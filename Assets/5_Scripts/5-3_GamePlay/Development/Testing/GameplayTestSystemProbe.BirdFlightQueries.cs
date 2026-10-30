@@ -29,7 +29,7 @@ public static partial class GameplayTestSystemProbe
             Matrix4x4 shifted = Matrix4x4.Translate(new Vector3(.25f, 0f, 0f));
             bool Compare(Sprite oldSprite, Sprite newSprite, Matrix4x4 oldMatrix,
                 Matrix4x4 newMatrix, bool flipX = false, bool flipY = false)
-                => Mod_AI_Bird.IsFlightHitboxGeometryUnchanged(oldSprite, newSprite,
+                => Mod_AnimalFlightMovement.IsFlightHitboxGeometryUnchanged(oldSprite, newSprite,
                     oldMatrix, newMatrix, false, false, flipX, flipY);
             return new JObject
             {
@@ -76,9 +76,9 @@ public static partial class GameplayTestSystemProbe
         var committed = new List<ChunkRuntime>();
         foreach (JObject coordinate in (JArray)args["chunks"])
             committed.Add(Commit((int)Number(coordinate, "x", 0), (int)Number(coordinate, "y", 0)));
-        var navigation = new BirdFlightNavigationProfile { sampleSpacing = .25f, crossGroundObstacles = true };
+        var navigation = new AnimalFlightNavigationProfile { sampleSpacing = .25f, crossGroundObstacles = true };
         var query = new ChunkMgr.RuntimeTerrainPresenceQuery(world, topology, dimension, width, height);
-        var cursor = new BirdFlightNavigationProfile.TraversalCursor();
+        var cursor = new AnimalFlightNavigationProfile.TraversalCursor();
         Vector2 origin = new((float)Number(args, "originX", .1), (float)Number(args, "originY", .1));
         var results = new JArray();
         foreach (JObject endpoint in (JArray)args["segments"])

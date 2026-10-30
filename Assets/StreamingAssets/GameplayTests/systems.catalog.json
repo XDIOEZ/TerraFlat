@@ -14,7 +14,9 @@
         "Assets/StreamingAssets/GameConfig/Actors/*",
         "Assets/StreamingAssets/GameplayTests/Systems/AI/*",
         "Assets/5_Scripts/Shared/Utilities/Geometry/PerceptionShape2D.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MonsterSpawnerSaveData.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MonsterSpawnerSaveData.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAnimalBehaviorTreeScenarios.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.AnimalTree*.cs"
       ],
       "dependsOn": [
         "navigation",
@@ -23,6 +25,7 @@
       ],
       "ruleCaseIds": [
         "ai_rules",
+        "ai_behavior_tree_rules",
         "ai_spawn_countdown_rules",
         "ai_world_ownership_rules"
       ],

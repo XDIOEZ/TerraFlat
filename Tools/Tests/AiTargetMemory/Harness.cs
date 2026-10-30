@@ -1,198 +1,223 @@
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-// 替身只提供环境输入与副作用采样，追踪记忆及集火入口直接编译生产代码。
+// 替身提供实体、可见性和导航输入；目标规则、记忆、搜索动作及群体情报入口取自生产代码。
 internal static class Program
 {
     #region 生产规则回归
-    private static int passed, failed;
+    private static int passed;
     private static void Check(bool condition, string label)
     {
-        Console.WriteLine($"{(condition ? "PASS" : "FAIL")}: {label}");
-        if (condition) passed++; else failed++;
+        if (!condition) throw new InvalidOperationException(label);
+        passed++;
     }
 
-    private static (AI_Wolf wolf, Item target) Create()
+    private static (AnimalBehaviorTreeContext context, AnimalPackCapability pack, Item target) Create()
     {
-        var wolf = new AI_Wolf();
+        var context = new AnimalBehaviorTreeContext(new Item { itemData = new ItemData { Guid = 1 } });
+        var pack = new AnimalPackCapability(context);
+        context.Pack = pack;
         var target = new Item { itemData = new ItemData { Guid = 20 } };
         target.transform.position = new Vector3(8, 0);
-        wolf.TargetCandidate = target;
-        return (wolf, target);
+        return (context, pack, target);
     }
 
     private static void Main()
     {
-        var (wolf, target) = Create();
-        wolf.TriggerPackAttack(target);
+        var (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
         Vector3 seen = target.transform.position;
-        wolf.Visible = false;
+        target.Visible = false;
         target.transform.position = new Vector3(20, 7);
-        wolf.Refresh();
-        Check(wolf.Searching && wolf.LastKnownThreatPosition == seen,
-            "集火确认后、第一次状态评估前丢视野，仍保留搜索坐标");
+        pack.Memory.RefreshVisibility(44);
+        Check(pack.Memory.IsSearching && pack.Memory.LastKnownPosition == seen,
+            "集火确认后、第一次决策前丢视野仍保留搜索坐标");
 
-        (wolf, target) = Create();
-        var caller = new AI_Wolf { TargetCandidate = target };
-        caller.TriggerPackAttack(target);
-        wolf.ReceivePackCall(target, caller);
+        (context, pack, target) = Create();
+        var (callerContext, caller, _) = Create();
+        callerContext.Detector.CurrentItemsInArea.Add(context.Actor);
+        caller.TriggerGroupAttack(target);
+        Check(pack.Memory.HasMemory && pack.Memory.CanSearch, "首次集火立即通过正式群体呼叫入口传播目标");
         seen = target.transform.position;
-        wolf.Visible = false;
+        target.Visible = false;
         target.transform.position = new Vector3(20, 7);
-        wolf.Refresh();
-        Check(wolf.Searching && wolf.LastKnownThreatPosition == seen,
-            "收到可见目标的同伴呼叫后、第一次决策前丢视野仍搜索");
+        pack.Memory.RefreshVisibility(44);
+        Check(pack.Memory.IsSearching && pack.Memory.LastKnownPosition == seen,
+            "收到可见目标的同伴呼叫后、首次决策前丢视野仍搜索");
 
-        (wolf, target) = Create();
-        wolf.ObserveInChase(target);
+        (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
         seen = target.transform.position;
-        wolf.Visible = false;
+        target.Visible = false;
         target.transform.position = new Vector3(.1f, 0);
-        wolf.Refresh();
-        wolf.EnterSearch();
-        wolf.NavigationResult = WorldNavigationDestinationResult.Pending;
-        wolf.SearchTick();
-        Check(wolf.Searching && wolf.RequestedDestination == seen && wolf.LastKnownThreatPosition == seen,
+        pack.Memory.RefreshVisibility(44);
+        var search = new AnimalSearchAction(context, new JObject());
+        context.Mod_Mover.Result = WorldNavigationDestinationResult.Pending;
+        search.Tick(0);
+        Check(pack.Memory.IsSearching && context.Mod_Mover.RequestedDestination == seen && pack.Memory.LastKnownPosition == seen,
             "隐藏目标移动到身边也只向最后可见位置申请路径");
-        Check(wolf.HasThreatMemory, "异步路径等待不会清除目标记忆");
-        wolf.TimerTick(2);
-        Check(wolf.HasThreatMemory && !wolf.WaitingAtLastThreatPosition, "赶路阶段不消费到点搜索时间");
-        wolf.transform.position = seen;
-        wolf.SearchTick();
-        wolf.SearchTick();
-        Check(wolf.WaitingAtLastThreatPosition && wolf.DetectionRequests == 1 && wolf.Stopped,
+        Check(pack.Memory.HasMemory, "异步路径等待不会清除目标记忆");
+        search.Tick(2);
+        Check(pack.Memory.HasMemory && !pack.Memory.WaitingAtLastPosition, "赶路阶段不消费到点搜索时间");
+        context.Actor.transform.position = seen;
+        search.Tick(0);
+        search.Tick(0);
+        Check(pack.Memory.WaitingAtLastPosition && context.Detector.Requests == 1 && context.Mod_Mover.Stopped,
             "抵达最后位置停车且仅额外请求一次感知");
-        wolf.TimerTick(wolf.lostTargetSearchDuration - .1f);
-        Check(wolf.HasThreatMemory, "到点搜索时间未满时保留记忆");
-        wolf.TimerTick(.2f);
-        Check(!wolf.HasThreatMemory && !wolf.Searching, "到点搜索超时后清理目标");
+        search.Tick(2.9f);
+        Check(pack.Memory.HasMemory, "到点搜索时间未满时保留记忆");
+        search.Tick(.2f);
+        Check(!pack.Memory.HasMemory && !pack.Memory.IsSearching, "到点搜索超时后清理目标");
 
-        (wolf, target) = Create();
-        wolf.ObserveInChase(target);
-        wolf.Visible = false;
-        wolf.Refresh();
-        wolf.EnterSearch();
-        wolf.TimerTick(wolf.lostTargetTravelTimeout + .1f);
-        Check(!wolf.HasThreatMemory, "不可抵达目标受独立赶路超时限制");
+        (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
+        target.Visible = false;
+        pack.Memory.RefreshVisibility(44);
+        search = new AnimalSearchAction(context, new JObject());
+        search.Tick(15.1f);
+        Check(!pack.Memory.HasMemory, "不可抵达目标受独立赶路超时限制");
 
-        (wolf, target) = Create();
-        wolf.ObserveInChase(target);
-        wolf.Visible = false;
-        wolf.Refresh();
-        wolf.EnterSearch();
-        wolf.transform.position = wolf.LastKnownThreatPosition;
-        wolf.SearchTick();
+        (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
+        target.Visible = false;
+        pack.Memory.RefreshVisibility(44);
+        context.Actor.transform.position = pack.Memory.LastKnownPosition;
+        search = new AnimalSearchAction(context, new JObject());
+        search.Tick(0);
         target.transform.position = new Vector3(12, 3);
-        wolf.Visible = true;
-        wolf.Refresh();
-        Check(wolf.ThreatVisible && wolf.LastKnownThreatPosition == target.transform.position &&
-              !wolf.WaitingAtLastThreatPosition && !wolf.Searching, "重新看见目标更新记忆并退出到点等待");
-        wolf.Visible = false;
-        wolf.Refresh();
+        target.Visible = true;
+        pack.Memory.RefreshVisibility(44);
+        Check(pack.Memory.Visible && pack.Memory.LastKnownPosition == target.transform.position &&
+              !pack.Memory.WaitingAtLastPosition && !pack.Memory.IsSearching, "重新看见目标更新记忆并退出到点等待");
+        target.Visible = false;
+        pack.Memory.RefreshVisibility(44);
         target.itemData.Guid++;
-        wolf.Refresh();
-        Check(!wolf.HasThreatMemory, "回池复用的另一身份不能继承旧仇恨");
+        pack.Memory.RefreshVisibility(44);
+        Check(!pack.Memory.HasMemory, "回池复用的另一身份不能继承旧仇恨");
 
-        (wolf, target) = Create();
-        wolf.ObserveInChase(target);
-        wolf.Visible = false;
+        (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
+        target.Visible = false;
         target.RuntimeGeneration++;
-        wolf.Refresh();
-        Check(!wolf.HasThreatMemory, "同GUID但运行代际变化时清除记忆");
+        pack.Memory.RefreshVisibility(44);
+        Check(!pack.Memory.HasMemory, "同 GUID 但运行代际变化时清除记忆");
 
-        (wolf, target) = Create();
-        wolf.ObserveInChase(target);
-        wolf.Visible = false;
+        (context, pack, target) = Create();
+        pack.TriggerGroupAttack(target);
+        target.Visible = false;
         target.itemMods.Health.Hp = 0;
-        wolf.Refresh();
-        Check(!wolf.HasThreatMemory, "死亡目标不会继续被追踪");
+        pack.Memory.RefreshVisibility(44);
+        Check(!pack.Memory.HasMemory, "死亡目标不会继续被追踪");
 
-        (wolf, target) = Create();
-        caller = new AI_Wolf { TargetCandidate = target };
-        caller.TriggerPackAttack(target);
-        seen = caller.LastKnownThreatPosition;
-        wolf.Visible = false;
-        wolf.ReceivePackCall(target, caller);
+        (context, pack, target) = Create();
+        (_, caller, _) = Create();
+        caller.TriggerGroupAttack(target);
+        seen = caller.Memory.LastKnownPosition;
+        target.Visible = false;
+        pack.ReceiveGroupCall(target, caller);
         target.transform.position = new Vector3(25, 8);
-        wolf.Refresh();
-        Check(wolf.Searching && wolf.LastKnownThreatPosition == seen && !wolf.ThreatVisible,
+        pack.Memory.RefreshVisibility(44);
+        Check(pack.Memory.IsSearching && pack.Memory.LastKnownPosition == seen && !pack.Memory.Visible,
             "未直接见目标的同伴只得到呼叫者已知坐标");
-        caller.Visible = false;
-        caller.Refresh();
-        var uninformed = new AI_Wolf { Visible = false };
-        uninformed.ReceivePackCall(target, caller);
-        Check(!uninformed.HasThreatMemory, "没有视野的同伴不能继续传播目标情报");
+        caller.Memory.RefreshVisibility(44);
+        var (_, uninformed, _) = Create();
+        uninformed.ReceiveGroupCall(target, caller);
+        Check(!uninformed.Memory.HasMemory, "没有视野的同伴不能继续传播目标情报");
 
-        (wolf, target) = Create();
-        wolf.Visible = false;
-        wolf.TriggerPackAttack(target);
-        Check(!wolf.HasThreatMemory, "从未看到目标时不凭空建立追踪记忆");
-        Console.WriteLine($"RESULT: {passed} passed, {failed} failed");
-        Environment.ExitCode = failed == 0 ? 0 : 1;
+        (context, pack, target) = Create();
+        target.Visible = false;
+        pack.TriggerGroupAttack(target);
+        Check(!pack.Memory.HasMemory, "从未看到目标时不凭空建立追踪记忆");
+
+        foreach (WorldNavigationDestinationResult result in new[]
+                 { WorldNavigationDestinationResult.RejectedByPathCost, WorldNavigationDestinationResult.Failed })
+        {
+            (context, pack, target) = Create();
+            pack.TriggerGroupAttack(target);
+            target.Visible = false;
+            pack.Memory.RefreshVisibility(44);
+            context.Mod_Mover.Result = result;
+            search = new AnimalSearchAction(context, new JObject());
+            Check(search.Tick(0) == AnimalBehaviorTreeStatus.Failure && !pack.Memory.HasMemory && context.Mod_Mover.Stopped,
+                "路径代价拒绝或寻路失败时没有清理搜索并停车");
+        }
+        Console.WriteLine($"PASS: {passed} production target-memory, search and pack-call checks");
     }
     #endregion
 }
 
-public partial class AI_Wolf
+public partial class AnimalPackCapability
 {
-    #region 环境替身与正式入口适配
-    public Item item = new() { itemData = new ItemData { Guid = 1 } };
-    public Transform transform => item.transform;
-    public string name => "Wolf";
-    public Item TargetCandidate;
-    public bool Visible = true;
-    public WorldNavigationDestinationResult NavigationResult;
-    public Vector3 RequestedDestination;
-    public bool Stopped => _mover.Stopped;
-    public int DetectionRequests => _detector.Requests;
-    public bool Searching => ShouldSearch();
-    private Item _currentThreat;
-    private WolfState _currentState = WolfState.Idle;
-    private float _packAssistTimer, _alertTimer;
-    private readonly Mover _mover = new();
-    private readonly Detector _detector = new();
-    private readonly bool debugLog = false;
-    private readonly float chaseLossDistance = 44, avoidSafeDistance = 30, alertKeepDuration = 2,
-        packAssistDuration = 5, chasePathRetryDelay = 3;
-    private readonly int chasePathCostLimit = 440;
-    public void ObserveInChase(Item target) { _currentState = WolfState.Chase; RememberThreat(target, target.transform.position, true); }
-    public void EnterSearch() => _currentState = WolfState.Search;
-    public void Refresh() => RefreshThreatTarget();
-    public void SearchTick() => TickSearch();
-    public void TimerTick(float seconds) => TickThreatMemory(seconds);
-    private void ClearChaseFormation() { }
-    private bool IsChaseTargetBlockedByPathCost(Item target) => false;
-    private static float DecrementTimer(float remaining, float deltaTime) => MathF.Max(0, remaining - deltaTime);
-    private void StopMove() => _mover.StopMovement();
-    private WorldNavigationDestinationResult MoveToChaseTarget(Vector3 position, int cost, float range)
-    { RequestedDestination = position; return NavigationResult; }
-    private bool TryHandleRejectedChasePath(WorldNavigationDestinationResult result, Item target, float retry)
-        => result == WorldNavigationDestinationResult.RejectedByPathCost;
-    private void FaceTarget(Vector3 position) { }
-    private bool IsWithinEffectivePerceptionRange(Item target, float range)
-        => Visible && target != null && WorldTopologyRuntime.SqrDistance(transform.position, target.transform.position) <= range * range;
-    private void CallNearbyWolves(Item target) { }
-    private bool IsAggressiveAdvanceActive() => false;
-    private Item FindClosestAdvanceAggressionTarget() => FindClosestPlayerThreat();
-    private Item FindClosestPlayerThreat()
-        => IsUsableThreat(TargetCandidate) && IsWithinEffectivePerceptionRange(TargetCandidate, chaseLossDistance) ? TargetCandidate : null;
+    #region 群体入口环境
+    private readonly AnimalBehaviorTreeContext context;
+    private readonly AnimalTargetMemoryCapability memory;
+    private readonly JObject config = new();
+    private float alertTimer, assistTimer, callTimer;
+    public Item Actor => context.Actor;
+    public int MemberCount => context.Detector.CurrentItemsInArea.Count + 1;
+    public AnimalTargetMemoryCapability Memory => memory;
+    public AnimalPackCapability(AnimalBehaviorTreeContext context)
+    { this.context = context; context.Actor.Pack = this; memory = new AnimalTargetMemoryCapability(context, new JObject(), null); }
+    private bool TryGetAlly(Item item, out AnimalPackCapability ally) { ally = item.Pack; return ally != null; }
+    public void ClearFormation() { }
     #endregion
 }
 
-#region 非Unity运行环境
-public enum WolfState { Idle, Move, Alert, Chase, Attack, Avoid, Flee, Advance, Search }
+#region 非 Unity 环境输入
+public abstract class AnimalBehaviorTreeCapability { public virtual void Dispose() { } }
+public class AnimalBehaviorTreeContext
+{
+    public Item Actor;
+    public Vector3 Position => Actor.transform.position;
+    public Mod_ItemDetector Detector = new();
+    public Mod_Mover_AI Mod_Mover = new();
+    public AnimalPackCapability Pack;
+    public AnimalBehaviorTreeContext(Item actor) => Actor = actor;
+    public JObject GetCapabilityConfiguration(string key) => new();
+    public void BeginAction(string action, string animation, AIStateAnimationRole role) { }
+    public void FaceTarget(Vector3 position, bool immediate) { }
+}
+public static class AnimalLandActionSupport
+{
+    public static AnimalPackCapability Pack(AnimalBehaviorTreeContext context, JObject parameters) => context.Pack;
+}
+public static class AnimalLandBehaviorNodes
+{
+    public static AnimalChasePositionCapability Chase(AnimalBehaviorTreeContext context, JObject parameters) => new();
+}
+public class AnimalChasePositionCapability { }
+public enum AIStateAnimationRole { Moving }
 public enum WorldNavigationDestinationResult { Accepted, Pending, Failed, RejectedByPathCost }
+public class Mod_Mover_AI
+{
+    public bool Stopped;
+    public Vector3 RequestedDestination;
+    public WorldNavigationDestinationResult Result = WorldNavigationDestinationResult.Accepted;
+    public void StopMovement() => Stopped = true;
+    public WorldNavigationDestinationResult SetInteractionDestination(Vector3 position, float range, int cost)
+    { RequestedDestination = position; return Result; }
+}
+public class Mod_ItemDetector
+{
+    public int Requests;
+    public List<Item> CurrentItemsInArea = new();
+    public static float CalculateEffectiveDetectionRadius(float radius, Item target) => radius;
+    public bool HasLineOfSight(Item target) => target.Visible;
+    public void RequestDetectorUpdate() => Requests++;
+}
 public class Item
 {
     public ItemData itemData = new();
     public Transform transform = new();
     public GameObject gameObject = new();
     public ItemMods itemMods = new();
-    public bool DestructionHandled, IsUnloadingModules;
+    public AnimalPackCapability Pack;
+    public bool DestructionHandled, IsUnloadingModules, Visible = true;
     public uint RuntimeGeneration;
-    public string name => "Target";
 }
-public class ItemData { public int Guid; }
-public class GameObject { public int scene; }
+public class Player : Item { }
+public class ItemData { public int Guid; public List<string> Tags = new(); }
+public class GameObject { public bool activeInHierarchy = true; public int scene; }
 public class Transform { public Vector3 position; }
 public class Mod_DamageReceiver { public float Hp = 100; }
 public class ItemMods
@@ -200,6 +225,8 @@ public class ItemMods
     public Mod_DamageReceiver Health = new();
     public T GetMod_ByID<T>(string id) where T : class => Health as T;
 }
+public static class Tag { public const string Player = "Player"; }
+public static class TagExtensions { public static bool ContainsTag(this List<string> tags, string tag) => tags.Contains(tag); }
 public static class ModText { public const string Hp = "Hp"; }
 public enum FactionRelation { Friendly }
 public static class FactionRelationService
@@ -207,13 +234,18 @@ public static class FactionRelationService
     public static bool CanAttack(Item source, Item target) => source != target;
     public static FactionRelation GetRelation(Item source, Item target) => FactionRelation.Friendly;
 }
+public static class GameplayWorldRegistry { public static int GetItemWorldIdentity(Item item) => 1; }
+public class ItemMgr
+{
+    public static ItemMgr GetInstance() => null;
+    public bool TryIsWithinDataPerceptionRange(Vector3 position, Item target, float radius, out bool within)
+    { within = false; return false; }
+}
 public static class WorldTopologyRuntime
 {
-    public static float SqrDistance(Vector3 a, Vector3 b)
-        => (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+    public static float SqrDistance(Vector3 a, Vector3 b) => (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+    public static float Distance(Vector3 a, Vector3 b) => MathF.Sqrt(SqrDistance(a, b));
 }
-public class Mover { public bool Stopped; public void StopMovement() => Stopped = true; }
-public class Detector { public int Requests; public void RequestDetectorUpdate() => Requests++; }
 namespace UnityEngine
 {
     public struct Vector3 : IEquatable<Vector3>
@@ -226,7 +258,9 @@ namespace UnityEngine
         public static bool operator ==(Vector3 a, Vector3 b) => a.Equals(b);
         public static bool operator !=(Vector3 a, Vector3 b) => !a.Equals(b);
     }
-    public static class Mathf { public static float Max(float a, float b) => MathF.Max(a, b); }
-    public static class Debug { public static void Log(string text, object context) { } }
+    public static class Mathf
+    {
+        public static float Max(float a, float b) => MathF.Max(a, b);
+    }
 }
 #endregion

@@ -27,7 +27,7 @@ public static class HiveColonyDebugOverlay
 /// 初始三只、最多十只；此后的新蜂必须由满蜜和超过三个游戏日的间隔产生。
 /// 成员随蜂巢卸载，独立 Actor 不重复保存自由 AI 快照。
 /// </summary>
-public sealed partial class Mod_HiveColony : Module
+public sealed partial class Mod_HiveColony : Module, IColonyHome
 {
     #region 配置与存档
     private static readonly ProfilerMarker SpawnResidentMarker = new("FlatWorld.Hive.SpawnResident");
@@ -35,7 +35,7 @@ public sealed partial class Mod_HiveColony : Module
     public sealed class ResidentState
     {
         public int Guid; // 成员的稳定身份。
-        public Mod_BeeBehavior.BeeState Bee = new(); // 该蜂的行为快照。
+        public ColonyResidentState Bee = new(); // 该蜂的行为快照。
         public bool SleepingInHive; // 夜间已回到蜂巢并卸载本体。
         public bool NeedsInitialState; // 已登记的新成员第一次出巢时才初始化随机饱食度。
         public float SleepDrainPerSecond = 1f; // 入睡时记录该蜂正常饱食消耗，睡眠按倍率推进。
@@ -77,6 +77,13 @@ public sealed partial class Mod_HiveColony : Module
     public override string CanonicalModuleId => "Mod_HiveColony";
     public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    private static IColonyResident FindColonyResident(Item resident)
+    {
+        var capabilities = resident?.itemMods?.GetCapabilities<IColonyResident>();
+        return capabilities != null && capabilities.Count > 0 ? capabilities[0] : null;
+    }
+
+    public Item ColonyItem => item;
     public Vector2 HomePosition => WorldTopologyRuntime.NormalizePosition(item.transform.position);
     public int Honey => state.Honey;
     public int HoneyCapacity => state.HoneyCapacity;
@@ -318,7 +325,7 @@ public sealed partial class Mod_HiveColony : Module
         return true;
     }
 
-    internal static void CompleteResidentSpawn(ResidentState member, Mod_BeeBehavior.BeeState snapshot)
+    internal static void CompleteResidentSpawn(ResidentState member, ColonyResidentState snapshot)
     {
         member.Bee = snapshot;
         member.NeedsInitialState = false;
@@ -339,8 +346,8 @@ public sealed partial class Mod_HiveColony : Module
             ResidentState member = state.Residents[index];
             if (!residents.TryGetValue(member.Guid, out Item resident))
                 continue;
-            Mod_AI_Bird bird = resident != null ? resident.GetComponentInChildren<Mod_AI_Bird>(true) : null;
-            if (bird != null && bird.IsAlive && !resident.DestructionHandled)
+            IColonyResident memberCapability = FindColonyResident(resident);
+            if (memberCapability != null && memberCapability.IsAlive && !resident.DestructionHandled)
                 continue;
             residents.Remove(member.Guid);
             state.Residents.RemoveAt(index);
@@ -354,7 +361,7 @@ public sealed partial class Mod_HiveColony : Module
         {
             if (!residents.TryGetValue(member.Guid, out Item resident) || resident == null)
                 continue;
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             if (bee != null)
                 member.Bee = bee.CaptureState();
         }
@@ -370,17 +377,15 @@ public sealed partial class Mod_HiveColony : Module
         float angle = slot * (Mathf.PI * 2f / MaximumResidents);
         Vector2 offset = new(Mathf.Cos(angle), Mathf.Sin(angle));
         Vector3 position = WorldTopologyRuntime.NormalizePosition((Vector3)(home + offset * SpawnRadius));
-        Mod_BeeBehavior.BeeState snapshot = null;
+        ColonyResidentState snapshot = null;
         Item resident = null;
         // 蜂巢只提供成员绑定，实际创建和失败回收由统一管理器负责。
         bool BindResident(Item created)
         {
-            Mod_AI_Bird bird = created.itemMods.GetMod_ByID<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
-            Mod_BeeBehavior bee = created.itemMods.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
-            if (bird == null || !bird.permanentFlight || bee == null)
-                throw new InvalidOperationException($"蜂巢物种 {ActorId} 必须组合常驻飞行与蜜蜂行为模块。");
+            IColonyResident bee = FindColonyResident(created);
+            if (bee == null)
+                throw new InvalidOperationException($"群落物种 {ActorId} 必须提供群落成员能力。");
             if (residents.ContainsKey(created.itemData.Guid)) return false;
-            bird.SetColonyHome(item.itemData.Guid, home);
             bee.BindColony(this, saved != null && !saved.NeedsInitialState ? saved.Bee : null);
             snapshot = bee.CaptureState();
             resident = created;

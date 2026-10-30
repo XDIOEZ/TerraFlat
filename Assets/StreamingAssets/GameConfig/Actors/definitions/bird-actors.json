@@ -4,7 +4,15 @@
     {
       "id": "Bird",
       "ecs": {
-        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "flight"],
+        "capabilities": [
+          "movement",
+          "perception",
+          "nutrition",
+          "feeding",
+          "sleep",
+          "flee",
+          "flight"
+        ],
         "flight": {
           "height": 0.8,
           "speed": 3.2,
@@ -16,7 +24,9 @@
       },
       "weight": 0.3,
       "parent": "Chicken",
-      "removeModules": ["生产模块"],
+      "removeModules": [
+        "生产模块"
+      ],
       "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Bird.Shell",
       "shellAddress": "flatworld.actor.shell.bird",
@@ -69,14 +79,71 @@
         },
         "detector": {
           "enabled": true,
-          "parameters": { "DetectionRadius": 20.0 }
+          "parameters": {
+            "DetectionRadius": 20.0
+          }
         },
         "food": {
-          "parameters": {"NutritionTagMultipliers": [{"Tag": "Seed", "Multiplier": 3.0}, {"Tag": "Fruit", "Multiplier": 3.0}]}
+          "parameters": {
+            "NutritionTagMultipliers": [
+              {
+                "Tag": "Seed",
+                "Multiplier": 3.0
+              },
+              {
+                "Tag": "Fruit",
+                "Multiplier": 3.0
+              }
+            ]
+          }
         },
         "ai": {
-          "prefab": "Mod_AI_Bird",
-          "id": "AI_Bird",
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {},
+              "root": {
+                "type": "subtree",
+                "name": "flyAndForage"
+              }
+            }
+          },
+          "inherit": false
+        },
+        "mover": {
+          "id": "移动模块",
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 0.5
+              }
+            }
+          }
+        },
+        "health": {
+          "id": "生命值系统模块",
+          "parameters": {
+            "Data": {
+              "Hp": 30,
+              "MaxHp": 30,
+              "AccuracyLevel": 7,
+              "SizeLevel": 3,
+              "DefenseValues": {
+                "Physical": 0
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        },
+        "flightMovement": {
+          "prefab": "Mod_AnimalFlightMovement",
+          "id": "Mod_AnimalFlightMovement",
           "enabled": true,
           "data": {
             "BitData": null,
@@ -107,7 +174,10 @@
             "fleeSafeDistance": 30.0,
             "fleeRunDistance": 30.0,
             "canBeCaughtByFishingRod": true,
-            "additionalForageTags": ["Berry", "Fruit"],
+            "additionalForageTags": [
+              "Berry",
+              "Fruit"
+            ],
             "fishHuntHungerRate": 0.7,
             "fishHuntRadius": 12.0,
             "fishDiveRange": 0.7,
@@ -131,32 +201,6 @@
               "sampleSpacing": 0.25
             }
           }
-        },
-        "mover": {
-          "id": "移动模块",
-          "parameters": {
-            "Data": {
-              "Speed": {
-                "BaseValue": 0.5
-              }
-            }
-          }
-        },
-        "health": {
-          "id": "生命值系统模块",
-          "parameters": {
-            "Data": {
-              "Hp": 30,
-              "MaxHp": 30,
-              "AccuracyLevel": 7,
-              "SizeLevel": 3,
-              "DefenseValues": {
-                "Physical": 0
-              },
-              "CombatBalanceVersion": 1
-            },
-            "weakTool": 0
-          }
         }
       },
       "itemData": {
@@ -166,7 +210,15 @@
     {
       "id": "Seagull",
       "ecs": {
-        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "flight"]
+        "capabilities": [
+          "movement",
+          "perception",
+          "nutrition",
+          "feeding",
+          "sleep",
+          "flee",
+          "flight"
+        ]
       },
       "weight": 0.8,
       "parent": "Bird",
@@ -178,11 +230,10 @@
       "modules": {
         "health": {
           "parameters": {
-            "Data": { "SizeLevel": 4 }
+            "Data": {
+              "SizeLevel": 4
+            }
           }
-        },
-        "ai": {
-          "parameters": { "canBeCaughtByFishingRod": false }
         },
         "animator": {
           "parameters": {
@@ -201,6 +252,14 @@
             "initialDelayMaxSeconds": 22.0,
             "volumeScale": 1.0
           }
+        },
+        "flightMovement": {
+          "parameters": {
+            "canBeCaughtByFishingRod": false
+          },
+          "prefab": "Mod_AnimalFlightMovement",
+          "id": "Mod_AnimalFlightMovement",
+          "enabled": true
         }
       },
       "tags": [
@@ -228,13 +287,35 @@
     {
       "id": "Bee",
       "ecs": {
-        "capabilities": ["movement", "perception", "nutrition", "feeding", "flight", "hiveMember", "combat", "chase"],
-        "nutrition": { "maximum": 1440.0, "drainPerSecond": 1.0, "feedBelow": 800.0, "feedGain": 500.0, "resource": "nectar" },
-        "flight": { "height": 0.8, "speed": 3.2, "staminaMaximum": 100.0, "staminaDrainPerSecond": 0.0 },
-        "combat": { "damage": {
-          "physical": 1,
-          "ImpactKind": 2
-        } }
+        "capabilities": [
+          "movement",
+          "perception",
+          "nutrition",
+          "feeding",
+          "flight",
+          "hiveMember",
+          "combat",
+          "chase"
+        ],
+        "nutrition": {
+          "maximum": 1440.0,
+          "drainPerSecond": 1.0,
+          "feedBelow": 800.0,
+          "feedGain": 500.0,
+          "resource": "nectar"
+        },
+        "flight": {
+          "height": 0.8,
+          "speed": 3.2,
+          "staminaMaximum": 100.0,
+          "staminaDrainPerSecond": 0.0
+        },
+        "combat": {
+          "damage": {
+            "physical": 1,
+            "ImpactKind": 2
+          }
+        }
       },
       "weight": 0.001,
       "parent": "Bird",
@@ -244,7 +325,13 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Bee.prefab",
       "gameName": "蜜蜂",
       "description": "在蜂巢周围持续飞行的小型生物。",
-      "tags": ["Bee", "Insect", "Animal", "Blood", "Prey"],
+      "tags": [
+        "Bee",
+        "Insect",
+        "Animal",
+        "Blood",
+        "Prey"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png",
         "animatorControllerAddress": "flatworld.actor.animator.bee",
@@ -253,9 +340,15 @@
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.0, "y": 0.05 },
+          "offset": {
+            "x": 0.0,
+            "y": 0.05
+          },
           "path": "",
-          "size": { "x": 0.22, "y": 0.16 },
+          "size": {
+            "x": 0.22,
+            "y": 0.16
+          },
           "edgeRadius": 0.0
         }
       },
@@ -282,44 +375,28 @@
             "volumeScale": 1.0
           }
         },
-        "detector": { "parameters": { "DetectionRadius": 6.0 } },
-        "ai": {
+        "detector": {
           "parameters": {
-            "permanentFlight": true,
-            "enableEggLaying": false,
-            "flightSpeed": 3.2,
-            "flightTurnRadius": 0.25,
-            "flightMaxTurnSpeed": 540.0,
-            "flightHeight": 0.8,
-            "flightWanderRadius": 3.0,
-            "flightStaminaDrainRate": 0.0,
-            "fleeTriggerDistance": 3.0,
-            "fleeSafeDistance": 6.0,
-            "fleeRunDistance": 5.0,
-            "hurtEscapeSeconds": 2.0,
-            "canBeCaughtByFishingRod": false
+            "DetectionRadius": 6.0
           }
         },
-        "beeBehavior": {
-          "prefab": "Module_BeeBehavior",
-          "id": "Mod_BeeBehavior",
+        "ai": {
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
           "enabled": true,
-          "data": { "BitData": null, "Type": 0 },
           "parameters": {
-            "SatietyMaximum": 1440.0,
-            "SatietyDrainPerSecond": 1.0,
-            "ForageBelow": 800.0,
-            "ReturnAbove": 1000.0,
-            "HoneyContributionCost": 500.0,
-            "HoneyMealGain": 500.0,
-            "CropGainPerSecond": 100.0,
-            "FlowerGainPerSecond": 10.0,
-            "PatrolFlightSpeedMultiplier": 0.5,
-            "AngryLockRadius": 3.0,
-            "LostTargetAngerSeconds": 10.0,
-            "AngerMaximum": 10.0,
-            "AngerDecayPerSecond": 0.1
-          }
+            "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {},
+              "root": {
+                "type": "subtree",
+                "name": "colonyWorker"
+              }
+            }
+          },
+          "inherit": false
         },
         "health": {
           "parameters": {
@@ -336,9 +413,55 @@
             },
             "weakTool": 0
           }
+        },
+        "flightMovement": {
+          "parameters": {
+            "permanentFlight": true,
+            "enableEggLaying": false,
+            "flightSpeed": 3.2,
+            "flightTurnRadius": 0.25,
+            "flightMaxTurnSpeed": 540.0,
+            "flightHeight": 0.8,
+            "flightWanderRadius": 3.0,
+            "flightStaminaDrainRate": 0.0,
+            "fleeTriggerDistance": 3.0,
+            "fleeSafeDistance": 6.0,
+            "fleeRunDistance": 5.0,
+            "hurtEscapeSeconds": 2.0,
+            "canBeCaughtByFishingRod": false
+          },
+          "prefab": "Mod_AnimalFlightMovement",
+          "id": "Mod_AnimalFlightMovement",
+          "enabled": true
+        },
+        "colonyResident": {
+          "prefab": "Module_ColonyResident",
+          "id": "Mod_ColonyResident",
+          "enabled": true,
+          "data": {
+            "BitData": null,
+            "Type": 0
+          },
+          "parameters": {
+            "SatietyMaximum": 1440.0,
+            "SatietyDrainPerSecond": 1.0,
+            "ForageBelow": 800.0,
+            "ReturnAbove": 1000.0,
+            "HoneyContributionCost": 500.0,
+            "HoneyMealGain": 500.0,
+            "CropGainPerSecond": 100.0,
+            "FlowerGainPerSecond": 10.0,
+            "PatrolFlightSpeedMultiplier": 0.5,
+            "AngryLockRadius": 3.0,
+            "LostTargetAngerSeconds": 10.0,
+            "AngerMaximum": 10.0,
+            "AngerDecayPerSecond": 0.1
+          }
         }
       },
-      "itemData": { "factionId": "insects" }
+      "itemData": {
+        "factionId": "insects"
+      }
     }
   ]
 }

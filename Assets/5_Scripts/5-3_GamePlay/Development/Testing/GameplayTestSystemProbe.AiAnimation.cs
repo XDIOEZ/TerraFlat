@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/ecs_sway_animation", AiEcsSwayAnimation);
         operations.Add("ai/ecs_resident_ownership", AiEcsResidentOwnership);
         operations.Add("ai/debug_overlay_cache", AiDebugOverlayCache);
+        operations.Add("ai/animal_tree_animation", AiAnimalBehaviorTreeAnimation);
     }
 
     // 直接采样正式头顶缓存，检查同秒 Buff、换语言、池代际与字符串复用边界。
@@ -411,7 +412,7 @@ public static partial class GameplayTestSystemProbe
     {
         var requiredIds = new HashSet<string>(StringComparer.Ordinal)
         {
-            Mod_AI_Bird.ModuleId, ModText.Mod_Mover, ModText.Mod_TileEffectReceiver,
+            Mod_AnimalFlightMovement.ModuleId, ModText.Mod_Mover, ModText.Mod_TileEffectReceiver,
             ModText.Hp, ModText.Food, ModText.Detector, ModText.AnimatorReceiver
         };
         var root = new GameObject("[LuaFlightDependencies]") { hideFlags = HideFlags.HideAndDontSave };
@@ -449,7 +450,7 @@ public static partial class GameplayTestSystemProbe
                 foreach (Module module in modules) module.ModuleInit(item, module._Data);
             }
 
-            Mod_AI_Bird flight = item.itemMods.RequireSingleModById<Mod_AI_Bird>(Mod_AI_Bird.ModuleId);
+            Mod_AnimalFlightMovement flight = item.itemMods.RequireSingleModById<Mod_AnimalFlightMovement>(Mod_AnimalFlightMovement.ModuleId);
             flight.BindModuleDependencies(item.itemMods);
             Mod_AnimatorController animation = item.itemMods.RequireSingleModById<Mod_AnimatorController>(ModText.AnimatorReceiver);
             bool allBound = true, allEnabled = true, noneLoaded = true;

@@ -193,7 +193,7 @@ GameObject:
   - component: {fileID: 4040572142908259681}
   - component: {fileID: 1775883118074638832}
   m_Layer: 0
-  m_Name: Module_AI_Chicken
+  m_Name: Module_AnimalBehaviorTree
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -223,113 +223,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 6797200048394459089}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b0ae97d52ceacf841a041892e6987d4d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
   ModData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
-    BitData: 
-  _currentState: 0
-  _stateElapsed: 0
-  _isReady: 0
-  _recentDamageThreat: {fileID: 0}
-  _damageThreatRemain: 0
-  _mover: {fileID: 0}
-  _hp: {fileID: 0}
-  _detector: {fileID: 0}
-  _animator: {fileID: 0}
-  _turnBody: {fileID: 0}
+    bitData:
   OnStateChanged:
     _PersistentCalls: []
-  Data:
-    State: 0
-    EggTimer: 0
-    Fatigue01: 0
-  _currentFoodTarget: {fileID: 0}
-  _currentThreat: {fileID: 0}
-  _food: {fileID: 0}
-  debugLog: 0
-  eatEnterHungerRate: 0.35
-  eatExitHungerRate: 0.85
-  sleepEnterHpRate: 0.5
-  sleepExitHpRate: 0.55
-  sleepDuration: 6
-  sleepCooldown: 3
-  dayStartRatio: 0.25
-  dayEndRatio: 0.75
-  detectorRefreshInterval: 0.8
-  eatDistance: 1.2
-  enableGrassForaging: 1
-  grassSearchRadius: 8
-  grassEatDuration: 1
-  grassSustenanceDays: 2
-  enableIdleWander: 1
-  idleMinDuration: 0.6
-  idleMaxDuration: 1.8
-  wanderRadius: 4
-  wanderStopDistance: 0.35
-  wanderPauseMin: 0.8
-  wanderPauseMax: 2.2
-  edibleTags:
-  - Meat
-  - Worm
-  - Corn
-  - Wheat
-  - Seed
-  - Food
-  - Plant
-  wanderAvoidHighPenalty: 1
-  wanderDangerPenalty: 1200
-  wanderSampleCount: 8
-  wanderPenaltyWeight: 1
-  isAdult: 1
-  enableEggLaying: 1
-  eggItemId: Egg
-  layEggIntervalDays: 2
-  layEggDuration: 2
-  fleeTriggerDistance: 6
-  fleeSafeDistance: 36
-  fleeRunDistance: 36
-  damageFleeDuration: 5
-  threatTags:
-  - Predator
-  - Wolf
-  fleeFromPlayer: 1
-  defaultMateDuration: 8
-  animIdle: Stand
-  animMove: Move
-  animForage: Move
-  animEat: Stand
-  animSleep: Stand
-  animMate: Stand
-  animLayEgg: Stand
-  animFlee: Move
 --- !u!1001 &2149651359683716600
 PrefabInstance:
   m_ObjectHideFlags: 0

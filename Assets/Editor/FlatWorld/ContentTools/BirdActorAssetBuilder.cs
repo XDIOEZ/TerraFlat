@@ -66,8 +66,8 @@ public static class BirdActorAssetBuilder
                 animator.transform == root.transform || receiver.transform == root.transform)
                 throw new InvalidDataException("动物源外壳必须含独立动画与受击子节点。");
 
-            foreach (AI_Chicken chicken in root.GetComponentsInChildren<AI_Chicken>(true))
-                UnityEngine.Object.DestroyImmediate(chicken.gameObject);
+            if (root.GetComponentsInChildren<MonoBehaviour>(true).Count(component => component is IAIActor) != 1)
+                throw new InvalidDataException("动物源外壳必须包含一个通用 AI 宿主。");
 
             Transform lift = new GameObject("BirdLift").transform;
             lift.SetParent(root.transform, false);
@@ -91,13 +91,13 @@ public static class BirdActorAssetBuilder
             }).ToArray();
             PrefabUtility.RecordPrefabInstancePropertyModifications(animation);
 
-            var birdObject = new GameObject("Mod_AI_Bird");
+            var birdObject = new GameObject("Mod_AnimalFlightMovement");
             birdObject.transform.SetParent(root.transform, false);
-            Mod_AI_Bird bird = birdObject.AddComponent<Mod_AI_Bird>();
+            Mod_AnimalFlightMovement bird = birdObject.AddComponent<Mod_AnimalFlightMovement>();
             bird.liftRoot = lift;
             bird.birdAnimator = animator;
-            bird.Data.ModuleId = Mod_AI_Bird.ModuleId;
-            bird.Data.StableName = "ai";
+            bird.Data.ModuleId = Mod_AnimalFlightMovement.ModuleId;
+            bird.Data.StableName = "flightMovement";
             actor.itemData.IDName = species;
             actor.itemData.Guid = 0;
             actor.itemData.ModuleDataDic.Clear();
@@ -261,7 +261,7 @@ public static class BirdActorAssetBuilder
             ItemDefinitionDto definition = definitions.Single(value => value.Id == species);
             GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/2_Prefabs/Gameplay/AI/{species}.prefab");
             Require(shell != null, $"{species} 外壳未构建");
-            Mod_AI_Bird bird = shell.GetComponentInChildren<Mod_AI_Bird>(true);
+            Mod_AnimalFlightMovement bird = shell.GetComponentInChildren<Mod_AnimalFlightMovement>(true);
             Mod_DamageReceiver receiver = shell.GetComponentInChildren<Mod_DamageReceiver>(true);
             Require(bird != null && bird.liftRoot != null && bird.birdAnimator != null, $"{species} 飞行引用缺失");
             Require(receiver != null && receiver.transform.IsChildOf(bird.liftRoot), $"{species} 受击盒没有随视觉升高");
@@ -274,12 +274,18 @@ public static class BirdActorAssetBuilder
                     animation.singleSpriteStates.Count(entry => entry != null && entry.stateName == stateName &&
                         entry.sprite == expected && expected != null) == 1, $"{species}/{stateName} 单图状态贴图缺失或重复");
             }
-            Require(shell.GetComponentsInChildren<AI_Chicken>(true).Length == 0, $"{species} 残留鸡 AI");
+            Require(shell.GetComponentsInChildren<MonoBehaviour>(true).Count(component => component is IAIActor) == 1,
+                $"{species} 需要一个通用 AI 宿主");
             Require(bird.liftRoot.localPosition == Vector3.zero, $"{species} 外壳保存了运行时高度");
             foreach (var pair in definition.Modules)
             {
                 Module module = ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, pair.Value.Prefab);
-                Require(module != null, $"{species}/{pair.Key} 缺少外壳模块");
+                if (module == null)
+                {
+                    GameObject modulePrefab = FindAddressableModulePrefab(pair.Value.Prefab);
+                    module = ItemDefinitionCatalogLoader.FindModulePrototype(null, modulePrefab, pair.Value.Id);
+                }
+                Require(module != null, $"{species}/{pair.Key} 缺少外壳或独立模块");
                 ModuleJsonConfigurator.Validate(module, species, pair.Key, pair.Value.Id, pair.Value.Parameters?.ToString());
             }
             var entries = spawners.Configs.SelectMany(config => config.SpawnEntries)
@@ -313,6 +319,19 @@ public static class BirdActorAssetBuilder
             }
         }
         Debug.Log("[BirdActor] 鸟/海鸥 JSON、外壳层级、正式动画帧、Addressables 与生态后端验证通过。");
+    }
+
+    private static GameObject FindAddressableModulePrefab(string address)
+    {
+        var settings = AddressableAssetSettingsDefaultObject.Settings;
+        foreach (var group in settings.groups)
+        {
+            if (group == null) continue;
+            foreach (var entry in group.entries)
+                if (string.Equals(entry.address, address, StringComparison.OrdinalIgnoreCase))
+                    return AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(entry.guid));
+        }
+        return null;
     }
 
     private static void ValidateAddress(string address, string path)

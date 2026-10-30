@@ -11,6 +11,12 @@
       "enabled": true
     },
     {
+      "id": "ai_behavior_tree_rules",
+      "name": "动物行为树执行与共享子树",
+      "luaPath": "GameplayTests/Systems/AI/behavior-tree.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_spawn_countdown_rules",
       "name": "自然动物连续倒计时",
       "luaPath": "GameplayTests/Systems/AI/spawn-countdown.lua",

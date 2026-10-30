@@ -37,6 +37,14 @@ public sealed class Item
     public ItemData itemData = new();
 }
 public sealed class ItemData { public int Guid = 42; }
+public static class WorldPhysicsService2D
+{
+    public static void RequestItemMovementTowardsLogicalPosition(Item item, Rigidbody2D body, Vector2 position)
+    {
+        body.position = position;
+        item.transform.position = position;
+    }
+}
 public sealed class ItemMgr
 {
     public static ItemMgr Instance = new();
@@ -102,6 +110,7 @@ public sealed partial class FishHarness
 {
     public Item item = new();
     public Rigidbody2D body = new();
+    public bool canUseIndependentMotion = true;
     public Mod_Food food;
     public DroppedItemHandle target = new() { Id = 1 };
     public string targetTag = "Food";

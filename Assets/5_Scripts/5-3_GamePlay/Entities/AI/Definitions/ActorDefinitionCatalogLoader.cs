@@ -53,6 +53,7 @@ public static class ActorDefinitionCatalogLoader
     /// <summary>让候选 Actor 来源与资源缓存独立于仍在运行的正式目录。</summary>
     internal static void ConfigureResourceReload(ResourceReloadContext context)
     {
+        AnimalBehaviorTreeNodeCatalog.ConfigureResourceReload(context);
         context.AddDictionary(() => ResolvedSources, value => ResolvedSources = value);
         context.AddDictionary(() => LoadedSprites, value => LoadedSprites = value);
         context.AddDictionary(() => LoadedControllers, value => LoadedControllers = value);
@@ -94,6 +95,8 @@ public static class ActorDefinitionCatalogLoader
         }
 
         List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
+        ApplySharedBehaviorSubtrees(resolved, ReadBehaviorSubtrees(cache.ReadText(
+            ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees))));
         CacheResolvedSources(resolved);
         List<ItemDefinitionDto> definitions = ConvertResolvedDefinitions(resolved);
         cache.Store(new ActorDefinitionInputs { Sources = resolved, Definitions = definitions });
@@ -101,7 +104,7 @@ public static class ActorDefinitionCatalogLoader
     }
 
     private static BinaryContentCache CreateBinaryCache()
-        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 1);
+        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 2);
 
     private static IEnumerator LoadBuiltInSourcesAsync(BinaryContentCache cache,
         Action<List<JObject>> completed, Action<Exception> failed, Action<float> progress)
@@ -140,8 +143,16 @@ public static class ActorDefinitionCatalogLoader
             catalogs.Add(converted);
             progress?.Invoke(0.15f * (index + 1) / packages.Length);
         }
-        yield return StreamingAssetsTextLoader.RunPureDataAsync(
-            () => ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs), completed, failed);
+        string subtreeJson = null;
+        yield return cache.ReadTextAsync(ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees),
+            value => subtreeJson = value, exception => readError = exception);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
+        yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
+        {
+            List<JObject> sources = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
+            ApplySharedBehaviorSubtrees(sources, ReadBehaviorSubtrees(subtreeJson));
+            return sources;
+        }, completed, failed);
     }
 
     /// <summary>异步加载全部本体 Actor 资源并原子注册。</summary>
@@ -598,10 +609,29 @@ public static class ActorDefinitionCatalogLoader
 
     private static List<ItemDefinitionDto> ConvertResolvedDefinitions(IEnumerable<JObject> sources)
     {
-        return sources.Select(source => source.ToObject<ItemDefinitionDto>() ??
-                                        throw new InvalidDataException(
-                                            $"无法解析 Actor：{source.Value<string>("id")}"))
-            .ToList();
+        return sources.Select(ConvertResolvedActor).ToList();
+    }
+
+    private static JObject ReadBehaviorSubtrees(string json)
+        => JObject.Parse(json)["subtrees"] as JObject ?? throw new InvalidDataException("公共行为树目录缺少 subtrees。");
+
+    private static void ApplySharedBehaviorSubtrees(IEnumerable<JObject> sources, JObject shared)
+    {
+        foreach (JObject source in sources)
+        {
+            if (source["modules"]?["ai"]?["parameters"]?["behaviorTree"] is not JObject tree) continue;
+            var merged = (JObject)shared.DeepClone();
+            if (tree["subtrees"] is JObject local)
+                foreach (JProperty entry in local.Properties()) merged[entry.Name] = entry.Value.DeepClone();
+            tree["subtrees"] = merged;
+        }
+    }
+
+    private static ItemDefinitionDto ConvertResolvedActor(JObject source)
+    {
+        if (source["modules"]?["ai"]?["parameters"]?["behaviorTree"] is JObject tree)
+            AnimalBehaviorTreeNodeCatalog.Compile(tree.ToObject<AnimalBehaviorTreeDefinition>());
+        return source.ToObject<ItemDefinitionDto>() ?? throw new InvalidDataException($"无法解析 Actor：{source.Value<string>("id")}");
     }
 
     /// <summary>F5 逐个转换 Actor；单个 DTO 格式错误不影响同目录其他定义。</summary>
@@ -616,8 +646,7 @@ public static class ActorDefinitionCatalogLoader
                 throw new InvalidDataException("Actor 定义缺少稳定 ID，无法隔离候选。");
             try
             {
-                definitions.Add(source.ToObject<ItemDefinitionDto>() ??
-                    throw new InvalidDataException($"Actor {id} 无法转换为配置对象。"));
+                definitions.Add(ConvertResolvedActor(source));
             }
             catch (Exception exception)
             {
@@ -637,6 +666,12 @@ public static class ActorDefinitionCatalogLoader
                 continue;
             ResolvedSources[id] = (JObject)definition.DeepClone();
         }
+        foreach (JObject source in ResolvedSources.Values)
+            if (source["modules"]?["ai"]?["parameters"]?["behaviorTree"]?["subtrees"] is JObject subtrees)
+            {
+                AnimalBehaviorTreeNodeCatalog.SetSharedSubtrees(subtrees);
+                break;
+            }
     }
 
     private static void ValidateActorShell(GameObject shell, string shellId)
@@ -671,6 +706,9 @@ public sealed class ActorDefinitionManifestDto
 {
     [JsonProperty("schemaVersion")]
     public int SchemaVersion = 1;
+
+    [JsonProperty("behaviorSubtrees")]
+    public string BehaviorSubtrees = "behavior-subtrees.json";
 
     [JsonProperty("packages")]
     public List<ActorDefinitionPackageDto> Packages = new();

@@ -64,7 +64,7 @@ public sealed partial class Mod_HiveColony
     {
         foreach (Item resident in residents.Values)
         {
-            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             bee?.ForceHiveDefenseTarget(attacker);
         }
     }
@@ -75,7 +75,7 @@ public sealed partial class Mod_HiveColony
         Vector2 destroyedHome = HomePosition;
         foreach (Item resident in residents.Values)
         {
-            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             bee?.DetachFromDestroyedColony(attacker, destroyedHome);
         }
     }

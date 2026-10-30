@@ -1,13 +1,13 @@
-"""在编辑器外执行正式狼记忆和集火入口，不暂停或重载 Unity。"""
+"""在编辑器外执行正式目标记忆、搜索动作和群体情报入口。"""
 from pathlib import Path
-import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 
-def extract_method(source: str, signature: str) -> str:
+def extract_block(source: str, signature: str) -> str:
     if source.count(signature) != 1:
-        raise ValueError(f"生产方法签名不唯一或已变化：{signature}")
+        raise ValueError(f"生产代码签名不唯一或已变化：{signature}")
     start = source.index(signature)
     cursor = source.index("{", start) + 1
     depth = 1
@@ -15,7 +15,7 @@ def extract_method(source: str, signature: str) -> str:
         depth += (source[cursor] == "{") - (source[cursor] == "}")
         cursor += 1
     if depth:
-        raise ValueError(f"生产方法缺少闭括号：{signature}")
+        raise ValueError(f"生产代码缺少闭括号：{signature}")
     return source[start:cursor]
 
 
@@ -24,27 +24,35 @@ def main() -> None:
     source_dir = root / "Assets/5_Scripts/5-3_GamePlay/Entities/AI"
     output = root / ".codex-tmp/ai-target-memory-tests"
     output.mkdir(parents=True, exist_ok=True)
-    source = (source_dir / "AI_Wolf.cs").read_text(encoding="utf-8-sig")
-    methods = [extract_method(source, signature) for signature in (
-        "public void TriggerPackAttack(Item threatSource)",
-        "public void ReceivePackCall(Item threatSource, AI_Wolf caller)",
-        "private void RefreshThreatTarget()",
-    )]
-    generated = "using System;\nusing UnityEngine;\npublic partial class AI_Wolf\n{\n"
-    generated += "\n".join(methods) + "\n}\n"
-    (output / "ProductionEntryPoints.cs").write_text(generated, encoding="utf-8")
-    memory = (source_dir / "AI_Wolf.TargetMemory.cs").read_text(encoding="utf-8-sig")
-    # 仅移除 Inspector 注解，字段和方法原样编译；世界、导航和感知由替身提供输入。
-    memory = memory.replace("using Sirenix.OdinInspector;", "")
-    memory = re.sub(r"^\s*\[TabGroup\([^\n]+\n", "\n", memory, flags=re.MULTILINE)
-    (output / "ProductionMemory.cs").write_text(memory, encoding="utf-8")
-    (output / "Harness.cs").write_text(Path(__file__).with_name("Harness.cs").read_text(encoding="utf-8"), encoding="utf-8")
-    (output / "MemoryTests.csproj").write_text(
-        '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'
-        '<OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>'
-        '<ImplicitUsings>enable</ImplicitUsings><Nullable>disable</Nullable>'
-        '</PropertyGroup></Project>', encoding="utf-8")
-    subprocess.run(["dotnet", "run", "--project", str(output / "MemoryTests.csproj")], cwd=root, check=True)
+    rules = (source_dir / "AnimalLandTargetCapabilities.cs").read_text(encoding="utf-8-sig")
+    nodes = (source_dir / "AnimalLandBehaviorNodes.cs").read_text(encoding="utf-8-sig")
+    pack = (source_dir / "AnimalPackCapability.cs").read_text(encoding="utf-8-sig")
+    generated = "using System;\nusing System.Collections.Generic;\nusing Newtonsoft.Json.Linq;\nusing UnityEngine;\n"
+    generated += extract_block(rules, "internal static class AnimalLandTargetRules") + "\n"
+    generated += extract_block(rules, "public sealed class AnimalTargetMemoryCapability") + "\n"
+    generated += extract_block(nodes, "internal sealed class AnimalSearchAction") + "\n"
+    generated += "public partial class AnimalPackCapability\n{\n"
+    generated += "\n".join(extract_block(pack, signature) for signature in (
+        "public void TriggerGroupAttack(Item target)",
+        "public void ReceiveGroupCall(Item target, AnimalPackCapability caller)",
+        "private void CallNearbyAllies(bool immediate)",
+    )) + "\n}\n"
+    production = output / "ProductionTargetMemory.cs"
+    production.write_text(generated, encoding="utf-8")
+
+    project = ET.Element("Project", Sdk="Microsoft.NET.Sdk")
+    properties = ET.SubElement(project, "PropertyGroup")
+    for key, value in {"OutputType": "Exe", "TargetFramework": "net8.0", "ImplicitUsings": "enable",
+                       "Nullable": "disable", "EnableDefaultCompileItems": "false"}.items():
+        ET.SubElement(properties, key).text = value
+    group = ET.SubElement(project, "ItemGroup")
+    for path in (source_dir / "AnimalBehaviorTreeRuntime.cs", production, Path(__file__).with_name("Harness.cs")):
+        ET.SubElement(group, "Compile", Include=str(path))
+    reference = ET.SubElement(group, "Reference", Include="Newtonsoft.Json")
+    ET.SubElement(reference, "HintPath").text = str(root / "Library/PackageCache/com.unity.nuget.newtonsoft-json@3.2.1/Runtime/Newtonsoft.Json.dll")
+    project_path = output / "MemoryTests.csproj"
+    ET.ElementTree(project).write(project_path, encoding="utf-8", xml_declaration=True)
+    subprocess.run(["dotnet", "run", "--project", str(project_path)], cwd=root, check=True)
 
 
 if __name__ == "__main__":

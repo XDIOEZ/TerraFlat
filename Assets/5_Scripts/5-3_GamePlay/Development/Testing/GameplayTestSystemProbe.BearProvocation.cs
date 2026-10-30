@@ -99,7 +99,7 @@ public static partial class GameplayTestSystemProbe
 #if UNITY_EDITOR
         GameObject shell = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(definition.SourcePrefab);
         GameObject aiPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-            "Assets/2_Prefabs/Gameplay/Modules/AI/Module_AI_Bear.prefab");
+            "Assets/2_Prefabs/Gameplay/Modules/AI/Module_AnimalBehaviorTree.prefab");
 #else
         GameObject shell = GameRes.ExistingInstance?.GetPrefab(definition.ShellPrefab, false);
         GameObject aiPrefab = GameRes.ExistingInstance?.GetPrefab(definition.Modules["ai"].Prefab, false);
@@ -118,83 +118,105 @@ public static partial class GameplayTestSystemProbe
             bear.BindData(bearData);
             GameplayWorldRegistry.AssignItemToWorld(bear, "probe:bear-perception");
             bear.itemMods.BindOwner(bear);
-            var ai = host.AddComponent<GameplayTestBearTerritorialProbeAI>();
+            var ai = host.AddComponent<Mod_AnimalBehaviorTree>();
             RegisterModule("ai", ai);
             var detector = (Mod_ItemDetector)RegisterModule("detector");
             var health = (Mod_DamageReceiver)RegisterModule("health");
             var mover = (Mod_Mover_AI)RegisterModule("mover");
             Module damage = RegisterModule("damage");
+            RegisterModule("animator");
             detector.wallsBlockPerception = false;
-            ai.PrepareBearRuleProbe(detector, health, mover);
 
             GameItem first = CreatePlayer(1900000201, new Vector3(4f, 0f));
             GameItem second = CreatePlayer(1900000202, new Vector3(1f, 0f));
             GameItem weapon = CreateItem("Weapon", 1900000301);
             weapon.Owner = first;
             root.SetActive(true);
+            ai.Load();
+            AnimalTerritorialHatredCapability territory = RequireTerritory();
+            JObject territoryConfig = ai.BehaviorTree.Capabilities["territory"] as JObject ??
+                throw new InvalidOperationException("熊行为树缺少领地仇恨参数。");
             var result = new JObject
             {
                 ["moduleId"] = ai._Data.ModuleId, ["prefabId"] = ai.PrefabId,
-                ["identityBound"] = ReferenceEquals(bear.itemMods.GetMod_ByID<AI_BearTerritorialRetaliation>(ModText.AI), ai),
-                ["hasDamage"] = damage is Mod_Damage, ["hasWolfAi"] = bear.GetComponentInChildren<AI_Wolf>(true) != null,
+                ["identityBound"] = ReferenceEquals(bear.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(ModText.AI), ai),
+                ["hasDamage"] = damage is Mod_Damage,
+                ["hasPack"] = ai.Context.TryGetCapability("pack", out AnimalPackCapability _) ||
+                    ai.BehaviorTree.Capabilities["pack"] != null,
                 ["hasWolfBite"] = definition.Modules.ContainsKey("biteAttackSkill"),
                 ["hasWolfAudio"] = definition.Modules.ContainsKey("animalAudio"),
                 ["hasFood"] = definition.Modules.ContainsKey("food"),
                 ["spriteAddress"] = definition.Visual?.SpriteAddress ?? string.Empty,
                 ["flipX"] = definition.Visual?.FlipX ?? false,
-                ["radius"] = ai.territorialPresenceRadius, ["threshold"] = ai.territorialPresenceThresholdSeconds,
-                ["initialHatred"] = ai.territorialInitialHatred, ["decay"] = ai.hatredDecayPerSecond,
-                ["perHit"] = ai.hatredPerConfirmedHit, ["peacefulState"] = ai.EvaluateBearRuleProbe().ToString()
+                ["radius"] = territoryConfig.Value<float>("presenceRadius"),
+                ["threshold"] = territoryConfig.Value<float>("presenceThresholdSeconds"),
+                ["initialHatred"] = territoryConfig.Value<float>("initialHatred"),
+                ["decay"] = territoryConfig.Value<float>("decayPerSecond"),
+                ["perHit"] = territoryConfig.Value<float>("hatredPerHit"), ["peacefulState"] = EvaluateAction()
             };
             CombatIdentity firstIdentity = GameplayCombatBridge.Identity(first);
             CombatIdentity weaponIdentity = GameplayCombatBridge.Identity(weapon);
             DamageReceiverDamageInfo blockedHit = Hit(weapon, first, 0f);
-            result["resolvedOwner"] = AI_BearTerritorialRetaliation.ResolveRetaliationCreditActor(blockedHit)?.itemData.Guid ?? 0;
-            ai.HandleConfirmedHit(blockedHit);
-            result["zeroDamageHatred"] = ai.HatredLedger.GetHatred(firstIdentity);
-            result["weaponHatred"] = ai.HatredLedger.GetHatred(weaponIdentity);
-            result["zeroDamageTarget"] = ai.CurrentThreat?.itemData.Guid ?? 0;
-            result["zeroDamageState"] = ai.EvaluateBearRuleProbe().ToString();
-            ai.HandleConfirmedHit(blockedHit);
-            result["secondHitHatred"] = ai.HatredLedger.GetHatred(firstIdentity);
+            result["resolvedOwner"] = AnimalTerritorialHatredCapability.ResolveRetaliationCreditActor(blockedHit)?.itemData.Guid ?? 0;
+            territory.HandleConfirmedHit(blockedHit);
+            result["zeroDamageHatred"] = territory.Ledger.GetHatred(firstIdentity);
+            result["weaponHatred"] = territory.Ledger.GetHatred(weaponIdentity);
+            result["zeroDamageTarget"] = territory.CurrentTarget?.itemData.Guid ?? 0;
+            result["zeroDamageState"] = EvaluateAction();
+            territory.HandleConfirmedHit(blockedHit);
+            result["secondHitHatred"] = territory.Ledger.GetHatred(firstIdentity);
 
-            ai.HandleConfirmedHit(Hit(second, second, 1f));
-            ai.HandleConfirmedHit(Hit(second, second, 0f));
-            ai.HandleConfirmedHit(Hit(second, second, 0f));
-            result["highestHatredTarget"] = ai.CurrentThreat?.itemData.Guid ?? 0;
-            result["highestHatredState"] = ai.EvaluateBearRuleProbe().ToString();
+            territory.HandleConfirmedHit(Hit(second, second, 1f));
+            territory.HandleConfirmedHit(Hit(second, second, 0f));
+            territory.HandleConfirmedHit(Hit(second, second, 0f));
+            result["highestHatredTarget"] = territory.CurrentTarget?.itemData.Guid ?? 0;
+            result["highestHatredState"] = EvaluateAction();
 
             weapon.Owner = second;
-            result["changedOwnerNotBlamed"] = AI_BearTerritorialRetaliation.ResolveRetaliationCreditActor(blockedHit) != second;
+            result["changedOwnerNotBlamed"] = AnimalTerritorialHatredCapability.ResolveRetaliationCreditActor(blockedHit) != second;
             DamageReceiverDamageInfo environmentHit = Hit(first, first, 0f);
             environmentHit.Context.Attack.Source.Backend = CombatBackend.Environment;
-            ai.HandleConfirmedHit(environmentHit);
-            result["environmentHatred"] = ai.HatredLedger.GetHatred(firstIdentity);
+            territory.HandleConfirmedHit(environmentHit);
+            result["environmentHatred"] = territory.Ledger.GetHatred(firstIdentity);
             Data_GeneralItem rebound = EntityProbeData("test:bear_rebound_player", 1f);
             rebound.Guid = 1900000203;
             rebound.FactionId = FactionRelationService.PlayerFactionId;
             rebound.Tags = new List<string> { "Player" };
             first.BindData(rebound);
-            ai.AdvanceBearRuleProbe(0f);
-            result["staleIdentityCleared"] = ai.HatredLedger.GetHatred(firstIdentity) == 0f;
-            result["staleCreditRejected"] = AI_BearTerritorialRetaliation.ResolveRetaliationCreditActor(blockedHit) == null;
-            ai.AdvanceBearRuleProbe(90f);
-            result["expiredTarget"] = ai.CurrentThreat?.itemData.Guid ?? 0;
-            result["expiredState"] = ai.EvaluateBearRuleProbe().ToString();
-            ai.PrepareBearRuleProbe(detector, health, mover);
-            ai.TerritorialPlayers.Add(second);
+            territory.Tick(0f, null);
+            result["staleIdentityCleared"] = territory.Ledger.GetHatred(firstIdentity) == 0f;
+            result["staleCreditRejected"] = AnimalTerritorialHatredCapability.ResolveRetaliationCreditActor(blockedHit) == null;
+            territory.Tick(90f, null);
+            result["expiredTarget"] = territory.CurrentTarget?.itemData.Guid ?? 0;
+            result["expiredState"] = EvaluateAction();
+            ai.Unload();
+            ai.Load();
+            territory = RequireTerritory();
             detector.wallsBlockPerception = true;
             result["hiddenFixture"] = !detector.HasLineOfSight(second);
-            ai.AdvanceBearRuleProbe(61f);
+            territory.Tick(61f, new Item[] { second });
             CombatIdentity secondIdentity = GameplayCombatBridge.Identity(second);
-            result["hiddenPresence"] = ai.HatredLedger.GetContinuousPresenceSeconds(secondIdentity);
-            result["hiddenHatred"] = ai.HatredLedger.GetHatred(secondIdentity);
-            result["hiddenTarget"] = ai.CurrentThreat?.itemData.Guid ?? 0;
+            result["hiddenPresence"] = territory.Ledger.GetContinuousPresenceSeconds(secondIdentity);
+            result["hiddenHatred"] = territory.Ledger.GetHatred(secondIdentity);
+            result["hiddenTarget"] = territory.CurrentTarget?.itemData.Guid ?? 0;
             detector.wallsBlockPerception = false;
-            ai.AdvanceBearRuleProbe(0f);
-            result["reappearedTarget"] = ai.CurrentThreat?.itemData.Guid ?? 0;
-            result["reappearedState"] = ai.EvaluateBearRuleProbe().ToString();
+            territory.Tick(0f, new Item[] { second });
+            result["reappearedTarget"] = territory.CurrentTarget?.itemData.Guid ?? 0;
+            result["reappearedState"] = EvaluateAction();
             return result;
+
+            AnimalTerritorialHatredCapability RequireTerritory()
+            {
+                if (!ai.Context.TryGetCapability("territory", out AnimalTerritorialHatredCapability ability))
+                    throw new InvalidOperationException("熊正式行为树未绑定领地仇恨能力。");
+                return ability;
+            }
+
+            string EvaluateAction()
+            {
+                ai.ModUpdate(0f);
+                return ai.CurrentAction ?? string.Empty;
+            }
 
             Module RegisterModule(string slot, Module instance = null)
             {
@@ -253,46 +275,10 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
+            foreach (Mod_AnimalBehaviorTree ai in root.GetComponentsInChildren<Mod_AnimalBehaviorTree>(true)) ai.Unload();
             foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
             UnityEngine.Object.DestroyImmediate(root);
         }
-    }
-
-    #endregion
-}
-
-internal sealed class GameplayTestBearTerritorialProbeAI : AI_BearTerritorialRetaliation
-{
-    #region 只开放正式熊的绑定与决策钩子
-
-    internal readonly List<Item> TerritorialPlayers = new();
-
-    protected override void ObserveNearbyTerritorialPlayers()
-    {
-        foreach (Item target in TerritorialPlayers) ObserveNearbyTerritorialPlayer(target);
-    }
-
-    internal void PrepareBearRuleProbe(Mod_ItemDetector detector, Mod_DamageReceiver health, Mod_Mover_AI mover)
-    {
-        _detector = detector;
-        _hp = health;
-        _mover = mover;
-        _isReady = true;
-        TerritorialPlayers.Clear();
-        OnResetRuntimeState();
-        OnBindExtraModules();
-    }
-
-    internal BearTerritorialState EvaluateBearRuleProbe()
-    {
-        OnPreEvaluate();
-        return EvaluateNextState();
-    }
-
-    internal void AdvanceBearRuleProbe(float seconds)
-    {
-        UpdateExtraTimers(seconds);
-        OnPreEvaluate();
     }
 
     #endregion

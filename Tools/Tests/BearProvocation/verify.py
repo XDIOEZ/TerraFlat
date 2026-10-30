@@ -32,7 +32,7 @@ def compile_ledger() -> Path:
                        "Nullable": "disable", "EnableDefaultCompileItems": "false"}.items():
         ET.SubElement(properties, key).text = value
     group = ET.SubElement(project, "ItemGroup")
-    actor_source = (source.parent / "AI_BearTerritorialRetaliation.cs").read_text(encoding="utf-8-sig")
+    actor_source = (source.parent / "AnimalLandTargetCapabilities.cs").read_text(encoding="utf-8-sig")
 
     def production_method(signature):
         if actor_source.count(signature) != 1:
@@ -48,22 +48,17 @@ def compile_ledger() -> Path:
         return actor_source[start:cursor]
 
     methods = [production_method(signature) for signature in (
-        "internal void HandleConfirmedHit(DamageReceiverDamageInfo info)",
-        "internal static Item ResolveRetaliationCreditActor(DamageReceiverDamageInfo info)",
-        "protected override void UpdateExtraTimers(float deltaTime)",
-        "protected virtual void ObserveNearbyTerritorialPlayers()",
-        "internal bool ObserveNearbyTerritorialPlayer(Item target)",
-        "protected override void OnPreEvaluate()",
-        "private bool IsValidLivingTarget(Item target)",
-        "private bool IsEligibleVisibleHatredTarget(CombatIdentity identity)",
-        "private void RemoveInvalidTrackedTargets()",
-        "private void RemoveExpiredTrackedTargets()",
+        "internal static class AnimalLandTargetRules",
+        "public sealed class AnimalTerritorialHatredCapability",
     )]
     extracted = OUT / "ProductionBearEntrypoints.cs"
-    extracted.write_text("using FlatWorld.Combat;\nusing UnityEngine;\npublic partial class AI_BearTerritorialRetaliation\n{\n" +
-                         "\n".join(methods) + "\n}\n", encoding="utf-8")
+    extracted.write_text("using System;\nusing System.Collections.Generic;\nusing FlatWorld.Combat;\n"
+                         "using Newtonsoft.Json.Linq;\nusing UnityEngine;\n" +
+                         "\n".join(methods) + "\n", encoding="utf-8")
     for path in [source, extracted, Path(__file__).with_name("Harness.cs"), Path(__file__).with_name("HitCreditHarness.cs")]:
         ET.SubElement(group, "Compile", Include=str(path))
+    reference = ET.SubElement(group, "Reference", Include="Newtonsoft.Json")
+    ET.SubElement(reference, "HintPath").text = str(ROOT / "Library/PackageCache/com.unity.nuget.newtonsoft-json@3.2.1/Runtime/Newtonsoft.Json.dll")
     project_path = OUT / "BearLedgerTests.csproj"
     ET.ElementTree(project).write(project_path, encoding="utf-8", xml_declaration=True)
     run(["dotnet", "build", str(project_path), "--configuration", "Release", "-nologo", "-v:q"], "ledger-build.log")

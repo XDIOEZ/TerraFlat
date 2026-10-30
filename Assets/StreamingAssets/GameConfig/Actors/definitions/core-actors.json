@@ -4,10 +4,31 @@
     {
       "id": "Chicken",
       "ecs": {
-        "capabilities": ["movement", "perception", "nutrition", "feeding", "sleep", "flee", "reproduction", "eggLaying"],
-        "nutrition": { "maximum": 100.0, "drainPerSecond": 0.02, "feedBelow": 35.0, "feedGain": 25.0 },
-        "sleep": { "dayStartRatio": 0.25, "dayEndRatio": 0.75, "healthBelow": 0.5 },
-        "reproduction": { "cooldownDays": 2.0, "eggItemId": "Egg" }
+        "capabilities": [
+          "movement",
+          "perception",
+          "nutrition",
+          "feeding",
+          "sleep",
+          "flee",
+          "reproduction",
+          "eggLaying"
+        ],
+        "nutrition": {
+          "maximum": 100.0,
+          "drainPerSecond": 0.02,
+          "feedBelow": 35.0,
+          "feedGain": 25.0
+        },
+        "sleep": {
+          "dayStartRatio": 0.25,
+          "dayEndRatio": 0.75,
+          "healthBelow": 0.5
+        },
+        "reproduction": {
+          "cooldownDays": 2.0,
+          "eggItemId": "Egg"
+        }
       },
       "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Chicken.Shell",
@@ -176,86 +197,77 @@
           }
         },
         "ai": {
-          "prefab": "Module_AI_Chicken",
-          "id": "Module_AI_Chicken",
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
           "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
           "parameters": {
-            "debugLog": false,
-            "eatEnterHungerRate": 0.35,
-            "eatExitHungerRate": 0.85,
-            "sleepEnterHpRate": 0.5,
-            "sleepExitHpRate": 0.55,
-            "sleepDuration": 6.0,
-            "sleepCooldown": 3.0,
-            "dayStartRatio": 0.25,
-            "dayEndRatio": 0.75,
+            "damageThreatMemoryDuration": 5.0,
             "detectorRefreshInterval": 0.8,
-            "eatDistance": 1.2,
-            "enableGrassForaging": true,
-            "grassSearchRadius": 8.0,
-            "grassEatDuration": 1.0,
-            "grassSustenanceDays": 2.0,
-            "enableIdleWander": true,
-            "idleMinDuration": 0.6,
-            "idleMaxDuration": 1.8,
-            "wanderRadius": 4.0,
-            "wanderStopDistance": 0.35,
-            "wanderPauseMin": 0.8,
-            "wanderPauseMax": 2.2,
-            "edibleTags": [
-              "Meat",
-              "Worm",
-              "Corn",
-              "Wheat",
-              "Seed",
-              "Food",
-              "Plant"
-            ],
-            "wanderAvoidHighPenalty": true,
-            "wanderDangerPenalty": 1200,
-            "wanderSampleCount": 8,
-            "wanderPenaltyWeight": 1.0,
-            "isAdult": true,
-            "enableEggLaying": true,
-            "eggItemId": "Egg",
-            "layEggIntervalDays": 2.0,
-            "layEggDuration": 2.0,
-            "fleeTriggerDistance": 6.0,
-            "fleeSafeDistance": 36.0,
-            "fleeRunDistance": 36.0,
-            "damageFleeDuration": 5.0,
-            "threatTags": [
-              "Carnivore"
-            ],
-            "fleeFromPlayer": true,
-            "defaultMateDuration": 8.0,
-            "animIdle": "Stand",
-            "animMove": "Move",
-            "animForage": "Move",
-            "animEat": "Stand",
-            "animSleep": "Stand",
-            "animMate": "Stand",
-            "animLayEgg": "Stand",
-            "animFlee": "Move",
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "reaction": {
+                  "buffId": "速度1",
+                  "suppressSleepUntilNight": true,
+                  "dayEndRatio": 0.75
+                },
+                "threat": {
+                  "tags": [
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 36
+                },
+                "forage": {
+                  "foodTags": [
+                    "Meat",
+                    "Worm",
+                    "Corn",
+                    "Wheat",
+                    "Seed",
+                    "Food",
+                    "Plant"
+                  ],
+                  "grassEnabled": true,
+                  "pauseNutrition": true,
+                  "grassIndependentOfHunger": true,
+                  "enterHunger": 0.35,
+                  "exitHunger": 0.85,
+                  "eatDistance": 1.2,
+                  "grassRadius": 8,
+                  "grassDuration": 1,
+                  "sustenanceDays": 2,
+                  "searchDelay": 0.8,
+                  "startsWithSustenance": true
+                },
+                "sleep": {
+                  "reactionKey": "reaction",
+                  "enterHp": 0.5,
+                  "exitHp": 0.55,
+                  "duration": 6,
+                  "cooldown": 3
+                },
+                "mate": {
+                  "duration": 8
+                },
+                "production": {
+                  "enabled": true,
+                  "itemId": "Egg",
+                  "intervalDays": 2
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 4,
+                  "stopDistance": 0.35,
+                  "idleMin": 0.6,
+                  "idleMax": 1.8,
+                  "pauseMin": 0.8,
+                  "pauseMax": 2.2
+                }
               },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+              "root": {
+                "type": "subtree",
+                "name": "grazeAndProduce"
               }
             }
           }
@@ -741,9 +753,27 @@
     {
       "id": "WildBoar",
       "ecs": {
-        "capabilities": ["movement", "perception", "nutrition", "feeding", "flee", "combat", "charge", "chase"],
-        "nutrition": { "maximum": 100.0, "drainPerSecond": 0.025, "feedBelow": 35.0, "feedGain": 30.0 },
-        "charge": { "speedMultiplier": 1.8, "durationSeconds": 1.2, "cooldownSeconds": 5.0 }
+        "capabilities": [
+          "movement",
+          "perception",
+          "nutrition",
+          "feeding",
+          "flee",
+          "combat",
+          "charge",
+          "chase"
+        ],
+        "nutrition": {
+          "maximum": 100.0,
+          "drainPerSecond": 0.025,
+          "feedBelow": 35.0,
+          "feedGain": 30.0
+        },
+        "charge": {
+          "speedMultiplier": 1.8,
+          "durationSeconds": 1.2,
+          "cooldownSeconds": 5.0
+        }
       },
       "weight": 90.0,
       "lootTableId": "WildBoar_Default",
@@ -1223,90 +1253,82 @@
           }
         },
         "ai": {
-          "prefab": "Module_AI_WildBoar",
-          "id": "Module_AI_WildBoar",
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
           "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
           "parameters": {
-            "debugLog": true,
-            "eatEnterHungerRate": 0.4,
-            "eatExitHungerRate": 0.8,
-            "sleepEnterHpRate": 0.45,
-            "sleepExitHpRate": 0.5,
-            "sleepDuration": 8.0,
-            "sleepCooldown": 4.0,
-            "dayStartRatio": 0.25,
-            "dayEndRatio": 0.75,
+            "damageThreatMemoryDuration": 5.0,
             "detectorRefreshInterval": 1.0,
-            "eatDistance": 1.5,
-            "enableGrassForaging": true,
-            "grassSearchRadius": 8.0,
-            "grassEatDuration": 1.0,
-            "grassSustenanceDays": 2.0,
-            "enableWander": true,
-            "idleMinDuration": 1.0,
-            "idleMaxDuration": 3.0,
-            "wanderRadius": 6.0,
-            "wanderStopDistance": 0.5,
-            "wanderPauseMin": 1.0,
-            "wanderPauseMax": 3.0,
-            "edibleTags": [
-              "Food",
-              "Corpse",
-              "Meat"
-            ],
-            "wanderAvoidHighPenalty": true,
-            "wanderDangerPenalty": 1200,
-            "wanderSampleCount": 8,
-            "wanderPenaltyWeight": 1.0,
-            "playerAvoidDistance": 8.0,
-            "playerAvoidSafeDistance": 30.0,
-            "retaliationDamageThresholdRate": 0.2,
-            "retaliationDuration": 30.0,
-            "chasePathCostLimit": 200,
-            "chasePathRetryDelay": 3.0,
-            "chaseThreatTags": [
-              "Player"
-            ],
-            "chasePlayer": true,
-            "attackTriggerDistance": 1.6,
-            "attackVerticalTriggerDistance": 0.45,
-            "attackDuration": 1.5,
-            "attackPositionDistance": 1.2,
-            "attackPositionTolerance": 0.18,
-            "attackCooldown": 2.0,
-            "attackDamageWindow": 0.12,
-            "attackDamageStartDelay": 0.45,
-            "fleeTriggerHpRate": 0.2,
-            "fleeSafeHpRate": 0.4,
-            "fleeRunDistance": 30.0,
-            "animIdle": "Stand",
-            "animMove": "Move",
-            "animSleep": "Stand",
-            "animForage": "Move",
-            "animEat": "Stand",
-            "animAlert": "Stand",
-            "animChase": "Move",
-            "animAttack": "Attack",
-            "animFlee": "Move",
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "reaction": {
+                  "buffId": "减伤"
+                },
+                "threat": {
+                  "tags": [
+                    "Player"
+                  ],
+                  "includePlayers": true,
+                  "radius": 30
+                },
+                "retaliation": {
+                  "damageThresholdRate": 0.2,
+                  "duration": 30
+                },
+                "combat": {
+                  "range": 1.6,
+                  "cooldown": 2,
+                  "damageWindow": 0.12,
+                  "windup": 0.45,
+                  "recovery": 1.5,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 200,
+                  "retryDelay": 3,
+                  "sidePosition": true,
+                  "verticalRange": 0.45,
+                  "sideDistance": 1.2,
+                  "sideTolerance": 0.18
+                },
+                "sleep": {
+                  "enterHp": 0.45,
+                  "exitHp": 0.5,
+                  "duration": 8,
+                  "cooldown": 4
+                },
+                "forage": {
+                  "foodTags": [
+                    "Food",
+                    "Corpse",
+                    "Meat"
+                  ],
+                  "grassEnabled": true,
+                  "pauseNutrition": false,
+                  "grassIndependentOfHunger": false,
+                  "enterHunger": 0.4,
+                  "exitHunger": 0.8,
+                  "eatDistance": 1.5,
+                  "grassRadius": 8,
+                  "grassDuration": 1,
+                  "sustenanceDays": 2,
+                  "searchDelay": 1,
+                  "startsWithSustenance": false
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 6,
+                  "stopDistance": 0.5,
+                  "idleMin": 1,
+                  "idleMax": 3,
+                  "pauseMin": 1,
+                  "pauseMax": 3
+                }
               },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+              "root": {
+                "type": "subtree",
+                "name": "retaliateAndGraze"
               }
             }
           }
@@ -1520,8 +1542,19 @@
     {
       "id": "Wolf",
       "ecs": {
-        "capabilities": ["movement", "perception", "combat", "flee", "pack", "chase"],
-        "pack": { "assistRadius": 8.0, "cohesionRadius": 3.0, "candidateBudget": 32 }
+        "capabilities": [
+          "movement",
+          "perception",
+          "combat",
+          "flee",
+          "pack",
+          "chase"
+        ],
+        "pack": {
+          "assistRadius": 8.0,
+          "cohesionRadius": 3.0,
+          "candidateBudget": 32
+        }
       },
       "lootTableId": "Wolf_Default",
       "shellPrefab": "CoreActor.Wolf.Shell",
@@ -1589,8 +1622,13 @@
       },
       "modules": {
         "biteAttackSkill": {
-          "prefab": "Module_BiteAttack", "id": "AnimalSkill_BiteAttack", "enabled": true,
-          "parameters": {"SkillId": "animal.bite_attack", "rangeMultiplier": 1.0}
+          "prefab": "Module_BiteAttack",
+          "id": "AnimalSkill_BiteAttack",
+          "enabled": true,
+          "parameters": {
+            "SkillId": "animal.bite_attack",
+            "rangeMultiplier": 1.0
+          }
         },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
@@ -2154,86 +2192,75 @@
           }
         },
         "ai": {
-          "prefab": "Module_AI_Wolf",
+          "prefab": "Module_AnimalBehaviorTree",
           "id": "AI",
           "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
           "parameters": {
-            "debugLog": false,
-            "wolfTags": [
-              "Wolf"
-            ],
-            "playerTags": [
-              "Player"
-            ],
+            "damageThreatMemoryDuration": 5.0,
             "detectorRefreshInterval": 0.6,
-            "allyCallDistance": 120.0,
-            "packAssistDuration": 5.0,
-            "packCallCooldown": 0.8,
-            "enableChaseFormation": true,
-            "chaseFormationMinMembers": 2,
-            "chaseFormationRadius": 1.05,
-            "chaseFormationVerticalSpacing": 0.42,
-            "chaseFormationMaxVerticalRatio": 0.55,
-            "chaseFormationAttackMargin": 0.18,
-            "chaseFormationArrivalDistance": 0.3,
-            "chaseFormationResumeDistance": 0.6,
-            "chaseSeparationDistance": 0.85,
-            "chaseSeparationStrength": 0.7,
-            "chaseSeparationMaxOffset": 0.2,
-            "alertDetectDistance": 20.0,
-            "chaseTriggerDistance": 28.0,
-            "attackTriggerDistance": 2.1,
-            "chaseLossDistance": 44.0,
-            "chasePathCostLimit": 440,
-            "chasePathRetryDelay": 3.0,
-            "attackCooldown": 2.0,
-            "attackDamageWindow": 0.333333343,
-            "attackDamageStartDelay": 0.25,
-            "attackRecoveryDuration": 0.35,
-            "alertKeepDuration": 2.0,
-            "fleeTriggerHpRate": 0.22,
-            "fleeSafeHpRate": 0.45,
-            "avoidRunDistance": 30.0,
-            "avoidSafeDistance": 30.0,
-            "fleeRunDistance": 30.0,
-            "enableWander": true,
-            "idleMinDuration": 0.8,
-            "idleMaxDuration": 2.2,
-            "wanderRadius": 5.0,
-            "wanderStopDistance": 0.4,
-            "wanderCohesionWeight": 1.0,
-            "wanderPauseMin": 0.8,
-            "wanderPauseMax": 2.5,
-            "wanderAvoidHighPenalty": true,
-            "wanderDangerPenalty": 1200,
-            "wanderSampleCount": 8,
-            "wanderPenaltyWeight": 1.0,
-            "animIdle": "Idle",
-            "animMove": "Move",
-            "animAlert": "Idle",
-            "animChase": "Move",
-            "animAttack": "Attack",
-            "animAvoid": "Move",
-            "animFlee": "Move",
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "memory": {
+                  "travelTimeout": 15,
+                  "searchDuration": 3,
+                  "arrivalDistance": 0.6
+                },
+                "pack": {
+                  "groupTags": [
+                    "Wolf"
+                  ],
+                  "threatTags": [
+                    "Player"
+                  ],
+                  "chaseDistance": 28,
+                  "lossDistance": 44,
+                  "avoidSafeDistance": 30,
+                  "allyCallDistance": 120,
+                  "assistDuration": 5,
+                  "callCooldown": 0.8,
+                  "alertDistance": 20,
+                  "alertDuration": 2,
+                  "formationEnabled": true,
+                  "formationMinMembers": 2,
+                  "formationRadius": 1.05,
+                  "formationVerticalSpacing": 0.42,
+                  "formationMaxVerticalRatio": 0.55,
+                  "formationAttackMargin": 0.18,
+                  "formationArrival": 0.3,
+                  "formationResume": 0.6,
+                  "separationDistance": 0.85,
+                  "separationStrength": 0.7,
+                  "separationMaxOffset": 0.2,
+                  "attackRange": 2.1,
+                  "wanderCohesion": 1
+                },
+                "advance": {},
+                "combat": {
+                  "range": 2.1,
+                  "cooldown": 2,
+                  "damageWindow": 0.333333343,
+                  "windup": 0.25,
+                  "recovery": 0.35,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 440,
+                  "retryDelay": 3
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 5,
+                  "stopDistance": 0.4,
+                  "idleMin": 0.8,
+                  "idleMax": 2.2,
+                  "pauseMin": 0.8,
+                  "pauseMax": 2.5
+                }
               },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+              "root": {
+                "type": "subtree",
+                "name": "packHunt"
               }
             }
           }
@@ -2267,8 +2294,18 @@
     {
       "id": "Ghost",
       "ecs": {
-        "capabilities": ["movement", "perception", "combat", "darkness", "chase"],
-        "darkness": { "damageThreshold": 0.5, "damageFractionPerSecond": 0.05, "retreatRadius": 5.0 }
+        "capabilities": [
+          "movement",
+          "perception",
+          "combat",
+          "darkness",
+          "chase"
+        ],
+        "darkness": {
+          "damageThreshold": 0.5,
+          "damageFractionPerSecond": 0.05,
+          "retreatRadius": 5.0
+        }
       },
       "weight": 1.0,
       "shellPrefab": "CoreActor.Ghost.Shell",
@@ -2385,40 +2422,18 @@
           }
         },
         "ai": {
-          "prefab": "Mod_AI_Ghost",
-          "id": "Mod_AI_Ghost",
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
           "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
           "parameters": {
-            "perceptionRadius": 60.0,
-            "wanderRadius": 6.0,
-            "wanderSpeed": 1.25,
-            "chaseSpeed": 2.5,
-            "retreatSpeed": 2.0,
-            "decisionInterval": 0.2,
-            "stuckRepathDelay": 0.75,
-            "darkPositionSamples": 16,
-            "retreatSearchRadius": 6.0,
-            "bobHeight": 0.12,
-            "bobFrequency": 1.4,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
+            "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {},
+              "root": {
+                "type": "subtree",
+                "name": "seekInDarkness"
               }
             }
           }
@@ -2538,6 +2553,45 @@
             "Data": {
               "SafeTemperatureMin": -1000.0,
               "SafeTemperatureMax": 1000.0
+            }
+          }
+        },
+        "lightNavigation": {
+          "prefab": "Mod_LightSensitiveNavigation",
+          "id": "Mod_LightSensitiveNavigation",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "perceptionRadius": 60.0,
+            "wanderRadius": 6.0,
+            "wanderSpeed": 1.25,
+            "chaseSpeed": 2.5,
+            "retreatSpeed": 2.0,
+            "decisionInterval": 0.2,
+            "stuckRepathDelay": 0.75,
+            "darkPositionSamples": 16,
+            "retreatSearchRadius": 6.0,
+            "bobHeight": 0.12,
+            "bobFrequency": 1.4,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
             }
           }
         }

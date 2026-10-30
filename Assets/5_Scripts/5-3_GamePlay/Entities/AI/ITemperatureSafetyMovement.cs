@@ -8,3 +8,9 @@ public interface ITemperatureSafetyMovement
     void SetTemperatureSafetyDestination(Vector2 destination);
     void ClearTemperatureSafetyDestination();
 }
+
+/// <summary>特殊移动由行为树推进避险动作，普通导航仍由移动模块执行。</summary>
+public interface IAnimalTemperatureSafetyExecutor : ITemperatureSafetyMovement
+{
+    void TickTemperatureSafetyMovement(float deltaTime);
+}

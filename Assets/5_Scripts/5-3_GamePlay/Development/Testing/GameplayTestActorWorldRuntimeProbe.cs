@@ -198,8 +198,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             if (!FactionRelationService.TrySetFactionId(own.Actor, FactionRelationService.GetFactionId(player)))
                 throw new InvalidOperationException("自有推进生物无法设置测试阵营。");
             bool playerThreatExcluded = !FactionRelationService.CanAttack(own.Actor, player);
-            AI_Wolf ai = own.Actor.GetComponentInChildren<AI_Wolf>(true)
-                ?? throw new InvalidOperationException("正式测试生物没有推进状态机。");
+            Mod_AnimalBehaviorTree ai = own.Actor.GetComponentInChildren<Mod_AnimalBehaviorTree>(true)
+                ?? throw new InvalidOperationException("正式测试生物没有行为树宿主。");
             Mod_Mover_AI mover = own.Actor.GetComponentInChildren<Mod_Mover_AI>(true)
                 ?? throw new InvalidOperationException("正式测试生物缺少实际移动模块。");
             WorldNavigationAgent agent = own.Actor.GetComponent<WorldNavigationAgent>()

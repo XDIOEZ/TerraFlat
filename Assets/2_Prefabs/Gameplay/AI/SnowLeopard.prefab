@@ -604,7 +604,7 @@ GameObject:
   - component: {fileID: 3534720793548848610}
   - component: {fileID: 1918825113318403166}
   m_Layer: 0
-  m_Name: Module_AI_SnowLeopard
+  m_Name: Module_AnimalBehaviorTree
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -634,117 +634,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 8512601460832480776}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ade9b9eb4b58394fb04aefd9a080023, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
   ModData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
-    BitData: 
-  _currentState: 0
-  _stateElapsed: 0
-  _isReady: 0
-  _recentDamageThreat: {fileID: 0}
-  _damageThreatRemain: 0
-  _mover: {fileID: 0}
-  _hp: {fileID: 0}
-  _detector: {fileID: 0}
-  _animator: {fileID: 0}
-  _turnBody: {fileID: 0}
+    bitData:
   OnStateChanged:
     _PersistentCalls: []
-  Data:
-    State: 0
-    Fatigue01: 0
-    HasAdvanceCommand: 0
-    AdvanceTargetItemGuid: 0
-    AdvanceTargetPosition: {x: 0, y: 0, z: 0}
-    AdvanceArrivalDistance: 1.25
-    AttackActorsOnRoute: 0
-  _currentThreat: {fileID: 0}
-  _packCount: 1
-  _isAlphaWolf: 1
-  _alphaWolf: {fileID: 0}
-  _chaseFormationTarget: {x: 0, y: 0, z: 0}
-  _chaseFormationSlot: -1
-  _chaseFormationMemberCount: 0
-  debugLog: 0
-  wolfTags:
-  - Wolf
-  playerTags:
-  - Player
-  detectorRefreshInterval: 0.6
-  allyCallDistance: 120
-  packAssistDuration: 5
-  packCallCooldown: 0.8
-  enableChaseFormation: 1
-  chaseFormationMinMembers: 2
-  chaseFormationRadius: 1.05
-  chaseFormationVerticalSpacing: 0.42
-  chaseFormationMaxVerticalRatio: 0.55
-  chaseFormationAttackMargin: 0.18
-  chaseFormationArrivalDistance: 0.3
-  chaseFormationResumeDistance: 0.6
-  chaseSeparationDistance: 0.85
-  chaseSeparationStrength: 0.7
-  chaseSeparationMaxOffset: 0.2
-  alertDetectDistance: 20
-  chaseTriggerDistance: 28
-  attackTriggerDistance: 1.2
-  chaseLossDistance: 44
-  attackCooldown: 2
-  attackDamageWindow: 0.25
-  attackDamageStartDelay: 0.35
-  attackRecoveryDuration: 0.25
-  alertKeepDuration: 2
-  fleeTriggerHpRate: 0.22
-  fleeSafeHpRate: 0.45
-  avoidRunDistance: 9
-  fleeRunDistance: 12
-  enableWander: 1
-  idleMinDuration: 0.8
-  idleMaxDuration: 2.2
-  wanderRadius: 5
-  wanderStopDistance: 0.4
-  wanderCohesionWeight: 1
-  wanderPauseMin: 0.8
-  wanderPauseMax: 2.5
-  wanderAvoidHighPenalty: 1
-  wanderDangerPenalty: 1200
-  wanderSampleCount: 8
-  wanderPenaltyWeight: 1
-  animIdle: Idle
-  animMove: Move
-  animAlert: Idle
-  animChase: Move
-  animAttack: Attack
-  animAvoid: Move
-  animFlee: Move
 --- !u!1001 &1610503869733589615
 PrefabInstance:
   m_ObjectHideFlags: 0

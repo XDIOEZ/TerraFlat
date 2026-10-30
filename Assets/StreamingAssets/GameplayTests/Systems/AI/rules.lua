@@ -86,8 +86,8 @@ for _, case in ipairs({
     {name = "攻击站位内选择攻击", args = {count = 4, playerX = 1.05}, members = 4, state = "Attack", firstOnly = true}
 }) do
     test.system("ai", "wolf_pack", case.args, function(data)
-        assert(data.declaredId == "AI" and data.prefabId == "Module_AI_Wolf" and data.identityBound,
-            "正式狼将具体Prefab身份误当AI能力，真实注册后同伴查询失败")
+        assert(data.declaredId == "AI" and data.prefabId == "Module_AnimalBehaviorTree" and data.identityBound,
+            "正式狼没有按真实能力身份注册共享行为树")
         assert(data.wrongIdRejected, "错误能力ID被默认值掩盖，身份反例无效")
         for index, members in ipairs(data.packCounts) do
             assert(members == case.members and data.leaders[index] == 101,
@@ -513,29 +513,25 @@ end
 for _, blocked in ipairs({false, true}) do
     test.system("ai", "state_machine", {blocked = blocked}, function(data)
         local expected = blocked
-            and {"idle.enter", "idle.tick", "idle.tick", "idle.exit", "idle.enter", "idle.tick"}
-            or {"idle.enter", "idle.tick", "idle.exit", "transition", "chase.enter", "chase.tick", "chase.exit", "idle.enter", "idle.tick"}
-        assert(#data.events == #expected, "状态切换额外执行了节点回调")
-        for index, value in ipairs(expected) do assert(data.events[index] == value, "旧节点退出、宿主切换、新节点进入顺序错误") end
-        local state = blocked and "idle" or "chase"
-        assert(data.afterEvaluation == state and data.afterRejected == state, "禁止或未知状态切换破坏当前节点")
-        assert(data.repeatedTransitions == 0 and data.duplicateRejected and data.missingRejected and data.uninitializedRejected, "状态机身份或生命周期保护失效")
-        assert(not data.resetInitialized and data.reinitialized and data.chaseAnimation == "Moving", "回收重入或动画语义错误")
-    end, blocked and "AI状态机：被拦截时保持旧节点" or "AI状态机：正式评估切换与回收重入")
+            and {"idle.enter", "idle.tick", "idle.tick", "idle.exit", "idle.enter", "idle.tick", "idle.exit"}
+            or {"idle.enter", "idle.tick", "idle.exit", "chase.enter", "chase.tick", "chase.exit", "idle.enter", "idle.tick", "idle.exit"}
+        assert(#data.events == #expected, "树切换或重复中止额外执行了节点回调")
+        for index, value in ipairs(expected) do assert(data.events[index] == value, "旧动作退出、新动作进入或回收重入顺序错误") end
+        assert(data.selected == (blocked and "test_low" or "test_high") and data.afterAbort == "" and data.afterRestart == "test_low",
+            "条件拦截、抢占或中止后重新进入树的动作错误")
+    end, blocked and "行为树：条件不满足时保持旧动作" or "行为树：条件变化抢占并在中止后重入")
 end
-for _, case in ipairs({
-    {name = "目标暂时缺失", args = {}, firstMoves = 1, firstArrivals = 0},
-    {name = "非有限目标失效", args = {invalid = "nonfinite"}, firstMoves = 1, firstArrivals = 0},
-    {name = "到达阈值最少五厘米", args = {targetX = .04, arrivalDistance = -1}, firstMoves = 0, firstArrivals = 1}
-}) do
-    test.system("ai", "advance_target", case.args, function(data)
-        assert(data.firstMovements == case.firstMoves and data.firstArrivals == case.firstArrivals, "有效目标推进或到达阈值错误")
-        assert(data.invalidMovements == case.firstMoves and data.invalidStops >= 1, "失效目标继续提交移动")
-        assert(data.repeatedArrivalCount == case.firstArrivals + 1, "停在目标处重复通知到达")
-        assert(data.returnArrivalCount == case.firstArrivals + 2 and data.arrivals == case.firstArrivals + 3, "离开再到达或节点重入不重新通知")
-        assert(data.enters == 2 and data.exits == 2 and data.animation == "Moving", "推进节点生命周期错误")
-    end, "AI目标推进：" .. case.name)
-end
+test.system("ai", "advance_target", {}, function(data)
+    assert(data.movingStatus == "Running" and data.submitted and math.abs(data.arrivalDistance - .05) < .00001,
+        "有效推进没有提交移动或到达距离低于五厘米")
+    assert(data.arrivalStatus == "Success" and data.arrivalCleared and data.withoutCommand == "Failure",
+        "到达后没有停车清除指令，或重复执行已完成的指令")
+    assert(data.restartedStatus == "Running" and data.restartMoved and data.cancelledStatus == "Failure" and data.cancelled,
+        "重新下达、取消指令或停止移动失败")
+    assert(data.nonfiniteRejected and data.invalidStatus == "Running" and data.invalidStopped and
+        data.restoredStatus == "Running" and data.restoredMoved,
+        "非有限目标进入导航，或目标恢复后没有重新推进")
+end, "行为树推进：下达、到达、取消与无效目标恢复")
 for _, case in ipairs({
     {name = "前摇与攻击窗口独立", args = {}, immediate = false, restored = 1},
     {name = "零前摇立即进入窗口", args = {windup = 0}, immediate = true, restored = 1},
@@ -741,26 +737,26 @@ test.system("ai", "bear_provocation_sequence", {steps = {
 end, "熊选择最高仇恨，过滤不可用对象并在全部归零后脱战")
 
 test.system("ai", "bear_definition_and_hit_credit", {}, function(data)
-    assert(data.moduleId == "AI" and data.prefabId == "Module_AI_Bear" and data.identityBound,
-        "正式熊没有注册独立熊AI或能力身份错误")
-    assert(data.hasDamage and not data.hasWolfAi and not data.hasWolfBite and not data.hasWolfAudio and not data.hasFood,
+    assert(data.moduleId == "AI" and data.prefabId == "Module_AnimalBehaviorTree" and data.identityBound,
+        "正式熊没有注册共享行为树或能力身份错误")
+    assert(data.hasDamage and not data.hasPack and not data.hasWolfBite and not data.hasWolfAudio and not data.hasFood,
         "熊缺少正式伤害模块，或意外继承了狼群、狼咬/狼叫或食物腐败行为")
     assert(data.spriteAddress == "Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png[Bear_Idle_Right]" and not data.flipX,
         "熊没有绑定唯一的标准右向贴图")
     assert(data.radius == 8 and data.threshold == 60 and data.initialHatred == 120 and data.decay == 1 and data.perHit == 30,
         "熊最终继承/模块装配后丢失了驻留与仇恨配置")
-    assert(data.peacefulState == "Idle" or data.peacefulState == "Move", "熊没有仇恨时主动进入攻击")
+    assert(data.peacefulState == "idle" or data.peacefulState == "wander", "熊没有仇恨时主动进入攻击")
     assert(data.resolvedOwner == 1900000201 and data.zeroDamageHatred == 30 and data.weaponHatred == 0 and
-        data.zeroDamageTarget == 1900000201 and data.zeroDamageState == "Chase",
+        data.zeroDamageTarget == 1900000201 and data.zeroDamageState == "chase",
         "熊忽略有效零伤命中，或对武器实体记仇而非实际攻击角色")
-    assert(data.secondHitHatred == 60 and data.highestHatredTarget == 1900000202 and data.highestHatredState == "Attack",
+    assert(data.secondHitHatred == 60 and data.highestHatredTarget == 1900000202 and data.highestHatredState == "attack",
         "连续受击没有逐次增加30，或真实熊AI没有按最高仇恨选择攻击目标")
     assert(data.changedOwnerNotBlamed and data.environmentHatred == 60 and data.staleIdentityCleared and data.staleCreditRejected,
         "武器换持有者、环境伤害或失效代际把仇恨转移给错误对象")
-    assert(data.expiredTarget == 0 and (data.expiredState == "Idle" or data.expiredState == "Move"),
+    assert(data.expiredTarget == 0 and (data.expiredState == "idle" or data.expiredState == "wander"),
         "真实熊AI的仇恨归零后仍然追击或攻击")
     assert(data.hiddenFixture and data.hiddenPresence == 61 and data.hiddenHatred == 120 and data.hiddenTarget == 0,
         "周围玩家被遮挡就中断驻留，或熊在看不见时隔墙选为攻击目标")
-    assert(data.reappearedTarget == 1900000202 and data.reappearedState == "Attack",
+    assert(data.reappearedTarget == 1900000202 and data.reappearedState == "attack",
         "重新可见时丢弃了已累计仇恨，或没有恢复正式攻击决策")
 end, "正式熊配置、真实受击入口、零伤归属、最高仇恨与脱战")

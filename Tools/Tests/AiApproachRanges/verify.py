@@ -24,7 +24,7 @@ def main() -> None:
     root = Path(__file__).resolve().parents[3]
     output = root / ".codex-tmp/ai-approach-tests"
     output.mkdir(parents=True, exist_ok=True)
-    source = (root / "Assets/5_Scripts/5-3_GamePlay/Entities/AI/Mod_AI_Fish.cs").read_text(encoding="utf-8-sig")
+    source = (root / "Assets/5_Scripts/5-3_GamePlay/Entities/AI/Mod_AquaticMovement.cs").read_text(encoding="utf-8-sig")
     methods = [extract_method(source, signature) for signature in (
         "private void TickForage(float deltaTime)",
         "private bool SwimTowards(Vector2 position, float deltaTime,",

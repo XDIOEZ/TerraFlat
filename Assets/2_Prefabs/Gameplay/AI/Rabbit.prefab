@@ -192,7 +192,7 @@ GameObject:
   - component: {fileID: 4040572142908259681}
   - component: {fileID: 1775883118074638832}
   m_Layer: 0
-  m_Name: Module_AI_BehaviorGraph
+  m_Name: Module_AnimalBehaviorTree
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -223,16 +223,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
-  Item_Data: {fileID: 0}
   ModData:
-    Name: AI行为图
-    ID: Module_AI_BehaviorGraph
-    isRunning: 1
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
     Type: 0
-    BitData: 
+    bitData:
   OnStateChanged:
     _PersistentCalls: []
 --- !u!1001 &2149651359683716600

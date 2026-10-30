@@ -77,12 +77,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: dee43fdbfbc04d54bb5f6d9a4421c239
-    m_Address: Module_AI_Bear
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a5dca44b1f544374990dd092608d51d3
     m_Address: Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png
     m_ReadOnly: 0
@@ -1297,7 +1291,7 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 35f4a99a6dc040ebb8e3cefc7a769a4c
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_AI_BehaviorGraph.prefab
+    m_Address: Module_AnimalBehaviorTree
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1322,12 +1316,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 388afa80973304c4d9142b0199989fb1
     m_Address: Assets/2_Prefabs/Effects/SleepZZZEffect.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 38a8e9aeab95ec449a3606e2283fa18d
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_Base_AI.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -2342,12 +2330,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 85010448eb6bc8d4695b75a6845d1c00
-    m_Address: Assets/2_Prefabs/Gameplay/AI/Chicken_Tree.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 85328d2effb540b591284de6d0f77828
     m_Address: Assets/6_Art/Generated/Farming/FoxtailGrass/FoxtailGrass_Mature.png
     m_ReadOnly: 0
@@ -2589,7 +2571,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 92ef4c321c274532b9f2f327750dbb9e
-    m_Address: Module_BeeBehavior
+    m_Address: Module_ColonyResident
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -3544,12 +3526,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e1958d25f8baa7a48b6f0c754ee6317e
-    m_Address: Assets/2_Prefabs/Gameplay/AI/WildBoar_Tree.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e2cb4edbc3684c10af988c8359ca0b90
     m_Address: Assets/6_Art/Generated/InventoryCrafting/Clay/Clay_Icon.png
     m_ReadOnly: 0
@@ -4074,7 +4050,7 @@ MonoBehaviour:
     - ActorShell
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7a9b95e9c41ecc841acb1ff3bcfd4c8c
-    m_Address: Mod_AI_Fish
+    m_Address: Mod_AquaticMovement
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

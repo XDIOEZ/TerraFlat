@@ -21,7 +21,15 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterEntityOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ai/egg_schedule", EntityEggSchedule);
-        operations.Add("ai/state_machine", EntityAiStateMachine);
+        operations.Add("ai/state_machine", GameplayTestAnimalBehaviorTreeScenarios.Transitions);
+        operations.Add("ai/behavior_tree_priority", GameplayTestAnimalBehaviorTreeScenarios.Priority);
+        operations.Add("ai/behavior_tree_sequence", GameplayTestAnimalBehaviorTreeScenarios.Sequence);
+        operations.Add("ai/behavior_tree_subtrees", GameplayTestAnimalBehaviorTreeScenarios.Subtrees);
+        operations.Add("ai/behavior_tree_validation", GameplayTestAnimalBehaviorTreeScenarios.Validation);
+        operations.Add("ai/behavior_tree_service", GameplayTestAnimalBehaviorTreeScenarios.Service);
+        operations.Add("ai/animal_tree_catalog", EntityAnimalBehaviorTreeCatalog);
+        operations.Add("ai/animal_tree_inheritance", EntityAnimalTreeModuleInheritance);
+        operations.Add("ai/animal_tree_mapping_inputs", EntityAnimalTreeMappingInputs);
         operations.Add("ai/advance_target", EntityAiAdvance);
         operations.Add("ai/approach_ranges", EntityAiApproachRanges);
         operations.Add("ai/animal_foraging_empty_targets", EntityAiForagingEmptyTargets);
@@ -532,7 +540,7 @@ public static partial class GameplayTestSystemProbe
         float weight = (float)Number(args, "weight", 1d);
         return WithEntityProbeItem(receiver =>
         {
-            IWaterCurrentExposure exposure = receiver.gameObject.AddComponent<Mod_AI_Fish>();
+            IWaterCurrentExposure exposure = receiver.gameObject.AddComponent<Mod_AquaticMovement>();
             float fishSpeed = currents.ResolvePushSpeed("SmallFish", weight);
             Vector2 passiveVelocity = WorldMotionSystem.SampleWaterVelocity(Vector2.zero, fishSpeed);
             return new JObject
@@ -1022,77 +1030,73 @@ public static partial class GameplayTestSystemProbe
         }));
     }
 
-    private static JObject EntityAiStateMachine(JObject args)
-    {
-        var events = new JArray();
-        var machine = new AIStateMachine<string>();
-        machine.Register(new AIStateNode<string>("idle", _ => events.Add("idle.tick"),
-            () => events.Add("idle.enter"), () => events.Add("idle.exit"), AIStateAnimationRole.Stopped));
-        machine.Register(new AIStateNode<string>("chase", _ => events.Add("chase.tick"),
-            () => events.Add("chase.enter"), () => events.Add("chase.exit"), AIStateAnimationRole.Moving));
-        bool duplicateRejected = false, missingRejected = false, uninitializedRejected = false;
-        try { machine.Register(new AIStateNode<string>("idle", _ => { })); }
-        catch (InvalidOperationException) { duplicateRejected = true; }
-        try { machine.TransitionTo("chase", null); }
-        catch (InvalidOperationException) { uninitializedRejected = true; }
-        machine.Initialize("idle");
-        machine.Tick(.25f);
-        AI_StateMachineRunner.EvaluateAndTick(machine, machine.CurrentState, () => "chase",
-            next => machine.TransitionTo(next, () => events.Add("transition")), .25f,
-            _ => !Flag(args, "blocked", false));
-        string afterEvaluation = machine.CurrentState;
-        int repeatedTransitions = 0;
-        machine.TransitionTo(machine.CurrentState, () => repeatedTransitions++);
-        try { machine.TransitionTo("missing", null); }
-        catch (InvalidOperationException) { missingRejected = true; }
-        string afterRejected = machine.CurrentState;
-        machine.Reset(); machine.Reset();
-        bool resetInitialized = machine.IsInitialized;
-        machine.Tick(.25f);
-        machine.Initialize("idle");
-        machine.Tick(.25f);
-        return new JObject
-        {
-            ["events"] = events, ["afterEvaluation"] = afterEvaluation, ["afterRejected"] = afterRejected,
-            ["repeatedTransitions"] = repeatedTransitions, ["duplicateRejected"] = duplicateRejected,
-            ["missingRejected"] = missingRejected, ["uninitializedRejected"] = uninitializedRejected,
-            ["resetInitialized"] = resetInitialized, ["reinitialized"] = machine.IsInitialized,
-            ["chaseAnimation"] = machine.GetAnimationRole("chase").ToString()
-        };
-    }
-
     private static JObject EntityAiAdvance(JObject args)
     {
-        Vector3 destination = new((float)Number(args, "targetX", 3d), 0f, 0f), position = Vector3.zero;
-        AIAdvanceTarget target = new(true, destination);
-        int movements = 0, stops = 0, arrivals = 0, enters = 0, exits = 0;
-        var node = new AIAdvanceStateNode<string>("advance", () => target, () => position,
-            () => (float)Number(args, "arrivalDistance", .25d), _ => movements++, () => stops++,
-            () => arrivals++, () => enters++, () => exits++);
-        node.Enter(); node.Tick(.1f);
-        int firstMovements = movements, firstArrivals = arrivals;
-        target = Text(args, "invalid", "missing") == "nonfinite"
-            ? new AIAdvanceTarget(true, new Vector3(float.NaN, 0f, 0f)) : AIAdvanceTarget.None;
-        node.Tick(.1f);
-        int invalidMovements = movements, invalidStops = stops;
-        target = new AIAdvanceTarget(true, destination);
-        position = destination;
-        node.Tick(.1f); node.Tick(.1f);
-        int repeatedArrivalCount = arrivals;
-        position = destination - Vector3.right;
-        node.Tick(.1f);
-        position = destination;
-        node.Tick(.1f);
-        int returnArrivalCount = arrivals;
-        node.Exit(); node.Enter(); node.Tick(.1f); node.Exit();
-        return new JObject
+        var root = new GameObject("[LuaAnimalAdvance]") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        AnimalBehaviorTreeContext context = null;
+        try
         {
-            ["firstMovements"] = firstMovements, ["firstArrivals"] = firstArrivals,
-            ["invalidMovements"] = invalidMovements, ["invalidStops"] = invalidStops,
-            ["repeatedArrivalCount"] = repeatedArrivalCount, ["returnArrivalCount"] = returnArrivalCount,
-            ["arrivals"] = arrivals, ["enters"] = enters, ["exits"] = exits,
-            ["animation"] = node.AnimationRole.ToString()
-        };
+            GameItem actor = root.AddComponent<GameItem>();
+            actor.BindData(EntityProbeData("test:animal_advance", 1f));
+            var mover = root.AddComponent<Mod_Mover_AI>();
+            mover.ModuleInit(actor, new Ex_ModData_MemoryPackable { Enabled = true });
+            context = CreateContext();
+            var action = new AnimalAdvanceAction(context, new JObject());
+            if (!context.TryGetCapability("advance", out AnimalAdvanceCapability advance))
+                throw new InvalidOperationException("推进动作没有绑定真实推进能力。");
+            Vector3 destination = new(3f, 0f, 0f);
+            advance.BeginAdvance(new AIAdvanceCommand(0, destination, -.1f, false));
+            string movingStatus = action.Tick(.1f).ToString();
+            bool submitted = mover.HasActiveDestination && mover.CanMove && advance.HasCommand;
+            float arrivalDistance = advance.ArrivalDistance;
+            actor.transform.position = destination;
+            string arrivalStatus = action.Tick(.1f).ToString();
+            bool arrivalCleared = !advance.HasCommand && !mover.HasActiveDestination && !mover.CanMove;
+            string withoutCommand = action.Tick(.1f).ToString();
+            advance.BeginAdvance(new AIAdvanceCommand(0, destination + Vector3.right, .25f, false));
+            string restartedStatus = action.Tick(.1f).ToString();
+            bool restartMoved = mover.HasActiveDestination && advance.HasCommand;
+            advance.CancelAdvance();
+            string cancelledStatus = action.Tick(.1f).ToString();
+            bool cancelled = !advance.HasCommand && !mover.HasActiveDestination && !mover.CanMove;
+            bool nonfiniteRejected = false;
+            try { advance.BeginAdvance(new AIAdvanceCommand(0, new Vector3(float.NaN, 0f, 0f), .25f, false)); }
+            catch (ArgumentException) { nonfiniteRejected = true; }
+            action.Abort();
+            context.Dispose();
+
+            context = CreateContext(new JObject { ["hasCommand"] = true, ["x"] = float.NaN, ["y"] = 0f, ["z"] = 0f });
+            var restoredAction = new AnimalAdvanceAction(context, new JObject());
+            context.TryGetCapability("advance", out AnimalAdvanceCapability restored);
+            string invalidStatus = restoredAction.Tick(.1f).ToString();
+            bool invalidStopped = restored.HasCommand && !mover.HasActiveDestination && !mover.CanMove;
+            restored.BeginAdvance(new AIAdvanceCommand(0, destination + Vector3.right, .25f, false));
+            string restoredStatus = restoredAction.Tick(.1f).ToString();
+            bool restoredMoved = restored.HasCommand && mover.HasActiveDestination;
+            restoredAction.Abort();
+            return new JObject
+            {
+                ["movingStatus"] = movingStatus, ["submitted"] = submitted, ["arrivalDistance"] = arrivalDistance,
+                ["arrivalStatus"] = arrivalStatus, ["arrivalCleared"] = arrivalCleared, ["withoutCommand"] = withoutCommand,
+                ["restartedStatus"] = restartedStatus, ["restartMoved"] = restartMoved,
+                ["cancelledStatus"] = cancelledStatus, ["cancelled"] = cancelled,
+                ["nonfiniteRejected"] = nonfiniteRejected, ["invalidStatus"] = invalidStatus,
+                ["invalidStopped"] = invalidStopped, ["restoredStatus"] = restoredStatus, ["restoredMoved"] = restoredMoved
+            };
+
+            AnimalBehaviorTreeContext CreateContext(JObject saved = null)
+            {
+                var value = new AnimalBehaviorTreeContext(actor, mover, null, null, null, null, 5f, .8f, null, 0f, 0f, default);
+                value.ConfigureCapabilities(new JObject(), new JObject { ["advance"] = saved });
+                return value;
+            }
+        }
+        finally
+        {
+            context?.Dispose();
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     private static JObject EntityAiAttackWindow(JObject args)
@@ -1135,7 +1139,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject EntityAiBehaviorMemory(JObject args)
     {
-        var blackboard = new AIBehaviorGraphBlackboard(new Dictionary<string, float>
+        var blackboard = new AnimalBehaviorTreeBlackboard(new Dictionary<string, float>
             { ["ordinary"] = 4f, ["world"] = 10f }, 3f, 1f, new Vector3(-2f, 0f, 0f));
         blackboard.Tick((float)Number(args, "step", 2d), "world");
         float ordinaryAfter = blackboard.GetTimerRemaining("ordinary"), worldAfter = blackboard.GetTimerRemaining("world");

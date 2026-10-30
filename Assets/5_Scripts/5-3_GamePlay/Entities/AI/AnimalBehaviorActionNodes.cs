@@ -1,0 +1,253 @@
+using System;
+using UnityEngine;
+
+#region AI 宿主契约
+/// <summary>所有运行时 AI 角色的轻量标记，供跨物种仇恨筛选复用。</summary>
+public interface IAIActor
+{
+    Item ActorItem { get; }
+    bool IsAlive { get; }
+}
+
+/// <summary>可接收通用推进命令的 AI。</summary>
+public interface IAIAdvanceCommandReceiver
+{
+    void BeginAdvance(AIAdvanceCommand command);
+}
+
+/// <summary>可选的命令取消契约，不要求已有 MOD 推进接收器新增方法。</summary>
+public interface IAIAdvanceCommandCancellationReceiver
+{
+    void CancelAdvance();
+}
+
+/// <summary>状态节点对应的动画语义，用于在具体动画缺失时选择安全回退。</summary>
+public enum AIStateAnimationRole
+{
+    Stopped,
+    Moving,
+    Action
+}
+#endregion
+
+#region 陆地逃离规划
+/// <summary>
+/// 动物共用的逃离状态节点。进入状态时锁定水体安全目标，到达当前路段前接续下一段；
+/// 新伤害可显式重规划，避免威胁位置抖动导致反复请求路径和短暂停车。
+/// </summary>
+public sealed class AIFleeStateNode
+{
+    private readonly string nodeName;
+    private bool errorReported;
+    private const float NextSegmentDistance = 0.35f; // 大于到达阈值，且小于最短逃离段，避免到点停车。
+
+    private readonly Func<Vector3?> _resolveThreatPosition; // 当前威胁位置解析器。
+    private readonly Func<Vector3, float, Vector3?> _resolveDestination; // 可达的水体安全逃离目标解析器。
+    private readonly Func<float> _getRunDistance; // 当前物种的单次逃离距离。
+    private readonly Action<Vector3> _moveTo; // 提交已选定目标的移动回调。
+    private readonly Action _stopMovement; // 没有可用目标时停车。
+    private readonly Func<Vector3> _getCurrentPosition; // 当前动物位置。
+    private readonly Func<bool> _hasReachedDestination; // 导航是否已到达当前逃离目标。
+    private readonly Func<WorldNavigationDestinationResult> _getDestinationResult; // 当前导航目标的正式结果。
+    private readonly UnityEngine.Object _diagnosticContext; // Console 定位到对应动物。
+    private Vector3 _escapeDestination; // 本次逃离锁定的目标。
+    private bool _hasEscapeDestination; // 当前目标是否有效。
+
+    public AIFleeStateNode(
+        string nodeName,
+        Func<Vector3?> resolveThreatPosition,
+        Func<Vector3, float, Vector3?> resolveDestination,
+        Func<float> getRunDistance,
+        Action<Vector3> moveTo,
+        Action stopMovement,
+        Func<Vector3> getCurrentPosition,
+        Func<bool> hasReachedDestination,
+        Func<WorldNavigationDestinationResult> getDestinationResult,
+        UnityEngine.Object diagnosticContext)
+    {
+        this.nodeName = nodeName;
+        _resolveThreatPosition = resolveThreatPosition ?? throw new ArgumentNullException(nameof(resolveThreatPosition));
+        _resolveDestination = resolveDestination ?? throw new ArgumentNullException(nameof(resolveDestination));
+        _getRunDistance = getRunDistance ?? throw new ArgumentNullException(nameof(getRunDistance));
+        _moveTo = moveTo ?? throw new ArgumentNullException(nameof(moveTo));
+        _stopMovement = stopMovement ?? throw new ArgumentNullException(nameof(stopMovement));
+        _getCurrentPosition = getCurrentPosition ?? throw new ArgumentNullException(nameof(getCurrentPosition));
+        _hasReachedDestination = hasReachedDestination ?? throw new ArgumentNullException(nameof(hasReachedDestination));
+        _getDestinationResult = getDestinationResult ?? throw new ArgumentNullException(nameof(getDestinationResult));
+        _diagnosticContext = diagnosticContext;
+    }
+
+    public void Enter()
+    {
+        ClearError();
+        _hasEscapeDestination = false;
+        Retarget();
+    }
+
+    public void Tick(float deltaTime)
+    {
+        if (ReportNavigationFailure())
+        {
+            _hasEscapeDestination = false;
+            Retarget();
+            return;
+        }
+        // 一段逃离过程中不因威胁角度抖动反复重算；受击仍可显式 Retarget。
+        if (!_hasEscapeDestination || _hasReachedDestination() ||
+            WorldTopologyRuntime.SqrDistance(_getCurrentPosition(), _escapeDestination) <=
+            NextSegmentDistance * NextSegmentDistance)
+        {
+            Retarget();
+            return;
+        }
+
+        if (!_hasEscapeDestination)
+            return;
+
+        _moveTo(_escapeDestination);
+    }
+
+    public void Exit()
+    {
+        _hasEscapeDestination = false;
+        _stopMovement();
+        ClearError();
+    }
+
+    private void ReportError(string detail, UnityEngine.Object context)
+    {
+        if (errorReported) return;
+        errorReported = true;
+        Debug.LogError($"[AI 节点] {nodeName} 进入错误状态：{detail}", context);
+    }
+
+    private void ClearError() => errorReported = false;
+
+    /// <summary>导航连续失败时报告错误并请求重新选路；成功获得路径后恢复。</summary>
+    private bool ReportNavigationFailure()
+    {
+        if (!_hasEscapeDestination)
+            return false;
+
+        WorldNavigationDestinationResult result = _getDestinationResult();
+        if (result == WorldNavigationDestinationResult.Failed)
+        {
+            ReportError(
+                $"逃离寻路连续至少 {WorldNavigationAgent.PathFailureErrorThreshold} 次失败；" +
+                $"当前位置={_getCurrentPosition()}，目标={_escapeDestination}。",
+                _diagnosticContext);
+            return true;
+        }
+        else if (result == WorldNavigationDestinationResult.Accepted ||
+                 result == WorldNavigationDestinationResult.Reached)
+        {
+            ClearError();
+        }
+        return false;
+    }
+
+    /// <summary>新伤害来源出现时重新按当前威胁规划一次逃离目标。</summary>
+    public void Retarget()
+    {
+        Vector3? threatPosition = _resolveThreatPosition();
+        if (!threatPosition.HasValue || !IsFinite(threatPosition.Value))
+        {
+            _hasEscapeDestination = false;
+            ClearError();
+            _stopMovement();
+            return;
+        }
+
+        float runDistance = Mathf.Max(0.1f, _getRunDistance());
+        Vector3? destination = _resolveDestination(threatPosition.Value, runDistance);
+        if (destination.HasValue && _hasEscapeDestination &&
+            WorldTopologyRuntime.SqrDistance(_escapeDestination, destination.Value) > 0.25f)
+            ClearError();
+        _hasEscapeDestination = destination.HasValue && IsFinite(destination.Value);
+        if (_hasEscapeDestination)
+        {
+            _escapeDestination = destination.Value;
+            _moveTo(_escapeDestination);
+        }
+        else
+            _stopMovement();
+    }
+
+    private static bool IsFinite(Vector3 value)
+    {
+        return !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+               !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+               !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+    }
+}
+
+/// <summary>所有动物共用的逃离目标与有效距离计算。</summary>
+public static class AIFleeUtility
+{
+    private const float MaximumGroundEscapeSegmentDistance = 8f; // 地面逃离每段不超过半个 Chunk，避免请求远处不连通目标。
+
+    /// <summary>按水体与导航连通性选择地面动物的下一段逃离目标。</summary>
+    public static Vector3? ResolveNavigableGroundEscapeDestination(
+        Vector3 origin,
+        Vector3 threatPosition,
+        float distance,
+        Vector2 fallbackDirection)
+    {
+        Vector2 awayDirection = WorldTopologyRuntime.ShortestDelta(threatPosition, origin);
+        if (awayDirection.sqrMagnitude <= 0.0001f)
+            awayDirection = fallbackDirection;
+        if (awayDirection.sqrMagnitude <= 0.0001f)
+            awayDirection = Vector2.right;
+
+        float segmentDistance = Mathf.Min(
+            Mathf.Max(0.1f, distance),
+            MaximumGroundEscapeSegmentDistance);
+        if (!AI_WanderUtility.TryPickNavigableEscapeOffset(
+                origin,
+                awayDirection.normalized,
+                segmentDistance,
+                out Vector2 escapeOffset))
+            return null;
+
+        return WorldTopologyRuntime.NormalizePosition(origin + (Vector3)escapeOffset);
+    }
+
+    /// <summary>按威胁位置、后退方向和地形安全策略计算一次逃离目标。</summary>
+    public static Vector3 ResolveEscapeDestination(
+        Vector3 origin,
+        Vector3 threatPosition,
+        float distance,
+        Vector2 fallbackDirection)
+    {
+        Vector2 awayDirection = WorldTopologyRuntime.ShortestDelta(threatPosition, origin);
+        if (awayDirection.sqrMagnitude <= 0.0001f)
+            awayDirection = fallbackDirection;
+        if (awayDirection.sqrMagnitude <= 0.0001f)
+            awayDirection = Vector2.right;
+
+        Vector2 escapeOffset = AI_WanderUtility.PickWaterAwareEscapeOffset(
+            origin,
+            awayDirection.normalized,
+            Mathf.Max(0.1f, distance));
+        return WorldTopologyRuntime.NormalizePosition(origin + (Vector3)escapeOffset);
+    }
+
+    /// <summary>用目标体型倍率和感知视线判断鸟类是否仍处在逃离范围。</summary>
+    public static bool IsWithinEscapeRange(
+        Vector2 observerPosition,
+        Item threat,
+        Mod_ItemDetector detector,
+        float baseDistance)
+    {
+        if (threat == null || detector == null)
+            return false;
+
+        float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+            Mathf.Max(0f, baseDistance),
+            threat);
+        return WorldTopologyRuntime.SqrDistance(observerPosition, threat.transform.position) <=
+                   effectiveDistance * effectiveDistance &&
+               detector.HasLineOfSight(threat);
+    }
+}
+#endregion

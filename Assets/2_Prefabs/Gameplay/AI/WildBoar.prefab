@@ -465,7 +465,7 @@ GameObject:
   - component: {fileID: 3849199934911512678}
   - component: {fileID: 8358856076963370307}
   m_Layer: 9
-  m_Name: Module_AI_WildBoar
+  m_Name: Module_AnimalBehaviorTree
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -495,123 +495,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 5993558180366969558}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85bc528481ca06044a69c60e34b562de, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
   ModData:
-    Name: 
-    ID: 
-    isRunning: 1
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
-    BitData: 
-  _currentState: 0
-  _stateElapsed: 0
-  _isReady: 0
-  _recentDamageThreat: {fileID: 0}
-  _damageThreatRemain: 0
-  _mover: {fileID: 0}
-  _hp: {fileID: 0}
-  _detector: {fileID: 0}
-  _animator: {fileID: 0}
-  _turnBody: {fileID: 0}
+    bitData:
   OnStateChanged:
     _PersistentCalls: []
-  Data:
-    State: 0
-    Fatigue01: 0
-    RageLevel: 0
-    GrassSustenanceInitialized: 0
-    GrassSustenanceRemaining: 0
-  _currentFoodTarget: {fileID: 0}
-  _currentThreat: {fileID: 0}
-  debugLog: 0
-  eatEnterHungerRate: 0.4
-  eatExitHungerRate: 0.8
-  sleepEnterHpRate: 0.45
-  sleepExitHpRate: 0.5
-  sleepDuration: 8
-  sleepCooldown: 4
-  dayStartRatio: 0.25
-  dayEndRatio: 0.75
-  duskStartRatio: 0.65
-  aggressiveDuringDusk: 1
-  detectorRefreshInterval: 1
-  eatDistance: 1.5
-  enableGrassForaging: 1
-  grassSearchRadius: 8
-  grassEatDuration: 1
-  grassSustenanceDays: 2
-  enableWander: 1
-  idleMinDuration: 1
-  idleMaxDuration: 3
-  wanderRadius: 6
-  wanderStopDistance: 0.5
-  wanderPauseMin: 1
-  wanderPauseMax: 3
-  edibleTags:
-  - Food
-  - Corpse
-  - Meat
-  wanderAvoidHighPenalty: 1
-  wanderDangerPenalty: 1200
-  wanderSampleCount: 8
-  wanderPenaltyWeight: 1
-  playerAvoidDistance: 8
-  playerAvoidSafeDistance: 30
-  alertDetectDistance: 8
-  alertDuration: 3
-  alertToChaseDuration: 1
-  chaseTriggerDistance: 12
-  chaseLossDistance: 20
-  chaseThreatTags:
-  - Player
-  chasePlayer: 1
-  attackTriggerDistance: 1.6
-  attackVerticalTriggerDistance: 0.45
-  attackDuration: 1.5
-  attackPositionDistance: 1.2
-  attackPositionTolerance: 0.18
-  rageBuildupRate: 0.5
-  rageDecayRate: 0.2
-  attackCooldown: 2
-  attackDamageWindow: 0.12
-  attackDamageStartDelay: 0.45
-  fleeTriggerHpRate: 0.2
-  fleeSafeHpRate: 0.4
-  fleeRunDistance: 30
-  animIdle: Stand
-  animMove: Move
-  animSleep: Stand
-  animForage: Move
-  animEat: Stand
-  animAlert: Stand
-  animChase: Move
-  animAttack: Attack
-  animFlee: Move
-  _food: {fileID: 0}
 --- !u!1001 &1610503869733589615
 PrefabInstance:
   m_ObjectHideFlags: 0

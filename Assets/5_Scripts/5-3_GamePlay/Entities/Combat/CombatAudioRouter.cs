@@ -184,7 +184,7 @@ public static class CombatAudioRouter
         if (ContainsAny(target, "bush", "shrub", "grass", "leaf", "foliage", "plant", "vine", "fern", "flower", "灌木", "草", "叶"))
             return CombatImpactMaterial.Foliage;
 
-        // 生物名称可能带有皮肤/生态后缀（例如 WildBoar_Tree），因此优先识别生物。
+        // 生物名称可能带有皮肤/生态后缀（例如 WildBoar_Variant），因此优先识别生物。
         if (ContainsAny(target, "player", "wildboar", "boar", "wolf", "chicken", "animal", "deer", "pig", "fish", "monster", "玩家", "野猪", "狼", "鸡"))
             return CombatImpactMaterial.Flesh;
 

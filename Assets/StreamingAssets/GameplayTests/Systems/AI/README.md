@@ -1,5 +1,7 @@
 # AI 生物测试
 
+2026-10-30 动物行为树：`behavior-tree.lua` 调用正式树执行器，检查优先级抢占、动作进入退出、中断、顺序节点续跑与条件失效、后台服务、参数化嵌套子树、实例隔离、非法引用及模块继承替换；`ai/animal_tree_catalog` 从正式继承目录装配全部 13 种生物的模块并加载树，检查唯一 AI 身份、失效脚本、共享子树与特定能力；`ai/aiecs_tree_parameters` 检查狼、雪豹、熊、鸡和野猪的 ECS 参数映射与显式覆盖。`python Tools/Tests/AnimalBehaviorTree/verify.py` 使用项目 XLua 执行 9 组规则，包含正式继承、ECS 参数、雪豹伤害和出血，并编译 13 份最终动物树与正式共享子树；节点工厂使用替身，不加载动物外壳。鱼觅食、目标记忆和熊领地能力分别有离线入口 `AiApproachRanges`、`AiTargetMemory`、`BearProvocation`；树目录装配及狼熊实际节点仍需 Unity 编辑态运行，飞行捕食、蜂巢抢占、水域导航、实际战斗和联机现场仍需验收。
+
 2026-10-29 出生回归先执行分帧创建，再执行同步创建，避免同一用例预热对象池；新增准备期间未注册、交付 Scene/PhysicsScene 有效且匹配世界的断言。跨星球卸载后的再次创建纳入维度 `generation-presets.lua`。首次创建断言已单独通过；后续因系统内存不足中断，最终静态修复未复测。
 
 2026-10-26 熊：`rules.lua` 的四组 `ai/bear_provocation_sequence` 调用正式独立仇恨账本，覆盖严格超过 60 秒、120 初始仇恨、每秒减 1、每次命中加 30、离开重计、同次驻留不反复激怒、多人独立、最高仇恨/有效目标选择、无效时间和回池清理。`ai/bear_definition_and_hit_credit` 从正式 Manifest 继承并注册熊 AI/检测/生命/移动/伤害模块，检查唯一右向贴图、能力身份、无狼群/狼咬/狼叫/食物模块，以及实际受击处理的零伤归属、换持有者/失效身份、归零脱战、遮挡不打断周围驻留而重新可见后才选择攻击。离线入口 `python Tools/Tests/BearProvocation/verify.py --build` 原样编译账本、执行同一 Lua 断言，并抽取生产受击/归属/选敌/范围观察方法跑环境替身回归；不刷新 Unity。用户 PlayMode 保持运行，本轮未执行 Unity Lua；夹具没有走真实伤害事件派发、自然出生、导航/伤害窗口或网络，摇摆画面仍需现场验收。
@@ -68,9 +70,9 @@
 
 - `rules.lua`：直接调用 `AnimalEggLayingSchedule`。覆盖首次无资格、两天最小冷却、随机延迟上下界、配置提高冷却、成功后从实际日期重计时、非有限参数拒绝。
 - 自然刷新规则通过 `SpawnerConfigCatalogLoader.LoadBuiltIn` 读取正式目录，检查小鸡独立机会为 0.5、野猪默认机会为 1 且原权重均保留；直接调用独立概率的 0/0.5/1 边界与 `CompleteSpawnAttempt`，检查普通/补员队列在落空和出生时的扣减、出生累计与预算不误扣。本轮只补静态回归，未运行；不覆盖真实选点、全局预算扣除或随机长期分布。
-- 同脚本直接调用 GO 主路径的 `AIStateMachine/AI_StateMachineRunner`、`AIAdvanceStateNode`、`AI_AttackController`、`AIBehaviorGraphBlackboard`、`Mod_ItemDetector.CalculateEffectiveDetectionRadius`。覆盖节点退出/切换/进入顺序、切换拦截、重复/缺失身份保护、Reset复用、失效目标停车、到达去重与重入、前摇/伤害窗口/后摇/冷却、受击事实和来源记忆、世界计时独立及体型感知范围。
+- 同脚本调用正式 `AnimalBehaviorTreeNode`、`AnimalAdvanceCapability/AnimalAdvanceAction`、`AI_AttackController`、`AnimalBehaviorTreeBlackboard` 和 `Mod_ItemDetector.CalculateEffectiveDetectionRadius`。覆盖动作退出/抢占/进入、中止后复用、推进到达和取消、失效目标停车及恢复、前摇/伤害窗口/后摇/冷却、受击事实和来源记忆、世界计时独立及体型感知范围。
 - 新增 `ai/animal_foraging_empty_targets` 直接调用鸡/野猪共用觅食器，断言无检测器和无草时食物目标为空、觅食刷新一次检测、进食缺目标停车且不移动/不消费；不覆盖目标选取、无效目标清理、距离未到与到点真实进食。
-- 夹具：独立日历、状态机、攻击控制器、行为图黑板和局部回调，不生成动物、不改当前世界居民。攻击探针检查正式窗口时钟，没有伤害目标或动画器。
+- 夹具：独立日历、行为树、攻击控制器、行为树黑板和局部回调，不生成动物、不改当前世界居民。攻击探针检查正式窗口时钟，没有伤害目标或动画器。
 - `gameplay-suite.json` / `gameplay.lua`：与导航共用一套现场链。正式隔离世界中的 `Zombie` 经 `AiRuntimeBackendService.TrySpawnDirect` 完成真实 AI/移动模块加载；正式导航管理器异步请求先检查严格代价上限拒绝，再经 `TrySetAdvanceCommand` 驱动生物实际 Tick、获得路径、沿已加载可走格移动三格、到达清命令和取消旧路径。
 - Lua 断言读取真实身份、模块加载、导航回调、路径结果、实际最大位移/速度、沿途可走性、目标距离和到达/取消后的状态，不能仅凭生成或命令受理算通过。宿主定时截图，随后检查自有生物已删除。
 - 夹具只创建一只自有生物，使用附近实际已加载的空地，不修改玩家速度或全局时钟。跨帧等待有真实时间上限；路径请求异常时取消，生物登记每个 Lua 的逆序收尾，断言失败和中断也清理。

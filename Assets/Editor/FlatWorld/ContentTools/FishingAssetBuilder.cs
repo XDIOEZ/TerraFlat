@@ -16,7 +16,7 @@ public static class FishingAssetBuilder
     public const string FishControllerPath = "Assets/8_Animations/Character/SmallFish.controller";
     public const string FishShellPath = "Assets/2_Prefabs/Gameplay/AI/SmallFish.prefab";
     public const string RodModulePath = "Assets/2_Prefabs/Gameplay/Modules/Tools/Mod_FishingRod.prefab";
-    public const string FishModulePath = "Assets/2_Prefabs/Gameplay/Modules/AI/Mod_AI_Fish.prefab";
+    public const string FishModulePath = "Assets/2_Prefabs/Gameplay/Modules/AI/Mod_AquaticMovement.prefab";
     public const string PanelPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FishingRod.prefab";
     public const string BoneHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png";
     public const string IronHookSpritePath = "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png";
@@ -39,7 +39,7 @@ public static class FishingAssetBuilder
         foreach (string id in ids)
             if (!itemDefinitions.Any(value => value.Id == id)) throw new InvalidOperationException("物品目录缺失 " + id);
         if (!actorDefinitions.Any(value => value.Id == "SmallFish")) throw new InvalidOperationException("小鱼未接入 Actor Manifest。");
-        Mod_AI_Fish ai = fish.GetComponentInChildren<Mod_AI_Fish>(true);
+        Mod_AquaticMovement ai = fish.GetComponentInChildren<Mod_AquaticMovement>(true);
         Animator fishAnimator = fish.GetComponentInChildren<Animator>(true);
         FishingRodPanelBindings binding = panel.GetComponent<FishingRodPanelBindings>();
         if (ai == null || ai.fishRenderer == null || fishAnimator == null ||
@@ -135,12 +135,12 @@ public static class FishingAssetBuilder
     {
         EnsureFolder(Path.GetDirectoryName(RodModulePath).Replace('\\', '/'));
         EnsureFolder(Path.GetDirectoryName(FishModulePath).Replace('\\', '/'));
-        var fish = new GameObject("Mod_AI_Fish");
+        var fish = new GameObject("Mod_AquaticMovement");
         var rod = new GameObject("Mod_FishingRod");
         try
         {
-            var fishModule = fish.AddComponent<Mod_AI_Fish>();
-            fishModule.Data.ID = Mod_AI_Fish.ModuleId;
+            var fishModule = fish.AddComponent<Mod_AquaticMovement>();
+            fishModule.Data.ID = Mod_AquaticMovement.ModuleId;
             fishModule.Data.Name = "ai";
             PrefabUtility.SaveAsPrefabAsset(fish, FishModulePath);
 
@@ -171,7 +171,7 @@ public static class FishingAssetBuilder
             PrefabUtility.SaveAsPrefabAsset(rod, RodModulePath);
         }
         finally { UnityEngine.Object.DestroyImmediate(fish); UnityEngine.Object.DestroyImmediate(rod); }
-        Register(FishModulePath, "Mod_AI_Fish", "Prefab");
+        Register(FishModulePath, "Mod_AquaticMovement", "Prefab");
         Register(RodModulePath, "Mod_FishingRod", "Prefab");
     }
 
@@ -215,7 +215,7 @@ public static class FishingAssetBuilder
             Material material = oldRenderer.sharedMaterial;
             foreach (Module module in root.GetComponentsInChildren<Module>(true))
             {
-                if (module == null || module is Mod_DamageReceiver || module is Mod_BuffManager || module is Mod_Food ||
+                if (module == null || module is Mod_AnimalBehaviorTree || module is Mod_DamageReceiver || module is Mod_BuffManager || module is Mod_Food ||
                     module._Data?.ID == "ChunkAssigner") continue;
                 if (module.transform == root.transform) UnityEngine.Object.DestroyImmediate(module);
                 else UnityEngine.Object.DestroyImmediate(module.gameObject);
@@ -230,11 +230,11 @@ public static class FishingAssetBuilder
             fishRenderer.sortingLayerName = "Default";
             var animator = visual.AddComponent<Animator>();
             animator.runtimeAnimatorController = controller;
-            var behaviour = new GameObject("Mod_AI_Fish");
+            var behaviour = new GameObject("Mod_AquaticMovement");
             behaviour.transform.SetParent(root.transform, false);
-            Mod_AI_Fish ai = behaviour.AddComponent<Mod_AI_Fish>();
-            ai.Data.ID = Mod_AI_Fish.ModuleId;
-            ai.Data.Name = "ai";
+            Mod_AquaticMovement ai = behaviour.AddComponent<Mod_AquaticMovement>();
+            ai.Data.ID = Mod_AquaticMovement.ModuleId;
+            ai.Data.Name = "aquaticMovement";
             ai.fishRenderer = fishRenderer;
             actor.Sprite = fishRenderer;
             actor.itemData.IDName = "SmallFish";

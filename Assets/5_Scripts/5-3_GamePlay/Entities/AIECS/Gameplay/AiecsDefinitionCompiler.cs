@@ -10,6 +10,17 @@ using UnityEngine;
 
 namespace FlatWorld.AIECS.Gameplay
 {
+    /// <summary>行为树与独立运动模块编译出的 ECS 参数快照。</summary>
+    public struct AiecsBehaviorParameterSnapshot
+    {
+        public float SenseRange, ChaseRange, ChaseRetryDelay, PerceptionPeriod, DecisionPeriod, FleeHealthRatio, MemorySeconds;
+        public float WanderRadius, IdleSeconds, MoveSpeed, AttackRange, Windup, Active, Recovery, Cooldown;
+        public float NutritionMaximum, NutritionDrain, FeedBelow, FeedGain, SleepDayStart, SleepDayEnd, SleepHealth;
+        public float FlightHeight, FlightDrain, FlightSpeed, FlightStamina, FlightRecovery;
+        public float ReproductionDays, DarknessThreshold, DarknessRetreatRadius;
+        public string EggItemId;
+    }
+
     /// <summary>当前 Actor/MOD 定义到纯值模板的冷路径编译器；不实例化旧 AI，不读取 P0 审计快照。</summary>
     public static class AiecsDefinitionCompiler
     {
@@ -31,6 +42,10 @@ namespace FlatWorld.AIECS.Gameplay
             AiecsCapability capabilities = ParseCapabilities(actorId, ecs);
             ItemData item = source.CreateItemData();
             JObject ai = Module<IAIActor>(source, item, out _);
+            JObject flight = Module<Mod_AnimalFlightMovement>(source, item, out _);
+            JObject aquatic = Module<Mod_AquaticMovement>(source, item, out _);
+            JObject colony = Module<Mod_ColonyResident>(source, item, out _);
+            JObject light = Module<Mod_LightSensitiveNavigation>(source, item, out _);
             JObject detector = Module<Mod_ItemDetector>(source, item, out _);
             JObject mover = Module<Mod_Mover_AI>(source, item, out _);
             JObject health = Module<Mod_DamageReceiver>(source, item, out var healthModule);
@@ -44,21 +59,17 @@ namespace FlatWorld.AIECS.Gameplay
                 ? health["Data"].ToObject<Mod_DamageReceiver.DamageReceiver_SaveData>()
                 : EcsLife(ecs["health"]);
             var body = Body(source, health, healthModule);
-            float start = Number(ai, "attackTriggerDistance", 1.2f);
-            float sense = senseOverride > 0f ? senseOverride : Number(ecs?["perception"], "radius",
-                Number(ai, "chaseTriggerDistance", Number(detector, "detectionRadius", 10f)));
+            AiecsBehaviorParameterSnapshot behavior = CompileBehaviorParameters(ai, ecs, detector, mover, flight, aquatic, colony, light, senseOverride);
             definition = new AiecsDefinition { Id = actorId, Faction = faction, LootTable = source.LootTableId ?? string.Empty,
                 Capabilities = capabilities,
-                SenseRange = sense, ChaseRange = math.max(sense, Number(ai, "chaseLossDistance", sense * 1.5f)),
-                ChaseRetryDelay = math.max(0.1f, Number(ai, "chasePathRetryDelay", 3f)),
-                PerceptionPeriod = math.max(0.1f, Number(ai, "detectorRefreshInterval", 0.6f)), DecisionPeriod = 0.15f,
-                FleeHealthRatio = Number(ai, "fleeTriggerHpRate", 0.22f), FleeSeconds = 3f, MemorySeconds = 4f,
-                WanderRadius = Number(ai, "wanderRadius", 4f), WanderSeconds = 2.5f,
-                IdleSeconds = (Number(ai, "idleMinDuration", 0.8f) + Number(ai, "idleMaxDuration", 2.2f)) * 0.5f,
-                MoveSpeed = Number(ecs?["movement"], "speed", Speed(mover?["Data"]?["Speed"])), AttackStartRange = start,
-                HitRange = start * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
-                Windup = Number(ai, "attackDamageStartDelay", 0.5f), Active = Number(ai, "attackDamageWindow", 0.2f),
-                Recovery = Number(ai, "attackRecoveryDuration", 0.35f), Cooldown = Number(ai, "attackCooldown", 2f),
+                SenseRange = behavior.SenseRange, ChaseRange = behavior.ChaseRange,
+                ChaseRetryDelay = behavior.ChaseRetryDelay, PerceptionPeriod = behavior.PerceptionPeriod,
+                DecisionPeriod = behavior.DecisionPeriod, FleeHealthRatio = behavior.FleeHealthRatio,
+                FleeSeconds = 3f, MemorySeconds = behavior.MemorySeconds, WanderRadius = behavior.WanderRadius,
+                WanderSeconds = 2.5f, IdleSeconds = behavior.IdleSeconds,
+                MoveSpeed = behavior.MoveSpeed, AttackStartRange = behavior.AttackRange,
+                HitRange = behavior.AttackRange * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
+                Windup = behavior.Windup, Active = behavior.Active, Recovery = behavior.Recovery, Cooldown = behavior.Cooldown,
                 // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
                 Damage = attack != null ? GameplayCombatBridge.Values(attack["DamageValues"]?.ToObject<CombatDamage>()) :
                     GameplayCombatBridge.Values(ecs?["combat"]?["damage"]?.ToObject<CombatDamage>()),
@@ -81,39 +92,30 @@ namespace FlatWorld.AIECS.Gameplay
                     MaxHp = part.MaxHp, Weight = part.AreaRatio * part.InjuryProbability });
             }
             float hp = life.Hp, maxHp = life.MaxHp;
-            float flightHeight = Number(ecs?["flight"], "height", 0.8f);
-            float flightDrain = Number(ecs?["flight"], "staminaDrainPerSecond", 1f);
-            bool permanentFlight = flightDrain <= 0f;
+            bool permanentFlight = behavior.FlightDrain <= 0f;
             return new AiecsActorTemplate { Definition = definitionIndex, Faction = factionIndex, Body = body,
                 Capabilities = capabilities,
                 Nutrition = new AiecsNutrition
                 {
-                    Maximum = Number(ecs?["nutrition"], "maximum", 100f),
-                    Current = Number(ecs?["nutrition"], "maximum", 100f),
-                    DrainPerSecond = Number(ecs?["nutrition"], "drainPerSecond", 0.02f),
-                    FeedBelow = Number(ecs?["nutrition"], "feedBelow", 35f),
-                    FeedGain = Number(ecs?["nutrition"], "feedGain", 25f),
+                    Maximum = behavior.NutritionMaximum, Current = behavior.NutritionMaximum,
+                    DrainPerSecond = behavior.NutritionDrain, FeedBelow = behavior.FeedBelow, FeedGain = behavior.FeedGain,
                     Resource = string.Equals((string)ecs?["nutrition"]?["resource"], "nectar",
                         StringComparison.OrdinalIgnoreCase) ? AiecsFoodResource.Nectar : AiecsFoodResource.Grass,
                     CanFeed = (byte)((capabilities & AiecsCapability.Feeding) != 0 ? 1 : 0)
                 },
                 Sleep = new AiecsSleep
                 {
-                    DayStartRatio = Number(ecs?["sleep"], "dayStartRatio", 0.25f),
-                    DayEndRatio = Number(ecs?["sleep"], "dayEndRatio", 0.75f),
-                    HealthBelow = Number(ecs?["sleep"], "healthBelow", 0.5f)
+                    DayStartRatio = behavior.SleepDayStart, DayEndRatio = behavior.SleepDayEnd, HealthBelow = behavior.SleepHealth
                 },
                 Flight = new AiecsFlight
                 {
-                    Height = permanentFlight ? flightHeight : 0f,
-                    TargetHeight = permanentFlight ? flightHeight : 0f,
-                    CruiseHeight = flightHeight,
-                    Speed = Number(ecs?["flight"], "speed", 3.2f),
+                    Height = permanentFlight ? behavior.FlightHeight : 0f,
+                    TargetHeight = permanentFlight ? behavior.FlightHeight : 0f,
+                    CruiseHeight = behavior.FlightHeight,
+                    Speed = behavior.FlightSpeed,
                     GroundSpeed = definition.MoveSpeed,
-                    Stamina = Number(ecs?["flight"], "staminaMaximum", 100f),
-                    StaminaMaximum = Number(ecs?["flight"], "staminaMaximum", 100f),
-                    DrainPerSecond = flightDrain,
-                    RecoveryPerSecond = Number(ecs?["flight"], "staminaRecoveryPerSecond", 10f),
+                    Stamina = behavior.FlightStamina, StaminaMaximum = behavior.FlightStamina,
+                    DrainPerSecond = behavior.FlightDrain, RecoveryPerSecond = behavior.FlightRecovery,
                     TakeoffRecoveryRatio = Number(ecs?["flight"], "takeoffRecoveryRatio", 0.5f),
                     TakeoffChancePerSecond = Number(ecs?["flight"], "takeoffChancePerSecond", 0.25f),
                     BaseWaterPushSpeed = WaterCurrentPushConfigService.ResolvePushSpeed(actorId, item.Stack.Weight),
@@ -122,16 +124,15 @@ namespace FlatWorld.AIECS.Gameplay
                 },
                 Reproduction = new AiecsReproduction
                 {
-                    CooldownDays = Number(ecs?["reproduction"], "cooldownDays", 2f),
-                    EggItemId = new FixedString64Bytes((string)ecs?["reproduction"]?["eggItemId"] ??
-                        (string)ai?["eggItemId"] ?? "Egg"),
+                    CooldownDays = behavior.ReproductionDays,
+                    EggItemId = new FixedString64Bytes(behavior.EggItemId),
                     EggLaying = (byte)((capabilities & AiecsCapability.EggLaying) != 0 ? 1 : 0)
                 },
                 Darkness = new AiecsDarkness
                 {
-                    DamageThreshold = Number(ecs?["darkness"], "damageThreshold", 0.5f),
+                    DamageThreshold = behavior.DarknessThreshold,
                     DamageFractionPerSecond = Number(ecs?["darkness"], "damageFractionPerSecond", 0.05f),
-                    RetreatRadius = Number(ecs?["darkness"], "retreatRadius", 5f)
+                    RetreatRadius = behavior.DarknessRetreatRadius
                 },
                 Tactics = new AiecsTactics
                 {
@@ -154,6 +155,60 @@ namespace FlatWorld.AIECS.Gameplay
                     ReceivedMultiplier = 1f, LastDamageTime = double.NegativeInfinity },
                 Anatomy = anatomy, Defense = new AiecsDefense { Values = GameplayCombatBridge.Values(life.DefenseValues) },
                 HasBlood = (byte)(item.Tags != null && item.Tags.Contains("Blood") ? 1 : 0) };
+        }
+
+        /// <summary>从最终合并配置提取通用行为参数，供运行编译与规则测试共用。</summary>
+        public static AiecsBehaviorParameterSnapshot CompileBehaviorParameters(JObject ai, JObject ecs,
+            JObject detector, JObject mover, JObject flight, JObject aquatic, JObject colony, JObject light,
+            float senseOverride = 0f)
+        {
+            JToken tree = ai?["behaviorTree"], behavior = tree?["capabilities"];
+            JToken combat = behavior?["combat"], pack = behavior?["pack"], hunting = behavior?["hunting"];
+            JToken territory = behavior?["territory"], threat = behavior?["threat"], wander = behavior?["wander"];
+            JToken chase = behavior?["chase"], forage = behavior?["forage"], sleep = behavior?["sleep"];
+            JToken production = behavior?["production"];
+            float defaultSense = Number(territory, "chaseDistance", Number(hunting, "hungryRange",
+                Number(pack, "chaseDistance", Number(threat, "radius", Number(aquatic, "fleeTriggerDistance",
+                    Number(light, "perceptionRadius", Number(detector, "detectionRadius", 10f)))))));
+            float sense = senseOverride > 0f ? senseOverride : Number(ecs?["perception"], "radius", defaultSense);
+            float chaseRange = Number(territory, "chaseDistance", Number(hunting, "lossRange",
+                Number(pack, "lossDistance", sense * 1.5f)));
+            float idle = (Number(wander, "idleMin", .8f) + Number(wander, "idleMax", 2.2f)) * .5f;
+            if (wander == null && flight != null) idle = Number(flight, "groundDuration", idle);
+            float maximum = Number(ecs?["nutrition"], "maximum", Number(colony, "SatietyMaximum", 100f));
+            bool permanentFlight = (bool?)flight?["permanentFlight"] == true;
+            return new AiecsBehaviorParameterSnapshot
+            {
+                SenseRange = sense, ChaseRange = math.max(sense, chaseRange),
+                ChaseRetryDelay = math.max(.1f, Number(chase, "retryDelay", 3f)),
+                PerceptionPeriod = math.max(.1f, Number(ai, "detectorRefreshInterval", .6f)),
+                DecisionPeriod = Number(pack, "decisionInterval", .15f),
+                FleeHealthRatio = FindTreeConditionNumber(tree, "land.healthBelow", "enter", .22f),
+                MemorySeconds = Number(behavior?["memory"], "searchDuration", 4f),
+                WanderRadius = Number(wander, "radius", Number(aquatic, "wanderRadius",
+                    Number(flight, "groundWanderRadius", Number(light, "wanderRadius", 4f)))),
+                IdleSeconds = idle, MoveSpeed = Number(ecs?["movement"], "speed",
+                    Number(aquatic, "swimSpeed", Speed(mover?["Data"]?["Speed"]))),
+                AttackRange = Number(combat, "range", Number(colony, "StingDistance", 1.2f)),
+                Windup = Number(combat, "windup", .5f), Active = Number(combat, "damageWindow", .2f),
+                Recovery = Number(combat, "recovery", .35f), Cooldown = Number(combat, "cooldown", Number(colony, "StingInterval", 2f)),
+                NutritionMaximum = maximum,
+                NutritionDrain = Number(ecs?["nutrition"], "drainPerSecond", Number(colony, "SatietyDrainPerSecond", .02f)),
+                FeedBelow = Number(ecs?["nutrition"], "feedBelow", Number(colony, "ForageBelow", Number(forage, "enterHunger", .35f) * maximum)),
+                FeedGain = Number(ecs?["nutrition"], "feedGain", Number(colony, "HoneyMealGain", 25f)),
+                SleepDayStart = Number(ecs?["sleep"], "dayStartRatio", Number(sleep, "dayStart", .25f)),
+                SleepDayEnd = Number(ecs?["sleep"], "dayEndRatio", Number(sleep, "dayEnd", .75f)),
+                SleepHealth = Number(ecs?["sleep"], "healthBelow", Number(sleep, "enterHp", .5f)),
+                FlightHeight = Number(ecs?["flight"], "height", Number(flight, "flightHeight", .8f)),
+                FlightDrain = Number(ecs?["flight"], "staminaDrainPerSecond", permanentFlight ? 0f : Number(flight, "flightStaminaDrainRate", 1f)),
+                FlightSpeed = Number(ecs?["flight"], "speed", Number(flight, "flightSpeed", 3.2f)),
+                FlightStamina = Number(ecs?["flight"], "staminaMaximum", Number(flight, "flightStaminaMax", 100f)),
+                FlightRecovery = Number(ecs?["flight"], "staminaRecoveryPerSecond", Number(flight, "flightStaminaRecoveryRate", 10f)),
+                ReproductionDays = Number(ecs?["reproduction"], "cooldownDays", Number(production, "intervalDays", Number(flight, "layEggMinimumIntervalDays", 2f))),
+                EggItemId = (string)ecs?["reproduction"]?["eggItemId"] ?? (string)production?["itemId"] ?? (string)flight?["eggItemId"] ?? "Egg",
+                DarknessThreshold = Number(ecs?["darkness"], "damageThreshold", Number(light, "lightDamageThreshold", .5f)),
+                DarknessRetreatRadius = Number(ecs?["darkness"], "retreatRadius", Number(light, "retreatSearchRadius", 5f)),
+            };
         }
 
         /// <summary>验证 Actor 是否满足当前正式 AIECS 基础切片，不创建旧 AI 实例。</summary>
@@ -245,10 +300,25 @@ namespace FlatWorld.AIECS.Gameplay
                 prototype = match;
                 JObject parameters = JObject.Parse(JsonUtility.ToJson(match));
                 if (source.TryGetModuleParameters(pair.Key, out string json) && !string.IsNullOrEmpty(json))
-                    parameters.Merge(JObject.Parse(json), new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
+                    MergeConfiguredModuleParameters(parameters, JObject.Parse(json));
                 return parameters;
             }
             prototype = null; return null;
+        }
+
+        /// <summary>合并模块参数时保留攻击数值的显式赋值顺序。</summary>
+        public static JObject MergeConfiguredModuleParameters(JObject parameters, JObject overrides)
+        {
+            parameters.Merge(overrides, new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
+            if (parameters["DamageValues"] is not JObject damage || overrides["DamageValues"] is not JObject authored) return parameters;
+            // 物理总量和四槽会互相覆写，必须先保留原型，再按配置顺序应用作者字段。
+            foreach (JProperty property in authored.Properties())
+            {
+                JToken value = damage[property.Name]?.DeepClone();
+                damage.Remove(property.Name);
+                damage.Add(property.Name, value);
+            }
+            return parameters;
         }
 
         /// <summary>新物种可直接从 ECS 配置获得生命值，不要求挂旧 Mod_DamageReceiver 模块。</summary>
@@ -297,6 +367,56 @@ namespace FlatWorld.AIECS.Gameplay
 
         /// <summary>读取当前参数中的数值，缺失时使用对应通用能力默认值。</summary>
         private static float Number(JToken value, string name, float fallback) => (float?)value?[name] ?? fallback;
+
+        /// <summary>从行为树守卫读取低血等决策阈值，不依赖物种名称。</summary>
+        private static float FindTreeConditionNumber(JToken tree, string condition, string parameter, float fallback)
+        {
+            AnimalBehaviorTreeDefinition definition = tree?.ToObject<AnimalBehaviorTreeDefinition>();
+            return TryFindTreeConditionNumber(definition?.Root, definition?.Subtrees, new JObject(),
+                new HashSet<string>(StringComparer.Ordinal), condition, parameter, out float value) ? value : fallback;
+        }
+
+        private static bool TryFindTreeConditionNumber(AnimalBehaviorTreeNodeDefinition node,
+            Dictionary<string, AnimalBehaviorSubtreeDefinition> localSubtrees, JObject arguments, HashSet<string> ancestors,
+            string condition, string parameter, out float value)
+        {
+            value = default;
+            if (node == null) return false;
+            if (node.Type == "condition" && node.Name == condition)
+            {
+                JToken number = ResolveTreeArgument(node.Parameters?[parameter], arguments);
+                if (number?.Type == JTokenType.Float || number?.Type == JTokenType.Integer)
+                { value = number.Value<float>(); return true; }
+            }
+            if (node.Type == "subtree" && !string.IsNullOrEmpty(node.Name) && ancestors.Add(node.Name))
+            {
+                AnimalBehaviorSubtreeDefinition subtree = null;
+                if (localSubtrees != null) localSubtrees.TryGetValue(node.Name, out subtree);
+                subtree ??= AnimalBehaviorTreeNodeCatalog.GetSharedSubtree(node.Name);
+                if (subtree != null)
+                {
+                    JObject supplied = (JObject)(subtree.Parameters?.DeepClone() ?? new JObject());
+                    if (node.Parameters != null)
+                        foreach (JProperty property in node.Parameters.Properties())
+                            supplied[property.Name] = ResolveTreeArgument(property.Value, arguments)?.DeepClone();
+                    bool found = TryFindTreeConditionNumber(subtree.Root, localSubtrees, supplied, ancestors,
+                        condition, parameter, out value);
+                    ancestors.Remove(node.Name);
+                    if (found) return true;
+                }
+                else ancestors.Remove(node.Name);
+            }
+            if (node.Children != null)
+                foreach (AnimalBehaviorTreeNodeDefinition child in node.Children)
+                    if (TryFindTreeConditionNumber(child, localSubtrees, arguments, ancestors, condition, parameter, out value)) return true;
+            return false;
+        }
+
+        private static JToken ResolveTreeArgument(JToken value, JObject arguments)
+        {
+            string text = value?.Type == JTokenType.String ? value.Value<string>() : null;
+            return text != null && text.StartsWith("$", StringComparison.Ordinal) ? arguments[text.Substring(1)] : value;
+        }
 
         /// <summary>读取二维作者数据，保留未配置值。</summary>
         private static float2 Pair(JToken value, Vector2 fallback) => new float2((float?)value?["x"] ?? fallback.x, (float?)value?["y"] ?? fallback.y);

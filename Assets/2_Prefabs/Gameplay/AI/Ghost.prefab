@@ -40,6 +40,7 @@ Transform:
   - {fileID: 3001}
   - {fileID: 4001}
   - {fileID: 5001}
+  - {fileID: 8100000000000000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!61 &1002
@@ -362,7 +363,7 @@ GameObject:
   - component: {fileID: 3001}
   - component: {fileID: 3002}
   m_Layer: 0
-  m_Name: Mod_AI_Ghost
+  m_Name: Mod_LightSensitiveNavigation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -397,11 +398,11 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   item: {fileID: 0}
   ModData:
-    Name:
-    ID: Mod_AI_Ghost
-    isRunning: 1
+    StableName: lightNavigation
+    ModuleId: Mod_LightSensitiveNavigation
+    enabled: 1
     Type: 0
-    BitData:
+    bitData:
   Data:
     WanderTarget: {x: 0, y: 0}
     HasWanderTarget: 0
@@ -418,7 +419,6 @@ MonoBehaviour:
   spriteRenderer: {fileID: 2002}
   bobHeight: 0.12
   bobFrequency: 1.4
-  _state: 0
 --- !u!1001 &4000
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -555,3 +555,56 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
   m_PrefabInstance: {fileID: 5000}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8100000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8100000000000000002}
+  - component: {fileID: 8100000000000000003}
+  m_Layer: 0
+  m_Name: Module_AnimalBehaviorTree
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8100000000000000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8100000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1001}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8100000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8100000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
+    Type: 0
+    bitData:
+  OnStateChanged:
+    _PersistentCalls: []

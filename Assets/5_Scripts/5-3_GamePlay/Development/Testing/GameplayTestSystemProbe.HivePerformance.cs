@@ -44,7 +44,7 @@ public static partial class GameplayTestSystemProbe
         bool failedAttemptAdmitted = Mod_HiveColony.TryReserveResidentSpawnFrame(ref retryFrame, 20, false);
         bool sameFrameRetry = Mod_HiveColony.TryReserveResidentSpawnFrame(ref retryFrame, 20, false);
         bool nextFrameRetry = Mod_HiveColony.TryReserveResidentSpawnFrame(ref retryFrame, 21, false);
-        Mod_HiveColony.CompleteResidentSpawn(resumed.Residents[0], new Mod_BeeBehavior.BeeState { Satiety = 321f });
+        Mod_HiveColony.CompleteResidentSpawn(resumed.Residents[0], new ColonyResidentState { Satiety = 321f });
         var completed = JsonConvert.DeserializeObject<Mod_HiveColony.ColonyState>(JsonConvert.SerializeObject(resumed));
         bool completedPending = completed.Residents[0].NeedsInitialState;
         bool completedSleeping = completed.Residents[0].SleepingInHive;
@@ -83,15 +83,15 @@ public static partial class GameplayTestSystemProbe
         try
         {
             UnityEngine.Random.InitState(1031);
-            var bee = root.AddComponent<Mod_BeeBehavior>();
+            var bee = root.AddComponent<Mod_ColonyResident>();
             var target = root.AddComponent<GameItem>();
             var colony = root.AddComponent<Mod_HiveColony>();
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            Type type = typeof(Mod_BeeBehavior);
+            Type type = typeof(Mod_ColonyResident);
             T Read<T>(string name) => (T)type.GetField(name, flags).GetValue(bee);
             void Write(string name, object value) => type.GetField(name, flags).SetValue(bee, value);
             object Call(string name, params object[] values) => type.GetMethod(name, flags).Invoke(bee, values);
-            var state = new Mod_BeeBehavior.BeeState { Anger = bee.AngerMaximum, Angry = true };
+            var state = new ColonyResidentState { Anger = bee.AngerMaximum, Angry = true };
             var lastSeen = new Vector2(12f, 10f);
             Write("state", state);
             Write("colony", colony);

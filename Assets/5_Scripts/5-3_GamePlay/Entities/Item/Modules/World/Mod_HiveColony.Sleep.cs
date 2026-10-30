@@ -14,7 +14,7 @@ public sealed partial class Mod_HiveColony
             WakeSleepingResidents(null);
             foreach (Item resident in residents.Values)
             {
-                Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+                IColonyResident bee = FindColonyResident(resident);
                 bee?.SetNightSleepRequested(false);
             }
             return;
@@ -30,7 +30,7 @@ public sealed partial class Mod_HiveColony
             if (member.SleepingInHive || !residents.TryGetValue(member.Guid, out Item resident) || resident == null)
                 continue;
 
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             if (bee == null)
                 continue;
             bee.SetNightSleepRequested(true);
@@ -82,7 +82,7 @@ public sealed partial class Mod_HiveColony
             if (!TrySpawnResident(index, member, immediate)) break;
             if (!residents.TryGetValue(member.Guid, out Item resident) || resident == null)
                 continue;
-            Mod_BeeBehavior bee = resident.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             if (bee == null)
                 continue;
             bee.SetNightSleepRequested(nightTime);

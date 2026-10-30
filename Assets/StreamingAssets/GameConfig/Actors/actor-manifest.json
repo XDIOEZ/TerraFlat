@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "behaviorSubtrees": "behavior-subtrees.json",
   "packages": [
     {
       "id": "bear-actors",

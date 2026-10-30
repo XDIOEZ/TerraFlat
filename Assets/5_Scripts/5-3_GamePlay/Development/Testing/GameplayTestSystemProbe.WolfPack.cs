@@ -42,22 +42,22 @@ public static partial class GameplayTestSystemProbe
         bool wrappedDeltas = true, infiniteDeltas = true;
         for (int i = 0; i < origins.Length; i++)
         {
-            wrappedDeltas &= AI_Wolf.GetChaseDelta(origins[i], destinations[i], wrapped) == wrappedExpected[i];
-            infiniteDeltas &= AI_Wolf.GetChaseDelta(origins[i], destinations[i], infinite) ==
+            wrappedDeltas &= AnimalPackCapability.GetChaseDelta(origins[i], destinations[i], wrapped) == wrappedExpected[i];
+            infiniteDeltas &= AnimalPackCapability.GetChaseDelta(origins[i], destinations[i], infinite) ==
                 destinations[i] - origins[i];
         }
 
         Vector3 position = new(17.25f, -17.75f, 3.5f);
-        bool normalized = AI_Wolf.NormalizeChasePosition(position, wrapped) ==
+        bool normalized = AnimalPackCapability.NormalizeChasePosition(position, wrapped) ==
             new Vector3(-14.75f, 14.25f, 3.5f);
-        bool infiniteUnchanged = AI_Wolf.NormalizeChasePosition(position, infinite) == position;
-        bool laneSeamRight = AI_Wolf.ResolveRightChaseLane(origins[0], destinations[0], 0, wrapped);
-        bool laneSeamLeft = !AI_Wolf.ResolveRightChaseLane(origins[1], destinations[1], 1, wrapped);
-        bool unwrappedLaneLeft = !AI_Wolf.ResolveRightChaseLane(origins[0], destinations[0], 1, infinite);
-        bool laneTieParity = !AI_Wolf.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 0, wrapped) &&
-                             AI_Wolf.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 1, wrapped);
-        bool laneNearTie = AI_Wolf.ResolveRightChaseLane(Vector2.zero, new Vector2(.04f, 0f), 1, wrapped) &&
-                           !AI_Wolf.ResolveRightChaseLane(Vector2.zero, new Vector2(-.04f, 0f), 0, wrapped);
+        bool infiniteUnchanged = AnimalPackCapability.NormalizeChasePosition(position, infinite) == position;
+        bool laneSeamRight = AnimalPackCapability.ResolveRightChaseLane(origins[0], destinations[0], 0, wrapped);
+        bool laneSeamLeft = !AnimalPackCapability.ResolveRightChaseLane(origins[1], destinations[1], 1, wrapped);
+        bool unwrappedLaneLeft = !AnimalPackCapability.ResolveRightChaseLane(origins[0], destinations[0], 1, infinite);
+        bool laneTieParity = !AnimalPackCapability.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 0, wrapped) &&
+                             AnimalPackCapability.ResolveRightChaseLane(Vector2.zero, Vector2.zero, 1, wrapped);
+        bool laneNearTie = AnimalPackCapability.ResolveRightChaseLane(Vector2.zero, new Vector2(.04f, 0f), 1, wrapped) &&
+                           !AnimalPackCapability.ResolveRightChaseLane(Vector2.zero, new Vector2(-.04f, 0f), 0, wrapped);
 
         return new JObject
         {
@@ -73,7 +73,7 @@ public static partial class GameplayTestSystemProbe
 
     #region 狼群身份与正式决策采样
 
-    // 独立未激活实体按正式定义注册模块，子类仅开放原有评估钩子，不复制狼群规则。
+    // 独立实体按正式定义注册共享树和能力模块，再采样真实群体决策。
     private static JObject EntityAiWolfPack(JObject args)
     {
         List<ItemDefinitionDto> definitions = null;
@@ -84,8 +84,11 @@ public static partial class GameplayTestSystemProbe
         ItemModuleDefinitionDto configuredAi = definition.Modules["ai"];
 #if UNITY_EDITOR
         GameObject shell = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(definition.SourcePrefab);
+        GameObject treePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/2_Prefabs/Gameplay/Modules/AI/Module_AnimalBehaviorTree.prefab");
 #else
         GameObject shell = GameRes.ExistingInstance?.GetPrefab(definition.ShellPrefab, false);
+        GameObject treePrefab = GameRes.ExistingInstance?.GetPrefab(configuredAi.Prefab, false);
 #endif
         var root = new GameObject("[LuaWolfPack]") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
@@ -109,40 +112,33 @@ public static partial class GameplayTestSystemProbe
                 item.BindData(data);
                 GameplayWorldRegistry.AssignItemToWorld(item, "probe:wolf-pack");
                 item.itemMods.BindOwner(item);
-                var ai = host.AddComponent<GameplayTestWolfPackProbeAI>();
-                var detector = host.AddComponent<Mod_ItemDetector>();
-                var health = host.AddComponent<Mod_DamageReceiver>();
+                var ai = host.AddComponent<Mod_AnimalBehaviorTree>();
                 Register("ai", ai);
-                Register("detector", detector);
-                Register("health", health);
+                var detector = (Mod_ItemDetector)Register("detector");
+                var health = (Mod_DamageReceiver)Register("health");
+                Register("mover");
+                Register("animator");
+                Register("damage");
                 detector.wallsBlockPerception = false;
                 health.Data.Hp = health.Data.MaxHp * (float)Number(args, "hpRate", 1d);
-                ai.PrepareProbe(detector, health);
-                if (probeCombat)
-                {
-                    var mover = host.AddComponent<Mod_Mover_AI>();
-                    Register("mover", mover);
-                    ai.PrepareCombatProbe(mover);
-                }
                 host.transform.position = new Vector3(index, 0f);
                 if (index == count - 1)
                 {
                     if (exclusion == "dead") health.Data.Hp = 0f;
-                    if (exclusion == "disabled") ai._Data.Enabled = false;
-                    if (exclusion == "unready") ai.SetProbeReady(false);
                     if (exclusion == "foreign") data.FactionId = "test:hostile_wolves";
                 }
-                wolves.Add(ai);
+                wolves.Add(new GameplayTestWolfPackProbeAI(ai, detector, health));
                 detectors.Add(detector);
                 candidates.Add(item);
 
-                void Register(string slot, Module instance)
+                Module Register(string slot, Module instance = null)
                 {
                     ItemModuleDefinitionDto configured = definition.Modules[slot];
-                    Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, configured.Id) ??
-                        ItemDefinitionCatalogLoader.FindModulePrototype(shell, null, configured.Prefab);
+                    Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(shell, slot == "ai" ? treePrefab : null, configured.Id) ??
+                        ItemDefinitionCatalogLoader.FindModulePrototype(shell, slot == "ai" ? treePrefab : null, configured.Prefab);
                     ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype?._Data) as ModuleData;
                     if (moduleData == null) throw new InvalidOperationException("狼群采样缺少正式模块原型：" + slot);
+                    instance ??= UnityEngine.Object.Instantiate(prototype, host.transform, false);
                     if (configured.Enabled.HasValue) moduleData.Enabled = configured.Enabled.Value;
                     instance._Data = moduleData;
                     instance.BindRuntimeIdentity(slot, configured.Id, configured.Prefab);
@@ -150,6 +146,7 @@ public static partial class GameplayTestSystemProbe
                     item.itemData.ModuleDataDic[slot] = moduleData;
                     instance.ModuleInit(item, moduleData);
                     item.itemMods.AddMod(instance);
+                    return instance;
                 }
             }
 
@@ -162,8 +159,12 @@ public static partial class GameplayTestSystemProbe
             playerData.Tags = new List<string> { "Player" };
             player.BindData(playerData);
             GameplayWorldRegistry.AssignItemToWorld(player, "probe:wolf-pack");
+            player.itemMods.BindOwner(player);
             playerHost.transform.position = new Vector3((float)Number(args, "playerX", 15d), 0f);
-            if (probeCombat) root.SetActive(true);
+            root.SetActive(true);
+            foreach (GameplayTestWolfPackProbeAI wolf in wolves) wolf.Load();
+            if (exclusion == "disabled") wolves[count - 1].Host._Data.Enabled = false;
+            if (exclusion == "unready") wolves[count - 1].Host.Unload();
             for (int index = 0; index < count; index++)
             {
                 var visible = new List<Item>(candidates) { candidates[0] };
@@ -186,16 +187,16 @@ public static partial class GameplayTestSystemProbe
                 ai.RefreshProbe();
                 packCounts.Add(ai.PackMemberCount);
                 validatedAllyCounts.Add(ai.ValidatedPackAllyCount);
-                leaders.Add(ai.PackLeader?.item?.itemData?.Guid ?? 0);
+                leaders.Add(ai.PackLeader?.itemData?.Guid ?? 0);
                 states.Add(ai.EvaluateProbe().ToString());
                 threats.Add(ai.CurrentThreat?.itemData?.Guid ?? 0);
             }
-            AI_Wolf first = wolves[0];
-            bool identityBound = ReferenceEquals(first.item.itemMods.GetMod_ByID<AI_Wolf>(ModText.AI), first);
+            Mod_AnimalBehaviorTree first = wolves[0].Host;
+            bool identityBound = ReferenceEquals(first.item.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(ModText.AI), first);
             first.item.itemMods.RemoveMod(first);
             first.BindRuntimeIdentity("ai", "test:wrong_wolf_ai", configuredAi.Prefab);
             first.item.itemMods.AddMod(first);
-            bool wrongIdRejected = first.item.itemMods.GetMod_ByID<AI_Wolf>(ModText.AI) == null;
+            bool wrongIdRejected = first.item.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(ModText.AI) == null;
             return new JObject
             {
                 ["declaredId"] = configuredAi.Id, ["prefabId"] = configuredAi.Prefab,
@@ -208,6 +209,7 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
+            foreach (Mod_AnimalBehaviorTree ai in root.GetComponentsInChildren<Mod_AnimalBehaviorTree>(true)) ai.Unload();
             foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
             UnityEngine.Object.DestroyImmediate(root);
         }
@@ -387,60 +389,91 @@ public static partial class GameplayTestSystemProbe
     #endregion
 }
 
-// 仅为规则采样开放受保护的绑定和决策入口，不加载或推进真实世界。
-internal sealed class GameplayTestWolfPackProbeAI : AI_Wolf
+// 包装真实树宿主和群体能力，只提供采样输入，不复制生物决策。
+internal sealed class GameplayTestWolfPackProbeAI
 {
-    #region 正式狼群规则入口
+    #region 正式树与群体能力入口
+    public readonly Mod_AnimalBehaviorTree Host;
+    private readonly Mod_ItemDetector detector;
+    private readonly Mod_DamageReceiver health;
+    private AnimalPackCapability pack;
+    private AnimalCombatCapability combat;
+    public Item item => Host.item;
+    public Transform transform => Host.transform;
+    public int PackMemberCount => pack?.MemberCount ?? 0;
+    public int ValidatedPackAllyCount => pack?.ValidatedAllyCount ?? 0;
+    public Item PackLeader => pack?.Leader;
+    public Item CurrentThreat => pack?.CurrentTarget;
+    public bool HasThreatMemory => pack?.Memory.HasMemory == true;
+    public bool ThreatVisible => pack?.Memory.Visible == true;
+    public bool WaitingAtLastThreatPosition => pack?.Memory.WaitingAtLastPosition == true;
+    public Vector3 LastKnownThreatPosition => pack?.Memory.LastKnownPosition ?? default;
+    public Vector3? ChaseFormationTarget => pack?.FormationTarget;
+    public bool IsAttackLocked => combat?.IsAttackLocked == true;
+    public float AttackCooldownRemaining => combat?.CooldownRemaining ?? 0f;
+    public float attackDamageStartDelay => Number("combat", "windup", .25f);
+    public float attackDamageWindow => Number("combat", "damageWindow", .33333334f);
+    public float attackRecoveryDuration => Number("combat", "recovery", .35f);
+    public float lostTargetSearchDuration => Number("memory", "searchDuration", 3f);
+    public float lostTargetTravelTimeout => Number("memory", "travelTimeout", 15f);
+    public bool enableWander { set => Host.Context.GetCapabilityConfiguration("wander")["enabled"] = value; }
 
-    public void PrepareProbe(Mod_ItemDetector detector, Mod_DamageReceiver health)
+    public GameplayTestWolfPackProbeAI(Mod_AnimalBehaviorTree host, Mod_ItemDetector detector, Mod_DamageReceiver health)
+    { Host = host; this.detector = detector; this.health = health; }
+
+    public void Load()
     {
-        _detector = detector;
-        _hp = health;
-        _isReady = true;
-        _currentState = WolfState.Avoid;
-        OnResetRuntimeState();
-        OnBindExtraModules();
+        Host.Load();
+        if (!Host.Context.TryGetCapability("pack", out pack) || !Host.Context.TryGetCapability("combat", out combat))
+            throw new InvalidOperationException("正式狼行为树没有绑定群体和攻击能力。");
     }
 
-    public void SetProbeReady(bool ready) => _isReady = ready;
-    public void PrepareCombatProbe(Mod_Mover_AI mover)
+    public void RefreshProbe()
     {
-        _mover = mover;
-        _currentState = WolfState.Chase;
-        _stateMachine = new AIStateMachine<WolfState>();
-        ConfigureStateNodes(_stateMachine);
-        _stateMachine.Initialize(_currentState);
+        if (Host.IsRuntimeLoaded && Host.Enabled && Host.IsAlive) pack.RefreshGroupAndThreat();
     }
 
-    public WolfState TickCombatProbe(float deltaTime)
+    public string EvaluateProbe() => DecideProbe();
+    public string DecideProbe()
     {
-        UpdateExtraTimers(deltaTime);
-        OnPreEvaluate();
-        WolfState next = EvaluateNextState();
-        if (next != _currentState) SwitchState(next);
-        _stateMachine.Tick(deltaTime);
-        return _currentState;
+        if (!Host.IsRuntimeLoaded || !Host.Enabled || !Host.IsAlive) return "Idle";
+        RefreshProbe();
+        Host.ModUpdate(0f);
+        return State();
     }
 
-    public void RefreshProbe() => OnPreEvaluate();
-    public WolfState EvaluateProbe() => EvaluateNextState();
-    public WolfState DecideProbe()
+    public string TickCombatProbe(float deltaTime)
     {
-        OnPreEvaluate();
-        WolfState next = EvaluateNextState();
-        if (next != _currentState)
+        RefreshProbe();
+        Host.ModUpdate(deltaTime);
+        return State();
+    }
+
+    public void TickTimersProbe(float deltaTime)
+    {
+        Host.Context.Tick(deltaTime);
+        if (pack.Memory.IsSearching) pack.Memory.TickSearch(deltaTime);
+    }
+
+    public void TriggerPackAttack(Item target) => pack.TriggerGroupAttack(target);
+    public void ReceivePackCall(Item target, GameplayTestWolfPackProbeAI caller) => pack.ReceiveGroupCall(target, caller?.pack);
+    public void CancelAdvance() => Host.CancelAdvance();
+    public T GetComponent<T>() where T : Component => Host.GetComponentInChildren<T>(true);
+    public void ResetProbe() { Host.Unload(); Load(); }
+    public void ResetIdleProbe() => ResetProbe();
+
+    private float Number(string key, string name, float fallback)
+        => Host.Context.GetCapabilityConfiguration(key).Value<float?>(name) ?? fallback;
+
+    private string State()
+    {
+        string value = Host.CurrentAction;
+        return value switch
         {
-            OnBeforeSwitchState(_currentState, next);
-            _currentState = next;
-        }
-        return next;
-    }
-    public void TickTimersProbe(float deltaTime) => UpdateExtraTimers(deltaTime);
-    public void ResetProbe() => OnResetRuntimeState();
-    public void ResetIdleProbe()
-    {
-        _currentState = WolfState.Idle;
-        OnResetRuntimeState();
+            "idle" => "Idle", "wander" => "Move", "alert" => "Alert", "chase" => "Chase",
+            "attack" => "Attack", "avoid" => "Avoid", "flee" => "Flee", "advance" => "Advance",
+            "search" => "Search", _ => value ?? "Idle"
+        };
     }
 
     #endregion

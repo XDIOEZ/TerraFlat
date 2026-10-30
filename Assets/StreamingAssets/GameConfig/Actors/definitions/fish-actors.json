@@ -362,8 +362,25 @@
           }
         },
         "ai": {
-          "prefab": "Mod_AI_Fish",
-          "id": "Mod_AI_Fish",
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5.0,
+            "detectorRefreshInterval": 0.8,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {},
+              "root": {
+                "type": "subtree",
+                "name": "swimAndForage"
+              }
+            }
+          }
+        },
+        "aquaticMovement": {
+          "prefab": "Mod_AquaticMovement",
+          "id": "Mod_AquaticMovement",
           "enabled": true,
           "data": {
             "BitData": null,

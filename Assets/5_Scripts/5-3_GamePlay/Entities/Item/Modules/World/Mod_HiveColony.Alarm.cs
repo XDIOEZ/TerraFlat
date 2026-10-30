@@ -45,7 +45,7 @@ public sealed partial class Mod_HiveColony
     {
         foreach (Item resident in residents.Values)
         {
-            Mod_BeeBehavior bee = resident?.itemMods?.GetMod_ByID<Mod_BeeBehavior>(Mod_BeeBehavior.ModuleId);
+            IColonyResident bee = FindColonyResident(resident);
             if (bee == null)
                 continue;
             float residentStay = IsInsideTerritory(resident.transform.position) ? staySeconds : 0f;

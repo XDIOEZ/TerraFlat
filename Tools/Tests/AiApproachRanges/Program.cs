@@ -3,7 +3,7 @@ using System.Text.Json;
 using UnityEngine;
 
 using JsonDocument document = JsonDocument.Parse(File.ReadAllText(args[0]));
-JsonElement config = document.RootElement.GetProperty("actors")[0].GetProperty("modules").GetProperty("ai").GetProperty("parameters");
+JsonElement config = document.RootElement.GetProperty("actors")[0].GetProperty("modules").GetProperty("aquaticMovement").GetProperty("parameters");
 int checks = 0;
 void Check(bool condition, string label)
 {
@@ -52,6 +52,11 @@ foreach (float preferred in new[] { .3f, 9f })
 var moving = NewFish(.8f);
 moving.Tick(.1f);
 Check(moving.item.transform.position.x > 0f && Near(moving.eatElapsed, .1f), "进入进食外圈后仍立即停车/清零");
+
+var movementUnavailable = NewFish(.8f);
+movementUnavailable.canUseIndependentMotion = false;
+movementUnavailable.Tick(.1f);
+Check(movementUnavailable.item.transform.position.x == 0f, "未获得独立物理运动资格仍提交位移");
 
 var slowFrame = NewFish(.8f);
 slowFrame.Tick(.4f);

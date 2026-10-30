@@ -77,6 +77,7 @@ Transform:
   - {fileID: 7230635901269256475}
   - {fileID: 7553113507387281759}
   - {fileID: 5925862315762508756}
+  - {fileID: 8100000000000000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2233708521495915403
@@ -229,7 +230,7 @@ GameObject:
   - component: {fileID: 5925862315762508756}
   - component: {fileID: 1448019589593312339}
   m_Layer: 0
-  m_Name: Mod_AI_Bird
+  m_Name: Mod_AnimalFlightMovement
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -264,8 +265,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   Data:
-    StableName: ai
-    ModuleId: AI_Bird
+    StableName: flightMovement
+    ModuleId: Mod_AnimalFlightMovement
     Enabled: 1
     Type: 0
     BitData: 
@@ -1270,3 +1271,56 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
   m_PrefabInstance: {fileID: 8892630128597802635}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8100000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8100000000000000002}
+  - component: {fileID: 8100000000000000003}
+  m_Layer: 0
+  m_Name: Module_AnimalBehaviorTree
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8100000000000000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8100000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6625446444626420137}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8100000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8100000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fef5fe77db4845dcbaa20b04405daaef, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    StableName: ai
+    ModuleId: AI
+    enabled: 1
+    Type: 0
+    bitData:
+  OnStateChanged:
+    _PersistentCalls: []

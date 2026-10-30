@@ -558,17 +558,17 @@ public static partial class GameplayTestSystemProbe
             var awakeShell = new GameObject("AwakeIdentityShell");
             awakeShell.transform.SetParent(root.transform, false);
             awakeShell.AddComponent<GameItem>().IsPreparedCandidate = true;
-            var aiNode = new GameObject("Module_AI_Chicken");
+            var aiNode = new GameObject("Module_AnimalBehaviorTree");
             aiNode.transform.SetParent(awakeShell.transform, false);
-            var aiSource = aiNode.AddComponent<AI_Chicken>();
-            aiSource.ModData = new Ex_ModData_MemoryPackable { StableName = "", ModuleId = "" };
+            var aiSource = aiNode.AddComponent<Mod_AnimalBehaviorTree>();
+            aiSource.ModData = new Ex_ModData { StableName = "", ModuleId = "" };
             var turnNode = new GameObject("Module_TurnBody");
             turnNode.transform.SetParent(awakeShell.transform, false);
             var turnSource = turnNode.AddComponent<Mod_TurnBack>();
             turnSource.modData = new Ex_ModData { StableName = "", ModuleId = "" };
             var awakeDefinitions = new[]
             {
-                new RuntimeItemModuleDefinition("ai", aiNode.name, aiNode.name, null, true),
+                new RuntimeItemModuleDefinition("ai", Mod_AnimalBehaviorTree.ModuleId, aiNode.name, null, true),
                 new RuntimeItemModuleDefinition("turn", turnNode.name, turnNode.name, null, true)
             };
             var awakePlans = ItemModuleAssemblyCompiler.Compile(null, "test:awake-identity", awakeShell,
@@ -716,7 +716,7 @@ public static partial class GameplayTestSystemProbe
                     birdStates.Add(new JObject
                     {
                         ["phase"] = phase.ToString(), ["moving"] = moving,
-                        ["state"] = Mod_AI_Bird.ResolveAnimationStateName(phase, moving)
+                        ["state"] = Mod_AnimalFlightMovement.ResolveAnimationStateName(phase, moving)
                     });
 
             return new JObject

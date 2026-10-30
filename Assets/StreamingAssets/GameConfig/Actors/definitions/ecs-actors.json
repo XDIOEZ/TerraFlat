@@ -4,11 +4,19 @@
     {
       "id": "Zombie",
       "ecs": {
-        "capabilities": ["movement", "perception", "combat", "chase"]
+        "capabilities": [
+          "movement",
+          "perception",
+          "combat",
+          "chase"
+        ]
       },
       "weight": 70.0,
       "parent": "Wolf",
-      "removeModules": ["animalAudio", "biteAttackSkill"],
+      "removeModules": [
+        "animalAudio",
+        "biteAttackSkill"
+      ],
       "lootTableId": "",
       "gameName": "丧尸",
       "description": "用于尸潮的基础敌对生物，当前使用 GameObject AI，保留可选 ECS 配置。",
@@ -70,25 +78,85 @@
           }
         },
         "ai": {
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
           "parameters": {
-            "debugLog": false,
+            "damageThreatMemoryDuration": 5.0,
             "detectorRefreshInterval": 0.7,
-            "chaseTriggerDistance": 22.0,
-            "attackTriggerDistance": 1.2,
-            "chaseLossDistance": 32.0,
-            "chasePathCostLimit": 360,
-            "chasePathRetryDelay": 2.0,
-            "attackCooldown": 1.4,
-            "attackDamageWindow": 0.25,
-            "attackDamageStartDelay": 0.45,
-            "attackRecoveryDuration": 0.3,
-            "fleeTriggerHpRate": 0.0,
-            "enableChaseFormation": false,
-            "enableWander": true,
-            "idleMinDuration": 0.4,
-            "idleMaxDuration": 1.2,
-            "wanderRadius": 5.0
-          }
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "memory": {
+                  "travelTimeout": 15,
+                  "searchDuration": 3,
+                  "arrivalDistance": 0.6
+                },
+                "pack": {
+                  "groupTags": [
+                    "Wolf"
+                  ],
+                  "threatTags": [
+                    "Player"
+                  ],
+                  "chaseDistance": 22,
+                  "lossDistance": 32,
+                  "avoidSafeDistance": 30,
+                  "allyCallDistance": 120,
+                  "assistDuration": 5,
+                  "callCooldown": 0.8,
+                  "alertDistance": 20,
+                  "alertDuration": 2,
+                  "formationEnabled": false,
+                  "formationMinMembers": 2,
+                  "formationRadius": 1.05,
+                  "formationVerticalSpacing": 0.42,
+                  "formationMaxVerticalRatio": 0.55,
+                  "formationAttackMargin": 0.18,
+                  "formationArrival": 0.3,
+                  "formationResume": 0.6,
+                  "separationDistance": 0.85,
+                  "separationStrength": 0.7,
+                  "separationMaxOffset": 0.2,
+                  "attackRange": 1.2,
+                  "wanderCohesion": 1
+                },
+                "advance": {},
+                "combat": {
+                  "range": 1.2,
+                  "cooldown": 1.4,
+                  "damageWindow": 0.25,
+                  "windup": 0.45,
+                  "recovery": 0.3,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 360,
+                  "retryDelay": 2
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 5,
+                  "stopDistance": 0.4,
+                  "idleMin": 0.4,
+                  "idleMax": 1.2,
+                  "pauseMin": 0.8,
+                  "pauseMax": 2.5
+                }
+              },
+              "root": {
+                "type": "subtree",
+                "name": "packHunt",
+                "parameters": {
+                  "fleeEnter": 0.0,
+                  "chaseDistance": 22,
+                  "chaseLossDistance": 32,
+                  "avoidDistance": 22
+                }
+              }
+            }
+          },
+          "inherit": false
         }
       },
       "itemData": {

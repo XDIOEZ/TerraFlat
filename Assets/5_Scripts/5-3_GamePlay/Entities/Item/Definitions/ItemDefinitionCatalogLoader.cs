@@ -985,6 +985,8 @@ public static class ItemDefinitionCatalogLoader
             MergeNullValueHandling = MergeNullValueHandling.Merge
         });
         RemoveInheritedModules(result, source, id);
+        if (result["modules"] is JObject moduleBodies)
+            foreach (JProperty module in moduleBodies.Properties()) (module.Value as JObject)?.Remove("inherit");
         result["id"] = id;
         result["abstract"] = source.Value<bool?>("abstract") ?? false;
         result.Remove("parent");
@@ -995,7 +997,7 @@ public static class ItemDefinitionCatalogLoader
         return result;
     }
 
-    /// <summary>子定义切换模块 Prefab 时丢弃父模块参数，避免把旧组件字段合并进新组件。</summary>
+    /// <summary>切换 Prefab 或声明 inherit:false 时整体替换模块，其他模块保持正常继承。</summary>
     private static void RemoveReplacedModuleBodies(JObject inherited, JObject source)
     {
         if (inherited?["modules"] is not JObject inheritedModules ||
@@ -1014,7 +1016,8 @@ public static class ItemDefinitionCatalogLoader
 
             string inheritedPrefab = inheritedBody.Value<string>("prefab")?.Trim();
             string childPrefab = childBody.Value<string>("prefab")?.Trim();
-            if (!string.IsNullOrWhiteSpace(childPrefab) &&
+            if (childBody.Value<bool?>("inherit") == false ||
+                !string.IsNullOrWhiteSpace(childPrefab) &&
                 !string.Equals(inheritedPrefab, childPrefab, StringComparison.OrdinalIgnoreCase))
             {
                 inheritedModules.Remove(childModule.Name);
