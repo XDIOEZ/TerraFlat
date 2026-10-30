@@ -50,14 +50,6 @@ public partial struct TimedDespawnState
 public static class TimedDespawnRules
 {
     #region 游戏时钟与持久状态
-    private sealed class CachedState
-    {
-        public byte[] Payload;
-        public TimedDespawnState Value;
-    }
-    private static readonly ConditionalWeakTable<Ex_ModData_MemoryPackable, CachedState> states = new();
-    private static readonly ConditionalWeakTable<Ex_ModData_MemoryPackable, CachedState>.CreateValueCallback createState = _ => new();
-
     public static bool Advance(ref TimedDespawnState state, double now, string clockScene, float lifetime)
     {
         if (!double.IsFinite(now) || now < 0d || string.IsNullOrEmpty(clockScene) ||
@@ -90,20 +82,12 @@ public static class TimedDespawnRules
     internal static bool IsExpiredAt(Ex_ModData_MemoryPackable module, float lifetime, string clockScene, double now)
     {
         if (module == null || !module.Enabled) return false;
-        CachedState cache = states.GetValue(module, createState);
-        if (!ReferenceEquals(cache.Payload, module.BitData))
-        {
-            cache.Value = module.GetData<TimedDespawnState>();
-            cache.Payload = module.BitData;
-        }
-        TimedDespawnState previous = cache.Value;
-        bool expired = Advance(ref cache.Value, now, clockScene, lifetime);
-        if (previous.Initialized != cache.Value.Initialized || previous.LastGameSeconds != cache.Value.LastGameSeconds ||
-            previous.ElapsedGameSeconds != cache.Value.ElapsedGameSeconds || previous.ClockScene != cache.Value.ClockScene)
-        {
-            module.WriteData(cache.Value);
-            cache.Payload = module.BitData;
-        }
+        TimedDespawnState state = module.ReadRuntimeState<TimedDespawnState>();
+        TimedDespawnState previous = state;
+        bool expired = Advance(ref state, now, clockScene, lifetime);
+        if (previous.Initialized != state.Initialized || previous.LastGameSeconds != state.LastGameSeconds ||
+            previous.ElapsedGameSeconds != state.ElapsedGameSeconds || previous.ClockScene != state.ClockScene)
+            module.WriteRuntimeState(state);
         return expired;
     }
     #endregion

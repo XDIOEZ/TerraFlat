@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-/// <summary>食物腐败观察者自己的配置与运行时状态，不进入 ModData_FoodData 的具体字段。</summary>
+/// <summary>食物腐败观察者的配置与运行时状态。</summary>
 [Serializable]
 public struct FoodSpoilageObserverData
 {
@@ -19,38 +19,39 @@ public struct FoodSpoilageObserverData
         ? Mathf.Max(0f, SpoilageIntervalSeconds - SpoilageElapsedSeconds)
         : float.PositiveInfinity;
 
-    /// <summary>从通用观察者负载读取腐败数据。</summary>
-    public static FoodSpoilageObserverData Load(ModData_FoodData persistentData)
+    /// <summary>读取腐败计时状态。</summary>
+    public static FoodSpoilageObserverData Load(ModData_FoodData persistentData) =>
+        LoadFromState(persistentData?.FindSpoilageState());
+
+    private static FoodSpoilageObserverData LoadFromState(FoodMechanicStateData state)
     {
-        FoodMechanicStateData state = FoodObserverStateStore.Find(
-            persistentData,
-            FoodObserverStateStore.SpoilageStateKey);
+        FoodTimerStateData timer = FoodObserverStateStore.ReadSpoilageTimer(state);
         return new FoodSpoilageObserverData
         {
-            EnableSpoilage = FoodObserverStateStore.ReadBool(state, "EnableSpoilage", true),
-            SpoilageElapsedSeconds = FoodObserverStateStore.ReadFloat(state, "SpoilageElapsedSeconds", 0f),
-            SpoilageIntervalSeconds = FoodObserverStateStore.ReadFloat(state, "SpoilageIntervalSeconds", 1800f),
-            SpoilageTargetItemID = FoodObserverStateStore.ReadString(
-                state,
-                "SpoilageTargetItemID",
-                "Meat_Rotten"),
-            DryingMaxMoisture = FoodObserverStateStore.ReadFloat(state, "DryingMaxMoisture", 0.2f),
-            DryingTargetItemID = FoodObserverStateStore.ReadString(state, "DryingTargetItemID")
+            EnableSpoilage = timer.Enabled,
+            SpoilageElapsedSeconds = timer.ElapsedSeconds,
+            SpoilageIntervalSeconds = timer.IntervalSeconds,
+            SpoilageTargetItemID = timer.TargetItemID,
+            DryingMaxMoisture = timer.DryingMaxMoisture,
+            DryingTargetItemID = timer.DryingTargetItemID
         };
     }
 
-    /// <summary>把腐败数据写回观察者自己的通用负载。</summary>
+    /// <summary>保存腐败计时状态。</summary>
     public void Save(ModData_FoodData persistentData)
     {
         FoodMechanicStateData state = FoodObserverStateStore.GetOrCreate(
             persistentData,
             FoodObserverStateStore.SpoilageStateKey);
-        FoodObserverStateStore.WriteBool(state, "EnableSpoilage", EnableSpoilage);
-        FoodObserverStateStore.WriteFloat(state, "SpoilageElapsedSeconds", SpoilageElapsedSeconds);
-        FoodObserverStateStore.WriteFloat(state, "SpoilageIntervalSeconds", SpoilageIntervalSeconds);
-        FoodObserverStateStore.WriteString(state, "SpoilageTargetItemID", SpoilageTargetItemID);
-        FoodObserverStateStore.WriteFloat(state, "DryingMaxMoisture", DryingMaxMoisture);
-        FoodObserverStateStore.WriteString(state, "DryingTargetItemID", DryingTargetItemID);
+        FoodObserverStateStore.WriteSpoilageTimer(state, new FoodTimerStateData
+        {
+            Enabled = EnableSpoilage,
+            ElapsedSeconds = SpoilageElapsedSeconds,
+            IntervalSeconds = SpoilageIntervalSeconds,
+            TargetItemID = SpoilageTargetItemID ?? string.Empty,
+            DryingMaxMoisture = DryingMaxMoisture,
+            DryingTargetItemID = DryingTargetItemID ?? string.Empty
+        });
     }
 
     // 库存和落地食物共用游戏时间，到期后保留状态供替换失败时重试。
@@ -59,8 +60,7 @@ public struct FoodSpoilageObserverData
         if (!EnableSpoilage || !HasValidInterval || !float.IsFinite(seconds) || seconds <= 0f ||
             SpoilageElapsedSeconds >= SpoilageIntervalSeconds) return false;
         SpoilageElapsedSeconds = Mathf.Min(SpoilageIntervalSeconds, Mathf.Max(0f, SpoilageElapsedSeconds) + seconds);
-        FoodObserverStateStore.WriteFloat(FoodObserverStateStore.GetOrCreate(persistentData,
-            FoodObserverStateStore.SpoilageStateKey), "SpoilageElapsedSeconds", SpoilageElapsedSeconds);
+        FoodObserverStateStore.WriteSpoilageElapsedSeconds(persistentData, SpoilageElapsedSeconds);
         return true;
     }
 
@@ -95,9 +95,11 @@ public struct FoodSpoilageObserverData
         foreach (var pair in modules)
         {
             if (pair.Value is not ModData_FoodData food || !food.Enabled ||
-                !string.Equals(food.ModuleId, ModText.Food, StringComparison.Ordinal) ||
-                FoodObserverStateStore.Find(food, FoodObserverStateStore.SpoilageStateKey) == null) continue;
-            FoodSpoilageObserverData candidate = Load(food);
+                !string.Equals(food.ModuleId, ModText.Food, StringComparison.Ordinal)) continue;
+            FoodMechanicStateData timerState = food.FindSpoilageState();
+            if (timerState == null) continue;
+            FoodObserverStateStore.InitializeSpoilageTimer(timerState);
+            FoodSpoilageObserverData candidate = LoadFromState(timerState);
             if (!candidate.EnableSpoilage || !candidate.HasValidInterval) continue;
             foodData = food;
             state = candidate;
@@ -130,6 +132,7 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
         if (!(context.ModuleData is ModData_FoodData foodData))
             return;
 
+        FoodObserverStateStore.InitializeSpoilageTimer(foodData.FindSpoilageState());
         FoodSpoilageObserverData observerData = FoodSpoilageObserverData.Load(foodData);
         if (!observerData.EnableSpoilage)
             return;
@@ -187,34 +190,39 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataRule
 [Serializable]
 public struct FoodMeltingObserverData
 {
+    #region 融化计时状态
+
     public bool EnableMelting;
     public float MeltingElapsedSeconds;
     public float MeltingIntervalSeconds;
 
-    /// <summary>从通用观察者负载读取融化数据。</summary>
+    /// <summary>读取融化计时状态。</summary>
     public static FoodMeltingObserverData Load(ModData_FoodData persistentData)
     {
-        FoodMechanicStateData state = FoodObserverStateStore.Find(
-            persistentData,
-            FoodObserverStateStore.MeltingStateKey);
+        FoodTimerStateData timer = FoodObserverStateStore.ReadMeltingTimer(persistentData?.FindMeltingState());
         return new FoodMeltingObserverData
         {
-            EnableMelting = FoodObserverStateStore.ReadBool(state, "EnableMelting", false),
-            MeltingElapsedSeconds = FoodObserverStateStore.ReadFloat(state, "MeltingElapsedSeconds", 0f),
-            MeltingIntervalSeconds = FoodObserverStateStore.ReadFloat(state, "MeltingIntervalSeconds", 300f)
+            EnableMelting = timer.Enabled,
+            MeltingElapsedSeconds = timer.ElapsedSeconds,
+            MeltingIntervalSeconds = timer.IntervalSeconds
         };
     }
 
-    /// <summary>把融化计时写回观察者自己的通用负载。</summary>
+    /// <summary>保存融化计时状态。</summary>
     public void Save(ModData_FoodData persistentData)
     {
         FoodMechanicStateData state = FoodObserverStateStore.GetOrCreate(
             persistentData,
             FoodObserverStateStore.MeltingStateKey);
-        FoodObserverStateStore.WriteBool(state, "EnableMelting", EnableMelting);
-        FoodObserverStateStore.WriteFloat(state, "MeltingElapsedSeconds", MeltingElapsedSeconds);
-        FoodObserverStateStore.WriteFloat(state, "MeltingIntervalSeconds", MeltingIntervalSeconds);
+        FoodObserverStateStore.WriteMeltingTimer(state, new FoodTimerStateData
+        {
+            Enabled = EnableMelting,
+            ElapsedSeconds = MeltingElapsedSeconds,
+            IntervalSeconds = MeltingIntervalSeconds
+        });
     }
+
+    #endregion
 }
 
 /// <summary>
@@ -223,11 +231,13 @@ public struct FoodMeltingObserverData
 /// </summary>
 public sealed class FoodMeltingModuleDataObserver : IModuleDataRule
 {
+    #region 库存融化结算
+
     /// <summary>只观察显式声明了融化状态的食物数据。</summary>
     public bool CanStep(ModuleDataTickContext context)
     {
         return context.ModuleData is ModData_FoodData foodData &&
-               FoodObserverStateStore.Find(foodData, FoodObserverStateStore.MeltingStateKey) != null;
+               foodData.FindMeltingState() != null;
     }
 
     /// <summary>推进融化计时；允许一次较大的 Tick 跨过多个周期并一次性扣除对应数量。</summary>
@@ -236,6 +246,7 @@ public sealed class FoodMeltingModuleDataObserver : IModuleDataRule
         if (!(context.ModuleData is ModData_FoodData foodData))
             return;
 
+        FoodObserverStateStore.InitializeMeltingTimer(foodData.FindMeltingState());
         FoodMeltingObserverData observerData = FoodMeltingObserverData.Load(foodData);
         if (!observerData.EnableMelting)
             return;
@@ -260,7 +271,7 @@ public sealed class FoodMeltingModuleDataObserver : IModuleDataRule
         if (elapsedIntervals <= 0)
         {
             observerData.MeltingElapsedSeconds = elapsedSeconds;
-            observerData.Save(foodData);
+            FoodObserverStateStore.WriteMeltingElapsedSeconds(foodData, observerData.MeltingElapsedSeconds);
             return;
         }
 
@@ -269,20 +280,22 @@ public sealed class FoodMeltingModuleDataObserver : IModuleDataRule
         if (meltAmount <= 0)
         {
             observerData.MeltingElapsedSeconds = elapsedSeconds % intervalSeconds;
-            observerData.Save(foodData);
+            FoodObserverStateStore.WriteMeltingElapsedSeconds(foodData, observerData.MeltingElapsedSeconds);
             return;
         }
 
         float remainderSeconds = elapsedSeconds - elapsedIntervals * intervalSeconds;
         observerData.MeltingElapsedSeconds = Mathf.Max(0f, remainderSeconds);
-        observerData.Save(foodData);
+        FoodObserverStateStore.WriteMeltingElapsedSeconds(foodData, observerData.MeltingElapsedSeconds);
 
         if (!context.InventoryData.TryConsumeFromSlot(context.Slot, meltAmount, out _))
         {
             // 库存事务失败时保留已经累计的完整时间，下一次 Tick 继续尝试，避免凭空少融化。
             observerData.MeltingElapsedSeconds = elapsedSeconds;
-            observerData.Save(foodData);
+            FoodObserverStateStore.WriteMeltingElapsedSeconds(foodData, observerData.MeltingElapsedSeconds);
             Debug.LogWarning($"[FoodMelting] 融化扣减失败，物品={context.ItemData.IDName}，数量={meltAmount}");
         }
     }
+
+    #endregion
 }

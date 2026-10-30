@@ -10,9 +10,16 @@ using System.Globalization;
 [MemoryPackable]
 public partial class FoodMechanicStateData
 {
+    #region 观察者持久化状态
+
     public string StateKey;
     public Dictionary<string, string> Data = new Dictionary<string, string>();
     public byte[] Payload;
+    public FoodTimerStateData Timer;
+
+    #endregion
+
+    #region 其他观察者的运行时浮点状态
 
     [NonSerialized, MemoryPackIgnore]
     private Dictionary<string, float> runtimeFloats;
@@ -54,4 +61,25 @@ public partial class FoodMechanicStateData
         foreach (KeyValuePair<string, float> pair in runtimeFloats)
             Data[pair.Key] = pair.Value.ToString(CultureInfo.InvariantCulture);
     }
+
+    #endregion
+}
+
+/// <summary>腐败或融化计时的强类型持久状态，其他观察者继续使用各自的负载。</summary>
+[Serializable]
+[MemoryPackable]
+public partial struct FoodTimerStateData
+{
+    #region 食物计时数据
+
+    public bool Initialized;
+    public bool IsSpoilage;
+    public bool Enabled;
+    public float ElapsedSeconds;
+    public float IntervalSeconds;
+    public string TargetItemID;
+    public float DryingMaxMoisture;
+    public string DryingTargetItemID;
+
+    #endregion
 }

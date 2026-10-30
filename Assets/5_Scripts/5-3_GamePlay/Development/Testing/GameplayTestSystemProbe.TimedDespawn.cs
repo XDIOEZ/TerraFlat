@@ -41,9 +41,36 @@ public static partial class GameplayTestSystemProbe
         ItemData stranger = EntityProbeData("probe:replacement", 8);
         bool staleRejected = !TimedDespawnRules.RemoveExpiredSlot(inventory, slot, stranger);
         bool removed = TimedDespawnRules.RemoveExpiredSlot(inventory, slot, ember);
+        var hotState = new Ex_ModData_MemoryPackable { StableName = "lifetime", ModuleId = Mod_TimedDespawn.ModuleId };
+        TimedDespawnRules.IsExpiredAt(hotState, 10000f, "earth", 0d);
+        TimedDespawnRules.IsExpiredAt(hotState, 10000f, "earth", 1d);
+        long allocationStart = GC.GetAllocatedBytesForCurrentThread();
+        for (int index = 2; index <= 257; index++)
+            TimedDespawnRules.IsExpiredAt(hotState, 10000f, "earth", index);
+        long hotPathBytes = GC.GetAllocatedBytesForCurrentThread() - allocationStart;
+        var cloned = FastCloner.FastCloner.DeepClone(hotState);
+        double clonedBefore = cloned.ReadRuntimeState<TimedDespawnState>().ElapsedGameSeconds;
+        TimedDespawnRules.IsExpiredAt(cloned, 10000f, "earth", 260d);
+        double clonedAfter = cloned.GetData<TimedDespawnState>().ElapsedGameSeconds;
+        double sourceAfterClone = hotState.ReadRuntimeState<TimedDespawnState>().ElapsedGameSeconds;
+        ModuleInstanceSnapshot hotSnapshot = ModuleInstanceSnapshot.Capture(hotState);
+        var restored = new Ex_ModData_MemoryPackable { StableName = "lifetime", ModuleId = Mod_TimedDespawn.ModuleId };
+        hotSnapshot.RestoreTo(restored);
+        TimedDespawnRules.IsExpiredAt(restored, 10000f, "earth", 260d);
+        double restoredElapsed = restored.ReadRuntimeState<TimedDespawnState>().ElapsedGameSeconds;
+        double sourceElapsed = hotState.ReadRuntimeState<TimedDespawnState>().ElapsedGameSeconds;
+        var replacement = new Ex_ModData_MemoryPackable();
+        replacement.WriteData(new TimedDespawnState { Initialized = true, ElapsedGameSeconds = 7d,
+            LastGameSeconds = 100d, ClockScene = "earth" });
+        hotState.BitData = replacement.BitData;
+        TimedDespawnRules.IsExpiredAt(hotState, 10000f, "earth", 102d);
         return new JObject { ["samples"] = samples, ["staleRejected"] = staleRejected,
             ["removed"] = removed, ["empty"] = slot.itemData == null, ["amount"] = ember.Stack.Amount,
-            ["noProducts"] = inventory.itemSlots.All(value => value.itemData == null) };
+            ["noProducts"] = inventory.itemSlots.All(value => value.itemData == null),
+            ["hotPathAllocatedBytes"] = hotPathBytes, ["restoredElapsed"] = restoredElapsed,
+            ["sourceElapsed"] = sourceElapsed, ["clonedBefore"] = clonedBefore,
+            ["clonedAfter"] = clonedAfter, ["sourceAfterClone"] = sourceAfterClone,
+            ["replacedElapsed"] = hotState.ReadRuntimeState<TimedDespawnState>().ElapsedGameSeconds };
     }
 
     private static JObject TinderMaterialProbe(JObject args)

@@ -9,6 +9,7 @@
 - 配置效果实现 IEquipmentConfiguration，由CollectConfigurationTargets/TryOpenConfiguration收集/校验、同件去重，卸下/更换拒旧目标。宇航服生命支持/配置挂持罐衣服，头盔仅套装资格/自身防护；独立单槽InventoryInstanceSnapshot只收单只纯氧罐，两相变化停供，扣真实罐量后SupplyOxygen，来源不归氧气模块。
 - FoodRulePipeline初始化后复用Tick/观察者列表，不定时全扫；RequiresFoodTick实时判，新扩展保持插入顺序。世界静态Food可休眠，腐败/融化走冷数据。蛋白质管回血门槛，IHealingCostPolicy一次结算成本；濒死/HP≤0停被动回血与生存伤害，体力按有效MaxValue恢复。
 - 食物腐败共用 `FoodSpoilageObserverData` 游戏时钟与到期分流；仅显式配置 `DryingTargetItemID/DryingMaxMoisture` 的食品按含水量分流，生肉超过20%变腐肉、20%及以下变肉干。库存走食物替换网关，世界两后端走 `WorldItemMatterRules` 产物计划；未初始化含水量读物质定义初值，到期失败保留计时重试，大步进不得计入到期后的蒸发。
+- 腐败/融化首次参与模拟时将配置转为 `FoodMechanicStateData.Timer` 强类型真源，快照、复制和指纹含计时；库存继续按原条目顺序领取时钟、提交事务。
 - BodyPartTreatmentSession管医疗等待/提交，UI仅发意图；食物效果由目录与IFoodMechanic组合，咬痕从EatingProgress/GUID重建。
 
 ## 容器与热量

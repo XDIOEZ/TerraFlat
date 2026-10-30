@@ -203,6 +203,7 @@ public partial class FoodMechanicStateData
         StateKey = source.StateKey,
         Data = source.Data == null ? null : new Dictionary<string, string>(source.Data, source.Data.Comparer),
         Payload = source.Payload == null ? null : (byte[])source.Payload.Clone(),
+        Timer = source.Timer,
         runtimeFloats = source.runtimeFloats == null ? null : new Dictionary<string, float>(source.runtimeFloats, source.runtimeFloats.Comparer)
     };
 

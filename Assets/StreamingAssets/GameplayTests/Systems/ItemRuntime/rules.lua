@@ -850,5 +850,11 @@ for _, input in ipairs({
         end
         assert(data.staleRejected and data.removed and data.empty and data.amount == 0 and data.noProducts,
             "自然消失误删替换物、残留库存或产生了灰烬")
+        assert(data.hotPathAllocatedBytes == 0, "寿命连续推进仍在分配持久化载荷")
+        assert(data.sourceElapsed == 257 and data.restoredElapsed == 260,
+            "强类型寿命快照没有捕获最新进度，或恢复状态与来源共享")
+        assert(data.replacedElapsed == 9, "替换正式载荷后仍读取了旧寿命状态")
+        assert(data.clonedBefore == 257 and data.clonedAfter == 260 and data.sourceAfterClone == 257,
+            "未编码运行寿命深拷贝丢失进度或与源对象共享状态")
     end, "火种游戏时钟、快照与无副产物清除")
 end

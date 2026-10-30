@@ -338,6 +338,17 @@ public partial class FoodMechanicStateData
         if (Data != null)
             foreach (KeyValuePair<string, string> pair in Data) { hash.Add(pair.Key); hash.Add(pair.Value); }
         ItemRuntimeStateFingerprint.AppendBytes(ref hash, Payload);
+        hash.Add(Timer.Initialized);
+        if (Timer.Initialized)
+        {
+            hash.Add(Timer.IsSpoilage);
+            hash.Add(Timer.Enabled);
+            hash.Add(Timer.ElapsedSeconds);
+            hash.Add(Timer.IntervalSeconds);
+            hash.Add(Timer.TargetItemID);
+            hash.Add(Timer.DryingMaxMoisture);
+            hash.Add(Timer.DryingTargetItemID);
+        }
         // 私有浮点缓存可能比字符串负载更新，不为了比较状态而修改活跃对象。
         hash.Add(runtimeFloats?.Count ?? 0);
         if (runtimeFloats != null)

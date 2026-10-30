@@ -74,6 +74,32 @@ for _, case in ipairs(spoilageCases) do
     end, "生肉腐败与含水量：" .. case.name)
 end
 
+test.system("survival", "food_timer_state", {}, function(data)
+    assert(data.converted, "食物计时没有转入强类型状态，或丢失扩展负载")
+    near(data.initialSpoilage, 2, "首轮腐败进度")
+    near(data.initialMelting, 2, "首轮融化进度")
+    near(data.sharedSpoilage, 2, "共享模块跨库存腐败时间去重")
+    near(data.sharedMelting, 2, "共享模块跨库存融化时间去重")
+    near(data.afterSpoilage, 4, "同一宿主继续腐败")
+    near(data.afterMelting, 1, "融化周期后的剩余时间")
+    near(data.afterAmount, 4, "融化实际扣减库存数量")
+    near(data.restoredSpoilage, 2, "快照恢复腐败进度")
+    near(data.restoredMelting, 2, "快照恢复融化进度")
+    assert(data.independentClone and data.fingerprintChanged, "食物复制不独立或计时变化未更新快照指纹")
+    near(data.disabledSpoilage, 4, "禁用时不推进")
+    near(data.resumedSpoilage, 5, "启用后恢复计时")
+    assert(data.disabledTimersConverted and data.worldDisabledConverted,
+        "关闭的库存或世界食物仍在反复解析字符串，或被错误推进")
+    near(data.spoilageAtMelt, 1, "同物品先腐败后融化")
+    near(data.firstAmount, 1, "第一格融化事务")
+    assert(data.replacementStayed, "事务期间替换的槽位被旧条目覆盖")
+    near(data.staleSecondElapsed, 0, "被替换的旧物品未继续计时")
+    near(data.retryElapsed, 1.5, "融化事务失败保留已累计时间")
+    near(data.retryAmount, 2, "融化事务失败不扣数量")
+    assert(data.indexUpdated and data.typedGenericWrite and data.genericStringWrite,
+        "观察者替换、重命名或通用接口写入后读取错误")
+end, "食物计时强类型状态、顺序事务及快照")
+
 test.system("survival", "food_observer_index", {}, function(data)
     assert(data.registered and data.sortedCount and data.sortedTick and data.sortedState,
         "食物规则 Tick 或状态观察者索引遗漏、重复或改变优先级顺序")
