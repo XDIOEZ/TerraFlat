@@ -5,6 +5,7 @@ public sealed partial class ChunkTilemapRenderer
 {
     #region 深度行网格所有权
     private ChunkDepthMeshRenderer depthMesh;
+    private ChunkDepthMeshRenderer fireDepthMesh;
     private ChunkDepthMeshRenderer mechanicalConnectorDepthMesh;
     private ChunkDepthMeshRenderer groundBuildingDepthMesh;
     private ChunkDepthMeshRenderer submergedBuildingDepthMesh;
@@ -42,14 +43,37 @@ public sealed partial class ChunkTilemapRenderer
         }
     }
 
-    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0) + (groundBuildingDepthMesh?.PartCount ?? 0) + (submergedBuildingDepthMesh?.PartCount ?? 0);
-    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (groundBuildingDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
-    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (groundBuildingDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
+    /// <summary>地形火场单独共享一张深度网格，统一按 world-effect 排序并继承区块投影锚点。</summary>
+    internal ChunkDepthMeshRenderer FireDepthMesh
+    {
+        get
+        {
+            if (boundChunk?.Terrain == null)
+                throw new System.InvalidOperationException("火场行合批必须先绑定区块数据。");
+            if (fireDepthMesh == null || fireDepthMesh.IsDisposed)
+            {
+                int sortingLayerId;
+                int sortingOrder;
+                WorldRenderingManager manager = WorldRenderingManager.GetInstance();
+                if (manager != null)
+                    manager.GetSortingKey(WorldSortingManager.WorldEffectCategory, out sortingLayerId, out sortingOrder);
+                else
+                    WorldSortingManager.GetResourceSortingKey(WorldSortingManager.WorldEffectCategory, out sortingLayerId, out sortingOrder);
+                fireDepthMesh = new ChunkDepthMeshRenderer(transform, sortingLayerId, sortingOrder, useParentSortingAnchor: true);
+            }
+            return fireDepthMesh;
+        }
+    }
+
+    public int DepthMeshPartCount => (depthMesh?.PartCount ?? 0) + (fireDepthMesh?.PartCount ?? 0) + (mechanicalConnectorDepthMesh?.PartCount ?? 0) + (groundBuildingDepthMesh?.PartCount ?? 0) + (submergedBuildingDepthMesh?.PartCount ?? 0);
+    public int DepthMeshRowCount => (depthMesh?.RowCount ?? 0) + (fireDepthMesh?.RowCount ?? 0) + (mechanicalConnectorDepthMesh?.RowCount ?? 0) + (groundBuildingDepthMesh?.RowCount ?? 0) + (submergedBuildingDepthMesh?.RowCount ?? 0);
+    public int DepthMeshDrawGroupCount => (depthMesh?.DrawGroupCount ?? 0) + (fireDepthMesh?.DrawGroupCount ?? 0) + (mechanicalConnectorDepthMesh?.DrawGroupCount ?? 0) + (groundBuildingDepthMesh?.DrawGroupCount ?? 0) + (submergedBuildingDepthMesh?.DrawGroupCount ?? 0);
 
     internal void CollectVisualSnapshots(Matrix4x4 worldToDisplay, System.Collections.Generic.List<WorldVisualSnapshot> destination)
     {
         ChunkBatchRendererGroupService.CollectVisualSnapshots(this, destination);
         depthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+        fireDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         mechanicalConnectorDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         groundBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         submergedBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
@@ -67,6 +91,8 @@ public sealed partial class ChunkTilemapRenderer
         try
         {
             depthMesh?.SetEntitySortingEnabled(enabled);
+            // useParentSortingAnchor 固定 fire 在一个区块批次中，不拆成逐火排序组。
+            fireDepthMesh?.SetEntitySortingEnabled(enabled);
             mechanicalConnectorDepthMesh?.SetEntitySortingEnabled(enabled);
             groundBuildingDepthMesh?.SetEntitySortingEnabled(enabled);
             submergedBuildingDepthMesh?.SetEntitySortingEnabled(enabled);
@@ -83,10 +109,12 @@ public sealed partial class ChunkTilemapRenderer
     private void ReleaseDepthPresentation()
     {
         depthMesh?.Dispose();
+        fireDepthMesh?.Dispose();
         mechanicalConnectorDepthMesh?.Dispose();
         groundBuildingDepthMesh?.Dispose();
         submergedBuildingDepthMesh?.Dispose();
         depthMesh = null;
+        fireDepthMesh = null;
         mechanicalConnectorDepthMesh = null;
         groundBuildingDepthMesh = null;
         submergedBuildingDepthMesh = null;
@@ -99,6 +127,7 @@ public sealed partial class ChunkTilemapRenderer
     private void ClearDepthPresentation()
     {
         depthMesh?.Clear();
+        fireDepthMesh?.Clear();
         mechanicalConnectorDepthMesh?.Clear();
         groundBuildingDepthMesh?.Clear();
         submergedBuildingDepthMesh?.Clear();

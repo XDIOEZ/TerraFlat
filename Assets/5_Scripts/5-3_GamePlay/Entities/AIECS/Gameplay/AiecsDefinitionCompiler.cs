@@ -434,7 +434,8 @@ namespace FlatWorld.AIECS.Gameplay
             {
                 var source = pair.Value;
                 var definition = new AiecsBuffDefinition { Id = source.Id, Duration = source.DurationSeconds ?? float.PositiveInfinity,
-                    Interval = source.TickIntervalSeconds, StackMode = (byte)source.StackMode, MaxStacks = source.MaxStacks };
+                    Interval = source.TickIntervalSeconds, StackMode = (byte)source.StackMode, MaxStacks = source.MaxStacks,
+                    DecayStacksOnExpiry = source.DecayStacksOnExpiry ? (byte)1 : (byte)0 };
                 bool supported = true;
                 foreach (var effect in source.Effects)
                 {

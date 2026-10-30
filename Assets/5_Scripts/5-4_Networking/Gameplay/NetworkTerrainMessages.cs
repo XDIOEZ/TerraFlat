@@ -21,6 +21,17 @@ namespace FlatWorld.Networking.Gameplay
         public int ChunkX, ChunkY, TotalCells;
         public long Revision;
         public TerrainBuildingCellState[] Cells;
+        public long FireRevision;
+        public NetworkTerrainFireCellState[] FireCells;
+    }
+
+    public struct NetworkTerrainFireCellState
+    {
+        public int Index;
+        public float Intensity;
+
+        public readonly bool IsValid(int totalCells) => (uint)Index < (uint)totalCells &&
+            float.IsFinite(Intensity) && Intensity >= 0f && Intensity <= 1f;
     }
 
     public struct NetworkPersistedChunkRequest : NetworkMessage

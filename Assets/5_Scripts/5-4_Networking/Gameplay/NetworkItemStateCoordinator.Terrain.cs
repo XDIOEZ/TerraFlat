@@ -21,6 +21,8 @@ namespace FlatWorld.Networking.Gameplay
             public string WorldKey;
             public ChunkRuntime Chunk;
             public readonly HashSet<int> Cells = new();
+            public readonly HashSet<int> FireCells = new();
+            public long FireRevision;
         }
 
         private readonly Dictionary<(string, RuntimeWorldAddress), DirtyTerrainChunk> dirtyTerrain = new();
@@ -84,6 +86,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkChunkEntityBaselineRequest>(OnServerChunkEntityBaselineRequest, true);
             persistedServerCancellation = new CancellationTokenSource();
             SaveDataMgr.AuthoritativeTerrainCellChanged += QueueTerrainCell;
+            SaveDataMgr.AuthoritativeTerrainFireChanged += QueueTerrainFire;
         }
 
         private void StopTerrainServerBridge()
@@ -98,6 +101,7 @@ namespace FlatWorld.Networking.Gameplay
             persistedServerCancellation?.Dispose();
             persistedServerCancellation = null;
             SaveDataMgr.AuthoritativeTerrainCellChanged -= QueueTerrainCell;
+            SaveDataMgr.AuthoritativeTerrainFireChanged -= QueueTerrainFire;
             dirtyTerrain.Clear();
             terrainFlushBuffer.Clear();
         }
@@ -153,6 +157,21 @@ namespace FlatWorld.Networking.Gameplay
             pending.Cells.Add(local.y * terrain.Width + local.x);
         }
 
+        private void QueueTerrainFire(string worldKey, ChunkRuntime chunk, ChunkTerrainChanged changed)
+        {
+            ChunkTerrainData terrain = chunk?.Terrain;
+            if (!NetworkServer.active || string.IsNullOrWhiteSpace(worldKey) || terrain == null || terrain.IsDisposed ||
+                chunk.DataStatus != ChunkDataStatus.Ready || changed.Kind != TerrainChangeKind.Fire ||
+                !changed.AffectsFirePresentation || changed.Revision < 0)
+                return;
+            var key = (worldKey, chunk.Address);
+            if (!dirtyTerrain.TryGetValue(key, out DirtyTerrainChunk pending) || !ReferenceEquals(pending.Chunk, chunk))
+                dirtyTerrain[key] = pending = new DirtyTerrainChunk { WorldKey = worldKey, Chunk = chunk };
+            foreach (int index in changed.GetCellIndices(terrain.Width))
+                if ((uint)index < (uint)(terrain.Width * terrain.Height)) pending.FireCells.Add(index);
+            if (changed.Revision > pending.FireRevision) pending.FireRevision = changed.Revision;
+        }
+
         private bool PublishTerrainPlacement(TileBuildingCell cell)
         {
             ChunkTerrainData terrain = cell.RuntimeChunk?.Terrain;
@@ -186,10 +205,20 @@ namespace FlatWorld.Networking.Gameplay
                 if (terrain == null || terrain.IsDisposed || pending.Chunk.DataStatus != ChunkDataStatus.Ready) continue;
                 try
                 {
-                    var cells = new TerrainBuildingCellState[pending.Cells.Count];
+                    var cells = pending.Cells.Count == 0
+                        ? Array.Empty<TerrainBuildingCellState>() : new TerrainBuildingCellState[pending.Cells.Count];
                     int index = 0;
                     foreach (int cell in pending.Cells) cells[index++] = TerrainBuildingCellState.Capture(terrain, cell);
-                    SendTerrainCells(pending.WorldKey, pending.Chunk, cells, null, 0);
+                    var fireCells = pending.FireCells.Count == 0
+                        ? Array.Empty<NetworkTerrainFireCellState>() : new NetworkTerrainFireCellState[pending.FireCells.Count];
+                    index = 0;
+                    foreach (int cell in pending.FireCells)
+                    {
+                        WorldFireCellState state = terrain.GetFireState(cell % terrain.Width, cell / terrain.Width);
+                        fireCells[index++] = new NetworkTerrainFireCellState { Index = cell, Intensity = state.Intensity };
+                    }
+                    if (cells.Length > 0 || fireCells.Length > 0)
+                        SendTerrainCells(pending.WorldKey, pending.Chunk, cells, null, 0, fireCells, pending.FireRevision);
                 }
                 catch (Exception exception) { Debug.LogException(exception); }
             }
@@ -210,28 +239,47 @@ namespace FlatWorld.Networking.Gameplay
             var address = new RuntimeWorldAddress(request.DimensionId, new Int2(request.ChunkX, request.ChunkY));
             if (manager == null || !manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
                 !manager.IsTerrainRestoredForEnvironment(chunk)) return;
-            var cells = new TerrainBuildingCellState[checked(chunk.Terrain.Width * chunk.Terrain.Height)];
-            for (int i = 0; i < cells.Length; i++) cells[i] = TerrainBuildingCellState.Capture(chunk.Terrain, i);
-            SendTerrainCells(request.WorldKey, chunk, cells, connection, request.RequestToken);
+            ChunkTerrainData terrain = chunk.Terrain;
+            int cellCount = checked(terrain.Width * terrain.Height);
+            var cells = new TerrainBuildingCellState[cellCount];
+            var fireCells = new NetworkTerrainFireCellState[cellCount];
+            for (int i = 0; i < cellCount; i++)
+            {
+                cells[i] = TerrainBuildingCellState.Capture(terrain, i);
+                WorldFireCellState fire = terrain.GetFireState(i % terrain.Width, i / terrain.Width);
+                fireCells[i] = new NetworkTerrainFireCellState { Index = i, Intensity = fire.Intensity };
+            }
+            SendTerrainCells(request.WorldKey, chunk, cells, connection, request.RequestToken, fireCells, terrain.Revision);
         }
 
         private void SendTerrainCells(string world, ChunkRuntime chunk, TerrainBuildingCellState[] cells,
-            NetworkConnectionToClient target, uint requestToken)
+            NetworkConnectionToClient target, uint requestToken, NetworkTerrainFireCellState[] fireCells = null,
+            long fireRevision = 0)
         {
+            cells ??= Array.Empty<TerrainBuildingCellState>();
+            fireCells ??= Array.Empty<NetworkTerrainFireCellState>();
+            if (requestToken != 0 && (cells.Length == 0 || cells.Length != fireCells.Length)) return;
+            int total = Math.Max(cells.Length, fireCells.Length);
+            if (total == 0) return;
             int limit = Transport.active?.GetMaxPacketSize(Channels.Reliable) ?? 32 * 1024;
             int batchSize = Math.Min(64, Math.Max(1, (limit - 1024) / 64));
             long revision = ++nextTerrainRevision;
-            for (int offset = 0; offset < cells.Length; offset += batchSize)
+            for (int offset = 0; offset < total; offset += batchSize)
             {
-                int count = Math.Min(batchSize, cells.Length - offset);
-                var batch = new TerrainBuildingCellState[count];
-                Array.Copy(cells, offset, batch, 0, count);
+                int count = Math.Min(batchSize, total - offset);
+                int terrainCount = Math.Max(0, Math.Min(count, cells.Length - offset));
+                int fireCount = Math.Max(0, Math.Min(count, fireCells.Length - offset));
+                var terrainBatch = terrainCount == 0 ? Array.Empty<TerrainBuildingCellState>() : new TerrainBuildingCellState[terrainCount];
+                var fireBatch = fireCount == 0 ? Array.Empty<NetworkTerrainFireCellState>() : new NetworkTerrainFireCellState[fireCount];
+                if (terrainCount > 0) Array.Copy(cells, offset, terrainBatch, 0, terrainCount);
+                if (fireCount > 0) Array.Copy(fireCells, offset, fireBatch, 0, fireCount);
                 var message = new NetworkTerrainChunkMessage
                 {
                     WorldKey = world, DimensionId = chunk.Address.DimensionId,
                     ChunkX = chunk.Address.ChunkOrigin.X, ChunkY = chunk.Address.ChunkOrigin.Y,
                     TotalCells = checked(chunk.Terrain.Width * chunk.Terrain.Height), Revision = revision,
-                    RequestToken = requestToken, Cells = batch
+                    RequestToken = requestToken, Cells = terrainBatch,
+                    FireRevision = fireRevision, FireCells = fireBatch
                 };
                 if (target != null) SendTerrainToObserver(target, message);
                 else foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
@@ -301,7 +349,8 @@ namespace FlatWorld.Networking.Gameplay
             if (message.RequestToken != 0 && message.RequestToken != cursor.RequestToken) return;
             try
             {
-                if (!cursor.Apply(message.Revision, message.RequestToken, message.TotalCells, message.Cells))
+                if (!cursor.Apply(message.Revision, message.RequestToken, message.TotalCells, message.Cells,
+                        message.FireRevision, message.FireCells))
                     cursor.RequireSnapshot();
                 else if (message.RequestToken != 0)
                     cursor.NextRequestTime = Time.unscaledTime + 2f;
@@ -806,7 +855,8 @@ namespace FlatWorld.Networking.Gameplay
             if (!persistedChunks.TryGetValue(key, out PendingPersistedChunk pending) || !pending.Ready) return;
             cursor.SetPersistenceBaseline(pending.Revision);
             foreach (NetworkTerrainChunkMessage delta in pending.Deltas)
-                if (delta.Revision > pending.Revision && !cursor.Apply(delta.Revision, 0, delta.TotalCells, delta.Cells))
+                if (delta.Revision > pending.Revision && !cursor.Apply(delta.Revision, 0, delta.TotalCells, delta.Cells,
+                        delta.FireRevision, delta.FireCells))
                     pending.NeedsTerrainRefresh = true;
             if (pending.NeedsTerrainRefresh) cursor.RequireSnapshot();
             persistedChunks.Remove(key);

@@ -581,20 +581,11 @@ namespace FlatWorld.WorldModel
         /// <summary>修改格子火势；首次出现火焰时才租用整块数组，空区块不承担常驻火层内存。</summary>
         public void SetFire(int x, int y, byte intensity)
         {
-            ThrowIfDisposed();
-            int index = GetIndex(x, y);
-            if (_fire == null)
-            {
-                if (intensity == 0)
-                    return;
-                _fire = ArrayPool<byte>.Shared.Rent(CellCount);
-                Array.Clear(_fire, 0, CellCount);
-            }
-
-            if (_fire[index] == intensity)
-                return;
-            _fire[index] = intensity;
-            MarkChanged(x, y, TerrainChangeKind.Fire);
+            WorldFireCellState state = GetFireState(x, y);
+            state.Intensity = intensity / 255f;
+            Span<WorldFireCellState> states = stackalloc WorldFireCellState[1];
+            states[0] = state;
+            SetFireStatesBatch(states);
         }
 
         #endregion
@@ -775,6 +766,7 @@ namespace FlatWorld.WorldModel
                 ArrayPool<byte>.Shared.Return(_fire);
                 _fire = null;
             }
+            ReleaseFireCellStorage();
             Changed = null;
             LiquidBatchChanged = null;
             ClearEnvironmentBatches();
@@ -876,6 +868,7 @@ namespace FlatWorld.WorldModel
             EnvironmentLayerId = kind == TerrainChangeKind.Environment ? environmentLayerId : null;
             CellIndices = default;
             AffectsLiquidVisuals = affectsLiquidVisuals;
+            AffectsFirePresentation = true;
         }
 
         /// <summary>整个环境层的一批真实变化；格索引内存只在同步回调期间借用。</summary>
@@ -889,6 +882,19 @@ namespace FlatWorld.WorldModel
             EnvironmentLayerId = environmentLayerId;
             CellIndices = cellIndices;
             AffectsLiquidVisuals = true;
+            AffectsFirePresentation = true;
+        }
+
+        public ChunkTerrainChanged(ReadOnlyMemory<int> cellIndices, long revision, TerrainChangeKind kind,
+            bool affectsFirePresentation = true)
+        {
+            LocalCell = default;
+            Kind = kind;
+            Revision = revision;
+            EnvironmentLayerId = null;
+            CellIndices = cellIndices;
+            AffectsLiquidVisuals = true;
+            AffectsFirePresentation = affectsFirePresentation;
         }
 
         /// <summary>单格通知的局部坐标，批量通知应使用 GetCellIndices。</summary>
@@ -903,6 +909,7 @@ namespace FlatWorld.WorldModel
         public ReadOnlyMemory<int> CellIndices { get; }
         /// <summary>液体身份或十档水面发生变化；同档水量仍通过原通知同步玩法和存档。</summary>
         public bool AffectsLiquidVisuals { get; }
+        public bool AffectsFirePresentation { get; }
         public bool IsBatch => !CellIndices.IsEmpty;
 
         /// <summary>统一无分配遍历单格与批量变化，单格使用所在区块的真实宽度。</summary>

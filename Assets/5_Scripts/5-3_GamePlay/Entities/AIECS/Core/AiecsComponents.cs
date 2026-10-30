@@ -217,6 +217,7 @@ namespace FlatWorld.AIECS
         public int MaxStacks; // 当前内容目录的层数上限。
         public int BleedingTier; // 零表示普通状态，正值参与互斥等级。
         public byte StackMode; // 与当前 Buff 配置枚举一致。
+        public byte DecayStacksOnExpiry; // 潮湿按定义逐层干燥，不一次清空整组。
     }
 
     /// <summary>单个实体的实际工作计数，统计 Job 汇总；不从输入单位数推算。</summary>

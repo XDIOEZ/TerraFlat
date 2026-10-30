@@ -17,7 +17,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `NetworkItemStateCoordinator` 的 `Spawning/Buildings/MachineReplication` 分管生成、建造事务与机器复制；`NetworkBuildingRequestLedger` 统一建造/拆除回执、到期与断线清理，等待帧不复制键数组。规则 `networking/building_request_ledger`。
 - `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
-- Gameplay 协议为 34；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
+- Gameplay 协议为 35；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
 - 假人手写 Mirror Command 参数时，`uint` 须使用 Weaver 对应的 `WriteVarUInt`；定长 `WriteUInt` 会使后续参数错位。
@@ -38,7 +38,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - GM 地表 TP 与翻滚 Command 均携带玩家 `RealmRevision` 并在服务端处理前拒绝旧代际/迁移中请求；拒绝时回执释放客户端待确认动作，不消耗该请求序号。远端 TP 的坐标归一化、模块位置及观察者更新必须处于连接所属 `NetworkGameplayWorldScope`，Mirror 假人命令签名同步更新。
 - 建造消息校验连接与真实快捷栏材料，`BuildingPlacementService` 处理放置、扣料和回滚；缺少网络发布器时事务回滚。Host 确认回调不重复发布建造进度。
 - 放置结果显式携带 Item、Machine、TileCell 或 ShipId；平台/地板/格子墙走 `NetworkItemStateCoordinator.Terrain`，船上部件交正式船体快照，不能把无 Item 的成功结果误判为缺发布器。`SaveDataMgr` 的核心地形和支撑记录只通知脏格，事务结束后捕获最终状态，失败回滚不广播幽灵候选。
-- 地形协议按 WorldKey/Dimension/RealmRevision 隔离，可靠批次最多64格；客户端每格修订号防旧快照覆盖新差量，完整补拉按请求 token 和唯一格计数。新/重载区块与世界代际变化必须补拉，未就绪消息不生成或常驻缓存区块；Host 不回写共享地形。核心地形、损伤、草与独立支撑同步，不覆盖液体、天气或农业层。规则 `networking/terrain_replication、terrain_wire`；编辑器外 `python Tools/Tests/TerrainNetworking/verify.py`，不代替 Mirror Weaver 和真实双端验收。
+- 地形协议按 WorldKey/Dimension/RealmRevision 隔离，可靠批次最多64格；客户端每格修订号防旧快照覆盖新差量，完整补拉按请求 token 和唯一格计数。新/重载区块与世界代际变化必须补拉，未就绪消息不生成或常驻缓存区块；Host 不回写共享地形。核心地形、损伤、草、独立支撑与火势强度同步，完整快照发送显式零火势，客户端不复制表面燃料燃烧进度；液体、天气和农业仍走各自通道。规则 `networking/terrain_replication、terrain_wire`；编辑器外 `python Tools/Tests/TerrainNetworking/verify.py`，不代替 Mirror Weaver 和真实双端验收。
 - 区域天气、雨雪反馈由权威端推进；客户端按 WorldKey、规范地址及修订号复制，首次雷电同步只建立序号基线。地表批次只传水肥和雪层，复制序号独立于 Terrain.Revision；可靠消息按通道大小分片，待就绪区块缓存最多 256 个地址，淘汰后补拉快照，消息本身不生成地形。
 - 单人也是正式私有Host；本机连接不启动KCP listener，公开房间才按所选端口启动监听，关闭公开只断远端并停止监听。每玩家独立维度/重生走共享权威服务、目标9区块准备、限额分片世界资料、RealmRevision与presentation-ready；入世核对生成指纹和MOD集合。
 - 太空用 `SpaceSectorPosition` 的编号+区内 double 米坐标，观察、拾取、机器和攻击按规范距离判断，跨边界不按 Scene 名隔离。迁移只切本机呈现，不用 `ServerChangeScene` 停掉其它玩家；`RealmRevision` 使同地表复活也重定位。
@@ -49,7 +49,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## 快照与复制
 
-- `NetworkGameplayProtocol.CurrentVersion=34`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
+- `NetworkGameplayProtocol.CurrentVersion=35`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
 - 天气地表雪格同时携带 `IceMeltProgress`；客户端仅恢复权威进度，不执行融冰。
 
 - 玩家公开快照经 `Item.ModuleSavePublicNetworkState` 调用模块保存：实现 `IPublicNetworkStateSaver` 的模块仅刷新公开字段，未实现的模块仍执行完整保存。`Mod_Inventory` 跳过私有槽位保存和装备收纳袋拆装；正式存档仍走完整 `ModuleSave`。回归 `networking/public_network_save_route`。

@@ -738,6 +738,7 @@ public partial class ChunkSaveRecord
     [MemoryPack.MemoryPackOrder(7)] public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
     [MemoryPack.MemoryPackOrder(6)] public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
     [MemoryPack.MemoryPackOrder(11)] public List<SnowCellSaveData> SnowCells = new(); // 独立保存天气雪与玩家编辑雪，不替换底层地形。
+    [MemoryPack.MemoryPackOrder(15)] public List<FireCellSaveData> FireCells = new(); // 活火与表面燃烧进度的稀疏差量。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -751,7 +752,8 @@ public partial class ChunkSaveRecord
          (ContaminationCells?.Count ?? 0) > 0 ||
          (LiquidCells?.Count ?? 0) > 0 ||
          (GroundLayerCells?.Count ?? 0) > 0 ||
-         (SnowCells?.Count ?? 0) > 0);
+         (SnowCells?.Count ?? 0) > 0 ||
+         (FireCells?.Count ?? 0) > 0);
 }
 
 [MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]

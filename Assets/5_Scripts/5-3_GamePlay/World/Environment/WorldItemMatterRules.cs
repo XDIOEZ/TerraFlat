@@ -28,11 +28,12 @@ public static class WorldItemMatterRules
         float ambient = TemperatureMgr.DefaultAmbientTemperature;
         TemperatureMgr temperatures = TemperatureMgr.Instance;
         if (temperatures != null) temperatures.TryGetAmbientTemperature(position, out ambient);
-        return Advance(data, ambient, seconds, contact, out waterContact);
+        WorldFireSystem.TryGetWorldFireIntensity(GameplayWorldRegistry.ExecutionWorldKey, position, out float fireIntensity);
+        return Advance(data, ambient, seconds, contact, out waterContact, fireIntensity);
     }
 
     internal static bool Advance(ItemData data, float ambient, float seconds, WorldLiquidSettings contact,
-        out bool waterContact)
+        out bool waterContact, float fireIntensity = 0f)
     {
         waterContact = false;
         if (data == null || !float.IsFinite(seconds) || seconds <= 0f) return false;
@@ -48,6 +49,12 @@ public static class WorldItemMatterRules
                 targetTemperature = contact.Temperature;
                 contactHeatingPerSecond = contact.ContactHeatingPerSecond;
             }
+        }
+
+        if (!waterContact && fireIntensity > 0f)
+        {
+            targetTemperature = Mathf.Max(targetTemperature, WorldFireSystem.MaterialContactTemperature);
+            contactHeatingPerSecond = Mathf.Max(contactHeatingPerSecond ?? 0f, 100f * fireIntensity);
         }
 
         bool hasSpoilage = FoodSpoilageObserverData.TryLoad(data, out ModData_FoodData food,

@@ -21,6 +21,12 @@
       "name": "天然雪与冰地块升温融化",
       "luaPath": "GameplayTests/Systems/Environment/surface_thaw.lua",
       "enabled": true
+    },
+    {
+      "id": "environment_world_fire",
+      "name": "批量火场与燃料状态规则",
+      "luaPath": "GameplayTests/Systems/Environment/world_fire.lua",
+      "enabled": true
     }
   ]
 }

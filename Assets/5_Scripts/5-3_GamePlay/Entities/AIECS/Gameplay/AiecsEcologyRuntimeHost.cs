@@ -424,6 +424,7 @@ namespace FlatWorld.AIECS.Gameplay
                     _actorFactions.ToArray(),
                     0f,
                     _fleeFromHostiles.ToArray(), sharedWorld: entityWorld);
+                _bridge.Simulation.RegisterStage(new AiecsWorldFireContactStage(ownedWorldKey));
                 _renderer = AiecsWorldSortingResolver.CreateRenderer(_catalog, ids, _player.gameObject.scene);
                 RestoreResidentSnapshots();
                 WorldEntityRuntime.Register(entityWorld, this);

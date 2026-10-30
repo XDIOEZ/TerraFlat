@@ -43,7 +43,15 @@ namespace FlatWorld.AIECS
                     }
                     buff.NextTick += ticks * definition.Interval;
                 }
-                if (Clock.Time >= buff.Expires) { buffs.RemoveAtSwapBack(i); continue; }
+                if (Clock.Time >= buff.Expires)
+                {
+                    if (definition.DecayStacksOnExpiry == 0 || definition.Duration <= 0f)
+                    { buffs.RemoveAtSwapBack(i); continue; }
+                    int expiredStacks = 1 + (int)math.floor((Clock.Time - buff.Expires) / definition.Duration);
+                    buff.Stacks = math.max(1, buff.Stacks) - expiredStacks;
+                    if (buff.Stacks <= 0) { buffs.RemoveAtSwapBack(i); continue; }
+                    buff.Expires += expiredStacks * definition.Duration;
+                }
                 buffs[i] = buff; status.BleedingTier = math.max(status.BleedingTier, definition.BleedingTier);
             }
             HitCounts[index] = output.Length;

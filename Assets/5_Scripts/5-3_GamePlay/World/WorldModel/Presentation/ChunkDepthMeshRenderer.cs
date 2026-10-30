@@ -259,6 +259,110 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
         dirtyGroups.Clear();
     }
 
+#if UNITY_EDITOR
+    internal readonly struct EditorUploadDiagnostic
+    {
+        internal readonly int PartCount, DrawGroupCount, RowCount;
+        internal readonly int DrawVertexCount, DrawIndexCount;
+        internal readonly int IndexBufferUploadCount, VertexBufferUploadCount, TopologyRebuildCount;
+        internal readonly long IndexBufferUploadBytes, VertexBufferUploadBytes;
+        internal readonly int ParentAnchorRowCount, SortingGroupMismatchCount, MeshRendererMismatchCount;
+        internal readonly int SortingGroupLayerId, SortingGroupOrder, MeshRendererLayerId, MeshRendererOrder;
+        internal readonly int SourceMaterialMismatchCount, RendererShaderMismatchCount;
+        internal readonly string RendererShaderName;
+
+        internal EditorUploadDiagnostic(int partCount, int drawGroupCount, int rowCount,
+            int drawVertexCount, int drawIndexCount, int indexBufferUploadCount, int vertexBufferUploadCount,
+            int topologyRebuildCount, long indexBufferUploadBytes, long vertexBufferUploadBytes,
+            int parentAnchorRowCount, int sortingGroupMismatchCount, int meshRendererMismatchCount,
+            int sortingGroupLayerId, int sortingGroupOrder, int meshRendererLayerId, int meshRendererOrder,
+            int sourceMaterialMismatchCount, int rendererShaderMismatchCount, string rendererShaderName)
+        {
+            PartCount = partCount; DrawGroupCount = drawGroupCount; RowCount = rowCount;
+            DrawVertexCount = drawVertexCount; DrawIndexCount = drawIndexCount;
+            IndexBufferUploadCount = indexBufferUploadCount; VertexBufferUploadCount = vertexBufferUploadCount;
+            TopologyRebuildCount = topologyRebuildCount; IndexBufferUploadBytes = indexBufferUploadBytes;
+            VertexBufferUploadBytes = vertexBufferUploadBytes; ParentAnchorRowCount = parentAnchorRowCount;
+            SortingGroupMismatchCount = sortingGroupMismatchCount; MeshRendererMismatchCount = meshRendererMismatchCount;
+            SortingGroupLayerId = sortingGroupLayerId; SortingGroupOrder = sortingGroupOrder;
+            MeshRendererLayerId = meshRendererLayerId; MeshRendererOrder = meshRendererOrder;
+            SourceMaterialMismatchCount = sourceMaterialMismatchCount;
+            RendererShaderMismatchCount = rendererShaderMismatchCount; RendererShaderName = rendererShaderName;
+        }
+    }
+
+    internal void FlushForDiagnostics() => Flush();
+
+    internal EditorUploadDiagnostic CaptureEditorUploadDiagnostic(Material expectedSourceMaterial,
+        Shader expectedRendererShader)
+    {
+        int partCount = entries.Count, drawGroups = 0, drawVertices = 0, drawIndices = 0;
+        int indexUploads = 0, vertexUploads = 0, topologyRebuilds = 0;
+        long indexUploadBytes = 0, vertexUploadBytes = 0;
+        int parentAnchorRows = 0, sortingGroupMismatches = 0, rendererMismatches = 0;
+        int sourceMaterialMismatches = 0, rendererShaderMismatches = 0;
+        int sortingLayer = 0, sortingOrder = 0, rendererLayer = 0, rendererOrder = 0;
+        string rendererShader = null;
+        bool hasSortingGroup = false, hasRenderer = false;
+
+        foreach (Row row in rows.Values)
+        {
+            SortingGroup sortingGroup = row.Root != null ? row.Root.GetComponent<SortingGroup>() : null;
+            if (sortingGroup != null)
+            {
+                if (!sortingGroup.sortAtRoot && row.Root.localPosition == Vector3.zero) parentAnchorRows++;
+                if (!hasSortingGroup)
+                {
+                    sortingLayer = sortingGroup.sortingLayerID;
+                    sortingOrder = sortingGroup.sortingOrder;
+                    hasSortingGroup = true;
+                }
+                else if (sortingLayer != sortingGroup.sortingLayerID || sortingOrder != sortingGroup.sortingOrder)
+                    sortingGroupMismatches++;
+            }
+
+            foreach (Group group in row.Groups.Values)
+            {
+                drawGroups++;
+                indexUploads += group.IndexBufferUploadCount;
+                vertexUploads += group.VertexBufferUploadCount;
+                topologyRebuilds += group.TopologyRebuildCount;
+                indexUploadBytes += group.IndexBufferUploadBytes;
+                vertexUploadBytes += group.VertexBufferUploadBytes;
+                if (group.Key.Source != expectedSourceMaterial) sourceMaterialMismatches++;
+
+                MeshRenderer renderer = group.Renderer;
+                MeshFilter filter = group.MeshFilter;
+                Mesh mesh = filter != null ? filter.sharedMesh : null;
+                if (renderer != null)
+                {
+                    if (!hasRenderer)
+                    {
+                        rendererLayer = renderer.sortingLayerID;
+                        rendererOrder = renderer.sortingOrder;
+                        rendererShader = renderer.sharedMaterial != null && renderer.sharedMaterial.shader != null
+                            ? renderer.sharedMaterial.shader.name : null;
+                        hasRenderer = true;
+                    }
+                    else if (rendererLayer != renderer.sortingLayerID || rendererOrder != renderer.sortingOrder)
+                        rendererMismatches++;
+                    if (renderer.sharedMaterial == null || renderer.sharedMaterial.shader == null ||
+                        expectedRendererShader == null || renderer.sharedMaterial.shader != expectedRendererShader)
+                        rendererShaderMismatches++;
+                }
+                if (mesh == null || mesh.subMeshCount == 0) continue;
+                drawVertices += mesh.GetSubMesh(0).vertexCount;
+                drawIndices += checked((int)mesh.GetIndexCount(0));
+            }
+        }
+
+        return new EditorUploadDiagnostic(partCount, drawGroups, rows.Count, drawVertices, drawIndices,
+            indexUploads, vertexUploads, topologyRebuilds, indexUploadBytes, vertexUploadBytes,
+            parentAnchorRows, sortingGroupMismatches, rendererMismatches, sortingLayer, sortingOrder,
+            rendererLayer, rendererOrder, sourceMaterialMismatches, rendererShaderMismatches, rendererShader);
+    }
+#endif
+
     private static void ReleaseAll()
     {
         flushScratch.Clear(); flushScratch.AddRange(active);

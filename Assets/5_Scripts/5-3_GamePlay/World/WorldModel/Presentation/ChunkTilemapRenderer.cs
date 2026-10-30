@@ -442,7 +442,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
         if (changed.Kind == TerrainChangeKind.Fire)
         {
-            RefreshFireVisual(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+            if (!changed.AffectsFirePresentation)
+                return;
+            int fireWidth = boundChunk.Terrain.Width;
+            foreach (int index in changed.GetCellIndices(fireWidth))
+                RefreshFireVisual(boundChunk.Terrain, index % fireWidth, index / fireWidth);
             return;
         }
         RefreshMechanicalSubmergedSurfaceCells(changed);
@@ -501,6 +505,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     {
         if (terrain == null)
             return;
+        fireDepthMesh?.Clear();
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
             if (terrain.GetFire(x, y) != 0)
@@ -514,7 +519,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         byte intensity = terrain.GetFire(x, y);
         if (intensity == 0)
         {
-            depthMesh?.Remove(ChunkDepthMeshRenderer.FireDomain, entityId, 0);
+            fireDepthMesh?.Remove(ChunkDepthMeshRenderer.FireDomain, entityId, 0);
             return;
         }
         if (fireSprite == null || fireMaterial == null)
@@ -530,7 +535,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         float phase = phaseSeed % FireFrameCount;
         Vector4 animation = new(FireAnimationMode, FireFramesPerSecond, phase, FireFrameCount);
         Color tint = new(1f, 1f, 1f, Mathf.Lerp(0.72f, 1f, strength));
-        DepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0, fireSprite, fireMaterial,
+        FireDepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0, fireSprite, fireMaterial,
             matrix, world, FireDepthOrder, tint, animation: animation);
     }
 

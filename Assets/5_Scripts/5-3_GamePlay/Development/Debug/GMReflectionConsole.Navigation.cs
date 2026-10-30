@@ -633,6 +633,9 @@ public sealed partial class GMReflectionConsole
         CreateSearchableButton(grid, GmPageId.World, "下雨", "天气 雨 rain weather", () => InvokeByTypeName("GameDebugManager", "SetRainWeather"));
         CreateSearchableButton(grid, GmPageId.World, "刷新区块", "区块 chunk 刷新", () => InvokeByTypeName("Mod_ChunkLoader", "RefreshChunksAroundPlayer"));
         CreateChunkLoadSpeedControl(grid);
+        CreateSearchableButton(grid, GmPageId.World, "点燃周围", "火 火灾 点火 fire", () => IgniteWorldFireAroundPlayer(10));
+        CreateSearchableButton(grid, GmPageId.World, "万火点燃", "火 火灾 一万 批量 压测 fire", () => IgniteWorldFireAroundPlayer(100));
+        CreateSearchableButton(grid, GmPageId.World, "扑灭周围", "火 灭火 extinguish", () => ExtinguishWorldFireAroundPlayer(100));
         CreateWorldRangeControls(page.Content);
         CreateChunkStreamingBudgetControls(page.Content);
         CreateWorldWindControl(page.Content);

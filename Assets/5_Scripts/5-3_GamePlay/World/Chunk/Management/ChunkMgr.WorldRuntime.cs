@@ -295,6 +295,7 @@ public partial class ChunkMgr
             !GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) && !IsSurfaceStreamingScene)
             return;
         if (authoritativeSimulation) runtimeChunkManager?.World.Tick(deltaSeconds);
+        if (authoritativeSimulation) SimulateWorldFireFixedStep(deltaSeconds);
         SimulateLiquidFlowFixedStep(deltaSeconds);
         liquidBodies?.SimulateFixedStep();
     }
@@ -312,6 +313,8 @@ public partial class ChunkMgr
     {
         if (runtimeChunkManager != null || !IsSurfaceStreamingScene)
             return;
+
+        ResetWorldFireSimulationContexts();
 
         LiquidTypeCatalog liquidTypes = GameRes.RequireWorldLiquidTypes();
         runtimeEpoch = Math.Max(1, runtimeEpoch + 1);

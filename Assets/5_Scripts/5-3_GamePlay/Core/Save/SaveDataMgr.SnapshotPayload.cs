@@ -10,7 +10,7 @@ using UnityEngine;
 public partial class SaveDataMgr
 {
     #region 存档封装格式
-    private const int CompactSaveVersion = 36; // 机器与掉落物分别保存可复用的独立实例载荷。
+    private const int CompactSaveVersion = 37; // 新增区块火场稀疏状态载荷。
     private const int ModdedSaveVersion = 15;
     // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
@@ -329,6 +329,10 @@ public partial class SaveDataMgr
                 yield break;
             }
         }
+
+        // 机器准备与分帧期间火场仍可能变化；在冻结区块字节前再提交一次稀疏火场差量。
+        if (!CaptureRuntimeFireStatesForSave())
+            throw new InvalidOperationException("自动保存的火场状态采集失败。");
 
         // 地形先逐条冻结，联合点之后只组合这些字节，不再触碰运行态。
         var frozenChunks = new Dictionary<(string world, Vector2Int origin), SqliteChunkSnapshot>();

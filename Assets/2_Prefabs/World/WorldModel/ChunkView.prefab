@@ -79,7 +79,7 @@ MonoBehaviour:
   unityStylizedWaterMaterial: {fileID: 2100000, guid: 14b24a83e9594fa88a42840749610fa1, type: 2}
   lowSpecWaterMaterial: {fileID: 2100000, guid: cec69d57fdb24638a4196fcc4f41561a, type: 2}
   fireSprite: {fileID: 1068388729, guid: 4a6dc12468324d7cac3f091ef7053ec3, type: 3}
-  fireMaterial: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  fireMaterial: {fileID: 2100000, guid: 35b58d4fc6d8429eb86ae21b0c6acff1, type: 2}
 --- !u!114 &2007
 MonoBehaviour:
   m_ObjectHideFlags: 0

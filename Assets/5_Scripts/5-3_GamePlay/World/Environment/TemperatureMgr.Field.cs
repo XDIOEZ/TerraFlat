@@ -254,6 +254,7 @@ public partial class TemperatureMgr
         private readonly WorldTopologyBounds bounds;
         private readonly float ambientOffset, globalOffset, seasonOffset, orbitalFactor, weatherOffset;
         private readonly FrozenInfluence[] influences;
+        private readonly float[] fireWeights;
 
         private readonly struct FrozenInfluence
         {
@@ -284,6 +285,8 @@ public partial class TemperatureMgr
                     local[i].Source.Strength, local[i].Source.Cooling, local[i].Weights);
             for (int i = 0; i < liquid.Length; i++)
                 influences[local.Length + i] = new FrozenInfluence(liquid[i].TargetTemperature, 1f, false, liquid[i].Weights);
+            fireWeights = WorldFireSystem.CaptureWorldFireHeatWeights(GameplayWorldRegistry.ExecutionWorldKey,
+                origin, terrain.Width, terrain.Height);
         }
 
         internal bool TrySample(ChunkRuntime chunk, ReadOnlySpan<int> indices, Span<float> temperatures)
@@ -311,6 +314,9 @@ public partial class TemperatureMgr
                 foreach (FrozenInfluence influence in influences)
                     ThermalInfluenceRuntime.Accumulate(ambient, influence.Target,
                         influence.Weights[index] * influence.Strength, ref heating, ref cooling, influence.Cooling);
+                if (fireWeights != null)
+                    ThermalInfluenceRuntime.Accumulate(ambient, WorldFireSystem.AmbientTargetTemperature,
+                        fireWeights[index], ref heating, ref cooling);
                 temperatures[index] = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
             }
             return true;
@@ -455,6 +461,7 @@ public partial class TemperatureMgr
                     liquidBatch.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
                 else
                     liquidTemperatureField?.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
+                heating = Mathf.Max(heating, WorldFireSystem.GetWorldFireHeating(GameplayWorldRegistry.ExecutionWorldKey, worldPosition, ambient));
                 temperature = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
             }
         }
@@ -472,6 +479,7 @@ public partial class TemperatureMgr
         float heating = 0f, cooling = 0f;
         LocalTemperatureField.Accumulate(localSources, index, ambient, ref heating, ref cooling);
         LiquidTemperatureField.Accumulate(liquidSources, index, ambient, ref heating, ref cooling);
+        heating = Mathf.Max(heating, WorldFireSystem.GetWorldFireHeating(GameplayWorldRegistry.ExecutionWorldKey, position, ambient));
         return ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
     }
 

@@ -26,6 +26,7 @@ public sealed class RuntimeTileDefinition
     public TileData TileDataTemplate { get; }
     public IReadOnlyList<TileBlockBehaviour> Behaviours { get; }
     public TileBuildingDamageProfile DamageProfile { get; }
+    public WorldFireFuelProfile FireFuel { get; }
     public GroundTilePlacementRule GroundPlacement { get; }
     public GroundTileHarvestRule GroundHarvest { get; }
     private readonly JObject source;
@@ -46,6 +47,8 @@ public sealed class RuntimeTileDefinition
         TileDataTemplate = template;
         Behaviours = behaviours.AsReadOnly();
         DamageProfile = dto.DamageProfile;
+        FireFuel = dto.DamageProfile?.ImpactMaterial == CombatImpactMaterial.Wood
+            ? new WorldFireFuelProfile(1f) : default;
         GroundPlacement = dto.GroundPlacement;
         GroundHarvest = dto.GroundHarvest;
         this.source = (JObject)source.DeepClone();

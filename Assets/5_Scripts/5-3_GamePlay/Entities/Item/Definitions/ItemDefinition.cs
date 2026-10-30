@@ -604,6 +604,7 @@ public sealed class RuntimeItemDefinition
     public IReadOnlyDictionary<string, RuntimeItemProcessingDefinition> ProcessingDefinitions => processingDefinitions;
     public IReadOnlyDictionary<string, int> ProcessingCapabilityLevels => processingCapabilityLevels;
     public RuntimeItemMatterDefinition Matter { get; }
+    public WorldFireFuelProfile FireFuel { get; }
     public IReadOnlyList<RuntimeItemReactionDefinition> Reactions { get; }
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
@@ -755,6 +756,7 @@ public sealed class RuntimeItemDefinition
                 moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
+        FireFuel = WorldFireFuelProfile.Compile(this);
         moduleIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
             moduleIds.Add(module.ModuleId);

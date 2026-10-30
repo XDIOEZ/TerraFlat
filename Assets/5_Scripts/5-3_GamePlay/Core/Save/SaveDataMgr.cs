@@ -95,6 +95,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     protected override void OnDestroy()
     {
+        ClearRuntimeFireTracking();
         CloseSqliteArchive();
         if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(null);
         base.OnDestroy();
@@ -319,6 +320,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     public void ResetChunkDifferenceState()
     {
+        ClearRuntimeFireTracking();
         chunkBaselines.Clear();
         chunkDeltas.Clear();
         chunkDifferenceRevisions.Clear();

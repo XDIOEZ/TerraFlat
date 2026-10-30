@@ -95,13 +95,22 @@ end, "热栏保存缓存：实际OnSave计数、手持进度、字段变化、�
 
 test.system("networking", "terrain_replication", {}, function(data)
     assert(data.partialAccepted and not data.partialFull, "缺片的地形快照被标成完整")
+    assert(data.fireIntensityAffectsPresentation and data.fireProgressOnlyStillNotifies
+        and data.fireProgressOnlySkipsPresentation,
+        "燃料进度变化没有保留保存通知，或错误触发了火场网络/渲染更新")
     assert(data.support == 91 and data.effectiveGround == 91 and data.walkable,
         "平台没有进入正式支撑面和通行查询")
+    assert(math.abs(data.partialFireIntensity - .75) < .0001 and data.fireProgressExcluded,
+        "地形火势差量没有到达客户端，或错误复制了草地燃烧进度")
     assert(data.baseGround == 17 and data.baseCost == 25 and data.liquid == 8 and data.weather == 45,
         "平台同步破坏了底层地形、液体或天气")
     assert(data.duplicateAccepted and data.duplicateWrites == 0, "重复地形消息再次写入权威副本")
     assert(data.removeAccepted and data.oldSnapshotSupport == 0 and data.fullAfterReorder,
         "旧完整快照覆盖了更新的拆除，或乱序后无法完成补拉")
+    assert(data.oldSnapshotFireIntensity == 0,
+        "旧火势快照覆盖了更新的灭火差量")
+    assert(data.fireOnlyAccepted and math.abs(data.fireOnlyIntensity - .33) < .0001,
+        "不伴随地形单元的火场差量未能独立应用")
     assert(not data.removedWalkable and data.removedLiquid == 8, "拆平台没有恢复水域原通行")
     assert(data.wallAccepted and data.wall == 74 and data.damage == 9 and data.oldDeltaWall == 74,
         "墙体/损伤不同步或被旧差量回退")
@@ -112,16 +121,21 @@ test.system("networking", "terrain_replication", {}, function(data)
     end
     assert(data.refreshedFull and data.reloadedComplete and data.reloadedSupport == 0 and data.reloadedWall == 0,
         "重载或重新补拉后残留旧平台/墙体")
+    assert(data.snapshotZeroClearedFire and math.abs(data.snapshotFireIntensity - .35) < .0001,
+        "完整地形快照未用显式零值清除旧火场或恢复非零火势")
 end, "格子建筑：平台/墙体、底液保留、乱序、坏包、区块重载")
 
 test.system("networking", "terrain_wire", {}, function(data)
-    assert(data.protocol >= 24 and data.remainingBytes == 0 and data.cellCount == 2,
+    assert(data.protocol >= 35 and data.remainingBytes == 0 and data.cellCount == 2,
         "格子建筑 Mirror 协议未完整往返")
     assert(data.world == "probe-world" and data.dimension == "surface" and data.realm == 7 and data.token == 3,
         "地形消息丢失世界身份或补拉令牌")
     assert(data.chunkX == -16 and data.chunkY == 32 and data.revision == 1234567890123,
         "负区块坐标或地形版本被截断")
     assert(data.support == 91 and data.baseGround == 17, "地形协议混淆支撑层和原地面")
+    assert(data.fireRevision == 1234567890124 and data.fireCellCount == 2
+        and math.abs(data.fireIntensity - .75) < .0001 and data.explicitZeroFire,
+        "地形火势 revision、强度或显式灭火值未完成 Mirror 往返")
 end, "格子建筑：正式 Mirror 序列化和世界身份")
 
 test.system("networking", "world_request_gate", {}, function(data)

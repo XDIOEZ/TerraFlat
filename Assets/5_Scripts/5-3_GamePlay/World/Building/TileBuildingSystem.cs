@@ -621,7 +621,8 @@ public static partial class TileBuildingSystem
     private static bool TryDamageRuntime(
         TileBuildingHitCandidate hit,
         Mod_Damage sender,
-        out TileBuildingDamageResult result)
+        out TileBuildingDamageResult result,
+        float? damageOverride = null, bool spawnDestructionDrops = true)
     {
         result = default;
         TileBuildingCell target = hit.Target;
@@ -652,7 +653,7 @@ public static partial class TileBuildingSystem
         float maxHealth = Mathf.Max(1f, profile.MaxHealth);
         float accumulatedDamage = ResolveRuntimeDamage(terrain, target.LocalPosition, maxHealth);
         float remainingHealth = Mathf.Max(0f, maxHealth - accumulatedDamage);
-        float calculatedDamage = CalculateDamage(profile, sender, out _);
+        float calculatedDamage = damageOverride ?? CalculateDamage(profile, sender, out _);
         if (calculatedDamage <= 0f)
         {
             result = new TileBuildingDamageResult(
@@ -678,7 +679,7 @@ public static partial class TileBuildingSystem
             if (!terrain.TryRemoveBlockingTile(localX, localY, current.BlockingTileId))
                 return false;
             ResetRuntimeDamage(terrain, target.LocalPosition);
-            SpawnDestructionDrop(profile, target.Position, sender);
+            if (spawnDestructionDrops) SpawnDestructionDrop(profile, target.Position, sender);
         }
         else
         {

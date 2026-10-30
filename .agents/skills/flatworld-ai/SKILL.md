@@ -19,6 +19,8 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 | `AIECS/Gameplay/AiecsEcologyRuntimeHost*.cs`、`AiecsGameplayBridge.cs` | 世界、蜂巢、快照、Unity 接口桥 |
 | `AIECS/Presentation/AiecsWorldRenderer.cs`、`AiecsRenderBatch.cs` | 可选 ECS 原生排序批次 |
 
+`AiecsWorldFireContactStage` 在移动后读取地火，外部代理和飞行态跳过；入水按正式 Wet 定义与真实导航液深叠层，使用 `AiecsSimulationPulse.DeltaTime`，低频 actor 缺席基础 Tick 时不能清掉累积时钟。原生 Buff 的逐层到期由 `DecayStacksOnExpiry` 定义驱动，火势只添加/刷新现有 Burning，不另扣生命。
+
 Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则：`Assets/Resources/GameConfig/Spawners/Rules/`；ECS 图集：`Assets/6_Art/Generated/Actors/AIECS/`，Shader：`Assets/9_Shaders/Shader/AiecsSpriteLit.shader`。
 
 ## JSON 行为树

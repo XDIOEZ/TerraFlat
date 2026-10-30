@@ -48,6 +48,7 @@ public partial class SaveDataMgr
             return;
         }
 
+        WatchRuntimeFireChunk(chunk);
         string planetName = ResolveRuntimePlanetName();
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
@@ -57,6 +58,7 @@ public partial class SaveDataMgr
 
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
         {
+            RestoreRuntimeFireStates(chunk, (ChunkSaveRecord)null);
             baseline.PersistenceRestored = true;
             return;
         }
@@ -91,6 +93,7 @@ public partial class SaveDataMgr
         RestoreLiquidTerrain(chunk, delta);
         RestoreGroundLayerTerrain(chunk, delta);
         RestoreSnowTerrain(chunk, delta);
+        RestoreRuntimeFireStates(chunk, delta);
         baseline.PersistenceRestored = true;
     }
 
@@ -136,7 +139,12 @@ public partial class SaveDataMgr
     {
         if (string.IsNullOrEmpty(worldKey) ||
             !string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal)) return false;
-        try { return CaptureRuntimeTerrainStates(); }
+        try
+        {
+            if (!CaptureRuntimeTerrainStates()) return false;
+            CaptureRuntimeFireWorldsForSceneUnbinding(worldKey);
+            return true;
+        }
         catch (Exception exception)
         {
             Debug.LogError($"[SaveDataMgr] 场景解绑后采集地形失败：{worldKey}，{exception}");
@@ -147,14 +155,16 @@ public partial class SaveDataMgr
     /// <summary>保存前复核本次变脏的运行时区块，避免只依赖单格通知留下半成品差量。</summary>
     private bool CaptureRuntimeTerrainStates()
     {
-        if (!GameNetwork.HasStateAuthority || runtimeTerrainDirtyChunks.Count == 0) return true;
+        if (!GameNetwork.HasStateAuthority) return true;
+        bool fireCaptured = CaptureRuntimeFireStatesForSave();
+        if (runtimeTerrainDirtyChunks.Count == 0) return fireCaptured;
         string planetName = GameplayWorldRegistry.ExecutionWorldKey;
         if (string.IsNullOrWhiteSpace(planetName)) return false;
         string prefix = planetName + "\u001f";
         bool hasWorldChanges = false;
         foreach (string dirtyKey in runtimeTerrainDirtyChunks)
             if (dirtyKey.StartsWith(prefix, StringComparison.Ordinal)) { hasWorldChanges = true; break; }
-        if (!hasWorldChanges) return true;
+        if (!hasWorldChanges) return fireCaptured;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (SaveData == null || manager?.WorldRuntime == null || manager.WorldRuntime.WorldId != planetName)
             return false;
@@ -193,7 +203,7 @@ public partial class SaveDataMgr
                 Debug.LogError($"[SaveDataMgr] 采集世界地形失败：{key}，{exception}");
             }
         }
-        return succeeded;
+        return succeeded && fireCaptured;
     }
 
     /// <summary>为当前运行时区块建立完整地形与互斥的建筑损伤、地表采挖进度基线。</summary>
@@ -385,9 +395,14 @@ public partial class SaveDataMgr
 
     private IEnumerator CaptureRuntimeTerrainStatesCoroutine(AutoSaveWorkBudget budget)
     {
+        if (!GameNetwork.HasStateAuthority || SaveData == null)
+            yield break;
+        IEnumerator fireRoutine = CaptureRuntimeFireStatesCoroutine(budget);
+        while (fireRoutine.MoveNext())
+            yield return fireRoutine.Current;
+
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (!GameNetwork.HasStateAuthority || SaveData == null ||
-            runtimeTerrainDirtyChunks.Count == 0 || manager?.Chunks == null)
+        if (runtimeTerrainDirtyChunks.Count == 0 || manager?.Chunks == null)
             yield break;
 
         var chunks = new List<KeyValuePair<RuntimeWorldAddress, ChunkRuntime>>(manager.Chunks);

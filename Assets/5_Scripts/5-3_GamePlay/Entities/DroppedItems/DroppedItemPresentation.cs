@@ -105,9 +105,11 @@ internal sealed class DroppedItemPresentation : IDisposable
     private static readonly int DroppedWaterParamsId = Shader.PropertyToID("_DroppedWaterParams");
 
     private readonly Scene scene;
+    private readonly string worldKey;
     private readonly LightweightDroppedItemSimulation simulation;
     private readonly Dictionary<int, DroppedItemVisual> visuals;
     private readonly Dictionary<int, ItemData> payloads;
+    private readonly HashSet<int> transportItems;
     private readonly Dictionary<int, PooledView> active = new();
     private readonly Stack<PooledView> pool = new();
     private readonly HashSet<int> candidates = new();
@@ -124,14 +126,18 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     public DroppedItemPresentation(
         Scene scene,
+        string worldKey,
         LightweightDroppedItemSimulation simulation,
         Dictionary<int, DroppedItemVisual> visuals,
-        Dictionary<int, ItemData> payloads)
+        Dictionary<int, ItemData> payloads,
+        HashSet<int> transportItems)
     {
         this.scene = scene;
+        this.worldKey = worldKey;
         this.simulation = simulation;
         this.visuals = visuals;
         this.payloads = payloads;
+        this.transportItems = transportItems;
         sharedMaterial = Resources.Load<Material>("DroppedItems/DroppedItemLit");
         if (sharedMaterial == null)
             throw new InvalidOperationException("缺少轻量掉落物共享材质 DroppedItems/DroppedItemLit。");
@@ -366,8 +372,13 @@ internal sealed class DroppedItemPresentation : IDisposable
 
         Vector2 nearest = new(nearestPosition.x, nearestPosition.y);
         bool burning = payloads.TryGetValue(id, out ItemData data) && data.MatterState?.IsBurning == true;
+        bool fireSuppressed = burning && body.WaterKind == 0 && !transportItems.Contains(id) &&
+            !simulation.TryGetFlight(id, out _) &&
+            WorldFireSystem.TryGetWorldFireIntensity(worldKey, new Vector2(body.Position.x, body.Position.y), out float intensity) &&
+            intensity > 0f;
+        bool presentedBurning = burning && !fireSuppressed;
         if (view.HasState && SamePresentationState(view.LastBody, body) &&
-            view.LastNearestPosition == nearest && view.LastBurning == burning && view.LastProjection == worldToDisplay)
+            view.LastNearestPosition == nearest && view.LastBurning == presentedBurning && view.LastProjection == worldToDisplay)
             return;
 
         float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
@@ -392,11 +403,11 @@ internal sealed class DroppedItemPresentation : IDisposable
             height,
             (id & 1023) * 0.017f));
         view.Renderer.SetPropertyBlock(view.Properties);
-        SetCombustionPlaying(view, burning, visual.Layer, ResolveFlameSortingOrder(visual.Order));
+        SetCombustionPlaying(view, presentedBurning, visual.Layer, ResolveFlameSortingOrder(visual.Order));
         view.LastBody = body;
         view.LastNearestPosition = nearest;
         view.LastProjection = worldToDisplay;
-        view.LastBurning = burning;
+        view.LastBurning = presentedBurning;
         view.HasState = true;
     }
 

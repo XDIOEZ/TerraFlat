@@ -1,5 +1,13 @@
 # 渲染、光照与特效
 
+2026-10-30 区块火场资源断言已加入 `rendering/combustion_visual`：检查 ChunkView 的 Unlit 源材质绑定、八帧贴图与 FullRect 导入。以下新增采样仍未运行。
+
+`rendering/world_fire_batches` 使用 ChunkView 的正式 Sprite/材质，实际创建100×100个 fire domain 四边形，按16×16格构造49个 `ChunkDepthMeshRenderer(useParentSortingAnchor:true)`，显式 Flush 后读取每个 Mesh 的 submesh 顶点/索引、真实 MeshRenderer/SortingGroup、排序键和 `SetIndexBufferData` / `SetVertexBufferData` 调用点的 Editor 计数/字节。相同火格重提应无上传；单火颜色变化应只增加顶点上传，不增加索引上传或拓扑重建。该同步规则只验证 Unity Mesh 构造和 CPU 上传路径；实际相机帧数据由 `rendering/world_fire_render_benchmark` 另行采集。
+
+`rendering/world_fire_render_benchmark` 是显式 PlayMode Lua 操作：建临时 Scene、1920×1080 RenderTexture 与只看专用 Layer 的正交相机，使用相同49个正式深度合批 Renderer 提交10,000个 Sprite Quad；采样前暂时关闭其他已启用 Camera，取12帧预热和60帧实渲染，之后立即恢复相机。结果包含摄像机是否完整覆盖火格与真实 Mesh bounds、预热与正式采样期 Camera 实际渲染帧数、Profiler `Render/Draw Calls Count`、`Memory/GC Allocated In Frame`、FrameTimingManager 的 CPU 主线程/渲染线程/整帧与 GPU 时间，以及真实 `SetIndexBufferData` / `SetVertexBufferData` 的 Editor 计数和字节增量。采样完成后单独从 RT 读回 PNG 到 `Library/FlatWorldGameplayTests/WorldFireRenderBenchmark/`，JSON 的 `previewImagePath` 给出绝对路径；Lua 宿主结束截图仍是普通游戏现场。Lua只检查 PNG 文件生成，不做非黑像素或火焰着色断言，需人工查看这张基准PNG。Profiler 项不可用时标记 `unavailable`；GPU 样本为0时按不可用记录，不会伪报为通过。FrameTimingManager 是整帧计时，Draw Calls/GC 是隔离采样期间的整帧计数，并非每 Camera 的GPU计时；离屏 RT 测量不等于真实显示器刷新率或 Frame Debugger 验收。此夹具只在被 Lua 明确调用时建场景、启相机和 Recorder，无常驻玩法开销。本轮只添加采样入口，没有启动 Unity 或执行该规则。
+
+同一规则还提交正式16×16 `ChunkRuntime` 地形并写入真实火格，让 `DroppedItemPresentation.Present` 依次采样同格抑制、移动到无火格恢复、原格灭火后恢复；测试使用独立 owned `WorldRuntime` 和临时 Scene，并在清理阶段通过 `ReleaseOwnedWorldModel` 释放。尚未覆盖 `ItemMgr.Matter` 的散落物表现入口。
+
 ## 冷机器与提前显示回归（2026-10-30）
 
 `rendering/cold_machine_content` 克隆全部正式机器定义，以配置未解析、逻辑未创建的节点调用正式落地表现预备，再读取所有声明模块；Lua 验证炉体、晾架、培育仓、燃烧特效和照明类别均实际覆盖，光源不遗漏且保持停用，读取不激活业务、不改写节点快照或共享定义。另检查资源缺失的明确错误、失败不发布缓存、同对象重试、序列化排除缓存及失效重建。该采样不代替实际区块分帧绑定、音频播放或画面验收。离线入口 `Tools/Tests/ColdMachinePresentation/verify.py` 直接编译正式入口/绑定代码，使用 Unity 与资源边界替身验证事务，26 项断言通过；完整外部 C# 编译 0 错误、43 警告。

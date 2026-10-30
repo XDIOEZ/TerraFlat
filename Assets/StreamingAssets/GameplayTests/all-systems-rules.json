@@ -179,6 +179,12 @@
       "enabled": true
     },
     {
+      "id": "environment_world_fire",
+      "name": "批量火场与燃料状态规则",
+      "luaPath": "GameplayTests/Systems/Environment/world_fire.lua",
+      "enabled": true
+    },
+    {
       "id": "surface_fluids_rules",
       "name": "地表水体规则与边界",
       "luaPath": "GameplayTests/Systems/SurfaceFluids/rules.lua",

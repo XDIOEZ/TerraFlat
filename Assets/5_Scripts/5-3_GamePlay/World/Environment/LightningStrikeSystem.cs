@@ -112,6 +112,7 @@ public static class LightningStrikeSystem
         GameplayCombatBridge.ApplyEnvironmentalDamage(strike.WorldKey, context, radius);
         FlatWorld.NaturalEntities.NaturalEntityEcsService.ApplyEnvironmentalDamage(strike.WorldKey, eventId, center, radius, peakDamage, "lightning");
         FlatWorld.Spaceflight.SpaceSurfaceQuery.ApplyEnvironmentalDamageInRadius(strike.WorldKey, center, radius, peakDamage, eventId);
+        WorldFireSystem.TryIgniteWorldFireCell(strike.WorldKey, center);
     }
 
     private static void ApplyItemDamage(string world, ulong eventId, Vector2 center, float radius, float peakDamage)

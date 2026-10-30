@@ -113,8 +113,23 @@ public static partial class GameplayTestSystemProbe
             RuntimeTileDeltas = new List<RuntimeTileCellSaveDelta>
             {
                 RuntimeTileCellSaveDelta.Capture(new Vector2Int(2, 3), terrain, 12.5f)
+            },
+            FireCells = new List<FireCellSaveData>
+            {
+                new() { CellIndex = 23, Intensity = .75f, SurfaceFuelBurnSeconds = 4.5f }
             }
         };
+        var fireOnly = new ChunkSaveRecord
+        {
+            FireCells = new List<FireCellSaveData>
+            {
+                new() { CellIndex = 7, Intensity = .5f, SurfaceFuelBurnSeconds = 2f }
+            }
+        };
+        bool fireOnlyCountsAsChange = fireOnly.HasChanges;
+        byte[] fireOnlyBytes = MemoryPackSerializer.Serialize(fireOnly);
+        fireOnly.FireCells[0].Intensity = .1f;
+        var restoredFireOnly = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(fireOnlyBytes);
         var second = new ChunkSaveRecord
         {
             PlanetName = "probe:autosave", ChunkName = "0_0", ChunkPosition = Vector2Int.zero,
@@ -132,6 +147,8 @@ public static partial class GameplayTestSystemProbe
         item.Stack.Amount += 7;
         child.Stack.Amount += 11;
         source.RuntimeTileDeltas[0].GroundTileId = 901;
+        source.FireCells[0].Intensity = .1f;
+        source.FireCells[0].SurfaceFuelBurnSeconds = 99f;
         source.RemovedItemGuids.Add(99);
         second.ChunkName = "changed_after_capture";
         core.Seed = -1;
@@ -169,6 +186,14 @@ public static partial class GameplayTestSystemProbe
             ["ground"] = delta.GroundTileId, ["back"] = delta.BackTileId, ["blocking"] = delta.BlockingTileId,
             ["biome"] = delta.BiomeId, ["navigationCost"] = delta.NavigationCost,
             ["flags"] = (int)delta.Flags, ["damage"] = delta.AccumulatedDamage,
+            ["fireCellCount"] = restored.FireCells.Count, ["fireCellIndex"] = restored.FireCells[0].CellIndex,
+            ["fireIntensity"] = restored.FireCells[0].Intensity,
+            ["surfaceFuelBurnSeconds"] = restored.FireCells[0].SurfaceFuelBurnSeconds,
+            ["fireCountsAsChange"] = restored.HasChanges,
+            ["fireOnlyCountsAsChange"] = fireOnlyCountsAsChange,
+            ["fireOnlyCellIndex"] = restoredFireOnly.FireCells[0].CellIndex,
+            ["fireOnlyIntensity"] = restoredFireOnly.FireCells[0].Intensity,
+            ["emptyFireHasNoChanges"] = !new ChunkSaveRecord().HasChanges,
             ["firstBytesPreserved"] = Convert.ToBase64String(compact.ChunkRecords[0]) == Convert.ToBase64String(firstBytes),
             ["machinesPreserved"] = Convert.ToBase64String(compact.MechanicalNetworks) == Convert.ToBase64String(machines),
             ["dropsPreserved"] = Convert.ToBase64String(compact.DroppedItems) == Convert.ToBase64String(drops),

@@ -404,6 +404,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_world_fire_render_benchmark",
+      "name": "一万火格1080p隔离相机性能采样",
+      "luaPath": "GameplayTests/Systems/Rendering/world-fire-render-benchmark.lua",
+      "enabled": true
+    },
+    {
       "id": "testing_queue_gameplay",
       "name": "Lua真实命令队列与清理租约前置",
       "luaPath": "GameplayTests/Systems/Testing/gameplay.lua",

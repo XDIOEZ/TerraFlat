@@ -44,6 +44,7 @@ public static partial class GameplayTestSystemProbe
         RegisterNavigationOperations(result);
         result.Add("terrain/generation_stage_ownership", WorldGenerationStageOwnership);
         RegisterEnvironmentBatchOperations(result);
+        RegisterWorldFireOperations(result);
         RegisterGreenhouseOperations(result);
         RegisterSurfaceThawOperations(result);
         RegisterLooseItemMotionOperations(result);

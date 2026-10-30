@@ -7,7 +7,7 @@ using UnityEngine;
 /// 地块效果接收器。优先读取 ChunkRuntime/ChunkTerrainData 权威地形，进入、离开或地块来源变化时
 /// 调用 RuntimeTileDefinition 行为；旧 Map 仅作为尚未迁移场景的兼容回退。
 /// </summary>
-public partial class Mod_TileEffectReceiver : Module
+public partial class Mod_TileEffectReceiver : Module, IWorldTerrainContactState
 {
     private static readonly Vector2Int[] WaterEdgeDirections =
     {
@@ -72,6 +72,7 @@ public partial class Mod_TileEffectReceiver : Module
     private float activeSnowDepth;
     private bool snowContactActive;
     private readonly System.Collections.Generic.HashSet<object> effectSuppressors = new();
+    public bool HasTerrainContact => effectSuppressors.Count == 0 && !isPreparedForWorldTransition;
     private ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery;
     private bool terrainQueryActive;
     private bool hasTerrainQuery;

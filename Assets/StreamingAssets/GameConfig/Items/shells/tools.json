@@ -617,6 +617,13 @@
         }
       },
       "modules": {
+        "worldFireIgnition": {
+          "prefab": "Item.WorldFireIgnition",
+          "id": "Item.WorldFireIgnition",
+          "enabled": true,
+          "data": { "BitData": [] },
+          "parameters": { "Reach": 2.0 }
+        },
         "lifetime": {
           "prefab": "Item.TimedDespawn",
           "id": "Item.TimedDespawn",

@@ -16,7 +16,7 @@ public partial class ItemMgr
     private readonly List<Item> worldMatterSnapshot = new();
     private readonly Dictionary<Item, WorldMatterEntry> worldMatterEntries = new(ItemReferenceComparer.Instance);
     private readonly Dictionary<Item, WorldMatterStructure> worldMatterStructures = new(ItemReferenceComparer.Instance);
-    // 每帧只刷新确实存在火焰的散落物，其他物质条目仍按原周期结算。
+    // 每帧只刷新仍在燃烧的散落物，确保火场遮蔽结束后立即恢复独立火焰。
     private readonly HashSet<WorldMatterEntry> worldMatterFlames = new();
     private double worldMatterTime;
     private double nextWorldMatterSweepTime = WorldMatterTickInterval;
@@ -30,6 +30,7 @@ public partial class ItemMgr
         public double LastTime;
         public WorldMatterStructure Structure;
         public ShaderFlameEffect Flame;
+        public bool FireSuppressedByWorldFire;
     }
 
     // 层级能力只在结构或代际改变时读取，动态物种和投射物附着仍使用当前状态。
@@ -253,6 +254,20 @@ public partial class ItemMgr
             return;
         }
 
+        worldMatterFlames.Add(entry);
+        SpriteRenderer sprite = entry.Item.Sprite;
+        Vector3 position = sprite != null ? sprite.transform.position : entry.Item.transform.position;
+        bool wasSuppressed = entry.FireSuppressedByWorldFire;
+        entry.FireSuppressedByWorldFire = WorldFireSystem.TryGetWorldFireIntensity(
+            GameplayWorldRegistry.GetItemWorldKey(entry.Item), WorldLocalPresentation.ToLogical(position),
+            out float fireIntensity) && fireIntensity > 0f;
+        if (entry.FireSuppressedByWorldFire)
+        {
+            // 火场覆盖期间复用已创建的特效对象，火场消退后可立即恢复。
+            if (!wasSuppressed) entry.Flame?.SetBurning(false);
+            return;
+        }
+
         if (entry.Flame == null) entry.Flame = WorldItemCombustionVisual.Create(transform);
         // 特效资源暂不可用时不可留下空索引；下一次物质 Tick 仍可重试。
         if (entry.Flame == null)
@@ -260,9 +275,6 @@ public partial class ItemMgr
             worldMatterFlames.Remove(entry);
             return;
         }
-        worldMatterFlames.Add(entry);
-        SpriteRenderer sprite = entry.Item.Sprite;
-        Vector3 position = sprite != null ? sprite.transform.position : entry.Item.transform.position;
         if (entry.Flame.transform.position != position) entry.Flame.transform.position = position;
         if (sprite != null)
         {
@@ -283,7 +295,11 @@ public partial class ItemMgr
         {
             WorldMatterEntry entry = active[i];
             if (!worldMatterFlames.Contains(entry)) continue;
-            if (entry.Flame == null) { DestroyWorldItemCombustionVisual(entry); continue; }
+            if (entry.Flame == null && !entry.FireSuppressedByWorldFire)
+            {
+                DestroyWorldItemCombustionVisual(entry);
+                continue;
+            }
             RefreshWorldItemCombustionVisual(entry);
         }
     }
@@ -301,6 +317,7 @@ public partial class ItemMgr
     private void DestroyWorldItemCombustionVisual(WorldMatterEntry entry)
     {
         worldMatterFlames.Remove(entry);
+        entry.FireSuppressedByWorldFire = false;
         if (entry.Flame == null) { entry.Flame = null; return; }
         entry.Flame.SetBurning(false);
         UnityEngine.Object.Destroy(entry.Flame.gameObject);

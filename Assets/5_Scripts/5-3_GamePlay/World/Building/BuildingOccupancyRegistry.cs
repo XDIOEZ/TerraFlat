@@ -104,6 +104,13 @@ public static class BuildingOccupancyRegistry
 
     #region 占地查询
 
+    // 同步借用正式占地，环境接触不重新推导建筑旋转和尺寸。
+    internal static HashSet<Mod_Building> GetOccupantsAtNormalizedCell(Vector2Int cell)
+        => OccupantsByCell.TryGetValue(cell, out var occupants) ? occupants : null;
+
+    internal static HashSet<Vector2Int> GetRegisteredFootprintCells(Mod_Building building)
+        => CellsByBuilding.TryGetValue(building, out var cells) ? cells : null;
+
     public static bool IsOccupied(Vector2Int cell, Mod_Building except = null, int layer = -1, bool ignoreGroundBuildings = false)
         => IsOccupiedNormalized(WorldTopologyRuntime.NormalizeCell(cell), except, layer, ignoreGroundBuildings);
 

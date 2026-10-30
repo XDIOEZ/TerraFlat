@@ -92,7 +92,7 @@ end, "自动保存工作单元上限与重启计数隔离")
 
 test.system("save", "autosave_chunk_payload", { amount = 3, guid = 143 }, function(data)
     assert(data.bytes > 0 and data.outerMagic == "FWD6" and data.outerVersion == 15, "自动保存外层封装格式错误")
-    assert(data.compactVersion == 36, "自动保存独立区块字节格式错误")
+    assert(data.compactVersion == 37, "自动保存独立区块字节格式错误")
     assert(data.coreName == "probe:autosave_core" and data.coreSeed == 2468, "核心数据冻结后被源对象变化污染")
     assert(data.recordCount == 2 and data.firstChunk == "1_0" and data.secondChunk == "0_0", "封装没有保留捕获顺序或区块身份")
     assert(data.planet == "probe:autosave" and data.chunkX == 1 and data.itemCount == 1, "区块身份、位置或物品列表丢失")
@@ -104,6 +104,12 @@ test.system("save", "autosave_chunk_payload", { amount = 3, guid = 143 }, functi
     assert(data.terrainCount == 1 and data.localX == 2 and data.localY == 3, "地形差量列表或局部坐标丢失")
     assert(data.ground == 101 and data.back == 102 and data.blocking == 103 and data.biome == 104, "地形差量字段丢失或被后续修改污染")
     assert(data.navigationCost == 105 and data.flags == 2 and data.damage == 12.5, "导航、阻挡标记或建筑损伤未原样保存")
+    assert(data.fireCellCount == 1 and data.fireCellIndex == 23 and data.fireIntensity == 0.75 and
+        data.surfaceFuelBurnSeconds == 4.5 and data.fireCountsAsChange,
+        "火场强度、表面燃烧进度或火格差量没有进入区块冻结字节")
+    assert(data.fireOnlyCountsAsChange and data.fireOnlyCellIndex == 7 and data.fireOnlyIntensity == 0.5 and
+        data.emptyFireHasNoChanges,
+        "只有火格差量的区块没有保存，或冻结后火势数值被源列表修改污染")
     assert(data.firstBytesPreserved and data.machinesPreserved and data.dropsPreserved and data.modsPreserved, "纯字节封装改写了已捕获的独立载荷")
 end, "正式区块冻结字节、嵌套实例与外层存档封装往返")
 
@@ -120,7 +126,7 @@ test.system("save", "autosave_ecology_payload", { amount = 3, guid = 143 }, func
 end, "生态逐物品冻结、跨帧采收对齐、维度隔离与正式恢复往返")
 
 test.system("save", "load_failure_state", {}, function(data)
-    assert(data.currentVersion == 36 and data.currentName == "probe:current" and data.currentSeed == 2468, "当前核心格式不能正常恢复")
+    assert(data.currentVersion == 37 and data.currentName == "probe:current" and data.currentSeed == 2468, "当前核心格式不能正常恢复")
     assert(data.oldFailure == "SaveVersionIncompatibleException" and data.oldPreserved, "旧核心结构没有先被版本拒绝，或拒绝时清空了既有差量")
     assert(data.corruptFailure == "InvalidDataException" and data.corruptPreserved, "区块解析失败留下半份新差量或丢掉旧差量")
     assert(not data.missingLoaded and data.saveCleared and data.playerCleared, "载入失败仍允许使用上一份存档或角色")

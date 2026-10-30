@@ -555,13 +555,24 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/RegionalWeatherRecord.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInputLifecycleRuntimeProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.Liquid.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_TileEffectReceiver.Liquid.cs",
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/ChunkTerrainData.Fire.cs",
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/WorldFireSimulationKernel.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldFire.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Tool/Mod_WorldFireIgnition.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.Fire.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsWorldFireContactStage.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsService.Fire.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemRuntime.Fire.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Building/TileBuildingSystem.Fire.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_DamageReceiver.Fire.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
         "environment_rules",
         "environment_greenhouse",
-        "environment_surface_thaw"
+        "environment_surface_thaw",
+        "environment_world_fire"
       ],
       "rulesSuite": "GameplayTests/Systems/Environment/rules-suite.json",
       "integrationSuites": [
@@ -1405,7 +1416,9 @@
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/TerrainHeightShadowManager.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/TerrainShadowSurfaceSampleCache.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.TerrainHeightShadows.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkLightOccluderVisibilityScheduler.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkLightOccluderVisibilityScheduler.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldFireBatches.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.WorldFireRenderBenchmark.cs"
       ],
       "dependsOn": [
         "time",
@@ -1426,7 +1439,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Rendering/README.md",
       "integrationCaseIds": [
-        "rendering_gameplay"
+        "rendering_gameplay",
+        "rendering_world_fire_render_benchmark"
       ],
       "rulesCoverage": "partial"
     },

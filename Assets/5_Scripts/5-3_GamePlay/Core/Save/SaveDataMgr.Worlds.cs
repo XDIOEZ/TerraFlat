@@ -210,8 +210,13 @@ public partial class SaveDataMgr
                 record.ChunkName != record.ChunkPosition.ToString() || record.RuntimeTileDeltas == null ||
                 record.SupportCells == null || record.AgricultureCells == null || record.ContaminationCells == null ||
                 record.LiquidCells == null || record.GroundLayerCells == null || record.SnowCells == null ||
-                record.GrassDeltas == null || record.ChangedItems == null)
+                record.FireCells == null || record.GrassDeltas == null || record.ChangedItems == null)
                 throw new InvalidDataException("局部世界联机区块身份或内容无效。");
+            var fireCellIndices = new HashSet<int>();
+            foreach (FireCellSaveData cell in record.FireCells)
+                if (cell == null || !FireCellSaveData.IsValid(cell.CellIndex, cell.Intensity,
+                        cell.SurfaceFuelBurnSeconds, int.MaxValue) || !fireCellIndices.Add(cell.CellIndex))
+                    throw new InvalidDataException("局部世界联机区块火场状态无效。");
             records.Add(record);
         }
         return records;
@@ -273,6 +278,7 @@ public partial class SaveDataMgr
             terrain.LiquidCells = record.LiquidCells;
             terrain.GroundLayerCells = record.GroundLayerCells;
             terrain.SnowCells = record.SnowCells;
+            terrain.FireCells = record.FireCells;
             terrain.GrassDeltas = record.GrassDeltas;
             foreach (AgricultureCellSaveData cell in record.AgricultureCells)
                 terrain.AgricultureCells.Add(new AgricultureCellSaveData

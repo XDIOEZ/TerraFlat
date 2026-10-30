@@ -31,6 +31,7 @@ namespace FlatWorld.AIECS
         public AiecsLosView Los;
         public FlowNavigationSnapshot Navigation;
         public NativeArray<AiecsDefinition> Definitions;
+        public NativeArray<AiecsBuffDefinition> BuffDefinitions;
         public NativeArray<FixedString128Bytes> Factions;
         public NativeQueue<AiecsHitEvent>.ParallelWriter HitEvents; // 技能在实际 Pulse 通过同一结算入口发射命中。
         public float DayRatio;
@@ -648,7 +649,7 @@ namespace FlatWorld.AIECS
             results.Clear(); externalHits.Clear(); deaths.Clear();
             pending = perceptionSpatial.Build(scheduler, activeQuery, view.Domain, relations, factions.Length, maximumBodyExtent);
             var frame = new AiecsFrame { Clock = Clock, Spatial = perceptionSpatial.View, Los = los, Navigation = view, Definitions = definitions,
-                Factions = factions, HitEvents = abilityHits.AsParallelWriter(), DayRatio = DayRatio, GameDays = GameDays };
+                Factions = factions, BuffDefinitions = buffs, HitEvents = abilityHits.AsParallelWriter(), DayRatio = DayRatio, GameDays = GameDays };
             pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Los = los, Hives = scheduler.GetHiveLookup(), Time = time, Tick = (uint)Clock.Tick }, activeQuery, pending);
             if (!nutritionQuery.IsEmptyIgnoreFilter)

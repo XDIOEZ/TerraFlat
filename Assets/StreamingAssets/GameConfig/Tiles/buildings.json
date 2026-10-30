@@ -262,7 +262,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 3, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Wood_Summoner" }
     },

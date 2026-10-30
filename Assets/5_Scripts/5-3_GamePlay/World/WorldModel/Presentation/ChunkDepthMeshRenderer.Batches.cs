@@ -46,6 +46,8 @@ internal sealed partial class ChunkDepthMeshRenderer
         internal readonly GroupKey Key;
         internal readonly List<Entry> Entries = new();
         internal bool TopologyDirty = true;
+        internal MeshRenderer Renderer => renderer;
+        internal MeshFilter MeshFilter => root != null ? root.GetComponent<MeshFilter>() : null;
         private readonly Transform root;
         private readonly Mesh mesh;
         private readonly MeshRenderer renderer;
@@ -54,6 +56,14 @@ internal sealed partial class ChunkDepthMeshRenderer
         private uint[] indices = Array.Empty<uint>();
         private int vertexCount, indexCount;
         private bool disposed;
+#if UNITY_EDITOR
+        internal int IndexBufferUploadCount { get; private set; }
+        internal long IndexBufferUploadBytes { get; private set; }
+        internal int VertexBufferUploadCount { get; private set; }
+        internal long VertexBufferUploadBytes { get; private set; }
+        internal int TopologyRebuildCount { get; private set; }
+        private static readonly int DiagnosticVertexStride = Marshal.SizeOf<Vertex>();
+#endif
 
         internal Group(Row row, GroupKey key)
         {
@@ -115,6 +125,10 @@ internal sealed partial class ChunkDepthMeshRenderer
                     foreach (int triangle in entry.Geometry.Triangles)
                         indices[cursor++] = (uint)(entry.VertexStart + triangle);
                 mesh.SetIndexBufferData(indices, 0, 0, indexCount, UploadFlags);
+#if UNITY_EDITOR
+                IndexBufferUploadCount++;
+                IndexBufferUploadBytes += (long)indexCount * sizeof(uint);
+#endif
             }
             int first = vertexCount, last = 0;
             Bounds bounds = default;
@@ -131,12 +145,22 @@ internal sealed partial class ChunkDepthMeshRenderer
                 if (!hasBounds) { bounds = entry.Bounds; hasBounds = true; }
                 else bounds.Encapsulate(entry.Bounds);
             }
-            if (last > first) mesh.SetVertexBufferData(vertices, first, first, last - first, 0, UploadFlags);
+            if (last > first)
+            {
+                mesh.SetVertexBufferData(vertices, first, first, last - first, 0, UploadFlags);
+#if UNITY_EDITOR
+                VertexBufferUploadCount++;
+                VertexBufferUploadBytes += (long)(last - first) * DiagnosticVertexStride;
+#endif
+            }
             if (rebuild)
             {
                 mesh.subMeshCount = 1;
                 mesh.SetSubMesh(0, new SubMeshDescriptor(0, indexCount)
                     { vertexCount = vertexCount, bounds = bounds }, UploadFlags);
+#if UNITY_EDITOR
+                TopologyRebuildCount++;
+#endif
             }
             mesh.bounds = bounds;
             renderer.enabled = indexCount > 0;

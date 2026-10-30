@@ -26,6 +26,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 - 天气生成/推进、湿度、雨雪雷雾、地表积分或保存：[weather-and-surface.md](references/weather-and-surface.md)。
 - 地理/局部温度、传热、体温、氧气/压力或大气：[thermal-and-survival.md](references/thermal-and-survival.md)。
 - 地块接触、积雪操作、污染、光照或风推动：[contact-light-wind.md](references/contact-light-wind.md)。
+- 地火由 `WorldFireSystem` 按世界固定步推进，`ChunkTerrainData.Fire` 持有活火/表面燃料进度，`WorldFireSimulationKernel` 只计算冻结数值；燃料、生命、Buff 和材料转换仍由原拥有者结算。统一入口为 `TryIgniteWorldFireCell`、`ExtinguishWorldFireCell` 和区域批量接口；不为每团火创建对象/热源，卸载冻结且不补烧。
 
 ## 多世界所有权
 
@@ -46,3 +47,4 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 - 环境生产者发布通用供给/影响，生存模块只管自身状态；装备/设备走公开接口供氧或注册耐受，不向 Mod_Oxygen/Mod_Pressure 堆具体装备判断。
 - 海洋 `ocean.currentX/Y` 保存带强度的近岸回推/外海离岸向量；`WaterEnvironmentRules.ResolveOceanCurrentVector` 统一混河口，运行时/冷区/海面共用。海洋 `RuntimeWaterCurrentSample.Flow` 为 0～1 强度，物品与角色推速均须乘它；共享格角包含零流样本且禁止归一化吞掉弱流带。
 - 回归主题入口 `environment/*`、`survival/*`；按 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md) 和 `Assets/StreamingAssets/GameplayTests/systems.catalog.json` 选择，专项映射见参考。规则样本与最终场景/画面验收分开报告。
+- 地火回归 `environment/world_fire`，并联选 `rendering/combustion-visual`、保存及地形网络规则；火场前景合批见 effects-tools。草10游戏秒、木质对象60秒是满火累计暴露量，地面材料接触700℃，3格范围取最强180℃热影响；火种成功后扣料，普通炉火不自动引燃环境。

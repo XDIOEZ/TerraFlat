@@ -173,7 +173,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         if (!scene.IsValid() || !scene.isLoaded) { DetachScenePresentation(); return; }
         if (presentation != null && presentationScene == scene) return;
         DetachScenePresentation();
-        presentation = new DroppedItemPresentation(scene, simulation, visuals, payloads);
+        presentation = new DroppedItemPresentation(scene, matterWorldKey, simulation, visuals, payloads, transportItems);
         presentationScene = scene;
     }
 

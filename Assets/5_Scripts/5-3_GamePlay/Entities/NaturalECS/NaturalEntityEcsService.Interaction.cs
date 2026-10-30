@@ -835,11 +835,12 @@ namespace FlatWorld.NaturalEntities
             if (!Contains(record.Handle)) return;
             simulation.TryGet(record.Handle.Id, out AiecsVital vital);
             if (vital.DeathPublished != 0) return;
-            if (!FinishCanopy(record, record.DeathByDamage)) return;
+            if (!FinishCanopy(record, record.DeathByDamage && !record.DeathByFire)) return;
             // 死亡先锁存；即使表现/第三方回调抛异常，也不能再次发放战利品。
             vital.DeathPublished = 1; simulation.Set(record.Handle.Id, vital);
             try
             {
+                if (record.DeathByFire) return;
                 // 被击杀的成熟作物沿用一次收获产物表，徒手进度不影响死亡产量。
                 if (record.DeathByDamage && record.Profile.HasCrop && record.Profile.HarvestOutputs != null &&
                     simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle crop) && crop.Harvested == 0 &&
