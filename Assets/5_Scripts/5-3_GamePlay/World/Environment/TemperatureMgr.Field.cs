@@ -38,7 +38,7 @@ public partial class TemperatureMgr
         get { PrepareFieldContext(); return fieldContextVersion; }
     }
 
-    /// <summary>地块生成温度之外的星球基准与天气修正，同一帧只读取一次。</summary>
+    /// <summary>地块生成温度之外的星球基准与天气修正，同一固定步内复用。</summary>
     public float AmbientFieldOffset
     {
         get { PrepareFieldContext(); return ambientFieldOffset; }
@@ -54,7 +54,8 @@ public partial class TemperatureMgr
         long epoch = world?.Epoch ?? 0;
         TemperatureWorld state = FieldState;
         AtmosphereState atmosphere = fieldPlanet?.Atmosphere;
-        if (fieldContextFrame == Time.frameCount && ReferenceEquals(manager, fieldChunkManager) &&
+        if (fieldContextFrame == Time.frameCount && state.fieldContextSimulationTick == GameplayFixedStepSimulation.TickIndex &&
+            ReferenceEquals(manager, fieldChunkManager) &&
             ReferenceEquals(world, fieldWorld) && epoch == fieldWorldEpoch && dimensionId == fieldDimension &&
             ReferenceEquals(state.fieldAtmosphere, atmosphere) && state.fieldAtmosphereRevision == (atmosphere?.Revision ?? 0) &&
             ReferenceEquals(state.fieldGreenhouseConfiguration, AtmosphericGreenhouseConfigurationService.Current) &&
@@ -63,6 +64,7 @@ public partial class TemperatureMgr
             state.fieldAtmosphereReferencePressureKPa == (atmosphere?.ReferencePressureKPa ?? 0d))
             return;
         fieldContextFrame = Time.frameCount;
+        state.fieldContextSimulationTick = GameplayFixedStepSimulation.TickIndex;
 
         PlanetData planet = null;
         if (SaveDataMgr.Instance != null)
@@ -124,6 +126,7 @@ public partial class TemperatureMgr
         private readonly long epoch;
         private readonly int version;
         private readonly int frame;
+        private readonly ulong simulationTick;
         private readonly LiquidTemperatureField.PointSamplingBatch liquid;
 
         internal PointSamplingContext(TemperatureMgr owner)
@@ -133,6 +136,7 @@ public partial class TemperatureMgr
             epoch = owner.fieldWorldEpoch;
             version = owner.fieldContextVersion;
             frame = Time.frameCount;
+            simulationTick = GameplayFixedStepSimulation.TickIndex;
             liquid = owner.liquidTemperatureField?.BeginPointSamplingBatch() ?? default;
         }
 
@@ -143,7 +147,8 @@ public partial class TemperatureMgr
                 !ReferenceEquals(ChunkMgr.ExistingInstance?.WorldRuntime, world) ||
                 DimensionManager.ExistingInstance?.ActiveAddress.DimensionId != owner.fieldDimension)
                 return false;
-            if (frame != Time.frameCount || version != owner.fieldContextVersion)
+            if (frame != Time.frameCount || simulationTick != GameplayFixedStepSimulation.TickIndex ||
+                version != owner.fieldContextVersion)
                 throw new InvalidOperationException("单点温度上下文只能用于当前同步结算批次。");
             return owner.TrySamplePreparedTemperature(position, true, out ambient, out baseline, true, liquid);
         }

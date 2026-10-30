@@ -17,6 +17,7 @@ public partial class TemperatureMgr
         public LocalTemperatureField localTemperatureField;
         public LiquidTemperatureField liquidTemperatureField;
         public int fieldContextFrame = -1;
+        public ulong fieldContextSimulationTick;
         public AtmosphereState fieldAtmosphere;
         public long fieldAtmosphereRevision;
         public AtmosphericGreenhouseConfiguration fieldGreenhouseConfiguration;

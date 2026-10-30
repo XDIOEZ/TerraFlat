@@ -22,7 +22,7 @@ public static partial class RuntimeUIPrefabBuilder
         coordinates.overflowMode = TextOverflowModes.Ellipsis;
         SetTopLeft(coordinates.rectTransform, 0f, 0f, 560f, 28f);
 
-        TextMeshProUGUI fps = CreateText("FPS文本", root.transform, "FPS  --", 15f, Cream);
+        TextMeshProUGUI fps = CreateText("FPS文本", root.transform, "FPS  --    TPS  --", 15f, Cream);
         fps.fontStyle = FontStyles.Bold;
         fps.enableWordWrapping = false;
         fps.overflowMode = TextOverflowModes.Ellipsis;

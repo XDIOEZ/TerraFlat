@@ -158,7 +158,8 @@ public partial class MonsterSpawnerManager
         manager._naturalCountdown.Advance(0d, 100d);
         Check(!manager.ProcessDueSpawnWork("surface", 0) && manager.requests == 0, "no automatic birth before due");
         manager._naturalCountdown.Advance(100d, 100d);
-        Time.unscaledTime = 1f;
+        Time.time = 1f;
+        Time.unscaledTime = 100f;
         manager._nextCreatureBirthTime = 5f;
         Check(!manager.ProcessDueSpawnWork("surface", 0) && manager.requests == 0, "creation throttle never introduces a second spawn timer");
         manager._nextCreatureBirthTime = 0f;
@@ -167,7 +168,7 @@ public partial class MonsterSpawnerManager
         manager._naturalCreatureBirth = null;
         Check(!manager.ProcessDueSpawnWork("surface", 0) && manager._naturalCountdown.SelectedSpeciesId == null, "no loaded habitat keeps one unbound due opportunity");
         manager.habitats["sea"] = new Vector3(50f, 60f);
-        Time.unscaledTime = 2f;
+        Time.time = 2f;
         Check(manager.ProcessDueSpawnWork("surface", 0) && manager.requestedSpecies == "Fish", "invalid high-weight land species excluded before selection");
         Check(manager.requestedPosition.x == 50f && manager.requestedPosition.y == 60f, "selected valid position reaches the creation request");
         Check(manager._naturalCountdown.PendingCount == 2 && manager._runtimeStates["sea"].PendingSpawnCount == 2, "only selected rule has a batch");
@@ -225,7 +226,7 @@ public static class GameRuleMath { public static int ScaleCount(int count, float
 public sealed class WorldRules { public float SpawnFrequencyMultiplier = 1f, SpawnPopulationMultiplier = 1f; }
 public sealed class Rules { public WorldRules World = new(); }
 public static class GameRuleConfiguration { public static Rules Current = new(); }
-public sealed class TimeData { public double GetTotalGameTimeSeconds() => UnityEngine.Time.unscaledTime; }
+public sealed class TimeData { public double GetTotalGameTimeSeconds() => UnityEngine.Time.time; }
 public sealed class ChunkMgr
 {
     public Dictionary<string, ChunkRuntime> Chunks = new();
@@ -248,7 +249,7 @@ namespace UnityEngine
         public Vector3(float x, float y, float z = 0) { this.x = x; this.y = y; this.z = z; }
         public static Vector3 zero => default;
     }
-    public static class Time { public static float unscaledTime; }
+    public static class Time { public static float time, unscaledTime; }
     public static class Random { public static float value = .5f; public static int Range(int min, int max) => min; }
     public static class Mathf
     {

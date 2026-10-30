@@ -90,8 +90,8 @@ public partial class MonsterSpawnerManager
         target.PendingNaturalSpawns = target.Authority ? _naturalCountdown?.PendingCount ?? 0 : 0;
         target.SelectedSpecies = target.Authority ? _naturalCountdown?.SelectedSpeciesId : null;
         target.TickInterval = _settings?.EcologyTickInterval ?? 0f;
-        target.NextTickSeconds = Mathf.Max(0f, _nextEcologyTickTime - Time.unscaledTime);
-        target.TickOverdueSeconds = Mathf.Max(0f, Time.unscaledTime - _nextEcologyTickTime);
+        target.NextTickSeconds = Mathf.Max(0f, _nextEcologyTickTime - Time.time);
+        target.TickOverdueSeconds = Mathf.Max(0f, Time.time - _nextEcologyTickTime);
         target.GlobalLimit = _settings == null ? 0 : GameRuleMath.ScaleCount(_settings.GlobalAliveLimit,
             GameRuleConfiguration.Current.World.SpawnPopulationMultiplier, 1);
         IAiEcologyBackend ecology = AiRuntimeBackendService.ExistingEcology;
@@ -156,7 +156,7 @@ public partial class MonsterSpawnerManager
                 row.LifetimeBirths = state?.LifetimeSpawnCount ?? 0;
                 row.LastAttempt = observation.Result;
                 row.LastAttemptAge = Mathf.Max(0f, Time.unscaledTime - observation.Time);
-                row.RetrySeconds = _nextSpawnRetryTime.TryGetValue(key, out float retry) ? Mathf.Max(0f, retry - Time.unscaledTime) : 0f;
+                row.RetrySeconds = _nextSpawnRetryTime.TryGetValue(key, out float retry) ? Mathf.Max(0f, retry - Time.time) : 0f;
                 row.MinDistance = config.MinSpawnDistance;
                 row.MaxDistance = config.MaxSpawnDistance;
                 target.Entries.Add(row);

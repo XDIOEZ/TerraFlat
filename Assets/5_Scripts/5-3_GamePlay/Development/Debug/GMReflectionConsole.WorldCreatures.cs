@@ -25,7 +25,7 @@ public sealed partial class GMReflectionConsole
         RegisterSearchEntry(GmPageId.WorldCreatures, "世界生物信息",
             "生物 数量 计数 刷新 倒计时 上限 生态 预算 卡住 spawn countdown population", page.Content);
         AddPageHint(page.Content,
-            "倒计时 / 上限均为游戏秒，直接读取真实进度；重试与调度使用现实秒。合计包含已登记的存活 AI、蜜蜂与休眠居民，不含玩家、尸体和创建中的候选。",
+            "倒计时使用游戏时间；重试与调度使用受倍速影响的模拟秒。合计包含已登记的存活 AI、蜜蜂与休眠居民，不含玩家、尸体和创建中的候选。",
             48f);
     }
 
@@ -67,9 +67,9 @@ public sealed partial class GMReflectionConsole
         {
             string tick = data.TickOverdueSeconds > Mathf.Max(1f, data.TickInterval * 2f)
                 ? FlatWorldLocalizationService.GetUiFormat(
-                    "调度已逾期 {0:F1} 现实秒", data.TickOverdueSeconds)
+                    "调度已逾期 {0:F1} 模拟秒", data.TickOverdueSeconds)
                 : FlatWorldLocalizationService.GetUiFormat(
-                    "下次调度 {0:F1} 现实秒 / 间隔 {1:F2} 秒", data.NextTickSeconds, data.TickInterval);
+                    "下次调度 {0:F1} 模拟秒 / 间隔 {1:F2} 秒", data.NextTickSeconds, data.TickInterval);
             return FlatWorldLocalizationService.GetUiFormat(
                 "状态：{0}\n{1}　刷新频率倍率 {2:0.##}　游戏时间倍率 {3:0.##}\n{4}",
                 FlatWorldLocalizationService.GetUiText(data.Status),
@@ -148,7 +148,7 @@ public sealed partial class GMReflectionConsole
         return FlatWorldLocalizationService.GetUiFormat(
             "{0} [{1}]　世界存活 {2} / {3}\n{4}　待生成 {5}\n" +
             "规则 {6}　预算 {7}　规则累计出生 {8}　出生距离 {9:0.#}～{10:0.#} 格\n" +
-            "{11}　重试等待 {12:F1} 现实秒",
+            "{11}　重试等待 {12:F1} 模拟秒",
             GetCreatureMonitorName(row.SpeciesId), row.SpeciesId, row.Population, limit,
             clock, pending, row.RuleId, effectiveBudget, lifetime, row.MinDistance,
             row.MaxDistance, attempt, row.RetrySeconds);

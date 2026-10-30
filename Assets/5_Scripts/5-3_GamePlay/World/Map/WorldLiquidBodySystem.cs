@@ -36,7 +36,7 @@ public readonly struct WorldLiquidBodySnapshot
 public sealed partial class WorldLiquidBodySystem : IDisposable
 {
     #region 图与增量状态
-    private const int WorkCellsPerFrame = 128;
+    private const int WorkCellsPerFixedStep = 128;
     private static readonly Vector2Int[] Directions =
         { Vector2Int.left, Vector2Int.right, Vector2Int.down, Vector2Int.up };
 
@@ -519,8 +519,8 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         return true;
     }
 
-    /// <summary>只推进唤醒格的邻边；未知邻区先等待数据，静水不创建远端加载需求。</summary>
-    public void Advance()
+    /// <summary>按画面帧处理边界数据和共享泵寻源。</summary>
+    public void AdvanceStreamingFrame()
     {
         if (disposed || world.Epoch != epoch) return;
         if (owner.LiquidFlowExperiment != null || !GameNetwork.HasStateAuthority)
@@ -533,10 +533,19 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         }
         CompleteDiffusionBoundaryDataRequest();
         AdvanceSharedPumpSearches();
+        StartNextDiffusionBoundaryDataRequest();
+        ReleaseDormantDiffusionDataChunks();
+    }
+
+    /// <summary>固定步只推进唤醒格的权威液体转移。</summary>
+    public void SimulateFixedStep()
+    {
+        if (disposed || world.Epoch != epoch || owner.LiquidFlowExperiment != null || !GameNetwork.HasStateAuthority)
+            return;
         applying = true;
         try
         {
-            int remaining = Math.Min(pending.Count, WorkCellsPerFrame);
+            int remaining = Math.Min(pending.Count, WorkCellsPerFixedStep);
             while (pending.Count > 0 && remaining-- > 0)
             {
                 Vector2Int position = pending.Dequeue();
@@ -566,8 +575,6 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
             }
         }
         finally { applying = false; }
-        StartNextDiffusionBoundaryDataRequest();
-        ReleaseDormantDiffusionDataChunks();
     }
 
     private bool TryGetDiffusionTerrainSample(Vector2Int cell, out RuntimeTerrainTileSample sample)

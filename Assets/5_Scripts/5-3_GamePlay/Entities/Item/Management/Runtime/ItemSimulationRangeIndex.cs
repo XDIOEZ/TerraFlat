@@ -76,7 +76,7 @@ internal sealed class ItemSimulationRangeIndex
         public bool HasTier;
         public bool ForceDue;
         public SimulationRangeTier Tier;
-        public float DueAt;
+        public double DueAt;
         // 一次 ResolveTier 之后的真实位置快照。区域版本由 BeginFrame 统一更新，
         // 只有同区域、同位置、同逻辑世界且距离资格没有改变，才能跳过重复寻址。
         public bool HasMembershipSnapshot;
@@ -487,7 +487,7 @@ internal sealed class ItemSimulationRangeIndex
         }
     }
 
-    public void CollectEveryFrame(List<ItemTickScheduler.ScheduledEntry> snapshot, float currentTime)
+    public void CollectEveryFrame(List<ItemTickScheduler.ScheduledEntry> snapshot, double currentTime)
     {
         snapshot.Clear();
         dueSnapshot.Clear();

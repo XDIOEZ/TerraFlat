@@ -18,7 +18,7 @@ using UnityEngine.SceneManagement;
 // 其余分部：ItemMgr.Perception.cs（感知）/ ItemMgr.Matter.cs（物质）/ ItemMgr.RandomDrop.cs（掉落）
 // =================================================================
 
-public partial class ItemMgr : SingletonMono<ItemMgr>
+public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulationSystem
 {
     private static readonly ProfilerMarker MachineTickMarker = new("ItemMgr.Update.MachineWorld");
     private static readonly ProfilerMarker EntityTickMarker = new("ItemMgr.Update.WorldEntityRuntime");
@@ -167,6 +167,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private void OnEnable()
     {
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
         RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         RenderPipelineManager.beginContextRendering += PresentDroppedItemsAfterWorldProjection;
     }
@@ -226,6 +227,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private void OnDisable()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         ClearWorldItemMatter();
         CompletePerceptionBatch(false);
@@ -248,18 +250,24 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         }
 
         _itemTickSuspended = false;
+        _tickScheduler.UpdateRenderFrame(Time.deltaTime);
+    }
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (!IsWorldItemRuntimeActive()) return;
 
         using (MachineTickMarker.Auto())
-            MachineWorld.Tick(Time.deltaTime);
+            MachineWorld.Tick(deltaTime);
         using (EntityTickMarker.Auto())
-            WorldEntityRuntime.Tick(Time.deltaTime);
+            WorldEntityRuntime.Tick(deltaTime);
 
         using (PerceptionCompleteMarker.Auto())
             CompletePerceptionBatch();
 
         if (RuntimeItems.Count == 0)
         {
-            DroppedItemService.Tick(Time.deltaTime);
+            DroppedItemService.Tick(deltaTime);
             return;
         }
 
@@ -267,14 +275,14 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         // 索引刷新委托只创建一次，避免每帧方法组转换分配。
         _refreshRuntimeItemIndexesCallback ??= RefreshRuntimeItemIndexes;
         using (SchedulerTickMarker.Auto())
-            _tickScheduler.Update(Time.deltaTime, _refreshRuntimeItemIndexesCallback,
+            _tickScheduler.Update(deltaTime, GameplayFixedStepSimulation.CurrentTime, _refreshRuntimeItemIndexesCallback,
                 _simulationPlayers, WorldTopologyRuntime.GetActiveDomain());
         using (WaterTickMarker.Auto())
             WorldItemWaterSystem.ProcessPendingSpawnChecks();
         using (MatterTickMarker.Auto())
-            TickWorldItemMatter(Time.deltaTime);
+            TickWorldItemMatter(deltaTime);
         using (DroppedTickMarker.Auto())
-            DroppedItemService.Tick(Time.deltaTime);
+            DroppedItemService.Tick(deltaTime);
         // AI Tick 已提交本帧全部检测请求后立即调度，让 Job 在剩余帧时间里并行运行到下一帧结算。
         using (PerceptionScheduleMarker.Auto())
             SchedulePerceptionBatch();

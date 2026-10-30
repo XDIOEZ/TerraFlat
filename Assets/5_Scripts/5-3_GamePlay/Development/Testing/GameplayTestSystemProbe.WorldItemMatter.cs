@@ -18,6 +18,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/world_tick_move_query", WorldTickMoveQuery);
         operations.Add("item_runtime/logical_world_tick", LogicalWorldTick);
         operations.Add("item_runtime/module_tick_mutations", ModuleTickMutations);
+        operations.Add("item_runtime/fixed_step_and_render_schedule", FixedStepAndRenderSchedule);
+        operations.Add("combat/laser_fixed_step", LaserFixedStep);
         operations.Add("item_runtime/world_matter_contact", WorldMatterContact);
         operations.Add("item_runtime/matter_transition_scan", MatterTransitionScan);
         operations.Add("item_runtime/matter_moisture_info", MatterMoistureInfo);
@@ -319,13 +321,112 @@ public static partial class GameplayTestSystemProbe
         item.gameObject.SetActive(true);
         var scheduler = new ItemTickScheduler();
         scheduler.Register(item);
-        scheduler.Update(.1f, target => { scheduler.Remove(target); scheduler.Register(target); }, Array.Empty<Transform>(), default);
+        double now = Time.timeAsDouble + 1d;
+        scheduler.Update(.1f, now, target => { scheduler.Remove(target); scheduler.Register(target); }, Array.Empty<Transform>(), default);
         bool skippedOldRegistration = module.TickCount == 0;
-        scheduler.Update(.1f, null, Array.Empty<Transform>(), default);
+        scheduler.Update(.1f, now + .1d, null, Array.Empty<Transform>(), default);
         bool newRegistrationTicked = module.TickCount == 1;
         scheduler.Remove(item);
         return new JObject { ["result"] = skippedOldRegistration && newRegistrationTicked };
     }).Value<bool>("result");
+
+    // 同一画面帧手动推进真实调度器，区分模拟和画面模块并检查恢复时钟。
+    private static JObject FixedStepAndRenderSchedule(JObject args) => WithEntityProbeItem(item =>
+    {
+        Data_GeneralItem data = EntityProbeData("probe:fixed-render", 1);
+        data.inHand = true;
+        item.BindData(data);
+        GameplayWorldRegistry.AssignItemToWorld(item, "probe:fixed-render");
+        var every = AddTickCallbackProbe(item, "every", ModuleTickMode.EveryFrame);
+        var interval = AddTickCallbackProbe(item, "interval", ModuleTickMode.FixedInterval);
+        var render = AddTickCallbackProbe(item, "render", ModuleTickMode.Disabled);
+        render.Render = true;
+        item.ResumeRuntimeAfterReplacement();
+        item.gameObject.SetActive(true);
+        var scheduler = new WorldItemTickScheduler();
+        scheduler.Register(item);
+        scheduler.UpdateRenderFrame(.01f);
+        int frame = Time.frameCount;
+        const float step = 1f / 60f;
+        double start = Time.timeAsDouble + 1d;
+        for (int i = 0; i < 6; i++)
+            scheduler.Update(step, start + i * (double)step, null, Array.Empty<Transform>(), default);
+        bool noRenderOnFixedSteps = render.RenderTickCount == 1;
+        scheduler.UpdateRenderFrame(.02f);
+        int fixedTicks = every.TickCount;
+        float fixedSeconds = every.TotalDelta;
+        int intervalTicks = interval.TickCount;
+        float intervalSeconds = interval.LastDelta;
+        int renderTicks = render.RenderTickCount;
+        render.enabled = false;
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderComponentDisabled = render.RenderTickCount == renderTicks;
+        render.enabled = true;
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderComponentReenabled = render.RenderTickCount == renderTicks + 1;
+        render.SetEnabled(false);
+        scheduler.NotifyChanged(item);
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderModuleDisabled = render.RenderTickCount == renderTicks + 1;
+        render.SetEnabled(true);
+        scheduler.NotifyChanged(item);
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderModuleReenabled = render.RenderTickCount == renderTicks + 2;
+        GameplayWorldRegistry.AssignItemToWorld(item, "probe:fixed-render-next");
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderWorldTransferSkippedStale = render.RenderTickCount == renderTicks + 2;
+        scheduler.NotifyMoved(item);
+        scheduler.UpdateRenderFrame(.01f);
+        bool renderWorldTransferResumed = render.RenderTickCount == renderTicks + 3;
+        scheduler.Pause(new[] { item });
+        scheduler.Update(step, start + 20d, null, Array.Empty<Transform>(), default);
+        bool pausedWithoutCatchup = Mathf.Abs(every.LastDelta - step) < .0001f;
+        scheduler.Remove(item);
+        scheduler.UpdateRenderFrame(.03f);
+        return new JObject
+        {
+            ["multipleStepsInOneFrame"] = frame == Time.frameCount,
+            ["fixedTicks"] = fixedTicks, ["fixedSeconds"] = fixedSeconds,
+            ["intervalTicks"] = intervalTicks, ["intervalSeconds"] = intervalSeconds,
+            ["renderTicks"] = renderTicks, ["renderOnlyHasNoSimulationTicks"] = render.TickCount == 0,
+            ["noRenderOnFixedSteps"] = noRenderOnFixedSteps, ["pausedWithoutCatchup"] = pausedWithoutCatchup,
+            ["renderComponentDisabled"] = renderComponentDisabled, ["renderComponentReenabled"] = renderComponentReenabled,
+            ["renderModuleDisabled"] = renderModuleDisabled, ["renderModuleReenabled"] = renderModuleReenabled,
+            ["renderWorldTransferSkippedStale"] = renderWorldTransferSkippedStale,
+            ["renderWorldTransferResumed"] = renderWorldTransferResumed,
+            ["removedWithoutRender"] = render.RenderTickCount == renderTicks + 3
+        };
+    });
+
+    // 不创建世界，直接调用激光正式固定步并确认技能进度由管理器结算。
+    private static JObject LaserFixedStep(JObject args)
+    {
+        var root = new GameObject("[LaserFixedStep]");
+        root.SetActive(false);
+        try
+        {
+            Skill_Laser laser = root.AddComponent<Skill_Laser>();
+            var module = root.AddComponent<GameplayTestItemTickCallbackProbe>();
+            laser.runtimeSkill = new RuntimeSkill();
+            laser.mods.Add(module);
+            for (int i = 0; i < 3; i++) laser.SimulateFixedStep(.05f);
+            int ticks = module.TickCount;
+            float seconds = module.TotalDelta;
+            float progressBeforeManager = laser.runtimeSkill.progress;
+            laser.runtimeSkill.Stay(.05f);
+            float progressAfterManager = laser.runtimeSkill.progress;
+            laser.Unload();
+            laser.SimulateFixedStep(.05f);
+            return new JObject
+            {
+                ["registeredForFixedStep"] = laser is IGameplayFixedStepSimulationSystem,
+                ["moduleTicks"] = ticks, ["moduleSeconds"] = seconds,
+                ["progressBeforeManager"] = progressBeforeManager, ["progressAfterManager"] = progressAfterManager,
+                ["unloadStopsTicks"] = module.TickCount == ticks
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
 
     private static GameplayTestItemTickCallbackProbe AddTickCallbackProbe(GameItem item, string name, ModuleTickMode mode)
     {
@@ -674,10 +775,15 @@ internal sealed class GameplayTestItemTickCallbackProbe : Module
     public override float FixedTickInterval => .1f;
     public Action Callback;
     public int TickCount;
+    public int RenderTickCount;
     public float LastDelta;
+    public float TotalDelta;
+    public bool Render;
+    public override bool WantsRenderFrameUpdate => Render;
     protected override void OnLoad() { }
     protected override void OnSave() { }
-    public override void ModUpdate(float deltaTime) { TickCount++; LastDelta = deltaTime; Callback?.Invoke(); }
+    public override void ModUpdate(float deltaTime) { TickCount++; LastDelta = deltaTime; TotalDelta += deltaTime; Callback?.Invoke(); }
+    public override void ModRenderUpdate(float deltaTime) { RenderTickCount++; }
     #endregion
 }
 

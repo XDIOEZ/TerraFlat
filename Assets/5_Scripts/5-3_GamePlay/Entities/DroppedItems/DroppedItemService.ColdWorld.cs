@@ -49,7 +49,7 @@ public static partial class DroppedItemService
     private static readonly HashSet<int> worldDropIdentities = new();
     private static readonly Dictionary<string, uint> coldTransportSteps = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, HashSet<int>> coldTransported = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, (int Frame, HashSet<int> Items)> coldEnvironmentMotion = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (ulong Step, HashSet<int> Items)> coldEnvironmentMotion = new(StringComparer.Ordinal);
     private static readonly HashSet<ItemData> coldRebasedData = new();
     private static GameSaveData coldWorldSave;
     private static void BindColdWorldSave()
@@ -81,9 +81,9 @@ public static partial class DroppedItemService
         WorldTopologyDomain domain = save.PlanetData_Dict.TryGetValue(world, out PlanetData planet) &&
             WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
         using (coldWorldMotionMarker.Auto()) StepColdDropMotion(records, seconds, domain);
-        if (!coldEnvironmentMotion.TryGetValue(world, out var ownership)) ownership = (Time.frameCount, new HashSet<int>());
+        if (!coldEnvironmentMotion.TryGetValue(world, out var ownership)) ownership = (GameplayFixedStepSimulation.TickIndex, new HashSet<int>());
         ownership.Items.Clear();
-        coldEnvironmentMotion[world] = (Time.frameCount, ownership.Items);
+        coldEnvironmentMotion[world] = (GameplayFixedStepSimulation.TickIndex, ownership.Items);
         using var waterSample = coldWorldWaterMarker.Auto();
         for (int index = records.Count - 1; index >= 0; index--)
         {
@@ -292,7 +292,7 @@ public static partial class DroppedItemService
                 MachineWorld.GetTransportAt(drop.Position) != belt || !moved.Add(drop.Data.Guid)) continue;
             // 水中物品本帧被外力推到带上后，不能再重复消费这帧的推动时间。
             if (drop.Record != null && coldEnvironmentMotion.TryGetValue(world, out var ownership) &&
-                ownership.Frame == Time.frameCount && ownership.Items.Contains(drop.Data.Guid)) continue;
+                ownership.Step == GameplayFixedStepSimulation.TickIndex && ownership.Items.Contains(drop.Data.Guid)) continue;
             IItemTransferPort output = new ColdDropOutput(drop);
             MachineWorld.TryReceiveConveyorDrop(output, drop.Position, seconds, out bool terminal);
             if (!drop.Valid) continue;

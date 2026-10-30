@@ -68,9 +68,9 @@ public partial class MonsterSpawnerManager
             cached = new HabitatCandidates();
             _treeCapacityCache.Add(config, cached);
         }
-        if (Time.unscaledTime < cached.Until)
+        if (Time.time < cached.Until)
             return cached.Positions;
-        cached.Until = Time.unscaledTime + 2f;
+        cached.Until = Time.time + 2f;
         cached.Positions.Clear();
         if (_itemManager == null) return cached.Positions;
         using (TreeCandidatesMarker.Auto())

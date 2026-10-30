@@ -18,7 +18,7 @@ namespace FlatWorld.GameplayMCP
     /// 帧时来自真实 PlayerLoop，报告采样覆盖和 Editor 条件；生成仍须通过 GM 正式按钮。
     /// </summary>
     [McpForUnityTool("gameplay_aiecs_debug", Description =
-        "Read live AIECS test counters or sample real frame times for 1-20 seconds. Actions: status, sample. Read-only; create/clear units through the GM UI. Reports Burst, actual alive/visible counts, tick progress, backlog, memory, errors and occupancy validation.", Group = "core", Discoverable = false)]
+        "Read live AIECS test counters or sample real frame times for 1-20 seconds. Actions: status, sample. Read-only; create/clear units through the GM UI. Reports Burst, actual alive/visible counts, tick progress, memory, errors and occupancy validation.", Group = "core", Discoverable = false)]
     public static class GameplayAiecsDebugTool
     {
         #region 统一输入输出
@@ -97,7 +97,6 @@ namespace FlatWorld.GameplayMCP
             int errors = 0, warnings = 0, previousFrame = Time.frameCount, firstFrame = previousFrame;
             int minimumAlive = entry.AliveUnitCount, maximumAlive = minimumAlive;
             int minimumVisible = entry.VisibleUnitCount, maximumVisible = minimumVisible;
-            double maxBacklog = entry.SimulationBacklogSeconds;
             long memoryBefore = Profiler.GetTotalAllocatedMemoryLong();
             double start = EditorApplication.timeSinceStartup;
             var completion = new TaskCompletionSource<bool>();
@@ -120,7 +119,6 @@ namespace FlatWorld.GameplayMCP
                 maximumAlive = Math.Max(maximumAlive, entry.AliveUnitCount);
                 minimumVisible = Math.Min(minimumVisible, entry.VisibleUnitCount);
                 maximumVisible = Math.Max(maximumVisible, entry.VisibleUnitCount);
-                maxBacklog = Math.Max(maxBacklog, entry.SimulationBacklogSeconds);
             };
             Application.logMessageReceived += onLog;
             EditorApplication.update += sample;
@@ -136,7 +134,7 @@ namespace FlatWorld.GameplayMCP
                     elapsed, samples = frames.Count, renderedFrames = Time.frameCount - firstFrame,
                     sampleFps = total > 0 ? frames.Count * 1000d / total : 0,
                     p50Ms = Percentile(frames, 0.5), p95Ms = Percentile(frames, 0.95),
-                    maxMs = Percentile(frames, 1), maxBacklog, minimumAlive, maximumAlive, minimumVisible, maximumVisible,
+                    maxMs = Percentile(frames, 1), minimumAlive, maximumAlive, minimumVisible, maximumVisible,
                     memoryBefore, memoryAfter = Profiler.GetTotalAllocatedMemoryLong(),
                     errors, warnings, issues, burst = BurstCompiler.Options.EnableBurstCompilation,
                     isolated = IsIsolated(), before, after,

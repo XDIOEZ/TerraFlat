@@ -65,7 +65,7 @@ public partial class MonsterSpawnerManager
             return 0;
         }
 
-        float now = Time.unscaledTime;
+        float now = Time.time;
         if (now < _nextEventSearchTime || now < _nextCreatureBirthTime)
             return 0;
         _nextEventSearchTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);

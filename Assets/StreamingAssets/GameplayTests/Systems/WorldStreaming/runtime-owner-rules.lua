@@ -11,6 +11,8 @@ test.system("world_streaming", "runtime_owner_handoff", {}, function(data)
         "外部世界没有提交区块，或表现释放影响了数据保留租约")
     assert(data.sameWorld and data.sameChunk and data.terrainPreserved and data.newSchedulerTick,
         "旧调度器释放后，新调度器没有接管同一世界及其原始地形")
+    assert(data.streamingOnlyDidNotAdvance and data.fixedStepsAdvanced,
+        "逐帧流送不应推进世界模拟，两次固定步应各推进一次")
 end, "外部世界模型在调度器和表现释放后保留")
 
 test.system("world_streaming", "runtime_scene_detach", {}, function(data)

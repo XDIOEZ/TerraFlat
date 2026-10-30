@@ -180,8 +180,8 @@ public partial class Mod_Mover
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
-    private void OnDisable() { ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); }
-    protected override void OnUnload() { ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); DisposeSwimmingAudio(); UnbindMoveAnimationCallbacks(); }
+    private void OnDisable() { GameplayFixedStepSimulation.Unregister(this); ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); }
+    protected override void OnUnload() { GameplayFixedStepSimulation.Unregister(this); ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); DisposeSwimmingAudio(); UnbindMoveAnimationCallbacks(); }
     #endregion
 
     #region 载具推动阻力反馈

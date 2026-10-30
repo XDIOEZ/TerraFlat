@@ -613,6 +613,10 @@ end, "过期感知批次跳过无效视线与碰撞计算，完整消费结果�
 
 
 test.system("ai", "spawner_update_work", {}, function(data)
+    assert(data.renderInitialization and data.renderBirth and not data.renderIdle,
+        "画面帧没有初始化或推进出生装配，或空闲时仍执行装配")
+    assert(data.fixedDue and data.fixedOverdue and not data.fixedEarly and not data.fixedDuringBirth,
+        "生态调度没有在固定步到期时推进，或出生装配期间重复推进")
     assert(data.initialization and data.due and data.overdue,
         "生物调度初始化、到期边界或过期调度被空转守卫跳过")
     assert(not data.idle and data.birthPending and not data.birthCompleted,

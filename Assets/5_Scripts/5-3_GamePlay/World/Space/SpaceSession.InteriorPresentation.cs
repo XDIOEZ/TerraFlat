@@ -339,6 +339,7 @@ namespace FlatWorld.Spaceflight
 
         private void OnDisable()
         {
+            GameplayFixedStepSimulation.Unregister(this);
             ResetPresentationHistory();
             ReleaseSurfaceShadows();
         }

@@ -13,7 +13,7 @@ namespace FlatWorld.AIECS.Gameplay
     /// 不为成员创建 GameObject/导航 Agent；Gizmos 只显示少量轨迹，不能用作同屏性能证据。
     /// </summary>
     [AddComponentMenu("FlatWorld/AIECS/共享导航群体")]
-    public sealed class AiecsNavigationCrowd : MonoBehaviour
+    public sealed class AiecsNavigationCrowd : MonoBehaviour, IGameplayFixedStepSimulationSystem
     {
         #region 配置与观测
         // 数组下标就是共享目标组；支持一个玩家或两军的少量共同目的地。
@@ -120,11 +120,14 @@ namespace FlatWorld.AIECS.Gameplay
         }
         #endregion
 
-        #region 帧循环与清理
-        /// <summary>每帧仅采集少量目标 Transform，其余采样与移动通过同一批 Burst Job 完成。</summary>
-        private void Update()
+        #region 固定步与清理
+        private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
+
+        /// <summary>每个固定步采集目标并推进同一批 Burst Job。</summary>
+        public void SimulateFixedStep(float deltaTime)
         {
             if (world == null) return;
+            pending.Complete();
             WorldNavigationManager manager = WorldNavigationManager.ExistingInstance;
             if (manager == null || !manager.IsNavigationReady || !ReferenceEquals(cache, manager.GetSharedNavigation()) || GoalTargets.Length != handles.Length)
             { StopCrowd(); return; }
@@ -133,7 +136,7 @@ namespace FlatWorld.AIECS.Gameplay
                 if (GoalTargets[group] == null || !cache.IsValid(handles[group])) { StopCrowd(); return; }
                 cache.UpdateGoal(handles[group], PositionOf(GoalTargets[group]));
             }
-            pending = scheduler.Schedule(jobScheduler, query, cache, Time.deltaTime,
+            pending = scheduler.Schedule(jobScheduler, query, cache, deltaTime,
                 NeighbourLimit, SeparationWeight, DensityWeight);
         }
 
@@ -141,7 +144,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void LateUpdate() { pending.Complete(); }
 
         /// <summary>禁用或离开世界时清理本入口拥有的所有状态。</summary>
-        private void OnDisable() { StopCrowd(); }
+        private void OnDisable() { GameplayFixedStepSimulation.Unregister(this); StopCrowd(); }
 
         /// <summary>只采集桥接对象的二维坐标。</summary>
         private static float2 PositionOf(Transform target) => new float2(target.position.x, target.position.y);

@@ -332,19 +332,20 @@ public abstract class Item : MonoBehaviour
         public ModuleTickMode Mode;
         public float Interval;
         public float Elapsed;
-        public float StartedAt;
+        public double StartedAt;
         public bool HasTicked;
     }
 
     private ScheduledModuleTick[] everyFrameModules = Array.Empty<ScheduledModuleTick>();
     private ScheduledModuleTick[] scheduledModules = Array.Empty<ScheduledModuleTick>();
+    private ScheduledModuleTick[] renderFrameModules = Array.Empty<ScheduledModuleTick>();
     private readonly Dictionary<Module, ScheduledModuleTick> moduleClocks = new();
     private static readonly Dictionary<Type, bool> moduleTickImplementationCache = new Dictionary<Type, bool>();
     private bool moduleScheduleDirty = true;
     private ItemTickTier tickTier = ItemTickTier.Dormant;
-    private float lastScheduledTickTime = -1f;
-    private float nextSimulationTickTime = -1f; // 每帧模块的目标时钟，避免高帧率下频率向下取整。
-    internal float NextSimulationTickTime => nextSimulationTickTime;
+    private double lastScheduledTickTime = -1d;
+    private double nextSimulationTickTime = -1d; // 距离档的下一次固定步时钟。
+    internal double NextSimulationTickTime => nextSimulationTickTime;
     private float lastSimulationInterval;
     private bool simulationRangePaused;
     private Rigidbody2D pausedSimulationBody;
@@ -527,7 +528,9 @@ public abstract class Item : MonoBehaviour
     /// <summary>
     /// 物品的更新逻辑，由 ItemMgr 统一驱动
     /// </summary>
-    public void Tick(float deltaTime)
+    public void Tick(float deltaTime) => TickAtSimulationTime(deltaTime, Time.timeAsDouble);
+
+    internal void TickAtSimulationTime(float deltaTime, double currentTime)
     {
         if (!IsInitialized)
             return;
@@ -546,13 +549,13 @@ public abstract class Item : MonoBehaviour
                 GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             ScheduledModuleTick clock = snapshot[i];
             if (IsScheduledModuleValid(clock))
-                clock.Module.TickWithProfiler(GetModuleDelta(clock, deltaTime));
+                clock.Module.TickWithProfiler(GetModuleDelta(clock, deltaTime, currentTime));
         }
         if (IsInitialized && RuntimeGeneration == generation && GameplayWorldRegistry.GetItemWorldRevision(this) == worldRevision)
-            TickScheduledModules(deltaTime, generation, worldRevision, fixedSnapshot);
+            TickScheduledModules(deltaTime, currentTime, generation, worldRevision, fixedSnapshot);
     }
 
-    internal void TickScheduled(float currentTime)
+    internal void TickScheduled(double currentTime)
     {
         if (!IsInitialized)
             return;
@@ -567,9 +570,32 @@ public abstract class Item : MonoBehaviour
             return;
         }
 
-        float elapsed = Mathf.Max(0f, currentTime - lastScheduledTickTime);
+        float elapsed = (float)Math.Max(0d, currentTime - lastScheduledTickTime);
         lastScheduledTickTime = currentTime;
-        TickScheduledModules(elapsed, RuntimeGeneration, GameplayWorldRegistry.GetItemWorldRevision(this), scheduledModules);
+        TickScheduledModules(elapsed, currentTime, RuntimeGeneration, GameplayWorldRegistry.GetItemWorldRevision(this), scheduledModules);
+    }
+
+    internal bool HasRenderFrameUpdates
+    {
+        get { EnsureModuleSchedule(); return renderFrameModules.Length != 0; }
+    }
+
+    internal void TickRenderFrame(float deltaTime)
+    {
+        if (!IsInitialized || simulationRangePaused) return;
+        using var worldScope = UseOwnedWorldForItemCallbacks();
+        EnsureModuleSchedule();
+        uint generation = RuntimeGeneration;
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
+        ScheduledModuleTick[] snapshot = renderFrameModules;
+        for (int i = 0; i < snapshot.Length; i++)
+        {
+            if (!IsInitialized || RuntimeGeneration != generation ||
+                GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
+            ScheduledModuleTick clock = snapshot[i];
+            if (IsScheduledModuleValid(clock) && clock.Module.isActiveAndEnabled && PlayerSimulationAuthority.CanTick(clock.Module))
+                clock.Module.ModRenderUpdate(deltaTime);
+        }
     }
 
     /// <summary>
@@ -1229,41 +1255,41 @@ public abstract class Item : MonoBehaviour
         return tickTier;
     }
 
-    internal void ResetScheduledTickClock(float currentTime)
+    internal void ResetScheduledTickClock(double currentTime)
     {
         lastScheduledTickTime = currentTime;
         nextSimulationTickTime = -1f;
         lastSimulationInterval = 0f;
     }
 
-    internal void TickUnthrottledAt(float currentTime, float frameDelta)
+    internal void TickUnthrottledAt(double currentTime, float frameDelta)
     {
-        float elapsed = lastScheduledTickTime < 0f ? frameDelta : currentTime - lastScheduledTickTime;
+        float elapsed = lastScheduledTickTime < 0f ? frameDelta : (float)(currentTime - lastScheduledTickTime);
         lastScheduledTickTime = currentTime;
         nextSimulationTickTime = -1f;
         lastSimulationInterval = 0f;
-        Tick(Mathf.Max(0f, elapsed));
+        TickAtSimulationTime(Mathf.Max(0f, elapsed), currentTime);
     }
 
     /// <summary>回到模拟范围后立即恢复，暂停期间不补算游戏时间；单次 Tick 使用完整累计 delta，不截断模拟时间。</summary>
-    internal void TickEveryFrameAt(float currentTime, float minimumInterval)
+    internal void TickEveryFrameAt(double currentTime, float minimumInterval, float fixedDeltaTime)
     {
         if (lastScheduledTickTime < 0f)
         {
             lastScheduledTickTime = currentTime;
             nextSimulationTickTime = currentTime + minimumInterval;
             lastSimulationInterval = minimumInterval;
-            Tick(Mathf.Max(0f, Time.deltaTime));
+            TickAtSimulationTime(Mathf.Max(0f, fixedDeltaTime), currentTime);
             return;
         }
 
-        float elapsed = Mathf.Max(0f, currentTime - lastScheduledTickTime);
+        float elapsed = (float)Math.Max(0d, currentTime - lastScheduledTickTime);
         if (!Mathf.Approximately(lastSimulationInterval, minimumInterval))
         {
             lastScheduledTickTime = currentTime;
             nextSimulationTickTime = currentTime + minimumInterval;
             lastSimulationInterval = minimumInterval;
-            Tick(elapsed);
+            TickAtSimulationTime(elapsed, currentTime);
             return;
         }
         if (currentTime + 0.0005f < nextSimulationTickTime)
@@ -1273,7 +1299,7 @@ public abstract class Item : MonoBehaviour
         nextSimulationTickTime += minimumInterval;
         if (nextSimulationTickTime <= currentTime)
             nextSimulationTickTime = currentTime + minimumInterval;
-        Tick(elapsed);
+        TickAtSimulationTime(elapsed, currentTime);
     }
 
     /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>
@@ -1347,14 +1373,14 @@ public abstract class Item : MonoBehaviour
     }
 
     /// <summary>固定间隔模块也受距离档的最高更新频率约束。</summary>
-    internal bool IsScheduledTickDue(float currentTime, float minimumInterval)
+    internal bool IsScheduledTickDue(double currentTime, float minimumInterval)
     {
         return lastScheduledTickTime < 0f ||
                currentTime - lastScheduledTickTime + 0.0005f >= minimumInterval;
     }
 
     /// <summary>每帧模块使用目标时钟错开取整误差，每帧最多执行一次。</summary>
-    internal bool IsEveryFrameTickDue(float currentTime, float minimumInterval)
+    internal bool IsEveryFrameTickDue(double currentTime, float minimumInterval)
     {
         return lastScheduledTickTime < 0f ||
                !Mathf.Approximately(lastSimulationInterval, minimumInterval) ||
@@ -1378,6 +1404,7 @@ public abstract class Item : MonoBehaviour
         moduleClocks.Clear();
         using var frameScope = ListPool<ScheduledModuleTick>.Get(out var frameModules);
         using var scheduledScope = ListPool<ScheduledModuleTick>.Get(out var intervalModules);
+        using var renderScope = ListPool<ScheduledModuleTick>.Get(out var renderModules);
         float shortestInterval = float.MaxValue;
         bool useItemInterval = updateInterval > 0.1f;
 
@@ -1385,9 +1412,10 @@ public abstract class Item : MonoBehaviour
         {
             if (module == null || !module.Enabled || !module.IsRuntimeLoaded) continue;
             ModuleTickMode mode = ResolveModuleTickMode(module);
-            if (mode == ModuleTickMode.Disabled) continue;
-            if (useItemInterval) mode = ModuleTickMode.FixedInterval;
-            float interval = mode == ModuleTickMode.EveryFrame ? 0f
+            bool render = module.WantsRenderFrameUpdate;
+            if (mode == ModuleTickMode.Disabled && !render) continue;
+            if (useItemInterval && mode != ModuleTickMode.Disabled) mode = ModuleTickMode.FixedInterval;
+            float interval = mode == ModuleTickMode.EveryFrame || mode == ModuleTickMode.Disabled ? 0f
                 : useItemInterval ? updateInterval : Mathf.Max(0.01f, module.FixedTickInterval);
             // 结构刷新保留未改变模块的累计时间，只重置新增、重启或策略改变的模块。
             if (!previous.TryGetValue(module, out ScheduledModuleTick clock) ||
@@ -1401,8 +1429,9 @@ public abstract class Item : MonoBehaviour
                 };
             }
             moduleClocks.Add(module, clock);
+            if (render) renderModules.Add(clock);
             if (mode == ModuleTickMode.EveryFrame) frameModules.Add(clock);
-            else
+            else if (mode == ModuleTickMode.FixedInterval)
             {
                 intervalModules.Add(clock);
                 shortestInterval = Mathf.Min(shortestInterval, interval);
@@ -1410,6 +1439,7 @@ public abstract class Item : MonoBehaviour
         }
         everyFrameModules = frameModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : frameModules.ToArray();
         scheduledModules = intervalModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : intervalModules.ToArray();
+        renderFrameModules = renderModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : renderModules.ToArray();
         tickTier = frameModules.Count > 0 ? ItemTickTier.EveryFrame
             : intervalModules.Count == 0 ? ItemTickTier.Dormant
             : shortestInterval <= 0.075f ? ItemTickTier.Fast
@@ -1443,7 +1473,7 @@ public abstract class Item : MonoBehaviour
             "请覆写 TickMode，或在 ModuleTickPolicyCatalog 中声明本体迁移策略。");
     }
 
-    private void TickScheduledModules(float deltaTime, uint generation, ulong worldRevision, ScheduledModuleTick[] snapshot)
+    private void TickScheduledModules(float deltaTime, double currentTime, uint generation, ulong worldRevision, ScheduledModuleTick[] snapshot)
     {
         for (int i = 0; i < snapshot.Length; i++)
         {
@@ -1451,7 +1481,7 @@ public abstract class Item : MonoBehaviour
                 GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             ScheduledModuleTick clock = snapshot[i];
             if (!IsScheduledModuleValid(clock)) continue;
-            clock.Elapsed += GetModuleDelta(clock, deltaTime);
+            clock.Elapsed += GetModuleDelta(clock, deltaTime, currentTime);
             if (clock.Elapsed + 0.0005f < clock.Interval) continue;
             float elapsed = clock.Elapsed;
             clock.Elapsed = 0f;
@@ -1459,11 +1489,11 @@ public abstract class Item : MonoBehaviour
         }
     }
 
-    private static float GetModuleDelta(ScheduledModuleTick clock, float deltaTime)
+    private static float GetModuleDelta(ScheduledModuleTick clock, float deltaTime, double currentTime)
     {
         if (clock.HasTicked) return Mathf.Max(0f, deltaTime);
         clock.HasTicked = true;
-        return Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, Time.time - clock.StartedAt));
+        return Mathf.Min(Mathf.Max(0f, deltaTime), (float)Math.Max(0d, currentTime - clock.StartedAt));
     }
 
     private bool IsScheduledModuleValid(ScheduledModuleTick clock)
@@ -1480,6 +1510,7 @@ public abstract class Item : MonoBehaviour
         simulationRangePaused = false;
         everyFrameModules = Array.Empty<ScheduledModuleTick>();
         scheduledModules = Array.Empty<ScheduledModuleTick>();
+        renderFrameModules = Array.Empty<ScheduledModuleTick>();
         moduleClocks.Clear();
         tickTier = ItemTickTier.Dormant;
         lastScheduledTickTime = -1f;

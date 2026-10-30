@@ -61,12 +61,12 @@ def main() -> None:
     forbidden = {"scheduleMode", "spawnsPerDay", "daysBetweenSpawns", "spawnTriggerTime",
                  "recoveryCheckInterval", "recoveryTargetPopulation", "growthIntervalDays", "unboundedDailyGrowth"}
     configs = [json.loads(p.read_text(encoding="utf-8-sig"))["config"] for p in sorted((directory / "Rules").glob("*.json"))]
-    assert len(configs) == 9 and sum(len(c["spawnEntries"]) for c in configs) == 10
+    assert len(configs) == 10 and sum(len(c["spawnEntries"]) for c in configs) == 11
     for config in configs:
         assert not forbidden.intersection(config), config["id"]
         assert "ignoreEcologyBudget" in config
     assert next(c for c in configs if c["id"] == "zombie_horde")["spawnChance"] == 0
-    print("PASS: 9 official rules / 10 species; one global interval, no per-rule timing or recovery bypass.", flush=True)
+    print("PASS: 10 official rules / 11 species; one global interval, no per-rule timing or recovery bypass.", flush=True)
     # Verify that the real main-loop and commit-time guard call the tested scheduler and real terrain filters.
     manager = (game / "Entities/AI/Spawning/MonsterSpawnerManager.cs").read_text(encoding="utf-8")
     assert manager.count("AdvanceCountdownSchedule(") == 1

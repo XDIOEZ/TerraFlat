@@ -125,6 +125,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Core);
         WorldRenderingManager.EnsureForOwner(this);
+        GameplayFixedStepSimulationDriver.EnsureForOwner(this);
         InitializeWorldEntryPresentation();
         AutoSaveController.Ensure(this);
         _ = DimensionManager.Instance;
@@ -142,6 +143,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     protected override void OnDestroy()
     {
+        if (TryGetComponent<GameplayFixedStepSimulationDriver>(out var simulationDriver))
+            Destroy(simulationDriver);
         ChunkGenerator_River.ClearHydrologyCache();
         ResetWorldEntryLifecycle();
         DisposeWorldEntryPresentation();

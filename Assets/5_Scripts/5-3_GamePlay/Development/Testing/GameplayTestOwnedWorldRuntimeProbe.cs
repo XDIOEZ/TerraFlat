@@ -64,7 +64,11 @@ public static class GameplayTestOwnedWorldRuntimeProbe
         var oldScheduler = new RuntimeChunkManager(world, new NoGenerationExpected());
         oldScheduler.Dispose();
         using var newScheduler = new RuntimeChunkManager(world, new NoGenerationExpected());
-        newScheduler.Advance(0f);
+        newScheduler.CommitCompleted();
+        bool streamingOnlyDidNotAdvance = world.TickIndex == 0;
+        world.Tick(1f / 60f);
+        bool newSchedulerTick = world.TickIndex == 1;
+        world.Tick(1f / 60f);
         bool found = world.TryGetChunk(address, out ChunkRuntime after);
         return new JObject
         {
@@ -74,7 +78,9 @@ public static class GameplayTestOwnedWorldRuntimeProbe
             ["sameChunk"] = found && ReferenceEquals(before, after),
             ["terrainPreserved"] = found && after.Terrain != null && after.Terrain.GetCell(0, 0).GroundTileId == 17,
             ["retentionCount"] = found ? after.DataRetentionLeaseCount : -1,
-            ["newSchedulerTick"] = world.TickIndex == 1
+            ["newSchedulerTick"] = newSchedulerTick,
+            ["streamingOnlyDidNotAdvance"] = streamingOnlyDidNotAdvance,
+            ["fixedStepsAdvanced"] = world.TickIndex == 2
         };
     }
 

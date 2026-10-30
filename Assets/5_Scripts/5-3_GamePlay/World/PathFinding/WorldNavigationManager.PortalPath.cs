@@ -61,7 +61,11 @@ public sealed partial class WorldNavigationManager
     }
 
     /// <summary>停用时结束借用并释放输出；恢复后让仍有效的请求重新排队。</summary>
-    private void OnDisable() => DisposePortalPathJobs(requeue: true);
+    private void OnDisable()
+    {
+        GameplayFixedStepSimulation.Unregister(this);
+        DisposePortalPathJobs(requeue: true);
+    }
     #endregion
 
     #region 批量请求与共享目标

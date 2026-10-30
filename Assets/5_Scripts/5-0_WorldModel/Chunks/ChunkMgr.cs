@@ -612,15 +612,6 @@ namespace FlatWorld.WorldModel
             return count;
         }
 
-        /// <summary>先处理后台结果，再让世界逻辑向前运行一步。</summary>
-        public void Advance(float deltaSeconds, bool authoritativeSimulation = true,
-            int maxCompletedCommits = 1, double maxCommitMilliseconds = double.PositiveInfinity)
-        {
-            CommitCompleted(maxCompletedCommits, maxCommitMilliseconds);
-            if (authoritativeSimulation)
-                World.Tick(deltaSeconds);
-        }
-
         /// <summary>
         /// 取消某个区块当前的生成任务。
         /// 后台计算可能不会立刻停下，但它之后交回来的结果已经不能再生效。

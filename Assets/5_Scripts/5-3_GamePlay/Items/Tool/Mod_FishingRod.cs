@@ -486,11 +486,12 @@ public sealed partial class Mod_FishingRod : Module
         }
     }
 
+    public override bool WantsRenderFrameUpdate => true;
+
     public override void ModUpdate(float deltaTime)
     {
         if (!loaded) return;
         BindController();
-        SynchronizeRigVisualPose();
         if (!hasCast) return;
         if (item.Owner == null || !item.InHand) { CancelLine(); return; }
         Vector2 endpoint;
@@ -527,16 +528,24 @@ public sealed partial class Mod_FishingRod : Module
             }
             castLastPosition = endpoint;
         }
-        if (fishingLine != null)
-        {
-            Vector3 start = GetRodTipWorldPosition();
-            Vector2 nearEnd = WorldTopologyRuntime.NearestImagePosition(start, endpoint);
-            linePoints[0] = start;
-            linePoints[1] = new Vector3(nearEnd.x, nearEnd.y, start.z);
-            fishingLine.positionCount = 2;
-            fishingLine.SetPositions(linePoints);
-            fishingLine.enabled = true;
-        }
+    }
+
+    /// <summary>钓线与钓具姿态逐画面帧显示，牵引和咬钩仍由固定步结算。</summary>
+    public override void ModRenderUpdate(float deltaTime)
+    {
+        if (!loaded) return;
+        SynchronizeRigVisualPose();
+        if (!hasCast || item.Owner == null || fishingLine == null) return;
+        Vector2 endpoint = castLastPosition;
+        if (hookedTarget?.ActorItem != null) endpoint = hookedTarget.ActorItem.transform.position;
+        else if (DroppedItemService.TryGetPickablePosition(castBait, out Vector2 baitPosition)) endpoint = baitPosition;
+        Vector3 start = GetRodTipWorldPosition();
+        Vector2 nearEnd = WorldTopologyRuntime.NearestImagePosition(start, endpoint);
+        linePoints[0] = start;
+        linePoints[1] = new Vector3(nearEnd.x, nearEnd.y, start.z);
+        fishingLine.positionCount = 2;
+        fishingLine.SetPositions(linePoints);
+        fishingLine.enabled = true;
     }
 
     private void CancelLine()

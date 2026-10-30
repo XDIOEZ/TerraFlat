@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
@@ -66,7 +66,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
     public UltEvent<float> OnTemperatureChanged = new UltEvent<float>(); // 体温变化事件
 
     private bool _isInWater; // 当前是否处于真实水体中
-    private int _lastWaterExitFrame = -1; // 最近一次退出真实水体的帧
+    private ulong _lastWaterExitTick = ulong.MaxValue; // 最近一次退出真实水体的逻辑步
     private bool _lastWaterExitWasActive; // 最近一次退出前是否确实处于水中
     private bool _hasWaterEntryCoolingTarget; // 是否存在尚未完成的入水降温目标
     private float _waterEntryCoolingTargetTemperature; // 本次入水降温的目标体温
@@ -208,13 +208,13 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
         if (!inWater)
         {
             _lastWaterExitWasActive = _isInWater;
-            _lastWaterExitFrame = Time.frameCount;
+            _lastWaterExitTick = GameplayFixedStepSimulation.TickIndex;
             _isInWater = false;
             return;
         }
 
         bool continuedAcrossWaterTiles =
-            _isInWater || (_lastWaterExitWasActive && _lastWaterExitFrame == Time.frameCount);
+            _isInWater || (_lastWaterExitWasActive && _lastWaterExitTick == GameplayFixedStepSimulation.TickIndex);
         _isInWater = true;
         _lastWaterExitWasActive = false;
         if (!GameNetwork.HasStateAuthority)
@@ -299,7 +299,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
             NaturalTemperature = NaturalTemperature, TargetTemperature = _waterEntryCoolingTargetTemperature,
             CoolingSpeed = _waterEntryCoolingSpeed, Protection = _waterCoolingProtection, Seconds = deltaTime,
             HasTarget = _hasWaterEntryCoolingTarget, InWater = _isInWater,
-            WaterExitExpired = !_isInWater && Time.frameCount > _lastWaterExitFrame
+            WaterExitExpired = !_isInWater && GameplayFixedStepSimulation.TickIndex > _lastWaterExitTick
         };
         SurvivalNumericBatch.Advance(ref cooling);
         if (cooling.ClearTarget) { ClearWaterEntryCooling(); return; }
@@ -322,7 +322,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
     private void ResetWaterExposureState()
     {
         _isInWater = false;
-        _lastWaterExitFrame = -1;
+        _lastWaterExitTick = ulong.MaxValue;
         _lastWaterExitWasActive = false;
         _waterEntryReferenceTemperature = 0f;
         _waterEntryTemperatureDrop = 0f;

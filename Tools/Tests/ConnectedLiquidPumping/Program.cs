@@ -20,11 +20,16 @@ internal static class Program
         return chunk;
     }
     private static int Total(params ChunkRuntime[] chunks) => chunks.Sum(chunk => chunk.Terrain.Levels.Sum());
+    private static void Advance(WorldLiquidBodySystem system)
+    {
+        system.SimulateFixedStep();
+        system.AdvanceStreamingFrame();
+    }
     private static void DrainPending(WorldLiquidBodySystem system, int maximum = 300)
     {
         for (int i = 0; i < maximum; i++)
         {
-            system.Advance();
+            Advance(system);
             if (system.PendingDiffusionCellCount == 0 && system.PendingDiffusionBoundaryChunkCount == 0) return;
         }
         throw new Exception("扩散队列未在有界步骤内停稳");
@@ -35,8 +40,15 @@ internal static class Program
         var left = River(-16); var right = River(0);
         body.Observe(left); body.Observe(right);
         body.TryGetBody(new(-.5f, 1.5f), out _);
-        body.Advance(); Check(owner.Requests == 0, "stable water and read-only body queries do not load neighbours");
-        left.Terrain.Set(15, 1, 0, 0); DrainPending(body);
+        Advance(body); Check(owner.Requests == 0, "stable water and read-only body queries do not load neighbours");
+        left.Terrain.Set(15, 1, 0, 0);
+        body.AdvanceStreamingFrame();
+        Check(left.Terrain.GetLiquidLevel(15, 1) == 0 && right.Terrain.GetLiquidLevel(0, 1) == 100,
+            "streaming preparation does not simulate diffusion");
+        body.SimulateFixedStep();
+        Check(left.Terrain.GetLiquidLevel(15, 1) > 0 && Total(left, right) == 3100,
+            "fixed step advances awakened diffusion without creating water");
+        DrainPending(body);
         Check(left.Terrain.GetLiquidLevel(15, 1) > 0 && right.Terrain.GetLiquidLevel(0, 1) < 100 && Total(left, right) == 3100,
             "negative-coordinate cross-chunk neighbour diffusion conserves actual water");
         Check(body.PendingDiffusionCellCount == 0, "balanced water naturally sleeps");
@@ -55,11 +67,11 @@ internal static class Program
         using var remoteBody = new WorldLiquidBodySystem(remoteOwner, "surface");
         var near = River(0); var far = River(16); remoteOwner.Remote.Add(far.Address, far);
         remoteBody.Observe(near); near.Terrain.Set(15, 1, 0, 0);
-        remoteBody.Advance();
+        Advance(remoteBody);
         Check(remoteOwner.Requests == 1 && remoteBody.LoadingDiffusionBoundaryChunkCount == 1 && remoteOwner.SimulationLeases == 0,
             "edge demand starts one data-only request without simulation lease");
         int before = Total(near);
-        for (int i = 0; i < 5; i++) remoteBody.Advance();
+        for (int i = 0; i < 5; i++) Advance(remoteBody);
         Check(Total(near) == before && remoteOwner.Requests == 1 && Total(far) == 1600,
             "missing neighbour is closed until ready and repeated edges deduplicate");
         remoteOwner.WaitingLoads[far.Address].SetResult(far); remoteOwner.DelayLoads = false;
@@ -73,11 +85,11 @@ internal static class Program
         var cancelledOwner = new ChunkMgr { DelayLoads = true };
         var cancelledBody = new WorldLiquidBodySystem(cancelledOwner, "surface");
         var pending = River(0); cancelledBody.Observe(pending); pending.Terrain.Set(15, 1, 0, 0);
-        cancelledBody.Advance(); cancelledBody.Dispose();
+        Advance(cancelledBody); cancelledBody.Dispose();
         Check(cancelledOwner.Leases == 0 && cancelledOwner.WaitingLoads.Values.All(value => value.Task.IsCanceled),
             "world shutdown cancels late reads and releases all leases");
         var failedOwner = new ChunkMgr { DelayLoads = true }; using var failedBody = new WorldLiquidBodySystem(failedOwner, "surface");
-        var failed = River(0); failedBody.Observe(failed); failed.Terrain.Set(15, 1, 0, 0); failedBody.Advance();
+        var failed = River(0); failedBody.Observe(failed); failed.Terrain.Set(15, 1, 0, 0); Advance(failedBody);
         failedOwner.WaitingLoads.Values.Single().SetException(new Exception("expected test failure"));
         DrainPending(failedBody);
         Check(Total(failed) == 1500 && failedOwner.Requests == 1 && failedOwner.Leases == 0,
@@ -95,7 +107,7 @@ internal static class Program
         {
             var chunk = River(i * 48); boundedBody.Observe(chunk); chunk.Terrain.Set(15, 1, 0, 0);
         }
-        for (int i = 0; i < 40; i++) boundedBody.Advance();
+        for (int i = 0; i < 40; i++) Advance(boundedBody);
         Check(boundedBody.RetainedDiffusionDataChunkCount <= 24 && boundedBody.LoadingDiffusionBoundaryChunkCount == 1 &&
               boundedBody.PendingDiffusionBoundaryChunkCount <= 64 && boundedOwner.SimulationLeases == 0,
             "many independent boundaries stay bounded and reserve a slot for forward progress");
@@ -157,12 +169,12 @@ internal static class Program
         far.Terrain.Set(1, 1, 1, 2); pendingOwner.Remote.Add(far.Address, far); pendingSystem.Observe(near);
         Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching,
             "unknown boundary does not count as proof that only one-level water remains");
-        pendingSystem.Advance();
+        Advance(pendingSystem);
         Check(pendingOwner.Requests == 1 && pendingSystem.SelectConnectedPumpSource(new(15.5f, 1.5f), out _) ==
               WorldLiquidPumpSourceSelection.Searching && near.Terrain.GetLiquidLevel(15, 1) == 1,
             "two pumps reuse a single pending data read and preserve inlet water");
         pendingOwner.WaitingLoads[far.Address].SetResult(far); pendingOwner.DelayLoads = false;
-        pendingSystem.Advance();
+        Advance(pendingSystem);
         Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out var farSource) == WorldLiquidPumpSourceSelection.Surplus &&
               farSource.WorldCell == new Vector2Int(17, 1) && pendingOwner.SimulationLeases == 0 &&
               pendingSystem.SharedPumpSearchGroupCount == 1,
@@ -171,16 +183,16 @@ internal static class Program
         pendingOwner.WorldRuntime.Events.Evict(far.Address);
         Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching,
             "cached cold donor waits for authoritative data instead of withdrawing from a stale snapshot");
-        pendingSystem.Advance(); pendingSystem.Advance();
+        Advance(pendingSystem); Advance(pendingSystem);
         Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Surplus &&
               pendingSystem.PumpSearchTopologyBuildCount == remoteBuilds,
             "unchanged cold reload reuses topology and candidate cache");
         far.Terrain.Set(1, 1, 1, 1);
         pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _);
-        pendingSystem.Advance();
+        Advance(pendingSystem);
         Check(pendingSystem.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.LocalRemainder,
             "complete shared search enables local fallback only after all connected surplus is exhausted");
-        Time.unscaledTimeAsDouble = 6; pendingSystem.Advance(); Time.unscaledTimeAsDouble = 0;
+        Time.unscaledTimeAsDouble = 6; Advance(pendingSystem); Time.unscaledTimeAsDouble = 0;
         Check(pendingOwner.Leases == 0 && pendingSystem.PumpSearchCachedChunkCount > 0,
             "idle source data is released while lightweight topology remains cached");
         var mergingOwner = new ChunkMgr(); using var merging = new WorldLiquidBodySystem(mergingOwner, "surface");
@@ -189,7 +201,7 @@ internal static class Program
         merging.Observe(west); merging.Observe(east);
         merging.SelectConnectedPumpSource(new(14.5f, 1.5f), out _);
         merging.SelectConnectedPumpSource(new(17.5f, 1.5f), out _);
-        merging.Advance();
+        Advance(merging);
         Check(merging.SharedPumpSearchGroupCount == 1,
             "already-loaded adjoining water bodies merge caches even while both pumps have surplus");
         var separateOwner = new ChunkMgr(); using var separate = new WorldLiquidBodySystem(separateOwner, "surface");
@@ -199,9 +211,9 @@ internal static class Program
         Check(separate.SharedPumpSearchGroupCount == 2, "disconnected same-liquid pools keep independent caches");
         var badOwner = new ChunkMgr { DelayLoads = true }; using var bad = new WorldLiquidBodySystem(badOwner, "surface");
         var badNear = ShallowWater(0, 14, 15); bad.Observe(badNear);
-        bad.SelectConnectedPumpSource(new(14.5f, 1.5f), out _); bad.Advance();
+        bad.SelectConnectedPumpSource(new(14.5f, 1.5f), out _); Advance(bad);
         badOwner.WaitingLoads.Values.Single().SetException(new Exception("expected shared-search load failure"));
-        bad.Advance();
+        Advance(bad);
         Check(bad.SelectConnectedPumpSource(new(14.5f, 1.5f), out _) == WorldLiquidPumpSourceSelection.Searching &&
               badNear.Terrain.GetLiquidLevel(14, 1) == 1,
             "failed shared search never certifies exhaustion or consumes the final inlet layer");

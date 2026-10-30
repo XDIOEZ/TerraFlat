@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Mod_FocusPoint_AI : Mod_FocusPoint
 {
+    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    public override bool WantsRenderFrameUpdate => false;
     public Mod_Mover mover;
     protected override void OnLoad()
     {

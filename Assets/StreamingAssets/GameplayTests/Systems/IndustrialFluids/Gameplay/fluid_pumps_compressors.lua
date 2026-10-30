@@ -39,6 +39,8 @@ test.runtime("industrial_fluids", "surface_pump", {}, function(d)
 end, "低速水泵累计十升整批抽取、断电和容量阻塞重置、两批守恒")
 test.runtime("industrial_fluids", "connected_surface_pump", {}, function(d)
     assert(d.unpoweredLevel == d.initialLevel, "无电水泵消耗了连通水域")
+    assert(d.streamingDidNotDiffuse and d.fixedStepDiffused,
+        "逐帧准备不应转移水量，固定模拟步应推进已唤醒的扩散")
     assert(d.remainingLevel <= 2 and d.inletLevel == 0, "空泵口未通过邻格扩散持续得到补水")
     assert(d.bodyFound and d.bodyCells == 3 and d.bodyLevel == d.remainingLevel, "真实连通统计与剩余水量不一致")
     assert(d.litersPerUnit == 10 and math.abs(d.pumpLiters + d.tankLiters + d.remainingLevel * 10 - d.initialLiters) < .000001 and d.tankLiters > 0,

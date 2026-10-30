@@ -11,7 +11,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// 已出生个体由存档和休眠仓库保留身份，远距卸载表现，靠近时恢复同一 GUID 与模块状态。
 /// </summary>
 [RequireComponent(typeof(MonsterManager))]
-public partial class MonsterSpawnerManager : MonoBehaviour
+public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     #region 配置
 
@@ -66,6 +66,9 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (templateManager == null) templateManager = this;
         enabled = false;
     }
+
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
 
     private void Start()
     {
@@ -155,9 +158,9 @@ public partial class MonsterSpawnerManager : MonoBehaviour
                 }
             }
         }
-        _nextEcologyTickTime = Time.unscaledTime;
-        _nextCreatureBirthTime = Time.unscaledTime;
-        _nextEventSearchTime = Time.unscaledTime;
+        _nextEcologyTickTime = Time.time;
+        _nextCreatureBirthTime = Time.time;
+        _nextEventSearchTime = Time.time;
         _chunkManager.RuntimeEntityPresentationChanged += OnChunkPresentationChanged;
         _itemManager.RuntimeAiAddressChanged += OnRuntimeAiAddressChanged;
         enabled = true;
@@ -266,7 +269,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         if (!IsOwnedWorldReady)
             return;
 
-        float now = Time.unscaledTime;
+        float now = (float)GameplayFixedStepSimulation.CurrentTime;
         if (now < _nextEcologyTickTime)
             return;
         _nextEcologyTickTime = now + Mathf.Max(0.1f, _settings.EcologyTickInterval);
@@ -438,7 +441,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
             return false;
 
         string key = GetConfigKey(config);
-        float now = Time.unscaledTime;
+        float now = Time.time;
         if (_nextSpawnRetryTime.TryGetValue(key, out float nextRetry) && now < nextRetry)
             return false;
         if (now < _nextCreatureBirthTime)
@@ -515,7 +518,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
         }
 
         // 即使资源初始化失败，昂贵的创建尝试也不能在同一短时间窗内反复执行。
-        _nextCreatureBirthTime = Time.unscaledTime + Mathf.Max(0.1f, _settings.EcologyTickInterval);
+        _nextCreatureBirthTime = Time.time + Mathf.Max(0.1f, _settings.EcologyTickInterval);
         if (incremental && !AiRuntimeBackendService.UsesEntities(entry.PrefabName))
         {
             _naturalCreatureBirth = CreateNaturalCreatureInSteps(config, state, entry, spawnPosition, currentDay,
@@ -1092,7 +1095,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour
 
         RefreshMonsterSnapshot();
         int checks = Mathf.Min(Mathf.Max(1, _settings.ResidentChecksPerTick), _monsterSnapshot.Count);
-        float now = Time.unscaledTime;
+        float now = Time.time;
         for (int i = 0; i < checks; i++)
         {
             if (_activeResidentCursor >= _monsterSnapshot.Count)

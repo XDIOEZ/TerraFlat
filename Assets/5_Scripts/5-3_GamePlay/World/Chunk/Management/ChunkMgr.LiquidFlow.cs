@@ -26,7 +26,7 @@ public partial class ChunkMgr
         StopLiquidFlowExperiment();
         liquidFlowFailed = false;
         enableExperimentalLiquidFlow = enabled;
-        if (enabled) AdvanceLiquidFlowExperiment(0f);
+        if (enabled) AdvanceLiquidFlowStreamingFrame();
     }
 
     /// <summary>只有打开实验开关后才接受开发者唤醒；天然静水不会因查询而自动启动。</summary>
@@ -40,8 +40,11 @@ public partial class ChunkMgr
         return liquidFlowExperiment != null && liquidFlowExperiment.TryGetFlow(Vector2Int.FloorToInt(worldPosition), out flow);
     }
 
-    /// <summary>跟随世界宿主帧时间推进，不使用 FixedUpdate，不在默认关闭时创建任何缓存或订阅。</summary>
-    private void AdvanceLiquidFlowExperiment(float deltaSeconds)
+    private void AdvanceLiquidFlowStreamingFrame() => UpdateLiquidFlowExperiment(0f, true);
+    private void SimulateLiquidFlowFixedStep(float deltaSeconds) => UpdateLiquidFlowExperiment(deltaSeconds, false);
+
+    /// <summary>按世界所有权分别准备异步数据和推进实验液体。</summary>
+    private void UpdateLiquidFlowExperiment(float deltaSeconds, bool streaming)
     {
         if (!enableExperimentalLiquidFlow || !authoritativeSimulation || !GameNetwork.HasStateAuthority ||
             runtimeWindowTargets.Count == 0 || IsWorldRuntimeShuttingDown)
@@ -55,7 +58,8 @@ public partial class ChunkMgr
         {
             liquidFlowExperiment ??= new WorldLiquidFlowExperiment(this, experimentalLiquidFlowSettings,
                 ResolveCurrentDimensionId());
-            liquidFlowExperiment.Advance(deltaSeconds);
+            if (streaming) liquidFlowExperiment.AdvanceStreamingFrame();
+            else liquidFlowExperiment.SimulateFixedStep(deltaSeconds);
         }
         catch (Exception exception)
         {

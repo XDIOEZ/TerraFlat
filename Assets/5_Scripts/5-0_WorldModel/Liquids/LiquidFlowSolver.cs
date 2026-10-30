@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>实验液体参数；默认 5Hz、每帧最多一步。范围与区块上限限制海洋传播，不改变存档格式。</summary>
+    /// <summary>实验液体参数；默认 5Hz、每固定步最多一步。范围与区块上限限制海洋传播，不改变存档格式。</summary>
     [Serializable]
     public sealed class LiquidFlowSettings
     {

@@ -105,7 +105,7 @@ public partial class Mod_TileEffectReceiver : Module
     private float fallbackOxygen;
     private bool waterSurvivalActive;
     private float currentWaterImmersion;
-    private int lastWaterExitFrame = -1;
+    private ulong lastWaterExitTick = ulong.MaxValue;
     private bool lastWaterExitWasActive;
     private float drowningDamageTickTimer;
 
@@ -391,7 +391,7 @@ public partial class Mod_TileEffectReceiver : Module
         EnsureFallbackWaterVitals();
 
         bool continuedAcrossWaterTiles = lastWaterExitWasActive &&
-                                         lastWaterExitFrame == Time.frameCount;
+                                         lastWaterExitTick == GameplayFixedStepSimulation.TickIndex;
         waterSurvivalActive = true;
         lastWaterExitWasActive = false;
 
@@ -447,7 +447,7 @@ public partial class Mod_TileEffectReceiver : Module
             ResolveWaterVitals(actor);
 
         lastWaterExitWasActive = waterSurvivalActive;
-        lastWaterExitFrame = Time.frameCount;
+        lastWaterExitTick = GameplayFixedStepSimulation.TickIndex;
         waterSurvivalActive = false;
         waterOxygen?.RemoveBreathingBlockCause(this);
         SetLiquidFloating(false);

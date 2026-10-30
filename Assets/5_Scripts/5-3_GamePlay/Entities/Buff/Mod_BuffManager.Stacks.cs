@@ -12,7 +12,7 @@ public partial class Mod_BuffManager
 
     private double waterStackElapsed; // 每个角色独立计时，不能放在共享液体定义上。
     private bool waterStackExposure;
-    private int waterStackExitFrame = -1;
+    private ulong waterStackExitTick = ulong.MaxValue;
 
     public int GetBuffStacks(string buffId)
     {
@@ -47,13 +47,13 @@ public partial class Mod_BuffManager
 
     #region 入水计时
 
-    /// <summary>真实入/出水通知；同一帧跨越相邻水格保留尚未满一秒的进度。</summary>
+    /// <summary>真实入/出水通知；同一逻辑步跨越相邻水格保留尚未满一秒的进度。</summary>
     public void SetWaterStackExposure(bool exposed)
     {
-        if (exposed && !waterStackExposure && waterStackExitFrame != Time.frameCount)
+        if (exposed && !waterStackExposure && waterStackExitTick != GameplayFixedStepSimulation.TickIndex)
             waterStackElapsed = 0d;
         if (!exposed)
-            waterStackExitFrame = Time.frameCount;
+            waterStackExitTick = GameplayFixedStepSimulation.TickIndex;
         waterStackExposure = exposed;
     }
 
@@ -86,7 +86,7 @@ public partial class Mod_BuffManager
     {
         waterStackElapsed = 0d;
         waterStackExposure = false;
-        waterStackExitFrame = -1;
+        waterStackExitTick = ulong.MaxValue;
     }
 
     #endregion

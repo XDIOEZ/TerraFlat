@@ -657,7 +657,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
         if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
         var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
-            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+            Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
         context.HitPoint = (Vector2)transform.position;
         float ruleMultiplier = 1f;
         foreach (IIncomingDamageRule rule in incomingDamageRules)

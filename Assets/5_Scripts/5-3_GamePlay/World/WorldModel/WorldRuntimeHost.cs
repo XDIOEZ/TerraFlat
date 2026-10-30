@@ -1,11 +1,10 @@
 ﻿using UnityEngine;
 
 /// <summary>
-/// Unity lifecycle boundary for the engine-free world. It forwards frame time and main-thread
-/// commits only; all gameplay decisions live in FlatWorld.WorldModel systems.
+/// 按所属世界分别推进帧流送和固定模拟。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class WorldRuntimeHost : MonoBehaviour
+public sealed class WorldRuntimeHost : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private ChunkMgr owner;
 
@@ -25,6 +24,9 @@ public sealed class WorldRuntimeHost : MonoBehaviour
         owner = chunkManager;
     }
 
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.WorldSimulation);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
     private void Update()
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -32,16 +34,30 @@ public sealed class WorldRuntimeHost : MonoBehaviour
         LastUpdateFrame = Time.frameCount;
         LastUpdateTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 #endif
+        AdvanceOwnedWorld(false, 0f);
+    }
+
+    public void SimulateFixedStep(float deltaTime) => AdvanceOwnedWorld(true, deltaTime);
+
+    private void AdvanceOwnedWorld(bool simulation, float deltaTime)
+    {
         if (owner == null) return;
         if (!string.IsNullOrEmpty(owner.OwnedWorldKey))
         {
             // 已解绑的场景不能让旧宿主自动创建世界或继续推进新拥有者的数据。
             if (!GameplayWorldRegistry.TryGet(owner.OwnedWorldKey, out GameplayWorldRuntime world) ||
                 !ReferenceEquals(world.Chunks, owner)) return;
-            using (GameplayWorldRegistry.UseWorld(owner.OwnedWorldKey)) owner.AdvanceWorldRuntime(Time.deltaTime);
+            using (GameplayWorldRegistry.UseWorld(owner.OwnedWorldKey))
+            {
+                if (simulation) owner.SimulateWorldFixedStep(deltaTime);
+                else owner.AdvanceWorldStreamingFrame();
+            }
         }
         else if (owner.WorldRuntime == null || owner.WorldRuntime.WorldId == GameplayWorldRegistry.ExecutionWorldKey)
-            owner.AdvanceWorldRuntime(Time.deltaTime);
+        {
+            if (simulation) owner.SimulateWorldFixedStep(deltaTime);
+            else owner.AdvanceWorldStreamingFrame();
+        }
     }
 
     private void OnDestroy()

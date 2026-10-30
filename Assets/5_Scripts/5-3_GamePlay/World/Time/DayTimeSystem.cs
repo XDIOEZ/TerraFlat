@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 using System;
 using Unity.Profiling;
 
-public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
+public partial class DayTimeSystem : SingletonMono<DayTimeSystem>, IGameplayFixedStepSimulationSystem
 {
     #region 昼夜性能采样
 
@@ -62,6 +62,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     /// </summary>
     private void OnEnable()
     {
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.WorldTime);
         RegisterSeasonSettings();
         SetGlobalMoonlightIntensity(0f);
         SetGlobalMoonAppearance(0f);
@@ -79,6 +80,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     /// </summary>
     private void OnDisable()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         UnregisterSeasonSettings();
         UnsubscribeGameManagerEvents();
         ClearLocalPresentationLightingOverrides();
@@ -161,6 +163,15 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
             return;
 
+        using (UpdateLightingMarker.Auto())
+            UpdateCurrentSceneLighting();
+    }
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
+            return;
+
         // 主循环推进所有独立场景的时间
         using (AdvanceClocksMarker.Auto())
         foreach (var kvp in WorldTimeDict)
@@ -171,13 +182,9 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
             // 只有独立场景才推进时间（没有引用其他场景的场景）
             if (string.IsNullOrEmpty(timeData.ReferenceScene))
             {
-                TimeRun(sceneName, Time.deltaTime);
+                TimeRun(sceneName, deltaTime);
             }
         }
-        
-        // 更新当前场景的光照（假设有一个当前激活的场景）
-        using (UpdateLightingMarker.Auto())
-            UpdateCurrentSceneLighting();
     }
 
 /// <summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Networking;
@@ -154,7 +154,7 @@ internal sealed class ContactDamageRuntime
                 Damage = GameplayCombatBridge.Values(settings.DamageValues),
                 Origin = center,
                 HitPoint = collider.ClosestPoint(center),
-                Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = now, DeltaTime = Time.deltaTime },
+                Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = now, DeltaTime = Time.deltaTime },
                 SourceIsPlayer = (byte)(sourceItem != null && ActorIdentity.IsPlayer(sourceItem) ? 1 : 0),
                 BuildingMultiplier = 1f
             };

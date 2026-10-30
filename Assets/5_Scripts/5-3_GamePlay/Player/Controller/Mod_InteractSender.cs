@@ -66,6 +66,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         hotBar = null;
     }
 
+    public override bool WantsRenderFrameUpdate => true;
+
     public override void ModUpdate(float deltaTime)
     {
         using var worldScope = UseActorInteractionWorld();
@@ -85,8 +87,19 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         ValidateCurrentInteractionDistance();
         TickHeldInteraction();
-        RefreshInteractionPreview();
         TickEnvironmentInteraction(deltaTime);
+    }
+
+    public override void ModRenderUpdate(float deltaTime)
+    {
+        using var worldScope = UseActorInteractionWorld();
+        PruneDestroyedInteractionTargets();
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
+        {
+            ClearInteractionPreview();
+            return;
+        }
+        RefreshInteractionPreview();
     }
     #endregion
 

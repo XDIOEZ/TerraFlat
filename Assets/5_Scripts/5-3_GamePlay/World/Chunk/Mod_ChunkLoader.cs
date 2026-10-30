@@ -150,7 +150,9 @@ public class Mod_ChunkLoader : Module
 
     protected override void OnSave() => ModData.WriteData(distanceConfig);
 
-    public override void ModUpdate(float deltaTime)
+    public override bool WantsRenderFrameUpdate => true;
+
+    public override void ModRenderUpdate(float deltaTime)
     {
         if (!CanStreamSurface)
         {

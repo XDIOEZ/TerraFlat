@@ -1,8 +1,7 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Skill_Laser : Skill
+public class Skill_Laser : Skill, IGameplayFixedStepSimulationSystem
 {
     #region 字段和属性
 
@@ -22,15 +21,25 @@ public class Skill_Laser : Skill
     Mod_Mover mover;
     private const float MovementSpeedMultiplier = 0.25f;
     private bool _movementSpeedModified;
+    private bool _initialized;
     private bool _isUnloaded;
 
     #endregion
 
     #region 生命周期方法
 
+    private void OnEnable()
+    {
+        if (_initialized && !_isUnloaded)
+            GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
+    }
+
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
     // Start is called before the first frame update
     void Start()
     {
+        if (_isUnloaded) return;
         if (runtimeSkill == null)
         {
             Debug.LogError("激光技能：runtimeSkill为空！");
@@ -115,75 +124,41 @@ public class Skill_Laser : Skill
                 Debug.LogWarning("激光技能：在模块列表中发现空模块！");
             }
         }
+        _initialized = true;
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
     }
 
-    // Update is called once per frame
-    void Update()
+    public void SimulateFixedStep(float deltaTime)
     {
-        // 检查runtimeSkill是否存在
-        if (runtimeSkill == null)
-        {
-            Debug.LogError("激光技能：Update中runtimeSkill为空！");
-            return;
-        }
-
-        // 更新所有模块
+        if (_isUnloaded || runtimeSkill == null) return;
+        using var worldScope = runtimeSkill.skillSender?.UseOwnedWorldForItemCallbacks();
         foreach (var mod in mods)
-        {
-            if (mod != null)
-            {
-                mod.ModUpdate(Time.deltaTime);
-            }
-            else
-            {
-                Debug.LogWarning("激光技能：在Update中发现模块列表中的空模块！");
-            }
-        }
-
-        // 更新激光线
-        UpdateLaser();
+            if (mod != null) mod.ModUpdate(deltaTime);
+        if (laserCollider != null && TryGetLaserTarget(out Vector2 target))
+            UpdateLaserCollider(target);
     }
+
+    private void Update() => UpdateLaserPresentation();
 
     #endregion
 
     #region 激光更新方法
 
-    [Tooltip("更新激光线的显示")]
-    private void UpdateLaser()
+    private bool TryGetLaserTarget(out Vector2 target)
     {
-        // 检查runtimeSkill是否存在
-        if (runtimeSkill == null)
-        {
-            Debug.LogError("激光技能：UpdateLaser中runtimeSkill为空！");
-            return;
-        }
+        target = default;
+        if (_isUnloaded || laserCastingPoint == null || runtimeSkill?.skillManager?.focusPoint?.Data == null) return false;
+        target = WorldTopologyRuntime.NearestImagePosition(laserCastingPoint.position,
+            runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point);
+        return true;
+    }
 
-        // 检查skillManager是否存在
-        if (runtimeSkill.skillManager == null)
-        {
-            Debug.LogError("激光技能：UpdateLaser中skillManager为空！");
-            return;
-        }
-
-        // 检查聚焦点数据是否存在
-        if (runtimeSkill.skillManager.focusPoint == null || runtimeSkill.skillManager.focusPoint.Data == null)
-        {
-            Debug.LogError("激光技能：focusPoint或其数据为空！");
-            return;
-        }
-
-        // 检查施法点是否已缓存
-        if (laserCastingPoint == null)
-        {
-            Debug.LogError("激光技能：UpdateLaser中laserCastingPoint为空！");
-            return;
-        }
-
-        // 获取实时的目标点
-        Vector2 currentTargetPoint = runtimeSkill.skillManager.focusPoint.Data.DefaultSkill_Point;
-        Vector2 visualTargetPoint = laserCastingPoint != null
-            ? WorldTopologyRuntime.NearestImagePosition(laserCastingPoint.position, currentTargetPoint)
-            : currentTargetPoint;
+    [Tooltip("更新激光线的显示")]
+    private void UpdateLaserPresentation()
+    {
+        if (_isUnloaded || runtimeSkill == null) return;
+        using var worldScope = runtimeSkill.skillSender?.UseOwnedWorldForItemCallbacks();
+        if (!TryGetLaserTarget(out Vector2 visualTargetPoint)) return;
 
         // 更新激光线起点和终点
         if (lineRenderer != null)
@@ -197,27 +172,11 @@ public class Skill_Laser : Skill
         {
             laserEffect.position = new Vector3(visualTargetPoint.x, visualTargetPoint.y, 0);
         }
-
-        // 更新碰撞器的大小和旋转以匹配激光线
-        if (laserCollider != null)
-        {
-            UpdateLaserCollider(visualTargetPoint);
-        }
-
-        // 更新进度
-        runtimeSkill.progress += Time.deltaTime;
     }
 
     [Tooltip("更新激光碰撞器的大小和旋转")]
     private void UpdateLaserCollider(Vector2 targetPoint)
     {
-        // 检查缓存的施法点是否存在
-        if (laserCastingPoint == null)
-        {
-            Debug.LogError("激光技能：UpdateLaserCollider中laserCastingPoint为空！");
-            return;
-        }
-
         Vector2 startPoint = laserCastingPoint.position; // 使用缓存的施法点Transform
         Vector2 endPoint = targetPoint;
 
@@ -266,6 +225,7 @@ public class Skill_Laser : Skill
 
     public override void Unload()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         if (_isUnloaded)
             return;
 

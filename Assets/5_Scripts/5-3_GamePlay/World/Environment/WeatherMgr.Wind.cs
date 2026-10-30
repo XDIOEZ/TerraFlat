@@ -11,6 +11,7 @@ public partial class WeatherMgr
 
     private readonly RegionalWindPushField regionalWindPush = new();
     private int windPushFieldFrame = -1;
+    private ulong windPushFieldSimulationTick;
     private ulong windPushFieldRevision = ulong.MaxValue;
 
     private void MaintainWindPushField()
@@ -20,11 +21,13 @@ public partial class WeatherMgr
             ResetWindPushField();
             return;
         }
-        if (windPushFieldFrame == Time.frameCount && windPushFieldRevision == regionalEngine.WindQueryRevision)
+        if (windPushFieldFrame == Time.frameCount && windPushFieldSimulationTick == GameplayFixedStepSimulation.TickIndex &&
+            windPushFieldRevision == regionalEngine.WindQueryRevision)
             return;
         // 秒轴不随游戏日历跳时，同帧新天气用版本号补同步，所有物体共用同一批结果。
         regionalWindPush.Synchronize(regionalEngine, Time.timeAsDouble, _weatherTransitionSeconds);
         windPushFieldFrame = Time.frameCount;
+        windPushFieldSimulationTick = GameplayFixedStepSimulation.TickIndex;
         windPushFieldRevision = regionalEngine.WindQueryRevision;
     }
 

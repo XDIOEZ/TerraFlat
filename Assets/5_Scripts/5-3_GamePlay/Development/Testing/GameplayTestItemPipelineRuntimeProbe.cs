@@ -320,9 +320,110 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 手持武器正式装配与动画伤害窗口
+    private sealed class HeldWeaponFixedStepObservation : IDisposable, IGameplayFixedStepSimulationSystem
+    {
+        private readonly float originalTimeScale = Time.timeScale;
+        private readonly int originalTargetFrameRate = Application.targetFrameRate;
+        private readonly int originalVSyncCount = QualitySettings.vSyncCount;
+        private Mod_Damage damage;
+        private Mod_DamageReceiver targetReceiver;
+        private Item target;
+        private bool registered, disposed;
+        public readonly JArray Windows = new();
+        public readonly JArray Contacts = new();
+        public bool HostileTarget;
+        public JObject OriginalSettings => new()
+        {
+            ["timeScale"] = originalTimeScale, ["targetFrameRate"] = originalTargetFrameRate,
+            ["vSyncCount"] = originalVSyncCount
+        };
+        public static JObject CurrentSettings => new()
+        {
+            ["timeScale"] = Time.timeScale, ["targetFrameRate"] = Application.targetFrameRate,
+            ["vSyncCount"] = QualitySettings.vSyncCount
+        };
+
+        // 目标、帧率与观察器均属于当前 Lua，断言失败和中断时恢复。
+        public void Prepare(Player player, Mod_Damage source, float timeScale)
+        {
+            damage = source;
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 30;
+            Time.timeScale = timeScale;
+            target = ItemMgr.Instance.InstantiateItem("Chicken", player.transform.position);
+            target.Load();
+            foreach (Module module in target.itemMods.Mods.Values)
+                if (module is Mod_Food || module.ResolvedModuleId == ModText.AI ||
+                    module.ResolvedModuleId == ModText.Mod_Mover_AI)
+                    module.SetEnabled(false);
+            targetReceiver = target.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+            if (targetReceiver == null) throw new InvalidOperationException("固定步武器采样缺少目标生命模块。");
+            targetReceiver.Data.UseBodyPartHealth = false;
+            targetReceiver.MaxHp = 1000f;
+            targetReceiver.Hp = 1000f;
+            Rigidbody2D body = target.GetComponent<Rigidbody2D>();
+            if (body != null) { body.velocity = Vector2.zero; body.constraints = RigidbodyConstraints2D.FreezeAll; }
+            BoxCollider2D receiverShape = target.GetComponentsInChildren<BoxCollider2D>(true)
+                .FirstOrDefault(shape => shape.isActiveAndEnabled && CombatPhysicsChannels.IsDamageReceiverCollider(shape) &&
+                    ReferenceEquals(GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(shape), targetReceiver));
+            if (receiverShape == null) throw new InvalidOperationException("固定步武器采样缺少启用的受击盒。");
+            receiverShape.size = Vector2.one * 4f;
+            Physics2D.SyncTransforms();
+            HostileTarget = FactionRelationService.CanAttack(damage.item, target);
+            damage.OnReceiverDamageResolved += RecordContact;
+            damage.OnReceiverLogicalMissed += RecordContact;
+            GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+            registered = true;
+        }
+
+        private void RecordContact(Mod_DamageReceiver receiver, float amount)
+        {
+            if (!ReferenceEquals(receiver, targetReceiver)) return;
+            Contacts.Add(new JObject
+            {
+                ["tick"] = (long)GameplayFixedStepSimulation.TickIndex, ["frame"] = Time.frameCount,
+                ["inFixedStep"] = Time.inFixedTimeStep, ["windowOpen"] = damage.IsDamageEnabled()
+            });
+        }
+
+        public void SimulateFixedStep(float deltaTime)
+        {
+            if (damage == null || !damage.IsDamageEnabled()) return;
+            Windows.Add(new JObject
+            {
+                ["tick"] = (long)GameplayFixedStepSimulation.TickIndex, ["frame"] = Time.frameCount,
+                ["inFixedStep"] = Time.inFixedTimeStep, ["delta"] = deltaTime,
+                ["damageTickEnabled"] = damage.TickMode == ModuleTickMode.EveryFrame
+            });
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            try
+            {
+                if (registered) GameplayFixedStepSimulation.Unregister(this);
+                if (damage != null)
+                {
+                    damage.OnReceiverDamageResolved -= RecordContact;
+                    damage.OnReceiverLogicalMissed -= RecordContact;
+                }
+                Despawn(ref target);
+            }
+            finally
+            {
+                Time.timeScale = originalTimeScale;
+                Application.targetFrameRate = originalTargetFrameRate;
+                QualitySettings.vSyncCount = originalVSyncCount;
+            }
+        }
+    }
+
     private static IEnumerator CaptureHeldWeaponAction(Player player, JObject args, Action<JObject> completed)
     {
         Item weapon = null;
+        HeldWeaponFixedStepObservation fixedStep = null;
         string weaponId = args.Value<string>("weaponId") ?? "ChippedTool";
         // 按用例指定的真实攻击状态采样，覆盖不同武器的挥动动作。
         string attackStateName = args.Value<string>("attackStateName") ?? "Attack_1";
@@ -362,11 +463,19 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["damageLoaded"] = damage != null && damage.IsRuntimeLoaded;
             result["initialWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["idleDamageTickDisabled"] = damage != null && damage.TickMode == ModuleTickMode.Disabled;
+            result["animatorUpdateMode"] = animation?.animator != null ? animation.animator.updateMode.ToString() : "missing";
+
+            if (args.Value<bool?>("verifyFixedStep") == true)
+            {
+                fixedStep = new HeldWeaponFixedStepObservation();
+                GameplayTestRuntimeProbe.RegisterCleanup(fixedStep);
+                fixedStep.Prepare(player, damage, args.Value<float?>("timeScale") ?? 1f);
+            }
 
             result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
             bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
             result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
-            bool sawAttackState = false, sawOpenWindow = false, sawOpenWindowWithoutDamageTick = false, returnedToIdle = false;
+            bool sawAttackState = false, sawOpenWindow = false, sawOpenWindowWithFixedDamageTick = false, returnedToIdle = false;
             int sampledFrames = 0;
             float deadline = Time.realtimeSinceStartup + 10f;
             while (requested && Time.realtimeSinceStartup < deadline)
@@ -379,8 +488,8 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     returnedToIdle = sawAttackState && state.IsName("Idle_0");
                 }
                 sawOpenWindow |= damage != null && damage.IsDamageEnabled();
-                sawOpenWindowWithoutDamageTick |= damage != null && damage.IsDamageEnabled() &&
-                                                 damage.TickMode == ModuleTickMode.Disabled;
+                sawOpenWindowWithFixedDamageTick |= damage != null && damage.IsDamageEnabled() &&
+                                                 damage.TickMode == ModuleTickMode.EveryFrame;
                 sampledFrames++;
                 if (returnedToIdle && damage != null && !damage.IsDamageEnabled()) break;
                 yield return null;
@@ -388,10 +497,18 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["actionRequested"] = requested;
             result["sawAttackState"] = sawAttackState;
             result["sawOpenWindow"] = sawOpenWindow;
-            result["sawOpenWindowWithoutDamageTick"] = sawOpenWindowWithoutDamageTick;
+            result["sawOpenWindowWithFixedDamageTick"] = sawOpenWindowWithFixedDamageTick;
             result["returnedToIdle"] = returnedToIdle;
             result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["sampledFrames"] = sampledFrames;
+            if (fixedStep != null)
+                result["fixedStep"] = new JObject
+                {
+                    ["timeScale"] = Time.timeScale, ["targetFrameRate"] = Application.targetFrameRate,
+                    ["vSyncCount"] = QualitySettings.vSyncCount, ["hostileTarget"] = fixedStep.HostileTarget,
+                    ["windows"] = fixedStep.Windows, ["contacts"] = fixedStep.Contacts,
+                    ["originalSettings"] = fixedStep.OriginalSettings
+                };
 
             // 攻击中停用再启用真实武器，检查场景迁移同类的 Animator 失活路径。
             Animator weaponAnimator = animation?.animator;
@@ -433,8 +550,14 @@ public static class GameplayTestItemPipelineRuntimeProbe
         }
         finally
         {
-            try { Despawn(ref weapon); }
-            finally { if (stamina != null) stamina.CurrentValue = originalStamina; }
+            try { fixedStep?.Dispose(); }
+            finally
+            {
+                if (result["fixedStep"] is JObject sample)
+                    sample["restoredSettings"] = HeldWeaponFixedStepObservation.CurrentSettings;
+                try { Despawn(ref weapon); }
+                finally { if (stamina != null) stamina.CurrentValue = originalStamina; }
+            }
         }
         completed(result);
     }

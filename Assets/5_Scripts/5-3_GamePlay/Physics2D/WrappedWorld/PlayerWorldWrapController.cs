@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player), typeof(Rigidbody2D))]
-public sealed class PlayerWorldWrapController : MonoBehaviour
+public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private Player player;
     private Rigidbody2D body;
@@ -21,16 +21,24 @@ public sealed class PlayerWorldWrapController : MonoBehaviour
         chunkLoader = GetComponentInChildren<Mod_ChunkLoader>(true);
     }
 
-    private void FixedUpdate()
+    #region 固定步玩家坐标投影
+
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+
+    public void SimulateFixedStep(float deltaTime)
     {
+        using var world = player?.UseOwnedWorldForItemCallbacks();
         TryWrapNow();
     }
 
     private void OnDisable()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         WorldLocalPresentation.ClearAnchor(transform);
         hasPresentationImage = false;
     }
+
+    #endregion
 
     /// <summary>检测局部平面跨周并刷新逻辑世界；不会搬动 Rigidbody。保留公开入口供聚焦测试。</summary>
     public bool TryWrapNow()

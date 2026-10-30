@@ -1,3 +1,11 @@
+test.system("combat", "laser_fixed_step", {}, function(data)
+    assert(data.registeredForFixedStep and data.moduleTicks == 3 and math.abs(data.moduleSeconds - .15) < .0001,
+        "激光模块没有随固定步逐次推进")
+    assert(data.progressBeforeManager == 0 and math.abs(data.progressAfterManager - .05) < .0001,
+        "激光重复推进技能进度，或技能管理器没有推进进度")
+    assert(data.unloadStopsTicks, "激光卸载后仍推进模块")
+end, "激光固定步推进、技能进度单一归属及卸载")
+
 -- 投掷费用读取石头正式配置，距离、数量和非法参数均交给生产规则。
 test.system("combat", "discard_throw_stamina", {}, function(data)
     assert(data.baseCost == 1 and data.costPerMeter == .5, "石头投掷体力配置错误")

@@ -164,7 +164,9 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     {
     }
 
-    /// <summary>逐帧累计蓄力并更新搭箭回拉表现。</summary>
+    public override bool WantsRenderFrameUpdate => true;
+
+    /// <summary>蓄力与体力按固定逻辑步推进。</summary>
     public override void ModUpdate(float deltaTime)
     {
         if (!_chargeCycle.IsActive)
@@ -186,6 +188,12 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         if (_chargeCycle.IsCharging)
             foreach (IProjectileChargeModifier modifier in _chargeModifiers)
                 modifier.UpdateCharge(consumptionSeconds);
+    }
+
+    /// <summary>搭箭、轨迹与持弓姿态跟随画面帧刷新。</summary>
+    public override void ModRenderUpdate(float deltaTime)
+    {
+        if (!_chargeCycle.IsActive) return;
         float charge01 = GetCharge01();
         UpdateNockedArrowVisual(charge01);
         UpdateTrajectoryPreview(charge01);

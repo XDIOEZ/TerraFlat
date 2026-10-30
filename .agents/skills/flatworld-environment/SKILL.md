@@ -38,6 +38,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 ## 数据与接口边界
 
 - DayTimeSystem 为跨场景/保存时间主入口；日长 RotationPeriodSeconds、年长 OrbitalPeriodSeconds，经 SetRotationPeriod/SetOrbitalPeriod 修改。季节/年/轨道共用游戏秒轴；SeasonCalendar 历史冻结周期/倾角/离心率，不用新日长重算过去。
+- 日历和热源位置定期发布由统一固定步驱动，设备配置仍立即生效，天气跟随时间回调；光照、天气表现及地表队列仍逐帧维护。温度与风场缓存同时核对固定步编号，不能只按画面帧复用。
 - GM 时间滑条按实际 DayLength 预览，松开由权威 JumpToTime 一次；场景名可按 handle 缓存，时间/天气/维度实时读。菜单用无报错 GetInstance 探测。
 - 太空跨区不重建玩家/WorldEnter；SpaceMgr 必须登记新星区时间与采光并引用 SpaceScene 统一时钟，避免未登记场景的零光照。
 - 固定地理 temperature/airHumidity/precipitation、动态空气湿度、地表 moisture 和天气事件分层；环境查询不生成缺失地形，不把镜头区天气当全世界状态。

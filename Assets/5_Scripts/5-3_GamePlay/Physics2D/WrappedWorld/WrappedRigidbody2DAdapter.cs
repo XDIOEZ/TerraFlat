@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>GameObject 物理适配：刚体留在本机连续平面，只把权威数据写回规范逻辑坐标。</summary>
 [DisallowMultipleComponent]
-public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
+public sealed class WrappedRigidbody2DAdapter : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private Item item;
     private Rigidbody2D body;
@@ -47,10 +47,18 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
         enabled = false;
     }
 
-    private void FixedUpdate()
+    #region 固定步坐标投影
+
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
+    public void SimulateFixedStep(float deltaTime)
     {
+        using var world = item?.UseOwnedWorldForItemCallbacks();
         TryWrapNow();
     }
+
+    #endregion
 
     public bool TryWrapNow()
     {

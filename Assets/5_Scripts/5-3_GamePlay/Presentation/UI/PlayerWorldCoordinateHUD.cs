@@ -7,8 +7,8 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 为本地玩家维护屏幕左上角的坐标、FPS 和脚下地块环境温度 HUD。
-/// 仅实例化正式 Prefab；坐标与环境温度以 10Hz 采样，FPS 使用 0.5 秒窗口，显示值不变时不重写文本。
+/// 为本地玩家维护屏幕左上角的坐标、FPS、TPS 和脚下地块环境温度 HUD。
+/// 坐标与环境温度以 10Hz 采样，FPS 与 TPS 共用 0.5 秒真实时间窗口。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -39,7 +39,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private const string GeographicFormat = "经 {0:0.00}°  纬 {1:0.00}°";
     private const string UniverseCoordinateFormat = "宇宙  X {0:0.000}  Y {1:0.000} km";
     private const string UniverseCoordinateUnavailableText = "宇宙  X --  Y -- km";
-    private const string FpsFormat = "FPS  {0:0}";
+    private const string FpsFormat = "FPS  {0:0}    TPS  {1:0}";
     private const float RefreshIntervalSeconds = 0.1f;
     private const float FpsSampleIntervalSeconds = 0.5f;
 
@@ -73,7 +73,9 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private string localizedUniverseCoordinateFormat;
     private string localizedUniverseCoordinateUnavailableText;
     private int lastFpsSampleFrame = -1;
+    private ulong lastTpsSampleTick;
     private int lastDisplayedFps = -1;
+    private int lastDisplayedTps = -1;
     private float lastFpsSampleTime = -1f;
     private PlayerWorldCoordinateDisplayMode lastDisplayMode =
         (PlayerWorldCoordinateDisplayMode)(-1);
@@ -480,16 +482,18 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         RefreshFpsText();
     }
 
-    /// <summary>以当前帧和真实时间作为下一个 FPS 采样窗口的起点。</summary>
+    /// <summary>以当前画面帧、固定步和真实时间作为采样窗口起点。</summary>
     private void BeginFpsSample()
     {
         lastFpsSampleFrame = Time.frameCount;
+        lastTpsSampleTick = GameplayFixedStepSimulation.TickIndex;
         lastFpsSampleTime = Time.unscaledTime;
         lastDisplayedFps = -1;
-        fpsText.SetText("FPS  --");
+        lastDisplayedTps = -1;
+        fpsText.SetText("FPS  --    TPS  --");
     }
 
-    /// <summary>按固定真实时间窗口计算 FPS，仅在整数显示值变化时写入 TMP。</summary>
+    /// <summary>按同一真实时间窗口计算 FPS 和实际 TPS，变化时才写入 TMP。</summary>
     private void RefreshFpsText()
     {
         if (lastFpsSampleFrame < 0 || lastFpsSampleTime < 0f)
@@ -504,24 +508,30 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
             return;
 
         int sampleFrame = Time.frameCount;
+        ulong sampleTick = GameplayFixedStepSimulation.TickIndex;
         int displayedFps = Mathf.Max(
             0,
             Mathf.RoundToInt((sampleFrame - lastFpsSampleFrame) / elapsed));
+        int displayedTps = Mathf.RoundToInt((sampleTick - lastTpsSampleTick) / elapsed);
         lastFpsSampleFrame = sampleFrame;
+        lastTpsSampleTick = sampleTick;
         lastFpsSampleTime = sampleTime;
-        if (displayedFps == lastDisplayedFps)
+        if (displayedFps == lastDisplayedFps && displayedTps == lastDisplayedTps)
             return;
 
         lastDisplayedFps = displayedFps;
-        fpsText.SetText(FpsFormat, displayedFps);
+        lastDisplayedTps = displayedTps;
+        fpsText.SetText(FpsFormat, displayedFps, displayedTps);
     }
 
     /// <summary>停止沿用旧采样窗口，避免重新显示时统计隐藏期间的帧数。</summary>
     private void InvalidateFpsSample()
     {
         lastFpsSampleFrame = -1;
+        lastTpsSampleTick = 0;
         lastFpsSampleTime = -1f;
         lastDisplayedFps = -1;
+        lastDisplayedTps = -1;
     }
 
     /// <summary>

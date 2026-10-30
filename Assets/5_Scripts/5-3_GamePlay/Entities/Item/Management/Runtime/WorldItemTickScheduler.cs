@@ -16,6 +16,10 @@ internal sealed class WorldItemTickScheduler
     private readonly List<Group> dispatch = new();
     private readonly List<Item> removed = new();
     private readonly List<(Transform Player, string WorldKey)> playerWorlds = new();
+    private readonly List<(Item Item, uint Generation, ulong WorldRevision, ulong Token)> renderItems = new();
+    private readonly List<(Item Item, uint Generation, ulong WorldRevision, ulong Token)> renderSnapshot = new();
+    private readonly Dictionary<Item, int> renderSlots = new();
+    private ulong renderRegistrationSequence;
     public int RegisteredCount => owners.Count;
     internal int GetRegisteredCountForWorld(string key) =>
         key != null && groups.TryGetValue(key, out Group group) ? group.Items.Count : 0;
@@ -36,16 +40,19 @@ internal sealed class WorldItemTickScheduler
             {
                 owners[item] = (key, revision);
                 groups[key].Scheduler.Register(item);
+                RefreshRenderMembership(item);
                 return;
             }
             groups[previous.Key].Scheduler.Remove(item); groups[previous.Key].Items.Remove(item);
         }
         if (!groups.TryGetValue(key, out Group group)) groups.Add(key, group = new Group());
         owners[item] = (key, revision); group.Items.Add(item); group.Scheduler.Register(item);
+        RefreshRenderMembership(item);
     }
     public void Remove(Item item)
     {
         if (ReferenceEquals(item, null) || !owners.Remove(item, out var owner)) return;
+        RemoveRenderMembership(item);
         groups[owner.Key].Scheduler.Remove(item); groups[owner.Key].Items.Remove(item);
     }
     public void NotifyChanged(Item item)
@@ -72,7 +79,7 @@ internal sealed class WorldItemTickScheduler
     }
 
     // 同坐标的其它维度玩家不扩大本世界的模拟范围，也不借用本机地表拓扑。
-    public void Update(float deltaTime, Action<Item> beforeTick, IReadOnlyList<Transform> players, WorldTopologyDomain fallback)
+    public void Update(float deltaTime, double currentTime, Action<Item> beforeTick, IReadOnlyList<Transform> players, WorldTopologyDomain fallback)
     {
         playerWorlds.Clear();
         for (int i = 0; i < players.Count; i++)
@@ -95,15 +102,63 @@ internal sealed class WorldItemTickScheduler
             if (GameplayWorldRegistry.TryGet(key, out _))
             {
                 using (GameplayWorldRegistry.UseWorld(key))
-                    group.Scheduler.Update(deltaTime, beforeTick, group.Players, WorldTopologyRuntime.GetActiveDomain());
+                    group.Scheduler.Update(deltaTime, currentTime, beforeTick, group.Players, WorldTopologyRuntime.GetActiveDomain());
             }
             else if (SpaceMgr.IsSpaceScene(key))
             {
-                using (GameplayWorldRegistry.UseSpaceScene(key)) group.Scheduler.Update(deltaTime, beforeTick, group.Players, fallback);
+                using (GameplayWorldRegistry.UseSpaceScene(key)) group.Scheduler.Update(deltaTime, currentTime, beforeTick, group.Players, fallback);
             }
-            else group.Scheduler.Update(deltaTime, beforeTick, group.Players, fallback);
+            else group.Scheduler.Update(deltaTime, currentTime, beforeTick, group.Players, fallback);
         }
         dispatch.Clear();
+    }
+
+    // 只遍历显式声明画面更新的物品，并按注册令牌隔离回调中的增删。
+    public void UpdateRenderFrame(float deltaTime)
+    {
+        renderSnapshot.Clear();
+        renderSnapshot.AddRange(renderItems);
+        try
+        {
+            foreach (var entry in renderSnapshot)
+            {
+                Item item = entry.Item;
+                if (item == null || !item.isActiveAndEnabled || item.RuntimeGeneration != entry.Generation ||
+                    GameplayWorldRegistry.GetItemWorldRevision(item) != entry.WorldRevision ||
+                    !renderSlots.TryGetValue(item, out int slot) || renderItems[slot].Token != entry.Token) continue;
+                item.TickRenderFrame(deltaTime);
+            }
+        }
+        finally { renderSnapshot.Clear(); }
+    }
+
+    private void RefreshRenderMembership(Item item)
+    {
+        bool hasSlot = renderSlots.TryGetValue(item, out int slot);
+        if (!item.HasRenderFrameUpdates)
+        {
+            if (hasSlot) RemoveRenderMembership(item);
+            return;
+        }
+        ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(item);
+        if (hasSlot && renderItems[slot].Generation == item.RuntimeGeneration &&
+            renderItems[slot].WorldRevision == worldRevision) return;
+        if (hasSlot) RemoveRenderMembership(item);
+        renderSlots.Add(item, renderItems.Count);
+        renderItems.Add((item, item.RuntimeGeneration, worldRevision, ++renderRegistrationSequence));
+    }
+
+    private void RemoveRenderMembership(Item item)
+    {
+        if (!renderSlots.Remove(item, out int slot)) return;
+        int last = renderItems.Count - 1;
+        if (slot != last)
+        {
+            var moved = renderItems[last];
+            renderItems[slot] = moved;
+            renderSlots[moved.Item] = slot;
+        }
+        renderItems.RemoveAt(last);
     }
     #endregion
 }

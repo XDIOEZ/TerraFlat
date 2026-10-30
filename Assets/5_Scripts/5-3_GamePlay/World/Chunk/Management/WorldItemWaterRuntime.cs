@@ -34,7 +34,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private Transform driftVisual;
     private Vector3 originalDriftVisualPosition;
     private DriftInterpolation driftInterpolation;
-    private int activatedFrame;
+    private ulong activatedTick;
 
     public bool IsActive => waterItem != null && (isSinking || isFloating || isOnBottom);
     public bool IsOnBottom => IsActive && isOnBottom;
@@ -51,7 +51,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         ResetRuntimeState(resetVisual: true);
         waterItem = targetItem;
         observedSpecialData = targetItem.itemData.ItemSpecialData;
-        activatedFrame = Time.frameCount;
+        activatedTick = GameplayFixedStepSimulation.TickIndex;
         enabled = true;
 
         if (GetSavedBottomState(targetItem.itemData))
@@ -291,7 +291,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     /// <summary>水流与外力共用散物运动内核；岸线只限制水流，独立外力可把物品推上岸。</summary>
     private void UpdateWaterDrift(float deltaTime)
     {
-        if (waterItem == null || deltaTime <= 0f || activatedFrame == Time.frameCount)
+        if (waterItem == null || deltaTime <= 0f || activatedTick == GameplayFixedStepSimulation.TickIndex)
             return;
 
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;

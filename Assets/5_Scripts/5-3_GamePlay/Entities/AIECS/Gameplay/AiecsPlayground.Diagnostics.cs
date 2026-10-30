@@ -25,7 +25,6 @@ namespace FlatWorld.AIECS.Gameplay
         public long ExitFieldBuilds, TargetFieldBuilds, HighLevelRouteBuilds;
         public float PlayerDamage;
         public ulong Tick;
-        public double BacklogSeconds;
         public int InvalidPositions, DenseCells, MaximumCellDensity;
         public uint PositionHash;
         public bool PositionsChecked;
@@ -49,7 +48,7 @@ namespace FlatWorld.AIECS.Gameplay
                 Mode = mode.ToString(), Status = Status,
                 RequestedPerWave = ReinforcementUnitCount, Spawned = spawned, Alive = AliveUnitCount,
                 Visible = VisibleUnitCount, Batches = VisibleBatchCount, UploadedBytes = VisibleUploadedBytes,
-                Tick = CompletedSimulationTicks, BacklogSeconds = SimulationBacklogSeconds
+                Tick = CompletedSimulationTicks
             };
             if (bridge == null) return snapshot;
             var stats = bridge.Simulation.Statistics;

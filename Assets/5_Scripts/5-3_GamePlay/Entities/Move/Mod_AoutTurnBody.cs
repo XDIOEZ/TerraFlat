@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class Mod_AoutTurnBody : Mod_TurnBack
 {
+    public override bool WantsRenderFrameUpdate => false;
     public Mod_Mover mover;
     protected override void OnLoad()
     {

@@ -115,11 +115,21 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool animationDrivenDamageWindow; // 动画武器按有效窗口检测命中，不用周期伤害间隔限制采样。
+    private bool animationDamageSamplingActive;
     private HashSet<Module> idleTickSuppressionSources;
 
-    public override ModuleTickMode TickMode => animationDrivenDamageWindow || idleTickSuppressionSources?.Count > 0 &&
-        item != null && !item.InHand && !IsDamageEnabled()
+    public override ModuleTickMode TickMode =>
+        animationDrivenDamageWindow && !animationDamageSamplingActive && !IsDamageEnabled() && !lastColliderEnabled ||
+        idleTickSuppressionSources?.Count > 0 && item != null && !item.InHand && !IsDamageEnabled()
         ? ModuleTickMode.Disabled : ModuleTickMode.EveryFrame;
+
+    /// <summary>动作来源显式唤醒固定步采样，画面帧之间的多次补步也能检查动画伤害窗。</summary>
+    public void SetAnimationDamageSamplingActive(bool active)
+    {
+        if (animationDamageSamplingActive == active) return;
+        animationDamageSamplingActive = active;
+        InvalidateTickSchedule();
+    }
 
     /// <summary>各来源独立请求休眠空闲 Tick，攻击和手持时仍保持原频率。</summary>
     public void SetIdleTickSuppressed(bool suppressed, Module source)
@@ -138,6 +148,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     protected override void OnUnload()
     {
+        animationDamageSamplingActive = false;
         LaunchedWeaponDurabilityData = null;
         LaunchedWeaponDurabilityOwner = null;
         LaunchedWeaponInventoryOwner = null;
@@ -243,7 +254,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (damageCollider == null || !damageCollider.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0)
             return true;
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
-            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime });
+            Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime });
         context.Attack.Sequence = attackSequence;
         context.Attack.Window = 1;
         context.Attack.Pulse = ++attackPulse;
@@ -263,7 +274,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             HalfExtents = new Unity.Mathematics.float2(box.size.x * axisX.magnitude, box.size.y * axisY.magnitude) * 0.5f,
             Rotation = Mathf.Atan2(axisX.y, axisX.x), SweepDelta = displacement };
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
-            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+            Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
         context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
         context.Origin = shape.Center - shape.SweepDelta;
         if (UsesExternalCombatQueriesOnly() ||
@@ -366,7 +377,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         // 保存逻辑可以后续实现
     }
 
-    /// <summary>Animator 更新后再次同步武器命中盒，保证伤害区域始终跟随实际武器画面。</summary>
+    /// <summary>Animator 更新后只同步武器姿态，伤害查询统一留给固定逻辑步。</summary>
     private void LateUpdate()
     {
         // 动画伤害窗由 Animator 直接开关，待机时无需进入世界作用域或同步碰撞盒。
@@ -378,26 +389,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         if (damageCollider.enabled) SyncBoundWeaponHitbox();
-        if (animationDrivenDamageWindow)
-        {
-            // Animator 本帧写完姿态和开关后再登记窗口，避免第一段短挥砍只查到起始位置。
-            bool openedWindow = UpdateDamageWindowState();
-            if (openedWindow || damageCollider == null || !damageCollider.enabled || !CanDealDamageNow())
-                return;
-
-            if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && RemainingAttackTargets > 0)
-            {
-                ScanCurrentOverlapsAndApplyDamageForWindow(continueWindow: true);
-                EmitDataPulse();
-            }
-            TryApplyDamageToTilemap();
-            return;
-        }
-
-        // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
-        if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
-            damageCollider != null && damageCollider.enabled)
-            EmitDataPulse();
     }
 
     public override void ModUpdate(float deltaTime)
@@ -411,8 +402,25 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         }
 
         if (animationDrivenDamageWindow)
-            return;
+        {
+            // 使用最近一次 Animator 姿态取样，每个固定步独立检查有效攻击窗。
+            bool openedWindow = UpdateDamageWindowState();
+            if (openedWindow || damageCollider == null || !damageCollider.enabled || !CanDealDamageNow())
+                return;
 
+            if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && RemainingAttackTargets > 0)
+            {
+                ScanCurrentOverlapsAndApplyDamageForWindow(continueWindow: true);
+                EmitDataPulse();
+            }
+            TryApplyDamageToTilemap();
+            return;
+        }
+
+        // 窗口内按固定步检测新目标，预约集仍保证每目标只受击一次。
+        if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
+            damageCollider != null && damageCollider.enabled)
+            EmitDataPulse();
         UpdateDamageWindowState();
 
         // TilemapCollider2D 的整层只会产生一个 Collider 回调；主动查询当前攻击触发器，
@@ -442,6 +450,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             if (colliderEnabled != lastColliderEnabled)
             {
                 lastColliderEnabled = colliderEnabled;
+                if (animationDrivenDamageWindow) InvalidateTickSchedule();
                 if (colliderEnabled)
                 {
                     BeginTileDamageWindow();

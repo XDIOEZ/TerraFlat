@@ -10,7 +10,7 @@ using FlatWorld.Networking;
 
 namespace FlatWorld.Spaceflight
 {
-    public sealed partial class SpaceSession : MonoBehaviour, IItemEnvironmentSource
+    public sealed partial class SpaceSession : MonoBehaviour, IItemEnvironmentSource, IGameplayFixedStepSimulationSystem
     {
         #region 会话与持久化
         public static SpaceSession Current { get; private set; }
@@ -72,6 +72,7 @@ namespace FlatWorld.Spaceflight
             placementRegistration = FlatWorld.Gameplay.Building.BuildingPlacementService.Register(
                 "ship-local-grid", new ShipBuildingPlacementBackend(), 300);
         }
+        private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.SpaceSimulation);
         private void OnDestroy()
         {
             CaptureShipInteriorWorldStates();
@@ -245,12 +246,12 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 唯一固定模拟时钟
-        private void FixedUpdate()
+        public void SimulateFixedStep(float deltaTime)
         {
             if (!running || State == null || Universe == null || GameManager.Instance?.IsGameplayReady != true || Time.timeScale <= 0f || !GameNetwork.HasStateAuthority) return;
             CapturePresentationState(false);
             ResumePendingPassengerTransfer();
-            double seconds = Time.fixedDeltaTime;
+            double seconds = deltaTime;
             engineOutputs.Clear();
             AdvanceSectorTime(seconds);
             StepRemotePassengerInput(seconds);

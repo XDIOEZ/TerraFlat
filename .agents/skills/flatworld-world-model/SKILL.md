@@ -52,6 +52,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 离开窗口的 pending/后台请求取消，已有地面的旧 View/表现租约保留到平滑雾窗外才解绑；重入目标复用，换维度/关闭窗口清理。折返、连续跨块不重置到旧边界，规则见 Rendering/zoom_cloud_transition。保留请求按玩家现位置重排，同区块移动只改优先级；Mod_ChunkLoader 与 RetargetRuntimePresentationQueue 共用预加载距离。
 - 基础地形跨 Chunk 优先，草/导航/自然物后续轮转；续步骤先取基础未完成块，再按当前距离选择，单块每帧最多一步。`ChunkTilemapRenderer` 初绑每步最多64格，网格批写跨步、每层上传分别让帧，全部完成才发布基础就绪/重建事件；绑定间的地形/邻区脏格合并重扫，资源变化重启扫描，取消按绑定版本释放。`IIncrementalChunkViewRenderer` 扫描跳过项也计预算，自然物先宿主后伴生；宿主扫描时同时缓存伴生候选，第二阶段只扫候选，保持相对顺序和原每步预算并在解绑/取消时清理。规则 `ecology/companion_bind_candidates`。完成初绑后再季节补位。单项装配仍可能超时。
 - `ChunkMgr.ProcessRuntimePresentationFrame` 每帧借用管理器实际所属世界，返回后才让帧；取消、解绑与天气收尾同样按归属执行。已注销或被替代的管理器不推进、不补建世界；已解绑池壳可直接销毁。
+- `WorldRuntimeHost` 按所属世界分别驱动帧流送与固定模拟：后台提交、恢复绑定和泵寻源留在帧更新；世界 Tick、液体扩散与实验流动使用统一固定步，暂停不阻止流送。
 - `ChunkMgr.OnDestroy` 先终止再借现有 owner 释放上下文；记录缺失/已换 owner 时只清自身 View、协程、池及调度器，不按世界地址清新世界，也不销毁会话世界模型。意外卸载已销毁且未快照的活体无法补回；无场景时当前居民休眠，不能视为持续模拟。
 - 正常注销和 OnDestroy 共用已核对的释放上下文；建筑收尾的坐标换算只读尚未释放的 Profile，不调用 EnsureWorldRuntime。释放结束后仍拒绝重新访问已终止管理器；回归真实起降后再离开地表。
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。

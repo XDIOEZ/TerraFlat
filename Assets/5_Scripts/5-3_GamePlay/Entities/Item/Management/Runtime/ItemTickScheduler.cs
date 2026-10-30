@@ -126,7 +126,7 @@ internal sealed class ItemTickScheduler
 
         if (newGeneration || dormantBoundary)
             item.ResetScheduledTickClock(tier == ItemTickTier.EveryFrame || tier == ItemTickTier.Dormant
-                ? -1f : Time.time);
+                ? -1d : GameplayFixedStepSimulation.CurrentTime);
     }
 
     public void Remove(Item item)
@@ -171,7 +171,7 @@ internal sealed class ItemTickScheduler
 
     #region 帧边界与重建
 
-    public void Update(float deltaTime, Action<Item> beforeEveryFrameTick,
+    public void Update(float deltaTime, double currentTime, Action<Item> beforeEveryFrameTick,
         IReadOnlyList<Transform> players, WorldTopologyDomain topology)
     {
         if (updating)
@@ -180,7 +180,6 @@ internal sealed class ItemTickScheduler
         updating = true;
         try
         {
-            float currentTime;
             using (PrepareFrameMarker.Auto())
             {
                 FlushDirty();
@@ -188,7 +187,6 @@ internal sealed class ItemTickScheduler
                 // 本轮调度中新增或重新注册的版本统一从下一帧生效，不能进入后续低频桶。
                 currentUpdateToken = registrationSequence;
                 ApplySimulationRangeTransitions();
-                currentTime = Time.time;
                 simulationRanges.CollectEveryFrame(tickSnapshot, currentTime);
             }
             using (EveryFrameMarker.Auto())
@@ -242,7 +240,7 @@ internal sealed class ItemTickScheduler
                         beforeEveryFrameTick?.Invoke(item);
                         if (CanTick(entry) && item.isActiveAndEnabled)
                         {
-                            item.TickEveryFrameAt(currentTime, interval);
+                            item.TickEveryFrameAt(currentTime, interval, deltaTime);
                             if (CanTick(entry))
                             {
                                 simulationRanges.AcknowledgeTier(entry, tier);
@@ -259,9 +257,9 @@ internal sealed class ItemTickScheduler
 
             using (IntervalBucketsMarker.Auto())
             {
-                ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime);
-                ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime);
-                ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime);
+                ProcessTier(fastBuckets, ref fastTimer, ref fastCursor, FastSlice, deltaTime, currentTime);
+                ProcessTier(normalBuckets, ref normalTimer, ref normalCursor, NormalSlice, deltaTime, currentTime);
+                ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime, currentTime);
                 ProcessDormantPhysics(deltaTime);
             }
         }
@@ -389,14 +387,13 @@ internal sealed class ItemTickScheduler
     }
 
     private void ProcessTier(List<ScheduledEntry>[] buckets, ref float timer, ref int cursor,
-        float slice, float deltaTime)
+        float slice, float deltaTime, double currentTime)
     {
         timer += deltaTime;
         int elapsedSlices = Mathf.FloorToInt(timer / slice);
         if (elapsedSlices <= 0) return;
 
         int slicesToProcess = Mathf.Min(elapsedSlices, buckets.Length);
-        float currentTime = Time.time;
         for (int sliceIndex = 0; sliceIndex < slicesToProcess; sliceIndex++)
         {
             cursor = (cursor + 1) % buckets.Length;

@@ -54,7 +54,7 @@ public readonly struct WorldNavigationPathResult
 /// reverse flow-field search.
 /// </summary>
 [PersistentRuntimeObjectCategoryAttribute(PersistentRuntimeObjectCategory.World)]
-public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavigationManager>
+public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavigationManager>, IGameplayFixedStepSimulationSystem
 {
     private const int MaxPooledMapCellSets = 32;
 
@@ -141,6 +141,8 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Navigation);
+
     private void Start()
     {
         using var worldScope = UseWorldContext();
@@ -203,7 +205,11 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         }
         SchedulePortalPathBatch();
         pathStopwatch.Stop();
+    }
 
+    public void SimulateFixedStep(float deltaTime)
+    {
+        using var worldScope = UseWorldContext();
         pathStopwatch.Restart();
         DispatchCompletions(
             Mathf.Max(1, maxCompletionsPerFrame),

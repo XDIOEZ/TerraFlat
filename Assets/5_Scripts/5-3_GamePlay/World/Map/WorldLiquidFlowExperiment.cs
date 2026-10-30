@@ -200,17 +200,24 @@ public sealed class WorldLiquidFlowExperiment : IDisposable
     #endregion
 
     #region 独立 Tick 与数据窗口
-    /// <summary>没有活动格就不累计时钟；掉帧时丢弃历史积欠，单帧最多计算一个 Tick。</summary>
-    public void Advance(float seconds)
+    /// <summary>按画面帧准备已就绪区块及异步请求。</summary>
+    public void AdvanceStreamingFrame()
     {
         if (disposed || world.Epoch != epoch || !GameNetwork.HasStateAuthority) return;
         PrepareReadyChunks();
         StartQueuedLoads();
+    }
+
+    /// <summary>按固定步累计液体配置周期，静水不累计时钟。</summary>
+    public void SimulateFixedStep(float seconds)
+    {
+        if (disposed || world.Epoch != epoch || !GameNetwork.HasStateAuthority) return;
         if (active.Count == 0) { elapsed = 0f; return; }
         if (!float.IsFinite(seconds) || seconds <= 0f) return;
         elapsed += seconds;
-        if (elapsed < 1f / settings.TickRate) return;
-        elapsed = 0f;
+        float interval = 1f / settings.TickRate;
+        if (elapsed < interval) return;
+        elapsed -= interval;
         using (TickMarker.Auto()) Tick();
     }
 

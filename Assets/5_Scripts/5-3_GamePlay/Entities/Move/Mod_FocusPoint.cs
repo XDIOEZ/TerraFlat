@@ -75,7 +75,10 @@ public partial class Mod_FocusPoint : Module
         _needsRefresh = true;
     }
 
-    public override void ModUpdate(float deltaTime)
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+    public override bool WantsRenderFrameUpdate => true;
+
+    public override void ModRenderUpdate(float deltaTime)
     {
         // 优化：提前检查列表状态和旋转激活状态
         if (targetRotationTransforms == null || targetRotationTransforms.Count == 0 || !Data.ActivateRotation) 

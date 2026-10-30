@@ -26,9 +26,9 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - 显式 `AiRuntimeBackendService.TrySpawnDirect` 按当前世界懒建普通生成管理器；玩家位置优先读 Item 世界账本，局部世界使用本地物理坐标。`SimulateWithoutObservers` 不因无人观察休眠居民，世界退役通过 `MonsterSpawnerManager.ReleaseWorld` 统一保存、撤服务和后端；新增普通物种不增加船用生成分支。船内现场入口为 `Space/ship-world-suite.json`，未执行不能视作验收。
 
-- F4 → 生成与 AI → 世界生物信息读取 `MonsterSpawnerManager.Monitoring.cs` 快照；按本地玩家世界查询现有管理器/后端，不补建调度状态。倒计时/上限为真实游戏秒，调度/重试/最近尝试年龄为现实秒；生物合计含当前世界存活 GO、ECS 和已索引休眠居民，排除玩家/尸体/创建候选。仅可见时采样，真实生成分支只记录最近结果，不重新选点或抽概率；只读计时回归 `ai/spawn_monitor`。
+- F4 → 生成与 AI → 世界生物信息读取 `MonsterSpawnerManager.Monitoring.cs` 快照；按本地玩家世界查询现有管理器/后端，不补建调度状态。倒计时为游戏时间，调度/重试为受倍速影响的模拟秒，最近尝试年龄为现实秒；生物合计含当前世界存活 GO、ECS 和已索引休眠居民，排除玩家/尸体/创建候选。仅可见时采样，真实生成分支只记录最近结果，不重新选点或抽概率；只读计时回归 `ai/spawn_monitor`。
 
-- `MonsterSpawnerManager.Update` 已初始化且未到生态 Tick、也无分帧出生任务时，在进入世界上下文前返回；初始化和出生任务仍及时推进。`FlatWorld.MonsterSpawner.Advance` 包含世界作用域进出，Tick/Create 继续细分实际工作；回归 `ai/spawner_update_work`。
+- `MonsterSpawnerManager` 的生态调度进统一固定步，初始化与有帧预算的出生装配仍逐画面帧推进；无对应工作时不进入世界上下文。`FlatWorld.MonsterSpawner.Advance` 包含世界作用域进出，Tick/Create 继续细分实际工作；回归 `ai/spawner_update_work`。
 
 - **追近不等于动作**：共用 `FlatWorld.Navigation.AIApproachRange`，停止内圈取配置停止距离与动作范围一半中的较小值。地面动作目标必须用 `Mod_Mover_AI.SetInteractionDestination`（可带路径代价上限），不覆写普通 `stopDistance`；巡逻、温度避险保持各自配置。鱼 `forageStopDistance=0.3`、`eatRange=0.9`，追近过程中仍按实际距离累计摄食，越界或换目标才清零。鸟啄食、行为图、鸡/野猪、狼/雪豹、蜜蜂使用同一内外圈原则；只有真正攻击前摇/伤害窗口/后摇或技能锁定才禁止移动，冷却不强制停车。狼编队、野猪左右站位及可选 ECS 站位必须把目标偏移和停止余量一同算入动作范围。禁止通过放大进食/伤害范围掩盖提前停车。离线真实鱼方法回归：`python Tools/Tests/AiApproachRanges/verify.py`；Lua 规则：`ai/approach_ranges`。
 
@@ -52,7 +52,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 资源 ECS 独立于 AI 后端，蜜蜂采蜜查 `NaturalEntityEcsService`，栖息地合并 GO/ECS 树，不恢复完整资源 Item。Lua Actor 不要求 ECS 能力声明。
 - 树木栖息地两秒候选快照复用一次 `WorldTopologyDomain` 与 `ChunkMgr.RuntimeTerrainPresenceQuery`，只读真实 BiomeId，避免逐树重新解析世界/完整 Tile；最终随机落点仍实时检查原规则。回归为 `ai/tree_habitat_batch`。
 - 树木栖息地 ECS 记录在注册、移除与定义刷新时增量维护，两秒快照只遍历存活树；Profiler `NaturalEntityRuntime.TreeHabitat` / `FlatWorld.MonsterSpawner.TreeCandidates` 观察峰值。
-- ECS 用 60Hz 基础时钟与距离脉冲；脉冲直接按当前位置查询本世界 Native 导航 Chunk 索引，未知块休眠，跨块不粘出生块，View 解绑不删居民。整世界无人也显式冻结脉冲，恢复平移攻击/Buff/能力与尸体期限，繁殖按游戏日平移，不补算离线 Tick。规则 `ai/ecs_resident_ownership` 与 `dimension/cave_roundtrip` 覆盖归块及真实换层身份。移动前快照用于感知、移动后用于命中，前摇/Active/后摇时钟独立。
+- ECS 正式生态与 Playground 共用统一 60Hz 固定步和距离脉冲，不再另设追帧累积器；脉冲直接按当前位置查询本世界 Native 导航 Chunk 索引，未知块休眠，跨块不粘出生块，View 解绑不删居民。整世界无人也显式冻结脉冲，恢复平移攻击/Buff/能力与尸体期限，繁殖按游戏日平移，不补算离线 Tick。规则 `ai/ecs_resident_ownership` 与 `dimension/cave_roundtrip` 覆盖归块及真实换层身份。移动前快照用于感知、移动后用于命中，前摇/Active/后摇时钟独立。
 - 风推动由 `WorldMotionSystem` 共用完整物品目录的质量规则；ECS 模板/居民保存当前定义的 `CurrentWeight`，资源发布后同步。世界桥采当地风速，Burst 只消费被动 `WindVelocity` 并扫掠通行；不写入主动速度/动画，无风时不扫描居民，风停当次清残留。
 - GO 鸟/蜜蜂空中通过 `IWindMotionOwner` 独占风位移，地面交给 Mover；悬停也受风且风不改变主动飞行朝向。幽灵直追与无 Mover 导航分别叠风；鱼仅离水受风，正在蹦跳时同步平移起点，入水或被携带/钓住后停止。
 - 感知用稳定身份、空间桶和整数格 LOS；地形/建筑遮挡独立于导航。外部武器经候选筛选、临时 Collider 投影和 Physics2D 命中，镜像绑定不影响受击资格；整体 HP 来自 Actor 配置，部位耐久独立，耗尽部位仍可命中。

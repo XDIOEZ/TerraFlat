@@ -115,7 +115,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     public bool PersistRuntimeAi => !_isPreparingFlight && !_isFlying && !_endingFlight;
     private bool _endingFlight;
     private FlatWorld.Spaceflight.SpaceCombatFrame spaceFrame;
-    private int _lastFlightUpdateFrame = -1;
+    private ulong _lastFlightUpdateTick = ulong.MaxValue;
     public Vector2 SpaceFlightVelocity => _arcVelocity;
     public static readonly HashSet<Mod_Projectile> NetworkSurfaceProjectiles = new();
     public static readonly HashSet<Mod_Projectile> LocalWorldProjectiles = new();
@@ -174,7 +174,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         _isFlying = false;
         _isPreparingFlight = false;
         _endingFlight = false;
-        _lastFlightUpdateFrame = -1;
+        _lastFlightUpdateTick = ulong.MaxValue;
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualLaunchVerticalSpeed = 0f;
@@ -204,9 +204,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         if (!_isFlying)
             return;
 
-        // 物品本帧迁入另一个调度组时不能再推进一次。
-        if (_lastFlightUpdateFrame == Time.frameCount) return;
-        _lastFlightUpdateFrame = Time.frameCount;
+        // 同一逻辑步迁移调度组不重复推进，画面帧内的后续补步正常执行。
+        if (_lastFlightUpdateTick == GameplayFixedStepSimulation.TickIndex) return;
+        _lastFlightUpdateTick = GameplayFixedStepSimulation.TickIndex;
 
         float step = Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, _flightRemain));
         _flightElapsed += step;
@@ -630,6 +630,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _damage == null || _damage.DamageCollider == null || !_damage.DamageCollider.enabled)
             return;
 
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
         Vector2 displacement = _body.velocity * Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, _flightRemain));
         float distance = displacement.magnitude;
         if (distance <= 0.0001f)
@@ -1383,13 +1384,17 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
 /// <summary>把投射物根节点的刚体碰撞回传给模块，让伤害结算先于反弹表现作最终裁决。</summary>
 [DisallowMultipleComponent]
-public sealed class ProjectilePhysicsContact2D : MonoBehaviour
+public sealed class ProjectilePhysicsContact2D : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
+    #region 投射物固定步与接触转发
     private Mod_Projectile projectile;
 
     public void Bind(Mod_Projectile target) => projectile = target;
 
-    private void FixedUpdate() => projectile?.PreparePhysicsStep(Time.fixedDeltaTime);
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+    public void SimulateFixedStep(float deltaTime) => projectile?.PreparePhysicsStep(deltaTime);
 
     private void OnCollisionEnter2D(Collision2D collision) => projectile?.HandlePhysicalContact(collision);
+    #endregion
 }

@@ -197,13 +197,6 @@ public class AI_AttackController
         }
     }
 
-    /// <summary>兼容旧测试与 MOD 调用；正式 AI 运行链统一使用 Tick。</summary>
-    [System.Obsolete("请使用 Tick(deltaTime)，该入口仅为兼容旧调用保留。")]
-    public void Update(float deltaTime)
-    {
-        Tick(deltaTime);
-    }
-
     /// <summary>
 	/// 开启攻击伤害窗口：
 	/// - 标记窗口已触发

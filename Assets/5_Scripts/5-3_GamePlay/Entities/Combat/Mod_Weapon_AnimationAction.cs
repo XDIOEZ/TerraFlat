@@ -66,6 +66,11 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     private bool isHoldingInput;
     private bool restoreIdleWhenActive;
     private System.Action<bool> actionFinished;
+    private AnimatorUpdateMode previousAnimatorUpdateMode;
+    private bool ownsAnimatorUpdateMode;
+
+    public override ModuleTickMode TickMode => isAttacking || restoreIdleWhenActive || queuedNext
+        ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
     #endregion
     #region 基础参数
 
@@ -116,6 +121,12 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
             }
         }
         animator = item.GetComponentInChildren<Animator>();
+        if (animator != null)
+        {
+            previousAnimatorUpdateMode = animator.updateMode;
+            ownsAnimatorUpdateMode = true;
+            animator.updateMode = AnimatorUpdateMode.AnimatePhysics;
+        }
         BindHitFeedback(cachedDamageModule);
         ApplyAttackSpeedToAnimator();
         DisableDamageOutsideAttack(force: true);
@@ -142,6 +153,8 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         isHoldingInput = false;
         ResetToIdle(playAnimation: false);
         UnbindAttackInput();
+        if (ownsAnimatorUpdateMode && animator != null) animator.updateMode = previousAnimatorUpdateMode;
+        ownsAnimatorUpdateMode = false;
     }
 
     private void OnDestroy()
@@ -163,7 +176,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     #endregion
     #region 攻击动作与持有者输入
     [InfoBox("驱动持有者攻击语义与连击状态机")]
-    private void Update()
+    public override void ModUpdate(float deltaTime)
     {
         RestoreIdleWhenReady();
         if (cachedController != null && cachedController.IsGameplayInputLocked)
@@ -356,6 +369,8 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         ResetHitStop();
         currentIndex = index;
         isAttacking = true;
+        cachedDamageModule?.SetAnimationDamageSamplingActive(true);
+        InvalidateTickSchedule();
         queuedNext = false;
 
         ApplyAttackSpeedToAnimator();
@@ -464,6 +479,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     {
         ResetHitStop();
         isAttacking = false;
+        cachedDamageModule?.SetAnimationDamageSamplingActive(false);
         currentIndex = -1;
         comboDeadline = 0f;
         nextReadyTime = 0f;
@@ -481,6 +497,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
             restoreIdleWhenActive = true;
         }
         DisableDamageOutsideAttack(force: true);
+        InvalidateTickSchedule();
     }
 
     private bool CanPlayWeaponAnimation()
@@ -496,6 +513,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
         animator.Play(idleAnimationName, 0, 0f);
         restoreIdleWhenActive = false;
+        InvalidateTickSchedule();
     }
 
     /// <summary>待机时关闭伤害碰撞体，防止 Prefab 默认值异常造成常驻伤害。</summary>

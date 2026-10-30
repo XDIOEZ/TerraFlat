@@ -55,10 +55,10 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
     #region 低频生态快照
     public IReadOnlyList<Vector2> GetActivePositions(string sceneName)
     {
-        if (snapshotScene == sceneName && Time.unscaledTime < nextRefresh)
+        if (snapshotScene == sceneName && Time.time < nextRefresh)
             return activePositions;
         snapshotScene = sceneName;
-        nextRefresh = Time.unscaledTime + 2f;
+        nextRefresh = Time.time + 2f;
         activePositions.Clear();
         Scene scene = SceneManager.GetSceneByName(sceneName);
         foreach (Item tree in trees)

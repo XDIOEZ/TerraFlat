@@ -152,6 +152,23 @@ test.system("item_runtime", "module_tick_mutations", {}, function(data)
     assert(data.schedulerRegistration, "同帧注销重登后旧注册令牌继续执行或新注册未恢复")
 end, "物品 Tick 快照：增删、嵌套、时钟、跨世界、回池与注册令牌")
 
+test.system("item_runtime", "fixed_step_and_render_schedule", {}, function(data)
+    assert(data.multipleStepsInOneFrame and data.fixedTicks == 6,
+        "同一画面帧内的多个固定步没有逐步执行玩法模块")
+    assert(math.abs(data.fixedSeconds - .1) < .0001 and data.intervalTicks == 1 and
+        math.abs(data.intervalSeconds - .1) < .0001,
+        "固定步传入时间错误，或原有低频模块没有保留累计间隔")
+    assert(data.renderTicks == 2 and data.renderOnlyHasNoSimulationTicks and data.noRenderOnFixedSteps,
+        "输入或表现模块未按画面帧独立执行，或被固定步重复执行")
+    assert(data.renderComponentDisabled and data.renderComponentReenabled and
+        data.renderModuleDisabled and data.renderModuleReenabled,
+        "画面模块停用、重启或重新加载后调度集合错误")
+    assert(data.renderWorldTransferSkippedStale and data.renderWorldTransferResumed,
+        "物品迁移世界后仍执行旧登记，或迁移后没有恢复画面更新")
+    assert(data.pausedWithoutCatchup and data.removedWithoutRender,
+        "停止后恢复补算了旧时间，或注销的物品仍执行画面更新")
+end, "物品固定步与画面更新分离：多步、低频、恢复及注销")
+
 for _, actorId in ipairs({"SmallFish", "Bird"}) do
     local expectedActorId = actorId
     test.system("item_runtime", "initial_animator_activation", {actorId = actorId}, function(data)

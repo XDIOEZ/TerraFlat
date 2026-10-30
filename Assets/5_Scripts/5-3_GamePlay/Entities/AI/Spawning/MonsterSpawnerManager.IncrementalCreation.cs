@@ -172,7 +172,7 @@ public partial class MonsterSpawnerManager
         if (!config.IgnoreEcologyBudget)
             state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
         _remainingSearchAttempts.Remove(config);
-        _nextSpawnRetryTime[GetConfigKey(config)] = Time.unscaledTime + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
+        _nextSpawnRetryTime[GetConfigKey(config)] = Time.time + Mathf.Max(_settings.EcologyTickInterval, config.AsyncSpawnInterval);
         CompleteNaturalSpawnAttempt(state, true, currentDay);
         ObserveSpawn(config, "生成成功");
     }

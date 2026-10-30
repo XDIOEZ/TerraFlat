@@ -28,7 +28,7 @@ description: "FlatWorld 太空会话、星区物理、船体航行/起降、对�
 
 ## 共同边界
 
-- 固定步：`IsGameplayReady → 机器/输入 → 地表起降 → 独立 PhysicsScene2D → CommitSurfaceContacts → 状态/表现同步`。权威模拟不依赖视图；卸载美术或玩家回地表不冻结无人船/残骸，暂停与离线不补算。
+- 固定步：`IsGameplayReady → 机器/输入 → 地表起降 → 独立 PhysicsScene2D → CommitSurfaceContacts → 状态/表现同步`。`SpaceSession` 接入统一固定步，视图仍在 LateUpdate；权威模拟不依赖视图，暂停与离线不补算。
 - 船、整体、自由物和星体保存所属 Sector；宇宙位置为整数星区 + 区内 double 米，显示原点不参与业务。太空坐标不交给地表 Chunk/NormalizePosition；地表镜像使用 WorldLocalPresentation。
 - 船内逻辑使用局部坐标；船体和驾驶镜头的地表显示始终按本机显示世界的环绕边界选同一镜像，不借用船内执行上下文。
 - 整船、对接成员和残骸固定朝上且无角速度，散物可旋转，部件安装 QuarterTurns 保留。太空平移与接触由原生物理唯一推进，`ShipCollisionSimulation` 只管地表。

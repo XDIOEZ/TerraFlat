@@ -32,7 +32,7 @@ public partial class Mod_DamageReceiver
             Credit = source, Damage = new float4(0f, 0f, 0f, physicalDamage),
             DeathCauseId = GameplayCombatBridge.NarrativeCauseId(deathCauseId),
             Origin = logicalOrigin, HitPoint = (Vector2)WorldLocalPresentation.ToLogical(item.transform.position),
-            Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime },
+            Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime },
             BuildingMultiplier = 1f, ResourceToolEfficiency = 1f
         };
         return HurtContext(context, 1f, ignoreInterval: true);

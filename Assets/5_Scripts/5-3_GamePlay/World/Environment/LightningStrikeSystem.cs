@@ -80,7 +80,7 @@ public static class LightningStrikeSystem
             Credit = source, Damage = new float4(0f, 0f, 0f, peakDamage), Origin = center, HitPoint = center,
             DeathCauseId = "lightning",
             ResourceToolEfficiency = 1f, BuildingMultiplier = 1f,
-            Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime }
+            Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime }
         };
         GameplayCombatBridge.ApplyEnvironmentalDamage(strike.WorldKey, context, radius);
         FlatWorld.NaturalEntities.NaturalEntityEcsService.ApplyEnvironmentalDamage(strike.WorldKey, eventId, center, radius, peakDamage, "lightning");

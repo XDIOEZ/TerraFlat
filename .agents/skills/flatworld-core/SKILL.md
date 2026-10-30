@@ -21,6 +21,8 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 世界生命周期
 
+- 全游戏逻辑由 `GameplayFixedStepSimulationDriver.FixedUpdate` 唯一推进，默认 `Time.fixedDeltaTime = 1/60`，倍速只改 `Time.timeScale`，补步与上限复用 Unity。系统实现 `IGameplayFixedStepSimulationSystem` 并按 `GameplayFixedStepSimulationPhase` 登记，停用/卸载注销；阶段为世界时间→世界模拟→导航回执→玩法→物理准备→太空→原生物理→物理结果。模拟去重用 `TickIndex`，不再用画面 `frameCount`；输入、UI、表现与流送预算留画面帧。规则/现场回归 `core_lifecycle/fixed_step_scheduler、fixed_step_clock`，后者包含 30 FPS、倍速、暂停和实际 TPS 显示。
+
 - 常驻对象统一走共享 `PersistentRuntimeObjectHierarchy.MoveToPersistentCategory`，在 `DontDestroyOnLoad/Persistent Runtime` 下按职责收纳；自动创建单例可用 `PersistentRuntimeObjectCategoryAttribute` 声明类别。保留显式业务父子关系、激活状态和世界姿态，不能把场景对象或物理代理为整理而提升为常驻。需要原业务根时用 `GetBusinessOwnerRoot`，不要再把 `transform.root` 当业务所有者。第三方已常驻裸根仅在场景加载、资源就绪及入世完成时归入 `Infrastructure`，无逐帧扫描；退出后不补建根。回归 `core_lifecycle/persistent_object_hierarchy`（规则与现场）。
 
 - `RuntimeSceneObjectHierarchy` 为每个 Scene 按需建立 `Runtime Objects` 分类根；只在创建或迁移时挂接，保留显式宿主和原场景生命周期。世界自有物理代理与回收池统一挂 `Physics` 分类，固定代理仍挂共享区块刚体。分类节点保持单位 Transform，不能用作世界身份、持久池或业务所有权。

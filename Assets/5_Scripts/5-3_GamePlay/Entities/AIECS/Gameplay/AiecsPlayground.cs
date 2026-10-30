@@ -15,7 +15,7 @@ namespace FlatWorld.AIECS.Gameplay
     /// 默认单挑 3 只、两军各 100 只（总计 200）；只有本入口和有限渲染批次是 GameObject，AI 本身完全是 Entity。
     /// </summary>
     [AddComponentMenu("FlatWorld/AIECS/实战开发入口")]
-    public sealed partial class AiecsPlayground : MonoBehaviour
+    public sealed partial class AiecsPlayground : MonoBehaviour, IGameplayFixedStepSimulationSystem
     {
         #region 配置与状态
         public AiecsAnimationCatalog Catalog; // 当前导出的共享动画目录。
@@ -33,7 +33,6 @@ namespace FlatWorld.AIECS.Gameplay
         private AiecsPlaygroundMode mode;
         private bool startRequested;
         private Camera targetCamera;
-        private double simulationTime;
         private GameManager manager;
         private int spawned;
         private int armyReinforcementWave;
@@ -73,7 +72,7 @@ namespace FlatWorld.AIECS.Gameplay
                 SetStatus("已连接当前正式世界；请选择一个 AIECS GM 测试场景。");
         }
 
-        /// <summary>固定 30Hz 模拟保留实际 Tick/Time，积压顺延而不把多 Tick 都标成渲染帧时间。</summary>
+        /// <summary>画面帧只处理场景准备与世界退出。</summary>
         private void Update()
         {
             if (active != this) return;
@@ -83,20 +82,23 @@ namespace FlatWorld.AIECS.Gameplay
             if (bridge == null) return;
             if (!GameplayWorldRegistry.TryGet(bridge.WorldKey, out _) || !bridge.HasWorldNavigation)
             { StopScenario(); SetStatus("原世界已卸载，开发单位已清理。"); return; }
+        }
+
+        public void SimulateFixedStep(float deltaTime)
+        {
+            if (active != this || bridge == null) return;
+            if (!GameplayWorldRegistry.TryGet(bridge.WorldKey, out _) || !bridge.HasWorldNavigation)
+            { StopScenario(); SetStatus("原世界已卸载，开发单位已清理。"); return; }
             using var worldScope = GameplayWorldRegistry.UseWorld(bridge.WorldKey);
             SynchronizeScenarioPlayers();
             if (scenarioPlayers.Count == 0)
             {
                 bridge.Suspend();
-                simulationTime = Time.timeAsDouble;
                 return;
             }
-            const float step = 1f / 30f;
-            int budget = 4;
             try
             {
-                while (simulationTime + step <= Time.timeAsDouble && budget-- > 0)
-                { simulationTime += step; bridge.Step(step, simulationTime); }
+                bridge.Step(deltaTime, GameplayFixedStepSimulation.CurrentTime);
             }
             catch (Exception exception)
             { SetStatus("模拟已停止：" + exception.Message); Debug.LogException(exception, this); StopScenario(); }
@@ -106,6 +108,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void OnEnable()
         {
             if (active != this) return;
+            GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
             RenderPipelineManager.beginContextRendering -= PresentScenario;
             RenderPipelineManager.beginContextRendering += PresentScenario;
         }
@@ -164,6 +167,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>程序集重载可能只有停用回调，必须在丢失托管引用前归还原生批次。</summary>
         private void OnDisable()
         {
+            GameplayFixedStepSimulation.Unregister(this);
             RenderPipelineManager.beginContextRendering -= PresentScenario;
             StopScenario();
         }
@@ -201,7 +205,6 @@ namespace FlatWorld.AIECS.Gameplay
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
                 SynchronizeScenarioPlayers();
                 display = AiecsWorldSortingResolver.CreateRenderer(Catalog, ids, player.gameObject.scene);
-                simulationTime = Time.timeAsDouble;
                 float2 center = (Vector2)player.transform.position;
                 if (requested == AiecsPlaygroundMode.Armies)
                 {
@@ -212,7 +215,7 @@ namespace FlatWorld.AIECS.Gameplay
                 else if (requested == AiecsPlaygroundMode.Flee) SpawnGroup(0, 3, center + new float2(4, 0), 0.15f);
                 else SpawnGroup(0, 3, center + new float2(5, 0), 1f);
                 // 零时长首批只建立实际状态/索引，普通攻击仍需完整前摇。
-                bridge.Step(0f, simulationTime);
+                bridge.Step(0f, Time.timeAsDouble);
                 SetStatus("本场累计生成 " + spawned + " 个 ECS 单位；当前存活与行为见下方实时统计。");
             }
             catch (Exception exception)
@@ -233,7 +236,7 @@ namespace FlatWorld.AIECS.Gameplay
 
             int before = spawned;
             SpawnArmyReinforcement();
-            bridge.Step(0f, simulationTime);
+            bridge.Step(0f, Time.timeAsDouble);
             int added = spawned - before;
             SetStatus($"两军交战：累计生成 {spawned}；本次增援 {added} / 目标 {ReinforcementUnitCount}。当前存活见下方统计。");
         }
@@ -350,9 +353,6 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>实际脚底阴影数量与批次；与主体绘制计数分开验收。</summary>
         public int VisibleShadowCount => display == null ? 0 : display.ShadowCount;
         public int VisibleShadowBatchCount => display == null ? 0 : display.ShadowBatchCount;
-
-        /// <summary>尚未追上的游戏时间；稳定运行应小于单个 30Hz 步长，持续增长表示模拟已过载。</summary>
-        public double SimulationBacklogSeconds => bridge == null ? 0d : math.max(0d, Time.timeAsDouble - simulationTime);
 
         /// <summary>清空当前开发群体；不会自动重新创建默认模式。</summary>
         public void ClearScenario()

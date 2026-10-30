@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 /// 每 0.25 秒发布位置快照；静止源不会重建缓存，停用或回池立即撤销影响。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class LocalTemperatureSource : MonoBehaviour
+public sealed class LocalTemperatureSource : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     #region 参数
 
@@ -17,7 +17,7 @@ public sealed class LocalTemperatureSource : MonoBehaviour
     private float targetTemperature = 40f;
     private bool isEmitting = true;
     private bool cooling;
-    private float nextPublishTime;
+    private double nextPublishTime;
     private TemperatureMgr registeredManager;
     public float Radius => radius;
     public float TargetTemperature => targetTemperature;
@@ -26,18 +26,23 @@ public sealed class LocalTemperatureSource : MonoBehaviour
 
     #region 生命周期
 
-    private void OnEnable() => nextPublishTime = 0f;
-
-    private void Update()
+    private void OnEnable()
     {
-        if (Time.time < nextPublishTime)
+        nextPublishTime = 0d;
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.WorldSimulation);
+    }
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (GameplayFixedStepSimulation.CurrentTime < nextPublishTime)
             return;
-        nextPublishTime = Time.time + 0.25f;
+        nextPublishTime = GameplayFixedStepSimulation.CurrentTime + 0.25d;
         Publish();
     }
 
     private void OnDisable()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         if (registeredManager != null)
             registeredManager.RemoveLocalTemperatureSource(this);
         registeredManager = null;

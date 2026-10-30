@@ -25,20 +25,22 @@ public partial class MonsterSpawnerManager
     private void Update()
     {
         if (string.IsNullOrEmpty(_ownedWorld)) return;
-        // 已初始化且本帧无工作时不创建世界作用域，出生任务仍逐帧推进。
-        if (!RequiresUpdateWorldContext(_worldInitialized, enabled, _settings != null,
-                _naturalCreatureBirth != null, Time.unscaledTime, _nextEcologyTickTime)) return;
+        if (!RequiresRenderWorldContext(_worldInitialized, enabled, _settings != null, _naturalCreatureBirth != null)) return;
         using var advanceSample = AdvanceMarker.Auto();
         using var worldScope = EnterOwnedWorld();
         EnsureWorldInitialized();
         if (!_worldInitialized || !enabled || _settings == null) return;
         if (_naturalCreatureBirth != null)
-        {
             AdvanceNaturalCreatureBirth();
-            return;
-        }
-        if (Time.unscaledTime < _nextEcologyTickTime)
-            return;
+    }
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (string.IsNullOrEmpty(_ownedWorld) || !RequiresFixedWorldContext(_worldInitialized, enabled,
+                _settings != null, _naturalCreatureBirth != null, (float)GameplayFixedStepSimulation.CurrentTime,
+                _nextEcologyTickTime)) return;
+        using var advanceSample = AdvanceMarker.Auto();
+        using var worldScope = EnterOwnedWorld();
         using (TickMarker.Auto())
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -65,11 +67,12 @@ public partial class MonsterSpawnerManager
         }
     }
 
-    internal static bool RequiresUpdateWorldContext(bool initialized, bool schedulerEnabled,
+    internal static bool RequiresRenderWorldContext(bool initialized, bool schedulerEnabled,
+        bool settingsReady, bool birthPending) => !initialized || schedulerEnabled && settingsReady && birthPending;
+
+    internal static bool RequiresFixedWorldContext(bool initialized, bool schedulerEnabled,
         bool settingsReady, bool birthPending, float now, float nextTick)
-    {
-        return !initialized || schedulerEnabled && settingsReady && (birthPending || !(now < nextTick));
-    }
+        => initialized && schedulerEnabled && settingsReady && !birthPending && !(now < nextTick);
 
     /// <summary>保留具名生成入口；实际资源与实体初始化单独计量。</summary>
     private bool TrySpawnMonster(SpawnerConfig.SpawnEntry entry, Vector3 position)

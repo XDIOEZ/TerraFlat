@@ -22,6 +22,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.Register("time", "live_clock", CaptureClock);
+        GameplayTestRuntimeProbe.RegisterAsync("time", "fixed_clock_steps", CaptureFixedClockSteps);
         GameplayTestRuntimeProbe.Register("game_events", "signal_lifecycle", CaptureEvent);
         GameplayTestRuntimeProbe.RegisterAsync("dimension", "cave_roundtrip", CaptureDimension);
         GameplayTestRuntimeProbe.RegisterAsync("dimension", "generation_preset_roundtrip", CaptureMarsGenerationPresetRoundtrip);
@@ -29,6 +30,50 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #endregion
 
     #region 正式主时钟与场景引用
+    private static IEnumerator CaptureFixedClockSteps(Player player, JObject args, Action<JObject> completed)
+    {
+        DayTimeSystem service = DayTimeSystem.Instance ?? throw new InvalidOperationException("真实时钟未启动。");
+        string key = "[LuaFixedTimeSource]" + Guid.NewGuid().ToString("N");
+        service.InitializeSceneTimeData(key, timeScale: 1f);
+        TimeData clock = service.WorldTimeDict[key];
+        ulong initialTick = GameplayFixedStepSimulation.TickIndex;
+        ulong previousTick = initialTick;
+        int notifications = 0;
+        bool allInFixedStep = true, consecutiveTicks = true;
+        double initialTime = clock.GetTotalGameTimeSeconds(), expectedElapsed = 0d;
+        Action<string, float, float> onTime = (world, before, after) =>
+        {
+            if (world != key) return;
+            ulong tick = GameplayFixedStepSimulation.TickIndex;
+            notifications++;
+            allInFixedStep &= Time.inFixedTimeStep;
+            consecutiveTicks &= tick == previousTick + 1;
+            previousTick = tick;
+            expectedElapsed += Time.fixedDeltaTime * clock.TimeScaleModifier * GameRuleConfiguration.Current.World.TimeSpeedMultiplier;
+        };
+        service.TimeAdvanced += onTime;
+        try
+        {
+            double timeout = Time.realtimeSinceStartupAsDouble + 5d;
+            while (GameplayFixedStepSimulation.TickIndex - initialTick < 4 && Time.realtimeSinceStartupAsDouble < timeout)
+                yield return null;
+            completed(new JObject
+            {
+                ["steps"] = (long)(GameplayFixedStepSimulation.TickIndex - initialTick),
+                ["notifications"] = notifications,
+                ["allInFixedStep"] = allInFixedStep,
+                ["consecutiveTicks"] = consecutiveTicks,
+                ["elapsed"] = clock.GetTotalGameTimeSeconds() - initialTime,
+                ["expectedElapsed"] = expectedElapsed
+            });
+        }
+        finally
+        {
+            service.TimeAdvanced -= onTime;
+            service.WorldTimeDict.Remove(key);
+            service.SceneLightingRateDict.Remove(key);
+        }
+    }
     private static JObject CaptureClock(Player player, JObject args)
     {
         DayTimeSystem service = DayTimeSystem.Instance ?? throw new InvalidOperationException("真实时钟未启动。");

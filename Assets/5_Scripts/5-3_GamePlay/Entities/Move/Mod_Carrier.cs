@@ -8,7 +8,7 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -116,6 +116,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         }
         BindRuntimeSources();
         ActivateInstalledCarrier();
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
     }
 
     /// <summary>保存版本标记，不保存乘员引用、油门或瞬时速度。</summary>
@@ -124,6 +125,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     /// <summary>源回收前释放乘员的刚体与环境租约。</summary>
     protected override void OnUnload()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         SuspendRuntimeSources();
         loaded = false;
         motionAllowed = false;
@@ -156,10 +158,15 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private void OnEnable()
     {
         if (!loaded) return;
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
         BindRuntimeSources();
         ActivateInstalledCarrier();
     }
-    private void OnDisable() => SuspendRuntimeSources();
+    private void OnDisable()
+    {
+        GameplayFixedStepSimulation.Unregister(this);
+        SuspendRuntimeSources();
+    }
     private void OnDestroy() => Unload();
 
     /// <summary>载具击沉时让乘员留在当前世界位置并恢复自身物理/水体效果，禁止传回登船点。</summary>
@@ -334,11 +341,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     }
 
     /// <summary>逻辑只提交期望速度，实际位移和接触由 Physics2D 结算。</summary>
-    private void FixedUpdate()
+    public void SimulateFixedStep(float deltaTime)
     {
+        using var world = item?.UseOwnedWorldForItemCallbacks();
         if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority)
             return;
-        float deltaTime = Time.fixedDeltaTime;
         RefreshPushSource();
         Vector2 input = Rider != null && Rider.isActiveAndEnabled && ReferenceEquals(Rider.CarrierSource, this) &&
             !requestedControlsLocked ? requestedInput : Vector2.zero;
@@ -366,14 +373,15 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         UpdateVisualFacing();
     }
 
-    /// <summary>物理步结束后读取实际速度，数据投影组件负责回写实体快照。</summary>
-    private void LateUpdate()
+    /// <summary>每个物理步结束后读取实际速度，不把多个逻辑步合并成一次画面帧。</summary>
+    internal void CommitCompletedPhysicsStep(float deltaTime)
     {
+        using var world = item?.UseOwnedWorldForItemCallbacks();
         if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority) return;
         Vector2 previousVelocity = CurrentVelocity;
         CurrentVelocity = body.velocity;
         CurrentForce = (CurrentVelocity - previousVelocity) *
-            (body.mass / Mathf.Max(0.001f, Time.deltaTime));
+            (body.mass / Mathf.Max(0.001f, deltaTime));
         TrackPhysicsMovement();
     }
 

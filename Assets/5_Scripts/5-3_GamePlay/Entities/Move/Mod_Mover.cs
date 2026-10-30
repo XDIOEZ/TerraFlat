@@ -7,7 +7,7 @@ using FlatWorld.Spaceflight;
 /// <summary>
 /// Mod_Mover —— 处理游戏对象的移动逻辑
 /// </summary>
-public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
+public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
 {
     #region 保存数据类
     [System.Serializable]
@@ -200,6 +200,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
 
     protected override void OnLoad()
     {
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
         ReleaseMobileMovementInput();
         networkAuthorityMovement = networkMoving = networkRunning = false;
         ClearDrivenMotion();
@@ -264,8 +265,15 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
     private bool _wasMoving = false;
 
     /// <summary>物理步刷新玩家脚下推动速度，并按刚体实际到达位置发布世界格变化。</summary>
-    private void FixedUpdate()
+    private void OnEnable()
     {
+        if (IsRuntimeLoaded)
+            GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
+    }
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        using var world = item?.UseOwnedWorldForItemCallbacks();
         if (rb == null)
             return;
 

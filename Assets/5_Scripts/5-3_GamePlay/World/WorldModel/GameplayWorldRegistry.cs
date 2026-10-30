@@ -756,8 +756,7 @@ internal sealed class GameplayWorldPresentationOwner : MonoBehaviour
     }
 }
 
-[DefaultExecutionOrder(10000)]
-internal sealed class GameplayWorldRegistryHost : MonoBehaviour
+internal sealed class GameplayWorldRegistryHost : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private GameManager manager;
     private SimulationMode2D previousSimulation;
@@ -770,9 +769,11 @@ internal sealed class GameplayWorldRegistryHost : MonoBehaviour
         if (manager != null) manager.Event_GameWorldExit += GameplayWorldRegistry.ReleaseAll;
         ItemMgr.RuntimeItemRegistered += GameplayWorldRegistry.RegisterItemPresentation;
         Item.RuntimeStructureChanged += GameplayWorldRegistry.RegisterItemPresentation;
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Physics);
     }
     private void OnDisable()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         if (manager != null) manager.Event_GameWorldExit -= GameplayWorldRegistry.ReleaseAll;
         manager = null;
         Physics2D.simulationMode = previousSimulation;
@@ -781,6 +782,6 @@ internal sealed class GameplayWorldRegistryHost : MonoBehaviour
     }
     // 退出进程或 PlayMode 时，在 Unity 卸载场景前释放世界物理代理。
     private void OnApplicationQuit() => GameplayWorldRegistry.ReleaseAllWorldPhysics();
-    private void FixedUpdate() => GameplayWorldRegistry.SimulatePhysics();
+    public void SimulateFixedStep(float deltaTime) => GameplayWorldRegistry.SimulatePhysics();
     #endregion
 }

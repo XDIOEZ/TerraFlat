@@ -73,19 +73,26 @@ public static partial class GameplayTestSystemProbe
     {
         return new JObject
         {
-            ["initialization"] = MonsterSpawnerManager.RequiresUpdateWorldContext(false, false, false, false, 1f, 2f),
-            ["idle"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, 2f),
-            ["due"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 2f, 2f),
-            ["overdue"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 3f, 2f),
-            ["birthPending"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, true, 1f, 2f),
-            ["birthCompleted"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, 2f),
-            ["disabled"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, false, true, true, 3f, 2f),
-            ["missingSettings"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, false, true, 3f, 2f),
-            ["nanNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.NaN, 2f),
-            ["nanNext"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, float.NaN),
-            ["infiniteNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.PositiveInfinity, 2f),
-            ["infiniteNext"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, 1f, float.PositiveInfinity),
-            ["negativeInfinityNow"] = MonsterSpawnerManager.RequiresUpdateWorldContext(true, true, true, false, float.NegativeInfinity, 2f)
+            ["renderInitialization"] = MonsterSpawnerManager.RequiresRenderWorldContext(false, false, false, false),
+            ["renderBirth"] = MonsterSpawnerManager.RequiresRenderWorldContext(true, true, true, true),
+            ["renderIdle"] = MonsterSpawnerManager.RequiresRenderWorldContext(true, true, true, false),
+            ["fixedDue"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 2f, 2f),
+            ["fixedOverdue"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 3f, 2f),
+            ["fixedEarly"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 1f, 2f),
+            ["fixedDuringBirth"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, true, 3f, 2f),
+            ["initialization"] = MonsterSpawnerManager.RequiresRenderWorldContext(false, false, false, false),
+            ["idle"] = MonsterSpawnerManager.RequiresRenderWorldContext(true, true, true, false),
+            ["due"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 2f, 2f),
+            ["overdue"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 3f, 2f),
+            ["birthPending"] = MonsterSpawnerManager.RequiresRenderWorldContext(true, true, true, true),
+            ["birthCompleted"] = MonsterSpawnerManager.RequiresRenderWorldContext(true, true, true, false),
+            ["disabled"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, false, true, false, 3f, 2f),
+            ["missingSettings"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, false, false, 3f, 2f),
+            ["nanNow"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, float.NaN, 2f),
+            ["nanNext"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 1f, float.NaN),
+            ["infiniteNow"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, float.PositiveInfinity, 2f),
+            ["infiniteNext"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, 1f, float.PositiveInfinity),
+            ["negativeInfinityNow"] = MonsterSpawnerManager.RequiresFixedWorldContext(true, true, true, false, float.NegativeInfinity, 2f)
         };
     }
 

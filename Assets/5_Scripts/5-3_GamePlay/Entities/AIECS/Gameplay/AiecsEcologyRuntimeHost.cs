@@ -20,9 +20,6 @@ namespace FlatWorld.AIECS.Gameplay
     {
         #region 配置与记录
 
-        private const int BaseSimulationHz = 60; // 一级范围的权威模拟频率。
-        private const int MaxSimulationStepsPerFrame = 2; // 低帧率时只有限追帧，优先保护渲染帧。
-        private const int MaxBacklogSteps = 3; // 只保留少量时间债务，避免一次卡顿演变成连续多帧追赶尖峰。
         private const int MaxActorSweepPerFrame = 256; // 死亡清理每帧最多检查的 ECS 居民数。
         private static AiecsEcologyRuntimeHost active;
         [SerializeField] private AiecsAnimationCatalog _catalog;
@@ -65,7 +62,6 @@ namespace FlatWorld.AIECS.Gameplay
         private WorldPresentationSortingDomain replicaSortingDomain;
         private Player _player;
         private Camera _camera;
-        private double _simulationTime;
         private bool _worldPrepared;
         private bool _startFailed;
         private bool _ownsBackendRegistration;
@@ -134,7 +130,6 @@ namespace FlatWorld.AIECS.Gameplay
             if (_player == null)
             {
                 _bridge?.Suspend();
-                _simulationTime = Time.timeAsDouble;
                 ReleaseAllMirrors();
             }
 
@@ -150,34 +145,23 @@ namespace FlatWorld.AIECS.Gameplay
                 AiecsPlayground.Active?.HasActiveScenarioForWorld(ownedWorldKey) == true || !_bridge.IsCurrentWorld(_player))
                 return;
 
-            float step = 1f / BaseSimulationHz;
-            double now = Time.timeAsDouble;
-            double maxBacklog = step * MaxBacklogSteps;
-            if (now - _simulationTime > maxBacklog)
-                _simulationTime = now - maxBacklog;
-
-            int budget = MaxSimulationStepsPerFrame;
             try
             {
                 SynchronizeWorldPlayers();
                 _bridge.Simulation.Complete();
                 RefreshAdvanceGoals();
-                while (_simulationTime + step <= now && budget-- > 0)
+                Vector3 playerPosition = _player.transform.position;
+                int near = SimulationRangePreferences.NearRadius;
+                int middle = SimulationRangePreferences.MiddleRadius;
+                int far = SimulationRangePreferences.FarRadius;
+                _bridge.Step(deltaTime, GameplayFixedStepSimulation.CurrentTime, new AiecsSimulationRange
                 {
-                    _simulationTime += step;
-                    Vector3 playerPosition = _player.transform.position;
-                    int near = SimulationRangePreferences.NearRadius;
-                    int middle = SimulationRangePreferences.MiddleRadius;
-                    int far = SimulationRangePreferences.FarRadius;
-                    _bridge.Step(step, _simulationTime, new AiecsSimulationRange
-                    {
-                        Enabled = 1,
-                        PlayerPosition = new float2(playerPosition.x, playerPosition.y),
-                        NearSquared = near * near,
-                        MiddleSquared = middle * middle,
-                        FarSquared = far * far
-                    });
-                }
+                    Enabled = 1,
+                    PlayerPosition = new float2(playerPosition.x, playerPosition.y),
+                    NearSquared = near * near,
+                    MiddleSquared = middle * middle,
+                    FarSquared = far * far
+                });
 
                 PruneDestroyedActors();
                 RefreshMirrors();
@@ -442,7 +426,6 @@ namespace FlatWorld.AIECS.Gameplay
                     _fleeFromHostiles.ToArray(), sharedWorld: entityWorld);
                 _renderer = AiecsWorldSortingResolver.CreateRenderer(_catalog, ids, _player.gameObject.scene);
                 RestoreResidentSnapshots();
-                _simulationTime = Time.timeAsDouble;
                 WorldEntityRuntime.Register(entityWorld, this);
                 Debug.Log($"[AIECS] 正式 ECS 生态已启动：{ids.Length} 个 Actor 定义。", this);
             }

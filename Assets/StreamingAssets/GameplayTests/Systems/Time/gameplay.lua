@@ -14,3 +14,12 @@ test.runtime("time", "live_clock", {}, function(data)
     assert(data.sourceRemoved and data.referenceRemoved and data.activeReferenceRestored, "测试钟或场景引用没有恢复")
     assert(data.restoredSeconds == data.originalSeconds, "临时钟推进改动了活动世界主时钟")
 end, "实际时钟服务跨日与场景引用")
+
+test.runtime("time", "fixed_clock_steps", {}, function(data)
+    assert(data.steps >= 4 and data.notifications == data.steps,
+        "正式昼夜钟没有在每个固定步恰好推进一次")
+    assert(data.allInFixedStep and data.consecutiveTicks,
+        "昼夜通知发生在画面帧更新，或固定步重复、遗漏")
+    assert(math.abs(data.elapsed - data.expectedElapsed) < 0.0001,
+        "昼夜钟推进量与固定步及世界时间倍率不一致")
+end, "真实昼夜钟随固定步推进一次")

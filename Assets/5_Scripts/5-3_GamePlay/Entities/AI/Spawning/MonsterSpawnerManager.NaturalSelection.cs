@@ -15,7 +15,7 @@ public partial class MonsterSpawnerManager
     {
         float frequency = GameRuleConfiguration.Current.World.SpawnFrequencyMultiplier;
         if (frequency <= 0f || _naturalCreatureBirth != null ||
-            _naturalCountdown.RemainingGameSeconds != 0d || Time.unscaledTime < _nextCreatureBirthTime)
+            _naturalCountdown.RemainingGameSeconds != 0d || Time.time < _nextCreatureBirthTime)
             return false;
 
         if (_naturalCountdown.PendingCount > 0)
@@ -34,8 +34,8 @@ public partial class MonsterSpawnerManager
             return ProcessPendingSpawns(selected, GetOrCreateState(selected), sceneName, currentDay, entry);
         }
 
-        if (Time.unscaledTime < _nextNaturalSelectionTime) return false;
-        _nextNaturalSelectionTime = Time.unscaledTime + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
+        if (Time.time < _nextNaturalSelectionTime) return false;
+        _nextNaturalSelectionTime = Time.time + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
         CollectNaturalSpawnCandidates(sceneName);
         if (_naturalSpawnCandidates.Count == 0) return false;
         NaturalSpawnCandidate choice = _naturalSpawnCandidates[SelectCountdownCandidate(
@@ -146,7 +146,7 @@ public partial class MonsterSpawnerManager
             _remainingSearchAttempts.Remove(config);
             AbandonNaturalBatch(config, state);
         }
-        _nextSpawnRetryTime[GetConfigKey(config)] = Time.unscaledTime + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
+        _nextSpawnRetryTime[GetConfigKey(config)] = Time.time + Mathf.Max(0.05f, _settings.SpawnRetryInterval);
     }
 
     #endregion

@@ -213,6 +213,13 @@ internal static class GameplayTestFluidSurface
             f.Begin(); pump.ElectricalSuppliedWatts = 0;
             FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds);
             int unpowered = middle.Level + far.Level + inlet.Level;
+            ChunkMgr manager = ChunkMgr.ExistingInstance;
+            int initialInlet = inlet.Level, initialMiddle = middle.Level, initialFar = far.Level;
+            manager.AdvanceWorldStreamingFrame();
+            bool streamingDidNotDiffuse = inlet.Level == initialInlet && middle.Level == initialMiddle && far.Level == initialFar;
+            for (int i = 0; i < 64 && inlet.Level == initialInlet && middle.Level == initialMiddle && far.Level == initialFar; i++)
+                manager.SimulateWorldFixedStep(f.Seconds);
+            bool fixedStepDiffused = inlet.Level != initialInlet || middle.Level != initialMiddle || far.Level != initialFar;
             // 正式机器逐步消费整组水量，Lua 检查空入口、有限水量和设备库存守恒。
             int steps = (int)Math.Ceiling(140d / pump.Definition.Fluid.ThroughputLitersPerSecond / f.Seconds) + 4;
             Require(steps > 0 && steps <= 10000, "抽液回归步数有效");
@@ -220,7 +227,8 @@ internal static class GameplayTestFluidSurface
             {
                 f.Begin(); pump.ElectricalSuppliedWatts = pump.Definition.Electrical.PowerWatts;
                 FluidDeviceOperations.AdvanceLiquidPump(pump, f.Seconds);
-                ChunkMgr.ExistingInstance.AdvanceWorldRuntime(0f);
+                manager.AdvanceWorldStreamingFrame();
+                manager.SimulateWorldFixedStep(f.Seconds);
             }
             var source = GetFluidInventory(pump); var target = GetFluidInventory(tank);
             bool bodyFound = ChunkMgr.ExistingInstance.TryGetStaticWaterBody(inlet.Position, out var body);
@@ -228,6 +236,7 @@ internal static class GameplayTestFluidSurface
             {
                 ["initialLevel"] = 12, ["initialLiters"] = 120, ["litersPerUnit"] = LiquidCellValue.LitersPerUnit,
                 ["unpoweredLevel"] = unpowered, ["inletLevel"] = inlet.Level,
+                ["streamingDidNotDiffuse"] = streamingDidNotDiffuse, ["fixedStepDiffused"] = fixedStepDiffused,
                 ["remainingLevel"] = inlet.Level + middle.Level + far.Level,
                 ["pumpLiters"] = source.GetLiquidLiters(), ["tankLiters"] = target.GetLiquidLiters(),
                 ["bodyFound"] = bodyFound, ["bodyLevel"] = body.TotalLevel, ["bodyCells"] = body.CellCount
@@ -262,7 +271,7 @@ internal static class GameplayTestFluidSurface
         WorldLiquidPumpSourceSelection final = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out var local);
         for (int i = 0; i < 64 && final == WorldLiquidPumpSourceSelection.Searching; i++)
         {
-            manager.AdvanceWorldRuntime(0f);
+            manager.AdvanceWorldStreamingFrame();
             final = manager.SelectConnectedLiquidPumpSource(cells[0].Position, out local);
         }
         bool localTaken = final == WorldLiquidPumpSourceSelection.LocalRemainder &&

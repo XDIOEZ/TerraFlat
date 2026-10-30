@@ -16,6 +16,33 @@ local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end
 
+test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
+    local base = { "first", "time_peer", "world", "navigation", "gameplay_first", "gameplay_second",
+        "prepare_physics", "space", "physics", "after_physics" }
+    local function check_step(sample, tick, count, delta, expected)
+        assert(sample.tick == tick and sample.registered == count, "固定步序号或已登记系统数量错误")
+        assert(#sample.calls == #expected, "固定步漏执行、重复执行或执行了不应运行的系统")
+        for index, name in ipairs(expected) do
+            assert(sample.calls[index].name == name, "固定步阶段或同阶段注册顺序错误：" .. index)
+            near(sample.calls[index].delta, delta, "固定步传入时间")
+        end
+    end
+    assert(data.beforeTick == 0 and data.beforeRegistered == 14, "初始固定步调度状态错误")
+    check_step(data.first, 1, 14, .125, base)
+    check_step(data.disabled, 2, 14, .25, { "first", "time_peer", "world", "navigation", "gameplay_first",
+        "gameplay_second", "late", "reregistered", "prepare_physics", "space", "physics", "after_physics" })
+    check_step(data.reenabled, 3, 14, .5, { "first", "time_peer", "world", "navigation", "gameplay_first",
+        "gameplay_second", "late", "reregistered", "prepare_physics", "space", "physics", "disabled", "inactive", "after_physics" })
+    check_step(data.unregistered, 4, 10, .75, base)
+    local one, two = data.oneStepPerGroup, data.twoStepsPerGroup
+    assert(one.groups == 60 and two.groups == 30 and one.ticks == 60 and two.ticks == 60 and
+        one.calls == 60 and two.calls == 60, "手动推进次数被渲染分组改变")
+    near(one.elapsed, 1, "单步分组的模拟时长")
+    near(two.elapsed, 1, "双步分组的模拟时长")
+    assert(one.startFrame == one.endFrame and two.startFrame == two.endFrame,
+        "独立规则采样意外依赖真实渲染帧")
+end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
+
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)
     assert(data.available, "场景分类规则需要编辑器现场")
     assert(data.reused and data.sharedRoot and data.oneSceneRoot, "同场景分类重复创建或没有共用根节点")

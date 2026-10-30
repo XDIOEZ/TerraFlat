@@ -249,8 +249,8 @@ public partial class ChunkMgr
         runtimeChunkManager.CommitCompleted();
     }
 
-    /// <summary>推进纯世界模拟，并修复后台生成完成后的画面绑定。</summary>
-    internal void AdvanceWorldRuntime(float deltaSeconds)
+    /// <summary>按画面帧提交后台结果并维护数据与表现绑定。</summary>
+    internal void AdvanceWorldStreamingFrame()
     {
         // 渲染资源先于对象销毁结束，退出窗口不再提交会触发表现绑定的新区块。
         if (IsWorldRuntimeShuttingDown || SharedSpriteMeshCache.IsSessionEnding)
@@ -258,11 +258,10 @@ public partial class ChunkMgr
 
         if (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey))
         {
-            runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
-                RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
+            runtimeChunkManager?.CommitCompleted(RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
             RestorePendingLocalWorldChunks();
-            AdvanceLiquidFlowExperiment(deltaSeconds);
-            liquidBodies?.Advance();
+            AdvanceLiquidFlowStreamingFrame();
+            liquidBodies?.AdvanceStreamingFrame();
             return;
         }
         if (!IsSurfaceStreamingScene) return;
@@ -270,13 +269,23 @@ public partial class ChunkMgr
         RecordStreamingAdvance();
         using (WorldRuntimeAdvanceMarker.Measure())
         {
-            runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
-                RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
+            runtimeChunkManager?.CommitCompleted(RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
             WorldRuntimeAdvanceMarker.SetGauge(runtimeChunkManager?.PendingCommitCount ?? 0);
         }
         ReconcileRuntimeWindowBindings();
-        AdvanceLiquidFlowExperiment(deltaSeconds);
-        liquidBodies?.Advance();
+        AdvanceLiquidFlowStreamingFrame();
+        liquidBodies?.AdvanceStreamingFrame();
+    }
+
+    /// <summary>只在固定步推进世界和液体权威模拟。</summary>
+    internal void SimulateWorldFixedStep(float deltaSeconds)
+    {
+        if (IsWorldRuntimeShuttingDown || SharedSpriteMeshCache.IsSessionEnding ||
+            !GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) && !IsSurfaceStreamingScene)
+            return;
+        if (authoritativeSimulation) runtimeChunkManager?.World.Tick(deltaSeconds);
+        SimulateLiquidFlowFixedStep(deltaSeconds);
+        liquidBodies?.SimulateFixedStep();
     }
 
     /// <summary>玩家修改性能模式后，立即调整后台线程数量。</summary>

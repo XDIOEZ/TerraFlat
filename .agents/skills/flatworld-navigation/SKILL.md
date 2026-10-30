@@ -23,6 +23,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 ## 网格与路径契约
 
 - `WorldNavigationManager.Worlds` 按 WorldKey 独占网格、目标场和请求；执行上下文缺少对应实例时不能回落到主机当前世界。切本机 Scene 不清其他世界；Item 足迹和局部避让按真实 Scene 归属，跨世界迁移先取消旧请求再绑定新导航。
+- 路径搜索和 Job 按帧预算执行，结果在所属世界的固定导航步回调给单位；暂停仍允许搜索，恢复固定步后再交付结果。
 
 
 - 权威链：Tile 栈顶/有效支撑面的可走性与代价 + 离散动态占地 → 脏格/区 → `WorldNavigationGrid`。Collider/Physics2D 不是网格真源，建筑不修改 TileData。

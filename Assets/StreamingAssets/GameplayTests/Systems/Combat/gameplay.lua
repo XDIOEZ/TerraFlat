@@ -46,13 +46,14 @@ local function nearWeapon(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end
 for _, weaponCase in ipairs({
-    {id = "ChippedTool", name = "打制石器", physical = 6, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
+    {id = "ChippedTool", name = "打制石器", physical = 6, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1", timeScale = 1},
     {id = "Obsidian", name = "黑曜石", physical = 9, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
-    {id = "WoodHammer", name = "木锤", physical = 6, stamina = 0.9, impact = 4, shell = "Stick", attack = "Attack_2"},
+    {id = "WoodHammer", name = "木锤", physical = 6, stamina = 0.9, impact = 4, shell = "Stick", attack = "Attack_2", timeScale = 2},
     {id = "StoneHammer", name = "石锤", physical = 10, stamina = 2.7, impact = 4, shell = "Stick", attack = "Attack_2"}
 }) do
     local case = weaponCase
-    test.runtime("combat", "held_weapon_action", {weaponId = case.id, attackStateName = case.attack}, function(data)
+    test.runtime("combat", "held_weapon_action", {weaponId = case.id, attackStateName = case.attack,
+        verifyFixedStep = case.timeScale ~= nil, timeScale = case.timeScale}, function(data)
         assert(data.weaponId == case.id, "未使用真实" .. case.name .. "定义")
         assert(data.held.inHand and data.held.ownedByPlayer and data.held.registered and data.held.indexed, case.name .. "没有完成正式手持装配")
         assert(data.animationRegistered and data.animationLoaded, case.name .. "攻击动作模块未注册或未加载")
@@ -68,9 +69,30 @@ for _, weaponCase in ipairs({
         assert(data.impactKind == case.impact, case.name .. "伤害类型错误")
         assert(data.initialWindowClosed, case.name .. "待机时伤害窗未关闭")
         assert(data.idleDamageTickDisabled, case.name .. "待机时伤害模块仍被逐帧调度")
+        assert(data.animatorUpdateMode == "AnimatePhysics", case.name .. "武器动画没有绑定 Unity 固定步")
         assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
         assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
-        assert(data.sawOpenWindowWithoutDamageTick, case.name .. "停止伤害模块 Tick 后动画伤害窗没有正常打开")
+        assert(data.sawOpenWindowWithFixedDamageTick, case.name .. "动画伤害窗没有唤醒固定逻辑 Tick")
+        if case.timeScale then
+            local fixed = data.fixedStep
+            assert(fixed.timeScale == case.timeScale and fixed.targetFrameRate == 30 and fixed.vSyncCount == 0,
+                case.name .. "固定步采样没有处于指定倍率和低帧率")
+            assert(fixed.hostileTarget and #fixed.windows > 0 and #fixed.contacts > 0,
+                case.name .. "真实固定步伤害窗未采样，或没有命中/尝试命中隔离目标")
+            local sameFrameSteps = false
+            for index, sample in ipairs(fixed.windows) do
+                assert(sample.inFixedStep and sample.damageTickEnabled, case.name .. "伤害窗没有在固定步中唤醒")
+                nearWeapon(sample.delta, 1 / 60, case.name .. "固定步时间")
+                if index > 1 and sample.frame == fixed.windows[index - 1].frame then sameFrameSteps = true end
+            end
+            assert(sameFrameSteps, case.name .. "30 帧画面下没有观察到同一帧的多个开窗固定步")
+            for _, contact in ipairs(fixed.contacts) do
+                assert(contact.inFixedStep and contact.windowOpen, case.name .. "真实命中判定不在固定步伤害窗中")
+            end
+            for _, key in ipairs({ "timeScale", "targetFrameRate", "vSyncCount" }) do
+                assert(fixed.restoredSettings[key] == fixed.originalSettings[key], case.name .. "现场设置未恢复：" .. key)
+            end
+        end
         assert(data.returnedToIdle and data.finalWindowClosed, case.name .. "单次攻击后未回待机或未关闭伤害窗")
         assert(data.beforeDisableActionRequested and data.inactiveActionRejected, case.name .. "停用前未挥击或失活期间仍能攻击")
         assert(data.disabledWindowClosed and data.disabledHitStopCleared, case.name .. "停用未清理伤害窗与动画速度")
