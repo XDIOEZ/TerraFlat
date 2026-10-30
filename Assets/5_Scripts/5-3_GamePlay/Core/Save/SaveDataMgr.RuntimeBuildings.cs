@@ -44,6 +44,7 @@ public partial class SaveDataMgr
         string planetName = ResolveRuntimePlanetName();
         RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(worldPosition);
         string key = BuildChunkKey(planetName, ToChunkName(address));
+        MarkChunkDifferenceChanged(key);
         if (!buildingItem.DestructionHandled)
         {
             chunkManager.RegisterRuntimeBuilding(buildingItem);
@@ -245,6 +246,7 @@ public partial class SaveDataMgr
     {
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
+        MarkChunkDifferenceChanged(key);
         savedItems ??= new List<ItemData>();
 
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)

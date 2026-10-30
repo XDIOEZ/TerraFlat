@@ -121,7 +121,12 @@ public sealed class FluidGasPumpBehavior : FluidDeviceBehavior
     #region 动力气泵
     public override void Advance(MachineEntity node, float seconds) => FluidDeviceOperations.AdvanceGasPump(node, seconds);
     public override bool CanOutput(MachineEntity node, out string reason)
-    { reason = FluidDeviceOperations.IsGasPumpWet(node) ? "气泵遇到液体" : null; return reason == null; }
+    {
+        if (!MachineWorld.TryGetFluidEnvironmentSubmerged(node, out bool wet))
+        { reason = "等待地表数据"; return false; }
+        reason = wet ? "气泵遇到液体" : null;
+        return reason == null;
+    }
     #endregion
 }
 

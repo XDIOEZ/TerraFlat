@@ -206,7 +206,8 @@ public partial class Mod_TileEffectReceiver : Module
 
     protected override void OnLoad()
     {
-        ModSaveData?.ReadData(ref lastGridPos);
+        ModuleGridPositionSaveSnapshot saved = ModSaveData?.GetData<ModuleGridPositionSaveSnapshot>();
+        if (saved != null) lastGridPos = new Vector2Int(saved.X, saved.Y);
         isPreparedForWorldTransition = false;
         resumeTileEffectsOnEnable = false;
         nextSnowRefresh = 0f;
@@ -217,7 +218,7 @@ public partial class Mod_TileEffectReceiver : Module
     protected override void OnSave()
     {
         // 自动保存不代表离开当前地块，保存过程不能撤销环境效果。
-        ModSaveData?.WriteData(lastGridPos);
+        ModSaveData?.WriteData(new ModuleGridPositionSaveSnapshot { X = lastGridPos.x, Y = lastGridPos.y });
     }
 
     public override void Act()

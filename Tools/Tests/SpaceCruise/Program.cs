@@ -10,6 +10,8 @@ internal static partial class Program
     {
         if (args.Length == 1 && args[0] == "--space-network-snapshot-delta")
         { Run("太空网络差量共享、变更与恢复", NetworkSnapshotDelta); return; }
+        if (args.Length == 1 && args[0] == "--space-unknown-fields")
+        { Run("太空会话及船体乘员保留未知可选字段", SpaceUnknownOptionalFields); return; }
         Run("会话身份索引增删、替换与保存恢复", QueryIndexMutations);
         Run("星体完整身份索引注册、重建和无分配查询", BodyIdentityIndexLifecycle);
         Run("星区负向、多区、高位整数与空域惯性", SectorCoordinates);
@@ -25,6 +27,7 @@ internal static partial class Program
         Run("稳定船体身份查询无临时分配", QueryIndexAllocations);
         Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);
         Run("完整太空会话散落物保存、读回和重复保存", LooseItemSessionSnapshot);
+        Run("太空会话及船体乘员保留未知可选字段", SpaceUnknownOptionalFields);
         Run("太空网络差量共享、变更与恢复", NetworkSnapshotDelta);
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
@@ -81,6 +84,36 @@ internal static partial class Program
     #endregion
 
     #region 航行规则
+    private static void SpaceUnknownOptionalFields()
+    {
+        var session = new SpaceSessionState();
+        var ship = new ShipState { ShipId = "ship" };
+        ship.Pieces.Add(new ShipPieceState { PieceId = "piece" });
+        session.Ships.Add(ship);
+        session.Passengers.Add(new SpacePassengerState { ProfileId = "player" });
+        session.LooseItems.Add(new SpaceLooseItemState { Id = "drop", Scale = new UnityEngine.Vector3(2, 3, 4) });
+        session.Sectors.Add(new UniverseState { Bodies = new List<BodyState> { new BodyState { BodyId = "earth" } } });
+        var document = Newtonsoft.Json.Linq.JObject.FromObject(session);
+        document["future_root"] = new Newtonsoft.Json.Linq.JObject { ["value"] = 12 };
+        document["Ships"][0]["future_ship"] = "ship-extra";
+        document["Ships"][0]["Pieces"][0]["future_piece"] = 31;
+        document["Passengers"][0]["future_passenger"] = true;
+        document["Passengers"][0]["FreeMotion"]["future_motion"] = 42;
+        document["LooseItems"][0]["Scale"]["future_scale"] = "scale-extra";
+        document["Sectors"][0]["Bodies"][0]["future_body"] = "planet-extra";
+        var restored = document.ToObject<SpaceSessionState>();
+        restored.Ships[0].PositionX = 42;
+        restored.LooseItems[0].Scale = new UnityEngine.Vector3(5, 6, 7);
+        var saved = Newtonsoft.Json.Linq.JObject.FromObject(restored);
+        Check((int)saved["future_root"]["value"] == 12 && (string)saved["Ships"][0]["future_ship"] == "ship-extra" &&
+            (int)saved["Ships"][0]["Pieces"][0]["future_piece"] == 31 &&
+            (bool)saved["Passengers"][0]["future_passenger"] &&
+            (int)saved["Passengers"][0]["FreeMotion"]["future_motion"] == 42 &&
+            (string)saved["Sectors"][0]["Bodies"][0]["future_body"] == "planet-extra", "unknown optional fields were discarded");
+        Check((string)saved["LooseItems"][0]["Scale"]["future_scale"] == "scale-extra" &&
+            (float)saved["LooseItems"][0]["Scale"]["x"] == 5, "unknown loose item scale fields were discarded: " + saved["LooseItems"][0]["Scale"]);
+    }
+
     private static void Velocity()
     {
         var velocity = new SpaceVector2();

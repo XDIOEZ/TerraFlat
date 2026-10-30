@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FlatWorld.Networking;
 using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
@@ -137,6 +139,28 @@ public partial class ChunkMgr
     private readonly HashSet<RuntimeWorldAddress> runtimeWindowTargets = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeReadyTargets = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeStateTransferTargets = new();
+    private sealed class NetworkAuthorityChunkDemand
+    {
+        public int Count;
+        public bool OwnsTemporaryBinding;
+    }
+    private sealed class NetworkAuthorityChunkLease : IDisposable
+    {
+        private ChunkMgr owner;
+        private readonly RuntimeWorldAddress address;
+        private readonly ChunkLease lease;
+        public NetworkAuthorityChunkLease(ChunkMgr owner, RuntimeWorldAddress address, ChunkLease lease)
+        { this.owner = owner; this.address = address; this.lease = lease; }
+        public void Dispose()
+        {
+            ChunkMgr current = owner;
+            if (ReferenceEquals(current, null)) return;
+            owner = null;
+            try { current.ReleaseNetworkAuthorityChunkDemand(address); }
+            finally { lease.Dispose(); }
+        }
+    }
+    private readonly Dictionary<RuntimeWorldAddress, NetworkAuthorityChunkDemand> networkAuthorityChunkDemands = new();
     private readonly ChunkWindowCoverage runtimeWindowCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Data);
     private readonly ChunkWindowCoverage runtimeReadyCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Active);
     private readonly ChunkWindowCoverage runtimePrefetchCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Data);
@@ -314,6 +338,51 @@ public partial class ChunkMgr
 
     private static Vector2Int GetRuntimeWindowChunkRadius(Vector2Int distance) => new Vector2Int(
         Mathf.Max(0, distance.x - 1), Mathf.Max(0, distance.y - 1));
+
+    // 握手与远端窗口共用正式生成和恢复流程，数据票不提前激活模拟。
+    public IDisposable AcquireNetworkAuthorityChunkDemand(RuntimeWorldAddress address)
+    {
+        if (!GameNetwork.HasStateAuthority) throw new InvalidOperationException("只有权威世界能准备联机区块。");
+        EnsureWorldRuntime();
+        if (!networkAuthorityChunkDemands.TryGetValue(address, out NetworkAuthorityChunkDemand demand))
+            networkAuthorityChunkDemands.Add(address, demand = new NetworkAuthorityChunkDemand());
+        demand.Count++;
+        try { return new NetworkAuthorityChunkLease(this, address, AcquireChunkLease(address, ChunkLeaseKind.DataRetention)); }
+        catch { if (--demand.Count == 0) networkAuthorityChunkDemands.Remove(address); throw; }
+    }
+
+    public Task<ChunkRuntime> RequestNetworkAuthorityChunkAsync(RuntimeWorldAddress address, CancellationToken cancellation)
+    {
+        ChunkGenerationProfileSnapshot profile = PrepareActiveGenerationSnapshot(out int seed);
+        if (DimensionManager.Instance != null) seed = DimensionManager.Instance.GetActiveGenerationSeed(seed);
+        return RequestChunkDataAsync(address, seed, profile, cancellation, ResolveActiveGenerationTopology());
+    }
+
+    public bool TryRestoreNetworkAuthorityChunk(RuntimeWorldAddress address)
+    {
+        using var scope = RequireRuntimeWorldContext();
+        if (!networkAuthorityChunkDemands.TryGetValue(address, out NetworkAuthorityChunkDemand demand) ||
+            !TryGetChunkRuntime(address, out ChunkRuntime chunk) || chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null)
+            return false;
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+            activeRuntimeBindings.Add(address, binding = new RuntimeChunkBinding());
+        if (runtimeWindowTargets.Add(address))
+        { runtimeStateTransferTargets.Add(address); demand.OwnsTemporaryBinding = true; }
+        return RestoreRuntimeChunkState(address, binding, chunk) && ReferenceEquals(binding.RestoredEntitiesChunk, chunk);
+    }
+
+    public bool IsNetworkAuthorityChunkInRuntimeWindow(RuntimeWorldAddress address)
+        => runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address);
+
+    private void ReleaseNetworkAuthorityChunkDemand(RuntimeWorldAddress address)
+    {
+        if (!networkAuthorityChunkDemands.TryGetValue(address, out NetworkAuthorityChunkDemand demand) || --demand.Count != 0) return;
+        networkAuthorityChunkDemands.Remove(address);
+        if (IsWorldRuntimeShuttingDown || runtimeChunkManager == null ||
+            runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address)) return;
+        if (demand.OwnsTemporaryBinding && runtimeStateTransferTargets.Remove(address))
+        { runtimeWindowTargets.Remove(address); RetireRuntimeBinding(address); }
+    }
 
     /// <summary>尝试找到指定区块当前正在使用的画面对象。</summary>
     public bool TryGetRuntimeChunkView(RuntimeWorldAddress address, out ChunkView view)
@@ -566,6 +635,8 @@ public partial class ChunkMgr
         }
         foreach (RuntimeWorldAddress address in runtimeWindowCoverage.Removed(ChunkWindowCoverage.Layer.Data))
         {
+            if (networkAuthorityChunkDemands.TryGetValue(address, out NetworkAuthorityChunkDemand demand))
+            { runtimeStateTransferTargets.Add(address); demand.OwnsTemporaryBinding = true; continue; }
             runtimeWindowTargets.Remove(address);
             RetireRuntimeBinding(address);
         }
@@ -576,6 +647,8 @@ public partial class ChunkMgr
             runtimeWindowRemovalBuffer.AddRange(runtimeStateTransferTargets);
             foreach (RuntimeWorldAddress address in runtimeWindowRemovalBuffer)
             {
+                if (!runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address) &&
+                    networkAuthorityChunkDemands.ContainsKey(address)) continue;
                 runtimeStateTransferTargets.Remove(address);
                 if (runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address)) continue;
                 runtimeWindowTargets.Remove(address);

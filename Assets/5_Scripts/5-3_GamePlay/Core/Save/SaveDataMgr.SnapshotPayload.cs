@@ -83,7 +83,7 @@ public partial class SaveDataMgr
     internal static byte[] SerializeCoreDataWithoutChunks(GameSaveData saveData)
     {
         using var coreSample = SaveCoreEncodePoint.Measure();
-        List<(PlanetData planet, Dictionary<string, MapSave> maps, List<EcologyChunkSaveData> ecology)> backups = new();
+        List<(PlanetData planet, Dictionary<string, MapSave> maps, List<EcologyChunkSaveData> ecology, List<RegionalWeatherRecord> weather)> backups = new();
         if (saveData.PlanetData_Dict != null)
         {
             foreach (PlanetData planet in saveData.PlanetData_Dict.Values)
@@ -91,8 +91,9 @@ public partial class SaveDataMgr
                 if (planet == null)
                     continue;
 
-                backups.Add((planet, planet.MapData_Dict, planet.Ecology?.Chunks));
+                backups.Add((planet, planet.MapData_Dict, planet.Ecology?.Chunks, planet.RegionalWeatherStates));
                 planet.MapData_Dict = new Dictionary<string, MapSave>();
+                planet.RegionalWeatherStates = new List<RegionalWeatherRecord>();
                 if (planet.Ecology != null)
                     planet.Ecology.Chunks = null;
             }
@@ -110,6 +111,7 @@ public partial class SaveDataMgr
             for (int i = 0; i < backups.Count; i++)
             {
                 backups[i].planet.MapData_Dict = backups[i].maps;
+                backups[i].planet.RegionalWeatherStates = backups[i].weather;
                 if (backups[i].planet.Ecology != null)
                     backups[i].planet.Ecology.Chunks = backups[i].ecology;
             }
@@ -328,55 +330,74 @@ public partial class SaveDataMgr
             }
         }
 
+        // 地形先逐条冻结，联合点之后只组合这些字节，不再触碰运行态。
+        var frozenChunks = new Dictionary<(string world, Vector2Int origin), SqliteChunkSnapshot>();
+        var frozenTerrainRevisions = new Dictionary<string, long>();
+        var frozenTerrainAddresses = new Dictionary<string, (string world, Vector2Int origin)>();
+        foreach (string key in new List<string>(chunkDeltas.Keys))
+        {
+            if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) && record != null)
+            {
+                frozenChunks[(record.PlanetName, record.ChunkPosition)] = new SqliteChunkSnapshot
+                    { Terrain = record.HasChanges ? MemoryPackSerializer.Serialize(record) : null };
+                frozenTerrainAddresses[key] = (record.PlanetName, record.ChunkPosition);
+                frozenTerrainRevisions[key] = chunkDifferenceRevisions.TryGetValue(key, out long version) ? version : 0;
+            }
+            if (!budget.ShouldYield()) continue;
+            yield return budget.WaitForNextSlice();
+            if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
+            { onQueued?.Invoke(Task.FromResult(false)); yield break; }
+        }
+
         // 玩家、机器与掉落物之间会转移真实物品，必须同帧冻结，避免重复或丢失。
         if (captureCoreState == null) throw new ArgumentNullException(nameof(captureCoreState));
+        if (!CaptureRuntimeTerrainStates()) throw new InvalidOperationException("最终保存点的地形采集失败。");
+        CaptureRuntimeBuildingStates();
+        if (!CaptureRuntimeAiEntityStates()) throw new InvalidOperationException("最终保存点的实体采集失败。");
         // 采收会在让帧期间改动删除记录，最终点按现有成员重组，只重捕获新增或替换的独立快照。
         ecologyRecords.Clear();
         using (SaveEcologyFinalizePoint.Measure())
             foreach (int work in FreezeEcologyChunks(capturedSave, ecologyRecords, ecologyItems)) { }
         ecologyItems.Clear();
-        byte[] machines, coreSaveData, droppedItems;
+        long archiveRevision = ReserveArchiveSnapshotRevision(fullPath);
+        byte[] machines, droppedItems;
+        List<FlatWorld.Persistence.SaveArchiveRecord> sqliteRecords;
         using (MachineWorld.BeginSaveSnapshotCapture())
         {
             using (SavePlayerCapturePoint.Measure()) captureCoreState();
             using (SaveMachinesCapturePoint.Measure()) machines = MachineWorld.CaptureArchive(capturedSave);
             using (SaveSpaceCapturePoint.Measure()) FlatWorld.Spaceflight.SpaceSession.Capture(capturedSave);
-            coreSaveData = SerializeCoreDataWithoutChunks(capturedSave);
             using (SaveDropsCapturePoint.Measure()) droppedItems = DroppedItemService.CaptureArchive(capturedSave);
+            sqliteRecords = CaptureSqliteCoreRecords(capturedSave, machines, droppedItems);
         }
-        yield return budget.WaitForNextSlice();
-        if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
+        // 让帧期间发生的采矿/建造必须在联合点补冻，保持地形与最终库存、掉落一致。
+        foreach (var changed in new List<KeyValuePair<string, long>>(chunkDifferenceRevisions))
         {
-            onQueued?.Invoke(Task.FromResult(false));
-            yield break;
-        }
-
-        ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
-        if (modRuntime == null || !modRuntime.IsReady)
-            throw new InvalidOperationException("MOD 框架尚未完成加载，无法保存世界");
-        byte[] modMetadata = MemoryPackSerializer.Serialize(modRuntime.CaptureSaveMetadata());
-        yield return budget.WaitForNextSlice();
-        if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
-        {
-            onQueued?.Invoke(Task.FromResult(false));
-            yield break;
-        }
-
-        List<string> recordKeys = new(chunkDeltas.Keys);
-        recordKeys.Sort(CompareChunkSaveKeys);
-        List<byte[]> chunkRecords = new(recordKeys.Count);
-        for (int i = 0; i < recordKeys.Count; i++)
-        {
-            if (chunkDeltas.TryGetValue(recordKeys[i], out ChunkSaveRecord record) &&
-                record != null && record.HasChanges)
+            if (frozenTerrainRevisions.TryGetValue(changed.Key, out long version) && version == changed.Value) continue;
+            if (chunkDeltas.TryGetValue(changed.Key, out var current) && current != null)
             {
-                // 每条记录立即成为独立字节，后续帧的区块变化不会改写已冻结载荷。
-                chunkRecords.Add(MemoryPackSerializer.Serialize(record));
+                var address = (current.PlanetName, current.ChunkPosition);
+                if (!frozenChunks.TryGetValue(address, out var chunk)) frozenChunks.Add(address, chunk = new SqliteChunkSnapshot());
+                chunk.Terrain = current.HasChanges ? MemoryPackSerializer.Serialize(current) : null;
             }
-
+            else if (frozenTerrainAddresses.TryGetValue(changed.Key, out var address)) frozenChunks[address].Terrain = null;
+        }
+        foreach (FrozenEcologyChunkSaveRecord ecology in ecologyRecords)
+        {
+            var metadata = MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(ecology.ChunkData);
+            var key = (ecology.WorldKey, new Vector2Int(metadata.ChunkX, metadata.ChunkY));
+            if (!frozenChunks.TryGetValue(key, out SqliteChunkSnapshot chunk))
+                frozenChunks.Add(key, chunk = new SqliteChunkSnapshot());
+            chunk.Ecology = ecology;
+        }
+        foreach (var state in persistedChunkReads.Values)
+            if (state.Kind == "chunk" && state.Ready && !state.Released && !frozenChunks.ContainsKey((state.World, state.Origin)))
+                frozenChunks.Add((state.World, state.Origin), new SqliteChunkSnapshot());
+        foreach (var pair in frozenChunks)
+        {
+            sqliteRecords.Add(FreezeSqliteChunk(pair.Key.world, pair.Key.origin, pair.Value));
             if (!budget.ShouldYield())
                 continue;
-
             yield return budget.WaitForNextSlice();
             if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
             {
@@ -391,14 +412,7 @@ public partial class SaveDataMgr
             yield break;
         }
 
-        Task<bool> writeTask = Task.Run(() =>
-        {
-            if (!IsSaveRevisionCurrent(fullPath, revision))
-                return false;
-            byte[] payload = BuildCapturedSavePayload(
-                coreSaveData, chunkRecords, machines, droppedItems, modMetadata, ecologyRecords);
-            return WriteSaveAtomically(fullPath, payload, revision, discardIfSuperseded: true);
-        });
+        Task<bool> writeTask = CommitSqliteRecordsAndReportAsync(fullPath, capturedSave, sqliteRecords, archiveRevision, revision);
         onQueued?.Invoke(writeTask);
     }
 
@@ -513,7 +527,7 @@ public partial class SaveDataMgr
             {
                 if (itemBytes == null || itemBytes.Length == 0)
                     throw new InvalidDataException("生态物品快照为空。");
-                chunk.ChangedItems.Add(MemoryPackSerializer.Deserialize<ItemData>(itemBytes));
+                chunk.ChangedItems.Add(MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(itemBytes)?.CreateColdData());
             }
             planet.Ecology.Chunks ??= new List<EcologyChunkSaveData>();
             planet.Ecology.Chunks.Add(chunk);
@@ -551,13 +565,13 @@ public partial class CompactSaveEnvelope
     public List<FrozenEcologyChunkSaveRecord> EcologyRecords = new();
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class FrozenEcologyChunkSaveRecord
 {
     #region 独立冻结字节
-    public string WorldKey;
-    public byte[] ChunkData;
-    public List<byte[]> ChangedItems = new();
+    [MemoryPackOrder(0)] public string WorldKey;
+    [MemoryPackOrder(1)] public byte[] ChunkData;
+    [MemoryPackOrder(2)] public List<byte[]> ChangedItems = new();
     #endregion
 }

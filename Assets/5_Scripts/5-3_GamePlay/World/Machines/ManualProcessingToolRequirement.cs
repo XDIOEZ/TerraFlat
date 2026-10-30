@@ -4,12 +4,14 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>手动加工把工具库存和材料加工状态分别保存，工具不会参加材料配方匹配。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class ManualProcessingState
 {
     #region 手动加工状态
-    public RecipeProcessingState Processing = new();
-    public Inventory_Data Tool = MachineInventory.NewData("工具", 1);
+    [MemoryPackOrder(0)] public RecipeProcessingState Processing = new();
+    [MemoryPackIgnore] public Inventory_Data Tool = MachineInventory.NewData("工具", 1);
+    [MemoryPackInclude, MemoryPackOrder(1)] private StandaloneInventorySaveSnapshot ToolSnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Tool); set => Tool = value?.Restore(); }
     #endregion
 }
 

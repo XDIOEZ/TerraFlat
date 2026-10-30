@@ -1,0 +1,6 @@
+{
+    "name": "FlatWorld.Persistence",
+    "references": ["Gilzoide.SqliteNet"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

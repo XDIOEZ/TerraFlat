@@ -197,6 +197,15 @@ namespace FlatWorld.Spaceflight
             }
             return true;
         }
+        private bool IsShipExplosionGroundReady(PressureExplosionEvent entry, float radius)
+        {
+            if (!entry.WorldKey.StartsWith("ship:", StringComparison.Ordinal)) return true;
+            ShipExplosionSpatialContext explosion = ReadExplosionContext(entry);
+            if (explosion.InSpace || explosion.HeightMeters >= radius) return true;
+            float groundRadius = (float)Math.Sqrt(radius * radius - explosion.HeightMeters * explosion.HeightMeters);
+            Vector2 center = new((float)explosion.CenterX, (float)explosion.CenterY);
+            return SpaceSurfaceQuery.EnsureSurfaceAreaReady(explosion.WorldKey, center, groundRadius) != SurfaceQueryStatus.Pending;
+        }
         private void RetainExplosionGasInCabin(PressureExplosionEvent entry, ShipExplosionSpatialContext explosion)
         {
             var candidates = new List<ShipState>(State.Ships);

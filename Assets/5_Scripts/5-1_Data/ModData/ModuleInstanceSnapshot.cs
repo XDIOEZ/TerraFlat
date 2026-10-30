@@ -5,15 +5,15 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>模块身份与不透明状态负载；具体实现由显式注册的状态编解码器负责。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class ModuleInstanceSnapshot
 {
     #region 快照状态
 
-    [MemoryPackInclude] private string stableName;
-    [MemoryPackInclude] private string moduleId;
-    [MemoryPackInclude] private string codecId;
-    [MemoryPackInclude] private byte[] payload;
+    [MemoryPackInclude, MemoryPackOrder(0)] private string stableName;
+    [MemoryPackInclude, MemoryPackOrder(1)] private string moduleId;
+    [MemoryPackInclude, MemoryPackOrder(2)] private string codecId;
+    [MemoryPackInclude, MemoryPackOrder(3)] private byte[] payload;
 
     [MemoryPackIgnore] public string StableName => stableName;
     [MemoryPackIgnore] public string ModuleId => moduleId;
@@ -208,7 +208,8 @@ public static class ModuleInstanceStateCodecs
             return ItemSnapshotSerialization.SerializePayload(new InventoryModuleInstanceState
             {
                 Inventories = publicState ? null : InventoryInstanceSnapshot.CaptureDictionary(state.Data),
-                PanelPosition = state.PanleRectPosition, PanelIsOpen = state.BasePanelIsOpen
+                PanelPositionX = state.PanleRectPosition.x, PanelPositionY = state.PanleRectPosition.y,
+                PanelPositionZ = state.PanleRectPosition.z, PanelIsOpen = state.BasePanelIsOpen
             });
         }
         public void Restore(ModuleData data, byte[] payload)
@@ -217,7 +218,7 @@ public static class ModuleInstanceStateCodecs
             var target = (Inventory_ModuleData)data;
             if (state.Inventories != null)
                 InventoryInstanceSnapshot.RestoreDictionary(state.Inventories, target.Data ??= new());
-            target.PanleRectPosition = state.PanelPosition;
+            target.PanleRectPosition = new Vector3(state.PanelPositionX, state.PanelPositionY, state.PanelPositionZ);
             target.BasePanelIsOpen = state.PanelIsOpen;
         }
     }
@@ -232,7 +233,9 @@ public static class ModuleInstanceStateCodecs
             var state = (ModData_FoodData)data;
             return ItemSnapshotSerialization.SerializePayload(new FoodInstanceState
             {
-                MechanicStates = state.MechanicStates, PanelPosition = state.FoodData?.PanelPosition ?? Vector2.zero,
+                MechanicStates = state.MechanicStates,
+                PanelPositionX = state.FoodData?.PanelPosition.x ?? 0f,
+                PanelPositionY = state.FoodData?.PanelPosition.y ?? 0f,
                 Nutrition = NutritionInstanceState.Capture(state.FoodData?.nutrition)
             });
         }
@@ -242,7 +245,7 @@ public static class ModuleInstanceStateCodecs
             var target = (ModData_FoodData)data;
             target.MechanicStates = state.MechanicStates ?? new();
             Food food = target.EnsureFoodData();
-            food.PanelPosition = state.PanelPosition;
+            food.PanelPosition = new Vector2(state.PanelPositionX, state.PanelPositionY);
             state.Nutrition?.RestoreTo(food.nutrition ??= new Nutrition());
         }
     }
@@ -250,41 +253,44 @@ public static class ModuleInstanceStateCodecs
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class CollectableInstanceState
 {
-    public int Stock;
-    public bool Initialized;
+    [MemoryPackOrder(0)] public int Stock;
+    [MemoryPackOrder(1)] public bool Initialized;
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class InventoryModuleInstanceState
 {
-    public Dictionary<string, InventoryInstanceSnapshot> Inventories;
-    public Vector3 PanelPosition;
-    public bool PanelIsOpen;
+    [MemoryPackOrder(0)] public Dictionary<string, InventoryInstanceSnapshot> Inventories;
+    [MemoryPackOrder(1)] public float PanelPositionX;
+    [MemoryPackOrder(2)] public float PanelPositionY;
+    [MemoryPackOrder(3)] public float PanelPositionZ;
+    [MemoryPackOrder(4)] public bool PanelIsOpen;
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class FoodInstanceState
 {
-    public List<FoodMechanicStateData> MechanicStates;
-    public Vector2 PanelPosition;
-    public NutritionInstanceState Nutrition;
+    [MemoryPackOrder(0)] public List<FoodMechanicStateData> MechanicStates;
+    [MemoryPackOrder(1)] public float PanelPositionX;
+    [MemoryPackOrder(2)] public float PanelPositionY;
+    [MemoryPackOrder(3)] public NutritionInstanceState Nutrition;
 }
 
 /// <summary>营养当前值和运行中增长的脂肪容量持久化，代谢与摄取配置继续读取当前定义。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class NutritionInstanceState
 {
     #region 营养实例状态
 
-    public float Carbohydrates;
-    public float Fat;
-    public float Protein;
-    public float Water;
-    public float Vitamins;
-    public float MaxFat;
+    [MemoryPackOrder(0)] public float Carbohydrates;
+    [MemoryPackOrder(1)] public float Fat;
+    [MemoryPackOrder(2)] public float Protein;
+    [MemoryPackOrder(3)] public float Water;
+    [MemoryPackOrder(4)] public float Vitamins;
+    [MemoryPackOrder(5)] public float MaxFat;
 
     public static NutritionInstanceState Capture(Nutrition data) => data == null ? null : new NutritionInstanceState
     {
@@ -302,5 +308,36 @@ internal sealed partial class NutritionInstanceState
         data.Max_Fat = MaxFat;
     }
 
+    #endregion
+}
+
+[MemoryPackable(GenerateType.VersionTolerant)]
+public sealed partial class InventoryModulePayloadSnapshot
+{
+    #region 嵌套库存独立载荷
+    [MemoryPackOrder(0)] public Dictionary<string, InventoryInstanceSnapshot> Inventories;
+    [MemoryPackOrder(1)] public float PanelX;
+    [MemoryPackOrder(2)] public float PanelY;
+    [MemoryPackOrder(3)] public float PanelZ;
+    [MemoryPackOrder(4)] public string InventoryInitName;
+    [MemoryPackOrder(5)] public bool PanelIsOpen;
+
+    public static InventoryModulePayloadSnapshot Capture(Inventory_ModuleData data) => new InventoryModulePayloadSnapshot
+    {
+        Inventories = InventoryInstanceSnapshot.CaptureDictionary(data.Data),
+        PanelX = data.PanleRectPosition.x, PanelY = data.PanleRectPosition.y, PanelZ = data.PanleRectPosition.z,
+        InventoryInitName = data.InventoryInitName, PanelIsOpen = data.BasePanelIsOpen
+    };
+
+    public Inventory_ModuleData Restore()
+    {
+        var result = new Inventory_ModuleData
+        {
+            PanleRectPosition = new Vector3(PanelX, PanelY, PanelZ),
+            InventoryInitName = InventoryInitName, BasePanelIsOpen = PanelIsOpen
+        };
+        if (Inventories != null) InventoryInstanceSnapshot.RestoreDictionary(Inventories, result.Data);
+        return result;
+    }
     #endregion
 }

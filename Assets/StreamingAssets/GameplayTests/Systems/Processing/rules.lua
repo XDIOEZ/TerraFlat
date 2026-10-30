@@ -266,6 +266,7 @@ test.system("processing", "cold_motion_workspace", {}, function(data)
     assert(data.duplicateError == "ArgumentException", "同世界重复实物身份没有被拒绝")
     near(data.recoveredPosition, .5, "失败后残留工作区污染下一轮冷物推进")
     assert(data.repeatedMotionBytes == 0, "已预热的冷物推进仍逐步重建模拟器或工作列表")
+    assert(data.pendingSettled and data.pendingBounded, "地表等待时长没有按固定步结清，或超过预算的余量没有保留")
 end, "冷物真实轨迹、跨世界工作区复用、浮沉结束、异常清理与热循环分配")
 
 

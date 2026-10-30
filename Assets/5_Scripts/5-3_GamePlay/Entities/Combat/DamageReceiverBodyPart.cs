@@ -7,14 +7,14 @@ using UnityEngine;
 /// </summary>
 public enum BodyPartType
 {
-    Head,
-    Chest,
-    Abdomen,
-    LeftHand,
-    RightHand,
-    Pelvis,
-    LeftLeg,
-    RightLeg
+    Head = 0,
+    Chest = 1,
+    Abdomen = 2,
+    LeftHand = 3,
+    RightHand = 4,
+    Pelvis = 5,
+    LeftLeg = 6,
+    RightLeg = 7
 }
 
 [Serializable]

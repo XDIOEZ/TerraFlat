@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using MemoryPack;
@@ -22,11 +22,11 @@ public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, 
     public float DamageIntervalSeconds = 5f;
     public float LowPressureDamage = 5f;
     public float HighPressureDamage = 5f;
-    [MemoryPackable, Serializable]
+    [MemoryPackable(GenerateType.VersionTolerant), Serializable]
     public partial class PressureState
     {
-        public bool Initialized;
-        public float RemainingBufferSeconds;
+        [MemoryPackOrder(0)] public bool Initialized;
+        [MemoryPackOrder(1)] public float RemainingBufferSeconds;
     }
     public PressureState State = new();
     public double EnvironmentPressureKPa { get; private set; }

@@ -6,6 +6,24 @@ using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
+    #region 发布世界生成版本
+
+    public static class WorldGenerationAlgorithmVersion
+    {
+        public const int Current = 1;
+        public const string ParameterId = "flatworld.generation.algorithmVersion";
+
+        // 未实现的算法版本必须拒绝，不能悄悄用当前算法重建旧世界。
+        public static int RequireSupported(double value)
+        {
+            if (value != Current)
+                throw new NotSupportedException($"不支持的世界生成算法版本：{value}。");
+            return Current;
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// 告诉后台生成器世界边界是什么样的。
     /// 默认表示无限世界；如果提供了范围，就表示走出左边会从右边回来、走出上边会从下边回来。
@@ -198,6 +216,9 @@ namespace FlatWorld.WorldModel
             var frozenNumbers = numericParameters == null
                 ? new Dictionary<string, double>(StringComparer.Ordinal)
                 : new Dictionary<string, double>(numericParameters, StringComparer.Ordinal);
+            frozenNumbers.TryAdd(WorldGenerationAlgorithmVersion.ParameterId, WorldGenerationAlgorithmVersion.Current);
+            GenerationAlgorithmVersion = WorldGenerationAlgorithmVersion.RequireSupported(
+                frozenNumbers[WorldGenerationAlgorithmVersion.ParameterId]);
             // 扩大预览或水文范围时仍按原始地形区块算降水，不能把区域尺寸当成区块尺寸。
             frozenNumbers.TryAdd("climate.distance.chunkWidth", width);
             frozenNumbers.TryAdd("climate.distance.chunkHeight", height);
@@ -293,6 +314,7 @@ namespace FlatWorld.WorldModel
         public string ProfileId { get; }
         /// <summary>这套设置的版本标记，用来判断生成规则是否变过。</summary>
         public int Signature { get; }
+        public int GenerationAlgorithmVersion { get; }
         /// <summary>一个区块有多少列格子。</summary>
         public int Width { get; }
         /// <summary>一个区块有多少行格子。</summary>

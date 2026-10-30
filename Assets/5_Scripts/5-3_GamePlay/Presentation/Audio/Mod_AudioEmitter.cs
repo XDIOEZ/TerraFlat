@@ -32,11 +32,11 @@ public sealed class ItemAudioBinding
     [Min(0.01f)] public float PitchScale = 1f;
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class ItemAudioEmitterSaveData
 {
-    public List<string> ActivePersistentEvents = new List<string>();
+    [MemoryPackOrder(0)] public List<string> ActivePersistentEvents = new List<string>();
 }
 
 [DisallowMultipleComponent]

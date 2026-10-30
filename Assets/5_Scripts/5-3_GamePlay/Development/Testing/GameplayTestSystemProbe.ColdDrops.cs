@@ -213,6 +213,17 @@ public static partial class GameplayTestSystemProbe
         catch (ArgumentException error) { duplicateError = error.GetType().Name; }
         var recovered = new List<DroppedItemSaveRecord> { ColdMotionRecord(4, 0f, 2f, 1f) };
         DroppedItemService.StepColdDropMotion(recovered, .25f, default);
+        float fixedStep = float.IsFinite(Time.fixedDeltaTime) && Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : .02f;
+        var delayed = new List<DroppedItemSaveRecord> { ColdMotionRecord(5, 0f, 100f, 100f) };
+        delayed[0].PendingSurfaceMotionSeconds = fixedStep * 2f;
+        DroppedItemService.StepColdDropMotion(delayed, fixedStep, default);
+        bool pendingSettled = delayed[0].PendingSurfaceMotionSeconds <= .000001f &&
+            Mathf.Abs(delayed[0].FlightElapsed - fixedStep * 3f) < .0001f;
+        var bounded = new List<DroppedItemSaveRecord> { ColdMotionRecord(6, 0f, 100f, 100f) };
+        bounded[0].PendingSurfaceMotionSeconds = fixedStep * 70f;
+        DroppedItemService.StepColdDropMotion(bounded, fixedStep, default);
+        bool pendingBounded = bounded[0].PendingSurfaceMotionSeconds > 0f &&
+            Mathf.Abs(bounded[0].FlightElapsed - fixedStep * 64f) < .001f;
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 32; i++)
         {
@@ -230,6 +241,7 @@ public static partial class GameplayTestSystemProbe
             ["sinkingDepth"] = sinking.Count > 0 ? sinking[0].LiquidDepth : -1f,
             ["sinkingAmount"] = sinking.Count > 0 ? sinking[0].Data.Stack.Amount : 0f,
             ["duplicateError"] = duplicateError,
+            ["pendingSettled"] = pendingSettled, ["pendingBounded"] = pendingBounded,
             ["recoveredPosition"] = recovered[0].Position.x, ["repeatedMotionBytes"] = allocated
         };
     }

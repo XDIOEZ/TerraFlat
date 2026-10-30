@@ -26,8 +26,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static readonly PerformanceDebugPoint SaveMachinesCapturePoint = new("FlatWorld.Save.Capture.Machines");
     private static readonly PerformanceDebugPoint SaveSpaceCapturePoint = new("FlatWorld.Save.Capture.Space");
     private static readonly PerformanceDebugPoint SaveDropsCapturePoint = new("FlatWorld.Save.Capture.DroppedItems");
-    private static readonly PerformanceDebugPoint SaveWritePoint = new("FlatWorld.Save.Write.Atomic");
-    private static readonly PerformanceDebugPoint SaveWriteBytesPoint = new("FlatWorld.Save.Write.BytesAndFlush");
     private static readonly PerformanceDebugPoint SaveSnapshotCompressPoint = new("FlatWorld.Save.NetworkSnapshot.GZip");
 
     // 协程只计每次同步推进，不能把 yield 等待时间算成 CPU 采集耗时。
@@ -64,6 +62,11 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 currentSaveData = previous;
                 throw;
             }
+            if (previous != null || value == null)
+            {
+                CloseSqliteArchive();
+                ResetChunkDifferenceState();
+            }
         }
     }
 
@@ -92,6 +95,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     protected override void OnDestroy()
     {
+        CloseSqliteArchive();
         if (ReferenceEquals(instance, this)) GameWorldRuleSession.Bind(null);
         base.OnDestroy();
     }
@@ -128,7 +132,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     [Button("保存存档到磁盘上")]
     public void Save_And_WriteToDisk()
     {
-        SaveCurrentToDisk(recordExitTime: false);
+        SaveCurrentToDisk();
     }
 
     /// <summary>
@@ -185,7 +189,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         try
         {
             EnsureDirectoryExists(UserSavePath);
-            fullPath = GetSaveFilePath(UserSavePath, capturedSave.saveName);
+            capturedSave.ArchiveId ??= Guid.NewGuid().ToString("N");
+            fullPath = Path.Combine(UserSavePath, capturedSave.ArchiveId, "save.sqlite");
             // 长采集开始前登记版本，后来的手动或退出保存始终可以取代它。
             saveRevision = ReserveSaveRevision(fullPath);
             pendingBackgroundSavePath = fullPath;
@@ -260,6 +265,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         finally
         {
             ecologySnapshotReaders--;
+            TrimReleasedSqliteChunkCache();
         }
     }
 
@@ -271,13 +277,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             EnsureDirectoryExists(UserSavePath);
 
             string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
-            byte[] dataBytes = BuildCompactSavePayload(SaveData);
+            SaveData.ArchiveId ??= Guid.NewGuid().ToString("N");
+            fullPath = Path.Combine(UserSavePath, SaveData.ArchiveId, "save.sqlite");
             long saveRevision = ReserveSaveRevision(fullPath);
+            var records = CaptureSqliteSnapshot(SaveData);
             pendingBackgroundSavePath = fullPath;
             pendingBackgroundSaveRevision = saveRevision;
 
-            return Task.Run(() =>
-                WriteSaveAtomically(fullPath, dataBytes, saveRevision, discardIfSuperseded: true));
+            return CommitSqliteRecordsAndReportAsync(fullPath, SaveData, records, fileRevision: saveRevision);
         }
         catch (Exception exception)
         {
@@ -292,10 +299,10 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     public bool Save_And_WriteToDiskAndRecordExitTime()
     {
-        return SaveCurrentToDisk(recordExitTime: true);
+        return SaveCurrentToDisk();
     }
 
-    private bool SaveCurrentToDisk(bool recordExitTime)
+    private bool SaveCurrentToDisk()
     {
         if (SaveData == null)
         {
@@ -307,11 +314,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
             return false;
 
-        if (recordExitTime)
-        {
-            string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
-            RecordLastExitTimeUtc(fullPath, DateTime.UtcNow);
-        }
         return true;
     }
 
@@ -319,6 +321,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         chunkBaselines.Clear();
         chunkDeltas.Clear();
+        chunkDifferenceRevisions.Clear();
         runtimeChunkBaselines.Clear();
         runtimeTerrainDirtyChunks.Clear();
         runtimeBuildingDirtyChunks.Clear();

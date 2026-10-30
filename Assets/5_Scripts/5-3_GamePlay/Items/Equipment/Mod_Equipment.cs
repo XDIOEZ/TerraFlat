@@ -6,11 +6,11 @@ using MemoryPack;
 using UnityEngine;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class Mod_EquipmentSaveData
 {
-    public InventoryInstanceSnapshot EquipmentInventoryData;
-    public List<List<EquipmentInstance>> EquipmentInstances;
+    [MemoryPackOrder(0)] public InventoryInstanceSnapshot EquipmentInventoryData;
+    [MemoryPackOrder(1)] public List<List<EquipmentInstance>> EquipmentInstances;
 }
 
 /// <summary>

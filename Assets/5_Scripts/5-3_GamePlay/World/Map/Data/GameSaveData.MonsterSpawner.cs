@@ -7,7 +7,7 @@ public partial class GameSaveData
 {
     #region 世界生态存档
     [ShowInInspector]
-    public Dictionary<string, MonsterSpawnerSaveData> MonsterSpawnerWorlds = new();
+    [MemoryPack.MemoryPackOrder(20)] public Dictionary<string, MonsterSpawnerSaveData> MonsterSpawnerWorlds = new();
 
     [MemoryPackIgnore, JsonIgnore]
     public MonsterSpawnerSaveData MonsterSpawnerData

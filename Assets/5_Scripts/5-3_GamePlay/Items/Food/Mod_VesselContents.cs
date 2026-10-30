@@ -5,10 +5,10 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>液体容器的独立固体库存存档；每个真实槽位对应界面中的一个可移动物体，关闭界面不清空内容。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class VesselContentsState
 {
-    public InventoryInstanceSnapshot Items; // 木桶内部的六格物品实例状态。
+    [MemoryPackOrder(0)] public InventoryInstanceSnapshot Items; // 木桶内部的六格物品实例状态。
 }
 
 /// <summary>

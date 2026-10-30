@@ -41,8 +41,7 @@ public partial class ChunkMgr
         DimensionManager.Instance.TryGetDefinitionForWorldKey(planet.Name, out DimensionDefinition definition);
         var inputs = new WorldGenerationProfileCache.Inputs(planet, save,
             FlatWorld.Spaceflight.SpaceCatalog.LoadDefault(), resources, resources?.ResourceReloadVersion ?? 0,
-            NaturalGenerationRuleCatalogService.Catalog, definition, seed,
-            save?.UsesFrozenWorldGenerationConfiguration != false, GameNetwork.HasStateAuthority);
+            NaturalGenerationRuleCatalogService.Catalog, definition, seed, GameNetwork.HasStateAuthority);
         if (cache.TryGet(inputs, out var profile, out currentTileCatalog)) return profile;
 
         EcologyWorldSaveData before = planet.Ecology;
@@ -100,8 +99,6 @@ public partial class ChunkMgr
     private static ChunkGenerationProfileSnapshot ApplyPersistedEcologyConfiguration(
         ChunkGenerationProfileSnapshot profile, PlanetData planet)
     {
-        if (SaveDataMgr.Instance?.SaveData?.UsesFrozenWorldGenerationConfiguration == false)
-            return profile;
         planet.Ecology ??= new EcologyWorldSaveData();
         planet.Ecology.EnsureCompatibleVersion();
         if (!planet.Ecology.HasConfiguration || planet.Ecology.ProfileId != profile.ProfileId)
@@ -191,8 +188,7 @@ public partial class ChunkMgr
     public ulong GetActiveEcologyFingerprint()
     {
         SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr?.SaveData?.UsesFrozenWorldGenerationConfiguration != false &&
-            saveDataMgr.TryGetActivePlanetData(out PlanetData planet) &&
+        if (saveDataMgr != null && saveDataMgr.TryGetActivePlanetData(out PlanetData planet) &&
             planet.Ecology != null && planet.Ecology.HasConfiguration)
         {
             return planet.Ecology.ConfigurationFingerprint;

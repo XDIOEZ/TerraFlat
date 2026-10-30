@@ -88,6 +88,7 @@ public partial class SaveDataMgr
         if (cell == null) return true;
         if (cell.Crop != null) return false;
         record.AgricultureCells.Remove(cell);
+        MarkChunkDifferenceChanged(BuildChunkKey(GameplayWorldRegistry.ExecutionWorldKey, ToChunkName(sample.Address)));
         return true;
     }
 
@@ -190,14 +191,26 @@ public partial class ChunkSaveRecord
 }
 
 /// <summary>一格农业的持久化快照，Crop 为空代表尚未播种或已收获。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class AgricultureCellSaveData
 {
-    public Vector2Int LocalPosition; // 区块内格坐标
-    public int SourceTileId; // 水肥状态关联的当前地表
-    public int Water; // 当前水分只保存 0～10 整级。
-    public float WaterSupplyRemainder; // 连续降水尚未满一份的进度。
-    public float WaterConsumptionRemainder; // 连续耗水尚未满一份的进度。
-    public float Fertility; // 当前肥力
-    public ItemData Crop; // 唯一作物快照
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(2)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    } // 区块内格坐标
+    [MemoryPack.MemoryPackOrder(3)] public int SourceTileId; // 水肥状态关联的当前地表
+    [MemoryPack.MemoryPackOrder(4)] public int Water; // 当前水分只保存 0～10 整级。
+    [MemoryPack.MemoryPackOrder(6)] public float WaterSupplyRemainder; // 连续降水尚未满一份的进度。
+    [MemoryPack.MemoryPackOrder(5)] public float WaterConsumptionRemainder; // 连续耗水尚未满一份的进度。
+    [MemoryPack.MemoryPackOrder(1)] public float Fertility; // 当前肥力
+    [MemoryPackIgnore] public ItemData Crop; // 唯一作物快照
+    [MemoryPackInclude, MemoryPackOrder(0)]
+    private ItemInstanceSnapshot SavedCrop
+    {
+        get => Crop == null ? null : ItemSnapshotSerialization.Capture(Crop);
+        set => Crop = value?.CreateColdData();
+    }
 }

@@ -18,6 +18,7 @@
     <!-- 直接编译生产库存、相变和舱室查询，测试替身仅隔离未覆盖的外部入口。 -->
     <Compile Include="Program.cs" />
     <Compile Include="TestDoubles.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-1_Data/CoreData/PersistentDecimalText.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidInventory.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidUnits.cs" />

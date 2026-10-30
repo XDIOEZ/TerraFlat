@@ -3,25 +3,33 @@ using System.Collections.Generic;
 using MemoryPack;
 
 /// <summary>大气用 decimal mol 精确记账，巨大储量中的普通气包仍能被真实扣除。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class AtmosphereGasAmount
 {
-    public string FluidId;
-    public decimal Moles;
+    [MemoryPackOrder(0)] public string FluidId;
+    [MemoryPackIgnore] public decimal Moles;
+    [MemoryPackInclude, MemoryPackOrder(1)] private string SavedMoles
+    { get => PersistentDecimalText.Format(Moles); set => Moles = PersistentDecimalText.Parse(value); }
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class AtmosphereState
 {
     #region 星球唯一大气库存
-    public string DefinitionId;
-    public decimal CapacityMoles;
-    public decimal ReferenceMoles;
-    public double ReferencePressureKPa;
-    public double TemperatureKelvin;
-    public double InitialCarbonDioxidePartialPressureKPa;
-    public List<AtmosphereGasAmount> Gases = new();
-    public decimal TotalEscapedMoles;
+    [MemoryPackOrder(0)] public string DefinitionId;
+    [MemoryPackIgnore] public decimal CapacityMoles;
+    [MemoryPackIgnore] public decimal ReferenceMoles;
+    [MemoryPackInclude, MemoryPackOrder(1)] private string SavedCapacityMoles
+    { get => PersistentDecimalText.Format(CapacityMoles); set => CapacityMoles = PersistentDecimalText.Parse(value); }
+    [MemoryPackInclude, MemoryPackOrder(2)] private string SavedReferenceMoles
+    { get => PersistentDecimalText.Format(ReferenceMoles); set => ReferenceMoles = PersistentDecimalText.Parse(value); }
+    [MemoryPackOrder(3)] public double ReferencePressureKPa;
+    [MemoryPackOrder(4)] public double TemperatureKelvin;
+    [MemoryPackOrder(5)] public double InitialCarbonDioxidePartialPressureKPa;
+    [MemoryPackOrder(6)] public List<AtmosphereGasAmount> Gases = new();
+    [MemoryPackIgnore] public decimal TotalEscapedMoles;
+    [MemoryPackInclude, MemoryPackOrder(7)] private string SavedEscapedMoles
+    { get => PersistentDecimalText.Format(TotalEscapedMoles); set => TotalEscapedMoles = PersistentDecimalText.Parse(value); }
     [MemoryPackIgnore] public long Revision { get; internal set; }
     [MemoryPackIgnore] public decimal CurrentMoles
     { get { decimal result = 0m; foreach (var gas in Gases) result += gas.Moles; return result; } }

@@ -39,18 +39,14 @@ public partial class SaveDataMgr
 
     #region 完整联机快照
     /// <summary>
-    /// 为联机客户端创建完整世界快照。快照包含存档种子、星球参数和地图区块数据，
-    /// 并使用 GZip 压缩以降低首次加入时的传输体积。
+    /// 为联机客户端压缩必要元数据，区块由观察窗口独立同步。
     /// </summary>
     public byte[] CreateCompressedNetworkSnapshot()
     {
         if (SaveData == null)
             throw new InvalidOperationException("SaveData为null，无法创建联机世界快照");
 
-        PrepareLoadedChunksForSave();
-        using IDisposable publicPlayerCapture = ItemSnapshotSerialization.BeginPublicPlayerState(
-            MachineInventoryCommands.PublicSpecialData);
-        byte[] rawData = BuildCompactSavePayload(SaveData);
+        byte[] rawData = CaptureNetworkBootstrapSnapshot();
         using MemoryStream output = new MemoryStream();
         using var compressionSample = SaveSnapshotCompressPoint.Measure(rawData.LongLength);
         using (GZipStream gzip = new GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, true))
@@ -74,11 +70,7 @@ public partial class SaveDataMgr
         using MemoryStream output = new MemoryStream();
         gzip.CopyTo(output);
 
-        GameSaveData snapshot = DeserializeSavePayload(output.ToArray());
-        if (snapshot == null)
-            throw new InvalidDataException("联机世界快照反序列化失败");
-
-        SaveData = snapshot;
+        ApplyNetworkBootstrapSnapshot(output.ToArray());
     }
     #endregion
 
@@ -88,86 +80,34 @@ public partial class SaveDataMgr
     {
         if (SaveData == null || !SaveData.PlanetData_Dict.TryGetValue(worldKey, out PlanetData planet))
             throw new InvalidDataException("目标世界没有正式星球资料：" + worldKey);
-        using var scope = GameplayWorldRegistry.UseWorld(worldKey);
-        PrepareLoadedChunksForSave();
-        _ = MachineWorld.CaptureArchive(SaveData);
-        _ = DroppedItemService.CaptureArchive(SaveData);
         var subset = new GameSaveData { Seed = SaveData.Seed, Time = SaveData.Time, TimeSpeed = SaveData.TimeSpeed,
-            WorldGenerationConfigMode = SaveData.WorldGenerationConfigMode, DayTimeData = SaveData.DayTimeData,
-            DimensionStateJson = SaveData.DimensionStateJson,
-            MonsterSpawnerWorlds = new Dictionary<string, MonsterSpawnerSaveData> { [worldKey] = SaveData.GetMonsterSpawnerData(worldKey) },
+            DayTimeData = SaveData.DayTimeData, DimensionStateJson = SaveData.DimensionStateJson,
             PlanetData_Dict = new Dictionary<string, PlanetData> { [worldKey] = planet } };
-        var snapshot = new NetworkWorldSaveSnapshot { WorldKey = worldKey };
-        foreach (int _ in FreezeEcologyChunks(subset, snapshot.Ecology)) { }
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData))
-        {
-            snapshot.Core = SerializeCoreDataWithoutChunks(subset);
-            foreach (ChunkSaveRecord record in chunkDeltas.Values)
-                if (record?.PlanetName == worldKey && record.HasChanges) snapshot.Chunks.Add(MemoryPackSerializer.Serialize(record));
-            if (SaveData.Mechanical?.Worlds.TryGetValue(worldKey, out List<ItemData> nodes) == true) snapshot.Machines.Worlds[worldKey] = nodes;
-            if (SaveData.Mechanical?.RemovedGenerated.TryGetValue(worldKey, out HashSet<int> removed) == true) snapshot.Machines.RemovedGenerated[worldKey] = removed;
-            if (SaveData.DroppedItems?.Worlds.TryGetValue(worldKey, out List<DroppedItemSaveRecord> drops) == true) snapshot.Drops = drops;
-            return MemoryPackSerializer.Serialize(snapshot);
-        }
+        return MemoryPackSerializer.Serialize(new NetworkWorldSaveSnapshot
+            { WorldKey = worldKey, Core = SerializeCoreDataWithoutChunks(subset) });
     }
 
     public string ApplyNetworkWorldSnapshot(byte[] bytes, string expectedWorldKey)
     {
-        NetworkWorldSaveSnapshot snapshot = MemoryPackSerializer.Deserialize<NetworkWorldSaveSnapshot>(bytes);
-        if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.WorldKey) || snapshot.WorldKey != expectedWorldKey || snapshot.Core == null ||
-            snapshot.Chunks == null || snapshot.Ecology == null || snapshot.Machines?.Worlds == null || snapshot.Drops == null)
-            throw new InvalidDataException("目标世界快照结构不完整。");
-        GameSaveData subset = MemoryPackSerializer.Deserialize<GameSaveData>(snapshot.Core);
-        if (subset?.PlanetData_Dict?.Count != 1 || !subset.PlanetData_Dict.TryGetValue(snapshot.WorldKey, out PlanetData planet) || planet == null || subset.Seed != SaveData?.Seed)
-            throw new InvalidDataException("目标世界快照的身份或世界种子不匹配。");
-        var records = new List<ChunkSaveRecord>(snapshot.Chunks.Count);
-        foreach (byte[] payload in snapshot.Chunks)
+        var snapshot = MemoryPackSerializer.Deserialize<NetworkWorldSaveSnapshot>(bytes);
+        if (snapshot?.WorldKey != expectedWorldKey || snapshot.Core == null)
+            throw new InvalidDataException("目标世界元数据无效。");
+        var subset = MemoryPackSerializer.Deserialize<GameSaveData>(snapshot.Core);
+        if (subset?.Seed != SaveData?.Seed || subset.PlanetData_Dict?.Count != 1 ||
+            !subset.PlanetData_Dict.TryGetValue(expectedWorldKey, out PlanetData planet) || planet == null)
+            throw new InvalidDataException("目标世界元数据的身份或种子不匹配。");
+        planet.Ecology?.EnsureCompatibleVersion();
+        // 区块数据由独立请求发布，元数据抵达不能清除已完成的区块或运行时。
+        if (SaveData.PlanetData_Dict.TryGetValue(expectedWorldKey, out var previous))
         {
-            ChunkSaveRecord record = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(payload);
-            if (record?.PlanetName != snapshot.WorldKey || string.IsNullOrWhiteSpace(record.ChunkName)) throw new InvalidDataException("区块资料越过目标世界边界。");
-            records.Add(record);
+            planet.MapData_Dict = previous.MapData_Dict;
+            planet.RegionalWeatherStates = previous.RegionalWeatherStates;
+            if (planet.Ecology != null && previous.Ecology != null) planet.Ecology.Chunks = previous.Ecology.Chunks;
         }
-        foreach (FrozenEcologyChunkSaveRecord record in snapshot.Ecology)
-            if (record?.WorldKey != snapshot.WorldKey) throw new InvalidDataException("生态资料越过目标世界边界。");
-        foreach (string key in snapshot.Machines.Worlds.Keys)
-            if (key != snapshot.WorldKey) throw new InvalidDataException("机器资料越过目标世界边界。");
-        RestoreEcologyChunks(subset, snapshot.Ecology);
-        GameplayWorldRegistry.TryGetOwnedWorldModel(snapshot.WorldKey, out var previousWorld);
-        if (GameplayWorldRegistry.TryGet(snapshot.WorldKey, out GameplayWorldRuntime runtime))
-        {
-            if (!ChunkManagerBelongsToSnapshotWorld(runtime.Chunks, snapshot.WorldKey, allowUnowned: true))
-                throw new InvalidOperationException("旧场景管理器已属于其他世界，不能替换目标快照。");
-            using (GameplayWorldRegistry.UseWorld(snapshot.WorldKey)) runtime.Chunks?.OnSceneChange();
-        }
-        else if (GameplayWorldRegistry.Worlds.TryGetValue(snapshot.WorldKey, out GameplayWorldRuntime staleRuntime) &&
-                 ChunkManagerBelongsToSnapshotWorld(staleRuntime.Chunks, snapshot.WorldKey))
-            staleRuntime.Chunks?.DetachAfterPresentationSceneUnloaded();
-
-        // 网络快照明确替换旧模型；场景解绑不能把之前的区块数据带入新快照。
-        if (previousWorld != null && !GameplayWorldRegistry.ReleaseOwnedWorldModel(snapshot.WorldKey, previousWorld))
-            throw new InvalidOperationException("目标世界仍被旧区块管理器占用，不能应用网络快照。");
-        MachineWorld.ReleaseNetworkScope(snapshot.WorldKey);
-        worldRestoreStates.Remove(snapshot.WorldKey);
-        parkedWorldStates.Remove(snapshot.WorldKey);
-        SaveData.PlanetData_Dict[snapshot.WorldKey] = planet;
+        SaveData.PlanetData_Dict[expectedWorldKey] = planet;
         SaveData.DimensionStateJson = subset.DimensionStateJson;
-        if (subset.MonsterSpawnerWorlds?.TryGetValue(snapshot.WorldKey, out MonsterSpawnerSaveData spawner) == true)
-            SaveData.MonsterSpawnerWorlds[snapshot.WorldKey] = spawner;
-        SaveData.DayTimeData ??= new DayTimeSaveData();
-        if (subset.DayTimeData?.WorldTimeDict != null)
-            foreach (var pair in subset.DayTimeData.WorldTimeDict) SaveData.DayTimeData.WorldTimeDict[pair.Key] = pair.Value;
-        if (subset.DayTimeData?.SceneLightingRateDict != null)
-            foreach (var pair in subset.DayTimeData.SceneLightingRateDict) SaveData.DayTimeData.SceneLightingRateDict[pair.Key] = pair.Value;
-        SaveData.Mechanical ??= new MachineArchive();
-        SaveData.Mechanical.Worlds[snapshot.WorldKey] = snapshot.Machines.Worlds.TryGetValue(snapshot.WorldKey, out var nodes) ? nodes : new();
-        SaveData.Mechanical.RemovedGenerated[snapshot.WorldKey] = snapshot.Machines.RemovedGenerated.TryGetValue(snapshot.WorldKey, out var removed) ? removed : new();
-        SaveData.DroppedItems ??= new DroppedItemArchive();
-        SaveData.DroppedItems.Worlds[snapshot.WorldKey] = snapshot.Drops;
-        var removeKeys = new List<string>();
-        foreach (var pair in chunkDeltas) if (pair.Value?.PlanetName == snapshot.WorldKey) removeKeys.Add(pair.Key);
-        foreach (string key in removeKeys) chunkDeltas.Remove(key);
-        foreach (ChunkSaveRecord record in records) chunkDeltas[BuildChunkKey(snapshot.WorldKey, record.ChunkName)] = record;
-        return snapshot.WorldKey;
+        SaveData.DayTimeData = subset.DayTimeData ?? SaveData.DayTimeData;
+        return expectedWorldKey;
     }
 
     // 旧注册记录不能停止已经转交给另一个世界的区块管理器。
@@ -208,7 +148,9 @@ public partial class SaveDataMgr
         if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("退役世界身份为空。", nameof(worldKey));
         if (GameplayWorldRegistry.GetWorldItemCount(worldKey) != 0)
             throw new InvalidOperationException("退役世界仍持有物品，不能删除存档差量：" + worldKey);
+        RecordPermanentlyRetiredArchiveWorld(worldKey);
         string prefix = worldKey + "\u001f";
+        RemoveRuntimeWorldDictionaryEntries(chunkDifferenceRevisions, prefix);
         RemoveRuntimeWorldDictionaryEntries(chunkBaselines, prefix);
         RemoveRuntimeWorldDictionaryEntries(chunkDeltas, prefix);
         RemoveRuntimeWorldDictionaryEntries(runtimeChunkBaselines, prefix);
@@ -382,111 +324,7 @@ public partial class SaveDataMgr
     }
     #endregion
 
-    #region 世界生成配置策略
-    private readonly struct EcologyConfigurationBackup
-    {
-        public EcologyConfigurationBackup(EcologyWorldSaveData ecology)
-        {
-            Ecology = ecology;
-            DataVersion = ecology.DataVersion;
-            ProfileId = ecology.ProfileId;
-            ConfigurationFingerprint = ecology.ConfigurationFingerprint;
-            GlobalMultiplier = ecology.GlobalMultiplier;
-            Rules = ecology.Rules;
-            Generation = ecology.Generation;
-        }
 
-        public EcologyWorldSaveData Ecology { get; }
-        public int DataVersion { get; }
-        public string ProfileId { get; }
-        public ulong ConfigurationFingerprint { get; }
-        public double GlobalMultiplier { get; }
-        public List<EcologyRuleSaveData> Rules { get; }
-        public WorldGenerationProfileSaveData Generation { get; }
-    }
-
-    /// <summary>修改当前已加载存档的生成配置冻结模式，并立即原子写回磁盘。</summary>
-    public bool TrySetWorldGenerationConfigurationFrozen(bool frozen)
-    {
-        if (SaveData == null || string.IsNullOrWhiteSpace(SaveData.saveName))
-        {
-            UnityEngine.Debug.LogWarning("[SaveDataMgr] 当前没有可修改生成配置模式的存档。");
-            return false;
-        }
-
-        WorldGenerationConfigurationMode targetMode = frozen
-            ? WorldGenerationConfigurationMode.Frozen
-            : WorldGenerationConfigurationMode.FollowCurrent;
-        if (SaveData.WorldGenerationConfigMode == targetMode)
-            return true;
-
-        WorldGenerationConfigurationMode previousMode = SaveData.WorldGenerationConfigMode;
-        var backups = new List<EcologyConfigurationBackup>();
-
-        try
-        {
-            SaveData.WorldGenerationConfigMode = targetMode;
-            if (!frozen)
-                ClearFrozenWorldGenerationConfiguration(backups);
-
-            if (SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
-                return true;
-
-            RestoreFrozenWorldGenerationConfiguration(previousMode, backups);
-            return false;
-        }
-        catch (Exception exception)
-        {
-            RestoreFrozenWorldGenerationConfiguration(previousMode, backups);
-            UnityEngine.Debug.LogError($"[SaveDataMgr] 修改世界生成配置模式失败：{exception.Message}");
-            UnityEngine.Debug.LogException(exception);
-            return false;
-        }
-    }
-
-    /// <summary>清除所有维度的冻结快照，但不触碰生态区块差量。</summary>
-    private void ClearFrozenWorldGenerationConfiguration(
-        List<EcologyConfigurationBackup> backups)
-    {
-        if (SaveData?.PlanetData_Dict == null)
-            return;
-
-        foreach (PlanetData planet in SaveData.PlanetData_Dict.Values)
-        {
-            EcologyWorldSaveData ecology = planet?.Ecology;
-            if (ecology == null)
-                continue;
-
-            backups.Add(new EcologyConfigurationBackup(ecology));
-            ecology.ClearFrozenConfiguration();
-        }
-    }
-
-    /// <summary>写盘失败时恢复本次修改前的冻结配置引用与模式。</summary>
-    private void RestoreFrozenWorldGenerationConfiguration(
-        WorldGenerationConfigurationMode previousMode,
-        List<EcologyConfigurationBackup> backups)
-    {
-        if (SaveData == null)
-            return;
-
-        SaveData.WorldGenerationConfigMode = previousMode;
-        for (int i = 0; i < backups.Count; i++)
-        {
-            EcologyConfigurationBackup backup = backups[i];
-            EcologyWorldSaveData ecology = backup.Ecology;
-            if (ecology == null)
-                continue;
-
-            ecology.DataVersion = backup.DataVersion;
-            ecology.ProfileId = backup.ProfileId;
-            ecology.ConfigurationFingerprint = backup.ConfigurationFingerprint;
-            ecology.GlobalMultiplier = backup.GlobalMultiplier;
-            ecology.Rules = backup.Rules;
-            ecology.Generation = backup.Generation;
-        }
-    }
-    #endregion
 }
 
 [MemoryPackable]

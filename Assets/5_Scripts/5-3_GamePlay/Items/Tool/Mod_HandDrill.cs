@@ -9,15 +9,15 @@ using UnityEngine;
 /// 手钻独立运行态：加工进度与钻头材质耐久一起保存。
 /// 该状态属于共享“手钻模块”，因此便携载体与落地建筑互转时不会丢失制作质量。
 /// </summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class HandDrillRuntimeState
 {
     public const int CurrentVersion = 1;
-    public int Version = CurrentVersion;
-    public RecipeProcessingState Processing = new();
-    public string BitMaterialId = string.Empty;
-    public float Durability;
-    public float MaxDurability;
+    [MemoryPackOrder(0)] public int Version = CurrentVersion;
+    [MemoryPackOrder(1)] public RecipeProcessingState Processing = new();
+    [MemoryPackOrder(2)] public string BitMaterialId = string.Empty;
+    [MemoryPackOrder(3)] public float Durability;
+    [MemoryPackOrder(4)] public float MaxDurability;
 }
 
 /// <summary>便携手钻：每次钻孔动作增加一秒工作量，默认四次完成；输入、输出和进度通过共享模块随放置、拆回与存档迁移。</summary>

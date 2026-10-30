@@ -535,19 +535,19 @@ public class Mod_LightSource : Module, ICombustionStateReceiver
     }
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class LightSourceData
 {
     [Tooltip("是否开启光源")]
-    public bool IsEnabled = true;
+    [MemoryPackOrder(0)] public bool IsEnabled = true;
 
     [Tooltip("光照强度；同时驱动 Unity Light2D.intensity 和地块光照层")]
-    public float Intensity = 1f;
+    [MemoryPackOrder(1)] public float Intensity = 1f;
 
     [Tooltip("光照外半径；同时驱动 Point Light2D.pointLightOuterRadius")]
-    public float Range = 8f;
+    [MemoryPackOrder(2)] public float Range = 8f;
 
     [Tooltip("光照内半径，内半径内保持最大强度")]
-    public float InnerRadius = 0.1f;
+    [MemoryPackOrder(3)] public float InnerRadius = 0.1f;
 }

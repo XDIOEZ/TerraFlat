@@ -24,12 +24,14 @@ public partial class SaveDataMgr
     private ChunkSaveRecord GetRuntimeChunkRecord(string planet, RuntimeWorldAddress address, bool create)
     {
         var origin = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y);
-        if (TryGetChunkDelta(planet, origin, out var record))
+        string key = GetCachedChunkDifferenceKey(planet, origin);
+        if (create) MarkChunkDifferenceChanged(key);
+        if (chunkDeltas.TryGetValue(key, out var record))
             return record;
         if (!create)
             return null;
         record = CreateRuntimeChunkDelta(planet, address);
-        chunkDeltas.Add(BuildChunkKey(planet, ToChunkName(address)), record);
+        chunkDeltas.Add(key, record);
         return record;
     }
 
@@ -248,6 +250,7 @@ public partial class SaveDataMgr
         TerrainCell baselineCell,
         float baselineAccumulatedDamage)
     {
+        MarkChunkDifferenceChanged(key);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
             delta = CreateRuntimeChunkDelta(planetName, address);
 
@@ -275,6 +278,7 @@ public partial class SaveDataMgr
         ChunkRuntime chunk,
         RuntimeChunkBaseline baseline)
     {
+        MarkChunkDifferenceChanged(key);
         ChunkTerrainData terrain = chunk.Terrain;
         chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta);
 

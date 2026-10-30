@@ -148,15 +148,15 @@ public partial class CombatDamage
 /// 单一物理防御；旧四槽取最大值兼容，避免等值旧护甲被累加四次。
 /// </summary>
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class CombatDefense
 {
     private static readonly CombatDefense Empty = new CombatDefense();
 
-    [HideInInspector] public float Cutting;
-    [HideInInspector] public float Piercing;
-    [HideInInspector] public float Chopping;
-    [HideInInspector] public float Blunt;
+    [HideInInspector, MemoryPackOrder(0)] public float Cutting;
+    [HideInInspector, MemoryPackOrder(1)] public float Piercing;
+    [HideInInspector, MemoryPackOrder(2)] public float Chopping;
+    [HideInInspector, MemoryPackOrder(3)] public float Blunt;
 
     #region 物理防御配置与旧存档兼容
     [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("物理防御"), MinValue(0f)]

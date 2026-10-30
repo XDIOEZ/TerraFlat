@@ -218,6 +218,7 @@ public partial class SaveDataMgr
         var origin = new Vector2Int(x, y);
         if (WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)) origin = bounds.NormalizeChunkOrigin(origin);
         string key = BuildChunkKey(planet.Name, origin.ToString());
+        MarkChunkDifferenceChanged(key);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
             chunkDeltas[key] = record = CreateRuntimeChunkDelta(planet.Name, new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, new Int2(origin.x, origin.y)));
         record.ChangedItems ??= new List<ItemData>(); record.RemovedItemGuids ??= new List<int>();

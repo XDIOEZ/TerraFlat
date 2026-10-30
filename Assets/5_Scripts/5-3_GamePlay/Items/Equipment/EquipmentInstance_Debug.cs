@@ -4,12 +4,12 @@ using MemoryPack;
 using UnityEngine;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_Debug : EquipmentInstance
 {   
-    public string DebugInfo_Load = "This is a Bag Equipment Instance";
-    public string DebugInfo_Save = "Saving Bag Equipment Instance";
-    public string DebugInfo_Update = "Bag Equipment Instance";
+    [MemoryPackOrder(1)] public string DebugInfo_Load = "This is a Bag Equipment Instance";
+    [MemoryPackOrder(2)] public string DebugInfo_Save = "Saving Bag Equipment Instance";
+    [MemoryPackOrder(3)] public string DebugInfo_Update = "Bag Equipment Instance";
 
     public override bool RequiresUpdate => true;
 

@@ -58,6 +58,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     private readonly List<string> playerNameBuffer = new List<string>();
     private readonly Dictionary<string, System.DateTime> saveExitTimes =
         new Dictionary<string, System.DateTime>(System.StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> saveArchivePaths = new(System.StringComparer.OrdinalIgnoreCase);
     private readonly System.Diagnostics.Stopwatch rowWorkTimer = new System.Diagnostics.Stopwatch();
     private int rowWorkFrame = -1;
     private int preparedRowsThisFrame;
@@ -147,6 +148,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         saves.Clear();
         saveExitTimes.Clear();
+        saveArchivePaths.Clear();
 
         if (!Directory.Exists(PathToSaveFolder))
         {
@@ -154,12 +156,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
         }
 
-        List<SaveSelectionFileCatalog.Entry> entries = SaveSelectionFileCatalog.Load(
-            Directory.GetFiles(PathToSaveFolder, "*.bytes"), SaveDataMgr.GetLastExitTimeUtc);
-        foreach (SaveSelectionFileCatalog.Entry entry in entries)
+        var entries = SaveDataMgr.ReadSqliteSaveCatalog(PathToSaveFolder);
+        foreach (var entry in entries)
         {
             saves.Add(entry.Name);
             saveExitTimes[entry.Name] = entry.LastExitTimeUtc;
+            saveArchivePaths[entry.Name] = entry.Path;
         }
     }
     #endregion
@@ -195,7 +197,6 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             saveStructureChanged,
             playerStructureChanged,
             createdRow);
-        ResetWorldGenerationFreezeToggle();
     }
 
     /// <summary>
@@ -533,7 +534,6 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         ClearSelectedRow(ref selectedSaveRow);
         ClearSaveSelectionVisuals();
         ClearSelectedRow(ref selectedPlayerRow);
-        ResetWorldGenerationFreezeToggle();
         bool playerStructureChanged = ReleaseRows(playerRows);
         UpdateDeleteUi();
         CommitDynamicListChanges(false, playerStructureChanged, false);
@@ -682,10 +682,6 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (playerNameInput != null)
             playerNameInput.interactable = !isBatchDeleteMode && !deleteConfirmationOpen;
 
-        Toggle generationFreezeToggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
-        if (deleteConfirmationOpen && generationFreezeToggle != null)
-            generationFreezeToggle.interactable = false;
-
         if (isBatchDeleteMode)
         {
             panel.SetText(
@@ -726,11 +722,6 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
                     1,
                     pendingSingleDeleteSaveName));
         }
-        else if (!isBatchDeleteMode && !string.IsNullOrWhiteSpace(selectedSaveRow?.Value))
-        {
-            RefreshWorldGenerationFreezeToggle(selectedSaveRow.Value);
-        }
-
         panel.RefreshGamepadNavigationState();
     }
 
@@ -799,7 +790,6 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
         ClearSelectedSaveTime(panel);
         panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, string.Empty);
-        ResetWorldGenerationFreezeToggle(panel);
 
         Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
@@ -813,72 +803,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     }
     #endregion
 
-    #region 世界生成配置
 
-    /// <summary>按当前成功载入的存档刷新“冻结世界生成规则”开关。</summary>
-    public void RefreshWorldGenerationFreezeToggle(string saveName)
-    {
-        if (!TryGetSavePanel(out BasePanel panel))
-            return;
-
-        Toggle toggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
-        if (toggle == null)
-            return;
-
-        saveAndLoad ??= SaveDataMgr.Instance;
-        GameSaveData saveData = saveAndLoad?.SaveData;
-        bool validSelection = selectedSaveRow != null && saveData != null &&
-                              string.Equals(selectedSaveRow.Value, saveName,
-                                  System.StringComparison.OrdinalIgnoreCase) &&
-                              string.Equals(saveData.saveName, saveName,
-                                  System.StringComparison.OrdinalIgnoreCase);
-        toggle.interactable = validSelection;
-        toggle.SetIsOnWithoutNotify(
-            !validSelection || saveData.UsesFrozenWorldGenerationConfiguration);
-        RefreshGamepadNavigation(panel, false);
-    }
-
-    /// <summary>玩家切换冻结模式时立即更新当前存档；写盘失败则恢复 UI 原值。</summary>
-    public void OnWorldGenerationFreezeToggleChanged(bool frozen)
-    {
-        if (!TryGetSavePanel(out BasePanel panel))
-            return;
-
-        Toggle toggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
-        saveAndLoad ??= SaveDataMgr.Instance;
-        GameSaveData saveData = saveAndLoad?.SaveData;
-        bool validSelection = selectedSaveRow != null && saveData != null &&
-                              string.Equals(saveData.saveName, selectedSaveRow.Value,
-                                  System.StringComparison.OrdinalIgnoreCase);
-        if (toggle == null || !validSelection)
-        {
-            ResetWorldGenerationFreezeToggle(panel);
-            return;
-        }
-
-        bool previousValue = saveData.UsesFrozenWorldGenerationConfiguration;
-        if (saveAndLoad.TrySetWorldGenerationConfigurationFrozen(frozen))
-            return;
-
-        toggle.SetIsOnWithoutNotify(previousValue);
-        Debug.LogWarning("[SaveDataManager_UI] 世界生成配置模式写入失败，已恢复开关状态。");
-    }
-
-    /// <summary>没有有效存档选择时禁用生成配置开关，并显示安全的默认冻结状态。</summary>
-    private void ResetWorldGenerationFreezeToggle(BasePanel panel = null)
-    {
-        if (panel == null && !TryGetSavePanel(out panel))
-            return;
-
-        Toggle toggle = panel?.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
-        if (toggle == null)
-            return;
-
-        toggle.SetIsOnWithoutNotify(true);
-        toggle.interactable = false;
-    }
-
-    #endregion
 
     #region 存档时间
 
@@ -1217,7 +1142,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         {
             row.Info.Name = row.Value;
             row.Info.Path = isSave
-                ? Path.Combine(PathToSaveFolder, row.Value + ".bytes")
+                ? saveArchivePaths.GetValueOrDefault(row.Value, string.Empty)
                 : string.Empty;
         }
 

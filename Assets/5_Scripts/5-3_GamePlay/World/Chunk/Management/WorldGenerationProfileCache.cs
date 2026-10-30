@@ -9,17 +9,17 @@ internal sealed class WorldGenerationProfileCache
     internal readonly struct Inputs
     {
         public Inputs(PlanetData planet, object save, object catalog, object resources, int resourceVersion,
-            object naturalCatalog, DimensionDefinition definition, int seed, bool frozen, bool authority)
+            object naturalCatalog, DimensionDefinition definition, int seed, bool authority)
         {
             Planet = planet; Save = save; Catalog = catalog; Resources = resources;
             ResourceVersion = resourceVersion; NaturalCatalog = naturalCatalog; Definition = definition;
-            Seed = seed; Frozen = frozen; Authority = authority;
+            Seed = seed; Authority = authority;
         }
         public readonly PlanetData Planet;
         public readonly object Save, Catalog, Resources, NaturalCatalog;
         public readonly DimensionDefinition Definition;
         public readonly int ResourceVersion, Seed;
-        public readonly bool Frozen, Authority;
+        public readonly bool Authority;
     }
 
     private Inputs inputs;
@@ -43,7 +43,7 @@ internal sealed class WorldGenerationProfileCache
             !ReferenceEquals(inputs.Resources, current.Resources) ||
             !ReferenceEquals(inputs.NaturalCatalog, current.NaturalCatalog) ||
             !ReferenceEquals(inputs.Definition, definition) || inputs.ResourceVersion != current.ResourceVersion ||
-            inputs.Seed != current.Seed || inputs.Frozen != current.Frozen || inputs.Authority != current.Authority ||
+            inputs.Seed != current.Seed || inputs.Authority != current.Authority ||
             worldName != planet.Name || preset != planet.GenerationPresetId ||
             chunkWidth != planet.ChunkSize.x || chunkHeight != planet.ChunkSize.y ||
             !spatialScale.Equals(planet.SpatialDistanceScale) ||
@@ -51,7 +51,7 @@ internal sealed class WorldGenerationProfileCache
             portalItem != definition?.PortalItemId || portalTarget != definition?.PortalTargetDimensionId ||
             !SameValues(numbers, planet.GenerationNumericOverrides) ||
             !SameValues(texts, planet.GenerationTextOverrides) ||
-            (current.Frozen && !frozenConfiguration.Matches(planet.Ecology))) return false;
+            !frozenConfiguration.Matches(planet.Ecology)) return false;
         result = profile; currentTileCatalog = tileCatalog;
         return true;
     }
@@ -68,7 +68,7 @@ internal sealed class WorldGenerationProfileCache
         portalItem = current.Definition?.PortalItemId; portalTarget = current.Definition?.PortalTargetDimensionId;
         numbers = CopyValues(planet.GenerationNumericOverrides);
         texts = CopyValues(planet.GenerationTextOverrides);
-        frozenConfiguration = current.Frozen ? new FrozenConfigurationSnapshot(planet.Ecology) : null;
+        frozenConfiguration = new FrozenConfigurationSnapshot(planet.Ecology);
         profile = result; tileCatalog = currentTileCatalog;
     }
 

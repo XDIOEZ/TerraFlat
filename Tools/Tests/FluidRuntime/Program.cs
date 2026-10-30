@@ -75,6 +75,23 @@ public static class Program
         var binary = MemoryPackSerializer.Serialize(inventory.State);
         var restored = MemoryPackSerializer.Deserialize<FluidInventoryState>(binary);
         Check(binary[0] == 4 && restored.Components.Count == 1 && restored.Ports.Count == 1, "MemoryPack persists only four payload members");
+        var exact = new FluidInventoryState
+        {
+            Components = new List<FluidComponentState> { new FluidComponentState
+                { FluidId = "test:a", GasMoles = 1.234567890123456789m, LiquidMoles = 0.0000000000000000001m } },
+            Ports = new List<FluidOutputReservation> { new FluidOutputReservation
+                { PortId = "port", FluidId = "test:a", GasMoles = .0000000000000000001m, LiquidMoles = 1.00000000000001m } }
+        };
+        var oldCulture = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+        try
+        {
+            var exactRestored = MemoryPackSerializer.Deserialize<FluidInventoryState>(MemoryPackSerializer.Serialize(exact));
+            Check(exactRestored.Components[0].GasMoles == 1.234567890123456789m &&
+                exactRestored.Components[0].LiquidMoles == .0000000000000000001m &&
+                exactRestored.Ports[0].LiquidMoles == 1.00000000000001m, "decimal payload remains exact across locale");
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = oldCulture; }
         int originalEvents = events;
         var cloned = FastCloner.FastCloner.DeepClone(inventory.State);
         _ = cloned.MassRevision; cloned.Components[0].GasMoles += 1;

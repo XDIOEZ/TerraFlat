@@ -213,8 +213,6 @@ internal static class Program
         Invalidates(() => planet.Ecology.Generation.TextParameters[0].Value = "changed", "frozen text value");
         Invalidates(() => planet.Ecology.Generation.CaveResourceRules[0].NoiseOffset++, "frozen mineral");
         Invalidates(() => planet.Ecology.Rules[0].ProvidedTags[0] = "other", "frozen ecology tags");
-        Invalidates(() => SaveDataMgr.Instance.SaveData.UsesFrozenWorldGenerationConfiguration = false, "frozen mode off");
-        Invalidates(() => SaveDataMgr.Instance.SaveData.UsesFrozenWorldGenerationConfiguration = true, "frozen mode on");
         Invalidates(() => planet.Ecology = new EcologyWorldSaveData(), "frozen object replaced");
         Invalidates(() => SaveDataMgr.Instance.SaveData = new GameSaveData(), "save replaced");
         Invalidates(() => planet = new PlanetData(), "same-name world replaced");

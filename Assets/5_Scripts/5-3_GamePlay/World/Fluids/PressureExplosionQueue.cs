@@ -61,6 +61,7 @@ public static class PressureExplosionQueue
     #region 事件入队与有限曲线
     public static event Action<PressureExplosionEvent, float> Presented;
     public static Func<PressureExplosionEvent, float, float, bool> WorldHandler;
+    public static Func<PressureExplosionEvent, float, bool> WorldReady;
     public static Action<PressureExplosionEvent> SnapshotHandler;
     public static Func<PressureExplosionEvent, float, bool> PresentationHandler;
     public const double HydrogenOxygenEnergyJoulesPerOxygenMol = 483600d;
@@ -167,10 +168,15 @@ public static class PressureExplosionQueue
             int index = archive.PressureExplosions.FindIndex(value => value.WorldKey == world);
             if (index < 0) break;
             PressureExplosionEvent entry = archive.PressureExplosions[index];
+            float radius = Radius(entry.Intensity), peak = CenterDamage(entry.Intensity);
+            if (WorldReady?.Invoke(entry, radius) == false ||
+                WorldAddress.FromWorldKey(entry.WorldKey).IsSurface &&
+                SaveDataMgr.Instance.SaveData.PlanetData_Dict.ContainsKey(entry.WorldKey) && radius > 0f && peak > 0f &&
+                FlatWorld.Spaceflight.SpaceSurfaceQuery.EnsureSurfaceAreaReady(entry.WorldKey, entry.Center, radius) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending)
+                break;
             archive.PressureExplosions.RemoveAt(index);
             archive.RecentPressureExplosionSources.Add(entry.SourceId);
             if (archive.RecentPressureExplosionSources.Count > 4096) archive.RecentPressureExplosionSources.RemoveAt(0);
-            float radius = Radius(entry.Intensity), peak = CenterDamage(entry.Intensity);
             bool handled = WorldHandler?.Invoke(entry, radius, peak) == true;
             if (!handled) ReleaseMaterials(entry, entry.WorldKey, entry.Center);
             if (!handled && radius > 0f && peak > 0f)
@@ -254,11 +260,15 @@ public static class PressureExplosionQueue
             while (spillCellsThisFrame < SpillCellChecksPerFrame && CanAdvanceLiquidSpill(spill) &&
                    FluidUnits.MolToLiquidLiters(definition, spill.LiquidMoles) >= FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit)
             {
-                int index = spill.NextCellIndex++;
-                spillCellsThisFrame++;
+                int index = spill.NextCellIndex;
                 Vector2Int offset = SpiralCell(index);
                 Vector2 point = index == 0 ? spill.Center : new Vector2(Mathf.Floor(spill.Center.x) + offset.x + .5f,
                     Mathf.Floor(spill.Center.y) + offset.y + .5f);
+                if (WorldAddress.FromWorldKey(spill.WorldKey).IsSurface &&
+                    FlatWorld.Spaceflight.SpaceSurfaceQuery.QueryLandingSurface(spill.WorldKey, point, out _) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending)
+                    break;
+                spill.NextCellIndex++;
+                spillCellsThisFrame++;
                 decimal liters = FluidUnits.MolToLiquidLiters(definition, spill.LiquidMoles);
                 int level = (int)Math.Min(FlatWorld.WorldModel.LiquidCellValue.MaximumLevel,
                     decimal.Floor(liters / FlatWorld.WorldModel.LiquidCellValue.LitersPerUnit));

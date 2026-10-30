@@ -3,6 +3,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using CompressionLevel = System.IO.Compression.CompressionLevel;
 using System.Linq;
 using FlatWorld.Networking.MirrorAdapter;
 using FlatWorld.Spaceflight;
@@ -21,6 +24,9 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<int, NetworkProtocolHello> clientProtocolHellos = new Dictionary<int, NetworkProtocolHello>();
         private readonly HashSet<int> pendingPlayerSpawns = new HashSet<int>();
         private readonly Dictionary<int, NetworkConnectionToClient> worldReadyConnections = new();
+        private readonly Dictionary<int, (NetworkConnectionToClient Connection, string World, int Transfer)> pendingBootstrapChunks = new();
+        internal int ClientBootstrapTransfer { get; private set; }
+        internal string ClientBootstrapWorld { get; private set; }
         private string localPlayerName = NewWorldCreationRequest.CreateRandomPlayerName();
         private string currentPlanetName;
         private Coroutine worldEnterCoroutine;
@@ -242,6 +248,7 @@ namespace FlatWorld.Networking.Gameplay
                 clientProtocolHellos.Remove(connection.connectionId);
                 pendingPlayerSpawns.Remove(connection.connectionId);
                 worldReadyConnections.Remove(connection.connectionId);
+                pendingBootstrapChunks.Remove(connection.connectionId);
             }
             base.OnServerDisconnect(connection);
             SetGameplayStatus("玩家已断开（当前 {0} 人）", NetworkServer.connections.Count);
@@ -257,6 +264,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkWorldSnapshotBegin>();
             NetworkClient.UnregisterHandler<NetworkWorldSnapshotChunk>();
             incomingWorldSnapshot = null;
+            ClientBootstrapTransfer = 0;
+            ClientBootstrapWorld = null;
             if (itemStateCoordinator != null)
                 itemStateCoordinator.StopClientSide();
             if (weatherStateCoordinator != null)
@@ -290,6 +299,7 @@ namespace FlatWorld.Networking.Gameplay
             clientProtocolHellos.Clear();
             pendingPlayerSpawns.Clear();
             worldReadyConnections.Clear();
+            pendingBootstrapChunks.Clear();
             base.OnStopServer();
             SetGameplayStatus("服务器已停止");
         }
@@ -361,7 +371,6 @@ namespace FlatWorld.Networking.Gameplay
 
             string playerName = MakeUniquePlayerName(SanitizePlayerName(request.PlayerName), connection.connectionId);
 
-            CaptureLoadedChunks();
             ItemMgr.Instance.SavePlayer();
             SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.GetInstance().GetSaveData();
             SpaceSession.Capture(SaveDataMgr.Instance?.SaveData);
@@ -369,7 +378,7 @@ namespace FlatWorld.Networking.Gameplay
             PlanetData synchronizedPlanet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[planetName];
             NormalizeGenerationSettings(synchronizedPlanet);
             ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
-            byte[] snapshot = SaveDataMgr.Instance.CreateCompressedNetworkSnapshot();
+            byte[] snapshot = CompressBootstrapSnapshot(SaveDataMgr.Instance.CaptureNetworkBootstrapSnapshot(playerName, planetName));
             LastSnapshotBytes = snapshot.Length;
             uint generationSettingsHash = NetworkMapGenerationProtocol.CalculateSettingsHash(
                 SaveDataMgr.Instance.SaveData.Seed,
@@ -389,6 +398,7 @@ namespace FlatWorld.Networking.Gameplay
             int chunkCount = Mathf.CeilToInt(snapshot.Length / (float)NetworkGameplayProtocol.SnapshotChunkBytes);
             // 快照准备成功后再占用 Join 名额，避免打包异常让本连接无法重试。
             pendingPlayerNames[connection.connectionId] = playerName;
+            pendingBootstrapChunks[connection.connectionId] = (connection, planetName, transferId);
             connection.Send(new NetworkWorldSnapshotBegin
             {
                 TransferId = transferId,
@@ -470,6 +480,7 @@ namespace FlatWorld.Networking.Gameplay
                 LastReceivedTime = Time.unscaledTime,
                 Metadata = new NetworkWorldSnapshot
                 {
+                    TransferId = begin.TransferId,
                     PlanetName = begin.PlanetName,
                     Seed = begin.Seed,
                     GenerationProtocol = begin.GenerationProtocol,
@@ -590,6 +601,9 @@ namespace FlatWorld.Networking.Gameplay
             if (!TryApplySynchronizedSnapshot(snapshot))
                 yield break;
 
+            ClientBootstrapTransfer = snapshot.TransferId;
+            ClientBootstrapWorld = snapshot.PlanetName;
+
             SaveDataMgr.Instance.CurrentContrrolPlayerName = localPlayerName;
             currentPlanetName = snapshot.PlanetName;
             LastSnapshotBytes = snapshot.CompressedSaveData?.Length ?? 0;
@@ -625,7 +639,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             try
             {
-                SaveDataMgr.Instance.ApplyCompressedNetworkSnapshot(snapshot.CompressedSaveData);
+                SaveDataMgr.Instance.ApplyNetworkBootstrapSnapshot(ExpandBootstrapSnapshot(snapshot.CompressedSaveData));
                 RepairSynchronizedPlanet(snapshot);
                 return true;
             }
@@ -667,6 +681,40 @@ namespace FlatWorld.Networking.Gameplay
             connection != null && connection.isAuthenticated &&
             NetworkServer.connections.TryGetValue(connection.connectionId, out NetworkConnectionToClient current) &&
             ReferenceEquals(current, connection);
+
+        internal bool IsAuthorizedBootstrapChunkRequest(NetworkConnectionToClient connection, string worldKey, int transfer, Vector2Int origin)
+        {
+            if (transfer == 0 || !IsCurrentAuthenticatedConnection(connection) ||
+                !pendingBootstrapChunks.TryGetValue(connection.connectionId, out var pending) ||
+                !ReferenceEquals(connection, pending.Connection) || pending.Transfer != transfer || pending.World != worldKey ||
+                !pendingPlayerNames.TryGetValue(connection.connectionId, out string playerName)) return false;
+            int playerIndex = NetworkServer.connections.Values.Count(value => value?.identity != null);
+            return TryResolvePlayerLandSpawnPosition(playerName, playerIndex, out Vector3 spawn) &&
+                NetworkItemStateCoordinator.IsChunkInsideObserverWindow(worldKey, origin, spawn, 32);
+        }
+
+        private static byte[] CompressBootstrapSnapshot(byte[] raw)
+        {
+            using var output = new MemoryStream();
+            using (var gzip = new GZipStream(output, CompressionLevel.Fastest, true)) gzip.Write(raw, 0, raw.Length);
+            return output.ToArray();
+        }
+
+        private static byte[] ExpandBootstrapSnapshot(byte[] compressed)
+        {
+            using var source = new MemoryStream(compressed, false);
+            using var gzip = new GZipStream(source, CompressionMode.Decompress);
+            using var output = new MemoryStream();
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = gzip.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                if (output.Length + count > NetworkGameplayProtocol.MaxSnapshotBytes)
+                    throw new InvalidDataException("世界资料解压后超过大小限制。");
+                output.Write(buffer, 0, count);
+            }
+            return output.ToArray();
+        }
         #endregion
 
         private void CaptureLoadedChunks()

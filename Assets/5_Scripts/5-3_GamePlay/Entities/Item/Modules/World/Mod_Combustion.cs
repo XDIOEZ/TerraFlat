@@ -9,13 +9,13 @@ using UnityEngine.SceneManagement;
 /// 通用燃烧状态。燃料数量由 Mod_Fuel 独立保存，本模块只保存是否燃烧和世界时间基线。
 /// 字段顺序保持与旧可燃光源状态一致，便于现有存档迁移。
 /// </summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class CombustionState
 {
-    public bool IsBurning = true;
-    public string ClockId;
-    public float LastWorldTime;
-    public bool HasWorldTimeBaseline;
+    [MemoryPackOrder(0)] public bool IsBurning = true;
+    [MemoryPackOrder(1)] public string ClockId;
+    [MemoryPackOrder(2)] public float LastWorldTime;
+    [MemoryPackOrder(3)] public bool HasWorldTimeBaseline;
 }
 
 /// <summary>

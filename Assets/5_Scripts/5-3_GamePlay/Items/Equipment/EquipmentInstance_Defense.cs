@@ -4,20 +4,20 @@ using System.Linq;
 using System.Collections.Generic;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_Defense : EquipmentInstance
 {
     [HideInInspector]
-    public float DefenseBonusIncrease = 0f;
+    [MemoryPackOrder(1)] public float DefenseBonusIncrease = 0f;
 
     [MemoryPackIgnore]
     private bool _isApplied = false;
 
     // MemoryPack 兼容：新字段只追加在旧 DefenseBonusIncrease 后面。
-    public CombatDefense DefenseBonus = new CombatDefense();
+    [MemoryPackOrder(2)] public CombatDefense DefenseBonus = new CombatDefense();
 
     // 追加字段保持旧数据布局；空数组保留旧装备的全身覆盖语义。
-    public BodyPartType[] CoveredParts = new BodyPartType[0];
+    [MemoryPackOrder(3)] public BodyPartType[] CoveredParts = new BodyPartType[0];
 
     [MemoryPackIgnore] private Mod_DamageReceiver appliedReceiver;
     [MemoryPackIgnore] private CombatDefense appliedDefense;

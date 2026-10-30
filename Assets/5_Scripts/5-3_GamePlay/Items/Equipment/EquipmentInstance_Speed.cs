@@ -4,10 +4,10 @@ using MemoryPack;
 using UnityEngine;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_Speed : EquipmentInstance
 {
-    public float SpeedIncrease = 0f;
+    [MemoryPackOrder(1)] public float SpeedIncrease = 0f;
 
     [MemoryPackIgnore]
     private bool _isApplied = false;

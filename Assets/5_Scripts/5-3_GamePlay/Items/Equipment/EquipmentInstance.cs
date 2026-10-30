@@ -13,7 +13,7 @@ using MemoryPack;
 [MemoryPackUnion(7, typeof(EquipmentInstance_SpacesuitSupport))]
 public abstract partial class EquipmentInstance
 {
-    public string Name;
+    [MemoryPackOrder(0)] public string Name;
     [MemoryPackIgnore]
     public ItemData EquippedItem { get; private set; }
     public void BindEquippedItem(ItemData itemData) => EquippedItem = itemData;

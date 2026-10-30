@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -890,29 +890,29 @@ public void LoadFromSaveData(DayTimeSaveData saveData)
 }
 
 // 可序列化的 TimeData 版本，用于 MemoryPack 序列化
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SerializableTimeData
 {
-    public float CurrentTime;
-    public float RotationPeriodSeconds;
-    public float OrbitalPeriodSeconds;
-    public float AxialTiltDegrees;
-    public float OrbitalEccentricity;
-    public SerializableKeyframe[] LightParamsKeys;
-    public float TimeScaleModifier;
-    public string ReferenceScene;
-    public int TotalDays;
-    public SerializableGradient DayNightGradient;
-    public string TimeSystemProfileId;
-    public string TimeSystemMode;
-    public float TimeLimitTotalGameTime;
-    public float LunarCycleDays;
-    public float NewMoonNightIntensity;
-    public float FullMoonNightIntensity;
-    public float InitialMoonPhase;
-    public SeasonCycleSettings Seasons; // 当前世界的四季参数
-    public double OrbitalOffsetSeconds; // 年份与公转共同使用的秒制起点
-    public List<SeasonCalendarHistoryEntry> SeasonHistory; // 改季长前的历史，供离开区块后的补算读取。
+    [MemoryPack.MemoryPackOrder(1)] public float CurrentTime;
+    [MemoryPack.MemoryPackOrder(12)] public float RotationPeriodSeconds;
+    [MemoryPack.MemoryPackOrder(10)] public float OrbitalPeriodSeconds;
+    [MemoryPack.MemoryPackOrder(0)] public float AxialTiltDegrees;
+    [MemoryPack.MemoryPackOrder(8)] public float OrbitalEccentricity;
+    [MemoryPack.MemoryPackOrder(5)] public SerializableKeyframe[] LightParamsKeys;
+    [MemoryPack.MemoryPackOrder(16)] public float TimeScaleModifier;
+    [MemoryPack.MemoryPackOrder(11)] public string ReferenceScene;
+    [MemoryPack.MemoryPackOrder(19)] public int TotalDays;
+    [MemoryPack.MemoryPackOrder(2)] public SerializableGradient DayNightGradient;
+    [MemoryPack.MemoryPackOrder(18)] public string TimeSystemProfileId;
+    [MemoryPack.MemoryPackOrder(17)] public string TimeSystemMode;
+    [MemoryPack.MemoryPackOrder(15)] public float TimeLimitTotalGameTime;
+    [MemoryPack.MemoryPackOrder(6)] public float LunarCycleDays;
+    [MemoryPack.MemoryPackOrder(7)] public float NewMoonNightIntensity;
+    [MemoryPack.MemoryPackOrder(3)] public float FullMoonNightIntensity;
+    [MemoryPack.MemoryPackOrder(4)] public float InitialMoonPhase;
+    [MemoryPack.MemoryPackOrder(14)] public SeasonCycleSettings Seasons; // 当前世界的四季参数
+    [MemoryPack.MemoryPackOrder(9)] public double OrbitalOffsetSeconds; // 年份与公转共同使用的秒制起点
+    [MemoryPack.MemoryPackOrder(13)] public List<SeasonCalendarHistoryEntry> SeasonHistory; // 改季长前的历史，供离开区块后的补算读取。
 
     [MemoryPackConstructor]
     public SerializableTimeData(float currentTime,
@@ -1042,13 +1042,13 @@ public partial class SerializableTimeData
     }
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SerializableKeyframe
 {
-    public float time;
-    public float value;
-    public float inTangent;
-    public float outTangent;
+    [MemoryPack.MemoryPackOrder(2)] public float time;
+    [MemoryPack.MemoryPackOrder(3)] public float value;
+    [MemoryPack.MemoryPackOrder(0)] public float inTangent;
+    [MemoryPack.MemoryPackOrder(1)] public float outTangent;
     
     public SerializableKeyframe() { }
     
@@ -1075,11 +1075,11 @@ public partial class SerializableKeyframe
     }
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class DayTimeSaveData
 {
-    public Dictionary<string, SerializableTimeData> WorldTimeDict = new Dictionary<string, SerializableTimeData>();
-    public Dictionary<string, float> SceneLightingRateDict = new Dictionary<string, float>();
+    [MemoryPack.MemoryPackOrder(1)] public Dictionary<string, SerializableTimeData> WorldTimeDict = new Dictionary<string, SerializableTimeData>();
+    [MemoryPack.MemoryPackOrder(0)] public Dictionary<string, float> SceneLightingRateDict = new Dictionary<string, float>();
     
     public DayTimeSaveData() 
     {
@@ -1096,11 +1096,25 @@ public partial class DayTimeSaveData
     }
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SerializableGradient
 {
-    [MemoryPackInclude] public GradientColorKey[] colorKeys;
-    [MemoryPackInclude] public GradientAlphaKey[] alphaKeys;
+    [MemoryPackIgnore] public GradientColorKey[] colorKeys;
+    [MemoryPackIgnore] public GradientAlphaKey[] alphaKeys;
+
+    [MemoryPackInclude, MemoryPackOrder(1)]
+    private GradientColorKeySaveSnapshot[] SavedColorKeys
+    {
+        get => Array.ConvertAll(colorKeys ?? Array.Empty<GradientColorKey>(), GradientColorKeySaveSnapshot.Capture);
+        set => colorKeys = Array.ConvertAll(value ?? Array.Empty<GradientColorKeySaveSnapshot>(), key => key.Restore());
+    }
+
+    [MemoryPackInclude, MemoryPackOrder(0)]
+    private GradientAlphaKeySaveSnapshot[] SavedAlphaKeys
+    {
+        get => Array.ConvertAll(alphaKeys ?? Array.Empty<GradientAlphaKey>(), GradientAlphaKeySaveSnapshot.Capture);
+        set => alphaKeys = Array.ConvertAll(value ?? Array.Empty<GradientAlphaKeySaveSnapshot>(), key => key.Restore());
+    }
 
     [System.NonSerialized] private Gradient gradient;
 

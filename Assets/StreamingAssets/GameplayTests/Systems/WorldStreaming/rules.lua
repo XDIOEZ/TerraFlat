@@ -20,6 +20,13 @@ test.system("world_streaming", "terrain_physics_source", {}, function(data)
         "旧模型回调、过期解绑或世界关闭遗留了物理对象与登记")
 end, "区块物理脱离ChunkView：原生碰撞、模拟租约、地形重绑和世界回收")
 
+test.system("world_streaming", "chunk_persistence_gate", {}, function(data)
+    assert(data.notCommittedBeforeRead and data.committedAfterRead, "区块未等待存档读取完成，或完成后没有提交")
+    assert(data.sharedReadSurvivesCancellation and data.lastWaiterCancelsWork,
+        "共享等待者取消影响了其他需求，或最后一个等待者离开后仍继续读盘")
+    assert(data.visibleBeforeQueuedPrefetch, "新可见区块没有排到尚未启动的旧预读前")
+end, "区块持久化门禁、共享取消与可见窗口优先级")
+
 test.system("world_streaming", "world_scene_binding", {}, function(data)
     assert(not data.unknownResolved and data.firstAdded and data.singleWorld == "probe:world-a",
         "独立世界没有按绑定读取 WorldKey，或未绑定场景返回了世界")
@@ -102,8 +109,8 @@ test.system("world_streaming", "generation_profile_cache", {}, function(data)
         and data.ruleChanged and data.ruleScalarChanged and data.frozenNumberChanged and data.frozenTextChanged
         and data.mineralChanged and data.definitionChanged,
         "原位修改实例覆盖、冻结生态/生成规则或维度定义后仍命中旧配置")
-    assert(data.worldChanged and data.seedChanged and data.resourceChanged and data.saveChanged and data.modeChanged,
-        "世界或存档替换、种子、资源代际或冻结模式变化后仍复用旧配置")
+    assert(data.worldChanged and data.seedChanged and data.resourceChanged and data.saveChanged and data.authorityChanged,
+        "世界或存档替换、种子、资源代际或权威状态变化后仍复用旧配置")
     assert(data.hookDetected and data.hookRestored, "临时 Profile Hook 未被识别或测试后未恢复")
 end, "世界生成配置缓存命中、失效与零分配")
 

@@ -29,8 +29,8 @@ public static partial class GameplayTestSystemProbe
         var definition = new DimensionDefinition();
         var cache = new WorldGenerationProfileCache();
         WorldGenerationProfileCache.Inputs Inputs(PlanetData world = null, int seed = 1, int revision = 1,
-            bool frozen = true, object saveOwner = null) => new(world ?? planet, saveOwner ?? save, catalog,
-                resources, revision, natural, definition, seed, frozen, true);
+            bool authority = true, object saveOwner = null) => new(world ?? planet, saveOwner ?? save, catalog,
+                resources, revision, natural, definition, seed, authority);
         var original = Inputs();
         cache.Store(original, profile, tiles);
         bool hit = cache.TryGet(original, out var reused, out var reusedTiles) &&
@@ -73,7 +73,7 @@ public static partial class GameplayTestSystemProbe
         bool seedChanged = !cache.TryGet(Inputs(seed: 2), out _, out _);
         bool resourceChanged = !cache.TryGet(Inputs(revision: 2), out _, out _);
         bool saveChanged = !cache.TryGet(Inputs(saveOwner: new object()), out _, out _);
-        bool modeChanged = !cache.TryGet(Inputs(frozen: false), out _, out _);
+        bool authorityChanged = !cache.TryGet(Inputs(authority: false), out _, out _);
 
         bool stable = cache.TryGet(original, out _, out _);
         long before = GC.GetAllocatedBytesForCurrentThread();
@@ -98,7 +98,7 @@ public static partial class GameplayTestSystemProbe
             ["mineralChanged"] = mineralChanged, ["definitionChanged"] = definitionChanged,
             ["worldChanged"] = worldChanged, ["seedChanged"] = seedChanged,
             ["resourceChanged"] = resourceChanged, ["saveChanged"] = saveChanged,
-            ["modeChanged"] = modeChanged, ["hookDetected"] = hookDetected,
+            ["authorityChanged"] = authorityChanged, ["hookDetected"] = hookDetected,
             ["hookRestored"] = WorldGenerationRuntimeHooks.HasProfileSubscribers == hadSubscribers
         };
     }

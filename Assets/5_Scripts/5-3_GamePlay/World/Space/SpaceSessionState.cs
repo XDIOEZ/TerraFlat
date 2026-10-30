@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceSessionState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public const int CurrentVersion = 3;
         public int Version = CurrentVersion;
         [JsonIgnore] public UniverseState Universe;
@@ -32,6 +33,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceLocalWorldNetworkState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string WorldKey;
         public ulong Revision;
         public byte[] Payload;
@@ -40,6 +42,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class GroundAtmosphereState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         // 地面只借用气密几何与库存，不登记为飞船或创建飞行记录。
         public string WorldKey;
         public ShipState Geometry = new();
@@ -102,10 +105,11 @@ namespace FlatWorld.Spaceflight
         }
         #endregion
     }
-    public enum ShipFlightPhase { Landed, Floating, Lifting, Cruising, SurfaceDescending }
+    public enum ShipFlightPhase { Landed = 0, Floating = 1, Lifting = 2, Cruising = 3, SurfaceDescending = 4 }
     [Serializable]
     public sealed class ShipFlightState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ShipId, BodyId, SurfaceWorldKey;
         public string RequestedLandingBodyId;
         public ShipFlightPhase Phase;
@@ -123,6 +127,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class ShipDeviceState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string PieceId;
         public ShipPartConfiguration Configuration = new();
         public bool Enabled = true;
@@ -133,6 +138,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpacePassengerState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ProfileId, ShipId, ConsolePieceId;
         public uint RealmRevision;
         public double LocalX, LocalY;
@@ -179,6 +185,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class ShipNavigationState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ShipId, NavigationPieceId, ConsolePieceId;
         public double TargetX, TargetY;
         public SpaceSectorId TargetSector;
@@ -193,6 +200,6 @@ public partial class GameSaveData
 {
     #region 太空权威快照
     // 宇宙数据随正式存档封装保存，场景只负责显示。
-    public string SpaceStateJson;
+    [MemoryPack.MemoryPackOrder(25)] public string SpaceStateJson;
     #endregion
 }

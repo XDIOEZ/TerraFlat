@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using Unity.Profiling;
@@ -10,6 +11,7 @@ using RuntimeAddress = FlatWorld.WorldModel.WorldAddress;
 
 namespace FlatWorld.Spaceflight
 {
+    public enum SurfaceQueryStatus { Invalid, Pending, Ready }
     public struct LandingSurfaceSample
     {
         #region 落点真实地表快照
@@ -48,7 +50,7 @@ namespace FlatWorld.Spaceflight
                 !global::WorldAddress.FromWorldKey(worldKey).IsSurface || GameRes.ExistingInstance == null ||
                 !GameRes.ExistingInstance.TryGetLiquidDefinition(liquidId, out LiquidDefinition definition) || definition.WorldWater == null)
                 return 0;
-            LandingSurfaceSample sample = GetLandingSurface(worldKey, center);
+            if (QueryLandingSurface(worldKey, center, out LandingSurfaceSample sample) != SurfaceQueryStatus.Ready) return 0;
             if (sample.BlockingTileId != 0 || sample.SupportTileId != 0 ||
                 (sample.LiquidLevel > 0 && !string.Equals(sample.LiquidId, liquidId, StringComparison.OrdinalIgnoreCase))) return 0;
             int accepted = Math.Min(level, LiquidCellValue.MaximumLevel - sample.LiquidLevel);
@@ -105,6 +107,9 @@ namespace FlatWorld.Spaceflight
                 level = sample.LiquidLevel;
                 return true;
             }
+            SurfaceQueryStatus status = QueryLandingSurface(worldKey, point, out _);
+            if (status == SurfaceQueryStatus.Pending)
+            { selection = WorldLiquidPumpSourceSelection.Searching; return false; }
             bool found = TrySampleLiquid(worldKey, point, out liquid, out level);
             selection = found ? (level > 1 ? WorldLiquidPumpSourceSelection.Surplus : WorldLiquidPumpSourceSelection.LocalRemainder)
                 : WorldLiquidPumpSourceSelection.Unavailable;
@@ -165,6 +170,9 @@ namespace FlatWorld.Spaceflight
             bool Wrapped, Int2 Min, Int2 Span), float> temperatureSamples = new();
         private static readonly ProfilerMarker coldChunkGenerationMarker = new("SpaceSurfaceQuery.ColdChunk.Generate");
         private static readonly ProfilerMarker coldTemperatureMarker = new("SpaceSurfaceQuery.Temperature.Sample");
+        private static readonly Dictionary<(string, Vector2Int), Task> pendingPersistedChunks = new();
+        private static readonly HashSet<(string, Vector2Int)> reportedPersistenceFailures = new();
+        private static CancellationTokenSource coldQueryCancellation = new();
 
         #region 冷地表固定风力缓存
         // 仅保存生成时的不可变天气汇总，不保留被逐出的完整地形。
@@ -207,7 +215,83 @@ namespace FlatWorld.Spaceflight
 
         // 无人船落地也从同一冻结生成规则与已保存差量读取，查询不会加载场景。
         public static LandingSurfaceSample GetLandingSurface(string planetId, Vector2 position)
-            => GetLandingSurface(planetId, position, out _, out _);
+        {
+            if (QueryLandingSurface(planetId, position, out LandingSurfaceSample sample) != SurfaceQueryStatus.Ready)
+                throw new InvalidOperationException("地表区块资料尚未就绪。");
+            return sample;
+        }
+
+        // 冷区块缺失时登记异步读取，不把尚未加载的差量解释成空白。
+        public static SurfaceQueryStatus QueryLandingSurface(string planetId, Vector2 position, out LandingSurfaceSample sample)
+        {
+            sample = default;
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            if (string.IsNullOrWhiteSpace(planetId) || !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
+                save?.PlanetData_Dict == null || !save.PlanetData_Dict.TryGetValue(planetId, out PlanetData planet))
+                return SurfaceQueryStatus.Invalid;
+            if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
+            ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
+            ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
+                ? new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y)) : default;
+            int x = topology.NormalizeX(Mathf.FloorToInt(position.x)), y = topology.NormalizeY(Mathf.FloorToInt(position.y));
+            var origin = new Vector2Int((int)Math.Floor(x / (double)profile.Width) * profile.Width,
+                (int)Math.Floor(y / (double)profile.Height) * profile.Height);
+            if (!EnsureColdSurfaceChunkReady(planetId, origin)) return SurfaceQueryStatus.Pending;
+            sample = GetLandingSurface(planetId, position, out _, out _);
+            return SurfaceQueryStatus.Ready;
+        }
+
+        private static bool EnsureColdSurfaceChunkReady(string worldKey, Vector2Int origin)
+        {
+            SaveDataMgr saves = SaveDataMgr.Instance;
+            if (saves.IsPersistedChunkReady(worldKey, origin)) return true;
+            var key = (worldKey, origin);
+            if (pendingPersistedChunks.TryGetValue(key, out Task pending))
+            {
+                if (!pending.IsCompleted) return false;
+                if (pending.IsFaulted)
+                {
+                    if (reportedPersistenceFailures.Add(key)) Debug.LogWarning("[地表] 区块资料读取失败：" + pending.Exception?.GetBaseException().Message);
+                    return false;
+                }
+                pendingPersistedChunks.Remove(key);
+                if (saves.IsPersistedChunkReady(worldKey, origin)) return true;
+            }
+            if (GameNetwork.Session.IsClient && !GameNetwork.Session.IsServer)
+            {
+                if (!GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world) || world.Chunks.WorldRuntime == null ||
+                    ChunkMgr.PrepareNetworkChunkPersistenceAsync == null) return false;
+                var address = new RuntimeAddress(global::WorldAddress.SurfaceDimensionId, new Int2(origin.x, origin.y));
+                pending = ChunkMgr.PrepareNetworkChunkPersistenceAsync(worldKey, world.Chunks.WorldRuntime.Epoch, address, coldQueryCancellation.Token);
+            }
+            else pending = saves.EnsurePersistedChunkLoadedAsync(worldKey, origin, coldQueryCancellation.Token);
+            pendingPersistedChunks[key] = pending;
+            return pending.Status == TaskStatus.RanToCompletion && saves.IsPersistedChunkReady(worldKey, origin);
+        }
+
+        public static SurfaceQueryStatus EnsureSurfaceAreaReady(string worldKey, Vector2 center, float radius)
+        {
+            GameSaveData save = SaveDataMgr.Instance?.SaveData;
+            if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(center.x) || !float.IsFinite(center.y) ||
+                !float.IsFinite(radius) || radius < 0f || save?.PlanetData_Dict == null ||
+                !save.PlanetData_Dict.TryGetValue(worldKey, out PlanetData planet)) return SurfaceQueryStatus.Invalid;
+            if (!ReferenceEquals(owner, save)) { Reset(); owner = save; }
+            ChunkGenerationProfileSnapshot profile = GetFrozenProfile(planet);
+            ChunkGenerationTopologySnapshot topology = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
+                ? new ChunkGenerationTopologySnapshot(new Int2(bounds.Min.x, bounds.Min.y), new Int2(bounds.Span.x, bounds.Span.y)) : default;
+            int minX = (int)Math.Floor((center.x - radius) / profile.Width), maxX = (int)Math.Floor((center.x + radius) / profile.Width);
+            int minY = (int)Math.Floor((center.y - radius) / profile.Height), maxY = (int)Math.Floor((center.y + radius) / profile.Height);
+            bool ready = true;
+            var visited = new HashSet<Vector2Int>();
+            for (int y = minY; y <= maxY; y++) for (int x = minX; x <= maxX; x++)
+            {
+                int normalizedX = topology.NormalizeX(x * profile.Width), normalizedY = topology.NormalizeY(y * profile.Height);
+                var origin = new Vector2Int((int)Math.Floor(normalizedX / (double)profile.Width) * profile.Width,
+                    (int)Math.Floor(normalizedY / (double)profile.Height) * profile.Height);
+                if (visited.Add(origin) && !EnsureColdSurfaceChunkReady(worldKey, origin)) ready = false;
+            }
+            return ready ? SurfaceQueryStatus.Ready : SurfaceQueryStatus.Pending;
+        }
 
         private static LandingSurfaceSample GetLandingSurface(string planetId, Vector2 position,
             out ChunkTerrainData sampledTerrain, out Vector2Int sampledLocalCell)
@@ -247,7 +331,12 @@ namespace FlatWorld.Spaceflight
                     if (!cache.World.TryCommit(generated, out string reason)) throw new InvalidDataException($"降落地表生成失败：{reason}");
                     if (!cache.World.TryGetChunkTerrain(address, out terrain)) throw new InvalidOperationException("降落地表未生成");
                     cache.Order.Enqueue(address);
-                    while (cache.Order.Count > MaximumCachedChunksPerPlanet) cache.World.EvictChunk(cache.Order.Dequeue());
+                    while (cache.Order.Count > MaximumCachedChunksPerPlanet)
+                    {
+                        RuntimeAddress retired = cache.Order.Dequeue();
+                        if (cache.World.EvictChunk(retired)) saves.ReleasePersistedChunkIfUnleased(planetId,
+                            new Vector2Int(retired.ChunkOrigin.X, retired.ChunkOrigin.Y));
+                    }
                 }
             }
             if (!loaded && terrain.WeatherProfile != null)
@@ -288,10 +377,7 @@ namespace FlatWorld.Spaceflight
         public static bool TryGetLandingSurface(string planetId, Vector2 position, out LandingSurfaceSample sample)
         {
             sample = default;
-            GameSaveData save = SaveDataMgr.Instance?.SaveData;
-            if (save?.PlanetData_Dict == null || !save.PlanetData_Dict.ContainsKey(planetId ?? string.Empty)) return false;
-            sample = GetLandingSurface(planetId, position);
-            return true;
+            return QueryLandingSurface(planetId, position, out sample) == SurfaceQueryStatus.Ready;
         }
 
         #region 无需生成区块的地理温度查询
@@ -420,6 +506,7 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrWhiteSpace(worldKey) || !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
             global::WorldAddress address = global::WorldAddress.FromWorldKey(worldKey);
             if (!address.IsSurface || SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(address.RootWorldKey) != true) return false;
+            if (QueryLandingSurface(address.RootWorldKey, position, out sample) != SurfaceQueryStatus.Ready) return false;
             sample = GetLandingSurface(address.RootWorldKey, position, out terrain, out local); return true;
         }
 
@@ -429,7 +516,8 @@ namespace FlatWorld.Spaceflight
             ChunkMgr manager = ChunkMgr.ExistingInstance;
             if (dimension == null || !dimension.ActiveAddress.IsSurface || dimension.ActiveAddress.RootWorldKey != planetId ||
                 SpaceSession.Current?.IsSpaceView == true || manager?.WorldRuntime == null) return null;
-            return manager.WorldRuntime.TryGetChunkTerrain(address, out ChunkTerrainData terrain) ? terrain : null;
+            return manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) && manager.IsTerrainRestoredForEnvironment(chunk)
+                ? chunk.Terrain : null;
         }
 
         private static ChunkGenerationProfileSnapshot GetFrozenProfile(PlanetData planet)
@@ -488,6 +576,13 @@ namespace FlatWorld.Spaceflight
 
         public static void Reset()
         {
+            coldQueryCancellation.Cancel();
+            coldQueryCancellation.Dispose();
+            coldQueryCancellation = new CancellationTokenSource();
+            foreach (Task pending in pendingPersistedChunks.Values)
+                if (pending.IsFaulted) _ = pending.Exception;
+            pendingPersistedChunks.Clear();
+            reportedPersistenceFailures.Clear();
             foreach (SurfaceCache cache in caches.Values) cache.Dispose();
             caches.Clear(); frozenProfiles.Clear(); temperatureSamples.Clear(); owner = null; generationCatalog = null;
             if (resourceOwner != null) resourceOwner.ResourcesReloaded -= Reset;

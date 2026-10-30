@@ -9,16 +9,16 @@ using UnityEngine;
 /// <summary>
 /// 通用液体容器状态保存真实混合组分；LiquidId 和 Amount 只用于汇总显示。
 /// </summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class LiquidContainerState
 {
     #region 容器持久状态
 
-    public string LiquidId; // 主组分的稳定 ID；空容器必须为空。
-    public float Amount; // 全部组分的真实份数，保留工业输送产生的小数尾量。
-    public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
-    public float Temperature; // 混合液体的共同温度，自然传热与主动加工共用该状态。
-    public double RainwaterProgress; // 不足一份的接雨进度随保存及装拆保留。
+    [MemoryPackOrder(0)] public string LiquidId; // 主组分的稳定 ID；空容器必须为空。
+    [MemoryPackOrder(1)] public float Amount; // 全部组分的真实份数，保留工业输送产生的小数尾量。
+    [MemoryPackOrder(2)] public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
+    [MemoryPackOrder(3)] public float Temperature; // 混合液体的共同温度，自然传热与主动加工共用该状态。
+    [MemoryPackOrder(4)] public double RainwaterProgress; // 不足一份的接雨进度随保存及装拆保留。
 
     #endregion
 }

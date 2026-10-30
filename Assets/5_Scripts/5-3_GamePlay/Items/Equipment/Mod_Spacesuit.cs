@@ -37,13 +37,13 @@ public sealed class SpacesuitConfiguration
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class SpacesuitState
 {
     #region 实例状态
-    public bool HelmetOn = true;
-    public InventoryInstanceSnapshot OxygenTank;
-    public InventoryInstanceSnapshot PropulsionTank;
+    [MemoryPackOrder(0)] public bool HelmetOn = true;
+    [MemoryPackOrder(1)] public InventoryInstanceSnapshot OxygenTank;
+    [MemoryPackOrder(2)] public InventoryInstanceSnapshot PropulsionTank;
     #endregion
 }
 

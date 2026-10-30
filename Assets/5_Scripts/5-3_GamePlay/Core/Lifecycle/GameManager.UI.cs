@@ -1215,14 +1215,7 @@ public partial class GameManager
         });
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(
             value => saveList?.OnPlayerNameInputChanged(value));
-        Toggle generationFreezeToggle = panel.GetToggle(GameSaveGenerationFreezeToggleKey);
-        if (generationFreezeToggle != null)
-        {
-            generationFreezeToggle.SetIsOnWithoutNotify(true);
-            generationFreezeToggle.interactable = false;
-            generationFreezeToggle.onValueChanged.AddListener(
-                frozen => saveList?.OnWorldGenerationFreezeToggleChanged(frozen));
-        }
+        panel.GetToggle(GameSaveGenerationFreezeToggleKey)?.gameObject.SetActive(false);
         // 动态存档条目在 RefreshForGamepadOpen 后创建；这里仅提供无存档时的安全回退。
         panel.PrepareForGamepadNavigation(GameSaveBackButtonKey);
         panel.Open();
@@ -1538,11 +1531,10 @@ public partial class GameManager
             return;
         }
 
-        string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveName + ".bytes");
+        string path = SaveDataMgr.Instance.GetFullSavePath(selectedSaveName);
         if (!SaveDataMgr.Instance.LoadSaveByDisk(path))
         {
             SaveDataManager_UI.Instance?.GeneratePlayerButtons();
-            SaveDataManager_UI.Instance?.RefreshWorldGenerationFreezeToggle(selectedSaveName);
             ShowSaveLoadFailure();
             return;
         }
@@ -1551,7 +1543,6 @@ public partial class GameManager
         if (saveList != null)
         {
             saveList.GeneratePlayerButtons();
-            saveList.RefreshWorldGenerationFreezeToggle(selectedSaveName);
             if (!saveList.TrySelectFirstPlayer())
                 saveList.FocusFirstPlayerOrNameInputForGamepad();
         }

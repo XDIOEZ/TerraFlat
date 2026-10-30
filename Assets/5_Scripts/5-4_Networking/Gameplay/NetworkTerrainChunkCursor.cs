@@ -31,6 +31,15 @@ namespace FlatWorld.Networking.Gameplay
             Array.Clear(received, 0, received.Length);
         }
 
+        // 基线已随持久区块恢复，只接收捕获之后的格子增量。
+        public void SetPersistenceBaseline(long revision)
+        {
+            if (revision <= 0) throw new ArgumentOutOfRangeException(nameof(revision));
+            for (int i = 0; i < revisions.Length; i++) revisions[i] = revision;
+            HasFullState = true;
+            RequestToken = 0;
+        }
+
         public void RequireSnapshot()
         {
             HasFullState = false;

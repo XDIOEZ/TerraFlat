@@ -335,14 +335,14 @@ public sealed partial class ModSettingDefinition
 
 #region MOD 存档元数据
 
-[MemoryPack.MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class ModSaveRecord
 {
-    public string Id;
-    public string Version;
-    public string ContentHash;
-    public int LoadIndex;
+    [MemoryPack.MemoryPackOrder(0)] public string Id;
+    [MemoryPack.MemoryPackOrder(1)] public string Version;
+    [MemoryPack.MemoryPackOrder(2)] public string ContentHash;
+    [MemoryPack.MemoryPackOrder(3)] public int LoadIndex;
 }
 
 #endregion

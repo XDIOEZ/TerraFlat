@@ -5,11 +5,12 @@ using Newtonsoft.Json;
 namespace FlatWorld.Spaceflight
 {
     #region 电梯线路与单一轿厢
-    public enum SpaceElevatorEndpoint { Ground, Station }
+    public enum SpaceElevatorEndpoint { Ground = 0, Station = 1 }
 
     [Serializable]
     public sealed class SpaceElevatorState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ElevatorId = Guid.NewGuid().ToString("N");
         public string GroundTerminalId, StationTerminalId, StationShipId, GroundWorldKey;
         public double GroundX, GroundY;

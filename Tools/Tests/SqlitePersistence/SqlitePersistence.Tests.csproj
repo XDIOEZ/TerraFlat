@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <DefineConstants>$(DefineConstants);SQLITE_PERSISTENCE_TESTS</DefineConstants>
+    <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/Shared/Persistence/*.cs" />
+    <Compile Include="$(SQLiteDriverRoot)/Runtime/sqlite-net/SQLite.cs" />
+    <None Include="$(SQLiteDriverRoot)/Plugins/lib/windows/x86_64/gilzoide-sqlite-net.dll" Link="gilzoide-sqlite-net.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

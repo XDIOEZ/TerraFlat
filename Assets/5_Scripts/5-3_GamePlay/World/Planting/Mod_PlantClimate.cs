@@ -21,14 +21,14 @@ public interface IPlantGrowthConstraint
 }
 
 /// <summary>独立保存冷热暴露进度；只有持续超过致害阈值才死亡。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class PlantClimateState
 {
-    public float ColdSeconds; // 连续受寒负担。
-    public float HeatSeconds; // 连续受热负担。
-    public bool Dead; // 死亡结算标记。
-    public bool ClockInitialized; // 自主运行的树木耐候游标。
-    public double LastSimulationTime; // 最后完成结算的世界秒。
+    [MemoryPackOrder(0)] public float ColdSeconds; // 连续受寒负担。
+    [MemoryPackOrder(1)] public float HeatSeconds; // 连续受热负担。
+    [MemoryPackOrder(2)] public bool Dead; // 死亡结算标记。
+    [MemoryPackOrder(3)] public bool ClockInitialized; // 自主运行的树木耐候游标。
+    [MemoryPackOrder(4)] public double LastSimulationTime; // 最后完成结算的世界秒。
 }
 
 /// <summary>植物耐候能力。默认适生 5～35℃，低于 0℃或高于 40℃累计 6 个游戏小时死亡，回到安全温度逐渐恢复。</summary>

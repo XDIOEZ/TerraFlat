@@ -15,6 +15,7 @@ public static partial class LooseItemMotion
         internal ChunkMgr Chunks;
         internal bool LocalPhysics;
         internal bool SamplingInitialized, HasTerrainQuery, SurfaceWorld;
+        internal bool WaitingForSurface;
         internal ChunkMgr.RuntimeTerrainPresenceQuery TerrainQuery;
         internal WorldTopologyDomain Topology;
         public bool WaterOnly => InWater;
@@ -34,16 +35,27 @@ public static partial class LooseItemMotion
             EnsureSampling();
             position = NormalizeMotionPosition(Topology, position);
             if (HasTerrainQuery)
-                return TerrainQuery.TrySample(position, out RuntimeTerrainTileSample current) && current.LiquidDepth > 0f;
-            return Chunks != null
-                ? Chunks.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample) && sample.LiquidDepth > 0f
-                : FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(World, position, out _, out _);
+            {
+                if (!TerrainQuery.TrySample(position, out RuntimeTerrainTileSample current))
+                { WaitingForSurface = SurfaceWorld; return false; }
+                return current.LiquidDepth > 0f;
+            }
+            if (Chunks == null && FlatWorld.Spaceflight.SpaceSurfaceQuery.QueryLandingSurface(World, position, out _) ==
+                FlatWorld.Spaceflight.SurfaceQueryStatus.Pending)
+            { WaitingForSurface = true; return false; }
+            if (Chunks != null)
+            {
+                if (!Chunks.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample))
+                { WaitingForSurface = SurfaceWorld; return false; }
+                return sample.LiquidDepth > 0f;
+            }
+            return FlatWorld.Spaceflight.SpaceSurfaceQuery.TrySampleLiquid(World, position, out _, out _);
         }
         public Vector2 Move(Vector2 position, Vector2 displacement)
         {
             EnsureSampling();
             return ResolveDisplacement(World, position, displacement, Chunks, LocalPhysics,
-                SurfaceWorld, Topology, HasTerrainQuery, ref TerrainQuery);
+                SurfaceWorld, Topology, HasTerrainQuery, ref TerrainQuery, ref WaitingForSurface);
         }
 
         private void EnsureSampling()
@@ -54,7 +66,7 @@ public static partial class LooseItemMotion
             HasTerrainQuery = Chunks != null && Chunks.TryCreateTerrainPresenceQuery(out TerrainQuery);
             Topology = PressureExplosionQueue.TryGetTopology(World, out WorldTopologyBounds bounds)
                 ? bounds.ToDomain() : default;
-            SurfaceWorld = !HasTerrainQuery && Chunks == null && WorldAddress.FromWorldKey(World).IsSurface;
+            SurfaceWorld = WorldAddress.FromWorldKey(World).IsSurface;
         }
     }
 
@@ -70,10 +82,15 @@ public static partial class LooseItemMotion
     // 数据阻挡和本地实体碰撞归同一入口，后台世界绝不借用镜头所在世界的物理场。
     private static Vector2 ResolveDisplacement(string world, Vector2 position, Vector2 displacement,
         ChunkMgr chunks, bool localPhysics, bool surfaceWorld,
-        WorldTopologyDomain topology, bool hasTerrainQuery, ref ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery)
+        WorldTopologyDomain topology, bool hasTerrainQuery, ref ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery,
+        ref bool waitingForSurface)
     {
         int steps = Mathf.Clamp(Mathf.CeilToInt(displacement.magnitude / .1f), 1, 128);
         Vector2 move = displacement / steps;
+        Vector2 initial = position;
+        if (surfaceWorld && !hasTerrainQuery && chunks == null && FlatWorld.Spaceflight.SpaceSurfaceQuery.EnsureSurfaceAreaReady(world,
+                position + displacement * .5f, displacement.magnitude * .5f + .1f) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending)
+        { waitingForSurface = true; return position; }
         var filter = new ContactFilter2D { useTriggers = false };
         if (localPhysics)
         {
@@ -89,8 +106,8 @@ public static partial class LooseItemMotion
                 bool found = hasTerrainQuery
                     ? terrainQuery.TrySample(destination, out RuntimeTerrainTileSample sample)
                     : chunks.TryGetRuntimeTerrainTile(destination, out sample);
-                if (!found ||
-                    !BuildingOccupancyRegistry.GetEffectiveWalkable(sample.WorldCell,
+                if (!found) { waitingForSurface = surfaceWorld; return initial; }
+                if (!BuildingOccupancyRegistry.GetEffectiveWalkable(sample.WorldCell,
                         sample.Cell.IsWalkable || sample.LiquidDepth > 0f)) break;
             }
             else if (surfaceWorld)
@@ -139,18 +156,40 @@ public static partial class LooseItemMotion
     public static Vector2 AdvanceWater(string world, ItemData item, Vector2 position, Vector2 currentVelocity,
         float seconds, bool receiveExternal = true)
     {
-        if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return position;
+        TryAdvanceWater(world, item, position, currentVelocity, seconds, out Vector2 result, receiveExternal);
+        return result;
+    }
+
+    public static bool TryAdvanceWater(string world, ItemData item, Vector2 position, Vector2 currentVelocity,
+        float seconds, out Vector2 result, bool receiveExternal = true)
+    {
+        result = position;
+        if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return false;
         var field = CreateField(world, item, position, true, receiveExternal, null);
         field.WaterVelocity = currentVelocity;
-        return Integrate(position, seconds, ref field);
+        Vector2 advanced = Integrate(position, seconds, ref field);
+        if (field.WaitingForSurface) return false;
+        result = advanced;
+        return true;
     }
 
     public static Vector2 AdvanceExternal(string world, ItemData item, Vector2 position, float seconds,
         Vector2? windVelocity = null)
     {
-        if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return position;
+        TryAdvanceExternal(world, item, position, seconds, out Vector2 result, windVelocity);
+        return result;
+    }
+
+    public static bool TryAdvanceExternal(string world, ItemData item, Vector2 position, float seconds,
+        out Vector2 result, Vector2? windVelocity = null)
+    {
+        result = position;
+        if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return false;
         var field = CreateField(world, item, position, false, true, windVelocity);
-        return Integrate(position, seconds, ref field);
+        Vector2 advanced = Integrate(position, seconds, ref field);
+        if (field.WaitingForSurface) return false;
+        result = advanced;
+        return true;
     }
 
     internal static bool IsDrivenByConveyor(Vector2 position)

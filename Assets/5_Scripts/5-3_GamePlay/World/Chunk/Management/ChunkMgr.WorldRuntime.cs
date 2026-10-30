@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FlatWorld.WorldModel;
 using FlatWorld.Diagnostics;
+using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using RuntimeChunkMgr = FlatWorld.WorldModel.ChunkMgr;
@@ -38,6 +39,16 @@ public partial class ChunkMgr
     private long runtimeEpoch;
     private WorldRuntimeHost runtimeHost;
     private IDisposable sightBlockingChunkCommittedSubscription;
+    private sealed class RuntimeWeatherRegionDemand
+    {
+        public string WorldKey;
+        public Vector2Int Region;
+        public GameSaveData SaveOwner;
+        public CancellationTokenRegistration Cancellation;
+        public IDisposable RegionLease;
+    }
+    // 区块可跨场景保留，天气租约随纯世界而非场景组件存活。
+    private static readonly Dictionary<WorldRuntime, Dictionary<RuntimeWorldAddress, RuntimeWeatherRegionDemand>> runtimeWeatherDemands = new();
     /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
     internal bool IsWorldRuntimeShuttingDown { get; private set; }
     // 太空坐标不能拿来激活地表区块或生成一颗临时星球。
@@ -350,7 +361,9 @@ public partial class ChunkMgr
             runtimeGenerator = generator as DeterministicChunkGenerator;
             runtimeChunkManager = new RuntimeChunkMgr(world, generator,
                 EffectiveBackgroundGenerationConcurrency, GameplayWorldRegistry.UsesLocalCoordinates(world.WorldId)
-                    ? IdentityWorldAddressNormalizer.Instance : new UnityWorldAddressNormalizer());
+                    ? IdentityWorldAddressNormalizer.Instance : new UnityWorldAddressNormalizer(),
+                (address, cancellation) => PrepareRuntimeChunkPersistenceAsync(world, address, cancellation),
+                address => ReleaseRuntimeChunkPersistence(world, address));
             sightBlockingChunkCommittedSubscription =
                 world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
             SharedSpriteMeshCache.Clearing += MarkRuntimePresentationBackendsInvalidated;
@@ -376,6 +389,91 @@ public partial class ChunkMgr
             throw;
         }
     }
+
+    #region 区块持久数据门禁
+    // 局部船舱没有地表区块差量，客户端则必须等待网络权威数据。
+    private async Task PrepareRuntimeChunkPersistenceAsync(WorldRuntime world, RuntimeWorldAddress address,
+        CancellationToken cancellation)
+    {
+        if (GameplayWorldRegistry.UsesLocalCoordinates(world.WorldId)) return;
+        SaveDataMgr saves = SaveDataMgr.Instance;
+        if (saves?.SaveData == null) throw new InvalidOperationException("世界存档尚未就绪。");
+        Vector2Int origin = new(address.ChunkOrigin.X, address.ChunkOrigin.Y);
+        Vector2Int region = WeatherMgr.ResolveRegionalWeatherStorageOrigin(world.WorldId, origin);
+        var demand = new RuntimeWeatherRegionDemand { WorldKey = world.WorldId, Region = region, SaveOwner = saves.SaveData,
+            RegionLease = WeatherMgr.AcquireRegionalPersistenceLease(world.WorldId, region) };
+        if (!runtimeWeatherDemands.TryGetValue(world, out var demands))
+            runtimeWeatherDemands.Add(world, demands = new Dictionary<RuntimeWorldAddress, RuntimeWeatherRegionDemand>());
+        if (demands.TryGetValue(address, out RuntimeWeatherRegionDemand previous))
+            ReleaseRuntimeWeatherRegionDemand(world, address, previous, true);
+        demands[address] = demand;
+        demand.Cancellation = cancellation.Register(() => ReleaseAbortedRuntimeChunkPersistence(world, address, demand, false));
+        try
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (GameNetwork.Session.IsClient && !GameNetwork.Session.IsServer)
+                await (PrepareNetworkChunkPersistenceAsync?.Invoke(world.WorldId, world.Epoch, address, cancellation)
+                    ?? throw new InvalidOperationException("联机区块同步尚未就绪。"));
+            else
+                await Task.WhenAll(saves.EnsurePersistedChunkLoadedAsync(world.WorldId, origin, cancellation, retainForRuntime: true),
+                    saves.EnsurePersistedWeatherRegionLoadedAsync(world.WorldId, region, cancellation));
+        }
+        catch
+        {
+            ReleaseAbortedRuntimeChunkPersistence(world, address, demand, true);
+            throw;
+        }
+    }
+
+    private void ReleaseRuntimeChunkPersistence(WorldRuntime world, RuntimeWorldAddress address)
+    {
+        if (runtimeWeatherDemands.TryGetValue(world, out var demands) &&
+            demands.TryGetValue(address, out RuntimeWeatherRegionDemand demand))
+            ReleaseRuntimeWeatherRegionDemand(world, address, demand, true);
+        if (!GameplayWorldRegistry.UsesLocalCoordinates(world.WorldId))
+            SaveDataMgr.Instance?.ReleasePersistedChunkIfUnleased(world.WorldId,
+                new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y));
+    }
+
+    private static bool ReleaseRuntimeWeatherRegionDemand(WorldRuntime world, RuntimeWorldAddress address,
+        RuntimeWeatherRegionDemand demand, bool disposeRegistration)
+    {
+        if (!runtimeWeatherDemands.TryGetValue(world, out var demands) ||
+            !demands.TryGetValue(address, out RuntimeWeatherRegionDemand current) || !ReferenceEquals(current, demand)) return false;
+        demands.Remove(address);
+        if (disposeRegistration) demand.Cancellation.Dispose();
+        demand.RegionLease?.Dispose();
+        return true;
+    }
+
+    // 取消或准备失败只释放本次请求的缓存，旧请求不能撤掉新世界或新代次的持有。
+    private static void ReleaseAbortedRuntimeChunkPersistence(WorldRuntime world, RuntimeWorldAddress address,
+        RuntimeWeatherRegionDemand demand, bool disposeRegistration)
+    {
+        if (!ReleaseRuntimeWeatherRegionDemand(world, address, demand, disposeRegistration)) return;
+        SaveDataMgr saves = SaveDataMgr.Instance;
+        if (!ReferenceEquals(saves?.SaveData, demand.SaveOwner) ||
+            runtimeWeatherDemands.TryGetValue(world, out var demands) && demands.ContainsKey(address) ||
+            GameplayWorldRegistry.TryGetOwnedWorldModel(world.WorldId, out WorldRuntime owner) && !ReferenceEquals(owner, world)) return;
+        saves.ReleasePersistedChunkIfUnleased(world.WorldId,
+            new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y));
+    }
+
+    // 会话真正销毁模型时释放保留区块的持久化租约。
+    internal static void ReleaseRetainedRuntimePersistence(WorldRuntime world)
+    {
+        if (world == null || !runtimeWeatherDemands.Remove(world, out var demands)) return;
+        foreach (var pair in demands)
+        {
+            RuntimeWeatherRegionDemand demand = pair.Value;
+            demand.Cancellation.Dispose();
+            demand.RegionLease?.Dispose();
+            if (ReferenceEquals(SaveDataMgr.Instance?.SaveData, demand.SaveOwner))
+                SaveDataMgr.Instance.ReleasePersistedChunkIfUnleased(world.WorldId,
+                    new Vector2Int(pair.Key.ChunkOrigin.X, pair.Key.ChunkOrigin.Y));
+        }
+    }
+    #endregion
 
     // 世界模型优先沿用管理器已绑定的逻辑身份，场景只作为未绑定时的上下文来源。
     internal static string ResolveOwnedWorldRuntimeIdentity(string ownedWorldKey, string executionWorldKey)

@@ -7,12 +7,12 @@ using UnityEngine;
 /// 多件装备按保护值相加后统一限制到 100%，由体温模块负责最终结算。
 /// </summary>
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_WaterInsulation : EquipmentInstance
 {
     [Range(0f, 1f)]
     [Tooltip("入水降温保护比例。0=无保护，0.8=降温速度剩余20%，1=完全免疫入水降温。")]
-    public float WaterCoolingProtection;
+    [MemoryPackOrder(1)] public float WaterCoolingProtection;
 
     [MemoryPackIgnore]
     private bool _isApplied;

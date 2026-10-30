@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceLooseItemState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string Id = Guid.NewGuid().ToString("N"), Snapshot, WorldKey;
         public bool InSpace;
         public SpaceMotionState Motion = new();
@@ -20,10 +21,30 @@ namespace FlatWorld.Spaceflight
         public double DropVelocityX, DropVelocityY;
         public double PickupAfterSimulationSeconds;
         public bool CanBePickedUpAt(double seconds) => double.IsFinite(seconds) && seconds >= PickupAfterSimulationSeconds;
-        [JsonConverter(typeof(ScaleJsonConverter))]
+        [JsonIgnore]
         public Vector3 Scale = Vector3.one;
+        [JsonIgnore] private System.Collections.Generic.IDictionary<string, JToken> unknownScaleFields;
+        [JsonProperty("Scale", ObjectCreationHandling = ObjectCreationHandling.Replace)]
+        private ScaleSnapshot SavedScale
+        {
+            get => new ScaleSnapshot { X = Scale.x, Y = Scale.y, Z = Scale.z, UnknownOptionalFields = unknownScaleFields };
+            set
+            {
+                if (value == null) return;
+                Scale = new Vector3(value.X, value.Y, value.Z);
+                unknownScaleFields = value.UnknownOptionalFields;
+            }
+        }
 
-        // 缩放只保存三个分量，避免 Vector3 的 normalized 等计算属性递归进入存档。
+        // 缩放只保存三个分量和未知扩展字段。
+        private sealed class ScaleSnapshot
+        {
+            [JsonProperty("x")] public float X;
+            [JsonProperty("y")] public float Y;
+            [JsonProperty("z")] public float Z;
+            [JsonExtensionData] public System.Collections.Generic.IDictionary<string, JToken> UnknownOptionalFields;
+        }
+
         public sealed class ScaleJsonConverter : JsonConverter<Vector3>
         {
             public override void WriteJson(JsonWriter writer, Vector3 value, JsonSerializer serializer)

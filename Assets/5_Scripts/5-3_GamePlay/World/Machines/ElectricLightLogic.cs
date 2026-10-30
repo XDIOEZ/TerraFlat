@@ -97,10 +97,10 @@ public sealed partial class MachineLightDefinition
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class ElectricLightState
 {
     #region 同步状态
-    public float SuppliedWatts;
+    [MemoryPackOrder(0)] public float SuppliedWatts;
     #endregion
 }

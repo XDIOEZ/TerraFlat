@@ -2,12 +2,12 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>普通防护服以独立装备来源提供被动耐压，不消耗氧气或耐久。</summary>
-[System.Serializable, MemoryPackable]
+[System.Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_PressureProtection : EquipmentInstance
 {
     #region 耐压装备
-    public float LowPressureToleranceIncreaseKPa;
-    public float HighPressureToleranceIncreaseKPa;
+    [MemoryPackOrder(1)] public float LowPressureToleranceIncreaseKPa;
+    [MemoryPackOrder(2)] public float HighPressureToleranceIncreaseKPa;
     [MemoryPackIgnore] private Mod_Pressure applied;
     public override void Equip(Item owner)
     {

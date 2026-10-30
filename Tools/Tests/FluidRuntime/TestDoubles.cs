@@ -62,7 +62,8 @@ namespace FlatWorld.Spaceflight
     public static class ShipStructureService
     {
         public static bool ApplyDamage(ShipState ship, string pieceId, double damage, string reason,
-            Action<ShipState, ShipPieceState, string> onDestroyed = null) => throw new NotSupportedException();
+            Action<ShipState, ShipPieceState, string> onDestroyed = null,
+            Func<ShipState, ShipPieceState, double, string, double?> applyOwnedDamage = null) => throw new NotSupportedException();
     }
     #endregion
 }

@@ -6,10 +6,10 @@ using UnityEngine;
 [System.Serializable]
 public enum WeatherType
 {
-    Clear,
-    Cloudy,
-    Rain,
-    Storm,
+    Clear = 0,
+    Cloudy = 1,
+    Rain = 2,
+    Storm = 3,
     Fog = 4 // 只追加枚举值，保持已有存档和联机天气编号不变。
 }
 
@@ -24,11 +24,11 @@ public enum WorldTopologyMode
     Wrapped = 1
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class PlanetData
 {
-    public SnowCoverState SeasonalSnow = new(); // 季节覆盖独立于天然雪地与地形身份。
+    [MemoryPack.MemoryPackOrder(19)] public SnowCoverState SeasonalSnow = new(); // 季节覆盖独立于天然雪地与地形身份。
     #region 世界生成默认值
     public const int DefaultRadius = 1000;
     public const int DefaultChunkDimension = 16;
@@ -76,80 +76,86 @@ public partial class PlanetData
 
     #region 星球基础数据
     //星球名称
-    public string Name;
+    [MemoryPack.MemoryPackOrder(13)] public string Name;
     //星球半径
     [LabelText("星球半径"), MinValue(1), PropertyTooltip("星球可探索范围的基础半径。")]
-    public int Radius = DefaultRadius;
+    [MemoryPack.MemoryPackOrder(16)] public int Radius = DefaultRadius;
 
     [LabelText("空间距离倍率"), MinValue(MinSpatialDistanceScale), MaxValue(MaxSpatialDistanceScale), PropertyTooltip("自然地理结构的统一空间尺度。1x 为基准；2x 会让地貌、气候区、河流、湖泊、雪区与洞穴等空间距离约扩大到两倍，并反向降低底层噪声坐标频率。")]
-    public float SpatialDistanceScale = DefaultSpatialDistanceScale;
+    [MemoryPack.MemoryPackOrder(21)] public float SpatialDistanceScale = DefaultSpatialDistanceScale;
 
     //星球地图大小
-    public Vector2Int ChunkSize = new Vector2Int(DefaultChunkDimension, DefaultChunkDimension);
+    [MemoryPack.MemoryPackIgnore] public Vector2Int ChunkSize = new Vector2Int(DefaultChunkDimension, DefaultChunkDimension);
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(4)]
+    private ModuleGridPositionSaveSnapshot SavedChunkSize
+    {
+        get => new() { X = ChunkSize.x, Y = ChunkSize.y };
+        set { if (value != null) ChunkSize = new(value.X, value.Y); }
+    }
     #endregion
 
     #region 地图与环境数据
     //星球地图数据字典
     [ShowInInspector]
-    public Dictionary<string, MapSave> MapData_Dict = new();
+    [MemoryPack.MemoryPackOrder(12)] public Dictionary<string, MapSave> MapData_Dict = new();
 
     [Tooltip("星球是否自动生成地图")]
-    public bool AutoGenerateMap = true;
+    [MemoryPack.MemoryPackOrder(2)] public bool AutoGenerateMap = true;
 
     public const float DefaultGlobalTemperature = 26f; // 生成气候的星球温度基准
     [LabelText("基础温度"), SuffixLabel("℃", true), PropertyTooltip("默认 26℃ 保留生成地块温度；调高或调低时，整张地图叠加相对于 26℃ 的差值。")]
-    public float GlobalTemperature = DefaultGlobalTemperature;
+    [MemoryPack.MemoryPackOrder(11)] public float GlobalTemperature = DefaultGlobalTemperature;
 
     [LabelText("当前天气"), PropertyTooltip("该星球当前天气类型。")]
-    public WeatherType CurrentWeather = WeatherType.Clear;
+    [MemoryPack.MemoryPackOrder(6)] public WeatherType CurrentWeather = WeatherType.Clear;
 
     [LabelText("天气强度"), Range(0f, 1f), PropertyTooltip("当前天气的强度，0表示无影响，1表示满强度。")]
-    public float WeatherIntensity = 0f;
+    [MemoryPack.MemoryPackOrder(27)] public float WeatherIntensity = 0f;
 
     [LabelText("全局风力"), Range(0f, 1f), PropertyTooltip("星球当前的全局风力，统一控制草木摆动幅度。")]
-    public float WindStrength = DefaultWindStrength;
+    [MemoryPack.MemoryPackOrder(32)] public float WindStrength = DefaultWindStrength;
 
     [LabelText("天气数据版本"), PropertyTooltip("天气事件运行时数据版本。")]
-    public int WeatherDataVersion = 0;
+    [MemoryPack.MemoryPackOrder(25)] public int WeatherDataVersion = 0;
 
     [LabelText("天气阶段"), PropertyTooltip("权威天气事件当前所处阶段。")]
-    public WeatherPhase WeatherPhase = WeatherPhase.Clear;
+    [MemoryPack.MemoryPackOrder(28)] public WeatherPhase WeatherPhase = WeatherPhase.Clear;
 
     [LabelText("阶段开始总时间"), PropertyTooltip("当前天气阶段开始时的绝对世界时间。")]
-    public float WeatherPhaseStartedTotalTime = 0f;
+    [MemoryPack.MemoryPackOrder(30)] public float WeatherPhaseStartedTotalTime = 0f;
 
     [LabelText("阶段结束总时间"), PropertyTooltip("非晴朗阶段结束时的绝对世界时间。")]
-    public float WeatherPhaseEndTotalTime = 0f;
+    [MemoryPack.MemoryPackOrder(29)] public float WeatherPhaseEndTotalTime = 0f;
 
     [LabelText("下次天气事件总时间"), PropertyTooltip("晴朗阶段下一次天气预兆开始时的绝对世界时间。")]
-    public float NextWeatherEventTotalTime = 0f;
+    [MemoryPack.MemoryPackOrder(14)] public float NextWeatherEventTotalTime = 0f;
 
     [LabelText("天气随机游标"), PropertyTooltip("确定性天气随机序列的持久化游标。")]
-    public int WeatherRandomCursor = 0;
+    [MemoryPack.MemoryPackOrder(31)] public int WeatherRandomCursor = 0;
 
     [LabelText("天气事件序号"), PropertyTooltip("已经开始过的降雨事件数量。")]
-    public int WeatherEventSequence = 0;
+    [MemoryPack.MemoryPackOrder(26)] public int WeatherEventSequence = 0;
 
     [LabelText("雨天降温"), SuffixLabel("℃", true), PropertyTooltip("雨天对环境温度的额外降温值。")]
-    public float RainTemperatureOffset = -4f;
+    [MemoryPack.MemoryPackOrder(17)] public float RainTemperatureOffset = -4f;
 
     [LabelText("阴天天气修正"), SuffixLabel("℃", true), PropertyTooltip("阴天对环境温度的额外修正值。")]
-    public float CloudyTemperatureOffset = -1f;
+    [MemoryPack.MemoryPackOrder(5)] public float CloudyTemperatureOffset = -1f;
 
     [LabelText("暴风天气修正"), SuffixLabel("℃", true), PropertyTooltip("暴风天气对环境温度的额外修正值。")]
-    public float StormTemperatureOffset = -6f;
+    [MemoryPack.MemoryPackOrder(22)] public float StormTemperatureOffset = -6f;
 
     // Keep this field at the end of the MemoryPack layout. Older saves omit it
     // and therefore retain the enum default: Infinite.
     [LabelText("World Topology")]
-    public WorldTopologyMode TopologyMode = WorldTopologyMode.Infinite;
+    [MemoryPack.MemoryPackOrder(24)] public WorldTopologyMode TopologyMode = WorldTopologyMode.Infinite;
 
     // 世界级生态数据。
     [LabelText("生态世界数据")]
-    public EcologyWorldSaveData Ecology = new();
+    [MemoryPack.MemoryPackOrder(7)] public EcologyWorldSaveData Ecology = new();
 
     [LabelText("区块天气状态")]
-    public List<RegionalWeatherRecord> RegionalWeatherStates = new(); // 区块天气概率档案和独立事件时刻随世界一起保存。
+    [MemoryPack.MemoryPackOrder(18)] public List<RegionalWeatherRecord> RegionalWeatherStates = new(); // 区块天气概率档案和独立事件时刻随世界一起保存。
     #endregion
 
 }

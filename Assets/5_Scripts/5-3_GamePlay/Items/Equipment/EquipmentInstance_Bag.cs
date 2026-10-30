@@ -7,13 +7,18 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_Bag : EquipmentInstance
 {
-    public Inventory_Data BagData = new Inventory_Data(new List<ItemSlot>(), "EquipmentBag");
+    [MemoryPackIgnore] public Inventory_Data BagData = new Inventory_Data(new List<ItemSlot>(), "EquipmentBag");
+    [MemoryPackInclude, MemoryPackOrder(1)] private StandaloneInventorySaveSnapshot BagSnapshot
+    {
+        get => StandaloneInventorySaveSnapshot.Capture(BagData);
+        set => BagData = value?.Restore();
+    }
 
     [Header("调试")]
-    public bool EnableDebugLog = true;
+    [MemoryPackOrder(2)] public bool EnableDebugLog = true;
 
 
     [Header("对象缓存")]

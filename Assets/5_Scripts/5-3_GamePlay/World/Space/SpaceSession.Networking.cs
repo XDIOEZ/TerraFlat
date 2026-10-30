@@ -8,6 +8,7 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
+        public const double NetworkObserverRangeMeters = 8192d;
         #region 观察者快照性能诊断
         private static readonly PerformanceDebugPoint NetworkCapturePoint = new("FlatWorld.Space.Network.CaptureContents");
         private static readonly PerformanceDebugPoint NetworkFilterPoint = new("FlatWorld.Space.Network.Filter");
@@ -276,6 +277,13 @@ namespace FlatWorld.Spaceflight
             }
         }
 
+        public SpaceSessionState CaptureBootstrapObserverState(string profile)
+        {
+            if (State == null || string.IsNullOrWhiteSpace(profile) || !TryGetNetworkObserver(profile, out _)) return null;
+            using var batch = networkSnapshotBatchDepth == 0 ? BeginNetworkSnapshotCaptureBatch() : default;
+            return CaptureNetworkObserverSnapshot(profile, NetworkObserverRangeMeters);
+        }
+
         private SpaceSessionState CaptureNetworkObserverSnapshot(string profile, double rangeMeters)
         {
             if (!TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return null;
@@ -303,7 +311,9 @@ namespace FlatWorld.Spaceflight
                     ShipFlightState flight = GetFlight(ship.ShipId);
                     bool visible = observer.InSpace ? flight?.Phase == ShipFlightPhase.Cruising &&
                         SpaceSectorCoordinates.Difference(new SpaceSectorPosition(ship.Sector, new SpaceVector2(ship.PositionX, ship.PositionY)), observer.Position).Magnitude <= rangeMeters + CalculateShipContactRadius(ship)
-                        : flight?.SurfaceWorldKey == observer.WorldKey;
+                        : flight?.SurfaceWorldKey == observer.WorldKey &&
+                          PressureExplosionQueue.DeltaInWorld(observer.WorldKey, observer.Position.LocalMeters.ToVector2(),
+                              new Vector2((float)ship.PositionX, (float)ship.PositionY)).magnitude <= rangeMeters + CalculateShipContactRadius(ship);
                     if (visible || ship.ShipId == observer.ShipId) includedShips.Add(ship.ShipId);
                 }
                 // 一条已对接的船组必须整组复制，客户端不重建缺成员的组。
@@ -336,12 +346,14 @@ namespace FlatWorld.Spaceflight
                     if (passenger.ProfileId == profile || TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver remote) &&
                         remote.InSpace == observer.InSpace && (observer.InSpace
                             ? SpaceSectorCoordinates.Difference(remote.Position, observer.Position).Magnitude <= rangeMeters
-                            : remote.WorldKey == observer.WorldKey))
+                            : remote.WorldKey == observer.WorldKey && PressureExplosionQueue.DeltaInWorld(observer.WorldKey,
+                                observer.Position.LocalMeters.ToVector2(), remote.Position.LocalMeters.ToVector2()).magnitude <= rangeMeters))
                     { snapshot.Passengers.Add(passenger); includedSectors.Add(GetPassengerPosition(passenger).Sector); }
                 foreach (SpaceLooseItemState loose in State.LooseItems)
                     if (loose.InSpace == observer.InSpace && (observer.InSpace
                         ? SpaceSectorCoordinates.Difference(new SpaceSectorPosition(loose.Motion.Sector, loose.Motion.PositionMeters), observer.Position).Magnitude <= rangeMeters
-                        : loose.WorldKey == observer.WorldKey)) snapshot.LooseItems.Add(loose);
+                        : loose.WorldKey == observer.WorldKey && PressureExplosionQueue.DeltaInWorld(observer.WorldKey,
+                            observer.Position.LocalMeters.ToVector2(), loose.Motion.PositionMeters.ToVector2()).magnitude <= rangeMeters)) snapshot.LooseItems.Add(loose);
                 foreach (ShipNavigationState task in State.Navigation) if (includedShips.Contains(task.ShipId)) snapshot.Navigation.Add(task);
                 if (observer.InSpace)
                     foreach (SpaceOreAsteroidState asteroid in State.OreAsteroids)

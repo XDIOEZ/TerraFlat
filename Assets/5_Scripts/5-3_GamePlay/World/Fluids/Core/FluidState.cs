@@ -5,7 +5,7 @@ using MemoryPack;
 public enum FluidPhase : byte { Gas = 0, Liquid = 1 }
 
 /// <summary>唯一物质量真值；温度、压力和比例都从这里推导。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FluidComponentState
 {
     #region 两相物质量
@@ -13,15 +13,19 @@ public partial class FluidComponentState
     private decimal gasMoles, liquidMoles;
     [NonSerialized, MemoryPackIgnore, Newtonsoft.Json.JsonIgnore, FastCloner.Code.FastClonerIgnore]
     internal FluidInventoryState Owner;
-    public string FluidId { get => fluidId; set { if (fluidId == value) return; fluidId = value; Owner?.ComponentChanged(); } }
-    public decimal GasMoles { get => gasMoles; set { if (gasMoles == value) return; gasMoles = value; Owner?.ComponentChanged(); } }
-    public decimal LiquidMoles { get => liquidMoles; set { if (liquidMoles == value) return; liquidMoles = value; Owner?.ComponentChanged(); } }
+    [MemoryPackOrder(0)] public string FluidId { get => fluidId; set { if (fluidId == value) return; fluidId = value; Owner?.ComponentChanged(); } }
+    [MemoryPackIgnore] public decimal GasMoles { get => gasMoles; set { if (gasMoles == value) return; gasMoles = value; Owner?.ComponentChanged(); } }
+    [MemoryPackIgnore] public decimal LiquidMoles { get => liquidMoles; set { if (liquidMoles == value) return; liquidMoles = value; Owner?.ComponentChanged(); } }
+    [MemoryPackInclude, MemoryPackOrder(1)] private string SavedGasMoles
+    { get => PersistentDecimalText.Format(GasMoles); set => GasMoles = PersistentDecimalText.Parse(value); }
+    [MemoryPackInclude, MemoryPackOrder(2)] private string SavedLiquidMoles
+    { get => PersistentDecimalText.Format(LiquidMoles); set => LiquidMoles = PersistentDecimalText.Parse(value); }
     public FluidComponentState Clone() => new() { FluidId = FluidId, GasMoles = GasMoles, LiquidMoles = LiquidMoles };
     #endregion
 }
 
 /// <summary>每个出口独占预留的单种批次，预留内容仍属于原库存。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FluidOutputReservation
 {
     #region 输出预留
@@ -29,10 +33,14 @@ public partial class FluidOutputReservation
     private decimal gasMoles, liquidMoles;
     [NonSerialized, MemoryPackIgnore, Newtonsoft.Json.JsonIgnore, FastCloner.Code.FastClonerIgnore]
     internal FluidInventoryState Owner;
-    public string PortId { get => portId; set { if (portId == value) return; portId = value; Owner?.ReservationChanged(); } }
-    public string FluidId { get => fluidId; set { if (fluidId == value) return; fluidId = value; Owner?.ReservationChanged(); } }
-    public decimal GasMoles { get => gasMoles; set { if (gasMoles == value) return; gasMoles = value; Owner?.ReservationChanged(); } }
-    public decimal LiquidMoles { get => liquidMoles; set { if (liquidMoles == value) return; liquidMoles = value; Owner?.ReservationChanged(); } }
+    [MemoryPackOrder(0)] public string PortId { get => portId; set { if (portId == value) return; portId = value; Owner?.ReservationChanged(); } }
+    [MemoryPackOrder(1)] public string FluidId { get => fluidId; set { if (fluidId == value) return; fluidId = value; Owner?.ReservationChanged(); } }
+    [MemoryPackIgnore] public decimal GasMoles { get => gasMoles; set { if (gasMoles == value) return; gasMoles = value; Owner?.ReservationChanged(); } }
+    [MemoryPackIgnore] public decimal LiquidMoles { get => liquidMoles; set { if (liquidMoles == value) return; liquidMoles = value; Owner?.ReservationChanged(); } }
+    [MemoryPackInclude, MemoryPackOrder(2)] private string SavedGasMoles
+    { get => PersistentDecimalText.Format(GasMoles); set => GasMoles = PersistentDecimalText.Parse(value); }
+    [MemoryPackInclude, MemoryPackOrder(3)] private string SavedLiquidMoles
+    { get => PersistentDecimalText.Format(LiquidMoles); set => LiquidMoles = PersistentDecimalText.Parse(value); }
     [MemoryPackIgnore] public decimal TotalMoles => GasMoles + LiquidMoles;
     public FluidOutputReservation Clone() => new()
     { PortId = PortId, FluidId = FluidId, GasMoles = GasMoles, LiquidMoles = LiquidMoles };
@@ -40,26 +48,26 @@ public partial class FluidOutputReservation
 }
 
 /// <summary>管段、气罐和设备腔共用的可保存状态，不保存冲突的派生读数。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FluidInventoryState
 {
     #region 流体持久化
     private List<FluidComponentState> components = new();
     private double totalInternalEnergyJoules;
-    public List<FluidComponentState> Components
+    [MemoryPackOrder(0)] public List<FluidComponentState> Components
     {
         get => components;
         set { if (ReferenceEquals(components, value)) return; components = value; SynchronizeComponents(); }
     }
-    public double TotalInternalEnergyJoules
+    [MemoryPackOrder(1)] public double TotalInternalEnergyJoules
     {
         get => totalInternalEnergyJoules;
         set { if (totalInternalEnergyJoules == value) return; totalInternalEnergyJoules = value; contentRevision++; stateRevision++; }
     }
     private ulong randomState = 0x9E3779B97F4A7C15UL;
-    public ulong RandomState { get => randomState; set { if (randomState == value) return; randomState = value; stateRevision++; } }
+    [MemoryPackOrder(2)] public ulong RandomState { get => randomState; set { if (randomState == value) return; randomState = value; stateRevision++; } }
     private List<FluidOutputReservation> ports = new();
-    public List<FluidOutputReservation> Ports
+    [MemoryPackOrder(3)] public List<FluidOutputReservation> Ports
     {
         get => ports;
         set { if (ReferenceEquals(ports, value)) return; ports = value; SynchronizeReservations(); }

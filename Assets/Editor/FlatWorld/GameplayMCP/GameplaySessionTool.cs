@@ -27,7 +27,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("One of: status, list_saves, continue_save, create_world, reload_resources, save_exit.", Required = false, DefaultValue = "status")]
             public string action { get; set; }
 
-            [ToolParameter("Save name without .bytes. Empty means most recent save.", Required = false)]
+            [ToolParameter("SQLite save display name or stable archive ID. Empty means most recent save.", Required = false)]
             public string saveName { get; set; }
 
             [ToolParameter("Player profile name. Empty means the first stable profile in the save.", Required = false)]

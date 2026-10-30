@@ -44,18 +44,30 @@ namespace FlatWorld.WorldModel
             return size;
         }
 
+        // 存档索引和天气引擎使用完全相同的环绕分区公式。
+        public static Int2 ResolveRegionOrigin(Int2 cell, RegionalWeatherSettings settings,
+            WorldTopologyDomain domain, int chunkWidth, int chunkHeight)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            return ResolveRegionBounds(cell, checked(chunkWidth * settings.RegionSizeInChunks),
+                checked(chunkHeight * settings.RegionSizeInChunks), domain, out _);
+        }
+
         private Int2 ResolveRegionBounds(Int2 cell, out Int2 size)
+            => ResolveRegionBounds(cell, regionWidth, regionHeight, domain, out size);
+
+        private static Int2 ResolveRegionBounds(Int2 cell, int regionWidth, int regionHeight, WorldTopologyDomain domain, out Int2 size)
         {
             int2 normalized = domain.Normalize(new int2(cell.X, cell.Y));
-            int x = ResolveRegionAxis(normalized.x, regionWidth, domain.Min.x, domain.Span.x, out int width);
-            int y = ResolveRegionAxis(normalized.y, regionHeight, domain.Min.y, domain.Span.y, out int height);
+            int x = ResolveRegionAxis(normalized.x, regionWidth, domain.Min.x, domain.Span.x, domain.IsWrapped, out int width);
+            int y = ResolveRegionAxis(normalized.y, regionHeight, domain.Min.y, domain.Span.y, domain.IsWrapped, out int height);
             size = new Int2(width, height);
             return new Int2(x, y);
         }
 
-        private int ResolveRegionAxis(int cell, int targetSize, int minimum, int worldSpan, out int size)
+        private static int ResolveRegionAxis(int cell, int targetSize, int minimum, int worldSpan, bool wrapped, out int size)
         {
-            if (!domain.IsWrapped)
+            if (!wrapped)
             {
                 size = targetSize;
                 return checked(FloorDiv(cell, targetSize) * targetSize);
@@ -570,6 +582,13 @@ namespace FlatWorld.WorldModel
             };
         }
 
+        // 持久化数据可直接生成只读副本，不改变权威或副本引擎状态。
+        public RegionalWeatherSnapshot CapturePersistedStateSnapshot(RegionalWeatherState state)
+        {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+            return BuildSnapshot(state);
+        }
+
         private static float ResolveWindStrength(RegionalWeatherState state)
             => state.LastStepTime < state.ForcedElementsEndTime && state.ForcedWindStrength >= 0f
                 ? state.ForcedWindStrength : ActiveIntensity(state, WeatherElementIds.Wind);
@@ -596,6 +615,13 @@ namespace FlatWorld.WorldModel
             copies.Sort((a, b) => a.Region.X != b.Region.X
                 ? a.Region.X.CompareTo(b.Region.X) : a.Region.Y.CompareTo(b.Region.Y));
             return copies;
+        }
+
+        // 退出观察范围后释放区域状态，近期雷击仍保留到自然过期。
+        public void RemoveRegion(Int2 region)
+        {
+            region = ResolveRegion(region);
+            if (states.Remove(region) | replicas.Remove(region)) WindQueryRevision++;
         }
 
         public void RestoreState(RegionalWeatherState state)

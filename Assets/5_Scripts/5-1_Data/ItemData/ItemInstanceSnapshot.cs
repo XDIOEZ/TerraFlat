@@ -6,33 +6,41 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>脱离活跃对象的实例状态，定义配置和 Unity 引用不进入快照。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class ItemInstanceSnapshot
 {
     #region 冻结状态
 
-    [MemoryPackInclude] private ItemInstanceKind kind;
-    [MemoryPackInclude] private string definitionId;
-    [MemoryPackInclude] private int guid;
-    [MemoryPackInclude] private float amount;
-    [MemoryPackInclude] private bool canBePickedUp;
-    [MemoryPackInclude] private float durabilityFraction;
-    [MemoryPackInclude] private float craftedDurabilityMultiplier;
-    [MemoryPackInclude] private string specialData;
-    [MemoryPackInclude] private bool inHand;
-    [MemoryPackInclude] private string factionId;
-    [MemoryPackInclude] private bool hasTransform;
-    [MemoryPackInclude] private Vector3 position;
-    [MemoryPackInclude] private Quaternion rotation;
-    [MemoryPackInclude] private Vector3 scale;
-    [MemoryPackInclude] private byte[] matterPayload;
-    [MemoryPackInclude] private ModuleInstanceSnapshot[] modules;
-    [MemoryPackInclude] private string[] addedTags;
-    [MemoryPackInclude] private string[] removedTags;
-    [MemoryPackInclude] private byte[] kindPayload;
-    [MemoryPackInclude] private Vector2 physicsVelocity;
-    [MemoryPackInclude] private float physicsAngularVelocity;
-    [MemoryPackInclude] private bool persistentWorldResident;
+    [MemoryPackInclude, MemoryPackOrder(0)] private ItemInstanceKind kind;
+    [MemoryPackInclude, MemoryPackOrder(1)] private string definitionId;
+    [MemoryPackInclude, MemoryPackOrder(2)] private int guid;
+    [MemoryPackInclude, MemoryPackOrder(3)] private float amount;
+    [MemoryPackInclude, MemoryPackOrder(4)] private bool canBePickedUp;
+    [MemoryPackInclude, MemoryPackOrder(5)] private float durabilityFraction;
+    [MemoryPackInclude, MemoryPackOrder(6)] private float craftedDurabilityMultiplier;
+    [MemoryPackInclude, MemoryPackOrder(7)] private string specialData;
+    [MemoryPackInclude, MemoryPackOrder(8)] private bool inHand;
+    [MemoryPackInclude, MemoryPackOrder(9)] private string factionId;
+    [MemoryPackInclude, MemoryPackOrder(10)] private bool hasTransform;
+    [MemoryPackInclude, MemoryPackOrder(11)] private float positionX;
+    [MemoryPackInclude, MemoryPackOrder(12)] private float positionY;
+    [MemoryPackInclude, MemoryPackOrder(13)] private float positionZ;
+    [MemoryPackInclude, MemoryPackOrder(14)] private float rotationX;
+    [MemoryPackInclude, MemoryPackOrder(15)] private float rotationY;
+    [MemoryPackInclude, MemoryPackOrder(16)] private float rotationZ;
+    [MemoryPackInclude, MemoryPackOrder(17)] private float rotationW;
+    [MemoryPackInclude, MemoryPackOrder(18)] private float scaleX;
+    [MemoryPackInclude, MemoryPackOrder(19)] private float scaleY;
+    [MemoryPackInclude, MemoryPackOrder(20)] private float scaleZ;
+    [MemoryPackInclude, MemoryPackOrder(21)] private byte[] matterPayload;
+    [MemoryPackInclude, MemoryPackOrder(22)] private ModuleInstanceSnapshot[] modules;
+    [MemoryPackInclude, MemoryPackOrder(23)] private string[] addedTags;
+    [MemoryPackInclude, MemoryPackOrder(24)] private string[] removedTags;
+    [MemoryPackInclude, MemoryPackOrder(25)] private byte[] kindPayload;
+    [MemoryPackInclude, MemoryPackOrder(26)] private float physicsVelocityX;
+    [MemoryPackInclude, MemoryPackOrder(27)] private float physicsVelocityY;
+    [MemoryPackInclude, MemoryPackOrder(28)] private float physicsAngularVelocity;
+    [MemoryPackInclude, MemoryPackOrder(29)] private bool persistentWorldResident;
 
     [MemoryPackIgnore] public string DefinitionId => definitionId;
     [MemoryPackIgnore] public int Guid => guid;
@@ -48,7 +56,7 @@ public sealed partial class ItemInstanceSnapshot
         amount = 1f;
         canBePickedUp = true;
         durabilityFraction = 1f;
-        matterPayload = ItemSnapshotSerialization.SerializePayload(new ItemMatterState());
+        matterPayload = ItemSnapshotSerialization.SerializePayload(ItemMatterSnapshot.Capture(null));
     }
 
     public static ItemInstanceSnapshot Capture(ItemData data, bool includeTransform = true,
@@ -66,14 +74,24 @@ public sealed partial class ItemInstanceSnapshot
                 ? publicSpecialData(data.ItemSpecialData) : data.ItemSpecialData,
             inHand = data.inHand, factionId = data.FactionId,
             hasTransform = includeTransform && data.transform != null,
-            position = includeTransform && data.transform != null ? data.transform.position : Vector3.zero,
-            rotation = includeTransform && data.transform != null ? data.transform.rotation : Quaternion.identity,
-            scale = includeTransform && data.transform != null ? data.transform.scale : Vector3.one,
-            matterPayload = ItemSnapshotSerialization.SerializePayload(data.MatterState ?? new ItemMatterState()),
-            physicsVelocity = includeTransform && !data.inHand ? data.PhysicsState?.Velocity ?? Vector2.zero : Vector2.zero,
+            matterPayload = ItemSnapshotSerialization.SerializePayload(ItemMatterSnapshot.Capture(data.MatterState)),
             physicsAngularVelocity = includeTransform && !data.inHand ? data.PhysicsState?.AngularVelocity ?? 0f : 0f,
             persistentWorldResident = includeTransform && !data.inHand && data.PhysicsState?.PersistentWorldResident == true
         };
+        if (snapshot.hasTransform)
+        {
+            Vector3 position = data.transform.position;
+            Quaternion rotation = data.transform.rotation;
+            Vector3 scale = data.transform.scale;
+            snapshot.positionX = position.x; snapshot.positionY = position.y; snapshot.positionZ = position.z;
+            snapshot.rotationX = rotation.x; snapshot.rotationY = rotation.y; snapshot.rotationZ = rotation.z; snapshot.rotationW = rotation.w;
+            snapshot.scaleX = scale.x; snapshot.scaleY = scale.y; snapshot.scaleZ = scale.z;
+        }
+        if (includeTransform && !data.inHand && data.PhysicsState != null)
+        {
+            snapshot.physicsVelocityX = data.PhysicsState.Velocity.x;
+            snapshot.physicsVelocityY = data.PhysicsState.Velocity.y;
+        }
 
         var captured = new SortedDictionary<string, ModuleInstanceSnapshot>(StringComparer.Ordinal);
         if (data.PreservedModuleStates != null)
@@ -125,17 +143,22 @@ public sealed partial class ItemInstanceSnapshot
         current.ItemSpecialData = specialData;
         current.inHand = inHand;
         current.FactionId = factionId;
-        current.MatterState = MemoryPackSerializer.Deserialize<ItemMatterState>(matterPayload) ?? new ItemMatterState();
+        current.MatterState = MemoryPackSerializer.Deserialize<ItemMatterSnapshot>(matterPayload)?.Restore() ?? new ItemMatterState();
         if (current.Stack != null)
         {
             current.Stack.Amount = amount;
             current.Stack.CanBePickedUp = canBePickedUp;
         }
         if (hasTransform && !preserveTransform)
-            current.transform = new ItemTransform { position = position, rotation = rotation, scale = scale };
+            current.transform = new ItemTransform
+            {
+                position = new Vector3(positionX, positionY, positionZ),
+                rotation = new Quaternion(rotationX, rotationY, rotationZ, rotationW),
+                scale = new Vector3(scaleX, scaleY, scaleZ)
+            };
         if (!preserveTransform)
             current.PhysicsState = new ItemPhysicsRuntimeState
-            { Velocity = physicsVelocity, AngularVelocity = physicsAngularVelocity, PersistentWorldResident = persistentWorldResident };
+            { Velocity = new Vector2(physicsVelocityX, physicsVelocityY), AngularVelocity = physicsAngularVelocity, PersistentWorldResident = persistentWorldResident };
         RestoreTagOverrides(current);
 
         var unbound = new List<ModuleInstanceSnapshot>();
@@ -235,11 +258,11 @@ public sealed partial class ItemInstanceSnapshot
         if (string.IsNullOrWhiteSpace(definitionId) || !Enum.IsDefined(typeof(ItemInstanceKind), kind) ||
             !IsFinite(amount) || amount < 0f || !IsFinite(durabilityFraction) || durabilityFraction < 0f || durabilityFraction > 1f ||
             !IsFinite(craftedDurabilityMultiplier) || craftedDurabilityMultiplier <= 0f || matterPayload == null ||
-            !IsFinite(physicsVelocity.x) || !IsFinite(physicsVelocity.y) || !IsFinite(physicsAngularVelocity) ||
+            !IsFinite(physicsVelocityX) || !IsFinite(physicsVelocityY) || !IsFinite(physicsAngularVelocity) ||
             (kind != ItemInstanceKind.Block && kindPayload == null) ||
-            (hasTransform && (!IsFinite(position.x) || !IsFinite(position.y) || !IsFinite(position.z) ||
-                !IsFinite(rotation.x) || !IsFinite(rotation.y) || !IsFinite(rotation.z) || !IsFinite(rotation.w) ||
-                !IsFinite(scale.x) || !IsFinite(scale.y) || !IsFinite(scale.z))))
+            (hasTransform && (!IsFinite(positionX) || !IsFinite(positionY) || !IsFinite(positionZ) ||
+                !IsFinite(rotationX) || !IsFinite(rotationY) || !IsFinite(rotationZ) || !IsFinite(rotationW) ||
+                !IsFinite(scaleX) || !IsFinite(scaleY) || !IsFinite(scaleZ))))
             throw new InvalidDataException("物品实例快照身份或数值无效。");
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (ModuleInstanceSnapshot state in modules ?? Array.Empty<ModuleInstanceSnapshot>())
@@ -271,7 +294,30 @@ public sealed partial class ItemInstanceSnapshot
     #endregion
 }
 
-public enum ItemInstanceKind : byte { General, Player, TileMap, Block }
+public enum ItemInstanceKind : byte { General = 0, Player = 1, TileMap = 2, Block = 3 }
+
+[MemoryPackable(GenerateType.VersionTolerant)]
+internal sealed partial class ItemMatterSnapshot
+{
+    #region 物质存档字段
+    [MemoryPackOrder(0)] public bool Initialized;
+    [MemoryPackOrder(1)] public float? TemperatureCelsius;
+    [MemoryPackOrder(2)] public float Moisture;
+    [MemoryPackOrder(3)] public bool IsBurning;
+    [MemoryPackOrder(4)] public float CombustionElapsedSeconds;
+
+    public static ItemMatterSnapshot Capture(ItemMatterState state) => state == null ? new ItemMatterSnapshot() : new ItemMatterSnapshot
+    {
+        Initialized = state.Initialized, TemperatureCelsius = state.TemperatureCelsius, Moisture = state.Moisture,
+        IsBurning = state.IsBurning, CombustionElapsedSeconds = state.CombustionElapsedSeconds
+    };
+    public ItemMatterState Restore() => new ItemMatterState
+    {
+        Initialized = Initialized, TemperatureCelsius = TemperatureCelsius ?? 20f, Moisture = Moisture,
+        IsBurning = IsBurning, CombustionElapsedSeconds = CombustionElapsedSeconds
+    };
+    #endregion
+}
 
 /// <summary>公开世界快照使用独立的捕获策略，策略只作用于同步序列化调用所在的线程。</summary>
 public static class ItemSnapshotSerialization
@@ -333,28 +379,49 @@ public static class ItemSnapshotSerialization
 }
 
 /// <summary>角色属性属于角色进度；私有库存由公开网络快照排除。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class PlayerInstanceSnapshot
 {
-    public string SceneName;
-    public Hp Hp;
-    public Defense Defense;
-    public GameValue_float Speed;
-    public float Stamina;
-    public float StaminaMax;
-    public float StaminaRecoverySpeed;
-    public string UserName;
-    public float PlayerPov;
-    public float MaxCarryWeight;
-    public float MaxCarryVolume;
-    public float PerceptionRadiusMultiplier;
-    public Dictionary<string, InventoryInstanceSnapshot> Inventories;
+    [MemoryPackOrder(0)] public string SceneName;
+    [MemoryPackOrder(1)] public bool HasHp;
+    [MemoryPackOrder(2)] public float HpValue;
+    [MemoryPackOrder(3)] public float HpMaximum;
+    [MemoryPackOrder(4)] public List<string> HpWeaknesses;
+    [MemoryPackOrder(5)] public bool HasDefense;
+    [MemoryPackOrder(6)] public float DefenseCutting;
+    [MemoryPackOrder(7)] public float DefensePiercing;
+    [MemoryPackOrder(8)] public float DefenseChopping;
+    [MemoryPackOrder(9)] public float DefenseBlunt;
+    [MemoryPackOrder(10)] public bool HasSpeed;
+    [MemoryPackOrder(11)] public float SpeedBase;
+    [MemoryPackOrder(12)] public float SpeedBaseAdditive;
+    [MemoryPackOrder(13)] public float SpeedAdditiveModifier;
+    [MemoryPackOrder(14)] public float? SpeedMultiplicativeModifier;
+    [MemoryPackOrder(15)] public float SpeedFinalAdditive;
+    [MemoryPackOrder(16)] public float Stamina;
+    [MemoryPackOrder(17)] public float StaminaMax;
+    [MemoryPackOrder(18)] public float StaminaRecoverySpeed;
+    [MemoryPackOrder(19)] public string UserName;
+    [MemoryPackOrder(20)] public float PlayerPov;
+    [MemoryPackOrder(21)] public float MaxCarryWeight;
+    [MemoryPackOrder(22)] public float MaxCarryVolume;
+    [MemoryPackOrder(23)] public float? PerceptionRadiusMultiplier;
+    [MemoryPackOrder(24)] public Dictionary<string, InventoryInstanceSnapshot> Inventories;
 
     public static byte[] Capture(Data_Player data, bool publicState)
     {
         return ItemSnapshotSerialization.SerializePayload(new PlayerInstanceSnapshot
         {
-            SceneName = data.CurrentSceneName, Hp = data.hp, Defense = data.defense, Speed = data.Speed,
+            SceneName = data.CurrentSceneName,
+            HasHp = data.hp != null, HpValue = data.hp?.Value ?? 0f, HpMaximum = data.hp?.maxValue ?? 0f,
+            HpWeaknesses = data.hp?.Weaknesses == null ? null : new List<string>(data.hp.Weaknesses),
+            HasDefense = data.defense != null, DefenseCutting = data.defense?.Cutting ?? 0f,
+            DefensePiercing = data.defense?.Piercing ?? 0f, DefenseChopping = data.defense?.Chopping ?? 0f,
+            DefenseBlunt = data.defense?.Blunt ?? 0f,
+            HasSpeed = data.Speed != null, SpeedBase = data.Speed?.BaseValue ?? 0f,
+            SpeedBaseAdditive = data.Speed?.BaseAdditive ?? 0f, SpeedAdditiveModifier = data.Speed?.AdditiveModifier ?? 0f,
+            SpeedMultiplicativeModifier = data.Speed?.MultiplicativeModifier ?? 1f,
+            SpeedFinalAdditive = data.Speed?.FinalAdditive ?? 0f,
             Stamina = data.stamina, StaminaMax = data.staminaMax, StaminaRecoverySpeed = data.staminaRecoverySpeed,
             UserName = data.Name_User, PlayerPov = data.PlayerPov, MaxCarryWeight = data.MaxCarryWeight,
             MaxCarryVolume = data.MaxCarryVolume, PerceptionRadiusMultiplier = data.PerceptionRadiusMultiplier,
@@ -369,27 +436,27 @@ internal sealed partial class PlayerInstanceSnapshot
         if (state == null) throw new InvalidDataException("角色实例状态为空。");
         target.CurrentSceneName = state.SceneName;
         target.hp ??= new Hp(30f);
-        if (state.Hp != null)
+        if (state.HasHp)
         {
-            target.hp.maxValue = state.Hp.maxValue;
-            target.hp.Weaknesses = state.Hp.Weaknesses ?? new List<string>();
+            target.hp.maxValue = state.HpMaximum;
+            target.hp.Weaknesses = state.HpWeaknesses ?? new List<string>();
         }
         target.defense ??= new Defense();
-        if (state.Defense != null)
+        if (state.HasDefense)
         {
-            target.defense.Cutting = state.Defense.Cutting;
-            target.defense.Piercing = state.Defense.Piercing;
-            target.defense.Chopping = state.Defense.Chopping;
-            target.defense.Blunt = state.Defense.Blunt;
+            target.defense.Cutting = state.DefenseCutting;
+            target.defense.Piercing = state.DefensePiercing;
+            target.defense.Chopping = state.DefenseChopping;
+            target.defense.Blunt = state.DefenseBlunt;
         }
         target.Speed ??= new GameValue_float();
-        if (state.Speed != null)
+        if (state.HasSpeed)
         {
-            target.Speed.BaseValue = state.Speed.BaseValue;
-            target.Speed.BaseAdditive = state.Speed.BaseAdditive;
-            target.Speed.AdditiveModifier = state.Speed.AdditiveModifier;
-            target.Speed.MultiplicativeModifier = state.Speed.MultiplicativeModifier;
-            target.Speed.FinalAdditive = state.Speed.FinalAdditive;
+            target.Speed.BaseValue = state.SpeedBase;
+            target.Speed.BaseAdditive = state.SpeedBaseAdditive;
+            target.Speed.AdditiveModifier = state.SpeedAdditiveModifier;
+            target.Speed.MultiplicativeModifier = state.SpeedMultiplicativeModifier ?? 1f;
+            target.Speed.FinalAdditive = state.SpeedFinalAdditive;
         }
         target.stamina = state.Stamina;
         target.staminaMax = state.StaminaMax;
@@ -398,9 +465,9 @@ internal sealed partial class PlayerInstanceSnapshot
         target.PlayerPov = state.PlayerPov;
         target.MaxCarryWeight = state.MaxCarryWeight;
         target.MaxCarryVolume = state.MaxCarryVolume;
-        target.PerceptionRadiusMultiplier = state.PerceptionRadiusMultiplier;
+        target.PerceptionRadiusMultiplier = state.PerceptionRadiusMultiplier ?? 1f;
         if (state.Inventories != null)
             InventoryInstanceSnapshot.RestoreDictionary(state.Inventories, target._inventoryData ??= new());
-        if (state.Hp != null) target.hp.Value = state.Hp.Value;
+        if (state.HasHp) target.hp.Value = state.HpValue;
     }
 }

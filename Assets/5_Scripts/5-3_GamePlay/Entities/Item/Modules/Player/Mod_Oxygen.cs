@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UltEvents;
@@ -18,12 +18,12 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder, IPlayerSt
     #region 数据
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class OxygenData
     {
-        public float CurrentOxygen = 100f; // 当前氧气值。
-        public float MaxOxygen = 100f; // 最大氧气值。
-        public float HypoxiaSeconds; // 零氧后的伤害计时随实例保存，重载不能刷新喘息窗口。
+        [MemoryPackOrder(0)] public float CurrentOxygen = 100f; // 当前氧气值。
+        [MemoryPackOrder(1)] public float MaxOxygen = 100f; // 最大氧气值。
+        [MemoryPackOrder(2)] public float HypoxiaSeconds; // 零氧后的伤害计时随实例保存，重载不能刷新喘息窗口。
     }
 
     public Ex_ModData_MemoryPackable modData; // 模块存档容器。

@@ -7,16 +7,17 @@ namespace FlatWorld.Spaceflight
     #region 船体保存模型
     public enum ShipPieceKind
     {
-        Floor, Wall, Door, DockingPort, Console, Engine, Equipment,
-        GravityGenerator, Cultivator, Navigation, Wire, Pipe, Fiber
+        Floor = 0, Wall = 1, Door = 2, DockingPort = 3, Console = 4, Engine = 5, Equipment = 6,
+        GravityGenerator = 7, Cultivator = 8, Navigation = 9, Wire = 10, Pipe = 11, Fiber = 12
     }
 
-    public enum ShipMassKind { Cargo, Occupant, Gas, Other }
-    public enum ShipPlatformKind { Space, Land, Ocean }
+    public enum ShipMassKind { Cargo = 0, Occupant = 1, Gas = 2, Other = 3 }
+    public enum ShipPlatformKind { Space = 0, Land = 1, Ocean = 2 }
 
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipCell : IEquatable<ShipCell>
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public int X;
         public int Y;
         public ShipCell() { }
@@ -29,6 +30,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipPieceState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string PieceId = Guid.NewGuid().ToString("N");
         public string ItemId;
         public ShipPieceKind Kind;
@@ -69,6 +71,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipMassContribution
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string SourceId;
         public string SupportPieceId;
         public ShipMassKind Kind;
@@ -81,6 +84,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipCompartmentState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string CompartmentId = Guid.NewGuid().ToString("N");
         public List<ShipCell> Cells = new List<ShipCell>();
         public double VolumeLiters;
@@ -90,6 +94,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipDockingPortState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string PortId;
         public string PieceId;
         public int CellX;
@@ -106,6 +111,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipAnchorState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 固定站台锚定
         // 锚定本地原点而不是重心，扩建改变质量后站台仍留在原位。
         public string BodyId;
@@ -116,6 +122,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ShipId = Guid.NewGuid().ToString("N");
         public SpaceSectorId Sector;
         public string IdentityAnchorPieceId;
@@ -166,6 +173,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipAssemblyState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string AssemblyId;
         public SpaceSectorId Sector;
         public List<string> MemberShipIds = new List<string>();
@@ -183,6 +191,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipAssemblyMemberState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ShipId;
         public double OffsetX;
         public double OffsetY;
@@ -192,6 +201,7 @@ namespace FlatWorld.Spaceflight
     [Serializable, JsonObject(MemberSerialization.Fields)]
     public sealed class ShipDockingPairState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string PairId = Guid.NewGuid().ToString("N");
         public string ShipAId;
         public string PortAId;

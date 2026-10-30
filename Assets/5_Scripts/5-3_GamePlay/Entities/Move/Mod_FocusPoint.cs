@@ -295,30 +295,35 @@ public partial class Mod_FocusPoint : Module
 
     #region Data Class
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class FocusPoint_Data
     {
         /// <summary>旋转速度（度/秒）</summary>
-        public float RotationSpeed = 180f;
+        [MemoryPackOrder(0)] public float RotationSpeed = 180f;
 
-        public Dictionary<string, Vector2> FocusPoints = new Dictionary<string, Vector2>()
+        [MemoryPackIgnore] public Dictionary<string, Vector2> FocusPoints = new Dictionary<string, Vector2>()
         {
               { "See", Vector2.zero },
               { "Move", Vector2.zero },
               { "Skill_0", Vector2.zero }
         };
+        [MemoryPackInclude, MemoryPackOrder(1)] private Dictionary<string, ModuleVector2SaveSnapshot> FocusPointSnapshots
+        {
+            get => ModuleVector2SaveSnapshot.CaptureDictionary(FocusPoints);
+            set => FocusPoints = ModuleVector2SaveSnapshot.RestoreDictionary(value);
+        }
 
         /// <summary>是否启用旋转功能</summary>
-        public bool ActivateRotation = true;
+        [MemoryPackOrder(2)] public bool ActivateRotation = true;
 
         /// <summary>停止旋转的距离阈值，鼠标接近到此距离内时不再旋转</summary>
         [Tooltip("鼠标与物体的距离小于此值时，停止旋转并保留当前角度")]
-        public float StopRotationDistance = 0.1f; // 默认1.5单位距离
+        [MemoryPackOrder(3)] public float StopRotationDistance = 0.1f; // 默认1.5单位距离
 
         [MemoryPackIgnore]
         public Vector2 See_Point { get=> FocusPoints["See"]; set => FocusPoints["See"] = value; }
-        public Vector2 Move_Point { get=> FocusPoints["Move"]; set => FocusPoints["Move"] = value; }
-        public Vector2 DefaultSkill_Point { get=> FocusPoints["Skill_0"]; set => FocusPoints["Skill_0"] = value; }
+        [MemoryPackIgnore] public Vector2 Move_Point { get=> FocusPoints["Move"]; set => FocusPoints["Move"] = value; }
+        [MemoryPackIgnore] public Vector2 DefaultSkill_Point { get=> FocusPoints["Skill_0"]; set => FocusPoints["Skill_0"] = value; }
     }
     #endregion
 }

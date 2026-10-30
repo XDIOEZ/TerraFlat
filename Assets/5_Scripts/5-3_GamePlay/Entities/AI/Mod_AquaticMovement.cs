@@ -68,10 +68,10 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
 
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class LifeState
     {
-        public float DryElapsed;
+        [MemoryPackOrder(0)] public float DryElapsed;
     }
 
     public Item ActorItem => item;

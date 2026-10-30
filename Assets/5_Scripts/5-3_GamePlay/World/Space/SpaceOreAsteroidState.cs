@@ -6,6 +6,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceOreAsteroidState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 矿石小行星的持久状态
         public string AsteroidId, CenterBodyId, CompositionId;
         public SpaceSectorId Sector;

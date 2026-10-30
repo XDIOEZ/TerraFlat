@@ -2,13 +2,15 @@ using System;
 using MemoryPack;
 using UnityEngine;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class DarkNavigationSaveData
 {
-    public Vector2 WanderTarget;
-    public bool HasWanderTarget;
-    public float WanderPauseRemaining;
+    [MemoryPackIgnore] public Vector2 WanderTarget;
+    [MemoryPackInclude, MemoryPackOrder(0)] private float WanderTargetX { get => WanderTarget.x; set => WanderTarget.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(1)] private float WanderTargetY { get => WanderTarget.y; set => WanderTarget.y = value; }
+    [MemoryPackOrder(2)] public bool HasWanderTarget;
+    [MemoryPackOrder(3)] public float WanderPauseRemaining;
 }
 
 /// <summary>

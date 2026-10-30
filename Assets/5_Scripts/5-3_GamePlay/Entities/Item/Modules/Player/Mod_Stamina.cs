@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -43,11 +43,11 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class StaminaData
     {
-        public float CurrentStamina;
-        public float MaxStamina;
+        [MemoryPackOrder(0)] public float CurrentStamina;
+        [MemoryPackOrder(1)] public float MaxStamina;
     }
     // 是否为满精力 - 实时判断
     public bool IsStaminaFull => Mathf.Approximately(Data.CurrentStamina, MaxValue);

@@ -10,12 +10,12 @@ public enum GrassCellState : byte
 }
 
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class GrassLayerData
 {
-    public int Width;
-    public int Height;
-    public byte[] Cells = Array.Empty<byte>();
+    [MemoryPackOrder(0)] public int Width;
+    [MemoryPackOrder(1)] public int Height;
+    [MemoryPackOrder(2)] public byte[] Cells = Array.Empty<byte>();
 
     public void EnsureSize(int width, int height)
     {

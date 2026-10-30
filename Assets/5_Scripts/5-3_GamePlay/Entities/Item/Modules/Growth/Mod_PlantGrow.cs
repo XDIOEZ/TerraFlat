@@ -102,27 +102,27 @@ public class Mod_PlantGrow : Module
 
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class Mod_PlantGrow_Data
 {
 
     [Tooltip("是否循环执行")]
-    public bool isLoop = false;
+    [MemoryPackOrder(0)] public bool isLoop = false;
 
     [Tooltip("当前生产进度")]
-    public float progress;
+    [MemoryPackOrder(1)] public float progress;
 
     [Tooltip("生产进度上限")]
-    public GameValue_float progress_Max = new();
+    [MemoryPackOrder(2)] public GameValue_float progress_Max = new();
 
     [Tooltip("每秒生产速度")]
-    public GameValue_float productionSpeed = new();
+    [MemoryPackOrder(3)] public GameValue_float productionSpeed = new();
 
     [Tooltip("特殊生产点列表")]
-    public List<Float_Loot_List> specialProductionPoints = new();
+    [MemoryPackOrder(4)] public List<Float_Loot_List> specialProductionPoints = new();
 
     [Tooltip("当前特殊生产点的索引")]
-    public int nodeIndex= 0;
+    [MemoryPackOrder(5)] public int nodeIndex= 0;
 
     // 初始化默认值
     public Mod_PlantGrow_Data()
@@ -135,14 +135,14 @@ public partial class Mod_PlantGrow_Data
 }
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class Float_Loot_List
 {
-    public string NodeName;
-    public float InvokeValue;
+    [MemoryPackOrder(0)] public string NodeName;
+    [MemoryPackOrder(1)] public float InvokeValue;
 
     [Header("掉落数据")]
-    public LootData loot;
+    [MemoryPackOrder(2)] public LootData loot;
 
-    public bool DestroySelf = false;
+    [MemoryPackOrder(3)] public bool DestroySelf = false;
 }

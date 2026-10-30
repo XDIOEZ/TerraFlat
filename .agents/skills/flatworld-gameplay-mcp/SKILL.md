@@ -25,7 +25,7 @@ GamePlayMCP 通过正式生产 API 控制真实玩家；结构化状态/UI 树�
 ## 会话与控制
 
 - 正式启动场景为 `Assets/3_Scenes/GameStartScene.unity`。会话状态由 `gameplay_session(status)` 查询；世界玩法需要真实 Play Mode 和就绪世界，主菜单 UI 不需要玩家租约。
-- `continue_save(isolated=true)` 默认复制最近正式存档到 `Library/FlatWorldGameplayMCP/Saves/`；`create_world(isolated=true)` 的首次及后续保存也在隔离目录。正式存档写入仅限明确授权。
+- `continue_save(isolated=true)` 默认通过 SQLite backup/fork 将最近已提交存档复制到 `Library/FlatWorldGameplayMCP/Saves/<新ArchiveId>/save.sqlite`；名称/ID 从存档服务元数据解析，不复制裸数据库或 WAL 伴随文件；`create_world(isolated=true)` 的首次及后续保存也在隔离目录。正式存档写入仅限明确授权。
 - 入世等待默认 60 秒、最长 120 秒；已进入加载过程时查询状态，不重复建世界或切存档目录。`world_entry_timeout` 可能只是等待超时。`save_exit` 调用生产保存退出协程。
 - `continue_save/create_world` 首次成功入世通过生命公开接口把本地玩家当前/上限初始化为 20000，仅一次；已有世界、状态查询、获取租约和普通菜单启动不改血量。
 - `session(save_exit)` 的 `saved=true` 必须以本轮退出保存的真实写盘成功为条件，返回主菜单但写盘失败时返回 `save_write_failed`；续档前后位置、库存仍需通过 `observe` 实际对照。

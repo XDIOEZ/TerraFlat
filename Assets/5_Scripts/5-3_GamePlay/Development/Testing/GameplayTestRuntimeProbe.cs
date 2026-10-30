@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MemoryPack;
+using FlatWorld.Persistence;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -799,44 +800,48 @@ public static partial class GameplayTestRuntimeProbe
         marker._inventoryData["probe"] = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = item } }, "probe");
         copy.PlayerData_Dict.Add(markerProfile, marker);
         string directory = Path.Combine(root, "Roundtrips", Guid.NewGuid().ToString("N"));
-        string file = Path.Combine(directory, "roundtrip.bytes");
+        copy.ArchiveId = Guid.NewGuid().ToString("N");
+        string file = Path.Combine(directory, copy.ArchiveId, "save.sqlite");
         string parent = Path.GetDirectoryName(directory);
         if (Directory.Exists(parent) && (File.GetAttributes(parent) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidOperationException("测试归档子目录不允许目录联接。");
         RequireIsolatedSaveRoot(player);
         bool firstWritten = saves.SaveToDisk(copy, directory, "roundtrip");
         if (!firstWritten || !File.Exists(file)) throw new IOException("正式隔离写盘没有生成测试文件。");
-        byte[] firstBytes = File.ReadAllBytes(file);
+        long firstBytes = new FileInfo(file).Length;
+        string backup = Path.Combine(directory, "backup.sqlite");
+        long firstGeneration;
+        using (var store = new SqliteSaveArchiveStore(file))
+        {
+            firstGeneration = store.ReadMetadataAsync().GetAwaiter().GetResult().CurrentGeneration;
+            store.BackupAsync(backup).GetAwaiter().GetResult();
+        }
         item.Stack.Amount = amount + 1;
         copy.PlayerData_Dict[markerProfile].ItemSpecialData = "{\"probe\":2}";
         RequireIsolatedSaveRoot(player);
         bool secondWritten = saves.SaveToDisk(copy, directory, "roundtrip");
         if (!secondWritten) throw new IOException("正式隔离替换写盘失败。");
-        byte[] secondBytes = File.ReadAllBytes(file);
-        string backup = file + ".bak";
-        if (!File.Exists(backup)) throw new IOException("原子替换未保留上一版测试存档备份。");
-        byte[] backupBytes = File.ReadAllBytes(backup);
-        GameSaveData first, second;
-        var shell = new GameObject("[LuaSaveReadProbe]");
-        shell.SetActive(false);
-        shell.hideFlags = HideFlags.HideAndDontSave;
-        try
+        long secondBytes = new FileInfo(file).Length;
+        string previousPath = Path.Combine(directory, "previous.sqlite");
+        long previousGeneration;
+        using (var store = new SqliteSaveArchiveStore(file))
         {
-            var reader = shell.AddComponent<SaveDataMgr>();
-            if (!ReferenceEquals(SaveDataMgr.TestExistingInstance, saves) || !string.IsNullOrEmpty(reader.UserSavePath))
-                throw new InvalidOperationException("恢复外壳意外触发了正式存档初始化。");
-            first = reader.ReadTestArchiveWithoutPublishing(backupBytes);
-            second = reader.ReadTestArchiveWithoutPublishing(secondBytes);
+            previousGeneration = store.ReadMetadataAsync().GetAwaiter().GetResult().PreviousGeneration;
+            store.BackupAsync(previousPath).GetAwaiter().GetResult();
         }
-        finally { UnityEngine.Object.DestroyImmediate(shell); }
+        GameSaveData first = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(previousPath, previous: true);
+        GameSaveData second = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(file);
+        GameSaveData backedUp = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(backup);
         var firstItem = first.PlayerData_Dict[markerProfile]._inventoryData["probe"].itemSlots[0].itemData;
         var secondItem = second.PlayerData_Dict[markerProfile]._inventoryData["probe"].itemSlots[0].itemData;
         return new JObject
         {
             ["firstWritten"] = firstWritten, ["secondWritten"] = secondWritten, ["path"] = file,
-            ["firstBytes"] = firstBytes.Length, ["secondBytes"] = secondBytes.Length,
-            ["temporaryRemaining"] = File.Exists(file + ".tmp"), ["backupExists"] = File.Exists(file + ".bak"),
-            ["backupMatchesFirst"] = backupBytes.SequenceEqual(firstBytes),
+            ["firstBytes"] = firstBytes, ["secondBytes"] = secondBytes,
+            ["temporaryRemaining"] = File.Exists(file + ".tmp"), ["backupExists"] = File.Exists(backup),
+            ["backupMatchesFirst"] = backedUp.PlayerData_Dict[markerProfile].ItemSpecialData == first.PlayerData_Dict[markerProfile].ItemSpecialData,
+            ["previousGenerationPreserved"] = previousGeneration == firstGeneration,
+            ["stableArchiveId"] = second.ArchiveId == copy.ArchiveId,
             ["firstAmount"] = firstItem.Stack.Amount, ["secondAmount"] = secondItem.Stack.Amount,
             ["firstGuid"] = firstItem.Guid, ["secondGuid"] = secondItem.Guid,
             ["firstId"] = firstItem.IDName, ["secondId"] = secondItem.IDName,

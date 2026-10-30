@@ -116,17 +116,20 @@ public static partial class MachineWorld
         level = sample.LiquidLevel; return true;
     }
 
-    internal static bool IsFluidEnvironmentSubmerged(MachineEntity node)
+    internal static bool TryGetFluidEnvironmentSubmerged(MachineEntity node, out bool submerged)
     {
+        submerged = false;
         if (TryGetLocalAtmosphereKey(node, out string atmosphereKey) && RequireShipEnvironment().TryGetMachineEnvironment(atmosphereKey, node.Position,
-            out ShipEnvironmentSnapshot environment) && environment.HasFloorSupport) return false;
+            out ShipEnvironmentSnapshot environment) && environment.HasFloorSupport) return true;
         if (TryResolveFluidSurfacePoint(node.Position, out string world, out Vector2 position))
         {
-            LandingSurfaceSample surface = SpaceSurfaceQuery.GetLandingSurface(world, position);
-            return surface.SupportTileId == 0 && surface.LiquidDepth > 0f;
+            if (SpaceSurfaceQuery.QueryLandingSurface(world, position, out LandingSurfaceSample surface) != SurfaceQueryStatus.Ready) return false;
+            submerged = surface.SupportTileId == 0 && surface.LiquidDepth > 0f;
+            return true;
         }
-        return !IsShipScope && worldKey == SceneManager.GetActiveScene().name && WorldLiquidSourceResolver.TryResolve(node.Position, out WorldLiquidSourceTarget source) &&
+        submerged = !IsShipScope && worldKey == SceneManager.GetActiveScene().name && WorldLiquidSourceResolver.TryResolve(node.Position, out WorldLiquidSourceTarget source) &&
             TerrainSupportLayer.GetTileId(source.Sample.Terrain, source.Sample.LocalCell.x, source.Sample.LocalCell.y) == 0;
+        return true;
     }
 
     internal static bool TryPumpFluidEnvironmentLiquid(string world, Vector2 position, int requestedLevel,

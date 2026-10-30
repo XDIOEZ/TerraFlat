@@ -4,14 +4,14 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>静态季节覆盖量容器；区域天气积雪保存在区块环境层。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SnowCoverState
 {
     public const int MinimumTemperature = -80;
     public const int BandCount = 161;
-    public float[] Coverage = new float[BandCount]; // -80～80℃ 基础气候的持续覆盖。
-    public bool Initialized; // 是否建立世界时间游标。
-    public float LastTotalTime; // 在其他维度度过的时间也需按原天气边界补算。
+    [MemoryPack.MemoryPackOrder(0)] public float[] Coverage = new float[BandCount]; // -80～80℃ 基础气候的持续覆盖。
+    [MemoryPack.MemoryPackOrder(1)] public bool Initialized; // 是否建立世界时间游标。
+    [MemoryPack.MemoryPackOrder(2)] public float LastTotalTime; // 在其他维度度过的时间也需按原天气边界补算。
 
     /// <summary>从相邻气候档读取覆盖量，并统一量化为 0.1～1.0 的十层积雪。</summary>
     public float Sample(float baselineTemperature)

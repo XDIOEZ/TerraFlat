@@ -94,6 +94,11 @@ public partial class ChunkMgr
         chunk.Address.DimensionId == ResolveCurrentDimensionId() &&
         ReferenceEquals(ResolveRestoredAirHumidityTerrain(chunk.Address), chunk.Terrain) && chunk.Terrain != null;
 
+    // 联机实体补基线需要等待本地地形和实体都完成恢复。
+    public bool IsChunkStateRestoredForNetworking(ChunkRuntime chunk) => IsTerrainRestoredForEnvironment(chunk) &&
+        activeRuntimeBindings.TryGetValue(chunk.Address, out RuntimeChunkBinding binding) &&
+        ReferenceEquals(binding.RestoredEntitiesChunk, chunk);
+
     public bool TryGetRestoredTerrainForEnvironment(Vector2 position, out RuntimeTerrainTileSample sample)
     {
         sample = default;

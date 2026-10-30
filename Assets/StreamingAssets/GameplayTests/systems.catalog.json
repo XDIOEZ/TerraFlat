@@ -1127,7 +1127,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.IncrementalWindow.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BackgroundGenerationScheduling.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestChunkStreamingOptimizationRuntimeProbe.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestChunkStreamingOptimizationRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ChunkPersistenceGate.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1159,13 +1160,18 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData*",
         "Assets/5_Scripts/5-1_Data/*Snapshot*",
         "Assets/StreamingAssets/GameplayTests/Systems/Save/*",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/*Save*.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/*Save*.cs",
+        "Assets/5_Scripts/Shared/Persistence/*",
+        "Tools/Tests/SqlitePersistence/*",
+        "Tools/Tests/SaveArchiveContracts/*",
+        "Tools/Tests/WorldGenerationV1/*"
       ],
       "dependsOn": [
         "item_runtime",
         "inventory"
       ],
       "ruleCaseIds": [
+        "save_sqlite_records",
         "save_rules",
         "save_ecology_snapshot_cache",
         "save_machine_payload_cache",

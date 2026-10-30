@@ -134,23 +134,15 @@ namespace FlatWorld.GameplayMCP
             if (!Directory.Exists(saveDirectory))
                 return new JArray();
 
-            string[] files = Directory.GetFiles(saveDirectory, "*.bytes", SearchOption.TopDirectoryOnly);
-            var ordered = files
-                .Select(path => new FileInfo(path))
-                .OrderByDescending(info => info.LastWriteTimeUtc)
-                .ToArray();
-
             var result = new JArray();
-            for (int i = 0; i < ordered.Length; i++)
-            {
-                FileInfo info = ordered[i];
+            foreach (var entry in SaveDataMgr.ReadSqliteSaveCatalog(saveDirectory))
                 result.Add(new JObject
                 {
-                    ["name"] = Path.GetFileNameWithoutExtension(info.Name),
-                    ["lastWriteUtc"] = info.LastWriteTimeUtc.ToString("O", CultureInfo.InvariantCulture),
-                    ["bytes"] = info.Length
+                    ["name"] = entry.Name,
+                    ["id"] = Path.GetFileName(Path.GetDirectoryName(entry.Path)),
+                    ["lastWriteUtc"] = entry.LastExitTimeUtc.ToString("O", CultureInfo.InvariantCulture),
+                    ["bytes"] = new FileInfo(entry.Path).Length
                 });
-            }
 
             return result;
         }
@@ -205,12 +197,11 @@ namespace FlatWorld.GameplayMCP
                 "Library",
                 "FlatWorldGameplayMCP",
                 "Saves");
-            string existingIsolatedPath = isolated && !string.IsNullOrWhiteSpace(saveName)
-                ? Path.Combine(isolatedDirectory, saveName.Trim() + ".bytes")
-                : null;
-            bool resumeExistingIsolated = !string.IsNullOrEmpty(existingIsolatedPath) &&
-                                          File.Exists(existingIsolatedPath);
-            string sourcePath = resumeExistingIsolated ? existingIsolatedPath : ResolveSavePath(saveName);
+            var isolatedEntry = isolated && !string.IsNullOrWhiteSpace(saveName)
+                ? ResolveSaveEntry(saveName, isolatedDirectory) : null;
+            bool resumeExistingIsolated = isolatedEntry != null;
+            var source = isolatedEntry ?? ResolveSaveEntry(saveName, SaveDataMgr.GetDefaultSavePath());
+            string sourcePath = source?.Path;
             if (string.IsNullOrEmpty(sourcePath))
                 return BuildActionError("save_not_found", "没有找到可用于 GamePlayMCP 的存档。", false);
 
@@ -221,10 +212,7 @@ namespace FlatWorld.GameplayMCP
                 Directory.CreateDirectory(isolatedDirectory);
                 if (!resumeExistingIsolated)
                 {
-                    string isolatedName = $"GameplayMCP_{Path.GetFileNameWithoutExtension(sourcePath)}";
-                    loadPath = Path.Combine(isolatedDirectory, isolatedName + ".bytes");
-                    File.Copy(sourcePath, loadPath, true);
-                    CopyIfExists(sourcePath + ".bak", loadPath + ".bak");
+                    loadPath = await SaveDataMgr.CopySqliteArchiveToFolderAsync(sourcePath, isolatedDirectory, "GameplayMCP_" + source.Name);
                 }
                 saveDataMgr.UserSavePath = isolatedDirectory + Path.DirectorySeparatorChar;
             }
@@ -237,9 +225,6 @@ namespace FlatWorld.GameplayMCP
             saveDataMgr.LoadSaveByDisk(loadPath);
             if (saveDataMgr.SaveData == null)
                 return BuildActionError("save_load_failed", $"存档加载失败：{loadPath}", false);
-
-            if (isolated)
-                saveDataMgr.SaveData.saveName = Path.GetFileNameWithoutExtension(loadPath);
 
             string resolvedPlayerName = ResolvePlayerName(saveDataMgr.SaveData, playerName);
             if (string.IsNullOrEmpty(resolvedPlayerName))
@@ -453,21 +438,12 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>解析指定存档；未指定时使用最近修改的正式存档。</summary>
-        private static string ResolveSavePath(string saveName)
+        private static SaveDataMgr.ArchiveCatalogEntry ResolveSaveEntry(string saveName, string directory)
         {
-            string directory = SaveDataMgr.GetDefaultSavePath();
-            if (!Directory.Exists(directory))
-                return null;
-
-            if (!string.IsNullOrWhiteSpace(saveName))
-            {
-                string path = Path.Combine(directory, saveName.Trim() + ".bytes");
-                return File.Exists(path) ? path : null;
-            }
-
-            return Directory.GetFiles(directory, "*.bytes", SearchOption.TopDirectoryOnly)
-                .OrderByDescending(File.GetLastWriteTimeUtc)
-                .FirstOrDefault();
+            var entries = SaveDataMgr.ReadSqliteSaveCatalog(directory);
+            return string.IsNullOrWhiteSpace(saveName) ? entries.FirstOrDefault() : entries.FirstOrDefault(entry =>
+                string.Equals(entry.Name, saveName.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(Path.GetFileName(Path.GetDirectoryName(entry.Path)), saveName.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>优先使用调用方指定玩家，否则选择存档中的第一个稳定档案键。</summary>
@@ -480,13 +456,6 @@ namespace FlatWorld.GameplayMCP
                 return playerName;
 
             return saveData.PlayerData_Dict.Keys.OrderBy(name => name, StringComparer.Ordinal).FirstOrDefault();
-        }
-
-        /// <summary>复制存在的伴随文件。</summary>
-        private static void CopyIfExists(string source, string target)
-        {
-            if (File.Exists(source))
-                File.Copy(source, target, true);
         }
 
         #endregion

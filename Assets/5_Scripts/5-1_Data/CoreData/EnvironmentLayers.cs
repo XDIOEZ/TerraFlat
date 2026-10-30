@@ -23,19 +23,19 @@ public readonly struct EnvironmentSample
 }
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EnvironmentLayers
 {
-    public float[,] Temperature = new float[0, 0]; // 温度归一化层（0~1）
-    public float[,] TemperatureCelsius = new float[0, 0]; // 温度摄氏层（℃）
-    public float[,] Precipitation = new float[0, 0]; // 降水层
-    public float[,] Height = new float[0, 0]; // 海拔层
-    public float[,] WindX = new float[0, 0]; // 生成期风向 X（单位向量）
-    public float[,] WindY = new float[0, 0]; // 生成期风向 Y（单位向量）
-    public float[,] Light = new float[0, 0]; // 光照亮度层（0=完全黑暗，1=最大亮度）
+    [MemoryPackOrder(0)] public float[,] Temperature = new float[0, 0]; // 温度归一化层（0~1）
+    [MemoryPackOrder(1)] public float[,] TemperatureCelsius = new float[0, 0]; // 温度摄氏层（℃）
+    [MemoryPackOrder(2)] public float[,] Precipitation = new float[0, 0]; // 降水层
+    [MemoryPackOrder(3)] public float[,] Height = new float[0, 0]; // 海拔层
+    [MemoryPackOrder(4)] public float[,] WindX = new float[0, 0]; // 生成期风向 X（单位向量）
+    [MemoryPackOrder(5)] public float[,] WindY = new float[0, 0]; // 生成期风向 Y（单位向量）
+    [MemoryPackOrder(6)] public float[,] Light = new float[0, 0]; // 光照亮度层（0=完全黑暗，1=最大亮度）
 
-    public int Width => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(0) : 0;
-    public int GridHeight => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(1) : 0;
+    [MemoryPackIgnore] public int Width => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(0) : 0;
+    [MemoryPackIgnore] public int GridHeight => Temperature != null && Temperature.Length > 0 ? Temperature.GetLength(1) : 0;
 
     public bool Contains(int x, int y)
     {

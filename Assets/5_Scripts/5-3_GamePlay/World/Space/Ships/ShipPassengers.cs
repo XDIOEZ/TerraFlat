@@ -749,9 +749,17 @@ namespace FlatWorld.Spaceflight
                 if (passenger.SurfaceDescending)
                 {
                     BodyState body = GetBody(passenger.LandingBodyId);
-                    passenger.SurfaceVerticalSpeed -= body.SurfaceGravity * seconds;
-                    passenger.SurfaceHeight += passenger.SurfaceVerticalSpeed * seconds;
+                    if (passenger.SurfaceHeight > 0d)
+                    {
+                        passenger.SurfaceVerticalSpeed -= body.SurfaceGravity * seconds;
+                        passenger.SurfaceHeight += passenger.SurfaceVerticalSpeed * seconds;
+                    }
                     if (passenger.SurfaceHeight > 0d) continue;
+                    passenger.SurfaceHeight = 0d;
+                    SurfaceQueryStatus groundStatus = SpaceSurfaceQuery.QueryLandingSurface(body.PlanetId,
+                        new Vector2((float)passenger.LandingX, (float)passenger.LandingY), out _);
+                    if (groundStatus == SurfaceQueryStatus.Pending) continue;
+                    if (groundStatus != SurfaceQueryStatus.Ready) throw new InvalidOperationException("乘员触地位置无效。");
                     passenger.SurfaceHeight = 0d; passenger.SurfaceDescending = false; passenger.LandingResolved = true;
                     if (player != null && player.ProfileName == passenger.ProfileId)
                     {

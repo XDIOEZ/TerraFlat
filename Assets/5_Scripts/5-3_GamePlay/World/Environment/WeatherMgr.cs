@@ -508,6 +508,7 @@ public partial class WeatherMgr : MonoBehaviour
         bool local = IsLocalWeatherWorld && _weatherRuntimeAllowed;
         SetPresentationActive(local);
         if (!_weatherRuntimeAllowed) return;
+        LightningStrikeSystem.AdvancePending(ownedWorld);
         MaintainWeatherEventSystem();
         if (!local) return;
         Keyboard keyboard = Keyboard.current;

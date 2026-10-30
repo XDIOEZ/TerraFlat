@@ -38,11 +38,11 @@ public sealed partial class Mod_FishingRod : Module
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
 
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class RigState
     {
-        public InventoryInstanceSnapshot Inventory;
-        public bool PendingRodBreak;
+        [MemoryPackOrder(0)] public InventoryInstanceSnapshot Inventory;
+        [MemoryPackOrder(1)] public bool PendingRodBreak;
     }
 
     [Serializable]

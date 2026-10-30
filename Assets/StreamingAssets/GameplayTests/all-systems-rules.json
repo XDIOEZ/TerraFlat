@@ -341,6 +341,12 @@
       "enabled": true
     },
     {
+      "id": "save_sqlite_records",
+      "name": "SQLite事务与冻结修订",
+      "luaPath": "GameplayTests/Systems/Save/sqlite.lua",
+      "enabled": true
+    },
+    {
       "id": "save_rules",
       "name": "存档与恢复规则与边界",
       "luaPath": "GameplayTests/Systems/Save/rules.lua",

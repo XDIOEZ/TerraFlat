@@ -2,7 +2,7 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>宇航服装备效果主动读取实际气罐，供氧和整套耐压均由服装侧处理。</summary>
-[System.Serializable, MemoryPackable]
+[System.Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAmbientOxygenBlocker, IEquipmentConfiguration
 {
     #region 装备生命周期与供给

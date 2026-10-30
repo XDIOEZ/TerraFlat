@@ -144,10 +144,15 @@ namespace FlatWorld.Networking.Gameplay
         private void OnServerWeatherSurfaceRequest(NetworkConnectionToClient connection,
             NetworkWeatherSurfaceRequest request)
         {
-            if (!NetworkServer.active || string.IsNullOrWhiteSpace(request.DimensionId) ||
+            if (!NetworkServer.active || connection == null || !connection.isAuthenticated || !connection.isReady || string.IsNullOrWhiteSpace(request.DimensionId) ||
                 !TryGetConnectionWorld(connection, out string world) ||
+                connection.identity?.GetComponent<NetworkWorldPlayer>() is not NetworkWorldPlayer player ||
+                player.RealmRevision != request.RealmRevision || !player.TryGetSpaceObserver(out var observer) ||
                 !string.Equals(world, request.WorldKey, StringComparison.Ordinal) ||
-                !GameplayWorldRegistry.TryGet(world, out _)) return;
+                !GameplayWorldRegistry.TryGet(world, out _) ||
+                !NetworkItemStateCoordinator.IsChunkInsideObserverWindow(world, new Vector2Int(request.ChunkX, request.ChunkY),
+                    observer.Position.LocalMeters.ToVector2(),
+                    Mathf.Max(32, player.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true)?.CurrentDestroyChunkDistance ?? 0))) return;
             using var worldScope = GameplayWorldRegistry.UseWorld(world);
             ChunkMgr manager = ChunkMgr.ExistingInstance;
             var address = new RuntimeWorldAddress(request.DimensionId, new Int2(request.ChunkX, request.ChunkY));
@@ -197,10 +202,25 @@ namespace FlatWorld.Networking.Gameplay
                     Payload = bytes
                 };
                 if (target != null)
-                    target.Send(message);
+                    SendSurfaceToObserver(target, message, requested: true);
                 else
-                    SendToWorld(snapshot.WorldKey, message);
+                    foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                        SendSurfaceToObserver(connection, message);
             }
+        }
+
+        private static void SendSurfaceToObserver(NetworkConnectionToClient connection, NetworkWeatherSurfaceMessage message, bool requested = false)
+        {
+            if (connection == null || connection is LocalConnectionToClient || !connection.isAuthenticated || !connection.isReady ||
+                !TryGetConnectionWorld(connection, out string world) || world != message.WorldKey ||
+                connection.identity?.GetComponent<NetworkWorldPlayer>() is not NetworkWorldPlayer player ||
+                !player.TryGetSpaceObserver(out var observer)) return;
+            int distance = Mathf.Max(requested ? 32 : 4,
+                player.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true)?.CurrentDestroyChunkDistance ?? 0);
+            if (!NetworkItemStateCoordinator.IsChunkInsideObserverWindow(world, new Vector2Int(message.ChunkX, message.ChunkY),
+                observer.Position.LocalMeters.ToVector2(), distance)) return;
+            message.RealmRevision = player.RealmRevision;
+            connection.Send(message);
         }
 
         #endregion
@@ -210,6 +230,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnClientWeatherSurfaceMessage(NetworkWeatherSurfaceMessage message)
         {
             if (!PrepareWeatherSurfaceClient(out ChunkMgr manager, out PlanetData planet) ||
+                message.RealmRevision != NetworkGameplayWorldScope.LocalRevision ||
                 !string.Equals(GameplayWorldRegistry.LocalPresentationWorldKey, message.WorldKey, StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(message.DimensionId))
                 return;
@@ -420,6 +441,7 @@ namespace FlatWorld.Networking.Gameplay
                 NetworkClient.Send(new NetworkWeatherSurfaceRequest
                 {
                     WorldKey = GameplayWorldRegistry.LocalPresentationWorldKey,
+                    RealmRevision = NetworkGameplayWorldScope.LocalRevision,
                     DimensionId = pair.Key.DimensionId,
                     ChunkX = pair.Key.ChunkOrigin.X,
                     ChunkY = pair.Key.ChunkOrigin.Y

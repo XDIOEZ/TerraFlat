@@ -2,30 +2,30 @@ using System;
 using FlatWorld.WorldModel;
 using MemoryPack;
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class RegionalWeatherRecord
 {
     #region 区块天气存档字段
 
-    public int RegionX;
-    public int RegionY;
-    public double LastStepTime;
-    public long CheckIndex;
-    public ChunkWeatherProfileRecord Profile;
-    public WeatherElementStateRecord[] Elements = Array.Empty<WeatherElementStateRecord>();
-    public bool ForcedSnow;
-    public double NextLightningTime;
-    public double LastLightningTime = -1d;
-    public int LightningSequence;
-    public int LightningCellX;
-    public int LightningCellY;
-    public float LightningStrength;
-    public int Revision;
-    public float ForcedCloudCoverage = -1f;
-    public float ForcedFogDensity = -1f;
-    public float ForcedWindStrength = -1f;
-    public double ForcedElementsEndTime;
+    [MemoryPack.MemoryPackOrder(15)] public int RegionX;
+    [MemoryPack.MemoryPackOrder(16)] public int RegionY;
+    [MemoryPack.MemoryPackOrder(8)] public double LastStepTime;
+    [MemoryPack.MemoryPackOrder(0)] public long CheckIndex;
+    [MemoryPack.MemoryPackOrder(14)] public ChunkWeatherProfileRecord Profile;
+    [MemoryPack.MemoryPackOrder(1)] public WeatherElementStateRecord[] Elements = Array.Empty<WeatherElementStateRecord>();
+    [MemoryPack.MemoryPackOrder(5)] public bool ForcedSnow;
+    [MemoryPack.MemoryPackOrder(13)] public double NextLightningTime;
+    [MemoryPack.MemoryPackOrder(7)] public double LastLightningTime = -1d;
+    [MemoryPack.MemoryPackOrder(11)] public int LightningSequence;
+    [MemoryPack.MemoryPackOrder(9)] public int LightningCellX;
+    [MemoryPack.MemoryPackOrder(10)] public int LightningCellY;
+    [MemoryPack.MemoryPackOrder(12)] public float LightningStrength;
+    [MemoryPack.MemoryPackOrder(17)] public int Revision;
+    [MemoryPack.MemoryPackOrder(2)] public float ForcedCloudCoverage = -1f;
+    [MemoryPack.MemoryPackOrder(4)] public float ForcedFogDensity = -1f;
+    [MemoryPack.MemoryPackOrder(6)] public float ForcedWindStrength = -1f;
+    [MemoryPack.MemoryPackOrder(3)] public double ForcedElementsEndTime;
 
     #endregion
 
@@ -96,19 +96,19 @@ public partial class RegionalWeatherRecord
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class ChunkWeatherProfileRecord
 {
     #region 生成档案字段与转换
 
-    public float AirHumidity;
-    public float WindX;
-    public float WindY;
-    public float WindStrength;
-    public float TemperatureCelsius;
-    public float Precipitation;
-    public WeatherElementProfileRecord[] Elements = Array.Empty<WeatherElementProfileRecord>();
+    [MemoryPack.MemoryPackOrder(0)] public float AirHumidity;
+    [MemoryPack.MemoryPackOrder(5)] public float WindX;
+    [MemoryPack.MemoryPackOrder(6)] public float WindY;
+    [MemoryPack.MemoryPackOrder(4)] public float WindStrength;
+    [MemoryPack.MemoryPackOrder(3)] public float TemperatureCelsius;
+    [MemoryPack.MemoryPackOrder(2)] public float Precipitation;
+    [MemoryPack.MemoryPackOrder(1)] public WeatherElementProfileRecord[] Elements = Array.Empty<WeatherElementProfileRecord>();
 
     public static ChunkWeatherProfileRecord FromProfile(ChunkWeatherProfile profile)
     {
@@ -150,16 +150,16 @@ public partial class ChunkWeatherProfileRecord
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class WeatherElementProfileRecord
 {
     #region 天气要素配置与转换
 
-    public string Id;
-    public float Probability;
-    public float Intensity;
-    public float DurationSeconds;
+    [MemoryPack.MemoryPackOrder(1)] public string Id;
+    [MemoryPack.MemoryPackOrder(3)] public float Probability;
+    [MemoryPack.MemoryPackOrder(2)] public float Intensity;
+    [MemoryPack.MemoryPackOrder(0)] public float DurationSeconds;
 
     public static WeatherElementProfileRecord FromProfile(WeatherElementProfile profile)
     {
@@ -177,18 +177,18 @@ public partial class WeatherElementProfileRecord
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class WeatherElementStateRecord
 {
     #region 天气要素运行态与转换
 
-    public string Id;
-    public double StartedTime;
-    public double EndTime;
-    public float Intensity;
-    public double NaturalRecoveryEndTime;
-    public float PendingProbabilityBonus;
+    [MemoryPack.MemoryPackOrder(1)] public string Id;
+    [MemoryPack.MemoryPackOrder(5)] public double StartedTime;
+    [MemoryPack.MemoryPackOrder(0)] public double EndTime;
+    [MemoryPack.MemoryPackOrder(2)] public float Intensity;
+    [MemoryPack.MemoryPackOrder(3)] public double NaturalRecoveryEndTime;
+    [MemoryPack.MemoryPackOrder(4)] public float PendingProbabilityBonus;
 
     public static WeatherElementStateRecord FromState(WeatherElementState state)
     {

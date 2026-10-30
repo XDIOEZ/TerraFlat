@@ -13,19 +13,19 @@ public sealed class ReadableBookPageDefinition
 
 /// <summary>单本书的一页玩家编辑内容，按页码保存在书籍物品数据中。</summary>
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class ReadableBookPageContent
 {
     /// <summary>该本笔记中的零基页码。</summary>
-    public int PageIndex;
+    [MemoryPackOrder(0)] public int PageIndex;
     /// <summary>玩家自定义标题。</summary>
-    public string Title;
+    [MemoryPackOrder(1)] public string Title;
     /// <summary>玩家自定义正文。</summary>
-    public string Body;
+    [MemoryPackOrder(2)] public string Body;
     /// <summary>标题是否覆盖静态本地化标题。</summary>
-    public bool HasCustomTitle;
+    [MemoryPackOrder(3)] public bool HasCustomTitle;
     /// <summary>正文是否覆盖静态本地化正文。</summary>
-    public bool HasCustomBody;
+    [MemoryPackOrder(4)] public bool HasCustomBody;
 }
 
 /// <summary>单本书的可变状态；纸张扩页、正文和两个专用物品槽随这本物品保存。</summary>
@@ -43,14 +43,14 @@ public class ReadableBookInstanceData
 }
 
 /// <summary>书籍实例进度和库存快照；当前输入标签与布局不进入持久化负载。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class ReadableBookInstanceSnapshot
 {
     #region 书籍实例状态
 
-    public int AddedPageCount;
-    public List<ReadableBookPageContent> PageContents;
-    public InventoryInstanceSnapshot InputInventory;
+    [MemoryPackOrder(0)] public int AddedPageCount;
+    [MemoryPackOrder(1)] public List<ReadableBookPageContent> PageContents;
+    [MemoryPackOrder(2)] public InventoryInstanceSnapshot InputInventory;
 
     #endregion
 }

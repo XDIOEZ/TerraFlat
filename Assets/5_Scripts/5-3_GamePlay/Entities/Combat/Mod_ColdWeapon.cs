@@ -13,28 +13,30 @@ public partial class Mod_ColdWeapon : Module, IHeldItemPositionControl
     [SerializeField] public ColdWeapon_SaveData weaponData = new ColdWeapon_SaveData();
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class ColdWeapon_SaveData
     {
         [Header("武器属性设置")]
-        public float AttackSpeed = 10f;
-        public float MaxAttackDistance = 10f;
-        public float ReturnSpeed = 10f;
+        [MemoryPackOrder(0)] public float AttackSpeed = 10f;
+        [MemoryPackOrder(1)] public float MaxAttackDistance = 10f;
+        [MemoryPackOrder(2)] public float ReturnSpeed = 10f;
 
         [Header("安全距离设置")]
         [Tooltip("x: 造成伤害的最近距离, y: 造成伤害的最大距离")]
-        public Vector2 SafetyDistance = new Vector2(0.5f, 100f);
+        [MemoryPackIgnore] public Vector2 SafetyDistance = new Vector2(0.5f, 100f);
+        [MemoryPackInclude, MemoryPackOrder(3)] private float SafetyDistanceMin { get => SafetyDistance.x; set => SafetyDistance.x = value; }
+        [MemoryPackInclude, MemoryPackOrder(4)] private float SafetyDistanceMax { get => SafetyDistance.y; set => SafetyDistance.y = value; }
 
-        public List<ObserverSnapshot> ObserverState;
+        [MemoryPackOrder(5)] public List<ObserverSnapshot> ObserverState;
     }
     #endregion
 
     #region 观察者模式
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class ObserverSnapshot
     {
-        public string TypeName;
-        public byte[] Payload;
+        [MemoryPackOrder(0)] public string TypeName;
+        [MemoryPackOrder(1)] public byte[] Payload;
     }
 
     [SerializeReference]
@@ -43,18 +45,26 @@ public partial class Mod_ColdWeapon : Module, IHeldItemPositionControl
     public List<ObserverSnapshot> BuildObserverState()
     {
         var state = new List<ObserverSnapshot>();
+        var known = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var observer in observers)
         {
+            if (observer == null) continue;
+            string typeName = observer.GetType().AssemblyQualifiedName;
+            known.Add(typeName);
             var payload = observer.OnSave(this);
             if (payload != null)
             {
                 state.Add(new ObserverSnapshot
                 {
-                    TypeName = observer.GetType().AssemblyQualifiedName,
+                    TypeName = typeName,
                     Payload = payload
                 });
             }
         }
+        // 未加载的观察者状态继续留在存档中。
+        if (weaponData.ObserverState != null)
+            foreach (ObserverSnapshot snapshot in weaponData.ObserverState)
+                if (snapshot != null && !known.Contains(snapshot.TypeName)) state.Add(snapshot);
         return state;
     }
 
@@ -64,7 +74,8 @@ public partial class Mod_ColdWeapon : Module, IHeldItemPositionControl
 
         foreach (var snapshot in weaponData.ObserverState)
         {
-            var observer = observers.Find(o => o.GetType().AssemblyQualifiedName == snapshot.TypeName);
+            if (snapshot == null) continue;
+            var observer = observers.Find(o => o != null && o.GetType().AssemblyQualifiedName == snapshot.TypeName);
             if (observer != null)
             {
                 observer.OnLoad(snapshot.Payload);

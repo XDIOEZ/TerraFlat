@@ -1,11 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FlatWorld.WorldModel;
+using FlatWorld.Networking;
 using UnityEngine;
 
 public partial class ChunkMgr
 {
     #region 多观察者世界窗口
+
+    /// <summary>客户端以世界代际和区块地址向网络层请求权威差量。</summary>
+    public static Func<string, long, FlatWorld.WorldModel.WorldAddress, CancellationToken, Task> PrepareNetworkChunkPersistenceAsync;
+
+    // 返回已访问维度时先撤旧租约与区块，确保新代际重新请求服务器差量。
+    public bool InvalidateRetainedClientChunksForNetworkTransfer()
+    {
+        if (GameNetwork.Session.IsServer || !GameNetwork.Session.IsClient || runtimeChunkManager == null) return true;
+        ClearRuntimeWindowBindings();
+        runtimeChunkManager.ClearWindow();
+        runtimeChunkManager.CancelAllRequests();
+        var world = runtimeChunkManager.World;
+        world.BeginNewEpoch(world.Epoch + 1);
+        runtimeEpoch = world.Epoch;
+        runtimeGenerator?.BeginNewWorldHydrologyEpoch(runtimeEpoch);
+        var addresses = new List<FlatWorld.WorldModel.WorldAddress>(world.Chunks.Keys);
+        bool released = true;
+        foreach (var address in addresses)
+            if (!runtimeChunkManager.EvictChunk(address)) released = false;
+        return released;
+    }
 
     /// <summary>联机观察者共用正式世界模型，本机锚点只决定蒙版和画面调度优先级。</summary>
     public void RefreshChunksAroundObservers(IReadOnlyList<Vector3> observerPositions,

@@ -120,6 +120,7 @@ namespace FlatWorld.Spaceflight
             ShipState primary = GetShip(assembly.MemberShipIds[0]);
             ShipFlightState flight = GetFlight(primary.ShipId);
             if (flight == null) return;
+            if (IsWaitingForSurfaceContact(primary.ShipId)) return;
             if (primary.Anchor != null) return;
             if (flight.Phase is ShipFlightPhase.Landed or ShipFlightPhase.Floating) return;
             if (flight.Phase is ShipFlightPhase.Lifting or ShipFlightPhase.SurfaceDescending)
@@ -169,6 +170,14 @@ namespace FlatWorld.Spaceflight
             ShipFlightState flight = GetFlight(assembly.MemberShipIds[0]);
             BodyState body = GetBody(flight.BodyId);
             SpaceGameplaySettings settings = SpaceGameplaySettings.Current;
+            if (flight.Phase == ShipFlightPhase.SurfaceDescending && flight.HeightMeters <= 0d && flight.VerticalSpeed < 0d)
+            {
+                var contact = new SurfaceContact { Sector = body.Sector, BodyId = body.BodyId, PlanetId = body.PlanetId,
+                    RelativeVelocityMetersPerSecond = flight.EntrySurfaceVelocity, SurfaceAngleRadians = flight.SurfaceAngle, Fraction = 0d };
+                bool safelyPowered = flight.PoweredDescent && Math.Abs(flight.VerticalSpeed) <= settings.MaximumSafeLandingSpeedMetersPerSecond + 1e-6d;
+                QueueSurfaceLanding(assembly, contact, applyImpact: !safelyPowered);
+                return;
+            }
             double gravity = body.SurfaceGravity;
             double thrust = 0d;
             bool waitingForGround = flight.Phase == ShipFlightPhase.SurfaceDescending && flight.PoweredDescent && WaitForGroundPreparation(assembly);
@@ -316,10 +325,10 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        private void LandAssembly(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
+        private bool LandAssembly(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
         {
             ShipFlightState primary = GetFlight(assembly.MemberShipIds[0]);
-            if (primary.LandingResolved) return;
+            if (primary.LandingResolved) return true;
             string world = GetBody(contact.BodyId).SurfaceAddress.WorldKey;
             bool carryingPlayer = PlayerInAssembly(assembly);
             double impactSpeed = applyImpact ? contact.RelativeVelocityMetersPerSecond.Magnitude : 0d;
@@ -329,7 +338,12 @@ namespace FlatWorld.Spaceflight
             // 陆海判断和冲击都使用整船实际接触位置，不再在触地时跳到选点或随机点。
             SpaceVector2 point = new(assembly.PositionX, assembly.PositionY);
 
-            var sample = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, point.ToVector2());
+            SurfaceQueryStatus sampleStatus = SpaceSurfaceQuery.QueryLandingSurface(body.PlanetId, point.ToVector2(), out var sample);
+            SurfaceQueryStatus impactStatus = applyImpact
+                ? SpaceSurfaceQuery.EnsureSurfaceAreaReady(world, point.ToVector2(), impactRadius) : SurfaceQueryStatus.Ready;
+            if (sampleStatus == SurfaceQueryStatus.Pending || impactStatus == SurfaceQueryStatus.Pending) return false;
+            if (sampleStatus != SurfaceQueryStatus.Ready || impactStatus != SurfaceQueryStatus.Ready)
+                throw new InvalidOperationException("飞船触地位置无效。");
             string impactEvent = Guid.NewGuid().ToString("N");
             double stoppingAcceleration = applyImpact
                 ? Math.Abs(contact.RelativeVelocityMetersPerSecond.Y) / Math.Max(.001d, settings.ImpactStoppingSeconds) + body.SurfaceGravity : 0d;
@@ -369,6 +383,7 @@ namespace FlatWorld.Spaceflight
             if (carryingPlayer) EndDescentControl(ItemMgr.Instance?.User_Player);
             if (carryingPlayer && !applyImpact) ExitConsole(ItemMgr.Instance?.User_Player);
             if (carryingPlayer && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, point.ToVector2()));
+            return true;
         }
         public SpaceVector2 SurfaceCenter(string bodyId, double angle)
         {

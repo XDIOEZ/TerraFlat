@@ -299,16 +299,22 @@ public partial class SaveDataMgr
 }
 
 /// <summary>保存区域天气雪与玩家编辑，铲空仍保留标记以免天然雪重新出现。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SnowCellSaveData
 {
     #region 雪格快照
-    public Vector2Int LocalPosition;
-    public bool Edited;
-    public float Depth;
-    public float SeasonalDepth;
-    public float WeatherDepth;
-    public float IceMeltProgress; // 天然冰融化进度与雪覆盖共用稀疏地表快照。
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(3)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(1)] public bool Edited;
+    [MemoryPack.MemoryPackOrder(0)] public float Depth;
+    [MemoryPack.MemoryPackOrder(4)] public float SeasonalDepth;
+    [MemoryPack.MemoryPackOrder(5)] public float WeatherDepth;
+    [MemoryPack.MemoryPackOrder(2)] public float IceMeltProgress; // 天然冰融化进度与雪覆盖共用稀疏地表快照。
     #endregion
 }
 

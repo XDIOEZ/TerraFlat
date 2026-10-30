@@ -8,20 +8,23 @@ using FlatWorld.AIECS;
 using Unity.Mathematics;
 
 /// <summary>四季的稳定身份；数值同时用于日历顺序与季节配置查询。</summary>
-public enum WorldSeason { Spring, Summer, Autumn, Winter }
+public enum WorldSeason { Spring = 0, Summer = 1, Autumn = 2, Winter = 3 }
 
 /// <summary>一次已结束的季节配置区间。记录切换日和旧日历，保证修改季长不会重写离开区块期间的气候。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SeasonCalendarHistoryEntry
 {
-    public double EndTimeSeconds; // 不包含此秒的绝对世界时间。
-    public double OrbitalOffsetSeconds;
-    public float RotationPeriodSeconds, OrbitalPeriodSeconds, AxialTiltDegrees, OrbitalEccentricity;
-    public SeasonCycleSettings Settings; // 当时生效的独立参数。
+    [MemoryPack.MemoryPackOrder(1)] public double EndTimeSeconds; // 不包含此秒的绝对世界时间。
+    [MemoryPack.MemoryPackOrder(3)] public double OrbitalOffsetSeconds;
+     [MemoryPack.MemoryPackOrder(5)]     public float RotationPeriodSeconds;
+     [MemoryPack.MemoryPackOrder(4)]     public float OrbitalPeriodSeconds;
+     [MemoryPack.MemoryPackOrder(0)]     public float AxialTiltDegrees;
+     [MemoryPack.MemoryPackOrder(2)]     public float OrbitalEccentricity;
+    [MemoryPack.MemoryPackOrder(6)] public SeasonCycleSettings Settings; // 当时生效的独立参数。
 }
 
 /// <summary>每个世界独立保存四季派生长度与温差；总季长和不对称程度由公转周期与离心率决定。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SeasonCycleSettings
 {
     #region 配置
@@ -29,10 +32,10 @@ public partial class SeasonCycleSettings
     [MemoryPackIgnore, JsonIgnore] public double SummerDays { get; private set; } = 6d;
     [MemoryPackIgnore, JsonIgnore] public double AutumnDays { get; private set; } = 6d;
     [MemoryPackIgnore, JsonIgnore] public double WinterDays { get; private set; } = 6d;
-    public float SpringTemperatureOffset = 0f; // 春季中心温差
-    public float SummerTemperatureOffset = 12f; // 夏季中心温差
-    public float AutumnTemperatureOffset = 0f; // 秋季中心温差
-    public float WinterTemperatureOffset = -30f; // 冬季中心温差
+    [MemoryPack.MemoryPackOrder(1)] public float SpringTemperatureOffset = 0f; // 春季中心温差
+    [MemoryPack.MemoryPackOrder(2)] public float SummerTemperatureOffset = 12f; // 夏季中心温差
+    [MemoryPack.MemoryPackOrder(0)] public float AutumnTemperatureOffset = 0f; // 秋季中心温差
+    [MemoryPack.MemoryPackOrder(3)] public float WinterTemperatureOffset = -30f; // 冬季中心温差
 
     [MemoryPackIgnore, JsonIgnore] public double YearDays { get; private set; } = 24d;
     private double appliedEccentricity;

@@ -1,5 +1,6 @@
 """在独立进程编译正式缓存与 Hook，并用替身隔离 Unity 资源。"""
 from pathlib import Path
+import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -27,6 +28,7 @@ def main() -> None:
     ecology = (ROOT / "Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs").read_text(encoding="utf-8")
     rule = block(ecology, "public partial class EcologyRuleSaveData")
     fields = rule[rule.index("#region 规则字段"):rule.index("#endregion") + len("#endregion")]
+    fields = re.sub(r"\[MemoryPackOrder\(\d+\)\]\s*", "", fields)
     method = block((MANAGEMENT / "ChunkMgr.Ecology.cs").read_text(encoding="utf-8"),
                    "internal static ChunkGenerationProfileSnapshot GetCachedWorldGenerationProfile(")
     pairing = block((MANAGEMENT / "ChunkMgr.Ecology.cs").read_text(encoding="utf-8"),

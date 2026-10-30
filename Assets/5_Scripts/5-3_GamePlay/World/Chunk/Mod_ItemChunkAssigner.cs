@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>兼容旧 Prefab 模块 ID；运行时只刷新新版 WorldAddress 实体索引。</summary>
@@ -12,12 +12,13 @@ public class Mod_ItemChunkAssigner : Module
 
     protected override void OnLoad()
     {
-        ModData.ReadData(ref lastChunkPos);
+        ModuleGridPositionSaveSnapshot saved = ModData.GetData<ModuleGridPositionSaveSnapshot>();
+        if (saved != null) lastChunkPos = new Vector2Int(saved.X, saved.Y);
     }
 
     protected override void OnSave()
     {
-        ModData.WriteData(lastChunkPos);
+        ModData.WriteData(new ModuleGridPositionSaveSnapshot { X = lastChunkPos.x, Y = lastChunkPos.y });
     }
     
     public override void ModUpdate(float deltaTime)

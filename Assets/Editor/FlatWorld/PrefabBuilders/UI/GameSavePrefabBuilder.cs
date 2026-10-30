@@ -10,10 +10,6 @@ public static class GameSavePrefabBuilder
     private const string PanelPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab";
     private const string ItemPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
-    private const string GenerationFreezeTitle = "冻结世界生成规则";
-    private const string GenerationFreezeDescription =
-        "关闭后，世界生成规则跟随当前版本更新。";
-
     private static Color Ink => FlatWorldUITheme.Canvas;
     private static Color InkSoft => FlatWorldUITheme.SurfaceLow;
     private static Color Surface => FlatWorldUITheme.Surface;
@@ -74,9 +70,6 @@ public static class GameSavePrefabBuilder
             PrefabUtility.UnloadPrefabContents(root);
         }
 
-        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
-            GenerationFreezeTitle,
-            GenerationFreezeDescription);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[GameSaveUI] 存档选择界面与动态条目已重建。");
@@ -247,18 +240,6 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.anchoredPosition = new Vector2(0f, 104f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
-
-        Toggle generationFreezeToggle = CreateToggle(
-            card,
-            font,
-            GameManager.GameSaveGenerationFreezeToggleKey,
-            GenerationFreezeTitle,
-            GenerationFreezeDescription,
-            new Vector2(42f, 20f),
-            new Vector2(1030f, 80f),
-            new Vector2(0f, 0f));
-        generationFreezeToggle.SetIsOnWithoutNotify(true);
-        generationFreezeToggle.interactable = false;
 
         CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 25f, new Vector2(1f, 0f));
     }

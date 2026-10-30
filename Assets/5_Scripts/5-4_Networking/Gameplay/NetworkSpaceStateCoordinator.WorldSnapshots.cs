@@ -10,6 +10,7 @@ namespace FlatWorld.Networking.Gameplay
     {
         public ulong Sequence;
         public string WorldKey;
+        public uint RealmRevision;
         public int CompressedBytes, ExpandedBytes, ChunkCount;
         public uint Hash;
     }
@@ -31,6 +32,9 @@ namespace FlatWorld.Networking.Gameplay
         }
         private WorldIncoming worldIncoming;
         private ulong worldSnapshotSequence, lastWorldSnapshotSequence;
+        private string lastMetadataWorld;
+        private uint lastMetadataRealm;
+        private bool hasMetadataIdentity;
         private bool worldSnapshotInvalid;
         private void StartWorldSnapshotClientBridge()
         {
@@ -42,9 +46,10 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkDimensionWorldSnapshotBegin>();
             NetworkClient.UnregisterHandler<NetworkDimensionWorldSnapshotChunk>();
             worldIncoming = null; worldSnapshotInvalid = false; lastWorldSnapshotSequence = 0;
+            lastMetadataWorld = null; lastMetadataRealm = 0; hasMetadataIdentity = false;
         }
         // 客户端保留的目标区块先合入最新正式差量，随后才处理乘员归属快照。
-        private void SendWorldSnapshot(NetworkConnectionToClient connection, string worldKey)
+        private void SendWorldSnapshot(NetworkConnectionToClient connection, string worldKey, uint realmRevision)
         {
             byte[] raw = SaveDataMgr.Instance.CaptureNetworkWorldSnapshot(worldKey);
             if (raw.Length > MaxExpandedBytes) throw new InvalidDataException("目标世界资料超过解压限额。");
@@ -58,6 +63,7 @@ namespace FlatWorld.Networking.Gameplay
             if (++worldSnapshotSequence == 0) ++worldSnapshotSequence;
             int count = (compressed.Length + NetworkGameplayProtocol.SnapshotChunkBytes - 1) / NetworkGameplayProtocol.SnapshotChunkBytes;
             connection.Send(new NetworkDimensionWorldSnapshotBegin { Sequence = worldSnapshotSequence, WorldKey = worldKey,
+                RealmRevision = realmRevision,
                 CompressedBytes = compressed.Length, ExpandedBytes = raw.Length, ChunkCount = count,
                 Hash = NetworkGameplayProtocol.CalculatePayloadHash(compressed) });
             for (int i = 0; i < count; i++)
@@ -111,9 +117,17 @@ namespace FlatWorld.Networking.Gameplay
                     }
                     if (offset != raw.Length || gzip.ReadByte() != -1) throw new InvalidDataException("目标世界解压长度不匹配。");
                 }
+                bool changingRealm = hasMetadataIdentity
+                    ? lastMetadataWorld != incomingWorld.Header.WorldKey || lastMetadataRealm != incomingWorld.Header.RealmRevision
+                    : GameplayWorldRegistry.LocalPresentationWorldKey != incomingWorld.Header.WorldKey;
+                if (changingRealm && GameplayWorldRegistry.TryGet(incomingWorld.Header.WorldKey, out GameplayWorldRuntime target))
+                    using (GameplayWorldRegistry.UseWorld(incomingWorld.Header.WorldKey))
+                        if (!target.Chunks.InvalidateRetainedClientChunksForNetworkTransfer())
+                            throw new InvalidOperationException("目标世界仍有未释放的区块租约。");
                 string worldKey = SaveDataMgr.Instance.ApplyNetworkWorldSnapshot(raw, incomingWorld.Header.WorldKey);
                 if (worldKey != incomingWorld.Header.WorldKey) throw new InvalidDataException("目标世界载荷身份不匹配。");
                 lastWorldSnapshotSequence = incomingWorld.Header.Sequence; worldSnapshotInvalid = false;
+                lastMetadataWorld = worldKey; lastMetadataRealm = incomingWorld.Header.RealmRevision; hasMetadataIdentity = true;
                 Player actor = ItemMgr.Instance?.User_Player;
                 if (actor?.Data?.CurrentSceneName == worldKey && DimensionManager.ExistingInstance?.IsTransitioning != true)
                     StartCoroutine(DimensionManager.Instance.ApplyNetworkPresentation(actor, WorldAddress.FromWorldKey(worldKey), actor.Data.transform.position));

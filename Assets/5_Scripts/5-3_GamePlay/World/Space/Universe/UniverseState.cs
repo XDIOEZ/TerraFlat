@@ -40,6 +40,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class UniverseState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 星系权威状态
         public string TemplateId;
         public SpaceSectorId Sector;
@@ -56,6 +57,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed partial class BodyState
     {
+        [MemoryPack.MemoryPackIgnore, Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 星体轨道与地表配置
         public string BodyId;
         public string TemplateBodyId;
@@ -88,12 +90,13 @@ namespace FlatWorld.Spaceflight
     }
 
     [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-    public enum PlanetSurfaceStyle { Rocky, Ocean, Banded, Stellar, Asteroid }
+    public enum PlanetSurfaceStyle { Rocky = 0, Ocean = 1, Banded = 2, Stellar = 3, Asteroid = 4 }
 
     [MemoryPack.MemoryPackable]
     [Serializable]
     public sealed partial class PlanetVisualConfiguration
     {
+        [MemoryPack.MemoryPackIgnore, Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 星球模板外观参数
         public PlanetSurfaceStyle Style;
         public float[] BaseColor;
@@ -120,7 +123,9 @@ namespace FlatWorld.Spaceflight
         public PlanetVisualConfiguration Clone() => new()
         {
             Style = Style, BaseColor = (float[])BaseColor.Clone(), AccentColor = (float[])AccentColor.Clone(),
-            DetailStrength = DetailStrength, DetailScale = DetailScale
+            DetailStrength = DetailStrength, DetailScale = DetailScale,
+            UnknownOptionalFields = UnknownOptionalFields == null ? null :
+                new Dictionary<string, Newtonsoft.Json.Linq.JToken>(UnknownOptionalFields)
         };
         #endregion
     }
@@ -128,6 +133,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class SpaceMotionState
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         #region 太空移动主体
         public SpaceSectorId Sector;
         public SpaceVector2 PositionMeters;

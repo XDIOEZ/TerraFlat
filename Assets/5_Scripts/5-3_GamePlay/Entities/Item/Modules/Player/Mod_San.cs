@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using UltEvents;
 using UnityEngine;
 
@@ -7,11 +7,11 @@ public partial class Mod_San : Module, IPlayerStateAuthorityModule
 #region 嵌套类型
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class SanData
     {
-        public float CurrentSan = 100f; // 当前理智值
-        public float MaxSan = 100f; // 理智上限
+        [MemoryPackOrder(0)] public float CurrentSan = 100f; // 当前理智值
+        [MemoryPackOrder(1)] public float MaxSan = 100f; // 理智上限
     }
 
 #endregion

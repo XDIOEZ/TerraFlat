@@ -200,8 +200,8 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
 }
 
 /// <summary>只保存剩余冷却，临时目标与控制租约在装卸时始终解除。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class BiteCooldownState
 {
-    public float CooldownRemaining;
+    [MemoryPackOrder(0)] public float CooldownRemaining;
 }

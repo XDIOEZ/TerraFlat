@@ -10,61 +10,63 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     #region 数据结构
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class YieldGeneVariant
     {
-        public int minAmount = 1;
-        public int maxAmount = 1;
-        [Min(0f)] public float weight = 1f;
+        [MemoryPackOrder(0)] public int minAmount = 1;
+        [MemoryPackOrder(1)] public int maxAmount = 1;
+        [Min(0f), MemoryPackOrder(2)] public float weight = 1f;
     }
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class ItemProductionData
     {
-        public string itemName;
+        [MemoryPackOrder(0)] public string itemName;
         [Tooltip("生产物品数量的最小值")]
-        public int itemCountMin = 1;
+        [MemoryPackOrder(1)] public int itemCountMin = 1;
         [Tooltip("生产物品数量的最大值")]
-        public int itemCountMax = 1;
+        [MemoryPackOrder(2)] public int itemCountMax = 1;
 
         [Tooltip("生成所需时间")]
-        public float MaxProductionTime = 100f;
+        [MemoryPackOrder(3)] public float MaxProductionTime = 100f;
 
         [Tooltip("大于0时按当前世界天数作为固定生产周期，不受生产速度与成长倍率影响")]
-        public float ProductionIntervalDays;
+        [MemoryPackOrder(4)] public float ProductionIntervalDays;
 
         [Tooltip("当前累计生产时间")]
-        public float ProductionTime = 0;
+        [MemoryPackOrder(5)] public float ProductionTime = 0;
 
         [Tooltip("最大生产次数，-1 表示无限循环")]
-        public int MaxProductionCount = 10;
+        [MemoryPackOrder(6)] public int MaxProductionCount = 10;
 
         [Tooltip("当前已生产次数")]
-        public int CurrentProductionCount = 0;
+        [MemoryPackOrder(7)] public int CurrentProductionCount = 0;
         [Tooltip("是否抛出物品")]
-        public bool ThrowItem = true;
+        [MemoryPackOrder(8)] public bool ThrowItem = true;
 
         [Tooltip("将产出写入同一物品的库存接收模块，而不是直接生成世界物品")]
-        public bool StoreInModule;
+        [MemoryPackOrder(9)] public bool StoreInModule;
 
         [Tooltip("是否自动销毁自身item/在达到生产上限时销毁")]
-        public bool DestroySelf = false;
+        [MemoryPackOrder(10)] public bool DestroySelf = false;
 
         [Tooltip("实例化概率，取值范围 0~1")]
         [Range(0f, 1f)]
-        public float SpawnProbability = 1f;
+        [MemoryPackOrder(11)] public float SpawnProbability = 1f;
 
         [Header("随机初始化相关参数")]
         [Tooltip("生产时间随机范围")]
-        public Vector2 Random_ProductionTime = new Vector2(0f, 1000f);
+        [MemoryPackIgnore] public Vector2 Random_ProductionTime = new Vector2(0f, 1000f);
+        [MemoryPackInclude, MemoryPackOrder(12)] private float RandomProductionMinimum { get => Random_ProductionTime.x; set => Random_ProductionTime.x = value; }
+        [MemoryPackInclude, MemoryPackOrder(13)] private float RandomProductionMaximum { get => Random_ProductionTime.y; set => Random_ProductionTime.y = value; }
         [Tooltip("是否已经完成首次环境随机初始化")]
-        public bool IsInitialized;
-        public uint EntityRandomState; // Entity 库存生产的随机流随运行态保存。
+        [MemoryPackOrder(14)] public bool IsInitialized;
+        [MemoryPackOrder(15)] public uint EntityRandomState; // Entity 库存生产的随机流随运行态保存。
 
         [Header("产量基因")]
-        public List<YieldGeneVariant> YieldGeneVariants = new List<YieldGeneVariant>();
-        public int YieldGeneVariantIndex = -1;
+        [MemoryPackOrder(16)] public List<YieldGeneVariant> YieldGeneVariants = new List<YieldGeneVariant>();
+        [MemoryPackOrder(17)] public int YieldGeneVariantIndex = -1;
 
         public void RandomInitialize()
         {

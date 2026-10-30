@@ -7,7 +7,7 @@ namespace FlatWorld.Networking.Gameplay
     public static class NetworkGameplayProtocol
     {
         // 太空快照使用每连接基线和共享字段差量。
-        public const int CurrentVersion = 33;
+        public const int CurrentVersion = 34;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -48,6 +48,7 @@ namespace FlatWorld.Networking.Gameplay
 
     public struct NetworkWorldSnapshot : NetworkMessage
     {
+        public int TransferId;
         public string PlanetName;
         public int Seed;
         public int GenerationProtocol;
@@ -141,12 +142,14 @@ namespace FlatWorld.Networking.Gameplay
 
     public struct NetworkWeatherStateRequest : NetworkMessage
     {
+        public uint RealmRevision;
     }
 
     /// <summary>服务器广播的权威天气事件状态；客户端只应用，不参与阶段调度。</summary>
     public struct NetworkWeatherStateMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public string PlanetName;
         public WeatherType Weather;
         public WeatherPhase Phase;
@@ -164,6 +167,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkRegionalWeatherStateMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public int RegionX;
         public int RegionY;
         public double SampleTime;
@@ -191,6 +195,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkWeatherSurfaceRequest : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public string DimensionId;
         public int ChunkX;
         public int ChunkY;
@@ -200,6 +205,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkWeatherSurfaceMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public string DimensionId;
         public int ChunkX;
         public int ChunkY;
@@ -247,6 +253,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkItemSpawnMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
@@ -280,9 +287,12 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkMechanicalNodeMessage : NetworkMessage
     {
         public int NodeGuid;
+        public uint RealmRevision;
         public string WorldKey;
+        public Vector2 Position;
         public byte[] Payload;
         public bool Reset;
+        public bool ResetChunk;
         public bool Removed;
         public bool SpeedOnly;
         public float Rpm;
@@ -369,6 +379,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkItemStateMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public int ItemGuid;
         public string ItemId;
         public uint Revision;
@@ -385,6 +396,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkItemPoseMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public int ItemGuid;
         public string ItemId;
         public uint StateRevision;
@@ -397,6 +409,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkItemDespawnMessage : NetworkMessage
     {
         public string WorldKey;
+        public uint RealmRevision;
         public int ItemGuid;
         public string ItemId;
     }

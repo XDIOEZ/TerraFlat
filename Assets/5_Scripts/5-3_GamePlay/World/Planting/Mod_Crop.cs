@@ -10,31 +10,33 @@ using UnityEngine;
 /// 满水满肥时的基础成熟时间由 growthDurationSeconds 决定，环境与通用成长倍率只结算一次。
 /// </summary>
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class CropRuntimeData
 {
     [Header("当前阶段")]
-    public CropStage stage = CropStage.Seedling;
+    [MemoryPackOrder(0)] public CropStage stage = CropStage.Seedling;
 
     [Header("标准化成长进度")]
-    public float normalizedGrowth;
+    [MemoryPackOrder(1)] public float normalizedGrowth;
 
     [Header("是否由玩家种植")]
-    public bool isPlanted;
+    [MemoryPackOrder(2)] public bool isPlanted;
 
     [Header("种植地块坐标")]
-    public Vector2Int plantedTilePosition;
+    [MemoryPackIgnore] public Vector2Int plantedTilePosition;
+    [MemoryPackInclude, MemoryPackOrder(3)] private int PlantedTileX { get => plantedTilePosition.x; set => plantedTilePosition.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(4)] private int PlantedTileY { get => plantedTilePosition.y; set => plantedTilePosition.y = value; }
 
     [Header("是否已经收获")]
-    public bool isHarvested;
+    [MemoryPackOrder(5)] public bool isHarvested;
 
     [Header("成长反馈状态")]
-    public CropGrowthStatus growthStatus = CropGrowthStatus.Growing;
+    [MemoryPackOrder(6)] public CropGrowthStatus growthStatus = CropGrowthStatus.Growing;
 
-    public bool simulationInitialized; // 是否已经建立世界时间游标。
-    public double lastSimulatedTime; // 最后完成结算的绝对游戏秒。
-    public bool waterSimulationInitialized; // 耗水独立于生长状态。
-    public double lastWaterSimulationTime; // 成熟后仍推进耗水游标。
+    [MemoryPackOrder(7)] public bool simulationInitialized; // 是否已经建立世界时间游标。
+    [MemoryPackOrder(8)] public double lastSimulatedTime; // 最后完成结算的绝对游戏秒。
+    [MemoryPackOrder(9)] public bool waterSimulationInitialized; // 耗水独立于生长状态。
+    [MemoryPackOrder(10)] public double lastWaterSimulationTime; // 成熟后仍推进耗水游标。
 }
 
 public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IWorldTimePlant, IItemModuleDependencyBinder, INaturalResourceInitializer, INaturalRenewalPolicy

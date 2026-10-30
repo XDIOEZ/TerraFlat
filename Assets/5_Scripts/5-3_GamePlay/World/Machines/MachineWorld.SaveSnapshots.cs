@@ -235,13 +235,7 @@ public static partial class MachineWorld
                 items.Add(activePayloads.TryGetValue(data, out byte[] bytes) ? bytes : FreezeArchivedMachineSnapshot(data));
             payload.Worlds.Add(world.Key, items);
         }
-        Dictionary<string, List<ItemData>> worlds = archive.Worlds;
-        try
-        {
-            archive.Worlds = new Dictionary<string, List<ItemData>>(StringComparer.Ordinal);
-            payload.Metadata = MemoryPackSerializer.Serialize(archive);
-        }
-        finally { archive.Worlds = worlds; }
+        payload.Metadata = MemoryPackSerializer.Serialize(MachineArchiveMetadataSnapshot.Capture(archive));
         return MemoryPackSerializer.Serialize(payload);
     }
 
@@ -251,7 +245,7 @@ public static partial class MachineWorld
         FrozenMachineArchivePayload frozen = MemoryPackSerializer.Deserialize<FrozenMachineArchivePayload>(bytes);
         if (frozen?.Version != 2 || frozen.Metadata == null || frozen.Worlds == null)
             throw new InvalidOperationException("不支持的机械存档版本。");
-        MachineArchive archive = MemoryPackSerializer.Deserialize<MachineArchive>(frozen.Metadata);
+        MachineArchive archive = MemoryPackSerializer.Deserialize<MachineArchiveMetadataSnapshot>(frozen.Metadata)?.Restore();
         if (archive?.Version != 2 || archive.Worlds == null) throw new InvalidOperationException("机械存档元数据无效。");
         foreach (KeyValuePair<string, List<byte[]>> world in frozen.Worlds)
         {
@@ -272,12 +266,12 @@ public sealed partial class MachineEntity
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class FrozenMachineArchivePayload
 {
     #region 独立机器字节与档案元数据
-    public int Version = 2;
-    public byte[] Metadata;
-    public Dictionary<string, List<byte[]>> Worlds = new(StringComparer.Ordinal);
+    [MemoryPackOrder(0)] public int Version = 2;
+    [MemoryPackOrder(1)] public byte[] Metadata;
+    [MemoryPackOrder(2)] public Dictionary<string, List<byte[]>> Worlds = new(StringComparer.Ordinal);
     #endregion
 }

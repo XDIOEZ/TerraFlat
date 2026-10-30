@@ -8,10 +8,6 @@ using Sirenix.OdinInspector;
 public partial class SaveDataMgr
 {
     #region 磁盘路径与写入版本
-    private const string TemporarySaveSuffix = ".tmp";
-    private const string BackupSaveSuffix = ".bak";
-    private const string LastExitTimeSuffix = ".lastplayed";
-    private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
     private static readonly Dictionary<string, long> LatestSaveRevisions =
         new(StringComparer.OrdinalIgnoreCase);
@@ -29,38 +25,19 @@ public partial class SaveDataMgr
     /// <param name="saveName">保存名称</param>
     public bool SaveToDisk(GameSaveData saveData, string savePath, string saveName)
     {
-        if (saveData == null)
-        {
-            Debug.LogError("❌ saveData为null，无法保存");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(saveName))
-        {
-            Debug.LogError("❌ 存档名称为空，无法保存");
-            return false;
-        }
-
+        if (saveData == null || string.IsNullOrWhiteSpace(saveName)) return false;
         try
         {
             saveData.saveName = saveName;
-
-            // 确保保存路径存在
-            EnsureDirectoryExists(savePath);
-
-            string fullPath = GetSaveFilePath(savePath, saveName);
-            byte[] dataBytes = BuildCompactSavePayload(saveData);
-            long saveRevision = ReserveSaveRevision(fullPath);
-            if (!WriteSaveAtomically(fullPath, dataBytes, saveRevision, discardIfSuperseded: false))
-                return false;
-
-            Debug.Log($"✅ 存档成功！路径: {fullPath}");
-            return true;
+            saveData.ArchiveId ??= Guid.NewGuid().ToString("N");
+            string path = Path.Combine(savePath, saveData.ArchiveId, "save.sqlite");
+            ReserveSaveRevision(path);
+            return SaveSqliteArchive(saveData, path);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Debug.LogError($"❌ 保存存档失败: {ex.Message}");
-            Debug.LogException(ex);
+            LastArchiveError = exception.Message;
+            Debug.LogException(exception);
             return false;
         }
     }
@@ -72,6 +49,7 @@ public partial class SaveDataMgr
     public bool TryCreateNewSave(GameSaveData saveData, string requestedName, out string createdSaveName)
     {
         createdSaveName = GetAvailableSaveName(requestedName);
+        saveData.ArchiveId = Guid.NewGuid().ToString("N");
         return SaveToDisk(saveData, UserSavePath, createdSaveName);
     }
 
@@ -132,49 +110,20 @@ public partial class SaveDataMgr
         { reason = "名称不能为空"; return false; }
         if (newName.Length > 48)
         { reason = "名称不能超过48个字符。"; return false; }
-        if (!string.Equals(newName, NormalizeSaveName(newName), StringComparison.Ordinal))
-        { reason = "存档名称包含文件名不允许的字符，或以句点结尾。"; return false; }
         if (string.Equals(oldName, newName, StringComparison.Ordinal))
             return true;
 
         string oldPath = GetSaveFilePath(UserSavePath, oldName);
-        string newPath = GetSaveFilePath(UserSavePath, newName);
         if (!File.Exists(oldPath))
         { reason = "原存档文件已不存在，请刷新存档列表。"; return false; }
-        if (File.Exists(newPath) || File.Exists(GetBackupSavePath(newPath)) || File.Exists(GetTemporarySavePath(newPath)))
-        { reason = "这个存档名称已被存档或恢复文件占用。"; return false; }
-
-        DateTime lastExitTimeUtc = GetLastExitTimeUtc(oldPath);
+        foreach (var entry in ReadSqliteSaveCatalog(UserSavePath))
+            if (!string.Equals(entry.Path, oldPath, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(entry.Name, newName, StringComparison.OrdinalIgnoreCase))
+            { reason = "这个存档名称已被存档或恢复文件占用。"; return false; }
         if (!SaveToDisk(SaveData, UserSavePath, newName))
-        {
-            SaveData.saveName = oldName;
-            reason = "新存档文件写入失败，已保留原名称。";
-            return false;
-        }
-
-        try
-        {
-            if (lastExitTimeUtc != DateTime.MinValue)
-                RecordLastExitTimeUtc(newPath, lastExitTimeUtc);
-            // 先让旧路径的后台快照过期，再与原子写盘共用文件锁移除旧档。
-            ReserveSaveRevision(oldPath);
-            lock (SaveFileLock)
-            {
-                DeleteSaveFile(oldPath);
-                if (File.Exists(oldPath))
-                    throw new IOException("旧存档未能删除");
-            }
-            renamedSaveName = newName;
-            return true;
-        }
-        catch (Exception exception)
-        {
-            reason = "旧存档或退出记录更新失败，未完成改名。";
-            Debug.LogException(exception);
-            DeleteSaveFile(newPath);
-            SaveData.saveName = oldName;
-            return false;
-        }
+        { SaveData.saveName = oldName; reason = "新存档文件写入失败，已保留原名称。"; return false; }
+        renamedSaveName = newName;
+        return true;
     }
 
     #endregion
@@ -197,16 +146,7 @@ public partial class SaveDataMgr
     private static string NormalizeSaveName(string requestedName)
     {
         string value = requestedName?.Trim() ?? string.Empty;
-        foreach (char invalidCharacter in Path.GetInvalidFileNameChars())
-        {
-            value = value.Replace(invalidCharacter.ToString(), "_");
-        }
-
-        value = value.Trim().TrimEnd('.', ' ');
-        if (string.IsNullOrWhiteSpace(value) || value == "." || value == "..")
-        {
-            value = NewWorldCreationRequest.CreateRandomWorldName();
-        }
+        if (string.IsNullOrWhiteSpace(value)) value = NewWorldCreationRequest.CreateRandomWorldName();
 
         const int maxLength = 48;
         return value.Length <= maxLength ? value : value.Substring(0, maxLength);
@@ -218,65 +158,26 @@ public partial class SaveDataMgr
     /// <param name="loadSavePath">存档路径</param>
     public bool LoadSaveByDisk(string loadSavePath)
     {
-        // 新选择载入失败时不能继续使用上一份存档和角色。
         SaveData = null;
+        CloseSqliteArchive();
+        ResetChunkDifferenceState();
         CurrentContrrolPlayerName = string.Empty;
-        if (string.IsNullOrEmpty(loadSavePath))
-        {
-            Debug.LogError("❌ 存档路径为空");
-            return false;
-        }
-
         try
         {
-            string fullPath = NormalizeSavePath(loadSavePath);
-            string backupPath = GetBackupSavePath(fullPath);
-            string temporaryPath = GetTemporarySavePath(fullPath);
-            string[] candidatePaths = { fullPath, backupPath, temporaryPath };
-            Exception lastException = null;
-
-            for (int i = 0; i < candidatePaths.Length; i++)
-            {
-                string candidatePath = candidatePaths[i];
-                if (!File.Exists(candidatePath))
-                    continue;
-
-                try
-                {
-                    Debug.Log($"📖 开始加载存档：{candidatePath}");
-                    GameSaveData loadedSaveData = DeserializeSavePayload(File.ReadAllBytes(candidatePath));
-                    if (loadedSaveData == null)
-                        throw new InvalidDataException("存档反序列化结果为空");
-
-                    SaveData = loadedSaveData;
-                    if (i == 0)
-                        Debug.Log("✅ 存档加载成功");
-                    else
-                        Debug.LogWarning($"⚠️ 正式存档不可用，已从{(i == 1 ? "备份" : "临时文件")}恢复：{candidatePath}");
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    if (ex is SaveVersionIncompatibleException)
-                        throw;
-
-                    lastException = ex;
-                    Debug.LogWarning($"⚠️ 存档文件无效，尝试恢复文件：{candidatePath}\n{ex.Message}");
-                }
-            }
-
-            if (lastException != null)
-                throw new InvalidDataException("正式存档、备份及临时存档均无法加载", lastException);
-
-            Debug.LogWarning($"⚠️ 存档文件不存在：{fullPath}");
+            string path = NormalizeSavePath(loadSavePath);
+            if (path.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
+                throw new SaveVersionIncompatibleException("开发期 .bytes 存档不支持导入，请创建 SQLite 新世界；原文件已保留。");
+            if (!File.Exists(path)) return false;
+            return LoadSqliteArchive(path);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Debug.LogError($"❌ 加载存档失败: {ex.Message}");
-            if (ex is not SaveVersionIncompatibleException)
-                Debug.LogException(ex);
+            LastArchiveError = exception.Message;
+            CloseSqliteArchive();
+            SaveData = null;
+            Debug.LogException(exception);
+            return false;
         }
-        return false;
     }
 
     /// <summary>
@@ -305,37 +206,16 @@ public partial class SaveDataMgr
     /// </summary>
     private void DeleteSaveFile(string fullPath)
     {
-        if (string.IsNullOrEmpty(fullPath))
-        {
-            Debug.LogError("❌ 存档路径为空");
-            return;
-        }
-
-        try
-        {
-            string backupPath = GetBackupSavePath(fullPath);
-            string temporaryPath = GetTemporarySavePath(fullPath);
-            bool foundSaveFile = File.Exists(fullPath) || File.Exists(backupPath) || File.Exists(temporaryPath);
-
-            DeleteFileIfExists(fullPath);
-            DeleteFileIfExists(backupPath);
-            DeleteFileIfExists(temporaryPath);
-            DeleteFileIfExists(GetLastExitTimePath(fullPath));
-
-            if (foundSaveFile)
-            {
-                Debug.Log($"✅ 存档已删除：{fullPath}");
-            }
-            else
-            {
-                Debug.LogWarning($"⚠️ 未找到要删除的存档文件：{fullPath}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"❌ 删除存档失败：{fullPath}");
-            Debug.LogException(ex);
-        }
+        if (string.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath)) return;
+        if (!string.Equals(Path.GetFileName(fullPath), "save.sqlite", StringComparison.Ordinal))
+            throw new InvalidOperationException("旧开发存档不会由 SQLite 存档菜单删除。");
+        string directory = Path.GetFullPath(Path.GetDirectoryName(fullPath));
+        string parent = Path.GetDirectoryName(directory);
+        if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out _) ||
+            !string.Equals(parent, Path.GetFullPath(UserSavePath).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("存档目录身份不匹配。");
+        if (string.Equals(archivePath, fullPath, StringComparison.OrdinalIgnoreCase)) CloseSqliteArchive();
+        Directory.Delete(directory, true);
     }
 
     /// <summary>
@@ -362,81 +242,31 @@ public partial class SaveDataMgr
     /// </summary>
     private string GetSaveFilePath(string basePath, string saveName)
     {
-        return Path.Combine(basePath, saveName + ".bytes");
+        if (SaveData?.saveName == saveName && !string.IsNullOrWhiteSpace(SaveData.ArchiveId))
+            return Path.Combine(basePath, SaveData.ArchiveId, "save.sqlite");
+        foreach (var entry in ReadSqliteSaveCatalog(basePath))
+            if (string.Equals(entry.Name, saveName, StringComparison.OrdinalIgnoreCase)) return entry.Path;
+        return Path.Combine(basePath, "missing", "save.sqlite");
     }
 
-    private static string GetTemporarySavePath(string fullPath)
-    {
-        return fullPath + TemporarySaveSuffix;
-    }
-
-    private static string GetBackupSavePath(string fullPath)
-    {
-        return fullPath + BackupSaveSuffix;
-    }
-
-    private static string GetLastExitTimePath(string fullPath)
-    {
-        return fullPath + LastExitTimeSuffix;
-    }
-
-    /// <summary>
-    /// 获取存档最后退出时间。旧存档没有元数据时，使用存档文件修改时间兼容。
-    /// </summary>
+    // 时间与逻辑提交共用数据库元数据。
     public static DateTime GetLastExitTimeUtc(string fullSavePath)
     {
-        if (string.IsNullOrWhiteSpace(fullSavePath))
-            return DateTime.MinValue;
-
-        try
-        {
-            string metadataPath = GetLastExitTimePath(fullSavePath);
-            if (File.Exists(metadataPath))
-            {
-                string value = File.ReadAllText(metadataPath);
-                if (DateTime.TryParse(
-                    value,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    System.Globalization.DateTimeStyles.RoundtripKind,
-                    out DateTime timestamp))
-                {
-                    return timestamp.ToUniversalTime();
-                }
-            }
-
-            return File.Exists(fullSavePath)
-                ? File.GetLastWriteTimeUtc(fullSavePath)
-                : DateTime.MinValue;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning($"读取存档最后退出时间失败，将该存档排到列表末尾：{fullSavePath}\n{ex.Message}");
-            return DateTime.MinValue;
-        }
+        if (!File.Exists(fullSavePath)) return DateTime.MinValue;
+        bool borrow = instance?.archiveStore != null && string.Equals(instance.archivePath, Path.GetFullPath(fullSavePath), StringComparison.OrdinalIgnoreCase);
+        using var owned = borrow ? null : new FlatWorld.Persistence.SqliteSaveArchiveStore(fullSavePath);
+        FlatWorld.Persistence.ISaveArchiveStore store = borrow ? instance.archiveStore : owned;
+        long ticks = store.ReadMetadataAsync().GetAwaiter().GetResult().UpdatedUtcTicks;
+        return ticks > 0 ? new DateTime(ticks, DateTimeKind.Utc) : DateTime.MinValue;
     }
 
-    private static void RecordLastExitTimeUtc(string fullSavePath, DateTime exitTimeUtc)
-    {
-        try
-        {
-            File.WriteAllText(
-                GetLastExitTimePath(fullSavePath),
-                exitTimeUtc.ToUniversalTime().ToString(
-                    "O",
-                    System.Globalization.CultureInfo.InvariantCulture));
-        }
-        catch (Exception ex)
-        {
-            Debug.LogWarning($"存档已保存，但记录最后退出时间失败：{fullSavePath}\n{ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 规范化存档路径（添加.bytes扩展名）
-    /// </summary>
+    // 名称与档案 ID 定位统一交给存档服务。
     private string NormalizeSavePath(string path)
     {
-        return path.EndsWith(".bytes") ? path : path + ".bytes";
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("存档路径为空。", nameof(path));
+        if (Directory.Exists(path)) return Path.Combine(path, "save.sqlite");
+        if (Path.HasExtension(path)) return path;
+        return GetSaveFilePath(UserSavePath, Path.GetFileName(path));
     }
 
     /// <summary>
@@ -448,83 +278,6 @@ public partial class SaveDataMgr
             throw new ArgumentException("存档目录为空", nameof(path));
 
         Directory.CreateDirectory(path);
-    }
-
-    /// <summary>
-    /// 先将完整存档写入同目录临时文件并强制落盘，再原子替换正式文件。
-    /// 正式文件的上一版本会保留为.bak备份。
-    /// </summary>
-    private static bool WriteSaveAtomically(
-        string fullPath,
-        byte[] dataBytes,
-        long saveRevision,
-        bool discardIfSuperseded)
-    {
-        using var writeSample = SaveWritePoint.Measure();
-        writeSample.SetGauge(dataBytes?.LongLength ?? 0);
-        string temporaryPath = GetTemporarySavePath(fullPath);
-        string backupPath = GetBackupSavePath(fullPath);
-
-        lock (SaveFileLock)
-        {
-            // 退出/手动保存已生成更新快照时，丢弃尚未开始写入的旧自动保存，
-            // 防止后台任务在世界退出后把过期状态覆盖到磁盘。
-            if (discardIfSuperseded && !IsSaveRevisionCurrent(fullPath, saveRevision))
-                return false;
-
-            DeleteFileIfExists(temporaryPath);
-
-            try
-            {
-                using (FileStream stream = new FileStream(
-                    temporaryPath,
-                    FileMode.CreateNew,
-                    FileAccess.Write,
-                    FileShare.None,
-                    4096,
-                    FileOptions.WriteThrough))
-                {
-                    using var bytesSample = SaveWriteBytesPoint.Measure();
-                    stream.Write(dataBytes, 0, dataBytes.Length);
-                    bytesSample.AddWork(dataBytes.LongLength);
-                    stream.Flush(true);
-                }
-
-                if (new FileInfo(temporaryPath).Length != dataBytes.LongLength)
-                    throw new IOException("临时存档写入不完整");
-
-                // 退出或更新保存可能发生在写临时文件期间，提交正式文件前再检查一次。
-                if (discardIfSuperseded && !IsSaveRevisionCurrent(fullPath, saveRevision))
-                    return false;
-
-                if (!File.Exists(fullPath))
-                {
-                    File.Move(temporaryPath, fullPath);
-                    return true;
-                }
-
-                DeleteFileIfExists(backupPath);
-
-                try
-                {
-                    File.Replace(temporaryPath, fullPath, backupPath);
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    ReplaceSaveWithBackupFallback(temporaryPath, fullPath, backupPath);
-                }
-                catch (NotSupportedException)
-                {
-                    ReplaceSaveWithBackupFallback(temporaryPath, fullPath, backupPath);
-                }
-
-                return true;
-            }
-            finally
-            {
-                DeleteFileIfExists(temporaryPath);
-            }
-        }
     }
 
     /// <summary>退出世界时使旧后台保存失效，不等待磁盘任务，也不影响接下来的正式退出保存。</summary>
@@ -548,6 +301,8 @@ public partial class SaveDataMgr
         {
             long revision = ++nextSaveRevision;
             LatestSaveRevisions[saveKey] = revision;
+            if (instance?.archiveStore != null && string.Equals(instance.archivePath, saveKey, StringComparison.OrdinalIgnoreCase))
+                instance.ReserveArchiveSnapshotRevision(saveKey);
             return revision;
         }
     }
@@ -563,30 +318,5 @@ public partial class SaveDataMgr
         }
     }
 
-    /// <summary>
-    /// 不支持File.Replace的平台使用可恢复的两步替换：旧正式存档先转为备份，再提交新存档。
-    /// </summary>
-    private static void ReplaceSaveWithBackupFallback(string temporaryPath, string fullPath, string backupPath)
-    {
-        File.Move(fullPath, backupPath);
-
-        try
-        {
-            File.Move(temporaryPath, fullPath);
-        }
-        catch
-        {
-            if (!File.Exists(fullPath) && File.Exists(backupPath))
-                File.Copy(backupPath, fullPath);
-
-            throw;
-        }
-    }
-
-    private static void DeleteFileIfExists(string path)
-    {
-        if (File.Exists(path))
-            File.Delete(path);
-    }
     #endregion
 }

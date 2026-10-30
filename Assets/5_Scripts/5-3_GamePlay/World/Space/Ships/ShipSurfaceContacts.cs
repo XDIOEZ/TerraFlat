@@ -17,6 +17,14 @@ namespace FlatWorld.Spaceflight
             public bool ApplyImpact = true;
         }
         private readonly Dictionary<string, QueuedSurfaceContact> pendingSurfaceContacts = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, QueuedSurfaceContact> waitingSurfaceContacts = new(StringComparer.Ordinal);
+
+        private bool IsWaitingForSurfaceContact(string shipId)
+        {
+            foreach (QueuedSurfaceContact contact in waitingSurfaceContacts.Values)
+                if (contact.Assembly.MemberShipIds.Contains(shipId)) return true;
+            return false;
+        }
 
         // 地表下降保留真实触地时刻，先解算本步横移接触再提交落地。
         public void QueueSurfaceLanding(ShipAssemblyState assembly, SurfaceContact contact, bool applyImpact = true)
@@ -30,13 +38,15 @@ namespace FlatWorld.Spaceflight
         public void CommitSurfaceContacts(double seconds)
         {
             if (!GameNetwork.HasStateAuthority || State == null || Universe == null || seconds <= 0d) return;
-            if (pendingSurfaceContacts.Count > 0)
+            if (pendingSurfaceContacts.Count > 0 || waitingSurfaceContacts.Count > 0)
             {
                 // 仅有真实触地事务时租用快照，允许落地回调继续登记下一批接触。
                 using var lease = ListPool<QueuedSurfaceContact>.Get(out var contacts);
+                contacts.AddRange(waitingSurfaceContacts.Values);
                 contacts.AddRange(pendingSurfaceContacts.Values);
                 contacts.Sort((left, right) => left.Contact.Fraction.CompareTo(right.Contact.Fraction));
                 pendingSurfaceContacts.Clear();
+                waitingSurfaceContacts.Clear();
                 foreach (QueuedSurfaceContact candidate in contacts)
                 {
                     string id = candidate.Assembly.MemberShipIds[0];
@@ -52,7 +62,7 @@ namespace FlatWorld.Spaceflight
                         contact.RelativeVelocityMetersPerSecond = new SpaceVector2(
                             Math.Sqrt(assembly.VelocityX * assembly.VelocityX + assembly.VelocityY * assembly.VelocityY),
                             contact.RelativeVelocityMetersPerSecond.Y);
-                        LandAssembly(assembly, contact, candidate.ApplyImpact);
+                        if (!LandAssembly(assembly, contact, candidate.ApplyImpact)) waitingSurfaceContacts[id] = candidate;
                     }
                 }
             }

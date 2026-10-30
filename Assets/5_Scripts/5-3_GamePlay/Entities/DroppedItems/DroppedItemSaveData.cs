@@ -5,49 +5,61 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>独立版本的掉落物快照，放在外层存档封装中。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class DroppedItemArchive
 {
     public const int CurrentVersion = 2;
-    public int Version = CurrentVersion;
-    public Dictionary<string, List<DroppedItemSaveRecord>> Worlds = new();
+    [MemoryPackOrder(0)] public int Version = CurrentVersion;
+    [MemoryPackOrder(1)] public Dictionary<string, List<DroppedItemSaveRecord>> Worlds = new();
 }
 
 /// <summary>分离稳定物品载荷与实时数量、物质和运动状态。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class DroppedItemSaveRecord
 {
     #region 持久化状态
 
-    [MemoryPackInclude] private byte[] itemPayload;
-    public int Guid;
-    public float Amount;
-    public bool CanBePickedUp;
-    public float DurabilityFraction = 1f;
-    public bool MatterInitialized;
-    public float TemperatureCelsius = 20f;
-    public float Moisture;
-    public bool IsBurning;
-    public float CombustionElapsedSeconds;
-    public Vector2 Position;
-    public Vector2 Scale;
-    public float Rotation;
-    public float VisualHeight;
-    public float LiquidDepth;
-    public byte WaterKind;
-    public bool HasFlight;
-    public Vector2 FlightStart;
-    public Vector2 FlightEnd;
-    public Vector2 FlightControl;
-    public float FlightDuration;
-    public float FlightElapsed;
-    public float ArcHeight;
-    public float RotationSpeed;
-    public bool HasWaterTransition;
-    public float WaterStart;
-    public float WaterTarget;
-    public float WaterDuration;
-    public float WaterElapsed;
+    [MemoryPackInclude, MemoryPackOrder(0)] private byte[] itemPayload;
+    [MemoryPackOrder(1)] public int Guid;
+    [MemoryPackOrder(2)] public float Amount;
+    [MemoryPackOrder(3)] public bool CanBePickedUp;
+    [MemoryPackOrder(4)] public float DurabilityFraction = 1f;
+    [MemoryPackOrder(5)] public bool MatterInitialized;
+    [MemoryPackOrder(6)] public float TemperatureCelsius = 20f;
+    [MemoryPackOrder(7)] public float Moisture;
+    [MemoryPackOrder(8)] public bool IsBurning;
+    [MemoryPackOrder(9)] public float CombustionElapsedSeconds;
+    [MemoryPackIgnore] public Vector2 Position;
+    [MemoryPackInclude, MemoryPackOrder(10)] private float PositionX { get => Position.x; set => Position.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(11)] private float PositionY { get => Position.y; set => Position.y = value; }
+    [MemoryPackIgnore] public Vector2 Scale;
+    [MemoryPackInclude, MemoryPackOrder(12)] private float ScaleX { get => Scale.x; set => Scale.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(13)] private float ScaleY { get => Scale.y; set => Scale.y = value; }
+    [MemoryPackOrder(14)] public float Rotation;
+    [MemoryPackOrder(15)] public float VisualHeight;
+    [MemoryPackOrder(16)] public float LiquidDepth;
+    [MemoryPackOrder(17)] public byte WaterKind;
+    [MemoryPackOrder(18)] public bool HasFlight;
+    [MemoryPackIgnore] public Vector2 FlightStart;
+    [MemoryPackInclude, MemoryPackOrder(19)] private float FlightStartX { get => FlightStart.x; set => FlightStart.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(20)] private float FlightStartY { get => FlightStart.y; set => FlightStart.y = value; }
+    [MemoryPackIgnore] public Vector2 FlightEnd;
+    [MemoryPackInclude, MemoryPackOrder(21)] private float FlightEndX { get => FlightEnd.x; set => FlightEnd.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(22)] private float FlightEndY { get => FlightEnd.y; set => FlightEnd.y = value; }
+    [MemoryPackIgnore] public Vector2 FlightControl;
+    [MemoryPackInclude, MemoryPackOrder(23)] private float FlightControlX { get => FlightControl.x; set => FlightControl.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(24)] private float FlightControlY { get => FlightControl.y; set => FlightControl.y = value; }
+    [MemoryPackOrder(25)] public float FlightDuration;
+    [MemoryPackOrder(26)] public float FlightElapsed;
+    [MemoryPackOrder(27)] public float ArcHeight;
+    [MemoryPackOrder(28)] public float RotationSpeed;
+    [MemoryPackOrder(29)] public bool HasWaterTransition;
+    [MemoryPackOrder(30)] public float WaterStart;
+    [MemoryPackOrder(31)] public float WaterTarget;
+    [MemoryPackOrder(32)] public float WaterDuration;
+    [MemoryPackOrder(33)] public float WaterElapsed;
+    [MemoryPackOrder(34)] public float PendingSurfaceMotionSeconds;
+    [MemoryPackOrder(35)] public float PendingSurfaceDriftSeconds;
 
     [MemoryPackIgnore] private ItemData itemData;
     [MemoryPackIgnore] private DroppedItemPayloadCaptureCache mutablePayloadCache;

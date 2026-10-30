@@ -307,14 +307,16 @@ public class Mod_Fuel : Module
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class FuelData
 {
     /// <summary>
     /// x = 实际燃料值（允许高于显示容量）, y = 显示容量/自动补充阈值
     /// </summary>
-    public Vector2 Fuel = new Vector2(100f, 100f);
+    [MemoryPackIgnore] public Vector2 Fuel = new Vector2(100f, 100f);
+    [MemoryPackInclude, MemoryPackOrder(0)] private float FuelAmount { get => Fuel.x; set => Fuel.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(1)] private float FuelCapacity { get => Fuel.y; set => Fuel.y = value; }
     [Tooltip("燃烧时提供的最大温度")]
-    public float MaxTemperature = 100f;
+    [MemoryPackOrder(2)] public float MaxTemperature = 100f;
 }

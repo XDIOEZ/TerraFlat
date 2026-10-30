@@ -214,6 +214,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
 
     private void Restore(DroppedItemSaveRecord record)
     {
+        if (DeferRestoringPendingSurfaceMotion(record)) return;
         try
         {
             if (record?.Data?.Stack == null || record.Data.Stack.Amount <= 0f)

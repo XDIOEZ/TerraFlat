@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
@@ -7,13 +7,13 @@ using UnityEngine;
 public interface IStaminaCapacityModifier { float StaminaCapacityMultiplier { get; } }
 
 /// <summary>出汗与补盐状态；缺盐不会被普通体力恢复或清除 Buff 抹掉。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class SweatBalanceState
 {
-    public float SaltBurden; // 0～1 缺盐负担。
-    public float PendingRecovery; // 补盐后尚待缓慢恢复的量。
-    public float RecoveryRate; // 当前补盐每秒恢复量。
-    public float HeatExposure; // 高温缺水连续暴露秒。
+    [MemoryPackOrder(0)] public float SaltBurden; // 0～1 缺盐负担。
+    [MemoryPackOrder(1)] public float PendingRecovery; // 补盐后尚待缓慢恢复的量。
+    [MemoryPackOrder(2)] public float RecoveryRate; // 当前补盐每秒恢复量。
+    [MemoryPackOrder(3)] public float HeatExposure; // 高温缺水连续暴露秒。
 }
 
 /// <summary>高温补给规则：30℃以上增加耗水与盐负担，最多降低 25% 体力上限；盐食物在 60 秒内缓慢恢复。</summary>

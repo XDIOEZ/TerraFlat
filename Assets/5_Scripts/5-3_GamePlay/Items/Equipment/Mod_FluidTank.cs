@@ -29,11 +29,11 @@ public sealed class FluidTankConfiguration
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FluidTankState
 {
     #region 实例状态
-    public FluidInventoryState Contents = new();
+    [MemoryPackOrder(0)] public FluidInventoryState Contents = new();
     #endregion
 }
 

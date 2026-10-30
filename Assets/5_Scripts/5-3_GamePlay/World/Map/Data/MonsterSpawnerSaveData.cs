@@ -2,49 +2,54 @@ using System;
 using System.Collections.Generic;
 using MemoryPack;
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class MonsterSpawnerSaveData
 {
-    public Dictionary<string, SpawnerProgressSaveData> ConfigStates = new();
-    public List<AiecsResidentSaveData> EntitiesResidents = new();
-    public SpawnerCountdownProgress NaturalCountdown = new();
+    [MemoryPack.MemoryPackOrder(0)] public Dictionary<string, SpawnerProgressSaveData> ConfigStates = new();
+    [MemoryPack.MemoryPackOrder(1)] public List<AiecsResidentSaveData> EntitiesResidents = new();
+    [MemoryPack.MemoryPackOrder(2)] public SpawnerCountdownProgress NaturalCountdown = new();
 }
 
 /// <summary>正式 ECS 居民的持久玩法值；蜂巢成员仍由蜂巢存档持有。</summary>
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class AiecsResidentSaveData
 {
-    public int Guid;
-    public string SpeciesId;
-    public float X, Y, Hp;
-    public List<float> BodyPartHp = new();
-    public float Nutrition = -1f;
-    public float FlightStamina = -1f;
-    public bool FlightRecovering;
-    public double NextBirthTime;
-    public bool Orphaned;
-    public float HiveHomeX, HiveHomeY;
-    public int AdvanceTargetItemGuid;
-    public float AdvanceTargetX, AdvanceTargetY, AdvanceArrivalDistance;
-    public bool AdvanceAttackActorsOnRoute;
+    [MemoryPack.MemoryPackOrder(8)] public int Guid;
+    [MemoryPack.MemoryPackOrder(15)] public string SpeciesId;
+     [MemoryPack.MemoryPackOrder(16)]     public float X;
+     [MemoryPack.MemoryPackOrder(17)]     public float Y;
+     [MemoryPack.MemoryPackOrder(11)]     public float Hp;
+    [MemoryPack.MemoryPackOrder(5)] public List<float> BodyPartHp = new();
+    [MemoryPack.MemoryPackOrder(13)] public float Nutrition = -1f;
+    [MemoryPack.MemoryPackOrder(7)] public float FlightStamina = -1f;
+    [MemoryPack.MemoryPackOrder(6)] public bool FlightRecovering;
+    [MemoryPack.MemoryPackOrder(12)] public double NextBirthTime;
+    [MemoryPack.MemoryPackOrder(14)] public bool Orphaned;
+     [MemoryPack.MemoryPackOrder(9)]     public float HiveHomeX;
+     [MemoryPack.MemoryPackOrder(10)]     public float HiveHomeY;
+    [MemoryPack.MemoryPackOrder(2)] public int AdvanceTargetItemGuid;
+     [MemoryPack.MemoryPackOrder(3)]     public float AdvanceTargetX;
+     [MemoryPack.MemoryPackOrder(4)]     public float AdvanceTargetY;
+     [MemoryPack.MemoryPackOrder(0)]     public float AdvanceArrivalDistance;
+    [MemoryPack.MemoryPackOrder(1)] public bool AdvanceAttackActorsOnRoute;
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class SpawnerProgressSaveData
 {
     #region 生成队列进度
 
-    public int LastSpawnDay = -999;
+    [MemoryPack.MemoryPackOrder(2)] public int LastSpawnDay = -999;
 
-    public int AvailableBudget = -1;
-    public int LastBudgetRecoveryDay = -1;
-    public int PendingReplacementCount;
+    [MemoryPack.MemoryPackOrder(0)] public int AvailableBudget = -1;
+    [MemoryPack.MemoryPackOrder(1)] public int LastBudgetRecoveryDay = -1;
+    [MemoryPack.MemoryPackOrder(4)] public int PendingReplacementCount;
 
-    public int PendingSpawnCount;
-    public int LifetimeSpawnCount;
+    [MemoryPack.MemoryPackOrder(5)] public int PendingSpawnCount;
+    [MemoryPack.MemoryPackOrder(3)] public int LifetimeSpawnCount;
 
     /// <summary>独立概率落空也消耗一次排队机会，只有真正出生才累计出生数量。</summary>
     public void CompleteSpawnAttempt(bool spawned, int currentDay)
@@ -65,21 +70,23 @@ public partial class SpawnerProgressSaveData
 }
 
 /// <summary>每个世界只保存一个自然刷新时钟，到期抽中的规则、物种和当前批次随世界存档。</summary>
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class SpawnerCountdownProgress
 {
     #region 持续倒计时
 
-    public double RemainingGameSeconds = -1d;
-    public double LastObservedGameSeconds = -1d;
-    public double IntervalGameSeconds;
-    public int PendingCount;
-    public string SelectedConfigId, SelectedSpeciesId;
-    public bool HasBatchAnchor;
-    public float BatchAnchorX, BatchAnchorY;
-    public string BatchAnchorScene;
-    public List<long> BatchSpawnCells = new();
+    [MemoryPack.MemoryPackOrder(8)] public double RemainingGameSeconds = -1d;
+    [MemoryPack.MemoryPackOrder(6)] public double LastObservedGameSeconds = -1d;
+    [MemoryPack.MemoryPackOrder(5)] public double IntervalGameSeconds;
+    [MemoryPack.MemoryPackOrder(7)] public int PendingCount;
+     [MemoryPack.MemoryPackOrder(9)]     public string SelectedConfigId;
+     [MemoryPack.MemoryPackOrder(10)]     public string SelectedSpeciesId;
+    [MemoryPack.MemoryPackOrder(4)] public bool HasBatchAnchor;
+     [MemoryPack.MemoryPackOrder(1)]     public float BatchAnchorX;
+     [MemoryPack.MemoryPackOrder(2)]     public float BatchAnchorY;
+    [MemoryPack.MemoryPackOrder(0)] public string BatchAnchorScene;
+    [MemoryPack.MemoryPackOrder(3)] public List<long> BatchSpawnCells = new();
 
     // 只推进在线观察到的游戏时间，等待落点时不累计第二轮。
     public bool Advance(double totalGameSeconds, double intervalGameSeconds)

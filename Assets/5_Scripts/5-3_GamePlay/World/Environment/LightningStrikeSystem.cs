@@ -18,16 +18,18 @@ public static class LightningStrikeSystem
         public readonly Dictionary<Int2, int> Sequences = new();
     }
     private static readonly Dictionary<string, LightningWorld> worlds = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Queue<(RegionalLightningEvent Strike, float Radius, float Damage)>> pendingStrikes = new(StringComparer.Ordinal);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void Reset()
     {
         worlds.Clear();
+        pendingStrikes.Clear();
     }
 
     public static void Reset(string worldKey)
     {
-        if (worldKey != null) worlds.Remove(worldKey);
+        if (worldKey != null) { worlds.Remove(worldKey); pendingStrikes.Remove(worldKey); }
     }
 
     private static bool Reserve(in RegionalLightningEvent strike)
@@ -69,6 +71,31 @@ public static class LightningStrikeSystem
             WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.ExistingInstance?.ActiveDefinition) ||
             !float.IsFinite(radius) || radius <= 0f || !float.IsFinite(peakDamage) || peakDamage <= 0f ||
             !float.IsFinite(strike.Position.x) || !float.IsFinite(strike.Position.y) || !Reserve(strike)) return;
+        if (pendingStrikes.TryGetValue(strike.WorldKey, out var waiting) && waiting.Count > 0 ||
+            FlatWorld.Spaceflight.SpaceSurfaceQuery.EnsureSurfaceAreaReady(strike.WorldKey, strike.Position, radius) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending)
+        {
+            if (waiting == null) pendingStrikes[strike.WorldKey] = waiting = new();
+            waiting.Enqueue((strike, radius, peakDamage));
+            return;
+        }
+        ApplyReadyStrike(strike, radius, peakDamage);
+    }
+
+    public static void AdvancePending(string worldKey)
+    {
+        if (!pendingStrikes.TryGetValue(worldKey, out var waiting)) return;
+        while (waiting.Count > 0)
+        {
+            var next = waiting.Peek();
+            if (FlatWorld.Spaceflight.SpaceSurfaceQuery.EnsureSurfaceAreaReady(worldKey, next.Strike.Position, next.Radius) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending) break;
+            waiting.Dequeue();
+            ApplyReadyStrike(next.Strike, next.Radius, next.Damage);
+        }
+        if (waiting.Count == 0) pendingStrikes.Remove(worldKey);
+    }
+
+    private static void ApplyReadyStrike(RegionalLightningEvent strike, float radius, float peakDamage)
+    {
         ulong eventId = EventId(strike);
         Vector2 center = WorldTopologyRuntime.NormalizePosition(strike.Position);
         ApplyItemDamage(strike.WorldKey, eventId, center, radius, peakDamage);

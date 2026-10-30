@@ -24,16 +24,16 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     public override float FixedTickInterval => .1f;
 
     [System.Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class SaveData
     {
-        public bool HasSleepRespawnPoint = false;
-        public float SleepRespawnX = 0f;
-        public float SleepRespawnY = 0f;
-        public float SleepRespawnZ = 0f;
-        public bool? DropAllCarriedItemsOverride;
+        [MemoryPackOrder(0)] public bool HasSleepRespawnPoint = false;
+        [MemoryPackOrder(1)] public float SleepRespawnX = 0f;
+        [MemoryPackOrder(2)] public float SleepRespawnY = 0f;
+        [MemoryPackOrder(3)] public float SleepRespawnZ = 0f;
+        [MemoryPackOrder(4)] public bool? DropAllCarriedItemsOverride;
 
-        public Vector3 SleepRespawnPoint
+        [MemoryPackIgnore] public Vector3 SleepRespawnPoint
         {
             get => new Vector3(SleepRespawnX, SleepRespawnY, SleepRespawnZ);
             set

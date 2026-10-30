@@ -15,7 +15,9 @@ internal static partial class Program
         var siriusTemplate = new UniverseState { TemplateId = config["sectorSystems"][0].Value<string>("templateId"),
             OrbitTimeScale = solarTemplate.OrbitTimeScale, Bodies = config["sectorSystems"][0]["bodies"].ToObject<List<BodyState>>() };
         UniverseState sirius = UniverseSectorFactory.Generate(siriusTemplate, 42, new(-1, 0), true);
-        Check(solar.Bodies.Count == 10 && sirius.Bodies.Count == 2, "configured solar and Sirius templates instantiate independently");
+        Check(solar.Bodies.Count == config["bodies"].Count() &&
+            sirius.Bodies.Count == config["sectorSystems"][0]["bodies"].Count(),
+            "configured solar and Sirius templates instantiate independently");
         var solarSimulation = new UniverseSimulation(solar);
         var siriusSimulation = new UniverseSimulation(sirius);
         Check(solarSimulation.GetBody("earth").BodyId == "sector:0:0/body:earth", "solar earth has globally scoped identity");

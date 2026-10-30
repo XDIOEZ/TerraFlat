@@ -3,14 +3,14 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>燃料仍留在真实槽位里，吸收完成后才通过库存事务消费一份。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FuelAbsorptionState
 {
     #region 单份燃料吸收
-    public int SlotIndex = -1;
-    public int ItemGuid;
-    public string ItemId = "";
-    public float ElapsedSeconds;
+    [MemoryPackOrder(0)] public int SlotIndex = -1;
+    [MemoryPackOrder(1)] public int ItemGuid;
+    [MemoryPackOrder(2)] public string ItemId = "";
+    [MemoryPackOrder(3)] public float ElapsedSeconds;
 
     public bool Matches(ItemSlot slot)
         => slot?.itemData?.Stack != null && slot.itemData.Stack.Amount >= 1f &&

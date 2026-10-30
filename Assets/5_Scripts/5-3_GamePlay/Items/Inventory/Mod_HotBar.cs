@@ -1389,11 +1389,11 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 }
 
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class InventoryHotBarSaveState
 {
     public const int CurrentVersion = 2;
 
-    public int Version;
-    public InventoryInstanceSnapshot Inventory;
+    [MemoryPackOrder(0)] public int Version;
+    [MemoryPackOrder(1)] public InventoryInstanceSnapshot Inventory;
 }

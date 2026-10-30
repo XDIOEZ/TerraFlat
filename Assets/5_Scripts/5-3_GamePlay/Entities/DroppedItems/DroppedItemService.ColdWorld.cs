@@ -77,6 +77,7 @@ public static partial class DroppedItemService
     private static readonly LightweightDroppedItemSimulation coldMotion = new();
     private static readonly List<LightweightDroppedChange> coldMotionChanges = new();
     private static readonly HashSet<int> coldLanded = new();
+    private static readonly HashSet<int> coldMotionWaitingForSurface = new();
     private static readonly ProfilerMarker coldWorldMotionMarker = new("DroppedItemService.ColdWorld.Motion");
     private static readonly ProfilerMarker coldWorldWaterMarker = new("DroppedItemService.ColdWorld.Water");
 
@@ -87,86 +88,185 @@ public static partial class DroppedItemService
         List<DroppedItemSaveRecord> records = WorldRecords(world);
         if (records == null || records.Count == 0 || HasLiveWorld(world)) return;
         bool hasMoving = LooseItemMotion.HasVelocitySources;
-        foreach (DroppedItemSaveRecord record in records) hasMoving |= record != null && (record.HasFlight || record.HasWaterTransition || record.WaterKind != 0);
+        foreach (DroppedItemSaveRecord record in records) hasMoving |= record != null &&
+            (record.HasFlight || record.HasWaterTransition || record.WaterKind != 0 ||
+             record.PendingSurfaceMotionSeconds > 0f || record.PendingSurfaceDriftSeconds > 0f);
         if (!hasMoving) return;
         GameSaveData save = SaveDataMgr.Instance.SaveData;
         WorldTopologyDomain domain = save.PlanetData_Dict.TryGetValue(world, out PlanetData planet) &&
             WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
-        using (coldWorldMotionMarker.Auto()) StepColdDropMotion(records, seconds, domain);
+        using (coldWorldMotionMarker.Auto()) StepColdDropMotion(records, seconds, domain, world);
         if (!coldEnvironmentMotion.TryGetValue(world, out var ownership)) ownership = (GameplayFixedStepSimulation.TickIndex, new HashSet<int>());
         ownership.Items.Clear();
         coldEnvironmentMotion[world] = (GameplayFixedStepSimulation.TickIndex, ownership.Items);
         using var waterSample = coldWorldWaterMarker.Auto();
         for (int index = records.Count - 1; index >= 0; index--)
-        {
-            DroppedItemSaveRecord record = records[index];
-            if (record?.Data?.Stack == null || record.HasFlight || !(record.HasWaterTransition || record.WaterKind != 0 ||
-                coldLanded.Contains(record.Data.Guid) || LooseItemMotion.HasVelocitySources)) continue;
-            EnsureColdDropDefinition(record.Data);
-            if (record.WaterKind != 0)
-            {
-                Vector2 velocity = Vector2.zero;
-                if (record.WaterKind != LightweightDroppedBody.BottomWaterKind)
-                {
-                    if (FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetWaterCurrent(world, record.Position, out RuntimeWaterCurrentSample current))
-                        velocity = current.Direction * WorldItemWaterRules.ResolveDriftSpeed(current.Kind, current.Flow, record.Data.Stack);
-                    record.Position = LooseItemMotion.AdvanceWater(world, record.Data, record.Position, velocity,
-                        seconds, record.LiquidDepth < .995f);
-                    ownership.Items.Add(record.Data.Guid);
-                }
-            }
-            else if (LooseItemMotion.HasVelocitySources && record.Data.Stack.CanBePickedUp &&
-                     !LooseItemMotion.IsDrivenByConveyor(record.Position))
-            {
-                record.Position = LooseItemMotion.AdvanceExternal(world, record.Data, record.Position, seconds, Vector2.zero);
-                ownership.Items.Add(record.Data.Guid);
-            }
-            if (record.WaterKind != 0 || coldLanded.Contains(record.Data.Guid) || ownership.Items.Contains(record.Data.Guid))
-                RefreshColdWater(world, record);
-            record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
-        }
+            AdvanceColdDropDrift(world, records[index], seconds, ownership.Items);
     }
 
-    // 每次从真实档案重填并写回，复用容量不形成第二份长期权威状态。
-    internal static void StepColdDropMotion(List<DroppedItemSaveRecord> records, float seconds, WorldTopologyDomain domain)
+    private static void AdvanceColdDropDrift(string world, DroppedItemSaveRecord record, float seconds, HashSet<int> ownership)
+    {
+        if (record?.Data?.Stack == null || record.HasFlight || !(record.HasWaterTransition || record.WaterKind != 0 ||
+            coldLanded.Contains(record.Data.Guid) || LooseItemMotion.HasVelocitySources || record.PendingSurfaceDriftSeconds > 0f)) return;
+        if (coldMotionWaitingForSurface.Contains(record.Data.Guid))
+        { record.PendingSurfaceDriftSeconds = ValidColdMotionBudget(record.PendingSurfaceDriftSeconds) + seconds; return; }
+        EnsureColdDropDefinition(record.Data);
+        float budget = ValidColdMotionBudget(record.PendingSurfaceDriftSeconds) + seconds;
+        float fixedStep = ColdMotionFixedStep();
+        for (int stepIndex = 0; stepIndex < MaxColdMotionCatchUpSteps && budget > .000001f; stepIndex++)
+        {
+            float step = Mathf.Min(fixedStep, budget);
+            if (WorldAddress.FromWorldKey(world).IsSurface &&
+                FlatWorld.Spaceflight.SpaceSurfaceQuery.QueryLandingSurface(world, record.Position, out _) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending) break;
+            Vector2 position = record.Position;
+            bool advanced = true;
+            bool movedByEnvironment = false;
+            if (record.WaterKind != 0 && record.WaterKind != LightweightDroppedBody.BottomWaterKind)
+            {
+                Vector2 velocity = Vector2.zero;
+                if (FlatWorld.Spaceflight.SpaceSurfaceQuery.TryGetWaterCurrent(world, position, out RuntimeWaterCurrentSample current))
+                    velocity = current.Direction * WorldItemWaterRules.ResolveDriftSpeed(current.Kind, current.Flow, record.Data.Stack);
+                advanced = LooseItemMotion.TryAdvanceWater(world, record.Data, position, velocity, step,
+                    out position, record.LiquidDepth < .995f);
+                if (advanced) { ownership?.Add(record.Data.Guid); movedByEnvironment = true; }
+            }
+            else if (record.WaterKind == 0 && LooseItemMotion.HasVelocitySources && record.Data.Stack.CanBePickedUp &&
+                     !LooseItemMotion.IsDrivenByConveyor(position))
+            {
+                advanced = LooseItemMotion.TryAdvanceExternal(world, record.Data, position, step, out position, Vector2.zero);
+                if (advanced) { ownership?.Add(record.Data.Guid); movedByEnvironment = true; }
+            }
+            if (!advanced) break;
+            record.Position = position;
+            if (record.WaterKind != 0 || coldLanded.Contains(record.Data.Guid) || movedByEnvironment)
+                RefreshColdWater(world, record);
+            record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
+            budget -= step;
+        }
+        record.PendingSurfaceDriftSeconds = Mathf.Max(0f, budget);
+    }
+
+    private static readonly List<DroppedItemSaveRecord> deferredColdDropWork = new();
+
+    internal static bool AdvanceDeferredColdDrop(string world, DroppedItemSaveRecord record, float seconds, WorldTopologyDomain domain)
+    {
+        deferredColdDropWork.Clear();
+        deferredColdDropWork.Add(record);
+        try
+        {
+            StepColdDropMotion(deferredColdDropWork, seconds, domain, world);
+            AdvanceColdDropDrift(world, record, seconds, null);
+            return deferredColdDropWork.Count != 0 && record.PendingSurfaceMotionSeconds <= .000001f &&
+                record.PendingSurfaceDriftSeconds <= .000001f;
+        }
+        finally { deferredColdDropWork.Clear(); }
+    }
+
+    private const int MaxColdMotionCatchUpSteps = 64;
+
+    private static float ColdMotionFixedStep()
+        => float.IsFinite(Time.fixedDeltaTime) && Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : .02f;
+
+    private static float ValidColdMotionBudget(float value)
+        => float.IsFinite(value) && value > 0f ? value : 0f;
+
+    // 读取完成后按物理固定步结清等待时间，未完成部分仍保存在原档案。
+    internal static void StepColdDropMotion(List<DroppedItemSaveRecord> records, float seconds, WorldTopologyDomain domain, string world = null)
     {
         coldLanded.Clear();
+        coldMotionWaitingForSurface.Clear();
         coldMotion.Clear();
         try
         {
             foreach (DroppedItemSaveRecord record in records)
             {
-                // 稳定水态直接保留档案，只有飞行和水线过渡需要重填短期运动工作区。
-                if (record?.Data?.Stack == null || !(record.HasFlight || record.HasWaterTransition)) continue;
-                LightweightDroppedBody body = record.RestoreBody(record.Data, domain);
-                LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight { Start = record.FlightStart,
-                    End = record.FlightEnd, Control = record.FlightControl, Duration = record.FlightDuration,
-                    Elapsed = record.FlightElapsed, ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed } : null;
-                LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition {
-                    StartDepth = record.WaterStart, TargetDepth = record.WaterTarget, Duration = record.WaterDuration,
-                    Elapsed = record.WaterElapsed, RecedeDuration = record.WaterKind == 2 ? WorldItemWaterRules.SubmergedRecedeDuration : 0f } : null;
-                coldMotion.Create(body, flight, water);
+                if (record?.Data?.Stack == null) continue;
+                float budget = ValidColdMotionBudget(record.PendingSurfaceMotionSeconds);
+                bool backlogWasFlying = record.HasFlight;
+                int steps = 0;
+                while (budget > .000001f && steps++ < MaxColdMotionCatchUpSteps)
+                {
+                    if (!(record.HasFlight || record.HasWaterTransition))
+                    {
+                        if (backlogWasFlying) record.PendingSurfaceDriftSeconds += budget;
+                        budget = 0f;
+                        break;
+                    }
+                    float step = Mathf.Min(ColdMotionFixedStep(), budget);
+                    if (ColdDropSurfacePending(world, record, step)) break;
+                    coldMotion.Clear(); coldMotionChanges.Clear();
+                    AddColdMotionBody(record, domain);
+                    coldMotion.Step(step, domain, coldMotionChanges);
+                    if (!ApplyColdMotionBody(record)) break;
+                    budget -= step;
+                }
+                record.PendingSurfaceMotionSeconds = Mathf.Max(0f, budget);
+                if (budget > .000001f)
+                {
+                    record.PendingSurfaceMotionSeconds += seconds;
+                    coldMotionWaitingForSurface.Add(record.Data.Guid);
+                }
+            }
+
+            coldMotion.Clear(); coldMotionChanges.Clear();
+            foreach (DroppedItemSaveRecord record in records)
+            {
+                if (record?.Data?.Stack == null || !(record.HasFlight || record.HasWaterTransition) ||
+                    coldMotionWaitingForSurface.Contains(record.Data.Guid)) continue;
+                if (ColdDropSurfacePending(world, record, seconds))
+                {
+                    record.PendingSurfaceMotionSeconds += seconds;
+                    coldMotionWaitingForSurface.Add(record.Data.Guid);
+                    continue;
+                }
+                AddColdMotionBody(record, domain);
             }
             coldMotion.Step(seconds, domain, coldMotionChanges);
             for (int index = records.Count - 1; index >= 0; index--)
             {
                 DroppedItemSaveRecord record = records[index];
-                if (record?.Data == null || !(record.HasFlight || record.HasWaterTransition)) continue;
-                bool wasFlying = record.HasFlight;
-                if (!coldMotion.Contains(record.Data.Guid)) { records.RemoveAt(index); continue; }
-                LightweightDroppedBody body = coldMotion.Get(record.Data.Guid);
-                record.Position = body.Position; record.Rotation = body.Rotation; record.VisualHeight = body.VisualHeight;
-                record.LiquidDepth = body.LiquidDepth; record.WaterKind = body.WaterKind;
-                record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
-                record.HasFlight = coldMotion.TryGetFlight(body.Id, out LightweightDroppedFlight flight);
-                if (record.HasFlight) record.FlightElapsed = flight.Elapsed;
-                record.HasWaterTransition = coldMotion.TryGetWater(body.Id, out LightweightDroppedWaterTransition water);
-                if (record.HasWaterTransition) record.WaterElapsed = water.Elapsed;
-                record.Data.Stack.CanBePickedUp = !record.HasFlight;
-                if (wasFlying && !record.HasFlight) coldLanded.Add(record.Data.Guid);
+                if (record?.Data == null || !(record.HasFlight || record.HasWaterTransition) ||
+                    coldMotionWaitingForSurface.Contains(record.Data.Guid)) continue;
+                if (!ApplyColdMotionBody(record)) records.RemoveAt(index);
             }
         }
         finally { coldMotion.Clear(); coldMotionChanges.Clear(); }
+    }
+
+    private static bool ColdDropSurfacePending(string world, DroppedItemSaveRecord record, float seconds)
+    {
+        Vector2 target = record.HasFlight && record.FlightElapsed + seconds >= record.FlightDuration ? record.FlightEnd : record.Position;
+        return !string.IsNullOrEmpty(world) && WorldAddress.FromWorldKey(world).IsSurface &&
+            FlatWorld.Spaceflight.SpaceSurfaceQuery.QueryLandingSurface(world, target, out _) == FlatWorld.Spaceflight.SurfaceQueryStatus.Pending;
+    }
+
+    private static void AddColdMotionBody(DroppedItemSaveRecord record, WorldTopologyDomain domain)
+    {
+        LightweightDroppedBody body = record.RestoreBody(record.Data, domain);
+        LightweightDroppedFlight? flight = record.HasFlight ? new LightweightDroppedFlight { Start = record.FlightStart,
+            End = record.FlightEnd, Control = record.FlightControl, Duration = record.FlightDuration,
+            Elapsed = record.FlightElapsed, ArcHeight = record.ArcHeight, RotationSpeed = record.RotationSpeed } : null;
+        LightweightDroppedWaterTransition? water = record.HasWaterTransition ? new LightweightDroppedWaterTransition {
+            StartDepth = record.WaterStart, TargetDepth = record.WaterTarget, Duration = record.WaterDuration,
+            Elapsed = record.WaterElapsed, RecedeDuration = record.WaterKind == 2 ? WorldItemWaterRules.SubmergedRecedeDuration : 0f } : null;
+        coldMotion.Create(body, flight, water);
+    }
+
+    private static bool ApplyColdMotionBody(DroppedItemSaveRecord record)
+    {
+        if (!coldMotion.Contains(record.Data.Guid)) return false;
+        bool wasFlying = record.HasFlight;
+        LightweightDroppedBody body = coldMotion.Get(record.Data.Guid);
+        record.Position = body.Position; record.Rotation = body.Rotation; record.VisualHeight = body.VisualHeight;
+        record.LiquidDepth = body.LiquidDepth; record.WaterKind = body.WaterKind;
+        record.Data.transform.position = new Vector3(record.Position.x, record.Position.y);
+        record.HasFlight = coldMotion.TryGetFlight(body.Id, out LightweightDroppedFlight flight);
+        if (record.HasFlight) record.FlightElapsed = flight.Elapsed;
+        record.HasWaterTransition = coldMotion.TryGetWater(body.Id, out LightweightDroppedWaterTransition water);
+        if (record.HasWaterTransition) record.WaterElapsed = water.Elapsed;
+        record.Data.Stack.CanBePickedUp = !record.HasFlight;
+        if (wasFlying && !record.HasFlight) coldLanded.Add(record.Data.Guid);
+        return true;
     }
 
     private static void CollectWorldDrops(string world)

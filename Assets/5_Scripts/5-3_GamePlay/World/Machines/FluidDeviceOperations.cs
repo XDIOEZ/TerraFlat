@@ -54,14 +54,15 @@ public static class FluidDeviceOperations
     #endregion
 
     #region 动力泵直达真实储罐
-    public static bool IsGasPumpWet(MachineEntity node) => IsFluidEnvironmentSubmerged(node);
+    public static bool IsGasPumpWet(MachineEntity node) => !TryGetFluidEnvironmentSubmerged(node, out bool wet) || wet;
     public static void AdvanceGasPump(MachineEntity node, float seconds)
     {
         var state = GetFluidState(node); double maximum = Rate(node, seconds);
         state.LastFlowPhase = ""; // 仅真实交付成功的本轮抽气驱动机械反馈。
         if (maximum <= 0d) return;
         if (!Powered(node)) { state.Status = "没有动力"; return; }
-        if (IsGasPumpWet(node)) { state.Status = "气泵遇到液体"; return; }
+        if (!TryGetFluidEnvironmentSubmerged(node, out bool wet)) { state.Status = "等待地表数据"; return; }
+        if (wet) { state.Status = "气泵遇到液体"; return; }
         var workspace = workspaces.GetOrCreateValue(node); bool destination = false;
         foreach (var id in FluidCatalog.Default.Definitions.Keys)
         {
@@ -127,7 +128,7 @@ public static class FluidDeviceOperations
                 out int level, out WorldLiquidPumpSourceSelection sourceSelection) || level <= 0 ||
                 !FluidCatalog.Default.TryFromLiquidId(liquid.Id, out FluidDefinition fluid) || !fluid.AllowIndustrialTransport)
             {
-                ResetLiquidPumpBatchCredit(state, workspace);
+                if (sourceSelection != WorldLiquidPumpSourceSelection.Searching) ResetLiquidPumpBatchCredit(state, workspace);
                 state.Status = movedAny ? "正在抽液体" : sourceSelection == WorldLiquidPumpSourceSelection.Searching
                     ? "正在寻找可抽取的液体" : "入口没有可抽取的液体"; return;
             }

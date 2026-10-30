@@ -229,45 +229,63 @@ public partial class SaveDataMgr
 }
 
 /// <summary>可移除表面的独立持久化数据；不复制或替换下方地形。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class SupportCellSaveData
 {
-    public Vector2Int LocalPosition; // 区块内坐标。
-    public int TileId; // 支撑材料地块。
-    public short NavigationCost; // 支撑面的行走代价。
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(0)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    } // 区块内坐标。
+    [MemoryPack.MemoryPackOrder(2)] public int TileId; // 支撑材料地块。
+    [MemoryPack.MemoryPackOrder(1)] public short NavigationCost; // 支撑面的行走代价。
 }
 
 /// <summary>只保存被挖深或被玩家覆盖的格子，未修改的天然地形不生成记录。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class GroundLayerCellSaveData
 {
     #region 地层快照
-    public Vector2Int LocalPosition;
-    public int ExcavatedLayers;
-    public int ExcavatedSurfaceLevels; // 地表实际降低的层数，包含土层且不影响五层石头的产量。
-    public byte SurfaceGrass;
-    public List<GroundCoverLayerSaveData> Covers = new();
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(3)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(1)] public int ExcavatedLayers;
+    [MemoryPack.MemoryPackOrder(2)] public int ExcavatedSurfaceLevels; // 地表实际降低的层数，包含土层且不影响五层石头的产量。
+    [MemoryPack.MemoryPackOrder(4)] public byte SurfaceGrass;
+    [MemoryPack.MemoryPackOrder(0)] public List<GroundCoverLayerSaveData> Covers = new();
     #endregion
 }
 
 /// <summary>覆盖前的完整地块、未完成工作量和独立草层，按后放先挖的顺序恢复。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class GroundCoverLayerSaveData
 {
     #region 下层快照
-    public RuntimeTileCellSaveDelta UnderlyingCell;
-    public byte UnderlyingGrass;
+    [MemoryPack.MemoryPackOrder(0)] public RuntimeTileCellSaveDelta UnderlyingCell;
+    [MemoryPack.MemoryPackOrder(1)] public byte UnderlyingGrass;
     #endregion
 }
 
 /// <summary>只持久化位置、稳定 LiquidId 和整数 LiquidLevel；禁止追加会话数字编号。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class LiquidCellSaveData
 {
     #region 持久化字段
-    public Vector2Int LocalPosition;
-    public string LiquidId;
-    public int LiquidLevel;
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(2)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(0)] public string LiquidId;
+    [MemoryPack.MemoryPackOrder(1)] public int LiquidLevel;
     #endregion
 
     #region 捕获与恢复
@@ -292,17 +310,23 @@ public partial class LiquidCellSaveData
 }
 
 /// <summary>一格污染差量；Values 只保存偏离各自默认值的指标。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class ContaminationCellSaveData
 {
-    public Vector2Int LocalPosition;
-    public List<ContaminationValueSaveData> Values = new();
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(0)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(1)] public List<ContaminationValueSaveData> Values = new();
 }
 
 /// <summary>一个污染指标在单格上的持久化值。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 public partial class ContaminationValueSaveData
 {
-    public string ContaminationId;
-    public float Value;
+    [MemoryPack.MemoryPackOrder(0)] public string ContaminationId;
+    [MemoryPack.MemoryPackOrder(1)] public float Value;
 }

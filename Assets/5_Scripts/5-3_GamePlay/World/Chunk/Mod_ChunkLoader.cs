@@ -5,6 +5,16 @@ using UnityEngine;
 /// 区块加载器模块
 /// 根据玩家位置动态加载、卸载和管理区块
 /// </summary>
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
+public sealed partial class ChunkDistanceSaveState
+{
+    #region 区块距离存档字段
+    [MemoryPack.MemoryPackOrder(0)] public int UnActiveDistance;
+    [MemoryPack.MemoryPackOrder(1)] public int DestroyChunkDistance;
+    [MemoryPack.MemoryPackOrder(2)] public int LoadChunkDistance;
+    #endregion
+}
+
 public class Mod_ChunkLoader : Module
 {
     #region 数据结构
@@ -141,14 +151,21 @@ public class Mod_ChunkLoader : Module
 
     protected override void OnLoad()
     {
-        ModData.ReadData(ref distanceConfig);
+        ChunkDistanceSaveState saved = ModData.GetData<ChunkDistanceSaveState>();
+        if (saved != null)
+            distanceConfig = new ChunkDistanceConfig(saved.UnActiveDistance, saved.DestroyChunkDistance, saved.LoadChunkDistance);
         NormalizeDistanceConfig();
         ResetEffectiveDistancesFromConfig();
         _hasStreamedChunkOrigin = false;
         BindMovementEvent();
     }
 
-    protected override void OnSave() => ModData.WriteData(distanceConfig);
+    protected override void OnSave() => ModData.WriteData(new ChunkDistanceSaveState
+    {
+        UnActiveDistance = distanceConfig.UnActiveDistance,
+        DestroyChunkDistance = distanceConfig.DestroyChunkDistance,
+        LoadChunkDistance = distanceConfig.LoadChunkDistance
+    });
 
     public override bool WantsRenderFrameUpdate => true;
 

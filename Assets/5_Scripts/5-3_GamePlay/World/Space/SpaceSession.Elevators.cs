@@ -12,6 +12,7 @@ namespace FlatWorld.Spaceflight
 {
     public sealed partial class SpaceSession
     {
+        private const string ElevatorGroundLoadingReason = "正在加载地面区块。";
         #region 电梯资格与真实端点
         public const string SpaceElevatorTerminalItemId = "SpaceElevatorTerminal";
         private readonly Dictionary<string, Inventory_Data> elevatorCargo = new(StringComparer.Ordinal);
@@ -486,6 +487,9 @@ namespace FlatWorld.Spaceflight
             using var worldScope = GameplayWorldRegistry.UseWorld(elevator.GroundWorldKey);
             if (FindElevatorGroundTerminal(elevator) == null)
             { reason = "地面终端已损毁，请在原位置重建终端后重新绑定。"; return false; }
+            if (SpaceSurfaceQuery.EnsureSurfaceAreaReady(elevator.GroundWorldKey,
+                    new Vector2((float)elevator.GroundX, (float)elevator.GroundY), 4f) == SurfaceQueryStatus.Pending)
+            { reason = ElevatorGroundLoadingReason; return false; }
             for (int radius = 1; radius <= 3; radius++)
                 for (int y = -radius; y <= radius; y++)
                     for (int x = -radius; x <= radius; x++)
@@ -529,14 +533,21 @@ namespace FlatWorld.Spaceflight
                 SpaceElevatorEndpoint departure = elevator.CabinEndpoint == SpaceElevatorEndpoint.Ground ? SpaceElevatorEndpoint.Station : SpaceElevatorEndpoint.Ground;
                 if (State != savedSession || actor != ItemMgr.Instance?.User_Player || !IsAtElevatorEndpoint(actor, elevator, departure))
                 { reason = "乘坐准备期间玩家离开终端，已取消乘坐。"; yield break; }
-                if (!TryGetElevatorArrival(elevator, elevator.CabinEndpoint, out Vector2 point, out reason)) yield break;
+                Vector2 point;
+                while (!TryGetElevatorArrival(elevator, elevator.CabinEndpoint, out point, out reason))
+                {
+                    if (reason != ElevatorGroundLoadingReason || State != savedSession || actor != ItemMgr.Instance?.User_Player ||
+                        !IsAtElevatorEndpoint(actor, elevator, departure)) yield break;
+                    yield return null;
+                }
                 if (elevator.CabinEndpoint == SpaceElevatorEndpoint.Station)
                 {
                     ShipState station = GetShip(elevator.StationShipId);
                     var target = new SpacePassengerState { ProfileId = profile, ShipId = station.ShipId,
                         LocalX = point.x, LocalY = point.y, Supported = true, IsInSpace = true,
+                        UnknownOptionalFields = previous.UnknownOptionalFields,
                         RealmRevision = unchecked(revision + 1), SavedCameraSize = previous.SavedCameraSize,
-                        FreeMotion = new SpaceMotionState { Sector = station.Sector } };
+                        FreeMotion = new SpaceMotionState { Sector = station.Sector, UnknownOptionalFields = previous.FreeMotion?.UnknownOptionalFields } };
                     State.Passengers[index] = target; committed = true;
                     if (GameNetwork.IsOnline)
                     {
@@ -559,7 +570,9 @@ namespace FlatWorld.Spaceflight
                 {
                     State.Passengers[index] = new SpacePassengerState { ProfileId = profile,
                         LandingWorldKey = elevator.GroundWorldKey, LandingX = point.x, LandingY = point.y,
-                        RealmRevision = unchecked(revision + 1), FreeMotion = new SpaceMotionState { PositionMeters = SpaceVector2.FromVector2(point) } };
+                        UnknownOptionalFields = previous.UnknownOptionalFields,
+                        RealmRevision = unchecked(revision + 1), FreeMotion = new SpaceMotionState { PositionMeters = SpaceVector2.FromVector2(point),
+                            UnknownOptionalFields = previous.FreeMotion?.UnknownOptionalFields } };
                     committed = true;
                     if (!DimensionManager.Instance.TryBeginPlanetLanding(actor, WorldAddress.FromWorldKey(elevator.GroundWorldKey), point)) yield break;
                 }

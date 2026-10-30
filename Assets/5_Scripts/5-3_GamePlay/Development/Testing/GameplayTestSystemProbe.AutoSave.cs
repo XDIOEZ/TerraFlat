@@ -206,7 +206,7 @@ public static partial class GameplayTestSystemProbe
             ReferenceEquals(sourceMaps, cave.MapData_Dict) && chunk.ChangedItems.Count == 40;
         GameSaveData coreOnly = MemoryPackSerializer.Deserialize<GameSaveData>(core);
         var initial = MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(frozen[1].ChunkData);
-        ItemData first = MemoryPackSerializer.Deserialize<ItemData>(frozen[1].ChangedItems[0]);
+        ItemData first = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(frozen[1].ChangedItems[0]).CreateColdData();
 
         chunk.MarkRemoved(1000);
         Data_GeneralItem replacement = ServiceItem(args);

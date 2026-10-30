@@ -2,19 +2,25 @@ using MemoryPack;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class MapSave
 {
-    public string Name;
+    [MemoryPack.MemoryPackOrder(1)] public string Name;
 
     [ShowInInspector]
     // 将原先存储单个 ItemData 的字典改为存储 HashSet<ItemData>，key 为物品名称
-    public Dictionary<string, HashSet<ItemData>> items = new Dictionary<string, HashSet<ItemData>>();
+    [MemoryPack.MemoryPackOrder(3)] public Dictionary<string, HashSet<ItemData>> items = new Dictionary<string, HashSet<ItemData>>();
 
-    public float SunlightIntensity;
+    [MemoryPack.MemoryPackOrder(2)] public float SunlightIntensity;
 
-    public UnityEngine.Vector2Int MapPosition;
+    [MemoryPack.MemoryPackIgnore] public UnityEngine.Vector2Int MapPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(0)]
+    private ModuleGridPositionSaveSnapshot SavedMapPosition
+    {
+        get => new() { X = MapPosition.x, Y = MapPosition.y };
+        set { if (value != null) MapPosition = new(value.X, value.Y); }
+    }
 
     public void AddItemData(ItemData itemData)
     {

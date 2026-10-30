@@ -131,14 +131,18 @@ public sealed partial class InductionStoveDefinition
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class InductionStoveState
 {
     #region 持久状态
-    public float Temperature = TemperatureMgr.DefaultAmbientTemperature;
-    public float SuppliedWatts;
-    public Inventory_Data Input;
-    public Inventory_Data Output;
-    public float TargetTemperature;
+    [MemoryPackOrder(0)] public float Temperature = TemperatureMgr.DefaultAmbientTemperature;
+    [MemoryPackOrder(1)] public float SuppliedWatts;
+    [MemoryPackIgnore] public Inventory_Data Input;
+    [MemoryPackIgnore] public Inventory_Data Output;
+    [MemoryPackInclude, MemoryPackOrder(2)] private StandaloneInventorySaveSnapshot InputSnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Input); set => Input = value?.Restore(); }
+    [MemoryPackInclude, MemoryPackOrder(3)] private StandaloneInventorySaveSnapshot OutputSnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Output); set => Output = value?.Restore(); }
+    [MemoryPackOrder(4)] public float TargetTemperature;
     #endregion
 }

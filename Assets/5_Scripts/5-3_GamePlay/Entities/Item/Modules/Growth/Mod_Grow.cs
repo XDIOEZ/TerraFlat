@@ -3,31 +3,31 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class GrowData
 {
     [Header("当前生长阶段")]
-    public Mod_Grow.GrowState growState = Mod_Grow.GrowState.幼苗;
+    [MemoryPackOrder(0)] public Mod_Grow.GrowState growState = Mod_Grow.GrowState.幼苗;
 
     [Header("各阶段的进度阈值 (0-100)")]
-    public List<float> growState_Value = new List<float>() { 0, 20, 50, 100 };
+    [MemoryPackOrder(1)] public List<float> growState_Value = new List<float>() { 0, 20, 50, 100 };
 
     [Header("各阶段的缩放比例")]
-    public List<float> growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
+    [MemoryPackOrder(2)] public List<float> growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
 
     [Header("当前生长进度 (0-100)")]
-    public float GrowProgress = 0;
+    [MemoryPackOrder(3)] public float GrowProgress = 0;
 
     [Header("最大生长进度")]
-    public float MaxGrowProgress = 100;
+    [MemoryPackOrder(4)] public float MaxGrowProgress = 100;
 
     [Header("生长速度 (每秒增加多少进度点数)")]
-    public float GrowSpeed = 5f;
+    [MemoryPackOrder(5)] public float GrowSpeed = 5f;
 
-    public bool simulationInitialized; // 耕地作物是否建立世界时间游标。
-    public double lastSimulatedTime; // 耕地作物最后结算的绝对游戏秒。
-    public bool waterSimulationInitialized; // 耗水时钟独立于成长与气候。
-    public double lastWaterSimulationTime; // 成熟后仍保存耗水游标。
+    [MemoryPackOrder(6)] public bool simulationInitialized; // 耕地作物是否建立世界时间游标。
+    [MemoryPackOrder(7)] public double lastSimulatedTime; // 耕地作物最后结算的绝对游戏秒。
+    [MemoryPackOrder(8)] public bool waterSimulationInitialized; // 耗水时钟独立于成长与气候。
+    [MemoryPackOrder(9)] public double lastWaterSimulationTime; // 成熟后仍保存耗水游标。
 }
 
 
@@ -112,10 +112,10 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, IWorldTim
 
     public enum GrowState
     {
-        幼苗,
-        生长,
-        发育,
-        成熟,
+        幼苗 = 0,
+        生长 = 1,
+        发育 = 2,
+        成熟 = 3,
     }
 
     // 缓存 Mod_DamageReceiver 组件

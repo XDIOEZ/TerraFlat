@@ -37,13 +37,13 @@ public sealed class Mod_TimedDespawn : Module
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial struct TimedDespawnState
 {
-    public bool Initialized;
-    public double ElapsedGameSeconds;
-    public double LastGameSeconds;
-    public string ClockScene;
+    [MemoryPackOrder(0)] public bool Initialized;
+    [MemoryPackOrder(1)] public double ElapsedGameSeconds;
+    [MemoryPackOrder(2)] public double LastGameSeconds;
+    [MemoryPackOrder(3)] public string ClockScene;
 }
 
 /// <summary>库存、完整物品和轻量掉落物共用的计时规则；状态沿用正式模块快照。</summary>

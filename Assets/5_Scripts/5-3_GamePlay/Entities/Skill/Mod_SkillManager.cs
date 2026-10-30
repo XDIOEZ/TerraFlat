@@ -1,13 +1,13 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using MemoryPack;
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class SkillManagerSaveData
 {
-    public List<string> SkillNames = new List<string>();
-    public int CurrentSelectIndex = 0;
+    [MemoryPackOrder(0)] public List<string> SkillNames = new List<string>();
+    [MemoryPackOrder(1)] public int CurrentSelectIndex = 0;
 }
 public class Mod_SkillManager : Module
 {

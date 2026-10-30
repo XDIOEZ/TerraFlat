@@ -8,6 +8,7 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed class ShipPartConfiguration
     {
+        [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public ShipPieceKind Kind;
         public int Layer;
         public int FootprintWidth = 1, FootprintHeight = 1;

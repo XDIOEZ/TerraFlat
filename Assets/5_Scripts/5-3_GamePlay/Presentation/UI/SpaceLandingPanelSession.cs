@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FlatWorld.Localization;
 using FlatWorld.Spaceflight;
+using FlatWorld.Networking;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,13 +21,18 @@ public sealed class SpaceLandingPanelSession : IDisposable
     private string bodyId, eventKey;
     private Vector2 origin, selected;
     private float nextMapRefresh;
+    private bool remotePreviewPending, remotePreviewReady, remoteSelectedWater;
+    private byte[] remotePreview;
+    private Vector2 remoteOrigin, remoteSelected;
+    private string remoteBody;
+    private int remotePreviewGeneration;
     private string landingHeaderTemplate;
     private string mapHintTemplate;
     private string coordinatesTemplate;
     private string landingSafetyText;
     private string waterLandingText;
     private string landLandingText;
-    private const int MapSize = 33;
+    private const int MapSize = SpaceNetworkBridge.LandingPreviewGridSize;
     private SpaceLandingPanelSession()
     {
         GameObject prefab = GameRes.ExistingInstance.GetPrefab("UI_SpaceLanding", false);
@@ -66,10 +72,25 @@ public sealed class SpaceLandingPanelSession : IDisposable
         double velocity = passenger.SurfaceVerticalSpeed;
         double g = body.SurfaceGravity;
         double seconds = g > 0d ? (velocity + Math.Sqrt(velocity * velocity + 2d * g * Math.Max(0d, height))) / g : double.PositiveInfinity;
-        var ground = SpaceSurfaceQuery.GetLandingSurface(body.PlanetId, current.selected);
+        bool remote = GameNetwork.Session.IsClient && !GameNetwork.Session.IsServer;
+        SurfaceQueryStatus groundStatus;
+        bool isWater;
+        if (remote)
+        {
+            current.MaintainRemotePreview();
+            groundStatus = current.remotePreviewReady ? SurfaceQueryStatus.Ready : SurfaceQueryStatus.Pending;
+            isWater = current.remoteSelectedWater;
+        }
+        else
+        {
+            groundStatus = SpaceSurfaceQuery.QueryLandingSurface(body.PlanetId, current.selected, out var ground);
+            isWater = ground.IsWater;
+        }
         current.status.text = string.Format(current.landingHeaderTemplate, body.DisplayName, height, -velocity, seconds) + "\n" +
             string.Format(current.mapHintTemplate, SpaceGameplaySettings.Current.LandingChoiceRadiusMeters) + "\n" +
-            string.Format(current.coordinatesTemplate, current.selected.x, current.selected.y, ground.IsWater ? current.waterLandingText : current.landLandingText) + "\n" +
+            string.Format(current.coordinatesTemplate, current.selected.x, current.selected.y,
+                groundStatus == SurfaceQueryStatus.Ready ? isWater ? current.waterLandingText : current.landLandingText
+                    : FlatWorldLocalizationService.GetUiText("正在加载地表")) + "\n" +
             current.landingSafetyText;
         if (Time.unscaledTime >= current.nextMapRefresh)
         { current.nextMapRefresh = Time.unscaledTime + .5f; current.DrawMap(body.PlanetId); }
@@ -88,12 +109,43 @@ public sealed class SpaceLandingPanelSession : IDisposable
         for (int y = 0; y < MapSize; y++) for (int x = 0; x < MapSize; x++)
         {
             Vector2 point = origin + new Vector2((float)x / (MapSize - 1) - .5f, (float)y / (MapSize - 1) - .5f) * diameter;
-            var sample = SpaceSurfaceQuery.GetLandingSurface(planetId, point);
-            Color color = sample.IsWater ? new Color(.12f, .3f, .52f) : sample.BlockingTileId >= 0 ? new Color(.35f, .24f, .18f) : new Color(.3f, .38f, .27f);
+            Color color;
+            if (GameNetwork.Session.IsClient && !GameNetwork.Session.IsServer)
+            {
+                byte kind = remotePreviewReady ? remotePreview[y * MapSize + x] : (byte)0;
+                color = kind == 0 ? new Color(.2f, .2f, .2f) : kind == 1 ? new Color(.12f, .3f, .52f) :
+                    kind == 2 ? new Color(.35f, .24f, .18f) : new Color(.3f, .38f, .27f);
+            }
+            else
+            {
+                SurfaceQueryStatus sampleStatus = SpaceSurfaceQuery.QueryLandingSurface(planetId, point, out var sample);
+                color = sampleStatus != SurfaceQueryStatus.Ready ? new Color(.2f, .2f, .2f) :
+                    sample.IsWater ? new Color(.12f, .3f, .52f) : sample.BlockingTileId >= 0 ? new Color(.35f, .24f, .18f) : new Color(.3f, .38f, .27f);
+            }
             if (Vector2.Distance(point, selected) < diameter / MapSize) color = new Color(1f, .65f, .2f);
             texture.SetPixel(x, y, color);
         }
         texture.Apply(false);
+    }
+
+    // 下落地图只请求服务端确认的落点范围，旧选址回复不会覆盖新选择。
+    private void MaintainRemotePreview()
+    {
+        if (remoteBody != bodyId || remoteOrigin != origin || remoteSelected != selected)
+        {
+            SpaceNetworkBridge.LandingPreviewCancel?.Invoke();
+            remoteBody = bodyId; remoteOrigin = origin; remoteSelected = selected;
+            remotePreviewPending = remotePreviewReady = false; remotePreview = null; remotePreviewGeneration++;
+        }
+        if (remotePreviewReady || remotePreviewPending || SpaceNetworkBridge.LandingPreviewRequester == null) return;
+        int generation = remotePreviewGeneration;
+        remotePreviewPending = SpaceNetworkBridge.LandingPreviewRequester(bodyId, origin, selected, (grid, water) =>
+        {
+            if (generation != remotePreviewGeneration || !ReferenceEquals(current, this)) return;
+            if (grid?.Length != MapSize * MapSize) { remotePreviewPending = false; return; }
+            remotePreview = grid; remoteSelectedWater = water; remotePreviewReady = true; remotePreviewPending = false;
+            nextMapRefresh = 0f;
+        });
     }
     private void HandleLanguageChanged(string _)
     {
@@ -107,6 +159,8 @@ public sealed class SpaceLandingPanelSession : IDisposable
     }
     public void Dispose()
     {
+        remotePreviewGeneration++;
+        if (ReferenceEquals(current, this)) SpaceNetworkBridge.LandingPreviewCancel?.Invoke();
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         if (panel != null) UnityEngine.Object.Destroy(panel.gameObject);
         if (texture != null) UnityEngine.Object.Destroy(texture);

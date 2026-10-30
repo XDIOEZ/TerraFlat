@@ -11,27 +11,27 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
 {
     #region 保存数据类
     [System.Serializable]
-    [MemoryPack.MemoryPackable]
+    [MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
     public partial class Mover_SaveData
     {
         [Header("移动设置")]
-        public GameValue_float Speed = new(10f);
+        [MemoryPack.MemoryPackOrder(0)] public GameValue_float Speed = new(10f);
         [Tooltip("松开输入时的最低减速度，防止低速拖尾过长")]
-        public float slowDownSpeed = 5f;
-        public float endSpeed = 0.1f;
+        [MemoryPack.MemoryPackOrder(1)] public float slowDownSpeed = 5f;
+        [MemoryPack.MemoryPackOrder(2)] public float endSpeed = 0.1f;
 
         [Header("精力消耗设置")]
         [Tooltip("移动时每秒精力消耗")]
-        public float moveStaminaConsume = 1f;
+        [MemoryPack.MemoryPackOrder(3)] public float moveStaminaConsume = 1f;
 
         [Tooltip("奔跑时每秒精力消耗（独立值，不再参考移动消耗）")]
-        public float runStaminaConsume = 2f;
+        [MemoryPack.MemoryPackOrder(4)] public float runStaminaConsume = 2f;
 
         [Header("跑步设置")]
-        public float runSpeedRate = 1.5f;
+        [MemoryPack.MemoryPackOrder(5)] public float runSpeedRate = 1.5f;
         [Tooltip("是否保持奔跑模式；随玩家存档序列化保存")]
-        public bool isRunning = false;
-        public float RunStaminaThreshold = 2f; // 体力低于该值时，不能奔跑
+        [MemoryPack.MemoryPackOrder(6)] public bool isRunning = false;
+        [MemoryPack.MemoryPackOrder(7)] public float RunStaminaThreshold = 2f; // 体力低于该值时，不能奔跑
 
     }
     #endregion

@@ -7,15 +7,15 @@ using System.Globalization;
 /// 食物扩展机制的通用持久化负载。机制自行序列化 Payload，核心数据层不依赖具体玩法类型。
 /// </summary>
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FoodMechanicStateData
 {
     #region 观察者持久化状态
 
-    public string StateKey;
-    public Dictionary<string, string> Data = new Dictionary<string, string>();
-    public byte[] Payload;
-    public FoodTimerStateData Timer;
+    [MemoryPackOrder(0)] public string StateKey;
+    [MemoryPackOrder(1)] public Dictionary<string, string> Data = new Dictionary<string, string>();
+    [MemoryPackOrder(2)] public byte[] Payload;
+    [MemoryPackOrder(3)] public FoodTimerStateData Timer;
 
     #endregion
 
@@ -67,19 +67,19 @@ public partial class FoodMechanicStateData
 
 /// <summary>腐败或融化计时的强类型持久状态，其他观察者继续使用各自的负载。</summary>
 [Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial struct FoodTimerStateData
 {
     #region 食物计时数据
 
-    public bool Initialized;
-    public bool IsSpoilage;
-    public bool Enabled;
-    public float ElapsedSeconds;
-    public float IntervalSeconds;
-    public string TargetItemID;
-    public float DryingMaxMoisture;
-    public string DryingTargetItemID;
+    [MemoryPackOrder(0)] public bool Initialized;
+    [MemoryPackOrder(1)] public bool IsSpoilage;
+    [MemoryPackOrder(2)] public bool Enabled;
+    [MemoryPackOrder(3)] public float ElapsedSeconds;
+    [MemoryPackOrder(4)] public float IntervalSeconds;
+    [MemoryPackOrder(5)] public string TargetItemID;
+    [MemoryPackOrder(6)] public float DryingMaxMoisture;
+    [MemoryPackOrder(7)] public string DryingTargetItemID;
 
     #endregion
 }

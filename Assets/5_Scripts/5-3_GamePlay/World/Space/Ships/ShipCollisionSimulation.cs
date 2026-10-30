@@ -144,7 +144,7 @@ namespace FlatWorld.Spaceflight
             realm = "surface:" + flight.SurfaceWorldKey;
             height = Math.Max(0d, flight.HeightMeters);
             // 起飞只有高度动画，不再把地面上的飞船视为正在运动的刚体。
-            dynamic = flight.Phase == ShipFlightPhase.SurfaceDescending;
+            dynamic = flight.Phase == ShipFlightPhase.SurfaceDescending && !IsWaitingForSurfaceContact(ship.ShipId);
             return true;
         }
         private ShipContactPose GetShipContactStart(ShipState ship, string realm, double seconds)

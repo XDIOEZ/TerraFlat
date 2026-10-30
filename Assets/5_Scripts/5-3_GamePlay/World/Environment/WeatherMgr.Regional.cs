@@ -53,7 +53,9 @@ public partial class WeatherMgr
     private readonly List<ChunkRuntime> regionalChunks = new();
     private readonly List<Int2> regionalWork = new();
     private readonly Dictionary<Int2, RegionalWeatherAdvanceResult> regionalExposure = new();
-    private readonly Dictionary<Int2, int> regionalSaveIndices = new();
+    private readonly Dictionary<Int2, RegionalWeatherRecord> regionalSaveRecords = new();
+    private readonly HashSet<Int2> restoredPersistedRegions = new();
+    private readonly List<Int2> retiredWeatherRegions = new();
     private readonly Dictionary<Int2, int> lightningSeen = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksLastStep = new();
     private readonly Dictionary<RuntimeWorldAddress, ChunkRuntime> surfaceChunksThisStep = new();
@@ -70,6 +72,54 @@ public partial class WeatherMgr
     private static readonly PerformanceDebugPoint SurfacePrepareMarker = new("FlatWorld.Weather.SurfacePrepare");
     #endregion
     private LightningEffectController lightningEffect;
+    private static readonly Dictionary<(GameSaveData, string, Vector2Int), int> regionalPersistenceLeases = new();
+    private static RegionalWeatherSettings regionalStorageSettings;
+
+    private sealed class RegionalPersistenceLease : IDisposable
+    {
+        private readonly (GameSaveData Save, string World, Vector2Int Region) key;
+        private bool disposed;
+        internal RegionalPersistenceLease((GameSaveData, string, Vector2Int) key) => this.key = key;
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            if (!regionalPersistenceLeases.TryGetValue(key, out int count)) return;
+            if (count > 1) { regionalPersistenceLeases[key] = count - 1; return; }
+            regionalPersistenceLeases.Remove(key);
+            SaveDataMgr saves = SaveDataMgr.Instance;
+            if (!ReferenceEquals(saves?.SaveData, key.Save)) return;
+            GetForWorld(key.World, false)?.RetirePersistedWeatherRegion(key.Region);
+            saves.ReleasePersistedWeatherRegionIfUnleased(key.World, key.Region);
+        }
+    }
+
+    public static IDisposable AcquireRegionalPersistenceLease(string worldKey, Vector2Int region)
+    {
+        var key = (SaveDataMgr.Instance?.SaveData, worldKey, region);
+        regionalPersistenceLeases.TryGetValue(key, out int count);
+        regionalPersistenceLeases[key] = count + 1;
+        return new RegionalPersistenceLease(key);
+    }
+
+    private static bool HasRegionalPersistenceLease(string worldKey, Int2 region)
+        => regionalPersistenceLeases.ContainsKey((SaveDataMgr.Instance?.SaveData, worldKey, new Vector2Int(region.X, region.Y)));
+
+    public static bool HasRegionalPersistenceLease(string worldKey, Vector2Int region)
+        => regionalPersistenceLeases.ContainsKey((SaveDataMgr.Instance?.SaveData, worldKey, region));
+
+    // 天气区地址由纯区域引擎计算，存档和运行时不会各自维护分区规则。
+    public static Vector2Int ResolveRegionalWeatherStorageOrigin(string worldKey, Vector2Int chunkOrigin)
+    {
+        if (SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.TryGetValue(worldKey, out PlanetData planet) != true)
+            throw new InvalidOperationException("天气区域缺少世界配置：" + worldKey);
+        Vector2Int size = PlanetData.NormalizeChunkSize(planet.ChunkSize);
+        WorldTopologyDomain domain = WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds) ? bounds.ToDomain() : default;
+        regionalStorageSettings ??= ChunkWeatherConfiguration.Load();
+        Int2 region = RegionalWeatherEngine.ResolveRegionOrigin(new Int2(chunkOrigin.x, chunkOrigin.y),
+            regionalStorageSettings, domain, size.x, size.y);
+        return new Vector2Int(region.X, region.Y);
+    }
 
     // 缓存委托，正常排队和逐帧结算不产生闭包。
     private Action<ChunkRuntime, float, float, TemperatureMgr.AmbientChunkSnapshot> SurfaceWorkHandler =>
@@ -215,7 +265,8 @@ public partial class WeatherMgr
             chunkSize.x, chunkSize.y);
         ResetWindPushField();
         ResetWeatherAudioBaseline();
-        regionalSaveIndices.Clear();
+        regionalSaveRecords.Clear();
+        restoredPersistedRegions.Clear();
         lightningSeen.Clear();
         LightningStrikeSystem.Reset(ownedWorld);
         surfaceChunksLastStep.Clear();
@@ -228,10 +279,11 @@ public partial class WeatherMgr
             if (record == null) throw new InvalidOperationException("区域天气档案包含空记录。");
             RegionalWeatherState state = record.ToState();
             state.Region = regionalEngine.ResolveRegion(state.Region);
-            if (regionalSaveIndices.ContainsKey(state.Region))
+            if (regionalSaveRecords.ContainsKey(state.Region))
                 throw new InvalidOperationException("区域天气档案包含重复区域。");
             regionalEngine.RestoreState(state);
-            regionalSaveIndices.Add(state.Region, i);
+            regionalSaveRecords.Add(state.Region, record);
+            restoredPersistedRegions.Add(state.Region);
             lightningSeen[state.Region] = state.LightningSequence;
             if (regionalEngine.TryGetRegionSnapshot(state.Region, out var sample)) restoredSnapshots.Add(sample);
         }
@@ -287,6 +339,7 @@ public partial class WeatherMgr
         foreach (ChunkRuntime chunk in regionalChunks)
         {
             Int2 region = regionalEngine.ResolveRegion(chunk.Address.ChunkOrigin);
+            if (!RestorePersistedWeatherRegion(region)) continue;
             regionalEngine.RegisterChunk(chunk.Address.ChunkOrigin, chunk.Terrain.WeatherProfile, now);
             if (regionalExposure.TryAdd(region, default)) regionalWork.Add(region);
         }
@@ -336,6 +389,15 @@ public partial class WeatherMgr
         CompleteWeatherAudioBaseline();
         foreach (Int2 region in regionalWork)
             if (regionalEngine.TryGetState(region, out var state)) PersistRegionalState(state);
+
+        retiredWeatherRegions.Clear();
+        foreach (RegionalWeatherState state in regionalEngine.EnumerateStates())
+            if (!regionalExposure.ContainsKey(state.Region) && !HasRegionalPersistenceLease(ownedWorld, state.Region))
+                retiredWeatherRegions.Add(state.Region);
+        foreach (Int2 region in retiredWeatherRegions)
+        {
+            RetirePersistedWeatherRegion(new Vector2Int(region.X, region.Y));
+        }
         UpdateLocalWeatherProjection();
     }
 
@@ -434,12 +496,42 @@ public partial class WeatherMgr
     private void PersistRegionalState(RegionalWeatherState state)
     {
         RegionalWeatherRecord record = RegionalWeatherRecord.FromState(state);
-        if (regionalSaveIndices.TryGetValue(state.Region, out int index)) regionalPlanet.RegionalWeatherStates[index] = record;
-        else
+        int index = regionalSaveRecords.TryGetValue(state.Region, out RegionalWeatherRecord old)
+            ? regionalPlanet.RegionalWeatherStates.IndexOf(old) : -1;
+        if (index >= 0) regionalPlanet.RegionalWeatherStates[index] = record;
+        else regionalPlanet.RegionalWeatherStates.Add(record);
+        regionalSaveRecords[state.Region] = record;
+    }
+
+    private bool RestorePersistedWeatherRegion(Int2 region)
+    {
+        region = regionalEngine.ResolveRegion(region);
+        if (restoredPersistedRegions.Contains(region)) return true;
+        Vector2Int origin = new(region.X, region.Y);
+        if (!SaveDataMgr.Instance.IsPersistedWeatherRegionReady(ownedWorld, origin)) return false;
+        foreach (RegionalWeatherRecord record in regionalPlanet.RegionalWeatherStates)
         {
-            regionalSaveIndices[state.Region] = regionalPlanet.RegionalWeatherStates.Count;
-            regionalPlanet.RegionalWeatherStates.Add(record);
+            if (record == null || regionalEngine.ResolveRegion(new Int2(record.RegionX, record.RegionY)) != region) continue;
+            RegionalWeatherState state = record.ToState();
+            state.Region = region;
+            regionalEngine.RestoreState(state);
+            regionalSaveRecords[region] = record;
+            lightningSeen[region] = state.LightningSequence;
+            break;
         }
+        restoredPersistedRegions.Add(region);
+        return true;
+    }
+
+    private void RetirePersistedWeatherRegion(Vector2Int origin)
+    {
+        if (regionalEngine == null || regionalPlanet == null) return;
+        Int2 region = regionalEngine.ResolveRegion(new Int2(origin.x, origin.y));
+        if (GameNetwork.HasStateAuthority && regionalEngine.TryGetState(region, out RegionalWeatherState state)) PersistRegionalState(state);
+        regionalEngine.RemoveRegion(region);
+        regionalSaveRecords.Remove(region);
+        restoredPersistedRegions.Remove(region);
+        lightningSeen.Remove(region);
     }
 
     public IReadOnlyList<RegionalWeatherStateSnapshot> CaptureRegionalWeatherStates()
@@ -450,6 +542,30 @@ public partial class WeatherMgr
             if (regionalEngine.TryGetRegionSnapshot(state.Region, out var sample))
                 result.Add(new RegionalWeatherStateSnapshot(ownedWorld, sample));
         return result;
+    }
+
+    // 新到的区域档案只建立副本基线，已收到的更新仍按天气版本保留。
+    public static void ApplyNetworkPersistedWeatherRegion(string world, Vector2Int origin)
+    {
+        if (GameNetwork.HasStateAuthority || !GameplayWorldRegistry.TryGet(world, out _)) return;
+        using var scope = GameplayWorldRegistry.UseWorld(world);
+        WeatherMgr weather = GetForWorld(world, false);
+        if (weather == null || !weather.PrepareRegionalContext()) return;
+        Int2 region = weather.regionalEngine.ResolveRegion(new Int2(origin.x, origin.y));
+        foreach (RegionalWeatherRecord record in weather.regionalPlanet.RegionalWeatherStates)
+        {
+            if (record == null) continue;
+            RegionalWeatherState state = record.ToState();
+            if (weather.regionalEngine.ResolveRegion(state.Region) != region) continue;
+            state.Region = region;
+            RegionalWeatherSnapshot snapshot = weather.regionalEngine.CapturePersistedStateSnapshot(state);
+            if (weather.regionalEngine.TryGetRegionSnapshot(region, out RegionalWeatherSnapshot current) &&
+                (snapshot.Revision < current.Revision || snapshot.Revision == current.Revision && snapshot.SampleTime <= current.SampleTime))
+                return;
+            weather.regionalEngine.ApplyReplicatedSnapshot(snapshot);
+            weather.lightningSeen[region] = snapshot.LightningSequence;
+            break;
+        }
     }
 
     public void ApplyReplicatedRegionalWeatherState(RegionalWeatherStateSnapshot state, bool initialState = false)
@@ -489,9 +605,10 @@ public partial class WeatherMgr
             ChunkMgr.ExistingInstance?.TryGetRestoredTerrainForEnvironment(logicalPosition, out var tile) != true ||
             tile.Terrain.WeatherProfile == null) return false;
         double now = GetRegionalStepTime(clock);
-        regionalEngine.RegisterChunk(tile.Address.ChunkOrigin, tile.Terrain.WeatherProfile, now);
         Int2 cell = new(Mathf.FloorToInt(logicalPosition.x), Mathf.FloorToInt(logicalPosition.y));
         Int2 region = regionalEngine.ResolveRegion(cell);
+        if (!RestorePersistedWeatherRegion(region)) return false;
+        regionalEngine.RegisterChunk(tile.Address.ChunkOrigin, tile.Terrain.WeatherProfile, now);
         if (!lightningSeen.ContainsKey(region) && regionalEngine.TryGetRegionSnapshot(region, out var baseline))
             lightningSeen[region] = baseline.LightningSequence;
         RegionalWeatherSnapshot sample = regionalEngine.StrikeLightning(cell, now, Mathf.Clamp01(strength));
@@ -532,6 +649,7 @@ public partial class WeatherMgr
         AdvanceRegionalWeather();
         Vector2 position = ObservationPosition();
         Int2 region = regionalEngine.ResolveRegion(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)));
+        if (!RestorePersistedWeatherRegion(region)) return false;
         double now = GetRegionalStepTime(clock);
         regionalEngine.Advance(region, now);
         if (weather == WeatherType.Clear) regionalEngine.Clear(region, now);

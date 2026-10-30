@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal partial class LegacyGrowData
 {
-    public Mod_Grow.GrowState growState = Mod_Grow.GrowState.幼苗;
-    public List<float> growState_Value = new List<float>() { 0f, 20f, 50f, 100f };
-    public List<float> growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
-    public float GrowProgress;
-    public float MaxGrowProgress = 100f;
-    public float GrowSpeed = 5f;
+    [MemoryPackOrder(0)] public Mod_Grow.GrowState growState = Mod_Grow.GrowState.幼苗;
+    [MemoryPackOrder(1)] public List<float> growState_Value = new List<float>() { 0f, 20f, 50f, 100f };
+    [MemoryPackOrder(2)] public List<float> growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };
+    [MemoryPackOrder(3)] public float GrowProgress;
+    [MemoryPackOrder(4)] public float MaxGrowProgress = 100f;
+    [MemoryPackOrder(5)] public float GrowSpeed = 5f;
 }
 
 public partial class GrowData
@@ -19,25 +19,27 @@ public partial class GrowData
 #region 权威农作物存档
 
     [Header("是否为玩家播种的耕地作物")]
-    public bool isCultivatedCrop;
+    [MemoryPackOrder(10)] public bool isCultivatedCrop;
 
     [Header("种植地块坐标")]
-    public Vector2Int plantedTilePos;
+    [MemoryPackIgnore] public Vector2Int plantedTilePos;
+    [MemoryPackInclude, MemoryPackOrder(11)] private int PlantedTileX { get => plantedTilePos.x; set => plantedTilePos.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(12)] private int PlantedTileY { get => plantedTilePos.y; set => plantedTilePos.y = value; }
 
     [Header("是否已经成熟")]
-    public bool isMature;
+    [MemoryPackOrder(13)] public bool isMature;
 
     [Header("是否已经完成收获")]
-    public bool isHarvested;
+    [MemoryPackOrder(14)] public bool isHarvested;
 
     [Header("当前成长反馈状态")]
-    public Mod_Grow.GrowthStatus growthStatus = Mod_Grow.GrowthStatus.Growing;
+    [MemoryPackOrder(15)] public Mod_Grow.GrowthStatus growthStatus = Mod_Grow.GrowthStatus.Growing;
 
     [Header("自然环境是否已经初始化")]
-    public bool environmentInitialized;
+    [MemoryPackOrder(16)] public bool environmentInitialized;
 
     [Header("自然生成植物的环境成长倍率")]
-    public float environmentGrowthMultiplier = 1f;
+    [MemoryPackOrder(17)] public float environmentGrowthMultiplier = 1f;
 
 #endregion
 }
@@ -48,14 +50,14 @@ public partial class Mod_Grow
 
     public enum GrowthStatus
     {
-        Growing,
-        MissingFarmland,
-        NeedsWater,
-        NeedsFertility,
-        Mature,
-        Harvested,
-        TemperatureStress,
-        NeedsLight
+        Growing = 0,
+        MissingFarmland = 1,
+        NeedsWater = 2,
+        NeedsFertility = 3,
+        Mature = 4,
+        Harvested = 5,
+        TemperatureStress = 6,
+        NeedsLight = 7
     }
 
     [Header("耕地成长配置")]

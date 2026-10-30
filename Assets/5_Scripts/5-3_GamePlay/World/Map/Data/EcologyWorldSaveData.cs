@@ -8,7 +8,7 @@ using MemoryPack;
 /// 配置只保存字符串和数值；自然物的基线由世界种子重新生成，存档只记录被删除的 GUID
 /// 和发生过状态变化的 ItemData，避免区块保存体积随自然物数量线性膨胀。
 /// </summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class EcologyWorldSaveData
 {
@@ -18,15 +18,15 @@ public partial class EcologyWorldSaveData
     private const string RetiredWeedItemId = "Weed";
     private const string RetiredWeedRuleId = "surface.grassland.weed";
 
-    [MemoryPackInclude] public int DataVersion;
-    [MemoryPackInclude] public string ProfileId;
-    [MemoryPackInclude] public ulong ConfigurationFingerprint;
-    [MemoryPackInclude] public double GlobalMultiplier = 1d;
-    [MemoryPackInclude] public List<EcologyRuleSaveData> Rules = new();
-    [MemoryPackInclude] public List<EcologyChunkSaveData> Chunks = new();
-    [MemoryPackInclude] public List<IndependentNaturalEntitySaveData> IndependentEntities = new();
+    [MemoryPackInclude, MemoryPackOrder(0)] public int DataVersion;
+    [MemoryPackInclude, MemoryPackOrder(1)] public string ProfileId;
+    [MemoryPackInclude, MemoryPackOrder(2)] public ulong ConfigurationFingerprint;
+    [MemoryPackInclude, MemoryPackOrder(3)] public double GlobalMultiplier = 1d;
+    [MemoryPackInclude, MemoryPackOrder(4)] public List<EcologyRuleSaveData> Rules = new();
+    [MemoryPackInclude, MemoryPackOrder(5)] public List<EcologyChunkSaveData> Chunks = new();
+    [MemoryPackInclude, MemoryPackOrder(6)] public List<IndependentNaturalEntitySaveData> IndependentEntities = new();
     // 冻结洞穴布局、矿脉和地表入口参数。
-    [MemoryPackInclude] public WorldGenerationProfileSaveData Generation = new();
+    [MemoryPackInclude, MemoryPackOrder(7)] public WorldGenerationProfileSaveData Generation = new();
 
     [MemoryPackIgnore]
     public bool HasConfiguration => DataVersion == CurrentDataVersion && Rules != null;
@@ -44,6 +44,9 @@ public partial class EcologyWorldSaveData
             throw new InvalidOperationException(
                 $"生态存档版本不兼容：存档={DataVersion}，当前={CurrentDataVersion}。请创建新世界。");
         }
+
+        if (HasGenerationConfiguration)
+            Generation.RequireSupportedGenerationAlgorithmVersion();
 
         MigrateRetiredNaturalItemRules();
     }
@@ -223,14 +226,21 @@ public partial class EcologyWorldSaveData
 }
 
 /// <summary>出生身份与当前位置分别保存，可动物自然资源不再被出生区块重复生成。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class IndependentNaturalEntitySaveData
 {
     #region 独立自然实体所有权
-    public string SourceWorldKey;
-    public int SourceChunkX, SourceChunkY, Guid;
-    public ItemData Snapshot;
+    [MemoryPackOrder(0)] public string SourceWorldKey;
+    [MemoryPackOrder(1)] public int SourceChunkX;
+    [MemoryPackOrder(2)] public int SourceChunkY;
+    [MemoryPackOrder(3)] public int Guid;
+    [MemoryPackIgnore] public ItemData Snapshot;
+    [MemoryPackInclude, MemoryPackOrder(4)] private byte[] ItemSnapshotBytes
+    {
+        get => Snapshot == null ? null : ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(Snapshot));
+        set => Snapshot = value == null ? null : MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(value).CreateColdData();
+    }
     #endregion
 }
 
@@ -238,22 +248,32 @@ public partial class IndependentNaturalEntitySaveData
 /// 生成 Profile 的通用持久化快照。
 /// 该数据不含 Unity 资源引用，用于冻结地表入口、洞穴房间/隧道和矿脉参数。
 /// </summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class WorldGenerationProfileSaveData
 {
     public const int CurrentDataVersion = 4;
 
-    public int DataVersion;
-    public string ProfileId;
-    public ulong GenerationFingerprint;
-    public List<WorldGenerationNumericParameterSaveData> NumericParameters = new();
-    public List<WorldGenerationTextParameterSaveData> TextParameters = new();
-    public List<CaveResourceRuleSaveData> CaveResourceRules = new();
+    [MemoryPackOrder(0)] public int DataVersion;
+    [MemoryPackOrder(1)] public string ProfileId;
+    [MemoryPackOrder(2)] public ulong GenerationFingerprint;
+    [MemoryPackOrder(3)] public List<WorldGenerationNumericParameterSaveData> NumericParameters = new();
+    [MemoryPackOrder(4)] public List<WorldGenerationTextParameterSaveData> TextParameters = new();
+    [MemoryPackOrder(5)] public List<CaveResourceRuleSaveData> CaveResourceRules = new();
 
     [MemoryPackIgnore]
     public bool HasConfiguration => DataVersion > 0 && NumericParameters != null &&
                                     TextParameters != null && CaveResourceRules != null;
+
+    public int RequireSupportedGenerationAlgorithmVersion()
+    {
+        double version = WorldGenerationAlgorithmVersion.Current;
+        if (NumericParameters != null)
+            foreach (WorldGenerationNumericParameterSaveData parameter in NumericParameters)
+                if (parameter != null && parameter.Id == WorldGenerationAlgorithmVersion.ParameterId)
+                    version = parameter.Value;
+        return WorldGenerationAlgorithmVersion.RequireSupported(version);
+    }
 
     /// <summary>复制完整的数值、文本和矿脉规则；键按序保存便于审查与 JSON 转换。</summary>
     public void Capture(ChunkGenerationProfileSnapshot profile)
@@ -342,33 +362,33 @@ public partial class WorldGenerationProfileSaveData
 }
 
 /// <summary>一个冻结数值生成参数。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class WorldGenerationNumericParameterSaveData
 {
-    public string Id;
-    public double Value;
+    [MemoryPackOrder(0)] public string Id;
+    [MemoryPackOrder(1)] public double Value;
 }
 
 /// <summary>一个冻结文本生成参数。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class WorldGenerationTextParameterSaveData
 {
-    public string Id;
-    public string Value;
+    [MemoryPackOrder(0)] public string Id;
+    [MemoryPackOrder(1)] public string Value;
 }
 
 /// <summary>洞穴矿脉规则的存档副本，顺序保持稀有度优先级。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class CaveResourceRuleSaveData
 {
-    public string RuleId;
-    public string ItemId;
-    public double VeinThreshold;
-    public double VeinScale;
-    public int NoiseOffset;
+    [MemoryPackOrder(0)] public string RuleId;
+    [MemoryPackOrder(1)] public string ItemId;
+    [MemoryPackOrder(2)] public double VeinThreshold;
+    [MemoryPackOrder(3)] public double VeinScale;
+    [MemoryPackOrder(4)] public int NoiseOffset;
 
     public static CaveResourceRuleSaveData FromSnapshot(CaveResourceRuleSnapshot snapshot)
     {
@@ -392,52 +412,52 @@ public partial class CaveResourceRuleSaveData
 }
 
 /// <summary>生态规则的 JSON/MemoryPack 存档副本，不引用 ScriptableObject 或 Prefab。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class EcologyRuleSaveData
 {
     #region 规则字段
 
-    public string RuleId;
-    public string ItemId;
-    public int ItemCount = 1;
-    public EcologyItemCountDistribution ItemCountDistribution;
-    public int ItemCountMin = 1;
-    public double SpawnChance;
-    public double SpawnChanceMultiplier = 1d;
-    public EcologyDistributionMode DistributionMode;
-    public int PatchSpacing = 24;
-    public double PatchRadius = 2.5d;
-    public double PatchChance = 1d;
-    public int BiomeMask;
-    public double MinTemperature;
-    public double MaxTemperature = 1d;
-    public double MinPrecipitation;
-    public double MaxPrecipitation = 1d;
-    public double MinHeight;
-    public double MaxHeight = 1d;
-    public List<string> ProvidedTags = new();
-    public bool CompanionOnly;
-    public string CompanionHostTag;
-    public double CompanionSpawnChance;
-    public double CompanionOffsetX;
-    public double CompanionOffsetY;
-    public double CompanionMinRadius;
-    public double CompanionMaxRadius;
+    [MemoryPackOrder(0)] public string RuleId;
+    [MemoryPackOrder(1)] public string ItemId;
+    [MemoryPackOrder(2)] public int ItemCount = 1;
+    [MemoryPackOrder(3)] public EcologyItemCountDistribution ItemCountDistribution;
+    [MemoryPackOrder(4)] public int ItemCountMin = 1;
+    [MemoryPackOrder(5)] public double SpawnChance;
+    [MemoryPackOrder(6)] public double SpawnChanceMultiplier = 1d;
+    [MemoryPackOrder(7)] public EcologyDistributionMode DistributionMode;
+    [MemoryPackOrder(8)] public int PatchSpacing = 24;
+    [MemoryPackOrder(9)] public double PatchRadius = 2.5d;
+    [MemoryPackOrder(10)] public double PatchChance = 1d;
+    [MemoryPackOrder(11)] public int BiomeMask;
+    [MemoryPackOrder(12)] public double MinTemperature;
+    [MemoryPackOrder(13)] public double MaxTemperature = 1d;
+    [MemoryPackOrder(14)] public double MinPrecipitation;
+    [MemoryPackOrder(15)] public double MaxPrecipitation = 1d;
+    [MemoryPackOrder(16)] public double MinHeight;
+    [MemoryPackOrder(17)] public double MaxHeight = 1d;
+    [MemoryPackOrder(18)] public List<string> ProvidedTags = new();
+    [MemoryPackOrder(19)] public bool CompanionOnly;
+    [MemoryPackOrder(20)] public string CompanionHostTag;
+    [MemoryPackOrder(21)] public double CompanionSpawnChance;
+    [MemoryPackOrder(22)] public double CompanionOffsetX;
+    [MemoryPackOrder(23)] public double CompanionOffsetY;
+    [MemoryPackOrder(24)] public double CompanionMinRadius;
+    [MemoryPackOrder(25)] public double CompanionMaxRadius;
     // 当前规则的河流泛滥平原限制。
-    public double MinRiverFloodplainStrength;
+    [MemoryPackOrder(26)] public double MinRiverFloodplainStrength;
     // 伴生物所需的自然物标签及区块搜索半径。
-    public string RequiredChunkTag;
-    public int RequiredTagChunkRadius;
+    [MemoryPackOrder(27)] public string RequiredChunkTag;
+    [MemoryPackOrder(28)] public int RequiredTagChunkRadius;
     // 缺省与显式 0 必须分开，避免 MemoryPack 将未记录的上限读成禁止河岸。
-    public double? MaxRiverFloodplainStrength;
-    public string RequiredEnvironmentLayer;
-    public double MinimumEnvironmentValue;
-    public double? MaximumEnvironmentValue;
-    public bool RequireNaturalPlantableGround;
-    public int SharedRadius;
-    public int FootprintWidth = 1;
-    public int FootprintHeight = 1;
+    [MemoryPackOrder(29)] public double? MaxRiverFloodplainStrength;
+    [MemoryPackOrder(30)] public string RequiredEnvironmentLayer;
+    [MemoryPackOrder(31)] public double MinimumEnvironmentValue;
+    [MemoryPackOrder(32)] public double? MaximumEnvironmentValue;
+    [MemoryPackOrder(33)] public bool RequireNaturalPlantableGround;
+    [MemoryPackOrder(34)] public int SharedRadius;
+    [MemoryPackOrder(35)] public int FootprintWidth = 1;
+    [MemoryPackOrder(36)] public int FootprintHeight = 1;
 
     #endregion
 
@@ -535,17 +555,35 @@ public partial class EcologyRuleSaveData
 }
 
 /// <summary>单个区块的自然物差量，只保存删除 GUID 和变更后的 ItemData。</summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [Serializable]
 public partial class EcologyChunkSaveData
 {
     #region 差量字段
 
-    public int ChunkX;
-    public int ChunkY;
-    public List<int> RemovedGuids = new();
-    public List<ItemData> ChangedItems = new();
-    public Dictionary<int, int> RenewalYears = new(); // 删除的自然资源最早恢复年份。
+    [MemoryPackOrder(0)] public int ChunkX;
+    [MemoryPackOrder(1)] public int ChunkY;
+    [MemoryPackOrder(2)] public List<int> RemovedGuids = new();
+    [MemoryPackIgnore] public List<ItemData> ChangedItems = new();
+    [MemoryPackInclude, MemoryPackOrder(3)] private List<byte[]> ChangedItemSnapshots
+    {
+        get
+        {
+            if (ChangedItems == null) return null;
+            var snapshots = new List<byte[]>(ChangedItems.Count);
+            foreach (ItemData item in ChangedItems)
+                snapshots.Add(item == null ? null : ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(item)));
+            return snapshots;
+        }
+        set
+        {
+            if (value == null) { ChangedItems = null; return; }
+            ChangedItems = new List<ItemData>(value.Count);
+            foreach (byte[] bytes in value)
+                ChangedItems.Add(bytes == null ? null : MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(bytes).CreateColdData());
+        }
+    }
+    [MemoryPackOrder(4)] public Dictionary<int, int> RenewalYears = new(); // 删除的自然资源最早恢复年份。
 
     #endregion
 

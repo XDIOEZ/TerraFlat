@@ -32,7 +32,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             foreach (NetworkMechanicalNodeMessage message in machines)
             {
-                SendToGroundObservers(message, observerWorld: true);
+                BroadcastMechanicalMessage(message);
                 machineStateReplication.ForgetPendingNode(message.NodeGuid);
             }
             foreach (var prepared in items)

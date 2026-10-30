@@ -89,4 +89,5 @@ namespace MemoryPack
     // JSON 差量测试不运行 MemoryPack，仅保留编译所需标记。
     public sealed class MemoryPackableAttribute : System.Attribute { }
     public sealed class MemoryPackIgnoreAttribute : System.Attribute { }
+    public sealed class MemoryPackOrderAttribute : System.Attribute { public MemoryPackOrderAttribute(int order) { } }
 }

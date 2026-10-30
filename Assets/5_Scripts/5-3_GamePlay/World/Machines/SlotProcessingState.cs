@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using MemoryPack;
 
 /// <summary>整槽加工保存真实库存和计时；随机结果先记账，提交失败后不得重新掷骰。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class SlotProcessingState
 {
     #region 槽位加工状态
-    public Inventory_Data Inventory;
-    public List<float> Elapsed = new();
-    public List<string> Signatures = new();
-    public List<int> PendingAmounts = new();
-    public List<string> PendingItems = new();
+    [MemoryPackIgnore] public Inventory_Data Inventory;
+    [MemoryPackInclude, MemoryPackOrder(0)] private StandaloneInventorySaveSnapshot InventorySnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Inventory); set => Inventory = value?.Restore(); }
+    [MemoryPackOrder(1)] public List<float> Elapsed = new();
+    [MemoryPackOrder(2)] public List<string> Signatures = new();
+    [MemoryPackOrder(3)] public List<int> PendingAmounts = new();
+    [MemoryPackOrder(4)] public List<string> PendingItems = new();
 
     public void EnsureSlots(int count)
     {

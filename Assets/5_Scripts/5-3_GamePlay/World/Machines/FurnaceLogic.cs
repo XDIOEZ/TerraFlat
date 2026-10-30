@@ -7,15 +7,15 @@ using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FurnaceRuntimeState
 {
     #region 熔炉持久状态
-    public ModSmeltingData Smelting = new();
-    public FuelData Fuel = new();
-    public FuelAbsorptionState Absorption = new();
-    public bool AwaitingIgnition;
-    public float HeatingRatePercent; // 权威供热效率随炉体状态同步，面板与实际材料受热共用此值。
+    [MemoryPackOrder(0)] public ModSmeltingData Smelting = new();
+    [MemoryPackOrder(1)] public FuelData Fuel = new();
+    [MemoryPackOrder(2)] public FuelAbsorptionState Absorption = new();
+    [MemoryPackOrder(3)] public bool AwaitingIgnition;
+    [MemoryPackOrder(4)] public float HeatingRatePercent; // 权威供热效率随炉体状态同步，面板与实际材料受热共用此值。
     #endregion
 }
 

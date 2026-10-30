@@ -1,5 +1,15 @@
 # 实例与世界存档
 
+## SQLite 首版（2026-10-30）
+
+正式入口改为稳定 ID 文件夹下的 save.sqlite；以下 FWD6/Compact 与 .bak 描述是历史内部封装回归，不再代表磁盘格式。
+
+- 新 `sqlite.lua` 调用真实存储层，断言暂存隔离、冻结点后暂存保留、取消回滚、上一逻辑提交和未来 schema 拒绝。
+- `gameplay.lua` 的正式隔离保存改测 SQLite 两代逻辑提交、完整 backup API、稳定 ArchiveId 与非发布恢复，保留库存/GUID/非原点位置及活跃世界未污染断言。
+- `Tools/Tests/SqlitePersistence` 的真实 Windows 原生 SQLite 和 `SaveArchiveContracts` 固定样本回归已通过，不能代替 Unity 流程。
+- 当前有其他 Agent 修改工程，本轮未运行 Unity/Lua/PlayMode、真实双端或 Android 构建。退出重进、并发库存转移、冷→活动交接及目标设备峰值内存仍需正式集成验收。
+
+
 - 2026-10-21 `rename_feedback` 检查未载入/失效角色/空名/超长/重名/旧选择/非法文件名与名称不变分支；`resource_reload_feedback` 检查发布前后反馈及维度失败原因保留。只调用独立内存对象与文案规则，未覆盖真实写盘异常、资源发布事务或真实维度迁移。用户PlayMode中，本轮未编译、未执行。
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。

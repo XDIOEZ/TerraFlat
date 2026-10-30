@@ -33,11 +33,11 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnClientPoseMessage(NetworkItemPoseMessage message)
         {
-            if (!AcceptLocalWorld(message.WorldKey)) return;
+            if (!AcceptLocalWorld(message.WorldKey) || !AcceptLocalItemRealm(message.RealmRevision)) return;
             if (!GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return;
             using var scope = GameplayWorldRegistry.UseWorld(message.WorldKey);
             if (NetworkServer.active || !clientStates.TryGetValue(message.ItemGuid, out StateRecord state) ||
-                state.WorldKey != message.WorldKey || !string.Equals(state.ItemId, message.ItemId, StringComparison.Ordinal) ||
+                state.WorldKey != message.WorldKey || state.RealmRevision != message.RealmRevision || !string.Equals(state.ItemId, message.ItemId, StringComparison.Ordinal) ||
                 message.StateRevision != state.Revision || message.PoseRevision <= state.PoseRevision ||
                 !IsFinite(message.Position) || !IsFinite(message.Rotation) || !IsFinite(message.Scale)) return;
             state.PoseRevision = message.PoseRevision;

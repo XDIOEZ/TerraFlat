@@ -21,12 +21,17 @@ public partial class Mod_UI_CanvasManager : Module, IInstanceUI
     CanvasSaveData canvasPanelState = new CanvasSaveData();
 
     [Serializable]
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     public partial class CanvasSaveData
     {
         [ShowInInspector]
-        public Dictionary<string, bool> canvasPanelboolStates = new();
-        public Dictionary<string, Vector2> DraggerPos = new(); // 拖拽位置数据
+        [MemoryPackOrder(0)] public Dictionary<string, bool> canvasPanelboolStates = new();
+        [MemoryPackIgnore] public Dictionary<string, Vector2> DraggerPos = new(); // 拖拽位置数据
+        [MemoryPackInclude, MemoryPackOrder(1)] private Dictionary<string, ModuleVector2SaveSnapshot> DraggerPositionSnapshots
+        {
+            get => ModuleVector2SaveSnapshot.CaptureDictionary(DraggerPos);
+            set => DraggerPos = ModuleVector2SaveSnapshot.RestoreDictionary(value);
+        }
     }
     #endregion
 

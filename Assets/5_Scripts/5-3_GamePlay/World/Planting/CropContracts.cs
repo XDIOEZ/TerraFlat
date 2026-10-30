@@ -3,21 +3,21 @@ using UnityEngine;
 /// <summary>农作物只保留幼苗与成熟两个权威阶段。</summary>
 public enum CropStage
 {
-    Seedling,
-    Mature
+    Seedling = 0,
+    Mature = 1
 }
 
 /// <summary>描述农作物当前不能成长或已经完成生命周期的原因。</summary>
 public enum CropGrowthStatus
 {
-    Growing,
-    MissingFarmland,
-    NeedsWater,
-    NeedsFertility,
-    Mature,
-    Harvested,
-    TemperatureStress,
-    NeedsLight
+    Growing = 0,
+    MissingFarmland = 1,
+    NeedsWater = 2,
+    NeedsFertility = 3,
+    Mature = 4,
+    Harvested = 5,
+    TemperatureStress = 6,
+    NeedsLight = 7
 }
 
 /// <summary>种植入口初始化世界农作物的统一契约。</summary>

@@ -3,13 +3,13 @@ using UnityEngine;
 
 public enum WeatherPhase
 {
-    Clear,
-    Forecast,
-    RainStarting,
-    RainSteady,
-    RainHeavy,
-    RainEnding,
-    Recovery,
+    Clear = 0,
+    Forecast = 1,
+    RainStarting = 2,
+    RainSteady = 3,
+    RainHeavy = 4,
+    RainEnding = 5,
+    Recovery = 6,
     Fog = 7, // 大雾独立于降雨阶段，结束后回到晴天。
     Cloudy = 8 // 独立阴天结束后放晴，不进入降雨预告链。
 }

@@ -563,15 +563,7 @@ public static class InventoryModuleDataPersistence
         if (source?.BitData == null || source.BitData.Length == 0)
             return null;
 
-        try
-        {
-            Inventory_ModuleData data = source.GetData<Inventory_ModuleData>();
-            return data?.Data != null ? data : null;
-        }
-        catch
-        {
-            return null;
-        }
+        return source.GetData<InventoryModulePayloadSnapshot>()?.Restore();
     }
 
     /// <summary>把独立库存存档写回模块数据。</summary>
@@ -581,7 +573,7 @@ public static class InventoryModuleDataPersistence
             return;
 
         data.Data ??= new Dictionary<string, Inventory_Data>();
-        target.WriteData(data);
+        target.WriteData(InventoryModulePayloadSnapshot.Capture(data));
     }
 
     /// <summary>从指定键恢复一个库存的数据引用。</summary>

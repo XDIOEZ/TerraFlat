@@ -3,19 +3,19 @@ using FlatWorld.Combat;
 using MemoryPack;
 
 /// <summary>保存致命伤害的事实，文案和语言由死亡界面独立解释。</summary>
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class DeathCauseRecord
 {
     #region 死因快照
-    public string CauseId = "unknown";
-    public string AttackerItemId;
-    public string AttackerName;
-    public string WeaponItemId;
-    public string WeaponName;
-    public string EffectId;
-    public string EffectName;
-    public bool UseCauseForEffect; // 环境持续伤害可明确保留接触原因，普通攻击状态使用 Buff 自己的原因。
-    public int Variant;
+    [MemoryPackOrder(0)] public string CauseId = "unknown";
+    [MemoryPackOrder(1)] public string AttackerItemId;
+    [MemoryPackOrder(2)] public string AttackerName;
+    [MemoryPackOrder(3)] public string WeaponItemId;
+    [MemoryPackOrder(4)] public string WeaponName;
+    [MemoryPackOrder(5)] public string EffectId;
+    [MemoryPackOrder(6)] public string EffectName;
+    [MemoryPackOrder(7)] public bool UseCauseForEffect; // 环境持续伤害可明确保留接触原因，普通攻击状态使用 Buff 自己的原因。
+    [MemoryPackOrder(8)] public int Variant;
 
     public DeathCauseRecord Copy() => (DeathCauseRecord)MemberwiseClone();
     #endregion

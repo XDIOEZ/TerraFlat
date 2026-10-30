@@ -16,13 +16,13 @@ public partial class ColdWeaponStaminaObserver : ModuleObserverBase
 
     private bool isAttacking = false;
 
-    [MemoryPackable]
+    [MemoryPackable(GenerateType.VersionTolerant)]
     [System.Serializable]
     public partial class State
     {
-        public float StaminaConsumeSpeed = 1f;
-        public float StaminaConsumeSpeedRate = 1f;
-        public float StaminaLeast = 20f;
+        [MemoryPackOrder(0)] public float StaminaConsumeSpeed = 1f;
+        [MemoryPackOrder(1)] public float StaminaConsumeSpeedRate = 1f;
+        [MemoryPackOrder(2)] public float StaminaLeast = 20f;
     }
 
     public override void OnInit(Module mod)

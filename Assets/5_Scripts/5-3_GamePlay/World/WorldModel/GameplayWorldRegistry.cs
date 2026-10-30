@@ -154,6 +154,7 @@ public static partial class GameplayWorldRegistry
             return false;
         ownedWorldModels.Remove(worldKey);
         if (TryGetPhysics(worldKey, out var physics)) UnbindWorldPhysicsSources(current);
+        ChunkMgr.ReleaseRetainedRuntimePersistence(current);
         current.Dispose();
         return true;
     }
@@ -165,6 +166,7 @@ public static partial class GameplayWorldRegistry
         foreach (WorldRuntime world in ownedWorldModels.Values)
         {
             if (TryGetPhysics(world.WorldId, out var physics)) UnbindWorldPhysicsSources(world);
+            ChunkMgr.ReleaseRetainedRuntimePersistence(world);
             world.Dispose();
         }
         ownedWorldModels.Clear();

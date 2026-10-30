@@ -4,11 +4,13 @@ using MemoryPack;
 using FlatWorld.Networking;
 using UnityEngine;
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class MachineStorageState
 {
     #region 持久库存
-    public List<Inventory_Data> Inventories = new();
+    [MemoryPackIgnore] public List<Inventory_Data> Inventories = new();
+    [MemoryPackInclude, MemoryPackOrder(0)] private List<StandaloneInventorySaveSnapshot> InventorySnapshots
+    { get => StandaloneInventorySaveSnapshot.CaptureList(Inventories); set => Inventories = StandaloneInventorySaveSnapshot.RestoreList(value); }
     #endregion
 }
 

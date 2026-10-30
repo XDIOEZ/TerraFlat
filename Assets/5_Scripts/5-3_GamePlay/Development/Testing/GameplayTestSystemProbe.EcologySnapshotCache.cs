@@ -77,8 +77,8 @@ public static partial class GameplayTestSystemProbe
             ReferenceEquals(metadataOnly[0].ChangedItems[0], membersChanged[0].ChangedItems[0]) &&
             !ReferenceEquals(metadataOnly[0].ChangedItems[1], membersChanged[0].ChangedItems[1]) &&
             ReferenceEquals(metadataOnly[0].ChangedItems[2], membersChanged[0].ChangedItems[2]) &&
-            MemoryPackSerializer.Deserialize<ItemData>(membersChanged[0].ChangedItems[1]).Stack.Amount == 9 &&
-            MemoryPackSerializer.Deserialize<ItemData>(membersChanged[0].ChangedItems[3]).Guid == 104;
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(membersChanged[0].ChangedItems[1]).CreateColdData().Stack.Amount == 9 &&
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(membersChanged[0].ChangedItems[3]).CreateColdData().Guid == 104;
 
         chunk.MarkRemoved(101);
         chunk.RenewalYears[101] = 14;
@@ -87,7 +87,7 @@ public static partial class GameplayTestSystemProbe
         EcologyChunkSaveData finalMetadata = MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(final[0].ChunkData);
         bool harvestAndLateChunk = final.Count == 3 && finalMetadata.IsRemoved(101) &&
             finalMetadata.RenewalYears[101] == 14 && final[0].ChangedItems.Count == 3 &&
-            MemoryPackSerializer.Deserialize<ItemData>(final[0].ChangedItems[0]).Guid == 102 &&
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(final[0].ChangedItems[0]).CreateColdData().Guid == 102 &&
             ReferenceEquals(membersChanged[0].ChangedItems[2], final[0].ChangedItems[1]) &&
             MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(final[2].ChunkData).IsRemoved(300);
 
@@ -107,10 +107,10 @@ public static partial class GameplayTestSystemProbe
         nested.Stack.Amount = 77;
         chunk.RemovedGuids.Clear();
         chunk.RenewalYears.Clear();
-        ItemData oldFirst = MemoryPackSerializer.Deserialize<ItemData>(initial[0].ChangedItems[0]);
+        ItemData oldFirst = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(initial[0].ChangedItems[0]).CreateColdData();
         ItemData oldNested = ((Inventory_ModuleData)oldFirst.ModuleDataDic["cargo"]).Data["cargo"].itemSlots[0].itemData;
         bool frozenIsolation = oldFirst.Stack.Amount == 3 && oldNested.Stack.Amount == 5 &&
-            MemoryPackSerializer.Deserialize<ItemData>(final[0].ChangedItems[0]).Stack.Amount == 9 &&
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(final[0].ChangedItems[0]).CreateColdData().Stack.Amount == 9 &&
             MemoryPackSerializer.Deserialize<EcologyChunkSaveData>(final[0].ChunkData).IsRemoved(101);
 
         return new JObject
@@ -156,9 +156,9 @@ public static partial class GameplayTestSystemProbe
             List<FrozenEcologyChunkSaveRecord> immediate = FreezeEcologyForCacheProbe(source, out _);
             while (pending.MoveNext()) { }
             List<FrozenEcologyChunkSaveRecord> final = FreezeEcologyForCacheProbe(source, out _);
-            return MemoryPackSerializer.Deserialize<ItemData>(oldRecords[0].ChangedItems[1]).Stack.Amount == 4 &&
-                MemoryPackSerializer.Deserialize<ItemData>(immediate[0].ChangedItems[1]).Stack.Amount == 8 &&
-                MemoryPackSerializer.Deserialize<ItemData>(final[0].ChangedItems[1]).Stack.Amount == 8;
+            return MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(oldRecords[0].ChangedItems[1]).CreateColdData().Stack.Amount == 4 &&
+                MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(immediate[0].ChangedItems[1]).CreateColdData().Stack.Amount == 8 &&
+                MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(final[0].ChangedItems[1]).CreateColdData().Stack.Amount == 8;
         }
     }
 
@@ -176,9 +176,9 @@ public static partial class GameplayTestSystemProbe
         using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public"))
             network = FreezeEcologyForCacheProbe(source, out _);
         List<FrozenEcologyChunkSaveRecord> localAgain = FreezeEcologyForCacheProbe(source, out _);
-        return MemoryPackSerializer.Deserialize<ItemData>(local[0].ChangedItems[0]).ItemSpecialData == "private" &&
-            MemoryPackSerializer.Deserialize<ItemData>(network[0].ChangedItems[0]).ItemSpecialData == "public" &&
-            MemoryPackSerializer.Deserialize<ItemData>(localAgain[0].ChangedItems[0]).ItemSpecialData == "private" &&
+        return MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(local[0].ChangedItems[0]).CreateColdData().ItemSpecialData == "private" &&
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(network[0].ChangedItems[0]).CreateColdData().ItemSpecialData == "public" &&
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(localAgain[0].ChangedItems[0]).CreateColdData().ItemSpecialData == "private" &&
             !ReferenceEquals(local[0], network[0]) && !ReferenceEquals(network[0], localAgain[0]);
     }
 
@@ -231,7 +231,7 @@ public static partial class GameplayTestSystemProbe
 
     private static Data_Player ReadNestedEcologyPlayer(FrozenEcologyChunkSaveRecord record)
     {
-        ItemData carrier = MemoryPackSerializer.Deserialize<ItemData>(record.ChangedItems[0]);
+        ItemData carrier = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(record.ChangedItems[0]).CreateColdData();
         return (Data_Player)((Inventory_ModuleData)carrier.ModuleDataDic["cargo"]).Data["cargo"].itemSlots[0].itemData;
     }
 
@@ -257,7 +257,7 @@ public static partial class GameplayTestSystemProbe
         using (ModuleInstanceStateCodecs.Register(nextCodec))
         {
             List<FrozenEcologyChunkSaveRecord> updated = FreezeEcologyForCacheProbe(source, out _, sessionItems);
-            ItemData restored = MemoryPackSerializer.Deserialize<ItemData>(updated[0].ChangedItems[0]);
+            ItemData restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(updated[0].ChangedItems[0]).CreateColdData();
             List<FrozenEcologyChunkSaveRecord> repeated = FreezeEcologyForCacheProbe(source, out _, sessionItems);
             return ReferenceEquals(first[0].ChunkData, updated[0].ChunkData) &&
                 !ReferenceEquals(first[0].ChangedItems[0], updated[0].ChangedItems[0]) &&

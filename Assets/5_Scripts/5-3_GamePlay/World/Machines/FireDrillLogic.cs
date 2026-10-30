@@ -6,12 +6,16 @@ using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public partial class FireDrillRuntimeState
 {
     #region 取火状态
-    public Inventory_Data Input;
-    public Inventory_Data Output;
+    [MemoryPackIgnore] public Inventory_Data Input;
+    [MemoryPackIgnore] public Inventory_Data Output;
+    [MemoryPackInclude, MemoryPackOrder(0)] private StandaloneInventorySaveSnapshot InputSnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Input); set => Input = value?.Restore(); }
+    [MemoryPackInclude, MemoryPackOrder(1)] private StandaloneInventorySaveSnapshot OutputSnapshot
+    { get => StandaloneInventorySaveSnapshot.Capture(Output); set => Output = value?.Restore(); }
     #endregion
 }
 

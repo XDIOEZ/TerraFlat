@@ -21,7 +21,7 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 生命周期与连接身份
-        public const double ObserverRangeMeters = 8192d;
+        public const double ObserverRangeMeters = SpaceSession.NetworkObserverRangeMeters;
         private const float SnapshotInterval = .2f;
         private const float TransferTimeout = 5f;
         private const int MaxCompressedBytes = 8 * 1024 * 1024;
@@ -42,6 +42,7 @@ namespace FlatWorld.Networking.Gameplay
             public uint InputSequence, IntentSequence;
             public float NextRequest, InputTime;
             public string Profile, MetadataWorldKey;
+            public uint MetadataRealmRevision;
             public readonly SpaceNetworkSnapshotDeltaCursor SnapshotCursor = new();
         }
         private sealed class Incoming
@@ -58,6 +59,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.RegisterHandler<NetworkSpaceSnapshotRequest>(OnSnapshotRequest, true);
             NetworkServer.RegisterHandler<NetworkSpaceInput>(OnInput, true);
             NetworkServer.RegisterHandler<NetworkSpaceIntentRequest>(OnIntent, true);
+            NetworkServer.RegisterHandler<NetworkLandingPreviewRequest>(OnLandingPreviewRequest, true);
             FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted += OnNaturalHarvestCommitted;
             FlatWorld.NaturalEntities.NaturalEntityEcsService.IndependentPhysicsStateCommitted += OnIndependentNaturalStateCommitted;
             StartDimensionServerBridge();
@@ -75,6 +77,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.RegisterHandler<NetworkEcologySnapshotPart>(OnEcologySnapshot, true);
             NetworkClient.RegisterHandler<NetworkNaturalHarvestState>(OnNaturalHarvestState, true);
             NetworkClient.RegisterHandler<NetworkNaturalPhysicsPoseBatch>(OnIndependentNaturalPhysicsPoseBatch, true);
+            NetworkClient.RegisterHandler<NetworkLandingPreviewPart>(OnLandingPreviewPart, true);
+            StartLandingPreviewClient();
             SpaceNetworkBridge.InputSender = SendInput;
             SpaceNetworkBridge.IntentSender = SendIntent;
             SpaceNetworkBridge.IntentWithReplySender = SendIntentWithReply;
@@ -100,6 +104,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkServer.UnregisterHandler<NetworkSpaceSnapshotRequest>();
             NetworkServer.UnregisterHandler<NetworkSpaceInput>();
             NetworkServer.UnregisterHandler<NetworkSpaceIntentRequest>();
+            NetworkServer.UnregisterHandler<NetworkLandingPreviewRequest>();
+            landingPreviewServerRequests.Clear();
             FlatWorld.NaturalEntities.NaturalEntityEcsService.NetworkStateCommitted -= OnNaturalHarvestCommitted;
             FlatWorld.NaturalEntities.NaturalEntityEcsService.IndependentPhysicsStateCommitted -= OnIndependentNaturalStateCommitted;
             StopDimensionServerBridge();
@@ -117,6 +123,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkEcologySnapshotPart>();
             NetworkClient.UnregisterHandler<NetworkNaturalHarvestState>();
             NetworkClient.UnregisterHandler<NetworkNaturalPhysicsPoseBatch>();
+            NetworkClient.UnregisterHandler<NetworkLandingPreviewPart>();
+            StopLandingPreviewClient();
             ClearEcologySnapshots();
             ClearProjectileViews();
             SpaceSession.ClearClientNetworkCombat();
@@ -134,6 +142,7 @@ namespace FlatWorld.Networking.Gameplay
             RemoveFixedShipConnection(connection);
             // 请求表按连接对象做键，断线立即释放，旧连接清理也不会影响复用同 ID 的新连接。
             if (connection != null) dimensionRequests.Remove(connection);
+            if (connection != null) landingPreviewServerRequests.Remove(connection);
             // 只清理由原连接持有的输入与攻击状态，防止过期断线回调误删新连接。
             if (connection == null || !connections.TryGetValue(connection.connectionId, out ConnectionState state) ||
                 !ReferenceEquals(state.Connection, connection)) return;
@@ -253,6 +262,7 @@ namespace FlatWorld.Networking.Gameplay
             UpdateEcologyRealm();
             UpdateFixedShipRequests();
             UpdateProjectileViews();
+            TickLandingPreviewClient();
             NetworkWorldPlayer local = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (clientStarted && !NetworkServer.active && NetworkClient.ready && local != null)
             {
@@ -296,11 +306,13 @@ namespace FlatWorld.Networking.Gameplay
                 !ResolveConnection(connection, out ConnectionState state, out _)) return;
             using var sendSample = SnapshotSendPoint.Measure(1);
             if (SpaceSession.Current.TryGetNetworkObserver(profile, out SpaceNetworkObserver realm) && !realm.InSpace &&
-                state.MetadataWorldKey != realm.WorldKey)
+                (state.MetadataWorldKey != realm.WorldKey || state.MetadataRealmRevision != realm.RealmRevision))
             {
-                SendWorldSnapshot(connection, realm.WorldKey);
+                SendWorldSnapshot(connection, realm.WorldKey, realm.RealmRevision);
                 state.MetadataWorldKey = realm.WorldKey;
+                state.MetadataRealmRevision = realm.RealmRevision;
             }
+            else if (realm.InSpace) state.MetadataWorldKey = null;
             SendProjectilePoses(connection, profile);
             SendEcologySnapshot(connection, profile);
             if (++snapshotSequence == 0) ++snapshotSequence;

@@ -3,21 +3,21 @@ using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class LiquidPendingBatch
 {
-    public string LiquidId;
-    public float Servings = 1f;
+    [MemoryPackOrder(0)] public string LiquidId;
+    [MemoryPackOrder(1)] public float Servings = 1f;
 }
 
 public partial class LiquidContainerState
 {
     #region 混合液体持久状态
-    public Dictionary<string, float> Composition = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, float> ComponentProcessingSeconds = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, LiquidPendingBatch> PendingOutputs = new(StringComparer.Ordinal);
-    public uint RandomState;
-    public long Revision;
+    [MemoryPackOrder(5)] public Dictionary<string, float> Composition = new(StringComparer.OrdinalIgnoreCase);
+    [MemoryPackOrder(6)] public Dictionary<string, float> ComponentProcessingSeconds = new(StringComparer.OrdinalIgnoreCase);
+    [MemoryPackOrder(7)] public Dictionary<string, LiquidPendingBatch> PendingOutputs = new(StringComparer.Ordinal);
+    [MemoryPackOrder(8)] public uint RandomState;
+    [MemoryPackOrder(9)] public long Revision;
     [field: NonSerialized, MemoryPackIgnore, Newtonsoft.Json.JsonIgnore, FastCloner.Code.FastClonerIgnore]
     public event Action<LiquidContainerState> MassChanged;
     [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore] public ulong MassRevision { get; private set; }

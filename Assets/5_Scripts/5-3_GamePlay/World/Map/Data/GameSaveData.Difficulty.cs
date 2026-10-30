@@ -3,24 +3,24 @@ using Sirenix.OdinInspector;
 public partial class GameSaveData
 {
     [ShowInInspector]
-    public GameDifficultyId Difficulty = GameDifficultyId.Level0;
+    [MemoryPack.MemoryPackOrder(17)] public GameDifficultyId Difficulty = GameDifficultyId.Level0;
 
     [ShowInInspector]
-    public bool CustomDifficultyDropAllCarriedItems;
+    [MemoryPack.MemoryPackOrder(4)] public bool CustomDifficultyDropAllCarriedItems;
 
-    [ShowInInspector] public float CustomPlayerAttackMultiplier = 1f;
-    [ShowInInspector] public float CustomCreatureAttackMultiplier = 1f;
-    [ShowInInspector] public float CustomCreatureHealthMultiplier = 1f;
-    [ShowInInspector] public float CustomHungerDrainMultiplier = 1f;
-    [ShowInInspector] public float CustomStaminaConsumptionMultiplier = 1f;
-    [ShowInInspector] public float CustomStaminaRecoveryMultiplier = 1f;
-    [ShowInInspector] public float CustomHealingMultiplier = 1f;
-    [ShowInInspector] public float CustomEnvironmentalDamageMultiplier = 1f;
-    [ShowInInspector] public float CustomTimeSpeedMultiplier = 1f;
-    [ShowInInspector] public float CustomSpawnFrequencyMultiplier = 1f;
-    [ShowInInspector] public float CustomSpawnPopulationMultiplier = 1f;
-    [ShowInInspector] public float CustomLootAmountMultiplier = 1f;
-    [ShowInInspector] public float CustomCropGrowthMultiplier = 1f;
-    [ShowInInspector] public float CustomFuelConsumptionMultiplier = 1f;
-    [ShowInInspector] public float CustomCraftingOutputMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(10)] public float CustomPlayerAttackMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(1)] public float CustomCreatureAttackMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(2)] public float CustomCreatureHealthMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(8)] public float CustomHungerDrainMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(13)] public float CustomStaminaConsumptionMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(14)] public float CustomStaminaRecoveryMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(7)] public float CustomHealingMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(5)] public float CustomEnvironmentalDamageMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(15)] public float CustomTimeSpeedMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(11)] public float CustomSpawnFrequencyMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(12)] public float CustomSpawnPopulationMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(9)] public float CustomLootAmountMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(3)] public float CustomCropGrowthMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(6)] public float CustomFuelConsumptionMultiplier = 1f;
+    [ShowInInspector] [MemoryPack.MemoryPackOrder(0)] public float CustomCraftingOutputMultiplier = 1f;
 }

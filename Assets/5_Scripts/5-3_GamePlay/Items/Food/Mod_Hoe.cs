@@ -10,10 +10,10 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
 {
     #region 数据与配置
 
-    [System.Serializable, MemoryPackable]
+    [System.Serializable, MemoryPackable(GenerateType.VersionTolerant)]
     public partial class Mod_Hoe_Data
     {
-        public int tilledCount; // 已完成的耕地数
+        [MemoryPackOrder(0)] public int tilledCount; // 已完成的耕地数
     }
 
     public Mod_Hoe_Data Data = new();

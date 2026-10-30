@@ -44,17 +44,19 @@ public partial class Loot
 }
 
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class LootData
 {
-    public string lootName;
-    public Vector2Int lootAmountRange = new Vector2Int(1, 1);
+    [MemoryPackOrder(0)] public string lootName;
+    [MemoryPackIgnore] public Vector2Int lootAmountRange = new Vector2Int(1, 1);
+    [MemoryPackInclude, MemoryPackOrder(1)] private int MinAmount { get => lootAmountRange.x; set => lootAmountRange.x = value; }
+    [MemoryPackInclude, MemoryPackOrder(2)] private int MaxAmount { get => lootAmountRange.y; set => lootAmountRange.y = value; }
     [MemoryPackIgnore]
     [JsonIgnore]
     public GameObject lootPrefab;
 
-    public int LootAmountMin { get => lootAmountRange.x; }
-    public int LootAmountMax { get => lootAmountRange.y; }
+    [MemoryPackIgnore] public int LootAmountMin { get => lootAmountRange.x; }
+    [MemoryPackIgnore] public int LootAmountMax { get => lootAmountRange.y; }
 
     //随机输出一个lootAmount范围内的随机数
     public int GetRandomLootAmount()

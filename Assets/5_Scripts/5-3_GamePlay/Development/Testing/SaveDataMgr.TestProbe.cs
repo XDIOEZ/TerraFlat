@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using MemoryPack;
+using FlatWorld.Persistence;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -10,6 +11,53 @@ public partial class SaveDataMgr
     #region 测试归档的非发布恢复
 
     internal static SaveDataMgr TestExistingInstance => instance;
+
+    internal static GameSaveData ReadTestSqliteArchiveWithoutPublishing(string path, bool previous = false)
+    {
+        using var store = new SqliteSaveArchiveStore(path);
+        if (previous && !store.RestorePreviousSnapshotAsync().GetAwaiter().GetResult())
+            throw new InvalidOperationException("隔离数据库没有上一逻辑提交。");
+        return ReadSqliteArchiveCandidate(store, out _);
+    }
+
+    internal JObject CaptureTestSqliteReadFailureState()
+    {
+        if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))
+            throw new InvalidOperationException("区块失败测试必须使用停用独立 SaveDataMgr。");
+        const string world = "probe:sqlite";
+        var origin = new Vector2Int(16, -32);
+        var planet = new PlanetData();
+        SaveData = new GameSaveData { PlanetData_Dict = new() { [world] = planet } };
+        var previous = new ChunkSaveRecord { PlanetName = world, ChunkPosition = origin };
+        string key = BuildChunkKey(world, origin.ToString());
+        chunkDeltas[key] = previous;
+        bool chunkRejected = false, weatherRejected = false;
+        try
+        {
+            ApplySqliteChunkSnapshot(world, origin, new SqliteChunkSnapshot
+            {
+                Terrain = MemoryPackSerializer.Serialize(new ChunkSaveRecord { PlanetName = world, ChunkPosition = origin }),
+                Ecology = new FrozenEcologyChunkSaveRecord { WorldKey = world, ChunkData = new byte[] { 1 } }
+            });
+        }
+        catch (Exception) { chunkRejected = true; }
+        var weather = new RegionalWeatherRecord { RegionX = origin.x, RegionY = origin.y };
+        planet.RegionalWeatherStates.Add(weather);
+        try
+        {
+            MaterializeCachedArchiveRecord(new PersistedChunkRead
+            {
+                Kind = "weather", World = world, Origin = origin,
+                LoadedRecord = ArchiveRecord("weather", world, "16:-32", new byte[] { 1 })
+            });
+        }
+        catch (Exception) { weatherRejected = true; }
+        return new JObject
+        {
+            ["chunkFailurePreserved"] = chunkRejected && ReferenceEquals(chunkDeltas[key], previous) && (planet.Ecology?.Chunks?.Count ?? 0) == 0,
+            ["weatherFailurePreserved"] = weatherRejected && planet.RegionalWeatherStates.Count == 1 && ReferenceEquals(planet.RegionalWeatherStates[0], weather)
+        };
+    }
 
     internal JObject CaptureTestRenameFeedback()
     {
@@ -30,7 +78,7 @@ public partial class SaveDataMgr
         results["unchangedAccepted"] = TryRenamePlayerDisplayName("player-a", "原角色", out string unchangedReason);
         results["unchangedReason"] = unchangedReason;
         TryRenameSave("wrong_save", "new_save", out _, out string staleReason);
-        TryRenameSave("probe_save", "new_save.", out _, out string invalidReason);
+        TryRenameSave("probe_save", new string('字', 49), out _, out string invalidReason);
         results["staleSave"] = staleReason;
         results["invalidSave"] = invalidReason;
         results["saveUnchangedAccepted"] = TryRenameSave("probe_save", "probe_save", out string name, out string sameReason);
@@ -99,7 +147,7 @@ public partial class SaveDataMgr
         SaveData = source;
         CurrentContrrolPlayerName = "probe:previous-player";
         bool missingLoaded = LoadSaveByDisk(Path.Combine(Application.temporaryCachePath,
-            "FlatWorldGameplayTests", "missing-" + Guid.NewGuid().ToString("N") + ".bytes"));
+            "FlatWorldGameplayTests", "missing-" + Guid.NewGuid().ToString("N"), "save.sqlite"));
         return new JObject
         {
             ["currentVersion"] = ReadSaveEnvelope(valid).CoreSavePayload.Version,
@@ -108,7 +156,7 @@ public partial class SaveDataMgr
             ["corruptFailure"] = corruptFailure, ["corruptPreserved"] = corruptPreserved,
             ["missingLoaded"] = missingLoaded, ["saveCleared"] = SaveData == null,
             ["playerCleared"] = string.IsNullOrEmpty(CurrentContrrolPlayerName),
-            ["missingPreserved"] = HasPreviousDelta()
+            ["missingCleared"] = chunkDeltas.Count == 0
         };
 
         bool HasPreviousDelta() => chunkDeltas.Count == 1 &&

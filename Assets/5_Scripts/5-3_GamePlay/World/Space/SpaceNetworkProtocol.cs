@@ -1,5 +1,6 @@
 ﻿using System;
 using FlatWorld.Networking;
+using UnityEngine;
 
 namespace FlatWorld.Spaceflight
 {
@@ -44,6 +45,9 @@ namespace FlatWorld.Spaceflight
 
     public static class SpaceNetworkBridge
     {
+        public const int LandingPreviewGridSize = 33;
+        public static Func<string, Vector2, Vector2, Action<byte[], bool>, bool> LandingPreviewRequester;
+        public static Action LandingPreviewCancel;
         public static Func<string, SpacePassengerInput, bool> InputSender;
         public static Func<string, SpaceNetworkIntent, bool> IntentSender;
         public static Func<string, bool> CombatPreparationSender;

@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class BuffManagerSaveData
 {
-    public List<BuffInstance> Buffs = new();
+    [MemoryPackOrder(0)] public List<BuffInstance> Buffs = new();
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class BuffInstance
 {
@@ -18,12 +18,12 @@ public partial class BuffInstance
     [MemoryPackIgnore]
     public string SourceKey; // 派生状态来源，不写入 Buff 存档，由宿主状态重建。
 
-    public string DefinitionId;
-    public float RemainingDurationSeconds;
-    public float TickElapsedSeconds;
+    [MemoryPackOrder(0)] public string DefinitionId;
+    [MemoryPackOrder(1)] public float RemainingDurationSeconds;
+    [MemoryPackOrder(2)] public float TickElapsedSeconds;
     // 只在原有三个持久化字段后追加；旧存档缺失层数时恢复为第一层。
-    public int StackCount = 1;
-    public DeathCauseRecord DamageOrigin; // 状态施加时冻结来源，施加者离场后仍能解释致死原因。
+    [MemoryPackOrder(3)] public int StackCount = 1;
+    [MemoryPackOrder(4)] public DeathCauseRecord DamageOrigin; // 状态施加时冻结来源，施加者离场后仍能解释致死原因。
 
     [MemoryPackIgnore]
     public BuffDefinition Definition { get; private set; }

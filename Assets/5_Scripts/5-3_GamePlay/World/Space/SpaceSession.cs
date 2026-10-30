@@ -61,6 +61,7 @@ namespace FlatWorld.Spaceflight
             MachineWorld.CellChanged += InvalidateGroundAtmosphere;
             GameplayCombatBridge.Register(ShipCombatBridge.Instance);
             PressureExplosionQueue.WorldHandler = HandleShipExplosion;
+            PressureExplosionQueue.WorldReady = IsShipExplosionGroundReady;
             PressureExplosionQueue.SnapshotHandler = CaptureShipExplosionContext;
             PressureExplosionQueue.PresentationHandler = PresentShipExplosion;
             ItemMgr.RuntimeItemDespawning += OnLooseItemDespawning;
@@ -103,6 +104,7 @@ namespace FlatWorld.Spaceflight
             MachineWorld.CellChanged -= InvalidateGroundAtmosphere;
             GameplayCombatBridge.Unregister(ShipCombatBridge.Instance);
             if (PressureExplosionQueue.WorldHandler == HandleShipExplosion) PressureExplosionQueue.WorldHandler = null;
+            if (PressureExplosionQueue.WorldReady == IsShipExplosionGroundReady) PressureExplosionQueue.WorldReady = null;
             if (PressureExplosionQueue.SnapshotHandler == CaptureShipExplosionContext) PressureExplosionQueue.SnapshotHandler = null;
             if (PressureExplosionQueue.PresentationHandler == PresentShipExplosion) PressureExplosionQueue.PresentationHandler = null;
             if (Current == this) Current = null;

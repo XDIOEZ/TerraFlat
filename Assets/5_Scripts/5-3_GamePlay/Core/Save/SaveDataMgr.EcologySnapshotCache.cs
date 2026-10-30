@@ -175,7 +175,7 @@ public partial class SaveDataMgr
                 !(currentRevision == codecRevision && oldItems != null && oldItems.TryGetValue(item, out bytes) ||
                   frozenItems != null && frozenItems.TryGetValue(item, out bytes)))
             {
-                using (SaveEcologyItemPoint.Measure()) bytes = MemoryPackSerializer.Serialize<ItemData>(item);
+                using (SaveEcologyItemPoint.Measure()) bytes = ItemSnapshotSerialization.SerializePayload(item == null ? null : ItemSnapshotSerialization.Capture(item));
             }
             if (!currentPublicPlayerState && item != null && item is not Data_Player && frozenItems != null) frozenItems[item] = bytes;
             record.ChangedItems.Add(bytes);

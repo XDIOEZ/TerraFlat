@@ -43,11 +43,13 @@ namespace FlatWorld.Spaceflight
             {
                 ProfileId = previous.ProfileId,
                 IsInSpace = true,
+                UnknownOptionalFields = previous.UnknownOptionalFields,
                 FreeMotion = motion,
                 SavedCameraSize = previous.SavedCameraSize,
                 // 传送更换乘员状态时保留世界归属版本，避免回退到旧请求的版本。
                 RealmRevision = previous.RealmRevision
             };
+            target.FreeMotion.UnknownOptionalFields ??= previous.FreeMotion?.UnknownOptionalFields;
             bool succeeded = false;
             bool migrationStarted = false;
             transitionRunning = true;

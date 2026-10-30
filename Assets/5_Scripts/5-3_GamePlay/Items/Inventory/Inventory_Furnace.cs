@@ -348,32 +348,34 @@ public class Inventory_Furnace : Inventory
 
 }
 #region 数据定义
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [System.Serializable]
 public partial class ModSmeltingData
 {
     [ShowInInspector]
-    public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
+    [MemoryPackIgnore] public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
+    [MemoryPackInclude, MemoryPackOrder(0)] private Dictionary<string, StandaloneInventorySaveSnapshot> InventorySnapshots
+    { get => StandaloneInventorySaveSnapshot.CaptureDictionary(InvData); set => InvData = StandaloneInventorySaveSnapshot.RestoreDictionary(value); }
 
     [Tooltip("当前熔炉内温度")]
-    public float Temperature = 20f;
+    [MemoryPackOrder(1)] public float Temperature = 20f;
 
     [Tooltip("可达最大温度值（由燃料决定）")]
-    public float MaxTemperature = 0f;
+    [MemoryPackOrder(2)] public float MaxTemperature = 0f;
 
     [Tooltip("熔炉本身的最大温度限制（熔炉的物理限制）")]
-    public float MaxTemperatureLimit = 1000f;
+    [MemoryPackOrder(3)] public float MaxTemperatureLimit = 1000f;
 
     [Tooltip("是否正在熔炼")]
-    public bool IsSmelting = false;
+    [MemoryPackOrder(4)] public bool IsSmelting = false;
 
     [Tooltip("温度上升速度")]
-    public float TemperatureUpSpeed = 10f;
+    [MemoryPackOrder(5)] public float TemperatureUpSpeed = 10f;
 
     [Tooltip("按副产物规则 id 保存的燃料累计消费数。")]
-    public Dictionary<string, int> FuelByproductProgress = new Dictionary<string, int>();
+    [MemoryPackOrder(6)] public Dictionary<string, int> FuelByproductProgress = new Dictionary<string, int>();
 
     [Tooltip("按副产物规则 id 保存的待交付数量，避免目标库存满时丢失产出。")]
-    public Dictionary<string, int> PendingFuelByproductCount = new Dictionary<string, int>();
+    [MemoryPackOrder(7)] public Dictionary<string, int> PendingFuelByproductCount = new Dictionary<string, int>();
 }
 #endregion

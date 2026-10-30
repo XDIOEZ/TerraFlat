@@ -4,8 +4,8 @@ using MemoryPack;
 public partial class PlanetData
 {
     #region 星球大气持久化与派生读数
-    public string AtmosphereProfileId = AtmosphereCatalog.DefaultProfileId;
-    public AtmosphereState Atmosphere;
+    [MemoryPack.MemoryPackOrder(1)] public string AtmosphereProfileId = AtmosphereCatalog.DefaultProfileId;
+    [MemoryPack.MemoryPackOrder(0)] public AtmosphereState Atmosphere;
     [MemoryPackIgnore] public decimal AtmosphereGasVolume => (Atmosphere?.CurrentStandardLiters ?? 0m) / 1000m;
     [MemoryPackIgnore] public decimal AtmosphereGasCapacity => (Atmosphere?.CapacityStandardLiters ?? 0m) / 1000m;
     [MemoryPackIgnore] public decimal AtmosphereReferenceGasVolume => FluidUnits.MolToStandardLiters(Atmosphere?.ReferenceMoles ?? 0m) / 1000m;

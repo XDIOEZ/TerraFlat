@@ -15,6 +15,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly List<int> spawnCandidateKeys = new(MaxSpawnCandidatesPerFrame);
         private readonly HashSet<int> requestedClientSpawns = new();
         private readonly HashSet<int> networkInstantiationsInProgress = new();
+        private readonly HashSet<int> clientNetworkSpawned = new();
 
         private void BroadcastDespawn(Item item)
         {
@@ -40,18 +41,13 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             int guid = item.itemData.Guid;
+            clientNetworkSpawned.Remove(guid);
             pendingSpawnCandidates.Remove(guid);
             requestedClientSpawns.Remove(guid);
             if (serverPickupReservations.Remove(guid, out ServerPickupReservation reservation))
                 FinishServerPickup(reservation, false, 0f, 0f);
 
-            if (NetworkServer.active && serverStates.TryGetValue(guid, out StateRecord state))
-            {
-                Mod_DamageReceiver receiver = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-                if (state.SpawnIfMissing || GameplayWorldRegistry.UsesLocalCoordinates(state.WorldKey) ||
-                    receiver != null && receiver.Hp <= 0f)
-                    BroadcastDespawn(item);
-            }
+            if (NetworkServer.active && serverStates.ContainsKey(guid)) BroadcastDespawn(item);
         }
 
         private void ProcessSpawnCandidates()
@@ -202,7 +198,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnClientSpawnMessage(NetworkItemSpawnMessage message)
         {
-            if (!AcceptLocalWorld(message.WorldKey)) return;
+            if (!AcceptLocalWorld(message.WorldKey) || !AcceptLocalItemRealm(message.RealmRevision)) return;
             if (NetworkServer.active || !ItemNetworkStateSerialization.IsValidPayload(message.Payload))
                 return;
             if (!GameplayWorldRegistry.TryGet(message.WorldKey, out _))
@@ -211,8 +207,10 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
             using var worldScope = GameplayWorldRegistry.UseWorld(message.WorldKey);
+            if (!IsClientItemTerrainReady(message.WorldKey, message.Position))
+            { QueueClientSpawnState(message); return; }
             if (clientStates.TryGetValue(message.ItemGuid, out StateRecord known) &&
-                (message.Revision < known.Revision ||
+                known.RealmRevision == message.RealmRevision && (message.Revision < known.Revision ||
                  (message.Revision == known.Revision && message.PoseRevision < known.PoseRevision))) return;
 
             bool predictedLocally = requestedClientSpawns.Remove(message.ItemGuid);
@@ -255,6 +253,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 ItemId = message.ItemId,
                 WorldKey = message.WorldKey,
+                RealmRevision = message.RealmRevision,
                 Revision = message.Revision,
                 PoseRevision = message.PoseRevision,
                 Hash = message.PayloadHash,
@@ -272,7 +271,7 @@ namespace FlatWorld.Networking.Gameplay
         private void QueueClientSpawnState(NetworkItemSpawnMessage message)
         {
             OnClientStateMessage(new NetworkItemStateMessage { ItemGuid = message.ItemGuid, ItemId = message.ItemId,
-                WorldKey = message.WorldKey, Revision = message.Revision, PoseRevision = message.PoseRevision,
+                WorldKey = message.WorldKey, RealmRevision = message.RealmRevision, Revision = message.Revision, PoseRevision = message.PoseRevision,
                 PayloadHash = message.PayloadHash, Payload = message.Payload, SpawnIfMissing = true,
                 Position = message.Position, Rotation = message.Rotation, Scale = message.Scale });
         }
@@ -316,6 +315,7 @@ namespace FlatWorld.Networking.Gameplay
                         Mathf.Clamp(dropDuration, 0.05f, 3f));
                 }
 
+                clientNetworkSpawned.Add(guid);
                 return item;
             }
             catch (Exception exception)

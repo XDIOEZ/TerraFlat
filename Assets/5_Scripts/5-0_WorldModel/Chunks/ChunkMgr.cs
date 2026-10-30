@@ -140,6 +140,13 @@ namespace FlatWorld.WorldModel
             public CancellationTokenSource Cancellation;
             public TaskCompletionSource<ChunkRuntime> Completion;
             public ChunkGenerationTiming Timing;
+            public int Waiters;
+        }
+
+        private sealed class PendingPersistence
+        {
+            public PendingGeneration Generation;
+            public TaskCompletionSource<bool> Completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <summary>后台任务做完后放进安全队列的一张“完成通知单”。</summary>
@@ -178,19 +185,31 @@ namespace FlatWorld.WorldModel
             new List<WorldAddress>().AsReadOnly();
         private readonly ConcurrentQueue<GenerationCompletion> _completed =
             new ConcurrentQueue<GenerationCompletion>();
+        private readonly ConcurrentQueue<(WorldAddress Address, PendingGeneration Pending)> _releasedWaiters = new();
+        private readonly HashSet<WorldAddress> _unclaimedRequests = new();
+        private readonly List<WorldAddress> _unclaimedWorkBuffer = new();
         private readonly object _completionLifecycleGate = new object();
         private readonly ChunkGenerationScheduler _scheduler;
         private readonly IWorldAddressNormalizer _normalizer;
+        private readonly Func<WorldAddress, CancellationToken, Task> _preparePersistence;
+        private readonly Action<WorldAddress> _releasePersistence;
+        private readonly List<PendingPersistence> _persistenceWaiting = new();
+        private readonly ConcurrentQueue<bool> _persistenceFinished = new();
+        private int _persistenceRunning;
         private bool _disposed;
         private bool _completionCleanupFinished;
 
         public ChunkMgr(WorldRuntime world, IChunkPureGenerator generator,
-            int maxGenerationConcurrency = 2, IWorldAddressNormalizer normalizer = null)
+            int maxGenerationConcurrency = 2, IWorldAddressNormalizer normalizer = null,
+            Func<WorldAddress, CancellationToken, Task> preparePersistence = null,
+            Action<WorldAddress> releasePersistence = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             _scheduler = new ChunkGenerationScheduler(generator ??
                 throw new ArgumentNullException(nameof(generator)), maxGenerationConcurrency);
             _normalizer = normalizer ?? IdentityWorldAddressNormalizer.Instance;
+            _preparePersistence = preparePersistence;
+            _releasePersistence = releasePersistence;
             _windowCoverage = new ChunkWindowCoverage(_normalizer);
             _windowCommitSubscription = World.Events.Subscribe<ChunkCommitted>(TrackCommittedChunkOutsideRetentionWindow);
         }
@@ -267,18 +286,24 @@ namespace FlatWorld.WorldModel
         public Task<ChunkRuntime> RequestChunkDataAsync(WorldAddress address, int worldSeed,
             ChunkGenerationProfileSnapshot profile, CancellationToken cancellationToken = default,
             ChunkGenerationTopologySnapshot topology = default)
+            => RequestChunkDataCore(address, worldSeed, profile, cancellationToken, topology, false);
+
+        private Task<ChunkRuntime> RequestChunkDataCore(WorldAddress address, int worldSeed,
+            ChunkGenerationProfileSnapshot profile, CancellationToken cancellationToken,
+            ChunkGenerationTopologySnapshot topology, bool windowDemand)
         {
             ThrowIfDisposed();
+            if (cancellationToken.IsCancellationRequested) return Task.FromCanceled<ChunkRuntime>(cancellationToken);
             address = _normalizer.Normalize(address);
             if (World.TryGetChunk(address, out ChunkRuntime existing) &&
                 existing.DataStatus == ChunkDataStatus.Ready)
                 return Task.FromResult(existing);
             // 同一个区块只生成一次，后来的人一起等待，避免重复工作和结果互相打架。
             if (_pending.TryGetValue(address, out PendingGeneration current))
-                return current.Completion.Task;
+                return windowDemand ? current.Completion.Task : AwaitSharedChunkForCallerAsync(current, cancellationToken);
 
             ChunkGenerationRequest request = World.BeginChunkGeneration(address, worldSeed, profile, topology);
-            var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var linked = new CancellationTokenSource();
             var pending = new PendingGeneration
             {
                 Request = request,
@@ -288,15 +313,136 @@ namespace FlatWorld.WorldModel
                     TaskCreationOptions.RunContinuationsAsynchronously)
             };
             _pending.Add(address, pending);
-            Task<ChunkGenerationResult> task = _scheduler.ScheduleAsync(request, linked.Token, pending.Timing);
+            Task<ChunkGenerationResult> generation = _scheduler.ScheduleAsync(request, linked.Token, pending.Timing);
+            Task persistence = Task.CompletedTask;
+            if (_preparePersistence != null)
+            {
+                var work = new PendingPersistence { Generation = pending };
+                _persistenceWaiting.Add(work);
+                persistence = work.Completion.Task;
+                PumpPersistence();
+            }
+            Task<ChunkGenerationResult> task = AwaitGenerationAndPersistenceAsync(generation, persistence);
             _generationTasks.Add(task);
             // 后台线程不直接修改世界数据，只放一张完成通知；主线程之后再来安全处理。
             task.ContinueWith(completed => EnqueueOrReleaseGenerationCompletion(
                     new GenerationCompletion(address, pending, completed)),
                 CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
-            return pending.Completion.Task;
+            return windowDemand ? pending.Completion.Task : AwaitSharedChunkForCallerAsync(pending, cancellationToken);
         }
+
+        #region 生成与持久数据提交门禁
+        // 读盘只启动有限并发；未启动的窗口请求可随观察者移动重新排序。
+        private void PumpPersistence()
+        {
+            while (_persistenceFinished.TryDequeue(out _)) _persistenceRunning--;
+            for (int i = _persistenceWaiting.Count - 1; i >= 0; i--)
+                if (_persistenceWaiting[i].Generation.Cancellation.IsCancellationRequested)
+                {
+                    _persistenceWaiting[i].Completion.TrySetCanceled();
+                    _persistenceWaiting.RemoveAt(i);
+                }
+            while (_persistenceRunning < _scheduler.MaxConcurrency && _persistenceWaiting.Count != 0)
+            {
+                PendingPersistence work = _persistenceWaiting[0];
+                _persistenceWaiting.RemoveAt(0);
+                Task task;
+                try { task = _preparePersistence(work.Generation.Request.Address, work.Generation.Cancellation.Token) ?? Task.CompletedTask; }
+                catch (Exception error) { task = Task.FromException(error); }
+                _persistenceRunning++;
+                task.ContinueWith(completed =>
+                {
+                    if (completed.IsCanceled) work.Completion.TrySetCanceled();
+                    else if (completed.IsFaulted) work.Completion.TrySetException(completed.Exception.InnerExceptions);
+                    else work.Completion.TrySetResult(true);
+                    _persistenceFinished.Enqueue(true);
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            }
+        }
+
+        private void PrioritizeQueuedPersistence(IReadOnlyList<WorldAddress> addresses)
+        {
+            var ranks = new Dictionary<WorldAddress, int>();
+            for (int i = 0; i < addresses.Count; i++) ranks[addresses[i]] = i;
+            _persistenceWaiting.Sort((a, b) =>
+            {
+                int left = ranks.TryGetValue(a.Generation.Request.Address, out int x) ? x : int.MaxValue;
+                int right = ranks.TryGetValue(b.Generation.Request.Address, out int y) ? y : int.MaxValue;
+                int result = left.CompareTo(right);
+                return result != 0 ? result : a.Generation.Request.Address.CompareTo(b.Generation.Request.Address);
+            });
+        }
+
+        // 单个等待者取消不会终止仍被窗口或其他调用者使用的共享生成。
+        private async Task<ChunkRuntime> AwaitSharedChunkForCallerAsync(PendingGeneration pending, CancellationToken cancellation)
+        {
+            Interlocked.Increment(ref pending.Waiters);
+            try
+            {
+                Task<ChunkRuntime> shared = pending.Completion.Task;
+                if (!cancellation.CanBeCanceled) return await shared.ConfigureAwait(false);
+                var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                using (cancellation.Register(() => cancelled.TrySetCanceled()))
+                {
+                    if (await Task.WhenAny(shared, cancelled.Task).ConfigureAwait(false) != shared)
+                        await cancelled.Task.ConfigureAwait(false);
+                    return await shared.ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                if (Interlocked.Decrement(ref pending.Waiters) == 0)
+                    _releasedWaiters.Enqueue((pending.Request.Address, pending));
+            }
+        }
+
+        // 最后一个独立等待者退出后，由主线程确认窗口与其他租约再取消共享工作。
+        private void CancelRequestsWithoutDemand()
+        {
+            while (_releasedWaiters.TryDequeue(out var released))
+                if (_pending.TryGetValue(released.Address, out PendingGeneration current) && ReferenceEquals(current, released.Pending))
+                    _unclaimedRequests.Add(released.Address);
+            _unclaimedWorkBuffer.Clear();
+            _unclaimedWorkBuffer.AddRange(_unclaimedRequests);
+            foreach (WorldAddress address in _unclaimedWorkBuffer)
+            {
+                if (!_pending.TryGetValue(address, out PendingGeneration pending)) { _unclaimedRequests.Remove(address); continue; }
+                if (_windowDataDemand.Contains(address) || Volatile.Read(ref pending.Waiters) != 0)
+                { _unclaimedRequests.Remove(address); continue; }
+                if (World.TryGetChunk(address, out ChunkRuntime chunk) &&
+                    (chunk.DataRetentionLeaseCount > 0 || chunk.SimulationLeaseCount > 0 ||
+                     chunk.PresentationLeaseCount > 0 || chunk.NavigationLeaseCount > 0)) continue;
+                _unclaimedRequests.Remove(address);
+                CancelCanonicalChunkRequest(address);
+            }
+            _unclaimedWorkBuffer.Clear();
+        }
+
+        private bool HasIndependentChunkLease(WorldAddress address)
+        {
+            if (!World.TryGetChunk(address, out ChunkRuntime chunk)) return false;
+            int windowSimulation = _simulationLeases.ContainsKey(address) ? 1 : 0;
+            return chunk.DataRetentionLeaseCount > 0 || chunk.NavigationLeaseCount > 0 || chunk.PresentationLeaseCount > 0 ||
+                chunk.SimulationLeaseCount > windowSimulation;
+        }
+
+        // 生成与读盘并行，任一失败时归还已经生成但不能提交的地形。
+        private static async Task<ChunkGenerationResult> AwaitGenerationAndPersistenceAsync(
+            Task<ChunkGenerationResult> generation, Task persistence)
+        {
+            try
+            {
+                await Task.WhenAll(generation, persistence).ConfigureAwait(false);
+                return await generation.ConfigureAwait(false);
+            }
+            catch
+            {
+                if (generation.Status == TaskStatus.RanToCompletion) generation.Result?.Dispose();
+                throw;
+            }
+        }
+        #endregion
 
         // 调度器释放后迟到的完成通知只归还载荷，不再进入已关闭的世界队列。
         private void EnqueueOrReleaseGenerationCompletion(GenerationCompletion completion)
@@ -337,7 +483,10 @@ namespace FlatWorld.WorldModel
                 _windowDataDemand.Remove(address);
                 _windowRetryTargets.Remove(address);
                 _scheduler.CancelPrewarmDemandsForSource(address);
-                CancelCanonicalChunkRequest(address);
+                if (_pending.TryGetValue(address, out PendingGeneration held) &&
+                    (Volatile.Read(ref held.Waiters) != 0 || HasIndependentChunkLease(address)))
+                    _unclaimedRequests.Add(address);
+                else CancelCanonicalChunkRequest(address);
             }
             foreach (WorldAddress address in _windowCoverage.Added(ChunkWindowCoverage.Layer.Data))
                 _windowDataDemand.Add(address);
@@ -387,7 +536,7 @@ namespace FlatWorld.WorldModel
             foreach (WorldAddress address in _windowWorkBuffer)
             {
                 ChunkWindowRequest request = FindHighestPriorityWindowForAddress(address, requests);
-                _ = RequestChunkDataAsync(address, request.WorldSeed, request.Profile, topology: request.Topology);
+                _ = RequestChunkDataCore(address, request.WorldSeed, request.Profile, default, request.Topology, true);
             }
 
             // 只重排仍在等待生成的目标，距离随最新观察者位置即时更新。
@@ -396,6 +545,8 @@ namespace FlatWorld.WorldModel
                 if (_windowDataDemand.Contains(address)) _windowWorkBuffer.Add(address);
             _windowWorkBuffer.Sort((left, right) => CompareCurrentWindowDataPriority(left, right, requests));
             _scheduler.PrioritizeQueuedWork(_windowWorkBuffer);
+            PrioritizeQueuedPersistence(_windowWorkBuffer);
+            PumpPersistence();
             _windowWorkBuffer.Clear();
 
             foreach (WorldAddress address in _windowCoverage.Removed(ChunkWindowCoverage.Layer.Active))
@@ -483,8 +634,10 @@ namespace FlatWorld.WorldModel
             foreach (WorldAddress address in _windowDataDemand)
             {
                 _scheduler.CancelPrewarmDemandsForSource(address);
-                if (_pending.ContainsKey(address))
-                    _windowDataCancellationBuffer.Add(address);
+                if (!_pending.TryGetValue(address, out PendingGeneration pending)) continue;
+                if (Volatile.Read(ref pending.Waiters) != 0 || HasIndependentChunkLease(address))
+                    _unclaimedRequests.Add(address);
+                else _windowDataCancellationBuffer.Add(address);
             }
 
             _windowDataCancellationBuffer.Sort();
@@ -505,6 +658,8 @@ namespace FlatWorld.WorldModel
             ThrowIfDisposed();
             if (maxCount <= 0)
                 return 0;
+            CancelRequestsWithoutDemand();
+            PumpPersistence();
             World.StreamingDiagnostics.Count("commit.pumps");
             using var batchTiming = World.StreamingDiagnostics.Measure("commit.batch");
             int count = 0;
@@ -589,6 +744,8 @@ namespace FlatWorld.WorldModel
                         World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
                     }
                 }
+                // 未提交的当前请求需要通知持久化门禁归还已准备的数据。
+                if (current && diagnosticOutcome != "applied") completion.Pending.Cancellation.Cancel();
                 completion.Pending.Cancellation.Dispose();
                 World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
                 if (retryWindowRequest)
@@ -647,6 +804,10 @@ namespace FlatWorld.WorldModel
         private bool EvictCanonicalChunk(WorldAddress address)
         {
             if (_windowDataDemand.Contains(address)) _windowRetryTargets.Add(address);
+            if (_pending.TryGetValue(address, out PendingGeneration waiting) && Volatile.Read(ref waiting.Waiters) != 0)
+                return false;
+            if (HasIndependentChunkLease(address))
+                return false;
             if (_simulationLeases.TryGetValue(address, out ChunkLease lease))
             {
                 lease.Dispose();
@@ -654,7 +815,9 @@ namespace FlatWorld.WorldModel
             }
             SetPresentationDemand(address, false);
             CancelCanonicalChunkRequest(address);
-            return World.EvictChunk(address);
+            bool evicted = World.EvictChunk(address);
+            if (evicted) _releasePersistence?.Invoke(address);
+            return evicted;
         }
 
         /// <summary>后台数据用完后仅回收无窗口需求且无任何租约的区块，不撤销其它系统的使用票。</summary>
@@ -662,7 +825,9 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             address = _normalizer.Normalize(address);
-            return !_windowDataDemand.Contains(address) && !_pending.ContainsKey(address) && World.EvictChunk(address);
+            if (_windowDataDemand.Contains(address) || _pending.ContainsKey(address) || !World.EvictChunk(address)) return false;
+            _releasePersistence?.Invoke(address);
+            return true;
         }
 
         /// <summary>让当前窗口里的区块全部停止运行和显示，但暂时保留已经生成的数据。</summary>
@@ -698,6 +863,7 @@ namespace FlatWorld.WorldModel
                 CancelCanonicalChunkRequest(addresses[i]);
             _windowDataDemand.Clear();
             _windowDataCancellationBuffer.Clear();
+            _unclaimedRequests.Clear();
             _windowRetryTargets.Clear();
             _windowCoverage.Clear();
             _hasWindow = false;
@@ -743,6 +909,8 @@ namespace FlatWorld.WorldModel
                 pending.Cancellation.Cancel();
                 pending.Completion.TrySetCanceled();
             }
+            foreach (PendingPersistence work in _persistenceWaiting) work.Completion.TrySetCanceled();
+            _persistenceWaiting.Clear();
             _generationTasks.Clear();
             _presentationDemand.Clear();
             _windowDataDemand.Clear();

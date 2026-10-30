@@ -3,13 +3,13 @@ using UnityEngine;
 
 /// <summary>衣物、裤装和袜子的温度耐受效果；只扩展安全范围，不改变体表温度或传热速度。</summary>
 [System.Serializable]
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_ThermalInsulation : EquipmentInstance
 {
     [Min(0f)]
-    public float ColdToleranceIncrease;
+    [MemoryPackOrder(1)] public float ColdToleranceIncrease;
     [Min(0f)]
-    public float HeatToleranceIncrease;
+    [MemoryPackOrder(2)] public float HeatToleranceIncrease;
 
     [MemoryPackIgnore]
     private Mod_Temperature appliedTemperature;

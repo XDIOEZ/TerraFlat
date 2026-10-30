@@ -17,6 +17,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `NetworkItemStateCoordinator` 的 `Spawning/Buildings/MachineReplication` 分管生成、建造事务与机器复制；`NetworkBuildingRequestLedger` 统一建造/拆除回执、到期与断线清理，等待帧不复制键数组。规则 `networking/building_request_ledger`。
 - `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
+- Gameplay 协议为 34；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
 - 假人手写 Mirror Command 参数时，`uint` 须使用 Weaver 对应的 `WriteVarUInt`；定长 `WriteUInt` 会使后续参数错位。
@@ -48,14 +49,15 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## 快照与复制
 
-- `NetworkGameplayProtocol.CurrentVersion=33`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
+- `NetworkGameplayProtocol.CurrentVersion=34`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
 - 天气地表雪格同时携带 `IceMeltProgress`；客户端仅恢复权威进度，不执行融冰。
 
 - 玩家公开快照经 `Item.ModuleSavePublicNetworkState` 调用模块保存：实现 `IPublicNetworkStateSaver` 的模块仅刷新公开字段，未实现的模块仍执行完整保存。`Mod_Inventory` 跳过私有槽位保存和装备收纳袋拆装；正式存档仍走完整 `ModuleSave`。回归 `networking/public_network_save_route`。
 
 - 私有 Host 无远端 Ready 连接时不做周期性世界物品捕获或地形差量组包；新远端入世仍由完整物品扫描与区块请求补齐。Host 不向自己请求地形快照；物品捕获、待应用状态、生成候选、扫描及地形阶段有 `FlatWorld.Network.Items.*` Profiler Marker。
 - Host 本机玩家的脏状态与定时回退共用 `NetworkWorldPlayer.PublishServerPlayerState`，客户端提交入口只供远端拥有者；强制事务发布立即执行。常规发布在本帧动作完成后执行，捕获时借连接所属世界，捕获中新产生的脏标记不能清掉。发送端只读借用 `CaptureCachedNetworkPayload`，不能修改旧版本缓冲；`FlatWorld.Network.Player.*` 固定 Marker 不依赖统计开关。
-- 地表物品/机器/容器/建造请求带RealmRevision，连接所属world作用域和目标Item场景双重校验；旧epoch请求不能在新维度同坐标执行。目标世界快照仅合入指定Planet/差量/生态/机器/散物，不替换活跃SaveData根或PlayerData引用。
+- 地表物品/机器/容器/建造请求带RealmRevision，连接所属world作用域和目标Item场景双重校验；旧epoch请求不能在新维度同坐标执行。目标世界快照只合入Planet元数据，不替换活跃SaveData根、PlayerData或已请求的区块数据。
+- 区块回复按 WorldEpoch、RealmRevision、RequestToken 和快照版本验收；地形增量等待基线后重放，缺口重新请求。服务器临时持有并恢复请求块后捕获实体；窗口内机器按块重置并补齐，离窗副本回收。下落选址由连接乘员的目标星体和范围授权，只返回异步预览网格。
 - Item 使用 FWI1 实例快照；捕获不改活跃 ItemData、库存或位姿。公开世界捕获上下文为线程局部作用域，不能跨 await。
 - 地表/太空拾取由 `NetworkItemStateCoordinator.Pickup` 统一预留：客户端只读计划，服务器真实入包后按实际原份数扣同一来源；余量保留，Host 不重复入包。回执按连接引用、请求号和租约令牌去重，客户端成功合并库存才确认；确认前拒绝旧全量库存包，满包预检不申请租约，非库存生存状态继续复制。未提交超时/断线释放来源，已结算只重发回执，不重新入包。门禁经通用网络库存事务查询桥进入原生操作，测试夹具只单向调用正式消息。
 - 热快照按当前配置合并状态，不迁移模块布局；未变模块保留，非重载/远程白名单通过 `BindSnapshotData` 绑定。`CaptureRuntimeStateBaseline` 在合并前捕获基线，`ApplyMergedRuntimeStates` 只刷新原代际中改变的模块；回调回收或换代后停止旧实例处理。嵌套库存仅为新冷数据补配置。

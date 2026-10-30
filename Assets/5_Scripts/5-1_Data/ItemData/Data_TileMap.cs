@@ -32,7 +32,7 @@ public partial class Data_TileMap : ItemData
 
     internal byte[] CaptureMapInstanceState() => ItemSnapshotSerialization.SerializePayload(new TileMapInstanceSnapshot
     {
-        Tiles = _tileCells, Position = position, TileLoaded = TileLoaded,
+        Tiles = TileMapInstanceSnapshot.CaptureTiles(_tileCells), PositionX = position.x, PositionY = position.y, TileLoaded = TileLoaded,
         Environment = EnvironmentLayers, Grass = GrassLayer
     });
 
@@ -41,8 +41,8 @@ public partial class Data_TileMap : ItemData
         if (payload == null) return;
         TileMapInstanceSnapshot state = MemoryPackSerializer.Deserialize<TileMapInstanceSnapshot>(payload);
         if (state == null) throw new InvalidOperationException("地图实例快照为空。");
-        _tileCells = state.Tiles;
-        position = state.Position;
+        _tileCells = TileMapInstanceSnapshot.RestoreTiles(state.Tiles);
+        position = new Vector2Int(state.PositionX, state.PositionY);
         TileLoaded = state.TileLoaded;
         EnvironmentLayers = state.Environment ?? new EnvironmentLayers();
         GrassLayer = state.Grass ?? new GrassLayerData();
@@ -451,12 +451,132 @@ public partial class Data_TileMap : ItemData
     }
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 internal sealed partial class TileMapInstanceSnapshot
 {
-    public TileStackCell[,] Tiles;
-    public Vector2Int Position;
-    public bool TileLoaded;
-    public EnvironmentLayers Environment;
-    public GrassLayerData Grass;
+    #region 地图固定字段
+    [MemoryPackOrder(0)] public TileStackSaveSnapshot[,] Tiles;
+    [MemoryPackOrder(1)] public int PositionX;
+    [MemoryPackOrder(2)] public int PositionY;
+    [MemoryPackOrder(3)] public bool TileLoaded;
+    [MemoryPackOrder(4)] public EnvironmentLayers Environment;
+    [MemoryPackOrder(5)] public GrassLayerData Grass;
+
+    public static TileStackSaveSnapshot[,] CaptureTiles(TileStackCell[,] cells)
+    {
+        if (cells == null) return null;
+        var result = new TileStackSaveSnapshot[cells.GetLength(0), cells.GetLength(1)];
+        for (int x = 0; x < cells.GetLength(0); x++)
+            for (int y = 0; y < cells.GetLength(1); y++)
+                if (!cells[x, y].IsEmpty) result[x, y] = TileStackSaveSnapshot.Capture(cells[x, y]);
+        return result;
+    }
+
+    public static TileStackCell[,] RestoreTiles(TileStackSaveSnapshot[,] cells)
+    {
+        if (cells == null) return null;
+        var result = new TileStackCell[cells.GetLength(0), cells.GetLength(1)];
+        for (int x = 0; x < cells.GetLength(0); x++)
+            for (int y = 0; y < cells.GetLength(1); y++)
+                if (cells[x, y] != null) result[x, y] = cells[x, y].Restore();
+        return result;
+    }
+    #endregion
+}
+
+[MemoryPackable(GenerateType.VersionTolerant)]
+internal sealed partial class TileStackSaveSnapshot
+{
+    #region 地块栈固定字段
+    [MemoryPackOrder(0)] public TileSaveSnapshot Base;
+    [MemoryPackOrder(1)] public TileSaveSnapshot Overlay;
+    [MemoryPackOrder(2)] public List<TileSaveSnapshot> Overflow;
+
+    public static TileStackSaveSnapshot Capture(TileStackCell cell)
+    {
+        var result = new TileStackSaveSnapshot { Base = TileSaveSnapshot.Capture(cell.BaseTile), Overlay = TileSaveSnapshot.Capture(cell.OverlayTile) };
+        if (cell.OverflowLayers != null)
+        {
+            result.Overflow = new List<TileSaveSnapshot>(cell.OverflowLayers.Count);
+            foreach (TileData tile in cell.OverflowLayers) result.Overflow.Add(TileSaveSnapshot.Capture(tile));
+        }
+        return result;
+    }
+
+    public TileStackCell Restore()
+    {
+        var result = new TileStackCell { BaseTile = Base?.Restore(), OverlayTile = Overlay?.Restore() };
+        if (Overflow != null)
+        {
+            result.OverflowLayers = new List<TileData>(Overflow.Count);
+            foreach (TileSaveSnapshot tile in Overflow) result.OverflowLayers.Add(tile?.Restore());
+        }
+        return result;
+    }
+    #endregion
+}
+
+[MemoryPackable(GenerateType.VersionTolerant)]
+public sealed partial class TileSaveSnapshot
+{
+    #region 地块固定字段
+    [MemoryPackOrder(0)] public int Kind;
+    [MemoryPackOrder(1)] public string Id;
+    [MemoryPackOrder(2)] public string Name;
+    [MemoryPackOrder(3)] public string Tag;
+    [MemoryPackOrder(4)] public int X;
+    [MemoryPackOrder(5)] public int Y;
+    [MemoryPackOrder(6)] public int Z;
+    [MemoryPackOrder(7)] public float DemolitionTime;
+    [MemoryPackOrder(8)] public float WorkTime;
+    [MemoryPackOrder(9)] public uint Penalty;
+    [MemoryPackOrder(10)] public bool Walkable;
+    [MemoryPackOrder(11)] public GameValue_float Fertility;
+    [MemoryPackOrder(12)] public int Water;
+    [MemoryPackOrder(13)] public float WaterSupplyRemainder;
+    [MemoryPackOrder(14)] public float WaterConsumptionRemainder;
+    [MemoryPackOrder(15)] public int BuildingVersion;
+    [MemoryPackOrder(16)] public float BuildingHp;
+
+    public static TileSaveSnapshot Capture(TileData tile)
+    {
+        if (tile == null) return null;
+        var result = new TileSaveSnapshot
+        {
+            Id = tile.ID, Name = tile.Name, Tag = tile.TileTag,
+            X = tile.position.x, Y = tile.position.y, Z = tile.position.z,
+            DemolitionTime = tile.DemolitionTime, WorkTime = tile.workTime,
+            Penalty = tile.Penalty, Walkable = tile.IsWalkable
+        };
+        switch (tile)
+        {
+            case TileData_Grass grass: result.Kind = 54; result.Fertility = grass.FertileValue; break;
+            case TileData_Universal _: result.Kind = 56; break;
+            case TileData_Farmland farm:
+                result.Kind = 57; result.Fertility = farm.fertilityValue; result.Water = farm.waterValue;
+                result.WaterSupplyRemainder = farm.waterSupplyRemainder; result.WaterConsumptionRemainder = farm.waterConsumptionRemainder;
+                break;
+            case TileData_CellBuilding building:
+                result.Kind = 58; result.BuildingVersion = building.Version; result.BuildingHp = building.CurrentHp; break;
+            default: throw new InvalidOperationException($"未注册的地块快照类型：{tile.GetType().FullName}");
+        }
+        return result;
+    }
+
+    public TileData Restore()
+    {
+        TileData tile = Kind switch
+        {
+            54 => new TileData_Grass { FertileValue = Fertility },
+            56 => new TileData_Universal(),
+            57 => new TileData_Farmland { fertilityValue = Fertility, waterValue = Water,
+                waterSupplyRemainder = WaterSupplyRemainder, waterConsumptionRemainder = WaterConsumptionRemainder },
+            58 => new TileData_CellBuilding { Version = BuildingVersion, CurrentHp = BuildingHp },
+            _ => throw new InvalidOperationException($"未知的地块快照类型：{Kind}")
+        };
+        tile.ID = Id; tile.Name = Name; tile.TileTag = Tag; tile.position = new Vector3Int(X, Y, Z);
+        tile.DemolitionTime = DemolitionTime; tile.workTime = WorkTime; tile.Penalty = Penalty; tile.IsWalkable = Walkable;
+        return tile;
+    }
+    #endregion
 }

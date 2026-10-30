@@ -14,6 +14,10 @@ public partial class SaveDataMgr
     #region 区块差量索引
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
     private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
+    private readonly Dictionary<string, long> chunkDifferenceRevisions = new();
+    private long nextChunkDifferenceRevision;
+
+    private void MarkChunkDifferenceChanged(string key) => chunkDifferenceRevisions[key] = ++nextChunkDifferenceRevision;
 
     private static string BuildChunkKey(string planetName, string chunkName)
     {
@@ -220,6 +224,7 @@ public partial class SaveDataMgr
         string planetName = GameplayWorldRegistry.ExecutionWorldKey;
         if (string.IsNullOrEmpty(planetName)) return false;
         string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+        MarkChunkDifferenceChanged(key);
         if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
             return false;
 
@@ -302,6 +307,7 @@ public partial class SaveDataMgr
             yield break;
         }
         string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+        MarkChunkDifferenceChanged(key);
         if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
         {
             onCompleted?.Invoke(false, null);
@@ -454,6 +460,9 @@ public partial class SaveDataMgr
 
     // 只复用查询键，差量仍每次读取当前档案，扩展探索时有界释放旧键。
     public bool TryGetChunkDelta(string planetName, Vector2Int chunkOrigin, out ChunkSaveRecord delta)
+        => chunkDeltas.TryGetValue(GetCachedChunkDifferenceKey(planetName, chunkOrigin), out delta);
+
+    private string GetCachedChunkDifferenceKey(string planetName, Vector2Int chunkOrigin)
     {
         var lookup = (planetName, chunkOrigin);
         if (!chunkDeltaLookupKeys.TryGetValue(lookup, out string key))
@@ -461,7 +470,7 @@ public partial class SaveDataMgr
             if (chunkDeltaLookupKeys.Count >= 256) chunkDeltaLookupKeys.Clear();
             chunkDeltaLookupKeys.Add(lookup, key = BuildChunkKey(planetName, chunkOrigin.ToString()));
         }
-        return chunkDeltas.TryGetValue(key, out delta);
+        return key;
     }
     #endregion
 
@@ -697,26 +706,38 @@ public partial class SaveDataMgr
     #endregion
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class ChunkSaveRecord
 {
-    public string PlanetName;
-    public string ChunkName;
-    public Vector2Int ChunkPosition;
-    public float SunlightIntensity;
-    public List<ItemData> ChangedItems = new();
-    public List<int> RemovedItemGuids = new();
-    public List<TileCellSaveDelta> TileDeltas = new();
-    public List<GrassCellSaveDelta> GrassDeltas = new();
+    [MemoryPack.MemoryPackOrder(8)] public string PlanetName;
+    [MemoryPack.MemoryPackOrder(2)] public string ChunkName;
+    [MemoryPack.MemoryPackIgnore] public Vector2Int ChunkPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(3)]
+    private ModuleGridPositionSaveSnapshot SavedChunkPosition
+    {
+        get => new() { X = ChunkPosition.x, Y = ChunkPosition.y };
+        set { if (value != null) ChunkPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(12)] public float SunlightIntensity;
+    [MemoryPackIgnore] public List<ItemData> ChangedItems = new();
+    [MemoryPackInclude, MemoryPackOrder(1)]
+    private List<ItemInstanceSnapshot> SavedChangedItems
+    {
+        get => ChangedItems?.ConvertAll(item => item == null ? null : ItemSnapshotSerialization.Capture(item));
+        set => ChangedItems = value?.ConvertAll(item => item?.CreateColdData()) ?? new();
+    }
+    [MemoryPack.MemoryPackOrder(9)] public List<int> RemovedItemGuids = new();
+    [MemoryPack.MemoryPackOrder(14)] public List<TileCellSaveDelta> TileDeltas = new();
+    [MemoryPack.MemoryPackOrder(5)] public List<GrassCellSaveDelta> GrassDeltas = new();
     // 当前 WorldModel 的完整核心地形差量，包含地表铺设和阻挡墙。
-    public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
-    public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
-    public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
-    public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
-    public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
-    public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
-    public List<SnowCellSaveData> SnowCells = new(); // 独立保存天气雪与玩家编辑雪，不替换底层地形。
+    [MemoryPack.MemoryPackOrder(10)] public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
+    [MemoryPack.MemoryPackOrder(13)] public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
+    [MemoryPack.MemoryPackOrder(0)] public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
+    [MemoryPack.MemoryPackOrder(4)] public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
+    [MemoryPack.MemoryPackOrder(7)] public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
+    [MemoryPack.MemoryPackOrder(6)] public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
+    [MemoryPack.MemoryPackOrder(11)] public List<SnowCellSaveData> SnowCells = new(); // 独立保存天气雪与玩家编辑雪，不替换底层地形。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -733,35 +754,59 @@ public partial class ChunkSaveRecord
          (SnowCells?.Count ?? 0) > 0);
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class TileCellSaveDelta
 {
-    public Vector2Int LocalPosition;
-    public List<TileData> Tiles = new();
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(0)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPackIgnore] public List<TileData> Tiles = new();
+    [MemoryPackInclude, MemoryPackOrder(1)]
+    private List<TileSaveSnapshot> SavedTiles
+    {
+        get => Tiles?.ConvertAll(TileSaveSnapshot.Capture);
+        set => Tiles = value?.ConvertAll(tile => tile?.Restore()) ?? new();
+    }
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class GrassCellSaveDelta
 {
-    public Vector2Int LocalPosition;
-    public GrassCellState State;
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(0)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(1)] public GrassCellState State;
 }
 
-[MemoryPackable]
+[MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
 [Serializable]
 public partial class RuntimeTileCellSaveDelta
 {
-    public Vector2Int LocalPosition;
-    public int GroundTileId;
-    public int BackTileId;
-    public int BlockingTileId;
-    public int BiomeId;
-    public short NavigationCost;
-    public TerrainCellFlags Flags;
+    [MemoryPack.MemoryPackIgnore] public Vector2Int LocalPosition;
+    [MemoryPack.MemoryPackInclude, MemoryPack.MemoryPackOrder(6)]
+    private ModuleGridPositionSaveSnapshot SavedLocalPosition
+    {
+        get => new() { X = LocalPosition.x, Y = LocalPosition.y };
+        set { if (value != null) LocalPosition = new(value.X, value.Y); }
+    }
+    [MemoryPack.MemoryPackOrder(5)] public int GroundTileId;
+    [MemoryPack.MemoryPackOrder(1)] public int BackTileId;
+    [MemoryPack.MemoryPackOrder(3)] public int BlockingTileId;
+    [MemoryPack.MemoryPackOrder(2)] public int BiomeId;
+    [MemoryPack.MemoryPackOrder(7)] public short NavigationCost;
+    [MemoryPack.MemoryPackOrder(4)] public TerrainCellFlags Flags;
     // 0 表示该格建筑满耐久或当前没有阻挡建筑。
-    public float AccumulatedDamage;
+    [MemoryPack.MemoryPackOrder(0)] public float AccumulatedDamage;
 
     /// <summary>捕获核心地形，避免不同修改入口只保存自己关心的墙或水标记。</summary>
     public static RuntimeTileCellSaveDelta Capture(Vector2Int localPosition,

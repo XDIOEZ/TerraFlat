@@ -11,38 +11,38 @@ using MemoryPack;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class CultivatorHarvestOutput
 {
     #region 已抽定收获
-    public string ItemId;
-    public int Amount;
+    [MemoryPackOrder(0)] public string ItemId;
+    [MemoryPackOrder(1)] public int Amount;
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class CultivatorPlotState
 {
     #region 独立植株
-    public string CropId;
-    public float Growth;
-    public bool HasCompletedFirstGrowth;
-    public List<CultivatorHarvestOutput> PendingHarvest;
-    public int YieldGeneVariantIndex = -1;
-    public uint Seed;
+    [MemoryPackOrder(0)] public string CropId;
+    [MemoryPackOrder(1)] public float Growth;
+    [MemoryPackOrder(2)] public bool HasCompletedFirstGrowth;
+    [MemoryPackOrder(3)] public List<CultivatorHarvestOutput> PendingHarvest;
+    [MemoryPackOrder(4)] public int YieldGeneVariantIndex = -1;
+    [MemoryPackOrder(5)] public uint Seed;
     #endregion
 }
 
-[Serializable, MemoryPackable]
+[Serializable, MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class CultivatorState
 {
     #region 机器快照
-    public InventoryInstanceSnapshot Seeds;
-    public InventoryInstanceSnapshot Harvest;
-    public InventoryInstanceSnapshot Fertilizer;
-    public List<CultivatorPlotState> Plots = new();
-    public float FertilizerSeconds;
-    public ulong RandomState;
+    [MemoryPackOrder(0)] public InventoryInstanceSnapshot Seeds;
+    [MemoryPackOrder(1)] public InventoryInstanceSnapshot Harvest;
+    [MemoryPackOrder(2)] public InventoryInstanceSnapshot Fertilizer;
+    [MemoryPackOrder(3)] public List<CultivatorPlotState> Plots = new();
+    [MemoryPackOrder(4)] public float FertilizerSeconds;
+    [MemoryPackOrder(5)] public ulong RandomState;
     #endregion
 }
 

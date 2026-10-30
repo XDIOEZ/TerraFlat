@@ -32,6 +32,7 @@ namespace FlatWorld.Networking.Gameplay
         private sealed class StateRecord
         {
             public string ItemId, WorldKey;
+            public uint RealmRevision;
             public uint Revision;
             public uint PoseRevision;
             public uint Hash;
@@ -72,6 +73,15 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         private readonly Dictionary<int, StateRecord> serverStates = new();
+        private sealed class ObserverItemBaseline
+        {
+            public uint Realm;
+            public readonly Dictionary<(string World, int Guid), Vector3> Positions = new();
+        }
+        private readonly Dictionary<NetworkConnectionToClient, ObserverItemBaseline> observerItemBaselines = new();
+        private readonly List<NetworkConnectionToClient> staleItemObservers = new();
+        private readonly List<(string World, int Guid)> staleObserverItems = new();
+        private readonly List<int> staleClientItems = new();
         private readonly Dictionary<int, StateRecord> clientStates = new();
         private readonly Dictionary<int, NetworkItemStateMessage> pendingClientStates = new();
         private readonly List<int> pendingStateKeys = new();
@@ -158,6 +168,7 @@ namespace FlatWorld.Networking.Gameplay
             ReleaseAllPickupReservations();
             serverHandlersRegistered = false;
             serverStates.Clear();
+            observerItemBaselines.Clear();
             ClearScheduledScan();
             UpdateRuntimeBridgeRegistration();
         }
@@ -176,9 +187,11 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkBuildingPlaceResponse>();
             NetworkClient.UnregisterHandler<NetworkBuildingDismantleResponse>();
             NetworkClient.UnregisterHandler<NetworkMechanicalNodeMessage>();
+            machineStateReplication.ResetClientSide();
             StopMachineClientBridge();
             StopTerrainClientBridge();
             clientHandlersRegistered = false;
+            DiscardClientNetworkReplicas();
             clientStates.Clear();
             pendingClientStates.Clear();
             pendingSpawnCandidates.Clear();
@@ -210,6 +223,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (requestedItemWorld != readyItemWorld || requestedItemRealm != readyRealmRevision)
                 {
+                    DiscardClientNetworkReplicas();
                     requestedItemWorld = readyItemWorld; requestedItemRealm = readyRealmRevision;
                     requestedInitialState = false;
                     clientStates.Clear(); pendingClientStates.Clear();
@@ -271,6 +285,15 @@ namespace FlatWorld.Networking.Gameplay
                 ProcessServerItem(items[i]);
         }
 
+        private void ScanServerItemsForChunk(string worldKey, Vector2Int origin)
+        {
+            if (ItemMgr.Instance == null || !GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world) || world.Chunks == null) return;
+            using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+            foreach (Item item in SnapshotRuntimeItems())
+                if (ShouldSynchronize(item) && GameplayWorldRegistry.GetItemWorldKey(item) == worldKey &&
+                    world.Chunks.ResolveRuntimeChunkOrigin(GetLogicalItemPosition(item)) == origin) ProcessServerItem(item);
+        }
+
         private void BeginScheduledScan()
         {
             if (ItemMgr.Instance == null)
@@ -305,6 +328,8 @@ namespace FlatWorld.Networking.Gameplay
 
             ClearScheduledScan();
             nextScanTime = Time.unscaledTime + ScanInterval;
+            if (NetworkServer.active) PruneObserverItemBaselines();
+            else if (clientHandlersRegistered) PruneClientItemBaselines();
         }
 
         private void ProcessServerItem(Item item)
@@ -380,9 +405,16 @@ namespace FlatWorld.Networking.Gameplay
         private void OnServerStateRequest(NetworkConnectionToClient connection, NetworkItemStateRequest request)
         {
             ScanServerItems();
+            NetworkWorldPlayer requestingPlayer = connection?.identity?.GetComponent<NetworkWorldPlayer>();
+            bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey);
+            int distance = Mathf.Max(4, requestingPlayer?.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true)?.CurrentDestroyChunkDistance ?? 4);
+            Vector2 observerPosition = requestingPlayer != null && requestingPlayer.TryGetSpaceObserver(out SpaceNetworkObserver surfaceObserver)
+                ? surfaceObserver.Position.LocalMeters.ToVector2() : Vector2.zero;
             foreach (KeyValuePair<int, StateRecord> pair in serverStates)
-                if (pair.Value.WorldKey == GameplayWorldRegistry.ExecutionWorldKey) connection.Send(CreateMessage(pair.Key, pair.Value));
-            if (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey))
+                if (pair.Value.WorldKey == GameplayWorldRegistry.ExecutionWorldKey && (localWorld ||
+                    IsChunkInsideObserverWindow(pair.Value.WorldKey, ChunkMgr.Instance.ResolveRuntimeChunkOrigin(pair.Value.Position), observerPosition, distance)))
+                    SendItemState(connection, pair.Key, pair.Value, spawnIfMissing: !localWorld);
+            if (localWorld)
             {
                 NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
                 if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true || observer.InSpace ||
@@ -391,6 +423,17 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
             machineStateReplication.SendBaseline(connection);
+        }
+
+        // 每次进入新区块补齐该块已存在的运行实体，状态版本继续沿用原增量通道。
+        private void SendPersistedChunkItemStates(NetworkConnectionToClient connection, string worldKey, Vector2Int origin)
+        {
+            if (connection?.identity == null || !GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world)) return;
+            using (GameplayWorldRegistry.UseWorld(worldKey))
+                foreach (KeyValuePair<int, StateRecord> pair in serverStates)
+                    if (pair.Value.WorldKey == worldKey && world.Chunks.ResolveRuntimeChunkOrigin(pair.Value.Position) == origin)
+                        SendItemState(connection, pair.Key, pair.Value, spawnIfMissing: true);
+            machineStateReplication.SendChunk(connection, worldKey, origin);
         }
 
 
@@ -407,19 +450,19 @@ namespace FlatWorld.Networking.Gameplay
             {
                 ScanServerItems();
                 if (serverStates.TryGetValue(submit.ItemGuid, out state))
-                    connection.Send(CreateMessage(submit.ItemGuid, state));
+                    SendItemState(connection, submit.ItemGuid, state);
                 return;
             }
 
             if (submit.BaseRevision != state.Revision)
             {
-                connection.Send(CreateMessage(submit.ItemGuid, state));
+                SendItemState(connection, submit.ItemGuid, state);
                 return;
             }
 
             if (!ItemNetworkStateSerialization.Apply(item, submit.Payload, true, true))
             {
-                connection.Send(CreateMessage(submit.ItemGuid, state));
+                SendItemState(connection, submit.ItemGuid, state);
                 return;
             }
 
@@ -442,19 +485,20 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnClientStateMessage(NetworkItemStateMessage message)
         {
-            if (!AcceptLocalWorld(message.WorldKey)) return;
+            if (!AcceptLocalWorld(message.WorldKey) || !AcceptLocalItemRealm(message.RealmRevision)) return;
             if (!ItemNetworkStateSerialization.IsValidPayload(message.Payload))
                 return;
 
             clientStates.TryGetValue(message.ItemGuid, out StateRecord known);
-            if (known != null && known.WorldKey != message.WorldKey) known = null;
+            if (known != null && (known.WorldKey != message.WorldKey || known.RealmRevision != message.RealmRevision)) known = null;
             if (known != null && message.Revision < known.Revision)
                 return;
-            if (known != null && known.Applied && !known.SubmissionPending && known.Revision == message.Revision &&
+            if (known != null && known.Applied && ItemMgr.Instance?.GetItemByGuid(message.ItemGuid) != null &&
+                !known.SubmissionPending && known.Revision == message.Revision &&
                 known.Hash == message.PayloadHash && known.ItemId == message.ItemId)
             {
                 OnClientPoseMessage(new NetworkItemPoseMessage { ItemGuid = message.ItemGuid, ItemId = message.ItemId,
-                    WorldKey = message.WorldKey, StateRevision = message.Revision, PoseRevision = message.PoseRevision,
+                    WorldKey = message.WorldKey, RealmRevision = message.RealmRevision, StateRevision = message.Revision, PoseRevision = message.PoseRevision,
                     Position = message.Position, Rotation = message.Rotation, Scale = message.Scale });
                 return;
             }
@@ -462,6 +506,7 @@ namespace FlatWorld.Networking.Gameplay
             StateRecord state = known ?? new StateRecord();
             state.ItemId = message.ItemId;
             state.WorldKey = message.WorldKey;
+            state.RealmRevision = message.RealmRevision;
             state.Applied = false;
             state.Revision = message.Revision;
             state.Hash = message.PayloadHash;
@@ -494,7 +539,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnClientDespawnMessage(NetworkItemDespawnMessage message)
         {
-            if (!AcceptLocalWorld(message.WorldKey)) return;
+            if (!AcceptLocalWorld(message.WorldKey) || !AcceptLocalItemRealm(message.RealmRevision)) return;
+            clientNetworkSpawned.Remove(message.ItemGuid);
             clientStates.Remove(message.ItemGuid);
             pendingClientStates.Remove(message.ItemGuid);
 
@@ -529,6 +575,9 @@ namespace FlatWorld.Networking.Gameplay
             for (int i = 0; i < pendingStateKeys.Count; i++)
             {
                 int guid = pendingStateKeys[i];
+                if (pendingClientStates.TryGetValue(guid, out NetworkItemStateMessage stale) &&
+                    !AcceptLocalItemRealm(stale.RealmRevision))
+                { pendingClientStates.Remove(guid); continue; }
                 if (pendingClientStates.TryGetValue(guid, out NetworkItemStateMessage message) &&
                     TryApplyClientState(message))
                 {
@@ -544,8 +593,10 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active)
                 return true;
 
-            if (!AcceptLocalWorld(message.WorldKey) || !GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return false;
+            if (!AcceptLocalWorld(message.WorldKey) || !AcceptLocalItemRealm(message.RealmRevision) ||
+                !GameplayWorldRegistry.TryGet(message.WorldKey, out _)) return false;
             using var scope = GameplayWorldRegistry.UseWorld(message.WorldKey);
+            if (!IsClientItemTerrainReady(message.WorldKey, message.Position)) return false;
             Item item = ItemMgr.Instance?.GetItemByGuid(message.ItemGuid);
             if (item != null && GameplayWorldRegistry.GetItemWorldKey(item) != message.WorldKey) return false;
             bool created = item == null && message.SpawnIfMissing;
@@ -580,6 +631,31 @@ namespace FlatWorld.Networking.Gameplay
                 SendToGroundObservers(CreateMessage(guid, state), state.WorldKey);
         }
 
+        private void SendItemState(NetworkConnectionToClient connection, int guid, StateRecord state, bool spawnIfMissing = false)
+        {
+            if (connection?.identity?.GetComponent<NetworkWorldPlayer>() is not NetworkWorldPlayer player || player.IsWorldTransferPending) return;
+            NetworkItemStateMessage message = CreateMessage(guid, state);
+            message.SpawnIfMissing |= spawnIfMissing;
+            message.RealmRevision = player.RealmRevision;
+            connection.Send(message);
+            GetObserverItemBaseline(connection, player).Positions[(state.WorldKey, guid)] = state.Position;
+        }
+
+        private static bool IsClientItemTerrainReady(string world, Vector3 position)
+        {
+            if (GameplayWorldRegistry.UsesLocalCoordinates(world)) return true;
+            ChunkMgr chunks = ChunkMgr.ExistingInstance;
+            if (chunks == null) return false;
+            var address = chunks.ResolveWorldAddress(position);
+            return chunks.TryGetChunkRuntime(address, out var chunk) && chunks.IsChunkStateRestoredForNetworking(chunk);
+        }
+
+        private static bool AcceptLocalItemRealm(uint realm)
+        {
+            NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
+            return player != null && !player.IsWorldTransferPending && player.RealmRevision == realm;
+        }
+
         private static bool AcceptLocalWorld(string worldKey)
         {
             Player player = ItemMgr.Instance?.User_Player;
@@ -587,27 +663,158 @@ namespace FlatWorld.Networking.Gameplay
             return !string.IsNullOrWhiteSpace(worldKey) && worldKey == ownedWorld;
         }
 
-        private static void SendToGroundObservers<T>(T message, string worldKey = null, bool observerWorld = false) where T : struct, NetworkMessage
+        private void SendToGroundObservers<T>(T message, string worldKey = null, bool observerWorld = false) where T : struct, NetworkMessage
         {
             worldKey ??= GameplayWorldRegistry.ExecutionWorldKey;
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                 if (connection != null && connection.isAuthenticated && connection.isReady &&
                     connection.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer observer)
                 {
+                    if (observer.IsWorldTransferPending && (message is NetworkItemStateMessage || message is NetworkItemPoseMessage ||
+                        message is NetworkItemSpawnMessage || message is NetworkItemDespawnMessage)) continue;
                     if (observerWorld)
                     {
                         if (observer.TryGetSpaceObserver(out SpaceNetworkObserver surface) && !surface.InSpace && surface.WorldKey == worldKey)
-                            connection.Send(message);
+                            SendMessageWithRealmRevision(connection, observer, message);
                         continue;
                     }
                     string ownedWorld = GameplayWorldRegistry.GetItemWorldKey(observer.CorePlayer);
                     if (string.IsNullOrEmpty(ownedWorld) && observer.TryGetSpaceObserver(out SpaceNetworkObserver realm) && !realm.InSpace)
                         ownedWorld = realm.WorldKey;
-                    if (ownedWorld == worldKey) connection.Send(message);
+                    if (ownedWorld != worldKey) continue;
+                    ObserverItemBaseline baseline = GetObserverItemBaseline(connection, observer);
+                    int guid;
+                    string itemId;
+                    Vector3 position;
+                    if (message is NetworkItemStateMessage state) { guid = state.ItemGuid; itemId = state.ItemId; position = state.Position; }
+                    else if (message is NetworkItemSpawnMessage spawn) { guid = spawn.ItemGuid; itemId = spawn.ItemId; position = spawn.Position; }
+                    else if (message is NetworkItemPoseMessage pose) { guid = pose.ItemGuid; itemId = pose.ItemId; position = pose.Position; }
+                    else if (message is NetworkItemDespawnMessage despawn)
+                    {
+                        if (baseline.Positions.Remove((worldKey, despawn.ItemGuid)))
+                            SendMessageWithRealmRevision(connection, observer, message);
+                        continue;
+                    }
+                    else { SendMessageWithRealmRevision(connection, observer, message); continue; }
+                    var key = (worldKey, guid);
+                    if (!IsPositionInsideObserverWindow(observer, worldKey, position))
+                    {
+                        if (baseline.Positions.Remove(key))
+                            SendMessageWithRealmRevision(connection, observer,
+                                new NetworkItemDespawnMessage { ItemGuid = guid, ItemId = itemId, WorldKey = worldKey });
+                        continue;
+                    }
+                    if (message is NetworkItemPoseMessage &&
+                        (!baseline.Positions.TryGetValue(key, out Vector3 previous) ||
+                         !IsPositionInsideObserverWindow(observer, worldKey, previous)))
+                    {
+                        if (serverStates.TryGetValue(guid, out StateRecord current)) SendItemState(connection, guid, current, spawnIfMissing: true);
+                        continue;
+                    }
+                    if (message is NetworkItemStateMessage initial && !baseline.Positions.ContainsKey(key) &&
+                        !GameplayWorldRegistry.UsesLocalCoordinates(worldKey))
+                    {
+                        initial.SpawnIfMissing = true;
+                        SendMessageWithRealmRevision(connection, observer, initial);
+                        baseline.Positions[key] = position;
+                        continue;
+                    }
+                    SendMessageWithRealmRevision(connection, observer, message);
+                    baseline.Positions[key] = position;
                 }
         }
 
-        private static void SendItemDespawn(int guid, string itemId, string worldKey)
+        private ObserverItemBaseline GetObserverItemBaseline(NetworkConnectionToClient connection, NetworkWorldPlayer player)
+        {
+            if (!observerItemBaselines.TryGetValue(connection, out ObserverItemBaseline baseline))
+                observerItemBaselines.Add(connection, baseline = new ObserverItemBaseline { Realm = player.RealmRevision });
+            if (baseline.Realm != player.RealmRevision)
+            { baseline.Realm = player.RealmRevision; baseline.Positions.Clear(); }
+            return baseline;
+        }
+
+        // 已离开视窗的实体不长期占用连接的已同步集合。
+        private void PruneObserverItemBaselines()
+        {
+            staleItemObservers.Clear();
+            foreach (var entry in observerItemBaselines)
+            {
+                NetworkConnectionToClient connection = entry.Key;
+                if (!NetworkServer.connections.TryGetValue(connection.connectionId, out var current) ||
+                    !ReferenceEquals(current, connection) || connection.identity?.GetComponent<NetworkWorldPlayer>() is not NetworkWorldPlayer player)
+                { staleItemObservers.Add(connection); continue; }
+                ObserverItemBaseline baseline = GetObserverItemBaseline(connection, player);
+                staleObserverItems.Clear();
+                foreach (var item in baseline.Positions)
+                    if (!IsPositionInsideObserverWindow(player, item.Key.World, item.Value)) staleObserverItems.Add(item.Key);
+                foreach (var key in staleObserverItems) baseline.Positions.Remove(key);
+            }
+            foreach (var connection in staleItemObservers) observerItemBaselines.Remove(connection);
+        }
+
+        private static bool IsPositionInsideObserverWindow(NetworkWorldPlayer player, string worldKey, Vector3 position)
+        {
+            if (GameplayWorldRegistry.UsesLocalCoordinates(worldKey))
+                return GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer) == worldKey;
+            if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) || observer.InSpace || observer.WorldKey != worldKey ||
+                !GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world) || world.Chunks == null) return false;
+            using var scope = GameplayWorldRegistry.UseWorld(worldKey);
+            int distance = Mathf.Max(4, player.CorePlayer?.GetComponentInChildren<Mod_ChunkLoader>(true)?.CurrentDestroyChunkDistance ?? 4);
+            return IsChunkInsideObserverWindow(worldKey, world.Chunks.ResolveRuntimeChunkOrigin(position),
+                observer.Position.LocalMeters.ToVector2(), distance);
+        }
+
+        private void PruneClientItemBaselines()
+        {
+            NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
+            if (player == null || player.IsWorldTransferPending ||
+                !NetworkGameplayWorldScope.TryGetReadyLocalItemWorld(out uint realm, out string localWorld)) return;
+            staleClientItems.Clear();
+            foreach (var pair in clientStates)
+                if (pair.Value.RealmRevision != realm ||
+                    !IsPositionInsideObserverWindow(player, pair.Value.WorldKey, pair.Value.Position))
+                    staleClientItems.Add(pair.Key);
+            foreach (int guid in staleClientItems)
+            {
+                if (clientNetworkSpawned.Contains(guid) && clientStates.TryGetValue(guid, out StateRecord state) &&
+                    state.RealmRevision == realm && state.WorldKey == localWorld)
+                    OnClientDespawnMessage(new NetworkItemDespawnMessage
+                    { ItemGuid = guid, ItemId = state.ItemId, WorldKey = state.WorldKey, RealmRevision = realm });
+                else { clientStates.Remove(guid); pendingClientStates.Remove(guid); }
+            }
+        }
+
+        // 切换世界代际前只回收网络创建的副本，本地所有权对象仍由原系统管理。
+        private void DiscardClientNetworkReplicas()
+        {
+            if (NetworkServer.active || ItemMgr.Instance == null) { clientNetworkSpawned.Clear(); return; }
+            staleClientItems.Clear();
+            staleClientItems.AddRange(clientNetworkSpawned);
+            foreach (int guid in staleClientItems)
+            {
+                if (!clientStates.TryGetValue(guid, out StateRecord state)) continue;
+                Item item = ItemMgr.Instance.GetItemByGuid(guid);
+                if (item == null || item.itemData?.IDName != state.ItemId ||
+                    GameplayWorldRegistry.GetItemWorldKey(item) != state.WorldKey ||
+                    item.PersistenceOwner is SpaceSession or ChunkAgricultureRenderer) continue;
+                using var scope = GameplayWorldRegistry.TryGet(state.WorldKey, out _)
+                    ? GameplayWorldRegistry.UseWorld(state.WorldKey) : default;
+                ItemMgr.Instance.DespawnItem(item, saveData: false);
+            }
+            clientNetworkSpawned.Clear();
+        }
+
+        private static void SendMessageWithRealmRevision<T>(NetworkConnectionToClient connection, NetworkWorldPlayer player, T message)
+            where T : struct, NetworkMessage
+        {
+            if (message is NetworkItemStateMessage state) { state.RealmRevision = player.RealmRevision; connection.Send(state); }
+            else if (message is NetworkItemPoseMessage pose) { pose.RealmRevision = player.RealmRevision; connection.Send(pose); }
+            else if (message is NetworkItemSpawnMessage spawn) { spawn.RealmRevision = player.RealmRevision; connection.Send(spawn); }
+            else if (message is NetworkItemDespawnMessage despawn) { despawn.RealmRevision = player.RealmRevision; connection.Send(despawn); }
+            else connection.Send(message);
+        }
+
+        private void SendItemDespawn(int guid, string itemId, string worldKey)
         {
             if (string.IsNullOrEmpty(worldKey)) return;
             SendToGroundObservers(new NetworkItemDespawnMessage { ItemGuid = guid, ItemId = itemId, WorldKey = worldKey }, worldKey);

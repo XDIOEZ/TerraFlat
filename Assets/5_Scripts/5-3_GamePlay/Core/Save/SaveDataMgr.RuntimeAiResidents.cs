@@ -259,6 +259,7 @@ public partial class SaveDataMgr
     {
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
+        MarkChunkDifferenceChanged(key);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
         {
             record = new ChunkSaveRecord
@@ -768,6 +769,7 @@ public partial class SaveDataMgr
         string planetName = GameplayWorldRegistry.ExecutionWorldKey;
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
+        MarkChunkDifferenceChanged(key);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
         {
             record = new ChunkSaveRecord
@@ -786,6 +788,7 @@ public partial class SaveDataMgr
     private void RemoveRuntimeAiRecord(RuntimeWorldAddress address, int guid)
     {
         string key = BuildChunkKey(GameplayWorldRegistry.ExecutionWorldKey, ToChunkName(address));
+        MarkChunkDifferenceChanged(key);
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record?.ChangedItems == null)
             return;
         record.ChangedItems.RemoveAll(data => data != null && data.Guid == guid);
