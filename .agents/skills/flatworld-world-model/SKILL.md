@@ -45,6 +45,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 大矿山示例为 `Mine_Stone_Large`，覆盖半径包含贴图和受击范围而非仅阻挡框；资源目录校验器验证三者一致。纯规则 `ecology/shared_resources`；编辑器外回归 `python Tools/Tests/SharedNaturalResources/verify.py`，只在 Temp 中移除原生 Profiler 初始化，不能替代真实 Unity 碰撞/保存回归。
 
 - 单人和联机多观察者共用 `ChunkMgr.RefreshRuntimeWindows`，观察者请求经纯模型 `RefreshWindows` 合并模拟/表现/保留需求；本机蒙版、就绪等待与导航仍只跟随本机角色。
+- `ChunkWindowCoverage` 按观察者矩形进出边界维护引用计数，环绕别名合并；生成配置、种子、维度或拓扑变化重建。提交事件和新窗口只把相关地址放入恢复待办，稳定区块不逐帧扫描；表现队列每帧批量排序，基础地形优先并按轮次/距离续步。
 
 - 模拟圈、完整表现预加载圈、数据保留圈分别维护；就绪只检查活动圈，关闭释放全部表现需求。Mod_ChunkLoader 按玩家持久化加载距离提交窗口，相机缩放不改距离；距离 d 包含中心块，窗口边长是 (2d-1) 个区块。
 - ChunkMgr.TryGetRuntimeWindowBounds 默认读取已提交窗口，usePresentedBounds 选择 ChunkWindowPresentationTransition 的平滑表现窗；正式目标不延迟，云雾和旧 View 回收共用同一状态。边界按实际 Profile 宽高，队列 retarget 不提前移动目标；Mod_ChunkLoader 对外整体投影本地镜像，表现消费者不得反向改流送。
@@ -56,6 +57,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 差量在基础绑定前恢复，同一 Runtime 不因窗口刷新重复恢复。外圈预取只等待可见数据/基础地形，不等全部后续表现。
 - `WorldManager.prefab` 序列化提交/基础/后续预算覆盖源码默认值。GM 可调数量与毫秒上限；`StreamingDiagnostics` 分开记录排队、生成、提交、恢复、renderer 步骤与等待，读取诊断不推进世界。
 - 水文缓存键包含 Epoch、维度、种子、配置和稳定 Region。同组只算一次；单 Chunk 取消不终止仍有需求的共享河网，全部需求消失/世界结束才取消。Region/Halo 只扩大采样，结果只提交核心区域；世界退出清水文/海洋距离降水/海洋水源区块/火山缓存。
+- 正式生成与邻区预热共用 `ChunkGenerationScheduler` 并发额度，正式需求优先；来源离开数据窗口或世界结束会撤销其预热需求，不能另起 `Task.Run` 绕过调度。宏观高度按真实高度输入共享有界采样，仅完整区域成功后发布，纪元结束清理；诊断看 `river.macro.height_computes/height_shared_hits`。
 - 出生搜索、正式流送和联机生态冻结共用 `ChunkMgr.PrepareActiveGenerationSnapshot`，统一尺寸、空间倍率、运行时覆盖和保存配置；出生只检查可走地形/液深，不生成完整生态。`WorldAirHumidityField` 只读差量恢复后的 Ready 区块，依 Terrain/LiquidRevision/Epoch 失效，缺影响邻区返回 false，不触发生成。
 - 最终生成配置由 `WorldGenerationProfileCache` 复用，世界/种子/资源代际、实例覆盖与冻结规则变化失效；有 Profile Hook 时绕过。洞穴配对与冷地表共用失效条件，性能分看 `FreezeProfile/RefreshWindows`；离线回归 `Tools/Tests/WorldGenerationProfileCaching/`。
 - `WorldGenerationRuntimeHooks` 的 Profile Hook 在主线程冻结参数；`WorldModelTerrainDecorator` 在生成器创建时捕获委托，正式流送与出生查询共用。地形回调只能读请求中的冻结值并修改纯地形缓冲，不访问 Unity 对象或当前单例；测试平地等临时规则由订阅者退出时撤销。
@@ -68,7 +70,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，视觉层不保留物理 Tilemap；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
 - `ChunkGroundMeshRenderer` 的 Vertex/GPU Cell 托管数组按纹理批次从 ArrayPool 借用并在 Dispose 归还；每次租借清空本次有效范围。**索引格式、GPU 上传和包围盒扫描必须使用真实 `vertexCount/cellCount`，不得使用池数组的 `Length`**。构造或字典登记失败要释放已创建 Mesh/Buffer/材质和数组，单组释放异常不得阻断其它组回收；复测对比 `FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.{CellArray,VertexArray}` 的耗时与 GC。
 - 玩家/GO AI 用 SpriteRenderer 与行网格同 Player Layer/Order；行中心排序有半格近似，真实脚点仍用于几何/遮挡。草/花/阴影 BRG 只能在自身排序域排序。
-- 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；提交确认后登记缓存，解绑清自身整个图层并合并删除。`IRecoverableChunkViewRenderer` 在窗口刷新核对权威数据和真实实例，Owner 重建从权威数据恢复，不用旧可见缓存。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
+- 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；提交确认后登记缓存，解绑清自身整个图层并合并删除。`IRecoverableChunkViewRenderer` 从资源失效待办核对权威数据和真实实例，暂不可用时跨帧重试；Owner 重建读取权威数据，不用旧可见缓存。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
 - 世界 Fire 是独立玩法层，表现走 Y 行网格/GPU 图集翻帧；实体燃烧不写火格。地面积雪走地形光照 Mesh，墙冠用独立 Y 行网格，二者低于 Player。
 - `ChunkNaturalItemRenderer` 从所属 View 找 Owner，GUID/部件号标主体，太阳阴影用独立负槽；共用 `WorldEntityRuntime`。解绑先保存并撤表现/导航，最后释放世界。
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。

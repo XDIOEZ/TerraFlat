@@ -36,9 +36,10 @@ namespace FlatWorld.WorldModel
             CancellationToken cancellationToken, ChunkGenerationTiming timing)
         {
             MacroHydrologyRegion macro = hydrologyRegions.GetOrGenerateRegion(request, settings,
-                cancellationToken, timing);
+                cancellationToken, timing, ChunkGenerationScheduler.IsExecutingScheduledChunkGeneration);
             if (!isBiomeSearchGenerator)
-                hydrologyRegions.QueueNeighbourPrewarm(request, settings, ResolveHeightDrivenRegion(request, settings));
+                hydrologyRegions.QueueNeighbourPrewarm(request, settings, ResolveHeightDrivenRegion(request, settings),
+                    cancellationToken);
             // 邻区宿主查询复用外层请求诊断，父子细化阶段统一累计而非互相覆盖。
             using ((timing ?? ChunkGenerationTiming.CurrentOnThread)?.MeasureStage(
                        "river.local_refine", accumulate: true) ?? default)

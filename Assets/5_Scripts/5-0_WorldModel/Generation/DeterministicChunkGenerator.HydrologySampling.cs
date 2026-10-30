@@ -244,12 +244,15 @@ namespace FlatWorld.WorldModel
             private readonly Dictionary<Int2, double> heightCache = new();
             private readonly Dictionary<Int2, double> precipitationCache = new();
             private readonly Dictionary<Int2, double> channelCenterBiasCache = new();
+            private readonly SharedHydrologyHeightSamplingCache.Partition sharedHeightPartition;
+            private readonly List<KeyValuePair<Int2, double>> newSharedHeightSamples;
             private readonly bool measureSampling;
 
             /// <summary>仅统计缓存未命中时的真实高度计算。</summary>
             public long HeightComputeTicks { get; private set; }
             public long HeightMissCount { get; private set; }
             public long HeightHitCount { get; private set; }
+            public long HeightSharedHitCount { get; private set; }
             public long ChannelCenterBiasHitCount { get; private set; }
             public long ChannelCenterBiasMissCount { get; private set; }
 
@@ -257,10 +260,20 @@ namespace FlatWorld.WorldModel
             public HydrologySamplingContext(
                 ChunkGenerationRequest request,
                 ChunkGenerationSettingsSnapshot settings)
+                : this(request, settings, null)
+            {
+            }
+
+            public HydrologySamplingContext(
+                ChunkGenerationRequest request,
+                ChunkGenerationSettingsSnapshot settings,
+                SharedHydrologyHeightSamplingCache sharedHeightSamples)
             {
                 Request = request;
                 Settings = settings;
                 measureSampling = ChunkGenerationTiming.CurrentOnThread != null;
+                sharedHeightPartition = sharedHeightSamples?.GetPartition(request, settings);
+                if (sharedHeightPartition != null) newSharedHeightSamples = new List<KeyValuePair<Int2, double>>();
             }
 
             public ChunkGenerationRequest Request { get; }
@@ -288,17 +301,32 @@ namespace FlatWorld.WorldModel
             {
                 if (!heightCache.TryGetValue(position, out double value))
                 {
-                    long started = measureSampling ? Stopwatch.GetTimestamp() : 0;
-                    value = SampleHeight(Request, Settings, position.X, position.Y);
-                    heightCache.Add(position, value);
-                    if (measureSampling)
+                    if (sharedHeightPartition != null && sharedHeightPartition.TryGetValue(position, out value))
                     {
-                        HeightComputeTicks += Stopwatch.GetTimestamp() - started;
-                        HeightMissCount++;
+                        if (measureSampling) HeightSharedHitCount++;
                     }
+                    else
+                    {
+                        long started = measureSampling ? Stopwatch.GetTimestamp() : 0;
+                        value = SampleHeight(Request, Settings, position.X, position.Y);
+                        if (measureSampling)
+                        {
+                            HeightComputeTicks += Stopwatch.GetTimestamp() - started;
+                            HeightMissCount++;
+                        }
+                        newSharedHeightSamples?.Add(new KeyValuePair<Int2, double>(position, value));
+                    }
+                    heightCache.Add(position, value);
                 }
                 else if (measureSampling) HeightHitCount++;
                 return value;
+            }
+
+            // 取消或异常前的局部结果不进入跨区域缓存。
+            public void PublishCompletedHeightSamples(CancellationToken cancellationToken)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                sharedHeightPartition?.PublishCompletedSamples(newSharedHeightSamples, cancellationToken);
             }
 
             /// <summary>河源只读取第一层海洋距离降水，不反馈最终河湖影响。</summary>

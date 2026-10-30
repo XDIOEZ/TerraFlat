@@ -63,9 +63,10 @@ namespace FlatWorld.WorldModel
 
         // 恢复旧版每组一个河源，海洋距离降水只计算河源水量，不参与湖盆蒸发闭环。
         private static MacroHydrologyRegion BuildMacroHydrologyRegion(ChunkGenerationRequest request,
-            ChunkGenerationSettingsSnapshot settings, CancellationToken cancellationToken)
+            ChunkGenerationSettingsSnapshot settings, CancellationToken cancellationToken,
+            SharedHydrologyHeightSamplingCache sharedHeightSamples)
         {
-            var sampling = new HydrologySamplingContext(request, settings);
+            var sampling = new HydrologySamplingContext(request, settings, sharedHeightSamples);
             var lattice = new RunoffLattice(request, settings.RiverRunoffCellSize);
             int maxSteps = Math.Max(1, (int)Math.Ceiling(
                 settings.RiverMaxTraceSteps / Math.Min(lattice.StepX, lattice.StepY)));
@@ -200,6 +201,11 @@ namespace FlatWorld.WorldModel
             };
             // 区域发布后不再改变主支流关系，所有区块复用同一份确定性选择。
             region.PrimaryUpstream = ResolvePrimaryUpstream(region);
+            sampling.PublishCompletedHeightSamples(cancellationToken);
+            ChunkGenerationTiming timing = ChunkGenerationTiming.CurrentOnThread;
+            timing?.RecordStageCount("river.macro.height_computes", sampling.HeightMissCount, accumulate: true);
+            timing?.RecordStageCount("river.macro.height_shared_hits", sampling.HeightSharedHitCount, accumulate: true);
+            timing?.RecordStageCount("river.macro.height_local_hits", sampling.HeightHitCount, accumulate: true);
             return region;
         }
 

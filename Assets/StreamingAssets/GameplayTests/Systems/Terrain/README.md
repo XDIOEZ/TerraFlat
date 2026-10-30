@@ -1,5 +1,7 @@
 # 地形纯规则回归
 
+宏观水文区域现在按真实高度输入共享有界基础采样；仅区域完整成功后发布，取消和旧纪元不能留下迟到结果。`shared_hydrology_height_sampling` 覆盖输入隔离、容量、并发和完整生成哈希；独立生产代码回归见 `Tools/Tests/SharedHydrologyHeightSampling/`。
+
 - 2026-10-28：`petroleum_land_basins` 增加同一生成器按相反区块顺序重访、切换世界纪元后的逐格输出比较，覆盖油池、油池与岩浆并存及环绕世界。新增断言仅静态编写，未编译或执行；输出相同不能证明缓存命中或缓存已清空。
 
 - `petroleum_land_basins` 调用正式生成器，检查独立陆地油池的真实液量、保留底材与天然底床，覆盖负坐标、分块一致、环绕接缝、零下不冻结、禁用生成、海洋和岩浆优先级。离线入口为 `Tools/Tests/PetroleumTerrain/verify.py`；它编译当前 WorldModel 和同一探针，不进入 Unity，不能代替真实抽取、材质画面或 PlayMode Lua 验收。

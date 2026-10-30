@@ -444,7 +444,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceTool.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/MapMaker/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationStages.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationStages.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SharedHydrologyHeightSampling.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [
@@ -1120,7 +1121,10 @@
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.FixedPhysicsGeometry.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MapGenerationPlan.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationProfileCache.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs"
+        "Assets/5_Scripts/5-3_GamePlay/World/Map/WorldGenerationRuntimeHooks.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.IncrementalWindow.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.BackgroundGenerationScheduling.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestChunkStreamingOptimizationRuntimeProbe.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [

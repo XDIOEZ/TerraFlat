@@ -24,7 +24,19 @@ def main():
     text = response.read_text(encoding="utf-8-sig")
     snapshots = {}
     if args.revision:
-        sources = re.findall(r'^"([^"\r\n]+\.cs)"\r?$', text, re.M)
+        listed_sources = re.findall(r'^"([^"\r\n]+\.cs)"\r?$', text, re.M)
+        revision_sources = subprocess.check_output(
+            ["git", "ls-tree", "-r", "--name-only", args.revision, "--", "Assets/5_Scripts/5-0_WorldModel"],
+            cwd=ROOT, text=True).splitlines()
+        revision_sources = [source for source in revision_sources if source.endswith(".cs")]
+        sources = [source for source in listed_sources if not source.startswith("Assets/5_Scripts/5-0_WorldModel/")]
+        sources += revision_sources
+        for source in listed_sources:
+            if source not in sources:
+                text = text.replace(f'"{source}"', "")
+        for source in sources:
+            if source not in listed_sources:
+                text += f'\n"{source}"\n'
         source_requests = "".join(f"{args.revision}:{source}\n" for source in sources).encode()
         objects = subprocess.run(["git", "cat-file", "--batch"], input=source_requests,
                                  cwd=ROOT, stdout=subprocess.PIPE, check=True).stdout
@@ -41,6 +53,13 @@ def main():
             cursor = header_end + 1 + size + 1
             snapshots[source] = snapshot
             text = text.replace(f'"{source}"', f'"{snapshot.as_posix()}"')
+    else:
+        # Bee 响应在下次 Unity 编译前不含新脚本，当前验证补齐纯模型目录的生产源码。
+        known_sources = set(re.findall(r'^"([^"\r\n]+\.cs)"\r?$', text, re.M))
+        for source in sorted((ROOT / "Assets/5_Scripts/5-0_WorldModel").rglob("*.cs")):
+            relative = source.relative_to(ROOT).as_posix()
+            if relative not in known_sources:
+                text += f'\n"{relative}"\n'
     references = [Path(p) if Path(p).is_absolute() else ROOT / p for p in re.findall(r'^-r:"([^"]+)"', text, re.M)]
     engine = next(p for p in references if p.name == "UnityEngine.CoreModule.dll")
     editor_data = engine.parents[2]
@@ -66,6 +85,7 @@ def main():
     paths = [output / "FlatWorld.WorldModel.dll", engine]
     paths += [ROOT / "Library/ScriptAssemblies" / f"{name}.dll" for name in
               ("FlatWorld.WorldTopology", "Unity.Mathematics", "Unity.Burst", "Unity.Collections")]
+    paths += [path for path in references if path.name == "MemoryPack.Core.dll"]
     for path in paths:
         ET.SubElement(ET.SubElement(group, "Reference", Include=path.stem), "HintPath").text = str(path)
     project_path = output / "HydrologyRaster.Tests.csproj"

@@ -731,4 +731,11 @@ namespace FlatWorld.WorldModel
         /// <summary>返回仍需独占准备的共享生成资源；资源已就绪或没有共享资源时返回 null。</summary>
         object GetPendingGenerationGroupKey(ChunkGenerationRequest request);
     }
+
+    /// <summary>让生成器的独立查询复用所属区块调度器的预热额度。</summary>
+    internal interface IChunkGenerationPrewarmSchedulerBinding
+    {
+        void BindChunkGenerationPrewarmScheduler(ChunkGenerationScheduler scheduler);
+        void UnbindChunkGenerationPrewarmScheduler(ChunkGenerationScheduler scheduler);
+    }
 }

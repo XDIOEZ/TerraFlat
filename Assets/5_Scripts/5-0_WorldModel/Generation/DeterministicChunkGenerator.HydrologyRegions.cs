@@ -3,16 +3,21 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
 namespace FlatWorld.WorldModel
 {
-    public sealed partial class DeterministicChunkGenerator
+    public sealed partial class DeterministicChunkGenerator : IChunkGenerationPrewarmSchedulerBinding
     {
         #region 水文区域缓存所有权
 
         private readonly HeightDrivenHydrologyRegionCache hydrologyRegions = new();
         internal int CachedHeightDrivenRegionCount => hydrologyRegions.Count;
+
+        void IChunkGenerationPrewarmSchedulerBinding.BindChunkGenerationPrewarmScheduler(
+            ChunkGenerationScheduler scheduler) => hydrologyRegions.BindScheduler(scheduler);
+
+        void IChunkGenerationPrewarmSchedulerBinding.UnbindChunkGenerationPrewarmScheduler(
+            ChunkGenerationScheduler scheduler) => hydrologyRegions.UnbindScheduler(scheduler);
 
         // 区域缓存独占纪元取消、共享 Lazy 和有界淘汰，查询只借已完成的结果。
         private sealed class HeightDrivenHydrologyRegionCache
@@ -20,6 +25,8 @@ namespace FlatWorld.WorldModel
             private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<MacroHydrologyRegion>>
                 heightDrivenRegionCache = new();
             private readonly ConcurrentQueue<HeightDrivenRegionKey> heightDrivenCacheOrder = new();
+            internal readonly SharedHydrologyHeightSamplingCache sharedHeightSamples = new();
+            private ChunkGenerationScheduler prewarmScheduler;
             private CancellationTokenSource sharedHydrologyCancellation = new();
             private long retiredWorldEpoch = long.MinValue;
 
@@ -27,12 +34,19 @@ namespace FlatWorld.WorldModel
             internal long RetiredEpoch => Volatile.Read(ref retiredWorldEpoch);
             internal CancellationToken LifetimeToken => sharedHydrologyCancellation.Token;
 
+            internal void BindScheduler(ChunkGenerationScheduler scheduler) =>
+                Interlocked.Exchange(ref prewarmScheduler, scheduler);
+
+            internal void UnbindScheduler(ChunkGenerationScheduler scheduler) =>
+                Interlocked.CompareExchange(ref prewarmScheduler, null, scheduler);
+
             internal void RetireWorld(long epoch)
             {
                 Volatile.Write(ref retiredWorldEpoch, epoch);
                 CancellationTokenSource previous = Interlocked.Exchange(ref sharedHydrologyCancellation,
                     new CancellationTokenSource());
                 previous.Cancel();
+                sharedHeightSamples.RetireWorld(epoch);
                 heightDrivenRegionCache.Clear();
                 while (heightDrivenCacheOrder.TryDequeue(out _)) { }
             }
@@ -65,7 +79,7 @@ namespace FlatWorld.WorldModel
             /// <summary>河流定位和正式区块生成共享宏观河网入口。</summary>
             internal MacroHydrologyRegion GetOrGenerateRegion(ChunkGenerationRequest request,
                 ChunkGenerationSettingsSnapshot settings, CancellationToken cancellationToken,
-                ChunkGenerationTiming timing = null)
+                ChunkGenerationTiming timing = null, bool cancelSharedWorkWithRequest = false)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
@@ -75,7 +89,8 @@ namespace FlatWorld.WorldModel
                 if (!heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> shared))
                 {
                     Lazy<MacroHydrologyRegion> candidate = CreateRegionCandidate(request, settings, region,
-                        sharedHydrologyCancellation.Token);
+                        sharedHydrologyCancellation.Token,
+                        cancelSharedWorkWithRequest ? cancellationToken : default);
                     shared = heightDrivenRegionCache.GetOrAdd(key, candidate);
                     if (ReferenceEquals(shared, candidate))
                     {
@@ -97,47 +112,51 @@ namespace FlatWorld.WorldModel
                 }
                 catch
                 {
-                    if (!shared.IsValueCreated &&
-                        heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> failed) &&
-                        ReferenceEquals(failed, shared))
-                        heightDrivenRegionCache.TryRemove(key, out _);
+                    if (!shared.IsValueCreated || request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+                        ((ICollection<KeyValuePair<HeightDrivenRegionKey, Lazy<MacroHydrologyRegion>>>)
+                            heightDrivenRegionCache).Remove(new KeyValuePair<HeightDrivenRegionKey,
+                                Lazy<MacroHydrologyRegion>>(key, shared));
                     throw;
                 }
             }
 
             // 闭包只在冷路径工厂创建，热命中不为捕获方法参数生成显示类。
-            private static Lazy<MacroHydrologyRegion> CreateRegionCandidate(ChunkGenerationRequest request,
-                ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region, CancellationToken token) =>
+            private Lazy<MacroHydrologyRegion> CreateRegionCandidate(ChunkGenerationRequest request,
+                ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region,
+                CancellationToken lifetime, CancellationToken demand) =>
                 new(() =>
                 {
+                    if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
+                        throw new OperationCanceledException("旧世界的水文请求已经失效。");
+                    using var linked = CancellationTokenSource.CreateLinkedTokenSource(lifetime, demand);
                     using (ChunkGenerationTiming.CurrentOnThread?.MeasureStage("river.macro_compute") ?? default)
-                        return BuildMacroHydrologyRegion(CreateHeightDrivenRegionRequest(request, region), settings, token);
+                        return BuildMacroHydrologyRegion(CreateHeightDrivenRegionRequest(request, region),
+                            settings, linked.Token, sharedHeightSamples);
                 }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             /// <summary>只在靠近区域边界时预热相邻低分辨率图，后台任务共享世界纪元取消。</summary>
             internal void QueueNeighbourPrewarm(ChunkGenerationRequest request,
-                ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region)
+                ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region,
+                CancellationToken cancellationToken)
             {
                 int x = request.Address.ChunkOrigin.X;
                 int y = request.Address.ChunkOrigin.Y;
                 int distance = Math.Max(request.Profile.Width, request.Profile.Height);
                 if (x - region.Origin.X <= distance)
-                    TryQueueHydrologyPrewarm(request, settings, region, -1, 0);
+                    TryQueueHydrologyPrewarm(request, settings, region, -1, 0, cancellationToken);
                 if (region.Origin.X + region.Width - x - request.Profile.Width <= distance)
-                    TryQueueHydrologyPrewarm(request, settings, region, 1, 0);
+                    TryQueueHydrologyPrewarm(request, settings, region, 1, 0, cancellationToken);
                 if (y - region.Origin.Y <= distance)
-                    TryQueueHydrologyPrewarm(request, settings, region, 0, -1);
+                    TryQueueHydrologyPrewarm(request, settings, region, 0, -1, cancellationToken);
                 if (region.Origin.Y + region.Height - y - request.Profile.Height <= distance)
-                    TryQueueHydrologyPrewarm(request, settings, region, 0, 1);
+                    TryQueueHydrologyPrewarm(request, settings, region, 0, 1, cancellationToken);
             }
 
             private void TryQueueHydrologyPrewarm(ChunkGenerationRequest request,
                 ChunkGenerationSettingsSnapshot settings, HeightDrivenRegionDescriptor region,
-                int offsetX, int offsetY)
+                int offsetX, int offsetY, CancellationToken cancellationToken)
             {
                 if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch)) return;
-                if (heightDrivenRegionCache.Count >= settings.RiverMaxCachedRegions)
-                    return;
                 int nextX = request.Topology.NormalizeX(region.Origin.X + offsetX *
                     settings.RiverHydrologyRegionSize);
                 int nextY = request.Topology.NormalizeY(region.Origin.Y + offsetY *
@@ -147,28 +166,17 @@ namespace FlatWorld.WorldModel
                     request.WorldSeed, request.RequestVersion, request.Profile, request.Topology);
                 HeightDrivenRegionDescriptor adjacent = ResolveHeightDrivenRegion(adjacentRequest, settings);
                 HeightDrivenRegionKey key = CreateHeightDrivenRegionKey(adjacentRequest, adjacent);
-                if (heightDrivenRegionCache.ContainsKey(key)) return;
-                CancellationToken token = sharedHydrologyCancellation.Token;
-                var candidate = new Lazy<MacroHydrologyRegion>(() =>
-                {
-                    if (request.WorldEpoch <= Volatile.Read(ref retiredWorldEpoch))
-                        throw new OperationCanceledException("旧世界的水文预热已经失效。");
-                    return BuildMacroHydrologyRegion(
-                        CreateHeightDrivenRegionRequest(adjacentRequest, adjacent), settings, token);
-                },
-                    LazyThreadSafetyMode.ExecutionAndPublication);
-                if (!heightDrivenRegionCache.TryAdd(key, candidate)) return;
-                heightDrivenCacheOrder.Enqueue(key);
-                _ = Task.Run(() =>
-                {
-                    try { _ = candidate.Value; }
-                    catch
-                    {
-                        if (heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> current) &&
-                            ReferenceEquals(current, candidate))
-                            heightDrivenRegionCache.TryRemove(key, out _);
-                    }
-                });
+                if (heightDrivenRegionCache.TryGetValue(key, out Lazy<MacroHydrologyRegion> cached) &&
+                    cached.IsValueCreated) return;
+                bool allowNewWork = heightDrivenRegionCache.Count < settings.RiverMaxCachedRegions;
+                CancellationToken lifetime = sharedHydrologyCancellation.Token;
+                Action<CancellationToken> execute = token => GetOrGenerateRegion(
+                    adjacentRequest, settings, token, cancelSharedWorkWithRequest: true);
+                if (ChunkGenerationScheduler.IsExecutingScheduledChunkGeneration)
+                    ChunkGenerationScheduler.TryQueuePrewarmForCurrentGeneration(key, lifetime, execute, allowNewWork);
+                else
+                    Volatile.Read(ref prewarmScheduler)?.QueuePrewarmForGenerationDemand(
+                        key, lifetime, request.Address, cancellationToken, false, execute, allowNewWork);
             }
             /// <summary>把缓存限制在配置上限内，优先移除最早加入的区域。</summary>
             private void TrimHeightDrivenRegionCache(int maximumRegions)

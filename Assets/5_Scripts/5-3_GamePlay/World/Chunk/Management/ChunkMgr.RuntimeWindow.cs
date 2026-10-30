@@ -31,11 +31,34 @@ public partial class ChunkMgr
         public bool WantsPresentation;
         public bool PresentationQueued;
         public bool PresentationInProgress;
+        public long PresentationContinuationRound;
         public IEnumerator PresentationRoutine;
         // 诊断时间线：不影响排序或帧预算，重复窗口检查不能重置队龄。
         public long DiagnosticQueuedAt;
         public int DiagnosticPauseRevision;
         public bool DiagnosticBaseReported;
+    }
+
+    // 将距离和基础地形状态冻结到当前帧批次，避免每取一项重扫整个队列。
+    internal readonly struct RuntimePresentationBatchEntry
+    {
+        public RuntimePresentationBatchEntry(RuntimeWorldAddress address, float distance, bool needsBase, long round, int order)
+        {
+            Address = address; Distance = distance; NeedsBase = needsBase; Round = round; Order = order;
+        }
+        public RuntimeWorldAddress Address { get; }
+        public float Distance { get; }
+        public bool NeedsBase { get; }
+        public long Round { get; }
+        public int Order { get; }
+        public static int CompareForStack(RuntimePresentationBatchEntry a, RuntimePresentationBatchEntry b)
+        {
+            if (a.NeedsBase != b.NeedsBase) return a.NeedsBase ? 1 : -1;
+            int round = b.Round.CompareTo(a.Round);
+            if (round != 0) return round;
+            int distance = b.Distance.CompareTo(a.Distance);
+            return distance != 0 ? distance : b.Order.CompareTo(a.Order);
+        }
     }
 
     /// <summary>记录 ChunkView 的入池时刻与资源裁剪状态。</summary>
@@ -113,13 +136,27 @@ public partial class ChunkMgr
     private readonly Dictionary<RuntimeWorldAddress, RuntimeChunkBinding> activeRuntimeBindings = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeWindowTargets = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeReadyTargets = new();
+    private readonly HashSet<RuntimeWorldAddress> runtimeStateTransferTargets = new();
+    private readonly ChunkWindowCoverage runtimeWindowCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Data);
+    private readonly ChunkWindowCoverage runtimeReadyCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Active);
+    private readonly ChunkWindowCoverage runtimePrefetchCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Data);
+    private readonly ChunkWindowCoverage runtimePresentationInterestCoverage = new(new UnityWorldAddressNormalizer(), 1 << (int)ChunkWindowCoverage.Layer.Data);
+    private readonly List<ChunkWindowRequest> runtimePrefetchWindows = new();
+    private readonly HashSet<RuntimeWorldAddress> runtimeBindingReconciliationPending = new();
+    private readonly List<RuntimeWorldAddress> runtimeBindingReconciliationBatch = new();
+    private readonly HashSet<RuntimeWorldAddress> runtimePresentationBackendRepairPending = new();
+    private readonly List<RuntimeWorldAddress> runtimePresentationBackendRepairBatch = new();
+    private long runtimeBindingReconciliationAttempts;
+    private bool runtimePresentationBackendsInvalidated;
     private readonly HashSet<RuntimeWorldAddress> retiringRuntimeBindings = new();
     private readonly List<RuntimeWorldAddress> runtimeWindowRemovalBuffer = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationQueue = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationContinuationQueue = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationRescheduleBuffer = new();
+    private readonly List<RuntimePresentationBatchEntry> runtimePresentationSortBuffer = new();
     private readonly Queue<RuntimePrefetchRequest> runtimePrefetchQueue = new();
     private readonly HashSet<RuntimeWorldAddress> runtimePrefetchTargets = new();
+    private readonly HashSet<RuntimeWorldAddress> runtimePrefetchQueuedAddresses = new();
     private readonly List<RuntimePrefetchRequest> runtimePrefetchSortBuffer = new();
     private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
     private float nextChunkViewPoolMaintenanceAt;
@@ -136,6 +173,8 @@ public partial class ChunkMgr
     private Vector2Int runtimePresentationInterestOrigin;
     private Vector2Int runtimePresentationInterestDistance;
     private string runtimePresentationInterestDimensionId;
+    private int runtimePresentationInterestSeed;
+    private ChunkGenerationTopologySnapshot runtimePresentationInterestTopology;
     private Coroutine runtimePresentationCoroutine;
     private int runtimePresentationInProgressCount;
     private Coroutine runtimePrefetchCoroutine;
@@ -144,6 +183,12 @@ public partial class ChunkMgr
 
     /// <summary>仅所属地址的表现状态变化时通知实体系统，不要求实体每帧查询所有区块。</summary>
     public event Action<RuntimeWorldAddress> RuntimeEntityPresentationChanged;
+
+    public int PendingRuntimeBindingReconciliationCount => runtimeBindingReconciliationPending.Count;
+    public long RuntimeBindingReconciliationAttempts => runtimeBindingReconciliationAttempts;
+    public int RuntimeWindowLastVisitedCells => (runtimeChunkManager?.LastWindowVisitedCells ?? 0) +
+        runtimeWindowCoverage.LastVisitedCells + runtimeReadyCoverage.LastVisitedCells +
+        runtimePrefetchCoverage.LastVisitedCells + runtimePresentationInterestCoverage.LastVisitedCells;
 
     /// <summary>等待主线程绘制、碰撞和导航绑定的区块数量。</summary>
     public int PendingRuntimeChunkPresentationCount =>
@@ -290,6 +335,8 @@ public partial class ChunkMgr
             activeRuntimeBindings.Add(address, binding = new RuntimeChunkBinding());
         binding.WantsPresentation = true;
         runtimeWindowTargets.Add(address);
+        if (!runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address))
+            runtimeStateTransferTargets.Add(address);
         if (!RestoreRuntimeChunkState(address, binding, chunk) || !ReferenceEquals(binding.RestoredEntitiesChunk, chunk))
             throw new InvalidOperationException("地格移交所需的区块居民尚未恢复：" + address);
         pendingLocalChunkRestorations.Remove(address);
@@ -481,10 +528,15 @@ public partial class ChunkMgr
             : baseSeed;
         var centerAddress = new RuntimeWorldAddress(dimensionId,
             new Int2(centerOrigin.x, centerOrigin.y));
+        bool reprojectAcrossSeam = runtimePresentationInterestDimensionId == dimensionId &&
+            WorldTopologyRuntime.ShortestDelta(runtimePresentationInterestOrigin, centerOrigin) !=
+            centerOrigin - runtimePresentationInterestOrigin;
         runtimePresentationPriorityCenter = center;
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = resolvedPresentation;
         runtimePresentationInterestDimensionId = dimensionId;
+        runtimePresentationInterestSeed = seed;
+        runtimePresentationInterestTopology = topology;
         if (runtimeWindowDimensionId != dimensionId || !includeLocalPresentation)
             runtimeWindowTransition.Reset();
         Vector2Int chunkSize = new Vector2Int(stepX, stepY);
@@ -502,51 +554,63 @@ public partial class ChunkMgr
                 seed, profile, topology,
                 dataDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y),
                 presentationDistance: new Int2(resolvedPresentation.x, resolvedPresentation.y)) };
-        runtimeWindowTargets.Clear();
-        runtimeReadyTargets.Clear();
-        Vector2Int radius = GetRuntimeWindowChunkRadius(resolvedPresentation);
-        for (int windowIndex = 0; windowIndex < windows.Count; windowIndex++)
+        runtimeWindowCoverage.Update(windows);
+        foreach (RuntimeWorldAddress address in runtimeWindowCoverage.Added(ChunkWindowCoverage.Layer.Data))
         {
-            Int2 windowOrigin = windows[windowIndex].Center.ChunkOrigin;
-            for (int dx = -radius.x; dx <= radius.x; dx++)
-            {
-                for (int dy = -radius.y; dy <= radius.y; dy++)
-                {
-                    Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
-                        windowOrigin.X + dx * stepX, windowOrigin.Y + dy * stepY));
-                    var address = new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y));
-                    runtimeWindowTargets.Add(address);
-                    if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
-                    {
-                        binding = new RuntimeChunkBinding();
-                        activeRuntimeBindings.Add(address, binding);
-                    }
-                    binding.WantsPresentation = includeLocalPresentation;
-                    retiringRuntimeBindings.Remove(address);
-                }
-            }
+            runtimeWindowTargets.Add(address);
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+                activeRuntimeBindings.Add(address, binding = new RuntimeChunkBinding());
+            binding.WantsPresentation = includeLocalPresentation;
+            retiringRuntimeBindings.Remove(address);
+            runtimeBindingReconciliationPending.Add(address);
         }
-        // 加载页只等待本机活动圈，远处玩家不扩大本机蒙版或重生等待范围。
-        for (int dx = 1 - activeDistance.x; dx < activeDistance.x; dx++)
-            for (int dy = 1 - activeDistance.y; dy < activeDistance.y; dy++)
+        foreach (RuntimeWorldAddress address in runtimeWindowCoverage.Removed(ChunkWindowCoverage.Layer.Data))
+        {
+            runtimeWindowTargets.Remove(address);
+            RetireRuntimeBinding(address);
+        }
+        // 状态移交额外绑定的地址在下一次正式窗口提交时交回窗口管理。
+        if (runtimeStateTransferTargets.Count > 0)
+        {
+            runtimeWindowRemovalBuffer.Clear();
+            runtimeWindowRemovalBuffer.AddRange(runtimeStateTransferTargets);
+            foreach (RuntimeWorldAddress address in runtimeWindowRemovalBuffer)
             {
-                Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
-                    centerOrigin.x + dx * stepX, centerOrigin.y + dy * stepY));
-                runtimeReadyTargets.Add(new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y)));
+                runtimeStateTransferTargets.Remove(address);
+                if (runtimeWindowCoverage.Contains(ChunkWindowCoverage.Layer.Data, address)) continue;
+                runtimeWindowTargets.Remove(address);
+                RetireRuntimeBinding(address);
             }
+            runtimeWindowRemovalBuffer.Clear();
+        }
+        // 加载页仍只等待本机活动圈，独立追踪其矩形边界。
+        var readyWindow = new ChunkWindowRequest(centerAddress,
+            new Int2(activeDistance.x, activeDistance.y), new Int2(activeDistance.x, activeDistance.y),
+            false, seed, profile, topology);
+        runtimeReadyCoverage.Update(new[] { readyWindow });
+        foreach (RuntimeWorldAddress address in runtimeReadyCoverage.Added(ChunkWindowCoverage.Layer.Active))
+            runtimeReadyTargets.Add(address);
+        foreach (RuntimeWorldAddress address in runtimeReadyCoverage.Removed(ChunkWindowCoverage.Layer.Active))
+            runtimeReadyTargets.Remove(address);
+        if (runtimeWindowCoverage.LastFullRebuild)
+            foreach (RuntimeWorldAddress address in runtimeWindowTargets)
+                if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+                {
+                    binding.WantsPresentation = includeLocalPresentation;
+                    runtimeBindingReconciliationPending.Add(address);
+                }
 
-        runtimeWindowRemovalBuffer.Clear();
-        foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
-            if (!runtimeWindowTargets.Contains(pair.Key))
-                runtimeWindowRemovalBuffer.Add(pair.Key);
-        for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
-
+        var interestWindow = new ChunkWindowRequest(centerAddress,
+            new Int2(resolvedPresentation.x, resolvedPresentation.y),
+            new Int2(resolvedPresentation.x, resolvedPresentation.y), false, seed, profile, topology);
+        runtimePresentationInterestCoverage.Update(new[] { interestWindow });
+        foreach (RuntimeWorldAddress address in runtimePresentationInterestCoverage.Added(ChunkWindowCoverage.Layer.Data))
+            RestoreRuntimeBindingForReturningPresentationInterest(address);
         using (RefreshWindowsMarker.Measure()) runtimeChunkManager.RefreshWindows(windows);
         ReconcileRuntimeWindowBindings();
-        ReprojectRuntimeChunkViewsToLocalAnchor();
-        // 只在流送窗口发生变化时校验一次现有表现，不做定时轮询。
-        RepairRuntimeWindowPresentationBackends();
+        if (runtimeWindowCoverage.LastFullRebuild || reprojectAcrossSeam ||
+            RequiresWrappedRuntimeViewReprojection(topology, resolvedPresentation, stepX, stepY))
+            ReprojectRuntimeChunkViewsToLocalAnchor();
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, resolvedPresentation,
             resolvedPrefetch, stepX, stepY, profile, seed, topology, windows);
     }
@@ -573,28 +637,46 @@ public partial class ChunkMgr
             runtimePresentationInterestDimensionId == dimensionId)
             return;
 
-        runtimeWindowRemovalBuffer.Clear();
-        foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
-        {
-            RuntimeWorldAddress address = pair.Key;
-            Vector2Int origin = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y);
-            Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerOrigin, origin);
-            if (address.DimensionId != dimensionId ||
-                Mathf.Abs(delta.x) / stepX >= presentationDistance.x ||
-                Mathf.Abs(delta.y) / stepY >= presentationDistance.y)
-            {
-                runtimeWindowRemovalBuffer.Add(address);
-                continue;
-            }
-        }
-
-        for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            RetireRuntimeBinding(runtimeWindowRemovalBuffer[i]);
-        runtimeWindowRemovalBuffer.Clear();
+        var interestWindow = new ChunkWindowRequest(new RuntimeWorldAddress(dimensionId,
+            new Int2(centerOrigin.x, centerOrigin.y)),
+            new Int2(presentationDistance.x, presentationDistance.y),
+            new Int2(presentationDistance.x, presentationDistance.y), false,
+            runtimePresentationInterestSeed, profile, runtimePresentationInterestTopology);
+        runtimePresentationInterestCoverage.Update(new[] { interestWindow });
+        foreach (RuntimeWorldAddress address in runtimePresentationInterestCoverage.Removed(ChunkWindowCoverage.Layer.Data))
+            RetireRuntimeBinding(address);
+        foreach (RuntimeWorldAddress address in runtimePresentationInterestCoverage.Added(ChunkWindowCoverage.Layer.Data))
+            RestoreRuntimeBindingForReturningPresentationInterest(address);
+        bool reprojectAcrossSeam = runtimePresentationInterestDimensionId == dimensionId &&
+            WorldTopologyRuntime.ShortestDelta(runtimePresentationInterestOrigin, centerOrigin) !=
+            centerOrigin - runtimePresentationInterestOrigin;
         runtimePresentationInterestOrigin = centerOrigin;
         runtimePresentationInterestDistance = presentationDistance;
         runtimePresentationInterestDimensionId = dimensionId;
-        ReprojectRuntimeChunkViewsToLocalAnchor();
+        if (runtimePresentationInterestCoverage.LastFullRebuild || reprojectAcrossSeam ||
+            RequiresWrappedRuntimeViewReprojection(runtimePresentationInterestTopology, presentationDistance, stepX, stepY))
+            ReprojectRuntimeChunkViewsToLocalAnchor();
+    }
+
+    // 折返时正式窗口可能完全未变，仍需找回被提前退休的区块绑定。
+    private void RestoreRuntimeBindingForReturningPresentationInterest(RuntimeWorldAddress address)
+    {
+        if (!runtimeWindowTargets.Contains(address)) return;
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+            activeRuntimeBindings.Add(address, binding = new RuntimeChunkBinding());
+        else if (!retiringRuntimeBindings.Remove(address))
+            return;
+        binding.WantsPresentation = runtimeWindowUsesLocalPresentation;
+        runtimeBindingReconciliationPending.Add(address);
+    }
+
+    // 小型环绕世界覆盖半周时，已有区块的最近镜像也会在窗口内部切换。
+    private static bool RequiresWrappedRuntimeViewReprojection(ChunkGenerationTopologySnapshot topology,
+        Vector2Int distance, int stepX, int stepY)
+    {
+        return topology.IsWrapped &&
+            ((long)(distance.x + 1) * stepX * 2 >= topology.Span.X ||
+             (long)(distance.y + 1) * stepY * 2 >= topology.Span.Y);
     }
 
     /// <summary>只移动 ChunkView 表现根节点，ChunkRuntime/WorldAddress 完全不变。</summary>
@@ -681,6 +763,7 @@ public partial class ChunkMgr
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
+        runtimeBindingReconciliationPending.Remove(address);
         if (KeepRuntimeBindingForTransition(address, binding))
             retiringRuntimeBindings.Add(address);
         else
@@ -713,37 +796,48 @@ public partial class ChunkMgr
         ChunkGenerationProfileSnapshot profile, int seed,
         ChunkGenerationTopologySnapshot topology, IReadOnlyList<ChunkWindowRequest> windows)
     {
-        runtimePrefetchQueue.Clear();
-        runtimePrefetchTargets.Clear();
-        int activeRadiusX = activeDistance.x - 1;
-        int activeRadiusY = activeDistance.y - 1;
-        int prefetchRadiusX = prefetchDistance.x - 1;
-        int prefetchRadiusY = prefetchDistance.y - 1;
-        // 视野移动会反复重排，复用临时数组避免每次创建排序列表。
-        runtimePrefetchSortBuffer.Clear();
-        for (int windowIndex = 0; windowIndex < windows.Count; windowIndex++)
+        runtimePrefetchWindows.Clear();
+        for (int i = 0; i < windows.Count; i++)
+            runtimePrefetchWindows.Add(new ChunkWindowRequest(windows[i].Center, new Int2(1, 1),
+                new Int2(prefetchDistance.x, prefetchDistance.y), false, seed, profile, topology,
+                dataDistance: new Int2(prefetchDistance.x, prefetchDistance.y)));
+        runtimePrefetchCoverage.Update(runtimePrefetchWindows);
+        foreach (RuntimeWorldAddress address in runtimePrefetchCoverage.Removed(ChunkWindowCoverage.Layer.Data))
         {
-            Int2 windowOrigin = windows[windowIndex].Center.ChunkOrigin;
-            for (int dx = -prefetchRadiusX; dx <= prefetchRadiusX; dx++)
-            {
-                for (int dy = -prefetchRadiusY; dy <= prefetchRadiusY; dy++)
-                {
-                    if (Mathf.Abs(dx) <= activeRadiusX && Mathf.Abs(dy) <= activeRadiusY)
-                        continue;
-                    Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
-                        windowOrigin.X + dx * stepX, windowOrigin.Y + dy * stepY));
-                    var address = new RuntimeWorldAddress(dimensionId, new Int2(origin.x, origin.y));
-                    if (runtimeWindowTargets.Contains(address) || !runtimePrefetchTargets.Add(address) ||
-                        runtimePrefetchInFlight == address ||
-                        TryGetChunkRuntime(address, out ChunkRuntime chunk) && chunk.DataStatus == ChunkDataStatus.Ready)
-                        continue;
-                    Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerOrigin, origin);
-                    int ring = Mathf.Max(Mathf.Abs(delta.x) / stepX, Mathf.Abs(delta.y) / stepY);
-                    runtimePrefetchSortBuffer.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
-                }
-            }
+            runtimePrefetchTargets.Remove(address);
+            runtimePrefetchQueuedAddresses.Remove(address);
         }
+        foreach (RuntimeWorldAddress address in runtimeWindowCoverage.Added(ChunkWindowCoverage.Layer.Data))
+        {
+            runtimePrefetchTargets.Remove(address);
+            runtimePrefetchQueuedAddresses.Remove(address);
+        }
+        foreach (RuntimeWorldAddress address in runtimePrefetchCoverage.Added(ChunkWindowCoverage.Layer.Data))
+            AddRuntimePrefetchTargetIfOutsidePresentation(address);
+        foreach (RuntimeWorldAddress address in runtimeWindowCoverage.Removed(ChunkWindowCoverage.Layer.Data))
+            if (runtimePrefetchCoverage.Contains(ChunkWindowCoverage.Layer.Data, address))
+                AddRuntimePrefetchTargetIfOutsidePresentation(address);
 
+        // 只对尚未领取的预取重新排序，不再枚举整圈已经就绪的区块。
+        runtimePrefetchQueue.Clear();
+        runtimePrefetchSortBuffer.Clear();
+        runtimeWindowRemovalBuffer.Clear();
+        foreach (RuntimeWorldAddress address in runtimePrefetchQueuedAddresses)
+        {
+            if (!runtimePrefetchTargets.Contains(address) || runtimePrefetchInFlight == address ||
+                TryGetChunkRuntime(address, out ChunkRuntime chunk) && chunk.DataStatus == ChunkDataStatus.Ready)
+            {
+                runtimeWindowRemovalBuffer.Add(address);
+                continue;
+            }
+            Vector2Int delta = WorldTopologyRuntime.ShortestDelta(centerOrigin,
+                new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y));
+            int ring = Mathf.Max(Mathf.Abs(delta.x) / stepX, Mathf.Abs(delta.y) / stepY);
+            runtimePrefetchSortBuffer.Add(new RuntimePrefetchRequest(address, profile, seed, topology, ring));
+        }
+        foreach (RuntimeWorldAddress address in runtimeWindowRemovalBuffer)
+            runtimePrefetchQueuedAddresses.Remove(address);
+        runtimeWindowRemovalBuffer.Clear();
         runtimePrefetchSortBuffer.Sort((left, right) =>
         {
             int ring = left.Ring.CompareTo(right.Ring);
@@ -754,13 +848,20 @@ public partial class ChunkMgr
         runtimePrefetchSortBuffer.Clear();
 
         if (runtimePrefetchInFlight is RuntimeWorldAddress inFlight &&
-            !runtimePrefetchTargets.Contains(inFlight) &&
-            !runtimeWindowTargets.Contains(inFlight))
+            !runtimePrefetchTargets.Contains(inFlight) && !runtimeWindowTargets.Contains(inFlight))
             CancelChunkDataRequest(inFlight);
 
         if (runtimePrefetchQueue.Count > 0 && runtimePrefetchCoroutine == null &&
             isActiveAndEnabled)
             runtimePrefetchCoroutine = StartCoroutine(ProcessRuntimePrefetchQueue());
+    }
+
+    private void AddRuntimePrefetchTargetIfOutsidePresentation(RuntimeWorldAddress address)
+    {
+        if (runtimeWindowTargets.Contains(address)) return;
+        if (runtimePrefetchTargets.Add(address) && runtimePrefetchInFlight != address &&
+            (!TryGetChunkRuntime(address, out ChunkRuntime chunk) || chunk.DataStatus != ChunkDataStatus.Ready))
+            runtimePrefetchQueuedAddresses.Add(address);
     }
 
     /// <summary>可见区块的数据与基础地面就绪后，领取少量外圈预取任务。</summary>
@@ -773,6 +874,7 @@ public partial class ChunkMgr
                    !HasUrgentRuntimeChunkWork())
             {
                 RuntimePrefetchRequest request = runtimePrefetchQueue.Dequeue();
+                runtimePrefetchQueuedAddresses.Remove(request.Address);
                 if (!runtimePrefetchTargets.Contains(request.Address) ||
                     TryGetChunkRuntime(request.Address, out ChunkRuntime chunk) &&
                     chunk.DataStatus == ChunkDataStatus.Ready)
@@ -813,10 +915,11 @@ public partial class ChunkMgr
         }
         catch (OperationCanceledException)
         {
-            // 玩家窗口变化后，过期预取可以直接取消。
+            RememberFailedRuntimePrefetchUntilNextWindowRefresh(request.Address);
         }
         catch (Exception exception)
         {
+            RememberFailedRuntimePrefetchUntilNextWindowRefresh(request.Address);
             Debug.LogWarning($"[ChunkMgr] 区块预取失败 {request.Address}: {exception.Message}", this);
         }
         finally
@@ -825,6 +928,13 @@ public partial class ChunkMgr
             if (runtimePrefetchInFlight == request.Address)
                 runtimePrefetchInFlight = null;
         }
+    }
+
+    // 失败或取消只保留仍有效的地址，下次正式窗口刷新时才重新领取。
+    private void RememberFailedRuntimePrefetchUntilNextWindowRefresh(RuntimeWorldAddress address)
+    {
+        if (runtimePrefetchTargets.Contains(address))
+            runtimePrefetchQueuedAddresses.Add(address);
     }
 
     #endregion
@@ -891,6 +1001,7 @@ public partial class ChunkMgr
                 Stopwatch.Frequency * (double)RuntimeChunkPresentationStartMillisecondsBudget / 1000d);
             using (PresentationStartMarker.Measure())
             {
+                PrepareRuntimePresentationBatch(runtimePresentationQueue, false);
                 int startedChunks = 0;
                 while (startBudget-- > 0 &&
                        TryDequeueRuntimePresentation(out RuntimeWorldAddress address))
@@ -914,13 +1025,18 @@ public partial class ChunkMgr
                 Stopwatch.Frequency * (double)RuntimeChunkPresentationContinuationMillisecondsBudget / 1000d);
             using (PresentationStepMarker.Measure())
             {
+                PrepareRuntimePresentationBatch(runtimePresentationContinuationQueue, true);
                 int advancedChunks = 0;
                 runtimePresentationRescheduleBuffer.Clear();
                 while (continuationBudget-- > 0 && Stopwatch.GetTimestamp() < continuationDeadline &&
                        TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress continuationAddress))
                 {
                     if (AdvanceRuntimeChunkPresentation(continuationAddress))
+                    {
+                        if (activeRuntimeBindings.TryGetValue(continuationAddress, out RuntimeChunkBinding advanced))
+                            advanced.PresentationContinuationRound++;
                         runtimePresentationRescheduleBuffer.Add(continuationAddress);
+                    }
                     advancedChunks++;
                 }
                 // 本帧执行过的区块下帧才重入队列，防止一个耗时表现器连续吃满全部步骤。
@@ -947,43 +1063,50 @@ public partial class ChunkMgr
         return true;
     }
 
-    /// <summary>取出仍然有效且距离玩家最近的待绘制区块。</summary>
+    // 每帧一次冻结排序字段，续步优先基础地面，再按轮次和实时距离公平推进。
+    private void PrepareRuntimePresentationBatch(List<RuntimeWorldAddress> queue, bool continuation)
+    {
+        runtimePresentationSortBuffer.Clear();
+        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
+        for (int i = 0; i < queue.Count; i++)
+        {
+            RuntimeWorldAddress address = queue[i];
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding)) continue;
+            bool valid = continuation
+                ? binding.PresentationInProgress && binding.PresentationRoutine != null && binding.WantsPresentation && binding.View != null
+                : binding.PresentationQueued && binding.WantsPresentation && binding.PendingChunk != null;
+            if (!valid)
+            {
+                if (continuation) FinishRuntimeChunkPresentation(binding);
+                continue;
+            }
+            runtimePresentationSortBuffer.Add(new RuntimePresentationBatchEntry(address,
+                GetRuntimePresentationPriority(runtimePresentationPriorityCenter, address, profile.Width, profile.Height),
+                continuation && !binding.View.IsBaseTerrainPresented,
+                continuation ? binding.PresentationContinuationRound : 0, i));
+        }
+        runtimePresentationSortBuffer.Sort(RuntimePresentationBatchEntry.CompareForStack);
+        queue.Clear();
+        foreach (RuntimePresentationBatchEntry entry in runtimePresentationSortBuffer) queue.Add(entry.Address);
+        runtimePresentationSortBuffer.Clear();
+    }
+
     private bool TryDequeueRuntimePresentation(out RuntimeWorldAddress address)
     {
         address = default;
-        // 先移除失效条目，再选择优先项。倒序清理过程中删除较小索引会移动已选项，
-        // 两件事混在同一遍历中会留下过期 bestIndex，导致队列越界并中断表现协程。
-        for (int i = runtimePresentationQueue.Count - 1; i >= 0; i--)
+        while (runtimePresentationQueue.Count > 0)
         {
-            RuntimeWorldAddress candidate = runtimePresentationQueue[i];
-            if (!activeRuntimeBindings.TryGetValue(candidate, out RuntimeChunkBinding binding) ||
-                !binding.PresentationQueued || !binding.WantsPresentation || binding.PendingChunk == null)
-                runtimePresentationQueue.RemoveAt(i);
-        }
-
-        int bestIndex = -1;
-        float bestPriority = float.MaxValue;
-        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
-        for (int i = 0; i < runtimePresentationQueue.Count; i++)
-        {
-            RuntimeWorldAddress candidate = runtimePresentationQueue[i];
-            float priority = GetRuntimePresentationPriority(runtimePresentationPriorityCenter,
-                candidate, profile.Width, profile.Height);
-            if (priority < bestPriority)
+            int last = runtimePresentationQueue.Count - 1;
+            address = runtimePresentationQueue[last];
+            runtimePresentationQueue.RemoveAt(last);
+            if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) &&
+                binding.PresentationQueued && binding.WantsPresentation && binding.PendingChunk != null)
             {
-                bestIndex = i;
-                bestPriority = priority;
+                binding.PresentationQueued = false;
+                return true;
             }
         }
-
-        if (bestIndex < 0)
-            return false;
-
-        address = runtimePresentationQueue[bestIndex];
-        runtimePresentationQueue.RemoveAt(bestIndex);
-        if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding selected))
-            selected.PresentationQueued = false;
-        return true;
+        return false;
     }
 
     /// <summary>启动一个区块的增量表现，并立即推进首个表现器（ChunkTilemapRenderer）。</summary>
@@ -1008,6 +1131,11 @@ public partial class ChunkMgr
         if (binding.DiagnosticPauseRevision == WorldRuntime.StreamingDiagnostics.PauseRevision)
             WorldRuntime.StreamingDiagnostics.Record("view.queue_wait",
                 ChunkStreamingDiagnostics.ElapsedMs(binding.DiagnosticQueuedAt));
+        if (binding.PresentationInProgress)
+        {
+            runtimePresentationContinuationQueue.Remove(address);
+            FinishRuntimeChunkPresentation(binding);
+        }
         RecycleRuntimeChunkView(binding);
         DimensionManager dimensionManager = DimensionManager.Instance;
         ChunkView prefab = dimensionManager?.GetActiveChunkViewPrefab();
@@ -1017,20 +1145,22 @@ public partial class ChunkMgr
         if (prefab == null)
         {
             WorldRuntime.StreamingDiagnostics.Count("view.missing_prefab");
+            EnqueueRuntimePresentationRetryForOwnedWorld(address);
             return;
         }
 
         ChunkView view;
-        using (WorldRuntime.StreamingDiagnostics.Measure("view.acquire"))
-            view = AcquireChunkView(prefab);
-        binding.View = view;
         try
         {
+            using (WorldRuntime.StreamingDiagnostics.Measure("view.acquire"))
+                view = AcquireChunkView(prefab);
+            binding.View = view;
             view.gameObject.SetActive(true);
         }
         catch (Exception exception)
         {
             WorldRuntime.StreamingDiagnostics.Count("view.failed");
+            EnqueueRuntimePresentationRetryForOwnedWorld(address);
             RecycleRuntimeChunkView(binding);
             Debug.LogError($"[ChunkMgr] 区块主线程表现绑定失败 {address}: {exception}", this);
             return;
@@ -1039,6 +1169,7 @@ public partial class ChunkMgr
         binding.PresentationRoutine = view.BindIncremental(
             WorldRuntime, current, includeNavigation: true, renderersPerFrame: 1);
         binding.PresentationInProgress = true;
+        binding.PresentationContinuationRound = 0;
         runtimePresentationInProgressCount++;
         WorldRuntime.StreamingDiagnostics.Count("view.started");
 
@@ -1083,6 +1214,7 @@ public partial class ChunkMgr
             WorldRuntime.StreamingDiagnostics.Count("view.failed");
             FinishRuntimeChunkPresentation(binding);
             RecycleRuntimeChunkView(binding);
+            EnqueueRuntimePresentationRetryForOwnedWorld(address);
             Debug.LogError($"[ChunkMgr] 区块主线程分帧绑定失败 {address}: {exception}", this);
             return false;
         }
@@ -1091,51 +1223,20 @@ public partial class ChunkMgr
         return false;
     }
 
-    /// <summary>先清理过期绑定，再从后续表现队列取当前离玩家最近的区块。</summary>
     private bool TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress address)
     {
         address = default;
-        for (int i = runtimePresentationContinuationQueue.Count - 1; i >= 0; i--)
+        while (runtimePresentationContinuationQueue.Count > 0)
         {
-            RuntimeWorldAddress candidate = runtimePresentationContinuationQueue[i];
-            if (!activeRuntimeBindings.TryGetValue(candidate, out RuntimeChunkBinding binding))
-            {
-                runtimePresentationContinuationQueue.RemoveAt(i);
-                continue;
-            }
-            if (!binding.PresentationInProgress || binding.PresentationRoutine == null ||
-                !binding.WantsPresentation || binding.View == null)
-            {
-                FinishRuntimeChunkPresentation(binding);
-                runtimePresentationContinuationQueue.RemoveAt(i);
-            }
+            int last = runtimePresentationContinuationQueue.Count - 1;
+            address = runtimePresentationContinuationQueue[last];
+            runtimePresentationContinuationQueue.RemoveAt(last);
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding)) continue;
+            if (binding.PresentationInProgress && binding.PresentationRoutine != null && binding.WantsPresentation && binding.View != null)
+                return true;
+            FinishRuntimeChunkPresentation(binding);
         }
-
-        int bestIndex = -1;
-        float bestPriority = float.MaxValue;
-        bool bestNeedsBase = false;
-        ChunkGenerationProfileSnapshot profile = ActiveGenerationProfile;
-        for (int i = 0; i < runtimePresentationContinuationQueue.Count; i++)
-        {
-            RuntimeWorldAddress candidate = runtimePresentationContinuationQueue[i];
-            bool needsBase = !activeRuntimeBindings[candidate].View.IsBaseTerrainPresented;
-            float priority = GetRuntimePresentationPriority(runtimePresentationPriorityCenter,
-                candidate, profile.Width, profile.Height);
-            // 基础地形拆步后仍先补地面，再让已完成地面的区块继续草地、导航和自然物。
-            if (bestIndex < 0 || needsBase && !bestNeedsBase || needsBase == bestNeedsBase && priority < bestPriority)
-            {
-                bestIndex = i;
-                bestPriority = priority;
-                bestNeedsBase = needsBase;
-            }
-        }
-
-        if (bestIndex < 0)
-            return false;
-
-        address = runtimePresentationContinuationQueue[bestIndex];
-        runtimePresentationContinuationQueue.RemoveAt(bestIndex);
-        return true;
+        return false;
     }
 
     /// <summary>结束一个增量绑定并释放枚举器；计数只允许回收一次。</summary>
@@ -1226,7 +1327,24 @@ public partial class ChunkMgr
         return runtimeChunkViewRoot;
     }
 
-    /// <summary>后台生成完成后修复画面绑定，处理旧任务晚到或区块被回收的情况。</summary>
+    // 提交事件和窗口进入只登记对应地址，缺少存档或实体依赖的区块保留在待办中。
+    private void EnqueueCommittedRuntimeChunkForWindowReconciliation(ChunkCommitted committed)
+    {
+        if (activeRuntimeBindings.ContainsKey(committed.Address) && !retiringRuntimeBindings.Contains(committed.Address))
+            runtimeBindingReconciliationPending.Add(committed.Address);
+    }
+
+    // 地表和局部世界分别由各自的恢复循环消费重试地址。
+    private void EnqueueRuntimePresentationRetryForOwnedWorld(RuntimeWorldAddress address)
+    {
+        if (GameplayWorldRegistry.UsesLocalCoordinates(OwnedWorldKey))
+            pendingLocalChunkRestorations.Add(address);
+        else
+            runtimeBindingReconciliationPending.Add(address);
+    }
+
+    private void MarkRuntimePresentationBackendsInvalidated() => runtimePresentationBackendsInvalidated = true;
+
     private void ReconcileRuntimeWindowBindings()
     {
         using var reconcileTiming = WorldRuntime != null
@@ -1234,46 +1352,44 @@ public partial class ChunkMgr
         MaintainRuntimeChunkViewPool();
         SampleRuntimeWindowTransition();
         ReleaseRetiredRuntimeBindings();
-        if (runtimeChunkManager == null || activeRuntimeBindings.Count == 0)
-            return;
-        foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
+        ProcessPendingRuntimePresentationBackendRepairs();
+        if (runtimeChunkManager == null || runtimeBindingReconciliationPending.Count == 0) return;
+        runtimeBindingReconciliationBatch.Clear();
+        runtimeBindingReconciliationBatch.AddRange(runtimeBindingReconciliationPending);
+        runtimeBindingReconciliationPending.Clear();
+        foreach (RuntimeWorldAddress address in runtimeBindingReconciliationBatch)
         {
-            RuntimeChunkBinding binding = pair.Value;
-            if (retiringRuntimeBindings.Contains(pair.Key))
-                continue;
-            if (!runtimeChunkManager.TryGetChunk(pair.Key, out ChunkRuntime current) ||
+            runtimeBindingReconciliationAttempts++;
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) ||
+                retiringRuntimeBindings.Contains(address) ||
+                !runtimeChunkManager.TryGetChunk(address, out ChunkRuntime current) ||
                 current.DataStatus != ChunkDataStatus.Ready || current.Terrain == null)
                 continue;
-
-            if (ReferenceEquals(binding.FailedRestoreChunk, current))
-                continue;
+            if (ReferenceEquals(binding.FailedRestoreChunk, current)) continue;
             try
             {
-                if (!RestoreRuntimeChunkState(pair.Key, binding, current))
+                if (!RestoreRuntimeChunkState(address, binding, current))
+                {
+                    runtimeBindingReconciliationPending.Add(address);
                     continue;
+                }
             }
             catch (Exception exception)
             {
                 WorldRuntime.StreamingDiagnostics.Count("restore.failed");
-                // 单个存档区块异常不能中断其它区块的主线程提交和表现。
                 binding.FailedRestoreChunk = current;
-                Debug.LogError($"[ChunkMgr] 区块状态恢复失败 {pair.Key}: {exception}", this);
+                Debug.LogError($"[ChunkMgr] 区块状态恢复失败 {address}: {exception}", this);
                 continue;
             }
-            if (!binding.WantsPresentation)
-                continue;
-
-            if (binding.View != null && binding.View.IsBound &&
-                ReferenceEquals(binding.View.Model, current))
-                continue;
-            if (binding.View != null && binding.View.IsBinding &&
-                ReferenceEquals(binding.View.Model, current))
-                continue;
-            if (binding.PresentationQueued && ReferenceEquals(binding.PendingChunk, current))
-                continue;
-
-            QueueRuntimeChunkPresentation(pair.Key, binding, current);
+            if (!ReferenceEquals(binding.RestoredEntitiesChunk, current))
+                runtimeBindingReconciliationPending.Add(address);
+            if (!binding.WantsPresentation) continue;
+            if (binding.View != null && (binding.View.IsBound || binding.View.IsBinding) &&
+                ReferenceEquals(binding.View.Model, current)) continue;
+            if (binding.PresentationQueued && ReferenceEquals(binding.PendingChunk, current)) continue;
+            QueueRuntimeChunkPresentation(address, binding, current);
         }
+        runtimeBindingReconciliationBatch.Clear();
     }
 
     /// <summary>区块首次就绪时恢复地形，待物品管理器可用后恢复实体；同一数据实例只执行一次。</summary>
@@ -1315,18 +1431,29 @@ public partial class ChunkMgr
         return true;
     }
 
-    /// <summary>
-    /// 流送窗口刷新时检查已绑定区块的共享 BRG 登记；只处理当前可见窗口，不按时间轮询。
-    /// </summary>
-    private void RepairRuntimeWindowPresentationBackends()
+    // 后端失效只登记当前 View，尚未恢复的资源或绑定在对应待办中继续等待。
+    private void ProcessPendingRuntimePresentationBackendRepairs()
     {
-        foreach (RuntimeWorldAddress address in runtimeWindowTargets)
+        if (runtimePresentationBackendsInvalidated)
         {
-            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) ||
-                binding.View == null || !binding.View.IsBound)
-                continue;
-            binding.View.RepairPresentationBackendIfNeeded();
+            runtimePresentationBackendsInvalidated = false;
+            foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
+                if (pair.Value.View != null)
+                    runtimePresentationBackendRepairPending.Add(pair.Key);
         }
+        if (runtimePresentationBackendRepairPending.Count == 0) return;
+        runtimePresentationBackendRepairBatch.Clear();
+        runtimePresentationBackendRepairBatch.AddRange(runtimePresentationBackendRepairPending);
+        foreach (RuntimeWorldAddress address in runtimePresentationBackendRepairBatch)
+        {
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) || binding.View == null)
+                runtimePresentationBackendRepairPending.Remove(address);
+            else if (binding.View.IsBound && binding.View.RepairPresentationBackendIfNeeded())
+                runtimePresentationBackendRepairPending.Remove(address);
+            else if (!binding.View.IsBinding && !binding.View.IsBound)
+                runtimePresentationBackendRepairPending.Remove(address);
+        }
+        runtimePresentationBackendRepairBatch.Clear();
     }
 
     #endregion
@@ -1461,6 +1588,8 @@ public partial class ChunkMgr
             return;
         }
         retiringRuntimeBindings.Remove(address);
+        runtimeBindingReconciliationPending.Remove(address);
+        runtimePresentationBackendRepairPending.Remove(address);
         if (binding.RestoredTerrainChunk != null)
             WeatherMgr.ExistingInstance?.FlushSurfaceWork(binding.RestoredTerrainChunk);
         FinishRuntimeChunkPresentation(binding);
@@ -1543,6 +1672,16 @@ public partial class ChunkMgr
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowTargets.Clear();
         runtimeReadyTargets.Clear();
+        runtimeStateTransferTargets.Clear();
+        runtimeWindowCoverage.Clear();
+        runtimeReadyCoverage.Clear();
+        runtimePrefetchCoverage.Clear();
+        runtimePresentationInterestCoverage.Clear();
+        runtimeBindingReconciliationPending.Clear();
+        runtimeBindingReconciliationBatch.Clear();
+        runtimePresentationBackendRepairPending.Clear();
+        runtimePresentationBackendRepairBatch.Clear();
+        runtimePresentationBackendsInvalidated = false;
         retiringRuntimeBindings.Clear();
         runtimeWindowUsesLocalPresentation = false;
         runtimeWindowUsesObservers = false;
@@ -1554,9 +1693,12 @@ public partial class ChunkMgr
         runtimePresentationQueue.Clear();
         runtimePresentationContinuationQueue.Clear();
         runtimePresentationRescheduleBuffer.Clear();
+        runtimePresentationSortBuffer.Clear();
         runtimePresentationInProgressCount = 0;
         runtimePrefetchQueue.Clear();
         runtimePrefetchTargets.Clear();
+        runtimePrefetchQueuedAddresses.Clear();
+        runtimePrefetchWindows.Clear();
         runtimePrefetchSortBuffer.Clear();
         if (runtimePrefetchInFlight is RuntimeWorldAddress inFlight)
             CancelChunkDataRequest(inFlight);

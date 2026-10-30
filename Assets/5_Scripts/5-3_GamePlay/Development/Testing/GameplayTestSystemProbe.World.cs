@@ -24,6 +24,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/cached_generation", WorldCachedTerrainGeneration);
         operations.Add("terrain/river_generation_config", WorldRiverGenerationConfig);
         operations.Add("terrain/river_diagnostic_aggregation", WorldRiverDiagnosticAggregation);
+        operations.Add("terrain/shared_hydrology_height_sampling", WorldSharedHydrologyHeightSampling);
+        operations.Add("world_streaming/incremental_window_updates", ServiceIncrementalWindowUpdates);
         operations.Add("terrain/climate_cache", WorldClimateCache);
         operations.Add("terrain/spawn_line", WorldSurfaceSpawnLine);
         operations.Add("terrain/tile_search", WorldTileSearch);

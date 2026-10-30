@@ -55,6 +55,7 @@ public partial class ChunkMgr
     // 区块就绪时先恢复正式居民，再绑定画面；资源未就绪只重试待恢复区块。
     private void RestorePendingLocalWorldChunks()
     {
+        ProcessPendingRuntimePresentationBackendRepairs();
         if (restoringLocalChunks || localChunkRestorationSuspensions != 0 || pendingLocalChunkRestorations.Count == 0 ||
             SaveDataMgr.Instance == null || ItemMgr.GetExistingInstance() == null) return;
         restoringLocalChunks = true;

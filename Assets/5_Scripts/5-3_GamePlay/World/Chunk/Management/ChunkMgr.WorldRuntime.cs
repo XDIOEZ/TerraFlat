@@ -344,11 +344,13 @@ public partial class ChunkMgr
                     ? IdentityWorldAddressNormalizer.Instance : new UnityWorldAddressNormalizer());
             sightBlockingChunkCommittedSubscription =
                 world.Events.Subscribe<ChunkCommitted>(HandleSightBlockingChunkCommitted);
+            SharedSpriteMeshCache.Clearing += MarkRuntimePresentationBackendsInvalidated;
         }
         catch
         {
             try
             {
+                SharedSpriteMeshCache.Clearing -= MarkRuntimePresentationBackendsInvalidated;
                 try { sightBlockingChunkCommittedSubscription?.Dispose(); }
                 finally { runtimeChunkManager?.Dispose(); }
             }
@@ -380,6 +382,8 @@ public partial class ChunkMgr
     {
         if (TryGetChunkRuntime(committed.Address, out ChunkRuntime chunk))
             BuildingOccupancyRegistry.InitializeSightBlockingForChunk(chunk);
+        if (!GameplayWorldRegistry.UsesLocalCoordinates(OwnedWorldKey))
+            EnqueueCommittedRuntimeChunkForWindowReconciliation(committed);
     }
 
     #endregion
@@ -542,6 +546,7 @@ public partial class ChunkMgr
     private void DetachWorldRuntimeFromScene()
     {
         RuntimeChunkMgr manager = runtimeChunkManager;
+        SharedSpriteMeshCache.Clearing -= MarkRuntimePresentationBackendsInvalidated;
         try
         {
             try { StopLiquidBodies(); }

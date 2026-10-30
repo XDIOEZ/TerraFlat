@@ -174,19 +174,24 @@ public static partial class GameplayTestSystemProbe
 
     #region 纯地形冷暖生成采样
 
-    private static Dictionary<string, double> SmallGenerationParameters() => new()
+    private static Dictionary<string, double> SmallGenerationParameters()
     {
-        ["world.spatialDistanceScale"] = 1d,
-        ["river.hydrologyRegionSize"] = 64d, ["river.runoffCellSize"] = 16d,
-        ["river.maxTraceSteps"] = 32d, ["river.maxWidth"] = 3d,
-        ["river.floodplainMaxRadius"] = 2d, ["river.minimumVisibleCourseLength"] = 0d,
-        ["climate.distance.oceanRadiusChunks"] = 1d,
-        ["climate.distance.freshwaterRadiusChunks"] = 1d,
-        ["climate.distance.chunkWidth"] = 1d, ["climate.distance.chunkHeight"] = 1d,
-        ["airHumidity.radiusTiles"] = 1d, ["biome.peat.stoneBoundaryRadius"] = 1d,
-        ["structure.enabled"] = 0d, ["cave.portal.enabled"] = 0d,
-        ["lake.lava.enabled"] = 0d
-    };
+        var numbers = new Dictionary<string, double>
+        {
+            ["world.spatialDistanceScale"] = 1d,
+            ["river.hydrologyRegionSize"] = 64d, ["river.runoffCellSize"] = 16d,
+            ["river.maxTraceSteps"] = 32d, ["river.maxWidth"] = 3d,
+            ["river.floodplainMaxRadius"] = 2d, ["river.minimumVisibleCourseLength"] = 0d,
+            ["climate.distance.oceanRadiusChunks"] = 1d,
+            ["climate.distance.freshwaterRadiusChunks"] = 1d,
+            ["climate.distance.chunkWidth"] = 1d, ["climate.distance.chunkHeight"] = 1d,
+            ["airHumidity.radiusTiles"] = 1d, ["biome.peat.stoneBoundaryRadius"] = 1d,
+            ["structure.enabled"] = 0d, ["cave.portal.enabled"] = 0d,
+            ["lake.lava.enabled"] = 0d
+        };
+        DiscreteProbabilityConfiguration.Capture().WriteGenerationParameters(numbers);
+        return numbers;
+    }
 
     private static JObject WorldCachedTerrainGeneration(JObject args)
     {

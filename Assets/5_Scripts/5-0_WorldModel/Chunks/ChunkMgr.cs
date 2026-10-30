@@ -164,6 +164,12 @@ namespace FlatWorld.WorldModel
             new Dictionary<WorldAddress, ChunkLease>();
         private readonly HashSet<WorldAddress> _presentationDemand = new HashSet<WorldAddress>();
         private readonly HashSet<WorldAddress> _windowDataDemand = new HashSet<WorldAddress>();
+        private readonly HashSet<WorldAddress> _windowRetryTargets = new HashSet<WorldAddress>();
+        private readonly HashSet<WorldAddress> _deferredWindowEvictions = new HashSet<WorldAddress>();
+        private readonly List<WorldAddress> _windowWorkBuffer = new List<WorldAddress>();
+        private readonly ChunkWindowCoverage _windowCoverage;
+        private readonly IDisposable _windowCommitSubscription;
+        private bool _hasWindow;
         private readonly List<WorldAddress> _windowDataCancellationBuffer =
             new List<WorldAddress>();
         private readonly HashSet<Task<ChunkGenerationResult>> _generationTasks =
@@ -185,6 +191,8 @@ namespace FlatWorld.WorldModel
             _scheduler = new ChunkGenerationScheduler(generator ??
                 throw new ArgumentNullException(nameof(generator)), maxGenerationConcurrency);
             _normalizer = normalizer ?? IdentityWorldAddressNormalizer.Instance;
+            _windowCoverage = new ChunkWindowCoverage(_normalizer);
+            _windowCommitSubscription = World.Events.Subscribe<ChunkCommitted>(TrackCommittedChunkOutsideRetentionWindow);
         }
 
         /// <summary>这个管理员正在照顾哪个世界。</summary>
@@ -193,6 +201,7 @@ namespace FlatWorld.WorldModel
         public IReadOnlyDictionary<WorldAddress, ChunkRuntime> Chunks => World.Chunks;
         /// <summary>是否还有人正在等待区块加载完成。</summary>
         public bool HasPendingChunkLoads => _pending.Count > 0;
+        public int LastWindowVisitedCells => _windowCoverage.LastVisitedCells;
         /// <summary>是否还有后台任务没有被取回处理。</summary>
         public bool HasUnsettledGenerationTasks => _generationTasks.Count > 0;
         /// <summary>最多允许几个区块同时在后台生成。</summary>
@@ -314,170 +323,157 @@ namespace FlatWorld.WorldModel
             RefreshWindows(new[] { request });
         }
 
-        /// <summary>
-        /// 根据多个玩家或观察者的位置，一次更新所有区块。
-        /// 先加载近处区块，再让离开的区块休眠，最后删除所有人都离得很远的区块。
-        /// </summary>
+        /// <summary>根据观察者的窗口边界增减租约、数据请求和表现需求。</summary>
         public void RefreshWindows(IReadOnlyList<ChunkWindowRequest> requests)
         {
             ThrowIfDisposed();
-            if (requests == null)
-                throw new ArgumentNullException(nameof(requests));
-            // 分别记下“要运行”“提前生成”“只保留”“要显示”的区块。绕回后重复地址自动合并。
-            var targets = new HashSet<WorldAddress>();
-            var dataTargets = new Dictionary<WorldAddress, WindowDataTarget>();
-            var retainedTargets = new HashSet<WorldAddress>();
-            var presentationTargets = new HashSet<WorldAddress>();
-            for (int requestIndex = 0; requestIndex < requests.Count; requestIndex++)
+            if (requests == null) throw new ArgumentNullException(nameof(requests));
+            _windowCoverage.Update(requests);
+            _hasWindow = true;
+
+            // 先取消离开数据范围的任务，再发布新增的模拟和表现需求。
+            foreach (WorldAddress address in _windowCoverage.Removed(ChunkWindowCoverage.Layer.Data))
             {
-                ChunkWindowRequest request = requests[requestIndex];
-                WorldAddress center = _normalizer.Normalize(request.Center);
-                int activeRadiusX = request.ActiveDistanceX - 1;
-                int activeRadiusY = request.ActiveDistanceY - 1;
-                int presentationRadiusX = request.PresentationDistanceX - 1;
-                int presentationRadiusY = request.PresentationDistanceY - 1;
-                int dataRadiusX = request.DataDistanceX - 1;
-                int dataRadiusY = request.DataDistanceY - 1;
-                int destroyRadiusX = request.DestroyDistanceX - 1;
-                int destroyRadiusY = request.DestroyDistanceY - 1;
-                // 先算较大的保留范围，避免玩家刚走开一点，区块就马上被删除。
-                for (int x = -destroyRadiusX; x <= destroyRadiusX; x++)
-                {
-                    for (int y = -destroyRadiusY; y <= destroyRadiusY; y++)
-                    {
-                        retainedTargets.Add(_normalizer.Normalize(new WorldAddress(
-                            center.DimensionId,
-                            new Int2(center.ChunkOrigin.X + x * request.Profile.Width,
-                                center.ChunkOrigin.Y + y * request.Profile.Height))));
-                    }
-                }
-                for (int x = -dataRadiusX; x <= dataRadiusX; x++)
-                {
-                    for (int y = -dataRadiusY; y <= dataRadiusY; y++)
-                    {
-                        var address = _normalizer.Normalize(new WorldAddress(center.DimensionId,
-                            new Int2(center.ChunkOrigin.X + x * request.Profile.Width,
-                                center.ChunkOrigin.Y + y * request.Profile.Height)));
-                        int ring = Math.Max(Math.Abs(x), Math.Abs(y));
-                        bool active = Math.Abs(x) <= activeRadiusX &&
-                                      Math.Abs(y) <= activeRadiusY;
-                        var candidate = new WindowDataTarget(request, active, ring);
-                        if (!dataTargets.TryGetValue(address, out WindowDataTarget existing) ||
-                            candidate.IsHigherPriorityThan(existing))
-                            dataTargets[address] = candidate;
-
-                        if (active)
-                            targets.Add(address);
-                        if (request.RequestPresentation &&
-                            Math.Abs(x) <= presentationRadiusX &&
-                            Math.Abs(y) <= presentationRadiusY)
-                            presentationTargets.Add(address);
-                    }
-                }
+                _windowDataDemand.Remove(address);
+                _windowRetryTargets.Remove(address);
+                _scheduler.CancelPrewarmDemandsForSource(address);
+                CancelCanonicalChunkRequest(address);
             }
-
-            // 先撤销已经离开当前数据窗口的旧生成请求。否则调度器 FIFO 队列会继续生成
-            // 玩家早已离开的区块，让新进入视野的区块长期排在后面形成黑块。
-            ReconcileWindowDataDemand(dataTargets);
-
-            // 先把新范围里的区块都启用，再统一停掉旧区块；这样更新过程更安全、顺序也固定。
-            var orderedTargets = new List<WorldAddress>(targets);
-            orderedTargets.Sort();
-            for (int i = 0; i < orderedTargets.Count; i++)
-            {
-                WorldAddress address = orderedTargets[i];
-                if (!_simulationLeases.ContainsKey(address))
-                    _simulationLeases.Add(address,
-                        World.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
-            }
-
-            // 预加载圈只持有表现需求；离开真实活动圈时不必销毁已经画好的区块。
-            var orderedPresentationTargets = new List<WorldAddress>(presentationTargets);
-            orderedPresentationTargets.Sort();
-            for (int i = 0; i < orderedPresentationTargets.Count; i++)
-                SetPresentationDemand(orderedPresentationTargets[i], true);
-            var hiddenPresentationTargets = new List<WorldAddress>();
-            foreach (WorldAddress address in _presentationDemand)
-                if (!presentationTargets.Contains(address))
-                    hiddenPresentationTargets.Add(address);
-            hiddenPresentationTargets.Sort();
-            for (int i = 0; i < hiddenPresentationTargets.Count; i++)
-                SetPresentationDemand(hiddenPresentationTargets[i], false);
-
-            // 可见圈始终排在预取圈前面；同一圈按地址稳定排序，不再计算移动预测。
-            var orderedDataTargets = new List<WorldAddress>(dataTargets.Keys);
-            orderedDataTargets.Sort((left, right) =>
-                CompareWindowDataTargets(left, right, dataTargets));
-            for (int i = 0; i < orderedDataTargets.Count; i++)
-            {
-                WorldAddress address = orderedDataTargets[i];
-                ChunkWindowRequest targetRequest = dataTargets[address].Request;
-                _ = RequestChunkDataAsync(address, targetRequest.WorldSeed, targetRequest.Profile,
-                    topology: targetRequest.Topology);
-            }
-            // 玩家移动后，仍在队列里的旧任务必须按“当前可见性 + 当前距离”重新排序。
-            // 只在首次入队时排序会让新进入视野的区块长期卡在历史队列尾部。
-            _scheduler.PrioritizeQueuedWork(orderedDataTargets);
-
-            var deactivate = new List<WorldAddress>();
-            foreach (WorldAddress address in _simulationLeases.Keys)
-            {
-                if (!targets.Contains(address))
-                    deactivate.Add(address);
-            }
-            deactivate.Sort();
-            for (int i = 0; i < deactivate.Count; i++)
-            {
-                WorldAddress address = deactivate[i];
-                _simulationLeases[address].Dispose();
-                _simulationLeases.Remove(address);
-            }
-
-            // 真正删除前，世界还会再检查一次：只要还有人拿着使用票，就不会误删。
-            var evictions = new List<WorldAddress>();
-            foreach (WorldAddress address in World.Chunks.Keys)
-            {
-                if (!retainedTargets.Contains(address))
-                    evictions.Add(address);
-            }
-            evictions.Sort();
-            for (int i = 0; i < evictions.Count; i++)
-                EvictChunk(evictions[i]);
-        }
-
-        /// <summary>按可见性、距离和稳定地址排列窗口数据请求。</summary>
-        private static int CompareWindowDataTargets(WorldAddress left, WorldAddress right,
-            IReadOnlyDictionary<WorldAddress, WindowDataTarget> targets)
-        {
-            WindowDataTarget leftTarget = targets[left];
-            WindowDataTarget rightTarget = targets[right];
-            if (leftTarget.Active != rightTarget.Active)
-                return leftTarget.Active ? -1 : 1;
-            int ring = leftTarget.Ring.CompareTo(rightTarget.Ring);
-            if (ring != 0)
-                return ring;
-            return left.CompareTo(right);
-        }
-
-        /// <summary>取消已经离开当前数据窗口、但仍在后台队列中的旧区块请求。</summary>
-        private void ReconcileWindowDataDemand(
-            IReadOnlyDictionary<WorldAddress, WindowDataTarget> currentTargets)
-        {
-            _windowDataCancellationBuffer.Clear();
-            foreach (WorldAddress address in _windowDataDemand)
-            {
-                if (!currentTargets.ContainsKey(address) && _pending.ContainsKey(address))
-                    _windowDataCancellationBuffer.Add(address);
-            }
-
-            _windowDataCancellationBuffer.Sort();
-            for (int i = 0; i < _windowDataCancellationBuffer.Count; i++)
-                CancelChunkRequest(_windowDataCancellationBuffer[i]);
-
-            _windowDataDemand.Clear();
-            foreach (WorldAddress address in currentTargets.Keys)
+            foreach (WorldAddress address in _windowCoverage.Added(ChunkWindowCoverage.Layer.Data))
                 _windowDataDemand.Add(address);
-            _windowDataCancellationBuffer.Clear();
+            foreach (WorldAddress address in _windowCoverage.Added(ChunkWindowCoverage.Layer.Active))
+                if (!_simulationLeases.ContainsKey(address))
+                    _simulationLeases.Add(address, World.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
+            foreach (WorldAddress address in _windowCoverage.Added(ChunkWindowCoverage.Layer.Presentation))
+                SetPresentationDemand(address, true);
+            foreach (WorldAddress address in _windowCoverage.Removed(ChunkWindowCoverage.Layer.Presentation))
+                SetPresentationDemand(address, false);
+
+            // 配置变化时撤销仍使用旧种子或旧快照的后台任务，已提交数据仍由世界管理。
+            if (_windowCoverage.LastFullRebuild)
+            {
+                _windowWorkBuffer.Clear();
+                foreach (KeyValuePair<WorldAddress, PendingGeneration> pair in _pending)
+                {
+                    if (!_windowDataDemand.Contains(pair.Key)) continue;
+                    ChunkWindowRequest current = FindHighestPriorityWindowForAddress(pair.Key, requests);
+                    ChunkGenerationRequest pending = pair.Value.Request;
+                    if (pending.WorldSeed != current.WorldSeed || !ReferenceEquals(pending.Profile, current.Profile) ||
+                        pending.Topology.IsWrapped != current.Topology.IsWrapped || pending.Topology.Min != current.Topology.Min ||
+                        pending.Topology.Span != current.Topology.Span)
+                        _windowWorkBuffer.Add(pair.Key);
+                }
+                foreach (WorldAddress address in _windowWorkBuffer)
+                {
+                    _scheduler.CancelPrewarmDemandsForSource(address);
+                    CancelChunkRequest(address);
+                }
+            }
+            _windowWorkBuffer.Clear();
+            _windowWorkBuffer.AddRange(_windowCoverage.Added(ChunkWindowCoverage.Layer.Data));
+            foreach (WorldAddress address in _windowCoverage.Added(ChunkWindowCoverage.Layer.Data))
+                _windowRetryTargets.Remove(address);
+            foreach (WorldAddress address in _windowRetryTargets)
+            {
+                if (!_windowDataDemand.Contains(address)) continue;
+                if (_windowCoverage.Contains(ChunkWindowCoverage.Layer.Active, address) && !_simulationLeases.ContainsKey(address))
+                    _simulationLeases.Add(address, World.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
+                if (_windowCoverage.Contains(ChunkWindowCoverage.Layer.Presentation, address))
+                    SetPresentationDemand(address, true);
+                _windowWorkBuffer.Add(address);
+            }
+            _windowRetryTargets.Clear();
+            _windowWorkBuffer.Sort((left, right) => CompareCurrentWindowDataPriority(left, right, requests));
+            foreach (WorldAddress address in _windowWorkBuffer)
+            {
+                ChunkWindowRequest request = FindHighestPriorityWindowForAddress(address, requests);
+                _ = RequestChunkDataAsync(address, request.WorldSeed, request.Profile, topology: request.Topology);
+            }
+
+            // 只重排仍在等待生成的目标，距离随最新观察者位置即时更新。
+            _windowWorkBuffer.Clear();
+            foreach (WorldAddress address in _pending.Keys)
+                if (_windowDataDemand.Contains(address)) _windowWorkBuffer.Add(address);
+            _windowWorkBuffer.Sort((left, right) => CompareCurrentWindowDataPriority(left, right, requests));
+            _scheduler.PrioritizeQueuedWork(_windowWorkBuffer);
+            _windowWorkBuffer.Clear();
+
+            foreach (WorldAddress address in _windowCoverage.Removed(ChunkWindowCoverage.Layer.Active))
+                if (_simulationLeases.TryGetValue(address, out ChunkLease lease))
+                {
+                    lease.Dispose();
+                    _simulationLeases.Remove(address);
+                }
+            foreach (WorldAddress address in _windowCoverage.Removed(ChunkWindowCoverage.Layer.Retained))
+                _deferredWindowEvictions.Add(address);
+            if (_windowCoverage.LastFullRebuild)
+                foreach (WorldAddress address in World.Chunks.Keys)
+                    if (!_windowCoverage.Contains(ChunkWindowCoverage.Layer.Retained, address))
+                        _deferredWindowEvictions.Add(address);
+            _windowWorkBuffer.AddRange(_deferredWindowEvictions);
+            _windowWorkBuffer.Sort();
+            foreach (WorldAddress address in _windowWorkBuffer)
+            {
+                if (_windowCoverage.Contains(ChunkWindowCoverage.Layer.Retained, address) ||
+                    EvictCanonicalChunk(address) || !World.Chunks.ContainsKey(address))
+                    _deferredWindowEvictions.Remove(address);
+            }
+            _windowWorkBuffer.Clear();
+        }
+
+        // 距离只对待生成地址重算，重叠观察者选可见且最近的请求。
+        private int CompareCurrentWindowDataPriority(WorldAddress left, WorldAddress right,
+            IReadOnlyList<ChunkWindowRequest> requests)
+        {
+            WindowDataTarget a = FindHighestPriorityWindowTarget(left, requests);
+            WindowDataTarget b = FindHighestPriorityWindowTarget(right, requests);
+            if (a.Active != b.Active) return a.Active ? -1 : 1;
+            int ring = a.Ring.CompareTo(b.Ring);
+            return ring != 0 ? ring : left.CompareTo(right);
+        }
+
+        private ChunkWindowRequest FindHighestPriorityWindowForAddress(WorldAddress address,
+            IReadOnlyList<ChunkWindowRequest> requests) => FindHighestPriorityWindowTarget(address, requests).Request;
+
+        private WindowDataTarget FindHighestPriorityWindowTarget(WorldAddress address,
+            IReadOnlyList<ChunkWindowRequest> requests)
+        {
+            WindowDataTarget best = default;
+            bool found = false;
+            for (int i = 0; i < requests.Count; i++)
+            {
+                ChunkWindowRequest request = requests[i];
+                WorldAddress center = _normalizer.Normalize(request.Center);
+                if (center.DimensionId != address.DimensionId) continue;
+                int dx = address.ChunkOrigin.X - center.ChunkOrigin.X;
+                int dy = address.ChunkOrigin.Y - center.ChunkOrigin.Y;
+                if (request.Topology.IsWrapped)
+                {
+                    dx = ShortestWindowCoordinateDelta(dx, request.Topology.Span.X);
+                    dy = ShortestWindowCoordinateDelta(dy, request.Topology.Span.Y);
+                }
+                int x = Math.Abs(dx / request.Profile.Width), y = Math.Abs(dy / request.Profile.Height);
+                if (x >= request.DataDistanceX || y >= request.DataDistanceY) continue;
+                var candidate = new WindowDataTarget(request,
+                    x < request.ActiveDistanceX && y < request.ActiveDistanceY, Math.Max(x, y));
+                if (!found || candidate.IsHigherPriorityThan(best)) { best = candidate; found = true; }
+            }
+            if (!found) throw new InvalidOperationException("窗口数据地址没有对应的观察者。");
+            return best;
+        }
+
+        private static int ShortestWindowCoordinateDelta(int delta, int span)
+        {
+            delta %= span;
+            if (delta > span / 2) delta -= span;
+            else if (delta < -span / 2) delta += span;
+            return delta;
+        }
+
+        private void TrackCommittedChunkOutsideRetentionWindow(ChunkCommitted committed)
+        {
+            if (_hasWindow && !_windowCoverage.Contains(ChunkWindowCoverage.Layer.Retained, committed.Address))
+                _deferredWindowEvictions.Add(committed.Address);
         }
 
         /// <summary>窗口关闭时取消仍未完成的窗口生成请求，不影响独立的显式数据请求。</summary>
@@ -486,13 +482,14 @@ namespace FlatWorld.WorldModel
             _windowDataCancellationBuffer.Clear();
             foreach (WorldAddress address in _windowDataDemand)
             {
+                _scheduler.CancelPrewarmDemandsForSource(address);
                 if (_pending.ContainsKey(address))
                     _windowDataCancellationBuffer.Add(address);
             }
 
             _windowDataCancellationBuffer.Sort();
             for (int i = 0; i < _windowDataCancellationBuffer.Count; i++)
-                CancelChunkRequest(_windowDataCancellationBuffer[i]);
+                CancelCanonicalChunkRequest(_windowDataCancellationBuffer[i]);
 
             _windowDataCancellationBuffer.Clear();
             _windowDataDemand.Clear();
@@ -562,6 +559,7 @@ namespace FlatWorld.WorldModel
                         // 有效任务提交失败时不能继续假装处于 Generating；记录失败后，下一次窗口刷新可以重新请求。
                         World.RejectFailedGeneration(completion.Pending.Request, failure);
                         completion.Pending.Completion.TrySetException(failure);
+                        if (_windowDataDemand.Contains(completion.Address)) _windowRetryTargets.Add(completion.Address);
                         World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
                         diagnosticOutcome = "rejected";
                     }
@@ -586,7 +584,10 @@ namespace FlatWorld.WorldModel
                         World.RejectFailedGeneration(completion.Pending.Request, failure);
                     completion.Pending.Completion.TrySetException(failure);
                     if (ownsWorldRequest)
+                    {
+                        if (_windowDataDemand.Contains(completion.Address)) _windowRetryTargets.Add(completion.Address);
                         World.Events.Publish(new ChunkGenerationFailed(completion.Address, failure.Message));
+                    }
                 }
                 completion.Pending.Cancellation.Dispose();
                 World.StreamingDiagnostics.Complete(completion.Pending.Timing, diagnosticOutcome);
@@ -627,10 +628,16 @@ namespace FlatWorld.WorldModel
         public bool CancelChunkRequest(WorldAddress address)
         {
             ThrowIfDisposed();
-            address = _normalizer.Normalize(address);
+            return CancelCanonicalChunkRequest(_normalizer.Normalize(address));
+        }
+
+        // 已保存的窗口地址属于原维度，切维度时不能用新拓扑再次归一化。
+        private bool CancelCanonicalChunkRequest(WorldAddress address)
+        {
             if (!_pending.TryGetValue(address, out PendingGeneration pending))
                 return false;
             _pending.Remove(address);
+            if (_windowDataDemand.Contains(address)) _windowRetryTargets.Add(address);
             World.CancelChunkGeneration(pending.Request);
             pending.Timing?.Cancel();
             World.StreamingDiagnostics.Count("generation.cancel_requested");
@@ -643,14 +650,19 @@ namespace FlatWorld.WorldModel
         public bool EvictChunk(WorldAddress address)
         {
             ThrowIfDisposed();
-            address = _normalizer.Normalize(address);
+            return EvictCanonicalChunk(_normalizer.Normalize(address));
+        }
+
+        private bool EvictCanonicalChunk(WorldAddress address)
+        {
+            if (_windowDataDemand.Contains(address)) _windowRetryTargets.Add(address);
             if (_simulationLeases.TryGetValue(address, out ChunkLease lease))
             {
                 lease.Dispose();
                 _simulationLeases.Remove(address);
             }
             SetPresentationDemand(address, false);
-            CancelChunkRequest(address);
+            CancelCanonicalChunkRequest(address);
             return World.EvictChunk(address);
         }
 
@@ -667,6 +679,10 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             ClearWindowDataDemand();
+            _windowCoverage.Clear();
+            _windowRetryTargets.Clear();
+            _deferredWindowEvictions.Clear();
+            _hasWindow = false;
             var addresses = new List<WorldAddress>(_simulationLeases.Keys);
             addresses.Sort();
             for (int i = 0; i < addresses.Count; i++)
@@ -685,10 +701,15 @@ namespace FlatWorld.WorldModel
             ThrowIfDisposed();
             var addresses = new List<WorldAddress>(_pending.Keys);
             addresses.Sort();
+            foreach (WorldAddress address in _windowDataDemand)
+                _scheduler.CancelPrewarmDemandsForSource(address);
             for (int i = 0; i < addresses.Count; i++)
-                CancelChunkRequest(addresses[i]);
+                CancelCanonicalChunkRequest(addresses[i]);
             _windowDataDemand.Clear();
             _windowDataCancellationBuffer.Clear();
+            _windowRetryTargets.Clear();
+            _windowCoverage.Clear();
+            _hasWindow = false;
         }
 
         /// <summary>
@@ -716,6 +737,10 @@ namespace FlatWorld.WorldModel
             if (_disposed)
                 return;
             _disposed = true;
+            _windowCommitSubscription.Dispose();
+            _windowCoverage.Clear();
+            _windowRetryTargets.Clear();
+            _deferredWindowEvictions.Clear();
             foreach (ChunkLease lease in _simulationLeases.Values)
                 lease.Dispose();
             _simulationLeases.Clear();

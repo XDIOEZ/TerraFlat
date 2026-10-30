@@ -8,6 +8,21 @@ test.runtime("world_streaming", "live_window", {}, function(data)
         "真实ChunkView仍挂有物理组件，或脚下碰撞没有独立交给所属世界物理服务")
 end, "真实流送窗口、脚下数据和表现租约")
 
+test.runtime("world_streaming", "incremental_window_roundtrip", {}, function(data)
+    assert(data.scope == "live-isolated-world" and data.awayReady and data.awayActive,
+        "正式窗口平移后没有完成新区块数据、表现或模拟租约")
+    assert(data.forwardVisitedCells > 0 and data.forwardVisitedCells <= 52 and
+        data.immediateReturnVisitedCells > 0 and data.immediateReturnVisitedCells <= 52,
+        "单格平移或折返仍全量枚举窗口面积")
+    assert(data.retargetReturnViewsReady and data.foldedViewReused and data.returnedViewReused and data.returnedDataReused,
+        "折返没有复用重叠范围内的真实ChunkView或权威数据")
+    assert(data.homeActive and data.homePresentationLease and data.pendingBindings == 0 and
+        data.pendingPresentations == 0 and data.idleReconciliationAttempts == 0,
+        "回到原窗口后租约未恢复、待办未清空或稳定区块仍被逐帧检查")
+    assert(data.worldPreserved and data.playerPreserved and data.restoredWindowReady,
+        "窗口回归改变了世界/玩家，或未恢复玩家原配置窗口")
+end, "真实窗口边界增量、快速折返、数据表现复用与稳定零待办")
+
 test.runtime("world_streaming", "incremental_world_scope", {}, function(data)
     assert(data.sourceWorld ~= data.targetWorld and data.targetWindowReady and data.targetViewBound
         and data.targetViewWorld == data.targetWorld,

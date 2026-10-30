@@ -172,3 +172,43 @@ test.system("world_streaming", "map_generation_plan", {}, function(data)
     assert(data.rejectDuplicateTerrain and data.rejectUndefinedStage,
         "重复地形或非法阶段被接受，导致生成生命周期含糊")
 end, "地图生成计划保持稳定阶段顺序并明确拒绝非法声明")
+
+-- 对正式窗口增量与表现批次的采样只验证真实状态和实际访问量。
+test.system("world_streaming", "incremental_window_updates", {}, function(data)
+    assert(data.first.active == 15 and data.first.data == 35 and data.first.retained == 63,
+        "矩形活动、数据和保留窗口初始范围错误")
+    assert(data.move.activeAdded == 3 and data.move.activeRemoved == 3
+        and data.move.dataAdded == 5 and data.move.dataRemoved == 5
+        and data.move.retainedAdded == 7 and data.move.retainedRemoved == 7,
+        "单格跨区时没有只增删矩形两侧边界")
+    assert(data.move.visits == 40 and data.same.visits == 0 and data.reverseMatches,
+        "单格跨区仍遍历窗口面积、重复窗口有额外访问，或折返没有恢复原范围")
+    assert(data.diagonalMatches and data.diagonalVisits == 88,
+        "斜向跨区的角落重复计算或边界范围错误")
+    assert(data.overlapMatches and data.wrappedMatches and data.wrapBoundaryVisits == 40,
+        "多观察者并集、环绕去重或跨接缝边界增量错误")
+    assert(data.configurationRebuilt and data.seedRebuilt and data.dimensionRebuilt,
+        "生成配置、种子或维度变化没有重建窗口")
+    assert(data.priorityBaseFirst and data.priorityNearest and data.priorityRoundRobin
+        and data.priorityMovement,
+        "表现批次未遵守基础地形优先、实时距离和单帧单步公平轮转")
+    local retry = data.prefetchRetry
+    assert(retry.initialQueued and retry.failureRetained and retry.noImmediateRetry
+        and retry.failureRetriedOnRefresh and retry.cancellationRetained and retry.cancellationRetriedOnRefresh,
+        "预取失败或取消后丢失待办、立即反复重试，或同窗刷新未重新领取")
+    assert(retry.leavingDiscarded and retry.presentationDiscarded,
+        "预取地址离窗或进入表现圈后，旧失败仍错误保留重试")
+end, "区块窗口边界增量、环绕合并与表现批次优先级")
+
+test.system("world_streaming", "background_generation_scheduling", {}, function(data)
+    assert(data.sharedLimit and data.visibleBeforeQueuedPrewarm and data.promotedWithoutDuplicate,
+        "正式生成与邻区预热没有共享并发额度、正式区块未优先，或提升后重复计算")
+    assert(data.runningPrewarmReused and data.sameRegionDoesNotOccupyWaitingSlot,
+        "正在预热的同一区域未复用，或正式区块占用线程等待已有计算")
+    assert(data.sharedDemandSurvivesOneCancellation and data.noDemandCancels
+        and data.worldExitCancels and data.queuedWorldExitRemoved
+        and data.completedSourceLeavesWindowCancels and data.reenteredSourceRestartsPrewarm,
+        "共享需求、完成区块离窗、重新进入或世界结束时后台区域的生命周期错误")
+    assert(data.loweredLimitRespected and data.failedPrewarmCanRetry,
+        "动态降低并发后仍提前领取任务，或预热失败后无法重试")
+end, "正式区块与水文预热共用后台额度、优先级和生命周期")

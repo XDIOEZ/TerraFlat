@@ -493,6 +493,51 @@ test.system("terrain", "river_diagnostic_aggregation", {}, function(data)
         "河漫滩夹具没有覆盖重叠扩张，或重叠格仍重复查询高度")
 end, "河流同请求多次细化累计与最近规模分离")
 
+-- 使用正式宏观河网计数与提交的地形，检查相邻区域共享高度和身份隔离。
+for _, case in ipairs({
+    {scenario = "reuse", algorithm = "simple", wrapped = false},
+    {scenario = "reuse", algorithm = "legacy", wrapped = true}
+}) do
+    test.system("terrain", "shared_hydrology_height_sampling", case, function(data)
+        assert(data.cold.computed > 0 and data.cold.sharedHits == 0,
+            "冷水文区域应实际计算高度且不能命中共享缓存")
+        assert(data.adjacent.sharedHits > 0 and data.adjacent.computed < data.independent.computed,
+            "相邻宏观区域没有减少实际高度噪声计算")
+        assert(data.adjacent.hash == data.independent.hash,
+            "共享高度后正式生成的相邻地形改变")
+        assert(data.resized.sharedHits > 0 and data.resized.hash == data.resizedIndependent.hash,
+            "临时输出尺寸变化不应拆分或改变基础高度采样")
+        assert(data.climateGrid.sharedHits > 0 and data.climateGrid.hash == data.gridIndependent.hash,
+            "气候格网变化只能共享高度，不能误共享地形或降水结果")
+    end, "宏观高度跨区域复用与正式地形一致：" .. case.algorithm)
+end
+
+for _, scenario in ipairs({"seed", "dimension", "epoch", "topology", "height", "algorithm"}) do
+    test.system("terrain", "shared_hydrology_height_sampling", {scenario = scenario}, function(data)
+        assert(data.changed.computed > 0 and data.changed.sharedHits == 0,
+            "不同世界、纪元、种子、拓扑或高度配置误用了共享采样：" .. scenario)
+        assert(data.changed.hash == data.independent.hash,
+            "身份变化后的地形与独立生成不一致：" .. scenario)
+    end, "宏观高度共享身份隔离：" .. scenario)
+end
+
+test.system("terrain", "shared_hydrology_height_sampling", {scenario = "lifecycle"}, function(data)
+    assert(data.cancelled and data.before.samples == 0 and data.afterCancel.samples == 0,
+        "取消请求留下了共享高度结果")
+    assert(data.beforeRetire.samples > 0 and data.afterRetire.samples == 0 and data.retiredRejected,
+        "切换世界没有清理缓存或拒绝旧纪元")
+    assert(data.rebuilt.sharedHits == 0 and data.rebuilt.hash == data.independent.hash,
+        "新纪元误用了旧缓存或改变地形")
+end, "宏观高度缓存取消与世界纪元")
+
+test.system("terrain", "shared_hydrology_height_sampling", {scenario = "concurrency"}, function(data)
+    assert(data.concurrentMatches and data.after.partitions <= data.after.maximumPartitions and
+        data.after.samples <= data.after.maximumPartitions * data.after.maximumSamplesPerPartition,
+        "并发生成改变地形或共享高度缓存超出上限")
+    assert(data.after.partitions > 0 and data.after.samples > 0,
+        "并发和淘汰测试没有真正构建缓存")
+end, "宏观高度共享并发一致与容量上限")
+
 local harvestCases = {
     {name = "一级普通工具", args = {}, tool = true, rule = true, uses = 6},
     {name = "三级品质提高工作量", args = {tier = 3}, tool = true, rule = true, uses = 3},
