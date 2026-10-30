@@ -1,4 +1,4 @@
-# FlatWorld 物品字典与科技树
+# FlatWorld 物品字典、科技树与行为树
 
 这是直接读取当前项目配置的 HTML 工具，无需安装前端依赖或导出一份物品副本。
 
@@ -47,6 +47,7 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 | --- | --- |
 | 物品和模板 | `../GameConfig/Items/item-manifest.json` 中启用的分包 |
 | 生物 | `../GameConfig/Actors/actor-manifest.json` 中启用的分包 |
+| 生物行为树与公共子树 | 生物继承后的 `modules.ai.parameters.behaviorTree` 与 Actor Manifest 的 `behaviorSubtrees` |
 | 固定制作配方 | `../GameConfig/Recipes/recipe-manifest.json` 中启用的分包 |
 | 单料加工 | 每个物品自己的 `processing`，不继承父物品的加工产物 |
 | 机器加工与工作站能力 | `Assets/Resources/Config/Mechanical/mechanical-catalog.json` |
@@ -54,9 +55,17 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 | 战利品和 Buff | `../GameConfig/LootTables/loot-tables.json` 与 Buff Manifest |
 | 图标 | 当前定义的 Sprite 地址及必要的纹理 `.meta` 切片信息 |
 
-物品继承由 `mechanics.js` 与 Python 写入校验共同对齐游戏加载器：更换模块 Prefab 后清理旧参数，执行 `removeModules`，不继承显示身份、`formerIds` 或 `processing`。模块说明在 `mechanics-rules.js`，名称与字段解释在 `module-glossary.json`。
+物品继承由 `mechanics.js` 与 Python 写入校验共同对齐游戏加载器：更换模块 Prefab 或声明 `inherit:false` 时整体替换该模块，执行 `removeModules`，不继承显示身份、`formerIds` 或 `processing`。模块说明在 `mechanics-rules.js`，名称与字段解释在 `module-glossary.json`。
 
 本地 Item/Buff 编辑仍通过原来的备份、文件指纹和写入校验流程；单纯查看或切换科技树不会写回游戏配置。Actor 及公开服务保持只读。
+
+## 行为树分页
+
+顶部「07 行为树」可按生物或公共子树浏览，也可直接打开 `#behavior-tree/actor%2FWolf`。目录支持名称、ID、节点搜索；树图从左到右，同级按从上到下的优先顺序显示，可折叠分支、展开子树、拖动及缩放。
+
+点击节点查看本次调用的实际参数；公共子树合并默认值与调用覆盖，并列出递归引用它的生物。Actor 局部同名子树优先于公共定义，能力配置和 JSON 来源保留在详情中。页面只读展示配置结构，不显示运行中节点状态。
+
+`behavior-tree-model.js` 处理继承后目录、子树展开与 `$参数` 替换，`behavior-tree.js` / `.css` 负责浏览；「重新读取」会重新加载当前 JSON，无需导出副本。
 
 ## 时代和子阶段如何调整
 
@@ -86,6 +95,7 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 node Assets/StreamingAssets/ItemWiki/tests/maintenance.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/balance-tuning.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-model.test.js
+node --test Assets/StreamingAssets/ItemWiki/tests/behavior-tree-model.test.js
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_wiki_maintenance.py
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_balance_tuning.py
 ```

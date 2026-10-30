@@ -28,6 +28,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 子树参数用 `$名称` 引用，引用节点的 `parameters` 覆盖默认值；子树可以再引用子树。服务节点前面的子节点每 Tick 更新伴随事实，最后一个是主树，服务不改变主动作身份。未知节点、缺参数和子树循环在初始化编译时失败。
 - Actor 加载沿正式 StreamingAssets/BinaryContentCache 入口读取共享库并冷编译模板，Android 走异步读取，F5 候选隔离且保留逐定义回滚。模板共用，每只生物独立节点、黑板与能力状态；死亡同步 Abort、关闭本体攻击窗并取消所有组合技能，卸载解除订阅和目标占位。
 - 子物种完整声明另一套 AI 时用通用模块标记 `inherit:false`，整体替换父 AI 参数，其他模块继续继承；该标记在 JObject 解析阶段消费，不进入持久 DTO。
+- ItemWiki 顶部「行为树」可只读查看生物、公共/局部子树、调用实参和引用生物；来源为正式 Actor Manifest 与共享库，刷新读取当前 JSON，不是运行态节点监视器。
 - 地面、飞行、水生、群落与光照能力只执行树选择的动作；温度模块向宿主记录避险事实，由公共温度子树执行，鱼的外部接管/未知水域/搁浅优先。群体、仇恨、反击、觅食、产物和追踪记忆各自持有状态；推进和技能范围仍经既有接口。
 - 回归：`python Tools/Tests/AnimalBehaviorTree/verify.py`（生产树与真实 Lua、正式继承配置、ECS 映射），另选 `ai/animal_tree_catalog` 的真实模块装配与 AI/导航现场；离线通过不代表 Unity 导入和实测通过。
 

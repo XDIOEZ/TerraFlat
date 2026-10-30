@@ -47,6 +47,9 @@ BALANCE_HISTORY = BalanceHistory(PROJECT_ROOT)
 WIKI_URL_PATH = "/Assets/StreamingAssets/ItemWiki/"
 PUBLIC_WIKI_FILES = {
     "app.js",
+    "behavior-tree.js",
+    "behavior-tree-model.js",
+    "behavior-tree.css",
     "balance-tuning.js",
     "balance-tuning.css",
     "buffs.js",
@@ -191,7 +194,7 @@ def merge_like_json_net(base: Any, override: Any) -> Any:
 
 
 def remove_replaced_module_bodies(inherited: dict[str, Any], source: dict[str, Any]) -> None:
-    """子定义更换模块 Prefab 时清理父模块身体，保持与运行时解析规则一致。"""
+    """更换 Prefab 或声明 inherit:false 时整体替换模块，与运行时一致。"""
     inherited_modules = inherited.get("modules")
     source_modules = source.get("modules")
     if not isinstance(inherited_modules, dict) or not isinstance(source_modules, dict):
@@ -202,7 +205,7 @@ def remove_replaced_module_bodies(inherited: dict[str, Any], source: dict[str, A
             continue
         parent_prefab = str(parent_body.get("prefab") or "").strip().lower()
         child_prefab = str(child_body.get("prefab") or "").strip().lower()
-        if child_prefab and child_prefab != parent_prefab:
+        if child_body.get("inherit") is False or child_prefab and child_prefab != parent_prefab:
             inherited_modules.pop(module_name, None)
 
 
@@ -244,6 +247,10 @@ def resolve_items(sources: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any
                     raise WikiValidationError(f"物品 {source['id']} removeModules 找不到模块：{name}")
                 modules.pop(name.strip())
         result["id"] = source["id"]
+        if isinstance(result.get("modules"), dict):
+            for body in result["modules"].values():
+                if isinstance(body, dict):
+                    body.pop("inherit", None)
         result["abstract"] = bool(source.get("abstract", False))
         result.pop("parent", None)
         result.pop("removeModules", None)
@@ -598,6 +605,8 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 if lower == prefix + manifest_name:
                     return True
                 manifest = read_json(config_root / manifest_name)
+                if directory == "Actors" and lower == prefix + str(manifest.get("behaviorSubtrees", "behavior-subtrees.json")).lower():
+                    return True
                 for package in manifest.get("packages", []):
                     if package.get("enabled", True) is False:
                         continue

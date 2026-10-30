@@ -31,6 +31,16 @@ class WikiMaintenanceTests(unittest.TestCase):
         self.assertFalse(wiki.is_same_wiki(old, True))
         self.assertTrue(wiki.is_same_wiki({**old, "publicReadOnly": True, "writable": False, "projectId": wiki.PROJECT_ID, "projectRoot": None}, True))
 
+    def test_explicit_module_replacement_matches_behavior_tree_runtime(self):
+        sources = {
+            "base": {"id": "Base", "modules": {"ai": {"prefab": "Tree", "parameters": {"capabilities": {"pack": {}}}}, "health": {"id": "HP"}}},
+            "child": {"id": "Child", "parent": "Base", "modules": {"ai": {"inherit": False, "prefab": "Tree", "parameters": {"capabilities": {"territory": {}}}}}},
+        }
+        result = wiki.resolve_items(sources)["child"]
+        self.assertEqual({"capabilities": {"territory": {}}}, result["modules"]["ai"]["parameters"])
+        self.assertNotIn("inherit", result["modules"]["ai"])
+        self.assertIn("health", result["modules"])
+
     def test_current_item_catalog_remains_valid(self):
         packages = wiki.load_manifest_packages()
         roots = {package["id"]: wiki.read_json(wiki.ITEM_ROOT / package["path"]) for package in packages}
@@ -72,6 +82,15 @@ class WikiMaintenanceTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(200, response.status, request_path)
                 response.read()
+            for resource in ["behavior-tree.js", "behavior-tree-model.js", "behavior-tree.css"]:
+                connection.request("GET", "/Assets/StreamingAssets/ItemWiki/" + resource)
+                response = connection.getresponse()
+                self.assertEqual(200, response.status, resource)
+                response.read()
+            connection.request("GET", "/Assets/StreamingAssets/GameConfig/Actors/behavior-subtrees.json")
+            response = connection.getresponse()
+            self.assertEqual(200, response.status)
+            self.assertIn("subtrees", json.loads(response.read()))
             connection.request("GET", "/api/balance/state?itemId=Knife_Test")
             response = connection.getresponse()
             self.assertEqual(403, response.status, "公开 Wiki 不能读取本机调参历史")

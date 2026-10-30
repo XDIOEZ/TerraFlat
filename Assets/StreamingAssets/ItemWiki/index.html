@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles.css?v=20261026-balance">
     <link rel="stylesheet" href="balance-tuning.css?v=20261026-balance">
     <link rel="stylesheet" href="tech-tree.css?v=20261023-tree">
+    <link rel="stylesheet" href="behavior-tree.css?v=20261030-tree">
 </head>
 <body>
 <div class="site-shell">
@@ -48,6 +49,11 @@
                 <span>06</span>
                 <strong>BUFF</strong>
                 <small>状态与数值</small>
+            </button>
+            <button id="behaviorTreeViewButton" class="header-page-button" type="button">
+                <span>07</span>
+                <strong>行为树</strong>
+                <small>CREATURE AI</small>
             </button>
         </nav>
 
@@ -214,6 +220,10 @@
 
         <section id="techTreeBook" class="tech-tree-book pixel-frame" aria-label="物品科技树" hidden>
             <div id="techTreeRoot"><p class="no-data">正在整理物品与加工路线…</p></div>
+        </section>
+
+        <section id="behaviorTreeBook" class="behavior-tree-book pixel-frame" aria-label="生物行为树" hidden>
+            <div id="behaviorTreeRoot"><p class="no-data">正在读取生物与公共子树…</p></div>
         </section>
 
         <section id="designBook" class="design-book pixel-frame" hidden>
@@ -392,12 +402,14 @@
     </details>
 </template>
 
-<script src="mechanics.js?v=20261023-tree" defer></script>
+<script src="mechanics.js?v=20261030-tree" defer></script>
 <script src="mechanics-rules.js?v=20261023-tree" defer></script>
 <script src="buffs.js?v=20261023-tree" defer></script>
 <script src="tech-tree-model.js?v=20261023-tree" defer></script>
 <script src="tech-tree.js?v=20261023-tree" defer></script>
+<script src="behavior-tree-model.js?v=20261030-tree" defer></script>
+<script src="behavior-tree.js?v=20261030-tree" defer></script>
 <script src="balance-tuning.js?v=20261026-balance" defer></script>
-<script src="app.js?v=20261026-balance" defer></script>
+<script src="app.js?v=20261030-tree" defer></script>
 </body>
 </html>

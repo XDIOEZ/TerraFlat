@@ -55,10 +55,14 @@
                 delete inherited.formerIds;
                 delete inherited.processing; // 加工产物属于当前物品，不能从模板继承。
             }
+            const overrides = clone(source);
             for (const [name, body] of Object.entries(source.modules || {})) {
-                if (body?.prefab && inherited.modules?.[name] && keyOf(body.prefab) !== keyOf(inherited.modules[name].prefab)) delete inherited.modules[name];
+                if (body?.inherit === false) {
+                    delete inherited.modules?.[name];
+                    delete overrides.modules[name].inherit;
+                } else if (body?.prefab && inherited.modules?.[name] && keyOf(body.prefab) !== keyOf(inherited.modules[name].prefab)) delete inherited.modules[name];
             }
-            const final = merge(inherited, source);
+            const final = merge(inherited, overrides);
             if (source.removeModules !== undefined) {
                 if (!Array.isArray(source.removeModules) || !object(final.modules)) throw new Error(`无效 removeModules：${source.id}`);
                 for (const name of source.removeModules) {
@@ -98,7 +102,7 @@
                 packages.set(key, pkg);
             }
         }
-        return { sources, packages, resolved: collection === "recipes" ? sources : resolveDefinitions(sources) };
+        return { manifest, sources, packages, resolved: collection === "recipes" ? sources : resolveDefinitions(sources) };
     }
 
     function matches(input, item) {

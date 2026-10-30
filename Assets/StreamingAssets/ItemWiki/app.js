@@ -118,6 +118,9 @@
         techTreeConfig: null,
         techTreeResources: {},
         techTreeError: "",
+        behaviorTree: null,
+        behaviorSubtrees: null,
+        behaviorTreeError: "",
         designDocs: [],
         designLoaded: false,
         selectedDesignPath: DESIGN_DOC_INDEX_PATH,
@@ -158,6 +161,9 @@
         techTreeViewButton: document.getElementById("techTreeViewButton"),
         techTreeBook: document.getElementById("techTreeBook"),
         techTreeRoot: document.getElementById("techTreeRoot"),
+        behaviorTreeViewButton: document.getElementById("behaviorTreeViewButton"),
+        behaviorTreeBook: document.getElementById("behaviorTreeBook"),
+        behaviorTreeRoot: document.getElementById("behaviorTreeRoot"),
         footerCapability: document.getElementById("footerCapability"),
         designViewButton: document.getElementById("designViewButton"),
         systemMapViewButton: document.getElementById("systemMapViewButton"),
@@ -225,6 +231,11 @@
 
     // 页面启动时绑定交互并加载当前 JSON。
     function init() {
+        state.behaviorTree = window.ItemBehaviorTreeViewer?.create({
+            root: els.behaviorTreeRoot,
+            onSelect: id => history.replaceState(null, "", `#behavior-tree/${encodeURIComponent(id)}`),
+            openActor: id => { setView("catalog"); selectItem(`actor:${id}`); locateSelectedItemInIndex(); }
+        });
         state.techTree = window.ItemTechTree?.create({
             root: els.techTreeRoot,
             loadSprite,
@@ -286,6 +297,7 @@
         els.buffViewButton.addEventListener("click", () => setView("buffs"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
         els.techTreeViewButton.addEventListener("click", () => setView("tech-tree"));
+        els.behaviorTreeViewButton.addEventListener("click", () => setView("behavior-tree"));
         els.designViewButton.addEventListener("click", () => setView("design"));
         els.systemMapViewButton.addEventListener("click", () => setView("system-map"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
@@ -421,6 +433,7 @@
             await checkWriteCapability();
             clearSpriteCache();
             state.techTreeError = "";
+            state.behaviorTreeError = "";
             const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs, techTreeData] = await Promise.all([
                 fetchJson(ITEM_MANIFEST_PATH),
                 fetchJson(LOOT_TABLE_PATH),
@@ -472,6 +485,10 @@
             state.buffPackages = buffs.packages;
             state.buffHashes = buffs.hashes;
             state.actors = actors;
+            const behaviorSubtreePath = actors.manifest.behaviorSubtrees || "behavior-subtrees.json";
+            state.behaviorSubtrees = await fetchJson(`../GameConfig/Actors/${behaviorSubtreePath}`)
+                .then(library => ({ ...library, sourcePath: behaviorSubtreePath }))
+                .catch(error => { state.behaviorTreeError = error.message; return null; });
             state.recipes = Array.from(recipes.resolved.values());
             state.techTreeConfig = techTreeData?.[0] || null;
             state.techTreeResources = { mechanicalCatalog: techTreeData?.[1], liquids: techTreeData?.[2] };
@@ -502,6 +519,7 @@
             setStatus("error", `读取失败：${error.message}`);
             els.itemList.innerHTML = `<div class="no-data">${escapeHtml(error.message)}</div>`;
             state.techTree?.setError(error.message);
+            state.behaviorTree?.setError(error.message);
             showEmpty();
         } finally {
             els.reloadButton.disabled = false;
@@ -613,6 +631,15 @@
         state.mechanicsContext = ItemMechanics.createContext(state.entries, state.recipes, state.lootTables);
         state.entries.push(...Array.from(state.buffSources, ([key, source]) => BuffWiki.makeEntry(source, state.buffPackages.get(key))));
         rebuildTechTree();
+        rebuildBehaviorTree();
+    }
+
+    // 行为树直接消费当前 Actor 继承结果与 Manifest 指定的公共子树。
+    function rebuildBehaviorTree() {
+        try {
+            if (!state.behaviorSubtrees) throw new Error(state.behaviorTreeError || "公共子树未加载。");
+            state.behaviorTree.setCatalog(ItemBehaviorTreeModel.createCatalog(state.entries, state.behaviorSubtrees));
+        } catch (error) { state.behaviorTree?.setError(error.message); }
     }
 
     // 科技树只消费当前解析结果，时代规则独立配置，重新读取和保存后一起更新。
@@ -688,15 +715,18 @@
 
     // 按页面切换物品档案、科技树与系统资料，并保持可分享地址同步。
     function setView(view, updateRoute = true) {
-        state.activeView = ["overview", "tech-tree", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
+        state.activeView = ["overview", "tech-tree", "behavior-tree", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
         const overview = state.activeView === "overview";
         const techTree = state.activeView === "tech-tree";
+        const behaviorTree = state.activeView === "behavior-tree";
         const design = state.activeView === "design";
         const systemMap = state.activeView === "system-map";
         const settings = state.activeView === "settings";
         document.body.classList.toggle("overview-mode", overview);
         document.body.classList.toggle("tech-tree-mode", techTree);
-        els.catalogBook.hidden = overview || techTree || design || systemMap || settings;
+        document.body.classList.toggle("behavior-tree-mode", behaviorTree);
+        els.catalogBook.hidden = overview || techTree || behaviorTree || design || systemMap || settings;
+        els.behaviorTreeBook.hidden = !behaviorTree;
         els.techTreeBook.hidden = !techTree;
         els.overviewBook.hidden = !overview;
         els.designBook.hidden = !design;
@@ -706,18 +736,20 @@
         els.buffViewButton.classList.toggle("active", state.activeView === "buffs");
         els.overviewViewButton.classList.toggle("active", overview);
         els.techTreeViewButton.classList.toggle("active", techTree);
+        els.behaviorTreeViewButton.classList.toggle("active", behaviorTree);
         els.designViewButton.classList.toggle("active", design);
         els.systemMapViewButton.classList.toggle("active", systemMap);
         els.settingsButton.classList.toggle("active", settings);
-        for (const button of [els.catalogViewButton, els.buffViewButton, els.overviewViewButton, els.techTreeViewButton, els.designViewButton, els.systemMapViewButton, els.settingsButton]) {
+        for (const button of [els.catalogViewButton, els.buffViewButton, els.overviewViewButton, els.techTreeViewButton, els.behaviorTreeViewButton, els.designViewButton, els.systemMapViewButton, els.settingsButton]) {
             button.setAttribute("aria-pressed", String(button.classList.contains("active")));
         }
         if (updateRoute) {
-            const selectedTreeId = techTree ? state.techTree?.getSelectedId() : "";
+            const selectedTreeId = techTree ? state.techTree?.getSelectedId() : behaviorTree ? state.behaviorTree?.getSelectedId() : "";
             history.replaceState(null, "", `#${state.activeView}${selectedTreeId ? `/${encodeURIComponent(selectedTreeId)}` : ""}`);
         }
         if (techTree) state.techTree?.show();
         else state.techTree?.hide();
+        if (behaviorTree) state.behaviorTree?.show();
         if (overview) renderOverview();
         if (design) loadDesignDocs();
         if (systemMap) loadSystemMap();
@@ -1696,6 +1728,7 @@
     function readLocationRoute() {
         let hash = location.hash.slice(1);
         try { hash = decodeURIComponent(hash); } catch { hash = ""; }
+        if (hash === "behavior-tree" || hash.startsWith("behavior-tree/")) return { view: "behavior-tree", id: hash.slice("behavior-tree/".length) };
         if (hash === "tech-tree" || hash.startsWith("tech-tree/")) return { view: "tech-tree", id: hash.slice(10) };
         if (["overview", "design", "system-map", "settings", "buffs", "catalog"].includes(hash)) return { view: hash, id: "" };
         const id = hash.startsWith("item/") ? hash.slice(5) : hash;
@@ -1705,6 +1738,11 @@
     function applyLocationRoute() {
         if (!state.entries.length) return;
         const route = readLocationRoute();
+        if (route.view === "behavior-tree") {
+            setView("behavior-tree", false);
+            state.behaviorTree?.select(route.id, { notify: false });
+            return;
+        }
         if (route.view === "tech-tree") {
             setView("tech-tree", false);
             state.techTree?.select(route.id, { notify: false, center: true });
@@ -1742,7 +1780,17 @@
             (entry.final.abstract ? `<span class="badge red">ABSTRACT</span>` : `<span class="badge green">${entry.kind === "actor" ? "生物 · 只读" : "RUNTIME ITEM"}</span>`) +
             `</div>`;
         hero.append(icon, title);
-        if (entry.kind === "item" && !entry.final.abstract) {
+        if (entry.kind === "actor") {
+            const treeLink = document.createElement("button");
+            treeLink.type = "button";
+            treeLink.className = "detail-tree-link";
+            treeLink.textContent = "查看行为树 →";
+            treeLink.addEventListener("click", () => {
+                setView("behavior-tree");
+                state.behaviorTree?.select(`actor/${entry.final.id}`);
+            });
+            title.appendChild(treeLink);
+        } else if (entry.kind === "item" && !entry.final.abstract) {
             const treeLink = document.createElement("button");
             treeLink.type = "button";
             treeLink.className = "detail-tree-link";

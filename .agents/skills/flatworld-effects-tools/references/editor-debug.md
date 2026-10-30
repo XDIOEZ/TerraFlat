@@ -18,6 +18,7 @@
 - PuerTS MCP 调用接收 `System.Type` 的 Unity API 时，传 `puer.$typeof(CS.类型)`，不能直接传 JS 类；如 `CS.UnityEngine.Resources.FindObjectsOfTypeAll(puer.$typeof(CS.UnityEngine.GameObject))`。对象查询类型须继承 `UnityEngine.Object`，否则出现 `FindAllObjectsOfType: Invalid Type`；`GetComponentsInChildren` 的 Type 重载同样先转换。
 - HTML 物品字典入口 `Assets/StreamingAssets/ItemWiki/打开物品Wiki.cmd`，直接读启用的 Items/Actors/Recipes/Buffs manifests；维护说明在同目录 README。启动器按项目和读写模式复用后台服务，不按端口批量杀 Python。
 - 科技树 `tech-tree-eras.json` 配展示时代/细分阶段，`tech-tree-model.js` 从当前配方、物品加工和机器/温变数据建关系；processing 不继承。新增浏览器资源或配置入口同步 `wiki_server.py` 公开白名单。
+- ItemWiki「行为树」分页只读展示继承后的 Actor 树及 Manifest 的 `behaviorSubtrees`；`behavior-tree-model.js` 处理局部覆盖、展开、实参和引用生物，`behavior-tree.js` 管树图交互。回归 `tests/behavior-tree-model.test.js` 与 Python 公开资源路由。
 - 科技树自然资源按采矿/树木与直接采集路线识别，`stages.layoutBand: "natural"` 标记基础自然原料组；下方资源区按用途居中布局，与展示时代分开，未知来源不自动视为自然资源。
 - 外部刷新在 Windows 用 ReadDirectoryChangesW，禁 Mono DefaultWatcher 递归扫 Assets；Play/切换中留请求，编辑静默后合并，溢出补一次全量。Unity 保存独立于全库刷新；内容工坊只写 JSON 差异。
 - CreateScene 不触发 sceneLoaded；Hierarchy 工具结合卸载/hierarchyChanged 定向解析记录，GlobalObjectId 仅解析已加载所属场景。
