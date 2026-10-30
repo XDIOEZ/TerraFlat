@@ -64,6 +64,7 @@ test.system("core_lifecycle", "editor_asset_loading", {}, function(data)
     assert(data.customPreserved and data.bundlePreserved, "编辑器入口接管了自定义 Provider 或 Bundle 资源")
     assert(data.completedImmediately and data.loadedExpectedPrefab and data.immediateRequestReleased,
         "编辑器已准备资源仍额外排队等待、加载错误 Prefab，或释放后遗留请求")
+    assert(data.directSpriteMatches and data.slicedSpriteMatches, "编辑器普通 Sprite 或子图资源身份错误")
 end, "编辑器默认资源请求路由、缓存隔离和依赖保留")
 
 for _, row in ipairs({
@@ -289,6 +290,69 @@ test.system("core_lifecycle", "resource_plan", { mode = "throw" }, function(data
     assert(data.failure == "InvalidOperationException" and data.stage == "content", "没有保留失败阶段和异常")
     assert(#data.order == 2 and data.finished == 2, "异常阶段没有执行 finally 清理")
 end, "资源阶段异常与清理")
+
+for _, mode in ipairs({ "complete", "failed", "cancel", "nested_throw", "nested_cancel", "consume_twice" }) do
+    test.system("core_lifecycle", "resource_prefetch", { mode = mode }, function(data)
+        assert(data.startedBeforeStartupFinished, "配置预取没有与启动阶段重叠")
+        assert(data.disposed == 1, "预取结束、失败或取消后没有释放迭代器")
+        if mode == "complete" then
+            assert(data.value == 42 and data.failure == nil and data.prefetchFinishedBeforeContent,
+                "完成的预取没有被依赖阶段正确接收")
+        elseif mode == "failed" or mode == "nested_throw" then
+            assert(data.failure == "InvalidOperationException" and data.stage == "content" and data.value == 0,
+                "预取失败没有在依赖阶段终止资源会话")
+        elseif mode == "consume_twice" then
+            assert(data.failure == "InvalidOperationException" and data.value == 42, "预取结果被重复交接")
+        else
+            assert(data.value == 0 and not data.published, "取消后仍发布了预取结果")
+        end
+        if mode == "nested_throw" or mode == "nested_cancel" then
+            assert(data.nestedDisposed == 1, "嵌套预取异常或取消后没有释放内部迭代器")
+        end
+    end, "资源配置预取、错误与取消：" .. mode)
+end
+
+test.system("core_lifecycle", "resource_prefetch_fairness", {}, function(data)
+    assert(data.foregroundSteps == 5, "预取消耗预算阻塞了当前加载阶段")
+    assert(data.secondStartedBeforeFirstFinished, "预取没有轮流获得执行机会")
+    assert(not data.repeatedSameFrame and data.firstValue == 7 and data.secondValue == 9,
+        "预取同帧重复推进或结果错误")
+    assert(data.disposed == 2 and data.failure == nil, "并行预取没有完整收尾")
+end, "资源预取与前台阶段的帧预算和公平性")
+
+for _, mode in ipairs({ "complete", "failed", "cancel" }) do
+    test.system("core_lifecycle", "resource_prefetch_candidate", { mode = mode }, function(data)
+        assert(data.candidateContext and data.officialBetweenFrames and data.disposed == 1,
+            "候选预取污染正式目录或没有释放")
+        if mode == "complete" then
+            assert(data.committed and data.result == 24 and data.officialProgressPreserved,
+                "候选预取没有正确发布或覆盖了正式运行状态")
+        else
+            assert(not data.committed and data.officialProgressPreserved,
+                "失败或取消的候选预取改变了正式目录")
+            if mode == "failed" then
+                assert(data.failure == "InvalidOperationException" and data.stage == "content", "候选预取失败阶段错误")
+            end
+        end
+    end, "候选资源预取的隔离、失败与取消：" .. mode)
+end
+
+test.system("core_lifecycle", "world_liquid_resource_plan", {}, function(data)
+    assert(data.spriteCount == 2 and data.materialCount == 1, "重复液体外观地址没有合并")
+    assert(data.sharedSpriteOwner == "first" and data.sharedMaterialOwner == "first", "共享资源诊断丢失首个来源")
+    assert(data.invalidRejected, "缺少世界外观的液体未被拒绝")
+end, "世界液体外观按资源类型与地址合并")
+
+test.system("core_lifecycle", "actor_catalog_inputs", {}, function(data)
+    assert(data.count == 2 and data.childWeight == 5 and data.inheritedPrefab == "Module_Example",
+        "Actor 分包合并或跨文件继承结果不正确")
+    assert(data.invalidRejected, "错误的 Actor 分包没有被拒绝")
+end, "Actor 分包保留跨文件继承和格式校验")
+
+test.system("core_lifecycle", "catalog_package_deserialization", {}, function(data)
+    assert(data.recipeId == "recipe:test" and data.buffId == "buff:test", "本体分包解析结果错误")
+    assert(data.noNestedCacheBuild and data.strictBuffRejected, "分包重复写缓存或丢失 Buff 严格解析")
+end, "整包缓存内的配方和 Buff 分包直接解析")
 
 for _, mode in ipairs({ "slow", "instant", "budget", "empty", "failed_start", "failed_complete", "cancel", "optional_missing" }) do
     test.system("core_lifecycle", "resource_queue", { mode = mode }, function(data)

@@ -34,22 +34,29 @@ internal sealed class ResourceLoadPipeline : IDisposable
     private bool disposed;
     private readonly Func<bool> isInteractive;
     private readonly Func<double?> workBudget;
+    private readonly Func<int> frameNumber;
+    private readonly List<IPrefetchedResourceData> prefetched = new();
+    private int prefetchFrame = -1, nextPrefetch;
+    private static readonly Unity.Profiling.ProfilerMarker PrefetchMarker = new("FlatWorld.Resources.Prefetch");
     private int workFrame = -1;
     private long workStarted;
-    public string CurrentStage => currentStep?.Id ?? "plan";
+    private string lastStageId;
+    public string CurrentStage => currentStep?.Id ?? lastStageId ?? "plan";
     public Exception Failure { get; private set; }
 
-    public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null, Func<double?> workBudget = null)
+    public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null,
+        Func<double?> workBudget = null, Func<int> frameNumber = null)
     {
         this.report = report;
         this.isInteractive = isInteractive;
         this.workBudget = workBudget;
+        this.frameNumber = frameNumber ?? (() => UnityEngine.Time.frameCount);
     }
 
     /// <summary>所有嵌套阶段共用同帧预算，菜单显示后累计工作超过 1ms 就让出下一帧。</summary>
     public bool ShouldYield()
     {
-        int frame = UnityEngine.Time.frameCount;
+        int frame = frameNumber();
         if (workFrame != frame)
         {
             workFrame = frame;
@@ -78,6 +85,113 @@ internal sealed class ResourceLoadPipeline : IDisposable
         report(currentStep.Title, (completedWeight + currentStep.Weight * stepProgress) / totalWeight);
     }
 
+    /// <summary>预取只推进私有纯数据，结果仍由依赖阶段接收和发布。</summary>
+    public PrefetchedResourceData<T> Prefetch<T>(Func<Action<T>, Action<Exception>, IEnumerator> load)
+    {
+        var result = new PrefetchedResourceData<T>(load);
+        prefetched.Add(result);
+        return result;
+    }
+
+    private void AdvancePrefetchedResourceData()
+    {
+        int frame = frameNumber();
+        if (prefetched.Count == 0 || prefetchFrame == frame) return;
+        prefetchFrame = frame;
+        int first = nextPrefetch;
+        nextPrefetch = (nextPrefetch + 1) % prefetched.Count;
+        for (int i = 0; i < prefetched.Count && !ShouldYield(); i++)
+            prefetched[(first + i) % prefetched.Count].Advance(frame, ShouldYield);
+    }
+
+    internal interface IPrefetchedResourceData : IDisposable
+    {
+        void Advance(int frame, Func<bool> shouldYield);
+    }
+
+    internal sealed class PrefetchedResourceData<T> : IPrefetchedResourceData
+    {
+        private readonly Func<Action<T>, Action<Exception>, IEnumerator> load;
+        private readonly Stack<IEnumerator> pending = new();
+        private int lastFrame = -1;
+        private bool started, finished, returned, consumed, disposed;
+        private T result;
+        private Exception error;
+
+        internal PrefetchedResourceData(Func<Action<T>, Action<Exception>, IEnumerator> load)
+            => this.load = load ?? throw new ArgumentNullException(nameof(load));
+
+        void IPrefetchedResourceData.Advance(int frame, Func<bool> shouldYield)
+        {
+            if (disposed || finished || lastFrame == frame) return;
+            lastFrame = frame;
+            try
+            {
+                if (!started)
+                {
+                    started = true;
+                    pending.Push(load(value => { result = value; returned = true; }, exception => error = exception)
+                        ?? throw new InvalidOperationException("资源预取没有返回加载流程。"));
+                }
+                while (pending.Count > 0)
+                {
+                    IEnumerator routine = pending.Peek();
+                    if (!routine.MoveNext())
+                    {
+                        pending.Pop();
+                        (routine as IDisposable)?.Dispose();
+                        if (shouldYield()) return;
+                        continue;
+                    }
+                    if (routine.Current is IEnumerator nested) pending.Push(nested);
+                    else if (routine.Current == null) return;
+                    else throw new InvalidOperationException("资源预取只支持本地纯数据协程。");
+                    if (shouldYield()) return;
+                }
+                if (!returned && error == null) error = new InvalidOperationException("资源预取未返回结果。");
+                finished = true;
+            }
+            catch (Exception exception)
+            {
+                error = exception;
+                finished = true;
+                try { DisposePending(); }
+                catch (Exception cleanup) { error = new AggregateException(exception, cleanup); }
+            }
+        }
+
+        public IEnumerator Wait(Action<T> completed)
+        {
+            while (!finished) yield return null;
+            if (error != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+            if (consumed) throw new InvalidOperationException("资源预取结果只能交接一次。");
+            consumed = true;
+            T value = result;
+            result = default;
+            completed(value);
+        }
+
+        private void DisposePending()
+        {
+            Exception error = null;
+            while (pending.Count > 0)
+            {
+                try { (pending.Pop() as IDisposable)?.Dispose(); }
+                catch (Exception exception) { error ??= exception; }
+            }
+            if (error != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            DisposePending();
+            result = default;
+            error = null;
+        }
+    }
+
     #endregion
 
     #region 执行与释放
@@ -87,7 +201,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
     {
         List<Step> ordered;
         try { ordered = OrderSteps(); }
-        catch (Exception exception) { Failure = exception; yield break; }
+        catch (Exception exception) { Failure = exception; Dispose(); yield break; }
         totalWeight = ordered.Sum(step => step.Weight);
         try
         {
@@ -97,6 +211,8 @@ internal sealed class ResourceLoadPipeline : IDisposable
                 stepProgress = 0;
                 Report(0);
                 var timer = Stopwatch.StartNew();
+                var stageMarker = new Unity.Profiling.ProfilerMarker("FlatWorld.Resources." + step.Id);
+                long stageWorkTicks = 0, prefetchWorkTicks = 0;
                 double longestMoveMilliseconds = 0;
                 try { routines.Push(step.Load() ?? throw new InvalidOperationException($"阶段 {step.Id} 没有返回加载流程。")); }
                 catch (Exception exception) { Failure = exception; yield break; }
@@ -113,9 +229,11 @@ internal sealed class ResourceLoadPipeline : IDisposable
                     {
                         IEnumerator routine = routines.Peek();
                         long started = Stopwatch.GetTimestamp();
-                        bool moved = routine.MoveNext();
-                        longestMoveMilliseconds = Math.Max(longestMoveMilliseconds,
-                            (Stopwatch.GetTimestamp() - started) * 1000.0 / Stopwatch.Frequency);
+                        bool moved;
+                        using (stageMarker.Auto()) moved = routine.MoveNext();
+                        long duration = Stopwatch.GetTimestamp() - started;
+                        stageWorkTicks += duration;
+                        longestMoveMilliseconds = Math.Max(longestMoveMilliseconds, duration * 1000.0 / Stopwatch.Frequency);
                         if (!moved)
                         {
                             routines.Pop();
@@ -130,12 +248,18 @@ internal sealed class ResourceLoadPipeline : IDisposable
                         }
                     }
                     catch (Exception exception) { Failure = exception; yield break; }
+                    long prefetchStarted = Stopwatch.GetTimestamp();
+                    using (PrefetchMarker.Auto()) AdvancePrefetchedResourceData();
+                    prefetchWorkTicks += Stopwatch.GetTimestamp() - prefetchStarted;
                     yield return yielded;
                 }
                 if (disposed) yield break;
                 Report(1);
                 completedWeight += step.Weight;
-                UnityEngine.Debug.Log($"[GameRes] 阶段完成：{step.Id}，{timer.ElapsedMilliseconds} ms，主线程最慢单步 {longestMoveMilliseconds:F2} ms");
+                UnityEngine.Debug.Log($"[GameRes] 阶段完成：{step.Id}，{timer.ElapsedMilliseconds} ms，" +
+                    $"阶段工作 {stageWorkTicks * 1000.0 / Stopwatch.Frequency:F2} ms，" +
+                    $"预取工作 {prefetchWorkTicks * 1000.0 / Stopwatch.Frequency:F2} ms，" +
+                    $"主线程最慢单步 {longestMoveMilliseconds:F2} ms");
             }
         }
         finally { Dispose(); }
@@ -171,11 +295,20 @@ internal sealed class ResourceLoadPipeline : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        lastStageId = currentStep?.Id;
+        for (int i = prefetched.Count - 1; i >= 0; i--)
+        {
+            try { prefetched[i].Dispose(); }
+            catch (Exception exception) { Failure ??= exception; }
+        }
         while (routines.Count > 0)
         {
             try { (routines.Pop() as IDisposable)?.Dispose(); }
             catch (Exception exception) { Failure ??= exception; }
         }
+        prefetched.Clear();
+        steps.Clear();
+        currentStep = null;
     }
 
     #endregion

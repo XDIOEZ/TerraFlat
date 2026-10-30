@@ -29,6 +29,12 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("quests/catalog_package_path", ServiceCatalogPackagePath);
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
+        operations.Add("core_lifecycle/resource_prefetch", ServiceResourcePrefetch);
+        operations.Add("core_lifecycle/resource_prefetch_fairness", ServiceResourcePrefetchFairness);
+        operations.Add("core_lifecycle/resource_prefetch_candidate", ServiceResourcePrefetchCandidate);
+        operations.Add("core_lifecycle/world_liquid_resource_plan", ServiceWorldLiquidResourcePlan);
+        operations.Add("core_lifecycle/actor_catalog_inputs", ServiceActorCatalogInputs);
+        operations.Add("core_lifecycle/catalog_package_deserialization", ServiceCatalogPackageDeserialization);
         operations.Add("core_lifecycle/scene_object_hierarchy", ServiceSceneObjectHierarchy);
         operations.Add("core_lifecycle/persistent_object_hierarchy", ServicePersistentObjectHierarchy);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);

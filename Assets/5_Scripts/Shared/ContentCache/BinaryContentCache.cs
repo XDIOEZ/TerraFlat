@@ -31,6 +31,7 @@ public sealed class BinaryContentCache
     public string CachePath { get; }
     public bool IsHit { get; private set; }
     public string Reason { get; private set; } = "首次加载";
+    public double ElapsedMilliseconds => timer.Elapsed.TotalMilliseconds;
     public static int BuildRevision => Volatile.Read(ref buildRevision);
 
     /// <summary>只记录真实的缓存重建，加载画面据此提示首次加载较慢。</summary>
@@ -112,9 +113,12 @@ public sealed class BinaryContentCache
     }
 
     public void Report(string label, int count)
+        => Report(label, count, ElapsedMilliseconds);
+
+    public void Report(string label, int count, double elapsedMilliseconds)
     {
         UnityEngine.Debug.Log($"[启动二进制缓存] {label}：{(IsHit ? "命中" : Reason)}，" +
-                              $"{count} 个定义，读取/解析 {timer.Elapsed.TotalMilliseconds:F1} ms");
+                              $"{count} 个定义，读取/解析 {elapsedMilliseconds:F1} ms");
     }
 
     #endregion

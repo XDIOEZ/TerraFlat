@@ -17,11 +17,18 @@ public static class BuffDefinitionFactory
     };
 
     public static BuffCatalogDto Deserialize(string json)
+        => DeserializeCatalog(json, true);
+
+    internal static BuffCatalogDto DeserializeWithoutDocumentCache(string json)
+        => DeserializeCatalog(json, false);
+
+    private static BuffCatalogDto DeserializeCatalog(string json, bool useDocumentCache)
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("Buff JSON 为空");
 
-        return JsonConfigurationCache.Deserialize<BuffCatalogDto>(json, StrictJsonSettings)
+        return (useDocumentCache ? JsonConfigurationCache.Deserialize<BuffCatalogDto>(json, StrictJsonSettings)
+            : JsonConvert.DeserializeObject<BuffCatalogDto>(json, StrictJsonSettings))
             ?? throw new InvalidDataException("Buff JSON 无法反序列化");
     }
 

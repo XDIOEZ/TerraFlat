@@ -37,7 +37,7 @@ public static class BuffCatalogLoader
         ValidateManifest(manifest);
         var result = new BuffBinaryCatalog { Manifest = manifest };
         foreach (BuffPackageDto package in manifest.Packages)
-            if (package.Enabled) result.Catalogs.Add(BuffDefinitionFactory.Deserialize(
+            if (package.Enabled) result.Catalogs.Add(BuffDefinitionFactory.DeserializeWithoutDocumentCache(
                 cache.ReadText(ResolvePackagePath(package.Path))));
         return result;
     }
@@ -87,6 +87,11 @@ public static class BuffCatalogLoader
         GameRes gameRes,
         Action<int> onCompleted,
         Action<Exception> onFailed)
+        => LoadBuiltInAsync(gameRes, onCompleted, onFailed, null);
+
+    internal static IEnumerator LoadBuiltInAsync(
+        GameRes gameRes, Action<int> onCompleted, Action<Exception> onFailed,
+        BuffCatalogPreparation preparedCatalog)
     {
         if (gameRes == null)
         {
@@ -97,8 +102,7 @@ public static class BuffCatalogLoader
         List<BuffDefinition> definitions = null;
         Exception loadError = null;
         yield return LoadBuiltInDefinitionsAsync(
-            result => definitions = result,
-            exception => loadError = exception);
+            result => definitions = result, exception => loadError = exception, preparedCatalog);
 
         if (loadError != null)
         {
@@ -134,6 +138,34 @@ public static class BuffCatalogLoader
     public static IEnumerator LoadBuiltInDefinitionsAsync(
         Action<List<BuffDefinition>> onCompleted,
         Action<Exception> onFailed)
+        => LoadBuiltInDefinitionsAsync(onCompleted, onFailed, null);
+
+    internal sealed class BuffCatalogPreparation
+    {
+        public BinaryContentCache Cache;
+        public BuffBinaryCatalog Catalog;
+        public bool Hit;
+        public double InputMilliseconds;
+    }
+
+    private static IEnumerator LoadBuiltInDefinitionsAsync(Action<List<BuffDefinition>> onCompleted,
+        Action<Exception> onFailed, BuffCatalogPreparation prepared)
+    {
+        Exception readError = null;
+        if (prepared == null)
+            yield return LoadBuiltInCatalogInputAsync(value => prepared = value, exception => readError = exception);
+        if (readError != null) { onFailed?.Invoke(readError); yield break; }
+        List<BuffDefinition> definitions;
+        try { definitions = BuildDefinitions(prepared.Catalog); }
+        catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+        if (!prepared.Hit) yield return prepared.Cache.StoreAsync(prepared.Catalog);
+        prepared.Cache.Report("Buff", definitions.Count, prepared.InputMilliseconds);
+        onCompleted?.Invoke(definitions);
+    }
+
+    /// <summary>提前读取私有配置，效果处理器仍在正式 Buff 阶段绑定。</summary>
+    internal static IEnumerator LoadBuiltInCatalogInputAsync(
+        Action<BuffCatalogPreparation> onCompleted, Action<Exception> onFailed)
     {
         BinaryContentCache cache = CreateBinaryCache();
         BuffBinaryCatalog binary = null;
@@ -177,7 +209,7 @@ public static class BuffCatalogLoader
                     var result = new List<BuffCatalogDto>(paths.Count);
                     for (int i = 0; i < paths.Count; i++)
                     {
-                        try { result.Add(BuffDefinitionFactory.Deserialize(cache.ReadText(paths[i]))); }
+                        try { result.Add(BuffDefinitionFactory.DeserializeWithoutDocumentCache(cache.ReadText(paths[i]))); }
                         catch (Exception error) { throw new InvalidDataException($"Buff 分包 {enabled[i].Id} JSON 无效", error); }
                     }
                     return result;
@@ -199,7 +231,7 @@ public static class BuffCatalogLoader
                     }
                     BuffCatalogDto catalog = null;
                     yield return StreamingAssetsTextLoader.RunPureDataAsync(
-                        () => BuffDefinitionFactory.Deserialize(json),
+                        () => BuffDefinitionFactory.DeserializeWithoutDocumentCache(json),
                         value => catalog = value, exception => readError = exception);
                     if (readError != null)
                     {
@@ -211,12 +243,8 @@ public static class BuffCatalogLoader
             }
         }
 
-        List<BuffDefinition> definitions;
-        try { definitions = BuildDefinitions(binary); }
-        catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-        if (!hit) yield return cache.StoreAsync(binary);
-        cache.Report("Buff", definitions.Count);
-        onCompleted?.Invoke(definitions);
+        onCompleted?.Invoke(new BuffCatalogPreparation
+            { Cache = cache, Catalog = binary, Hit = hit, InputMilliseconds = cache.ElapsedMilliseconds });
     }
 
     public static BuffManifestDto DeserializeManifest(string json)

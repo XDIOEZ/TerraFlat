@@ -26,7 +26,7 @@ public static class RecipeCatalogLoader
         ValidateManifest(manifest);
         var result = new RecipeBinaryCatalog { Manifest = manifest };
         foreach (RecipePackageDto package in manifest.Packages.Where(value => value.Enabled))
-            result.Catalogs.Add(RecipeRuntimeFactory.Deserialize(cache.ReadText(ResolvePackagePath(root, package.Path))));
+            result.Catalogs.Add(RecipeRuntimeFactory.DeserializeWithoutDocumentCache(cache.ReadText(ResolvePackagePath(root, package.Path))));
         return result;
     }
 
@@ -82,6 +82,19 @@ public static class RecipeCatalogLoader
         GameRes gameRes,
         Action<int> onCompleted,
         Action<Exception> onFailed)
+        => LoadBuiltInAsync(gameRes, onCompleted, onFailed, null);
+
+    internal sealed class RecipeCatalogPreparation
+    {
+        public BinaryContentCache Cache;
+        public RecipeBinaryCatalog Catalog;
+        public bool Hit;
+        public string ManifestPath;
+        public double InputMilliseconds;
+    }
+
+    internal static IEnumerator LoadBuiltInAsync(GameRes gameRes, Action<int> onCompleted,
+        Action<Exception> onFailed, RecipeCatalogPreparation prepared)
     {
         if (gameRes == null)
         {
@@ -89,79 +102,12 @@ public static class RecipeCatalogLoader
             yield break;
         }
 
-        string recipeRoot;
-        string manifestPath;
-        try
-        {
-            recipeRoot = StreamingAssetsTextLoader.CombinePath(
-                Application.streamingAssetsPath,
-                RelativeRecipeRoot);
-            manifestPath = StreamingAssetsTextLoader.CombinePath(recipeRoot, ManifestFileName);
-        }
-        catch (Exception exception)
-        {
-            onFailed?.Invoke(exception);
-            yield break;
-        }
-
-        BinaryContentCache cache = CreateBinaryCache(recipeRoot, manifestPath);
-        RecipeBinaryCatalog binary = null;
-        yield return cache.TryReadAsync<RecipeBinaryCatalog>(value => binary = value);
-        bool hit = binary != null;
         Exception readError = null;
-        if (!hit && !StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
-        {
-            string manifestJson = null;
-            yield return cache.ReadTextAsync(manifestPath, value => manifestJson = value, exception => readError = exception);
-            if (readError != null) { onFailed?.Invoke(readError); yield break; }
-            RecipeManifestDto manifest;
-            string[] paths;
-            try
-            {
-                manifest = DeserializeManifest(manifestJson);
-                ValidateManifest(manifest);
-                // 配置路径在主线程统一校验，后台只读取已确认的文件。
-                paths = manifest.Packages.Where(value => value.Enabled)
-                    .Select(package => ResolvePackagePath(recipeRoot, package.Path)).ToArray();
-            }
-            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-
-            // 首次启动在后台合并读取分包 JSON，之后只恢复二进制 DTO。
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(
-                () =>
-                {
-                    var result = new RecipeBinaryCatalog { Manifest = manifest };
-                    foreach (string path in paths)
-                        result.Catalogs.Add(RecipeRuntimeFactory.Deserialize(cache.ReadText(path)));
-                    return result;
-                },
-                value => binary = value, exception => readError = exception);
-        }
-        else if (!hit)
-        {
-            string manifestJson = null;
-            yield return cache.ReadTextAsync(manifestPath, value => manifestJson = value, exception => readError = exception);
-            if (readError != null) { onFailed?.Invoke(readError); yield break; }
-            RecipeManifestDto manifest;
-            try { manifest = DeserializeManifest(manifestJson); ValidateManifest(manifest); }
-            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-            binary = new RecipeBinaryCatalog { Manifest = manifest };
-            foreach (RecipePackageDto package in manifest.Packages.Where(value => value.Enabled))
-            {
-                string packagePath;
-                try { packagePath = ResolvePackagePath(recipeRoot, package.Path); }
-                catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-                string json = null;
-                yield return cache.ReadTextAsync(packagePath, value => json = value, exception => readError = exception);
-                if (readError != null) { onFailed?.Invoke(readError); yield break; }
-                RecipeCatalogDto parsed = null;
-                yield return StreamingAssetsTextLoader.RunPureDataAsync(() => RecipeRuntimeFactory.Deserialize(json),
-                    value => parsed = value, exception => readError = exception);
-                if (readError != null) { onFailed?.Invoke(readError); yield break; }
-                binary.Catalogs.Add(parsed);
-            }
-        }
+        if (prepared == null)
+            yield return LoadBuiltInCatalogInputAsync(value => prepared = value, exception => readError = exception);
         if (readError != null) { onFailed?.Invoke(readError); yield break; }
+        BinaryContentCache cache = prepared.Cache;
+        RecipeBinaryCatalog binary = prepared.Catalog;
 
         // 物品引用与规则每轮按最新目录重新校验，不缓存运行时对象。
         var knownItems = new HashSet<string>(gameRes.AllPrefabs.Keys, gameRes.AllPrefabs.Comparer);
@@ -170,7 +116,7 @@ public static class RecipeCatalogLoader
             () => PreparePackages(binary, knownItems.Contains),
             value => preparedPackages = value, exception => readError = exception);
         if (readError != null) { onFailed?.Invoke(readError); yield break; }
-        if (!hit) yield return cache.StoreAsync(binary);
+        if (!prepared.Hit) yield return cache.StoreAsync(binary);
 
         int count = 0;
         foreach (var package in preparedPackages)
@@ -190,14 +136,76 @@ public static class RecipeCatalogLoader
 
         try
         {
-            cache.Report("配方", count);
-            Debug.Log($"[RecipeCatalog] 已从 {preparedPackages.Count} 个业务分包加载 {count} 条配方：{manifestPath}");
+            cache.Report("配方", count, prepared.InputMilliseconds);
+            Debug.Log($"[RecipeCatalog] 已从 {preparedPackages.Count} 个业务分包加载 {count} 条配方：{prepared.ManifestPath}");
             onCompleted?.Invoke(count);
         }
         catch (Exception exception)
         {
             onFailed?.Invoke(exception);
         }
+    }
+
+    /// <summary>预读配方纯数据，物品引用和目录注册仍在正式阶段处理。</summary>
+    internal static IEnumerator LoadBuiltInCatalogInputAsync(Action<RecipeCatalogPreparation> completed,
+        Action<Exception> failed)
+    {
+        string recipeRoot, manifestPath;
+        try
+        {
+            recipeRoot = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeRecipeRoot);
+            manifestPath = StreamingAssetsTextLoader.CombinePath(recipeRoot, ManifestFileName);
+        }
+        catch (Exception exception) { failed?.Invoke(exception); yield break; }
+        BinaryContentCache cache = CreateBinaryCache(recipeRoot, manifestPath);
+        RecipeBinaryCatalog binary = null;
+        yield return cache.TryReadAsync<RecipeBinaryCatalog>(value => binary = value);
+        bool hit = binary != null;
+        Exception readError = null;
+        if (!hit)
+        {
+            string manifestJson = null;
+            yield return cache.ReadTextAsync(manifestPath, value => manifestJson = value, exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+            RecipeManifestDto manifest;
+            string[] paths;
+            try
+            {
+                manifest = DeserializeManifest(manifestJson);
+                ValidateManifest(manifest);
+                paths = manifest.Packages.Where(value => value.Enabled)
+                    .Select(package => ResolvePackagePath(recipeRoot, package.Path)).ToArray();
+            }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            if (!StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
+            {
+                yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
+                {
+                    var result = new RecipeBinaryCatalog { Manifest = manifest };
+                    foreach (string path in paths)
+                        result.Catalogs.Add(RecipeRuntimeFactory.DeserializeWithoutDocumentCache(cache.ReadText(path)));
+                    return result;
+                }, value => binary = value, exception => readError = exception);
+            }
+            else
+            {
+                binary = new RecipeBinaryCatalog { Manifest = manifest };
+                foreach (string path in paths)
+                {
+                    string json = null;
+                    yield return cache.ReadTextAsync(path, value => json = value, exception => readError = exception);
+                    if (readError != null) { failed?.Invoke(readError); yield break; }
+                    RecipeCatalogDto parsed = null;
+                    yield return StreamingAssetsTextLoader.RunPureDataAsync(() => RecipeRuntimeFactory.DeserializeWithoutDocumentCache(json),
+                        value => parsed = value, exception => readError = exception);
+                    if (readError != null) { failed?.Invoke(readError); yield break; }
+                    binary.Catalogs.Add(parsed);
+                }
+            }
+        }
+        if (readError != null) { failed?.Invoke(readError); yield break; }
+        completed?.Invoke(new RecipeCatalogPreparation
+            { Cache = cache, Catalog = binary, Hit = hit, ManifestPath = manifestPath, InputMilliseconds = cache.ElapsedMilliseconds });
     }
 
     public static string Serialize(RecipeCatalogDto catalog)

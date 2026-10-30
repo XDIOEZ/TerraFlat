@@ -392,7 +392,10 @@ public static class ItemDefinitionCatalogLoader
                     if (texture != null && !texture.isDone) return false;
                     if (texture != null && texture.LoadedObject is not Texture2D)
                         throw new InvalidDataException($"Sprite 主纹理异步加载失败：{request.Address}");
-                    if (!TryLoadEditorSprite(request.Address, editorSprites, out _, out string error))
+                    // 普通 Sprite 由实际资源句柄校验，只有具名子图需要提前核对切片。
+                    if (request.Address.EndsWith("]", StringComparison.Ordinal) &&
+                        request.Address.LastIndexOf('[') > 0 &&
+                        !TryLoadEditorSprite(request.Address, editorSprites, out _, out string error))
                         throw new InvalidDataException(error);
 #endif
                     request.Handle = gameRes.ResourceAssets.Load<T>(request.Address);
@@ -923,6 +926,10 @@ public static class ItemDefinitionCatalogLoader
         }
         return ResolveDefinitionObjects(CreateCombinedCatalog(roots));
     }
+
+    /// <summary>复用已解析的目录树，避免 Actor 分包再次序列化和解析。</summary>
+    internal static List<JObject> ResolveDefinitionObjectsFromCatalogRoots(IEnumerable<JObject> roots)
+        => ResolveDefinitionObjects(CreateCombinedCatalog(roots));
 
     private static List<JObject> ResolveDefinitionObjects(JObject root)
     {

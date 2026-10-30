@@ -29,6 +29,42 @@ public partial class GameRes
         }, () => preparingInPlaceReload || ShouldKeepCurrentResourceLoadingInBackground,
             () => GameplayTestResourceCache.Active ? 8d : (double?)null);
         List<ItemDefinitionDto> itemSources = null;
+        ResourceLoadPipeline.PrefetchedResourceData<List<ItemDefinitionDto>> itemInputs = null;
+        ResourceLoadPipeline.PrefetchedResourceData<BuffCatalogLoader.BuffCatalogPreparation> buffInputs = null;
+        ResourceLoadPipeline.PrefetchedResourceData<ActorDefinitionCatalogLoader.ActorCatalogPreparation> actorInputs = null;
+        ResourceLoadPipeline.PrefetchedResourceData<RecipeCatalogLoader.RecipeCatalogPreparation> recipeInputs = null;
+#if !UNITY_WEBGL || UNITY_EDITOR
+        if (!StreamingAssetsTextLoader.RequiresWebRequest(Application.streamingAssetsPath))
+        {
+            // 本地纯配置与菜单资源并行准备，实际目录仍按依赖顺序发布。
+            itemInputs = plan.Prefetch<List<ItemDefinitionDto>>(
+                (done, fail) => GameplayTestResourceCache.LoadItemInputs(done, fail, null));
+            buffInputs = plan.Prefetch<BuffCatalogLoader.BuffCatalogPreparation>(BuffCatalogLoader.LoadBuiltInCatalogInputAsync);
+            actorInputs = plan.Prefetch<ActorDefinitionCatalogLoader.ActorCatalogPreparation>((done, fail) =>
+                ActorDefinitionCatalogLoader.LoadBuiltInCatalogInputAsync(done, fail, actorSnapshot != null));
+            recipeInputs = plan.Prefetch<RecipeCatalogLoader.RecipeCatalogPreparation>(RecipeCatalogLoader.LoadBuiltInCatalogInputAsync);
+        }
+#endif
+        IEnumerator LoadBuffCatalog()
+        {
+            BuffCatalogLoader.BuffCatalogPreparation inputs = null;
+            if (buffInputs != null) yield return buffInputs.Wait(value => inputs = value);
+            yield return LoadCatalog<int>((done, fail) =>
+                BuffCatalogLoader.LoadBuiltInAsync(this, done, fail, inputs), _ => { });
+        }
+        IEnumerator LoadActorCatalog()
+        {
+            ActorDefinitionCatalogLoader.ActorCatalogPreparation inputs = null;
+            if (actorInputs != null) yield return actorInputs.Wait(value => inputs = value);
+            yield return LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
+                this, done, fail, plan.Report, actorSnapshot, inputs), _ => { });
+        }
+        IEnumerator LoadRecipeCatalog()
+        {
+            RecipeCatalogLoader.RecipeCatalogPreparation inputs = null;
+            if (recipeInputs != null) yield return recipeInputs.Wait(value => inputs = value);
+            yield return LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail, inputs), _ => { });
+        }
         // 音库独立发出异步请求，目录构建期间持续接入，最终校验前再统一等待。
         plan.Add("audio-request", "异步预加载音库", 0.5f,
             () => RunAction(FlatWorld.Audio.AudioService.BeginStartupResourcePreload));
@@ -49,7 +85,8 @@ public partial class GameRes
             PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
-                GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report), value => itemSources = value), "addressables");
+                itemInputs != null ? itemInputs.Wait(done) : GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report),
+                value => itemSources = value), "addressables");
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
@@ -64,8 +101,7 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
             "prefabs", "loot", "tile-blocks");
         plan.Add("actors", "构建生物定义", 15,
-            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
-                this, done, fail, plan.Report, actorSnapshot), _ => { }), "items");
+            LoadActorCatalog, "items");
         plan.Add("animal-skills", "加载动物技能", 1,
             () => LoadCatalog<AnimalSkillCatalog>(AnimalSkillCatalogLoader.LoadBuiltInAsync, AnimalSkillCatalogService.Replace), "actors");
         plan.Add("spawners", "加载生物生成配置", 1,
@@ -77,9 +113,9 @@ public partial class GameRes
             () => LoadCatalog<RiverGenerationConfigCatalog>(RiverGenerationConfigLoader.LoadBuiltInAsync,
                 RiverGenerationConfigService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
-            () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            LoadRecipeCatalog, "items");
         plan.Add("buffs", "加载状态效果", 2,
-            () => LoadCatalog<int>((done, fail) => BuffCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            LoadBuffCatalog, "items");
         plan.Add("liquids", "加载液体定义", 1,
             () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("fluids", "加载工业流体与星球大气", 1,
