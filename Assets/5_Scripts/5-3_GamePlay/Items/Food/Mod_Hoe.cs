@@ -150,6 +150,7 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
         HoeTillingFeedback.Play(item, target.WorldCell);
         if (completed)
             Data.tilledCount++;
+        item.DecreaseDurability(1);
     }
 
     #endregion

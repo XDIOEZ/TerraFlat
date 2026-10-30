@@ -100,10 +100,11 @@ public sealed class Mod_HandDrill : Module, IInteractable
     {
         if (!GameNetwork.HasStateAuthority || Processor == null || item?.itemData == null || item.itemData.Durability <= 0f)
             return false;
-        bool result = Processor.Advance(WorkPerClick, actor);
-        if (result)
-            item.DecreaseDurability(1);
+        bool result = Processor.AdvanceManually(WorkPerClick, actor, out bool worked);
+        if (worked)
+            ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, Processor.Input, Processor.Output);
         Save();
+        if (worked) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         return result;
     }
     private void Drill(Player actor) { TryDrill(actor); panel?.Refresh(); }

@@ -274,7 +274,8 @@ public static class CraftingRecipeMatcher
         if (!OutsideRegionIsEmpty(inputSlots, rowOffset, columnOffset, recipe.inputs.GridWidth, recipe.inputs.GridHeight, inputWidth))
             return false;
 
-        match = new CraftingRecipeMatch(recipe, mirrored, consumptions);
+        if (!TryCollectWorkingToolSlots(inputSlots, recipe, consumptions, out var workingTools)) return false;
+        match = new CraftingRecipeMatch(recipe, mirrored, consumptions, workingTools);
         return true;
     }
 
@@ -313,7 +314,40 @@ public static class CraftingRecipeMatcher
             }
         }
 
-        match = new CraftingRecipeMatch(recipe, false, consumptions);
+        if (!TryCollectWorkingToolSlots(inputSlots, recipe, consumptions, out var workingTools)) return false;
+        match = new CraftingRecipeMatch(recipe, false, consumptions, workingTools);
+        return true;
+    }
+
+    /// <summary>记录配方中实际承担工作的非消耗工具，不把普通催化剂当作工具。</summary>
+    private static bool TryCollectWorkingToolSlots(IReadOnlyList<ItemSlot> slots, RuntimeRecipe recipe,
+        IReadOnlyList<CraftingConsumption> consumptions, out List<int> workingTools)
+    {
+        workingTools = null;
+        if (recipe.inputs.recipeType != RecipeType.Crafting) return true;
+        foreach (RuntimeRecipeIngredient ingredient in recipe.inputs.RowItems_List)
+        {
+            if (CraftingIngredientMatcher.IsEmpty(ingredient) || ingredient.amount > 0f) continue;
+            bool foundTool = false, foundUsable = false;
+            for (int index = 0; index < slots.Count; index++)
+            {
+                ItemData data = slots[index]?.itemData;
+                if (!CraftingIngredientMatcher.MatchesIdentity(ingredient, data) || data?.Tags == null ||
+                    !(data.Tags.Contains("Tool") || data.Tags.Contains("Knife") || data.Tags.Contains("Axe") ||
+                      data.Tags.Contains(EquipmentDurabilityRules.EquipmentTag))) continue;
+                foundTool = true;
+                if (!ItemDurabilityRules.IsEnabled(data)) { foundUsable = true; break; }
+                bool consumed = false;
+                foreach (CraftingConsumption usage in consumptions)
+                    if (usage.SlotIndex == index && usage.Amount >= (data.Stack?.Amount ?? 0f)) { consumed = true; break; }
+                if (consumed || !ItemDurabilityRules.CanConsume(data, 1f)) continue;
+                workingTools ??= new List<int>();
+                if (!workingTools.Contains(index)) workingTools.Add(index);
+                foundUsable = true;
+                break;
+            }
+            if (foundTool && !foundUsable) return false;
+        }
         return true;
     }
 
@@ -388,16 +422,31 @@ public static class CraftingRecipeMatcher
 
 public sealed class CraftingRecipeMatch
 {
-    public CraftingRecipeMatch(RuntimeRecipe recipe, bool mirrored, IReadOnlyList<CraftingConsumption> consumptions)
+    public CraftingRecipeMatch(RuntimeRecipe recipe, bool mirrored, IReadOnlyList<CraftingConsumption> consumptions,
+        IReadOnlyList<int> workingToolSlots = null)
     {
         Recipe = recipe;
         Mirrored = mirrored;
         Consumptions = consumptions ?? Array.Empty<CraftingConsumption>();
+        WorkingToolSlots = workingToolSlots ?? Array.Empty<int>();
     }
 
     public RuntimeRecipe Recipe { get; }
     public bool Mirrored { get; }
     public IReadOnlyList<CraftingConsumption> Consumptions { get; }
+    public IReadOnlyList<int> WorkingToolSlots { get; }
+
+    /// <summary>每次有效工作只扣实际匹配到的工具一次。</summary>
+    public bool TryConsumeWorkingToolDurability(Inventory inventory)
+    {
+        if (inventory?.Data?.itemSlots == null) return false;
+        foreach (int index in WorkingToolSlots)
+            if ((uint)index >= (uint)inventory.Data.itemSlots.Count ||
+                !ItemDurabilityRules.CanConsume(inventory.Data.itemSlots[index]?.itemData, 1f)) return false;
+        foreach (int index in WorkingToolSlots)
+            if (!inventory.Data.TryConsumeDurability(inventory.Data.itemSlots[index].itemData, 1f, out _)) return false;
+        return true;
+    }
 }
 
 public readonly struct CraftingConsumption

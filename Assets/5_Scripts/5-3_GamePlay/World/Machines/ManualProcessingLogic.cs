@@ -32,7 +32,7 @@ public class ManualProcessingLogic : MachineLogic
         var state = MachineModuleState.Read<ManualProcessingState>(entity.Snapshot, Mod_ManualProcessor.ModuleId) ?? new ManualProcessingState();
         BreakRecoveryFraction = config.Value("BreakRecoveryFraction", authoring.BreakRecoveryFraction);
         runtime = new ManualProcessingRuntime(() => entity.Snapshot, station, state,
-            config.Value("DurabilityPerProduct", authoring.DurabilityPerProduct),
+            config.Value("DurabilityPerClick", authoring.DurabilityPerClick),
             config.Value("RequiredToolKind", authoring.RequiredToolKind) == ResourceToolKind.None ? null :
                 new ManualProcessingToolRequirement(config.Value("RequiredToolKind", authoring.RequiredToolKind),
                     config.Value("RequiredToolTag", authoring.RequiredToolTag),
@@ -47,7 +47,7 @@ public class ManualProcessingLogic : MachineLogic
     public virtual bool PerformWork(Player actor)
     {
         if (!GameNetwork.HasStateAuthority) return false;
-        bool completed = !runtime.Exhausted && Processor.Advance(WorkPerClick, actor);
+        bool completed = !runtime.Exhausted && Processor.AdvanceManually(WorkPerClick, actor);
         if (runtime.Exhausted)
         {
             if (!MachineWorld.TryDestroyWornMachine(Entity, BreakRecoveryFraction, out string reason))
@@ -117,11 +117,13 @@ public class HandDrillLogic : MachineLogic
     public bool Drill(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || !CanAct) return false;
-        bool completed = Processor.Advance(WorkPerClick, actor);
-        if (completed) State.Durability = Mathf.Max(0f, State.Durability - 1f);
+        bool completed = Processor.AdvanceManually(WorkPerClick, actor, out bool worked);
+        if (worked) State.Durability = Mathf.Max(0f, State.Durability - 1f);
         Entity.Snapshot.Durability = State.Durability;
         Entity.Snapshot.MaxDurability = State.MaxDurability;
         NotifyChanged();
+        if (State.Durability <= 0f && !MachineWorld.TryDestroyWornMachine(Entity, 0f, out string reason))
+            Debug.LogError("[手钻损毁] " + reason);
         return completed;
     }
 

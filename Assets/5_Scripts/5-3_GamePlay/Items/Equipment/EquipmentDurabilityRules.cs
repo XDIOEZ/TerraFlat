@@ -40,6 +40,7 @@ public static partial class EquipmentDurabilityRules
             string prefab = module.Prefab ?? "";
             if (prefab.Contains("AnimationAction", StringComparison.OrdinalIgnoreCase) ||
                 prefab.Contains("ColdWeapon", StringComparison.OrdinalIgnoreCase) ||
+                prefab.Contains("Module_Shield", StringComparison.OrdinalIgnoreCase) ||
                 prefab.Contains("_Bow", StringComparison.OrdinalIgnoreCase)) weapon = true;
             if (weapon ||
                 prefab.Contains("ResourceTool", StringComparison.OrdinalIgnoreCase) ||
@@ -49,9 +50,10 @@ public static partial class EquipmentDurabilityRules
         equipment |= template.Tags?.Contains("Equipment") == true || template.Tags?.Contains("Tool") == true;
         if (!attack && !equipment) return;
         string materials = definition.Id + " " + string.Join(" ", template.Tags ?? new());
-        float maximum = definition.MaxDurability == 0f ? 0f
-            : ResolveMaterialMaximum(materials, template.MaxDurability, weapon);
-        template.MaxDurability = template.Durability = maximum;
+        // 显式物品数值优先，只有未填写时才按材质补充默认值。
+        float maximum = definition.MaxDurability ?? ResolveMaterialMaximum(materials, template.MaxDurability, weapon);
+        template.MaxDurability = maximum;
+        template.Durability = definition.Durability ?? maximum;
         template.Tags ??= new();
         if (!template.Tags.Contains(EquipmentTag)) template.Tags.Add(EquipmentTag);
         if (attack && !template.Tags.Contains(AttackEquipmentTag)) template.Tags.Add(AttackEquipmentTag);

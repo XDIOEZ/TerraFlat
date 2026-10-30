@@ -72,6 +72,7 @@ test.runtime("modding", "live_lua_module", {}, function(d)
 end, "MOD Lua实际调用正式物品API并传递生命周期状态")
 
 test.runtime("networking", "live_replica", {}, function(d)
+    assert(d.wearAccepted and d.sourceDurability == d.durabilityBeforeWear - 1, "物品实际磨损没有提交到权威实例")
     assert(d.identityRead and d.bytes > 4 and d.payloadGuid == d.sourceGuid and d.itemId == "Knife_Flint", "实际物品网络负载身份错误")
     assert(d.sourcePreserved and d.applied and d.replicaGuidPreserved, "捕获/合并破坏权威或副本身份")
     assert(math.abs(d.replicaDurability - d.sourceDurability) < .0001 and d.specialData == '{"luaReplica":42}', "运行副本没有收到实例状态")

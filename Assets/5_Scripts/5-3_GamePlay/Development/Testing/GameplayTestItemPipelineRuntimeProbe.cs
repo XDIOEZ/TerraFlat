@@ -619,7 +619,16 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["closedDamageIdle"] = damage.TickMode == ModuleTickMode.Disabled;
 
             // 用零速度和伤害门禁保留正式飞行时钟，同时避免影响附近目标。
-            projectile.Launch(player, Vector2.right, 0.2f, 1f, 0f);
+            scope.Weapon = ItemMgr.Instance.InstantiateItem("Bow_Wood", stonePosition + Vector3.up);
+            scope.Weapon.PersistenceOwner = scope;
+            scope.Weapon.Load();
+            float weaponBefore = scope.Weapon.itemData.Durability;
+            result["shotLaunched"] = Mod_Bow.TryLaunchProjectileAndConsumeWeaponDurability(
+                projectile, player, Vector2.right, 0.2f, 1f, 0f, scope.Weapon);
+            result["weaponBeforeShot"] = weaponBefore;
+            result["weaponAfterShot"] = scope.Weapon.itemData.Durability;
+            damage.ConsumeWeaponDurabilityForHit();
+            result["weaponAfterProjectileHit"] = scope.Weapon.itemData.Durability;
             result["flightStarted"] = projectile.HasActiveWorldAttachment &&
                                       projectile.TickMode == ModuleTickMode.EveryFrame && damage.IsDamageEnabled();
             float deadline = Time.realtimeSinceStartup + 5f;
@@ -644,6 +653,13 @@ public static class GameplayTestItemPipelineRuntimeProbe
                                      reloadedProjectile != null &&
                                      reloadedProjectile.TickMode == ModuleTickMode.Disabled && reloadedDamage != null &&
                                      reloadedDamage.TickMode == ModuleTickMode.Disabled;
+            scope.Weapon = ItemMgr.Instance.InstantiateItem("Bow_Wood", stonePosition + Vector3.up);
+            scope.Weapon.PersistenceOwner = scope;
+            scope.Weapon.Load();
+            float beforeSelfAmmunition = scope.Weapon.itemData.Durability;
+            result["wearSkipSampleLaunched"] = Mod_Bow.TryLaunchProjectileAndConsumeWeaponDurability(
+                reloadedProjectile, player, Vector2.right, 0.2f, 1f, 0f, scope.Weapon, true);
+            result["ammunitionWearSkipped"] = scope.Weapon.itemData.Durability == beforeSelfAmmunition;
         }
         finally
         {
@@ -655,10 +671,18 @@ public static class GameplayTestItemPipelineRuntimeProbe
     private sealed class ProjectileTickProbeScope : IDisposable
     {
         public Item Item;
+        public Item Weapon;
         public Action Restore;
 
         public void Dispose()
         {
+            Item weapon = Weapon;
+            Weapon = null;
+            if (weapon != null && !weapon.DestructionHandled)
+            {
+                weapon.PersistenceOwner = null;
+                ItemMgr.GetExistingInstance()?.DespawnItem(weapon, saveData: false);
+            }
             Item owned = Item;
             Item = null;
             if (owned == null || owned.DestructionHandled) return;
@@ -760,6 +784,8 @@ return callbacks");
         {
             source = Spawn(player);
             source.itemData.Durability = source.itemData.MaxDurability * .75f;
+            result["durabilityBeforeWear"] = source.itemData.Durability;
+            result["wearAccepted"] = ItemDurabilityService.TryConsume(source, 1f);
             source.itemData.ItemSpecialData = "{\"luaReplica\":42}";
             uint generation = source.RuntimeGeneration;
             byte[] payload = ItemNetworkStateSerialization.Capture(source, ignoreTransform: true);

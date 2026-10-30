@@ -3,6 +3,8 @@
   "items": [
     {
       "id": "Obsidian",
+      "maxDurability": 50,
+      "durability": 50,
       "parent": "BasicItem_Base",
       "shellPrefab": "ChippedTool",
       "gameName": "黑曜石",
@@ -82,6 +84,8 @@
     },
     {
       "id": "Dagger_Obsidian",
+      "maxDurability": 50,
+      "durability": 50,
       "parent": "Knife_Base",
       "gameName": "黑曜石小刀",
       "description": "用黑曜石制作的锋利小刀，适合切割材料和近身防御。",
@@ -114,6 +118,8 @@
     },
     {
       "id": "Spear_Obsidian",
+      "maxDurability": 50,
+      "durability": 50,
       "parent": "Spear_Stone",
       "gameName": "黑曜石长矛",
       "description": "以黑曜石作为矛头的长矛，沿用长矛的刺击动作。",

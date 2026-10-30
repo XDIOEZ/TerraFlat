@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Networking;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -46,6 +47,8 @@ public sealed class CraftingStationController : IDisposable
     private RuntimeRecipe selectedRecipe;
     private string lastFailureMessage;
     private int currentClickProgress;
+    private bool applyingWorkClick;
+    private RuntimeRecipe pausedForWorkingTool;
     private readonly RecipeProcessor authoritativeProcessor;
     private readonly Action<string> selectAuthoritativeRecipe;
     private readonly Action performAuthoritativeWork;
@@ -167,9 +170,12 @@ public sealed class CraftingStationController : IDisposable
 
     private void OnInputChanged(ItemSlot _)
     {
+        if (applyingWorkClick) return;
         if (authoritativeProcessor?.IsCommitting == true) return;
-        if (authoritativeProcessor == null) ResetProgress();
+        if (authoritativeProcessor == null && pausedForWorkingTool == null) ResetProgress();
         RefreshCandidates();
+        if (pausedForWorkingTool != null && selectedRecipe?.Id == pausedForWorkingTool.Id)
+            pausedForWorkingTool = null;
     }
 
     private void OnOutputChanged(ItemSlot _)
@@ -200,6 +206,7 @@ public sealed class CraftingStationController : IDisposable
         }
 
         selectedRecipe = recipe;
+        pausedForWorkingTool = null;
         ResetProgress();
         RefreshSelectionVisuals();
         RefreshSelectedRecipe();
@@ -216,7 +223,7 @@ public sealed class CraftingStationController : IDisposable
             return;
         }
         RuntimeRecipe recipe = selectedRecipe;
-        if (recipe == null)
+        if (recipe == null || pausedForWorkingTool != null)
             return;
 
         CraftingResult preview = CraftingService.PreviewRecipe(
@@ -232,25 +239,35 @@ public sealed class CraftingStationController : IDisposable
             return;
         }
 
+        if (!CraftingRecipeMatcher.TryMatchRecipe(inputInventory, recipe, capabilities, out CraftingRecipeMatch match)) return;
         int requiredClicks = Mathf.Max(1, requiredClickCount());
-        currentClickProgress = Mathf.Min(currentClickProgress + 1, requiredClicks);
-        RefreshOutputPreviews(preview.Outputs, currentClickProgress / (float)requiredClicks);
-        if (currentClickProgress < requiredClicks)
-            return;
-
-        CraftingResult result = CraftingService.CraftRecipe(
-            inputInventory,
-            outputInventory,
-            capabilities,
-            recipe,
-            resolveActor());
-        if (!result.Success)
-            ReportFailure(result);
-        else
-            PlaySuccess();
-
-        ResetProgress();
-        RefreshCandidates();
+        int nextProgress = Mathf.Min(currentClickProgress + 1, requiredClicks);
+        applyingWorkClick = true;
+        try
+        {
+            if (nextProgress == requiredClicks)
+            {
+                CraftingResult result = CraftingService.CraftRecipe(inputInventory, outputInventory, capabilities, recipe, resolveActor(), match);
+                if (!result.Success) { ReportFailure(result); ResetProgress(); return; }
+                if (match.WorkingToolSlots.Count > 0) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(resolveActor());
+                PlaySuccess();
+                pausedForWorkingTool = null;
+                ResetProgress();
+            }
+            else
+            {
+                if (!match.TryConsumeWorkingToolDurability(inputInventory)) return;
+                if (match.WorkingToolSlots.Count > 0) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(resolveActor());
+                currentClickProgress = nextProgress;
+                if (!CraftingRecipeMatcher.TryMatchRecipe(inputInventory, recipe, capabilities, out _))
+                    pausedForWorkingTool = recipe;
+            }
+        }
+        finally
+        {
+            applyingWorkClick = false;
+            RefreshCandidates();
+        }
     }
 
     #endregion
@@ -261,7 +278,7 @@ public sealed class CraftingStationController : IDisposable
     private void RefreshCandidates()
     {
         if (disposed || panel == null) return;
-        string previousRecipeId = authoritativeProcessor?.State.RecipeId ?? selectedRecipe?.Id;
+        string previousRecipeId = pausedForWorkingTool?.Id ?? authoritativeProcessor?.State.RecipeId ?? selectedRecipe?.Id;
         if (!CraftingRecipeMatcher.TryMatchAll(
                 inputInventory,
                 capabilities,
@@ -272,7 +289,8 @@ public sealed class CraftingStationController : IDisposable
         }
 
         EnsureEntryCount(matches.Count);
-        selectedRecipe = FindRecipe(previousRecipeId) ?? (matches.Count > 0 ? matches[0].Recipe : null);
+        bool waitingForTool = pausedForWorkingTool != null || authoritativeProcessor?.PausedForWorkingTool == true;
+        selectedRecipe = FindRecipe(previousRecipeId) ?? (!waitingForTool && matches.Count > 0 ? matches[0].Recipe : null);
 
         for (int index = 0; index < candidateEntries.Count; index++)
         {

@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("crafting", "metal_tools_catalog", ProbeMetalToolsCatalog);
         Register("crafting", "needle_sewing", ProbeNeedleSewing);
+        Register("crafting", "needle_work_clicks", ProbeNeedleWorkClicks);
         Register("crafting", "manual_station_wear", ProbeManualStationWear);
     }
 
@@ -77,7 +78,7 @@ public static partial class GameplayTestSystemProbe
         if (matched && CraftingTransaction.TryCreate(input, output, match,
                 new[] { EntityCraftingDefinitionData(definitions["Traveler_Gloves"], 1) }, false, out CraftingTransaction transaction, out _)
             && transaction.Commit(out _))
-        { RecipeActionRunner.Execute(recipe, input); transaction.Complete(); success = true; }
+        { transaction.Complete(); success = match.TryConsumeWorkingToolDurability(input); }
         ItemData remaining = input.Data.GetItemSlot(0).itemData;
         return new JObject { ["matched"] = matched, ["success"] = success,
             ["count"] = remaining?.Stack.Amount ?? 0, ["durability"] = remaining?.Durability ?? 0,
@@ -89,17 +90,67 @@ public static partial class GameplayTestSystemProbe
             ["leather"] = input.Data.GetItemSlot(2).itemData?.Stack.Amount ?? 0 };
     }
 
+    private static JObject ProbeNeedleWorkClicks(JObject args)
+    {
+        var definitions = MetalCraftingDefinitions();
+        RuntimeRecipe recipe = MetalCraftingRecipes("sewing", definitions).Find(value => value.Id == "core:leather_gloves");
+        ItemData needle = EntityCraftingDefinitionData(definitions["Needle_Bone"], 1);
+        needle.Durability = (float)Number(args, "durability", 2);
+        var input = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        {
+            new(0) { itemData = needle }, new(1) { itemData = EntityCraftingDefinitionData(definitions["Thread"], 1) },
+            new(2) { itemData = EntityCraftingDefinitionData(definitions["Leather"], 2) }
+        }, "needle-click-input") };
+        var output = new Inventory { Data = new Inventory_Data(new List<ItemSlot>
+        { new(0) { itemData = Flag(args, "full", false) ? EntityProbeData("blocker", 1) : null } }, "needle-click-output") };
+        var capabilities = new CraftingCapabilities { StationId = "handcraft", InputSlotLimit = 3 };
+        var state = new RecipeProcessingState { Input = input.Data, Output = output.Data };
+        using var processor = new RecipeProcessor(input, output, capabilities, state);
+        processor.SelectRecipe(recipe, 3f);
+        ItemData product = EntityCraftingDefinitionData(definitions["Traveler_Gloves"], 1);
+        processor.PreviewOverride = () => CraftingRecipeMatcher.TryMatchRecipe(input, recipe, capabilities, out var match) &&
+            CraftingTransaction.CanCreate(input, output, match, new[] { product }, false, out _)
+                ? CraftingResult.Succeeded(recipe, new[] { product })
+                : CraftingResult.Failed(CraftingFailureReason.ConditionsNotMet, "制作条件不足");
+        processor.CommitOverride = actor =>
+        {
+            if (Flag(args, "failCommit", false)) return CraftingResult.Failed(CraftingFailureReason.CommitFailed, "提交失败");
+            if (!CraftingRecipeMatcher.TryMatchRecipe(input, recipe, capabilities, out var match) ||
+                !CraftingTransaction.TryCreate(input, output, match, new[] { product }, false, out var transaction, out _, true))
+                return CraftingResult.Failed(CraftingFailureReason.CommitFailed, "制作失败");
+            if (Flag(args, "changeToolBeforeWear", false)) input.Data.NotifySlotsChanged();
+            if (!transaction.Commit(out _)) return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "工具槽已变化");
+            transaction.Complete();
+            return CraftingResult.Succeeded(recipe, new[] { product });
+        };
+        var samples = new JArray();
+        for (int click = 0; click < (int)Number(args, "clicks", 3); click++)
+        {
+            if (click > 0 && Flag(args, "replace", false) && input.Data.itemSlots[0].itemData == null)
+                input.Data.SetOne_ItemData(0, EntityCraftingDefinitionData(definitions["Needle_Bone"], 1));
+            bool completed = processor.AdvanceManually(1f, null, out bool worked);
+            var snapshot = new Ex_ModData_MemoryPackable();
+            snapshot.WriteData(state);
+            RecipeProcessingState restored = snapshot.GetData<RecipeProcessingState>();
+            samples.Add(new JObject { ["worked"] = worked, ["completed"] = completed,
+                ["progress"] = state.Progress, ["durability"] = input.Data.itemSlots[0].itemData?.Durability ?? 0f,
+                ["paused"] = processor.PausedForWorkingTool, ["output"] = output.Data.itemSlots[0].itemData?.IDName ?? "",
+                ["restoredPaused"] = restored.PausedForWorkingTool, ["restoredProgress"] = restored.Progress,
+                ["restoredRecipeId"] = restored.RecipeId });
+        }
+        return new JObject { ["samples"] = samples };
+    }
+
     private static JObject ProbeManualStationWear(JObject args)
     {
         var station = EntityProbeData("rule:station", 1);
         station.MaxDurability = (float)Number(args, "maximum", 500);
         station.Durability = (float)Number(args, "durability", 10);
-        var products = new[] { EntityProbeData("rule:product", (float)Number(args, "products", 10)) };
         float before = station.Durability;
         float rate = (float)Number(args, "rate", 1);
-        bool accepted = ManualProcessingRuntime.CanComplete(station, products, rate, out float cost);
+        bool accepted = ManualProcessingRuntime.CanPerformStationWork(station, rate);
         bool previewUnchanged = station.Durability == before;
-        bool consumed = Flag(args, "success", true) && ManualProcessingRuntime.TryConsumeCompletedProducts(station, products, rate);
+        bool consumed = Flag(args, "success", true) && ManualProcessingRuntime.TryConsumeStationWork(station, rate);
         var carrier = EntityProbeData("rule:carrier", 1);
         carrier.MaxDurability = station.MaxDurability;
         carrier.Durability = carrier.MaxDurability;
@@ -108,7 +159,7 @@ public static partial class GameplayTestSystemProbe
         replaced.MaxDurability = station.MaxDurability;
         BuildingModuleStateTransfer.CopyDurabilityRatio(carrier, replaced);
         var capabilities = new CraftingCapabilities { StationId = "hand_forge", RequireExplicitStation = true };
-        return new JObject { ["accepted"] = accepted, ["consumed"] = consumed, ["cost"] = cost,
+        return new JObject { ["accepted"] = accepted, ["consumed"] = consumed, ["cost"] = accepted ? rate : 0f,
             ["previewUnchanged"] = previewUnchanged, ["durability"] = station.Durability,
             ["stack"] = station.Stack.Amount, ["maximum"] = station.MaxDurability,
             ["carrierDurability"] = carrier.Durability, ["replacedDurability"] = replaced.Durability,

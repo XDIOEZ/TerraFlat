@@ -1926,7 +1926,7 @@
       "id": "CopperAnvil",
       "parent": "BuildingBody_Base",
       "gameName": "铜砧-建筑",
-      "description": "放置后锻造金属板或缝纫针，每次锻打推进0.7工作秒。耐久500，每产出一件物品消耗1点；耗尽后损坏并掉落配方50%的材料及内部物品。",
+      "description": "放置后锻造金属板或缝纫针，每次锻打推进0.7工作秒。耐久500，每次有效锻打消耗1点；耗尽后损坏并掉落配方50%的材料及内部物品。",
       "durability": 500,
       "maxDurability": 500,
       "amount": 1,
@@ -1978,7 +1978,7 @@
           "id": "手动加工模块",
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerProduct": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerClick": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
         }
       }
     },
@@ -1987,7 +1987,7 @@
       "worldDropBehavior": "interactive",
       "parent": "BuildingSummoner_Base",
       "gameName": "铜砧",
-      "description": "使用后放置在地上才能锻造。耐久500，每产出一件物品消耗1点；耗尽后损坏并返还5个铜锭。",
+      "description": "使用后放置在地上才能锻造。耐久500，每次有效锻打消耗1点；耗尽后损坏并返还5个铜锭。",
       "durability": 500,
       "maxDurability": 500,
       "amount": 1,
@@ -2039,7 +2039,7 @@
           "id": "手动加工模块",
           "enabled": true,
           "data": { "BitData": [], "Type": 0 },
-          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerProduct": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
+          "parameters": { "Station": "hand_forge", "WorkPerClick": 0.7, "DurabilityPerClick": 1, "BreakRecoveryFraction": 0.5, "RequiredToolKind": 4, "RequiredToolTag": "Metal", "ToolDurabilityPerClick": 1 }
         }
       }
     },

@@ -11,6 +11,7 @@ public partial class RecipeProcessingState
     public Inventory_Data Output = new(new List<ItemSlot> { new(0) }, "输出");
     public string RecipeId = "";
     public float Progress;
+    public bool PausedForWorkingTool;
     #endregion
 }
 

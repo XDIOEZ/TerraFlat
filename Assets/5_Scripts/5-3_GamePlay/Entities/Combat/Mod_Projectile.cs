@@ -406,17 +406,17 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     }
 
     /// <summary>按原有伤害倍率发射；无额外速度修饰时保持现有调用入口。</summary>
-    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier = 1f)
+    public bool Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier = 1f)
     {
-        Launch(shooter, direction, charge01, sourceDamageMultiplier, 1f);
+        return Launch(shooter, direction, charge01, sourceDamageMultiplier, 1f);
     }
 
     /// <summary>按射手、蓄力和武器模块产出的速度与伤害倍率开始一次飞行。</summary>
-    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier, float sourceSpeedMultiplier, Item sourceWeapon = null)
+    public bool Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier, float sourceSpeedMultiplier, Item sourceWeapon = null)
     {
         if (item == null || _damage == null || direction.sqrMagnitude < 0.0001f)
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
-        if (!WorldPhysicsService2D.CanItemUseIndependentMotion(item)) return;
+        if (!WorldPhysicsService2D.CanItemUseIndependentMotion(item)) return false;
 
         _isPreparingFlight = true;
         try
@@ -435,6 +435,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             _damage.LaunchedWeaponDurabilityOwner = sourceWeapon;
             _damage.LaunchedWeaponDurabilityData = sourceWeapon?.itemData;
             _damage.LaunchedWeaponInventoryOwner = shooter;
+            _damage.WeaponDurabilityConsumedAtLaunch = sourceWeapon != null;
             // 发射时记住真实射手和武器，之后切换手持物也不会改变这支箭的来源。
             launchDeathCause = DeathCauseRecord.CaptureAttack(sourceWeapon != null ? sourceWeapon : item, shooter);
             item.SetInHand(false);
@@ -444,7 +445,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
             EnsureBody();
             EnsureSolidCollider();
-            if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, _body)) return;
+            if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, _body)) return false;
             // 可见抛物线必须保持匀速地面位移，否则向下投掷时阻力会把曲线扭成非二次曲线。
             WorldPhysicsService2D.ApplyLegacyItemLinearDamping(item, _body, UseVisibleArc ? 0f : FlightLinearDrag);
             _body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -507,6 +508,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
 
             // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
             _damage.StartAttack();
+            return true;
         }
         finally
         {

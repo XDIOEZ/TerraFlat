@@ -42,6 +42,7 @@ public sealed partial class Mod_FishingRod : Module
     public partial class RigState
     {
         public InventoryInstanceSnapshot Inventory;
+        public bool PendingRodBreak;
     }
 
     [Serializable]
@@ -86,6 +87,7 @@ public sealed partial class Mod_FishingRod : Module
     private IFishingLineCatchTarget hookedTarget;
     private ItemData castBaitPayload;
     private bool hasCast, reeling;
+    private bool pendingRodBreak;
     private bool castVisualApplied;
     private Sprite castSourceSprite;
     private readonly List<SpriteRenderer> castHiddenRenderers = new();
@@ -305,6 +307,7 @@ public sealed partial class Mod_FishingRod : Module
         item.OnAct += OpenConfiguration;
         item.OnInHandChanged += HandleInHandChanged;
         loaded = true;
+        pendingRodBreak = state.PendingRodBreak;
         hasCast = reeling = false;
         hookedTarget = null;
         if (fishingLine != null) fishingLine.enabled = false;
@@ -316,6 +319,7 @@ public sealed partial class Mod_FishingRod : Module
     {
         if (state == null || rig?.Data == null) return;
         state.Inventory = InventoryInstanceSnapshot.Capture(rig.Data);
+        state.PendingRodBreak = pendingRodBreak;
         Data.WriteData(state);
     }
 
@@ -407,6 +411,7 @@ public sealed partial class Mod_FishingRod : Module
     #region 抛饵与收线
     private void TryCast(Vector2 target)
     {
+        if (!ItemDurabilityRules.CanConsume(item?.itemData, 1f)) return;
         ItemData hook = HookSlot.itemData;
         if (!IsUsableHook(hook))
         { ShowFeedback("请先在钓竿上安装鱼钩。"); return; }
@@ -455,9 +460,21 @@ public sealed partial class Mod_FishingRod : Module
         reeling = false;
         ApplyCastSprite();
         activeRods.Add(this);
+        if (item.itemData.Durability <= 1f)
+        {
+            // 最后一次抛竿先保留钓线，收线后再交付钓具并移除竿身。
+            pendingRodBreak = true;
+            item.itemData.Durability = 0f;
+            if (InventoryContextResolver.TryResolveContainingInventory(item.Owner, item.itemData, out Inventory ownerInventory))
+                ownerInventory.Data.NotifyItemStateChanged(item.itemData);
+            item.OnDurabilityModified?.Invoke(0f);
+            item.OnUIRefresh?.Invoke();
+        }
+        else ItemDurabilityService.TryConsume(item, 1f);
         ShowFeedback("鱼饵已抛出；小鱼吃饵或鱼钩勾到小鸟后，左键收线。");
         Save();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        if (pendingRodBreak) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item.Owner);
         RaiseSound(FishingSoundAction.Cast);
     }
 
@@ -492,6 +509,7 @@ public sealed partial class Mod_FishingRod : Module
     {
         if (!loaded) return;
         BindController();
+        if (pendingRodBreak && !hasCast && GameNetwork.HasStateAuthority) { FinishBrokenRod(); return; }
         if (!hasCast) return;
         if (item.Owner == null || !item.InHand) { CancelLine(); return; }
         Vector2 endpoint;
@@ -565,6 +583,17 @@ public sealed partial class Mod_FishingRod : Module
             Save();
             if (GameNetwork.HasStateAuthority) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         }
+        if (pendingRodBreak && GameNetwork.HasStateAuthority) FinishBrokenRod();
+    }
+
+    private void FinishBrokenRod()
+    {
+        if (!pendingRodBreak || item?.itemData == null || rig == null) return;
+        pendingRodBreak = false;
+        item.itemData.Durability = 1f;
+        if (ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, rig)) return;
+        item.itemData.Durability = 0f;
+        pendingRodBreak = true;
     }
 
     private bool TryReturnCastBait()

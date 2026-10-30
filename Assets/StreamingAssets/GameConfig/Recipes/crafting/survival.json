@@ -57,13 +57,7 @@
           "amount": 1
         }
       ],
-      "actions": [
-        {
-          "type": "change_durability",
-          "targetRole": "Knife",
-          "value": 1.0
-        }
-      ]
+      "actions": []
     },
     {
       "id": "core:斧头劈开椰子",
@@ -90,13 +84,7 @@
           "amount": 2
         }
       ],
-      "actions": [
-        {
-          "type": "change_durability",
-          "targetRole": "Axe",
-          "value": 2.0
-        }
-      ]
+      "actions": []
     },
     {
       "id": "core:木板",
@@ -172,13 +160,7 @@
           "amount": 4
         }
       ],
-      "actions": [
-        {
-          "type": "change_durability",
-          "targetRole": "Axe",
-          "value": 1.0
-        }
-      ]
+      "actions": []
     },
     {
       "id": "core:木质盔甲",

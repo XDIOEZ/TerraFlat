@@ -380,6 +380,8 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
         }
         Item shooter = item.Owner;
         Mod_HotBar hotbar = shooter.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
+        float originalAmmoAmount = ammoData.Stack.Amount;
+        float originalAmmoDurability = ammoData.Durability;
         if (!_sourceInventory.Data.TryConsumeFromSlot(ammoSlot, 1, out _))
         {
             ItemMgr.Instance.DespawnItem(projectileItem, saveData: false);
@@ -387,7 +389,15 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             return;
         }
 
-        projectile.Launch(shooter, direction, charge01, sourceDamageMultiplier, sourceSpeedMultiplier, item);
+        if (!TryLaunchProjectileAndConsumeWeaponDurability(projectile, shooter, direction, charge01,
+                sourceDamageMultiplier, sourceSpeedMultiplier, item, UseHeldItemAsAmmo))
+        {
+            ammoData.Durability = originalAmmoDurability;
+            _sourceInventory.Data.TrySetSlotItemAmount(ammoSlot, ammoData, originalAmmoAmount);
+            ItemMgr.Instance.DespawnItem(projectileItem, saveData: false);
+            _sourceInventory = null;
+            return;
+        }
         // 只有弹药已经实际发射才触发身体动作，取消蓄力和缺箭不会冒出攻击表现。
         Mod_AnimatorController shooterAnimator = shooter.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
         if (shooterAnimator != null && shooterAnimator.IsSingleSpriteMode)
@@ -399,6 +409,15 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
             hotbar?.NotifyOwnerNetworkStateChanged();
         }
         _sourceInventory = null;
+    }
+
+    /// <summary>投射物成功进入飞行后只磨损一次发射武器。</summary>
+    public static bool TryLaunchProjectileAndConsumeWeaponDurability(Mod_Projectile projectile, Item shooter,
+        Vector2 direction, float charge01, float damageMultiplier, float speedMultiplier, Item weapon, bool weaponIsAmmunition = false)
+    {
+        if (!projectile.Launch(shooter, direction, charge01, damageMultiplier, speedMultiplier, weapon)) return false;
+        if (!weaponIsAmmunition) ItemDurabilityService.TryConsume(weapon, 1f);
+        return true;
     }
 
     /// <summary>消费真实槽位，不另建库存副本；最后一个投掷物也通过同一库存事务交付。</summary>

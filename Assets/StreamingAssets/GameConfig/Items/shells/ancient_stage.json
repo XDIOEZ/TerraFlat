@@ -84,6 +84,8 @@
     },
     {
       "id": "WillowBranch",
+      "maxDurability": 30,
+      "durability": 30,
       "parent": "Stick_Wood",
       "gameName": "柳枝",
       "description": "柔韧柳枝可以编成绳子。",

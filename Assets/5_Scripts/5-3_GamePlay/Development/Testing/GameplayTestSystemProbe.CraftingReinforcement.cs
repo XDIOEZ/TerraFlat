@@ -67,6 +67,25 @@ public static partial class GameplayTestSystemProbe
         }
         ItemData coldWeapon = ResolveTemplate("Mod_ColdWeapon");
         ItemData shovel = ResolveTemplate("Module_Shovel");
+        ItemData shield = ResolveTemplate("Module_Shield");
+        var explicitNeedle = new Data_GeneralItem { MaxDurability = 1f, Durability = 1f, Tags = new List<string> { "Tool" } };
+        EquipmentDurabilityRules.ApplyDefaults(new ItemDefinitionDto { Id = "Needle_Bone", MaxDurability = 10f, Durability = 8f }, explicitNeedle);
+        var helmet = new EquipmentInstance_Defense { CoveredParts = new[] { BodyPartType.Head } };
+        var hits = new List<BodyPartDamageInfo> { new() { Part = BodyPartType.Head, DamageValue = 0f } };
+        var bodyArmor = new EquipmentInstance_Defense { CoveredParts = new[] { BodyPartType.Chest } };
+        var catalog = new JArray();
+        var ids = new HashSet<string>(new[] { "ChippedTool", "Scissors", "FlintStrike", "StoneThrowingRope",
+            "Needle_Bone", "Needle_Copper", "Needle_Iron", "CopperHammer", "IronHammer", "SteelHammer",
+            "Shield_Wood", "FishingRod", "Hoe_Wood", "Hoe_Stone", "Hoe_Iron" });
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+        {
+            if (definition.Abstract || !ids.Contains(definition.Id)) continue;
+            var template = new Data_GeneralItem { MaxDurability = definition.MaxDurability ?? 1f,
+                Durability = definition.Durability ?? 1f, Tags = new List<string>(definition.Tags ?? new List<string>()) };
+            EquipmentDurabilityRules.ApplyDefaults(definition, template);
+            catalog.Add(new JObject { ["id"] = definition.Id, ["maximum"] = template.MaxDurability,
+                ["durability"] = template.Durability });
+        }
         return new JObject {
             ["wood"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Wood"),
             ["stone"] = EquipmentDurabilityRules.ResolveMaterialMaximum("Axe_Stone"),
@@ -78,6 +97,12 @@ public static partial class GameplayTestSystemProbe
             ["coldWeaponMaximum"] = coldWeapon.MaxDurability,
             ["coldWeaponTagged"] = coldWeapon.Tags.Contains(EquipmentDurabilityRules.AttackEquipmentTag),
             ["obsidianToolMaximum"] = shovel.MaxDurability,
+            ["shieldAttackTagged"] = shield.Tags.Contains(EquipmentDurabilityRules.AttackEquipmentTag),
+            ["explicitNeedleMaximum"] = explicitNeedle.MaxDurability,
+            ["explicitNeedleDurability"] = explicitNeedle.Durability,
+            ["blockedHeadCovered"] = helmet.CoversReceivedHit(true, hits),
+            ["blockedChestCovered"] = bodyArmor.CoversReceivedHit(true, hits),
+            ["catalog"] = catalog,
             ["positiveHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),
             ["zeroDamageHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),
             ["damageRejectedAfterHitWear"] = EquipmentDurabilityRules.ResolveRemaining(50f, true),

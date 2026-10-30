@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.InventoryFeedback;
+using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
@@ -47,6 +48,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     List<ItemData> cached_ItemDatas = new();
 
     public event Action EquipmentChanged;
+    private Mod_DamageReceiver durabilityReceiver;
 
     public override ModuleTickMode TickMode => HasTickingEquipment()
         ? ModuleTickMode.EveryFrame
@@ -98,6 +100,9 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
         EquipmentInventory.Data.Event_OnDataChanged_TwoSlots += UpdateEquipment;
 
+        durabilityReceiver = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (durabilityReceiver != null) durabilityReceiver.OnHitReceived += ConsumeArmorDurabilityForReceivedHit;
+
         EnsureEquipmentListSize();
         RebuildEquipmentRuntimeStateAfterLoad();
         RefreshBagStorageSlots();
@@ -120,6 +125,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     protected override void OnUnload()
     {
+        if (durabilityReceiver != null) durabilityReceiver.OnHitReceived -= ConsumeArmorDurabilityForReceivedHit;
+        durabilityReceiver = null;
         foreach (var list in equipment_Instances)
             if (list != null) foreach (var equipment in list) equipment?.UnEquip(item);
         if (EquipmentInventory?.Data != null)
@@ -333,6 +340,39 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     #endregion
 
     #region 装备逻辑
+
+    /// <summary>有效命中只磨损覆盖命中部位的防护装备。</summary>
+    private void ConsumeArmorDurabilityForReceivedHit(DamageReceiverDamageInfo hit)
+    {
+        if (!GameNetwork.HasStateAuthority || hit?.Receiver != durabilityReceiver ||
+            !hit.Context.Attack.Source.IsValid || hit.Context.IsTrueDamage != 0 ||
+            hit.Context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment ||
+            EquipmentInventory?.Data?.itemSlots == null) return;
+        for (int index = 0; index < EquipmentInventory.Data.itemSlots.Count && index < equipment_Instances.Count; index++)
+        {
+            ItemData equipped = EquipmentInventory.Data.itemSlots[index]?.itemData;
+            if (equipped == null) continue;
+            bool covered = false;
+            foreach (EquipmentInstance effect in equipment_Instances[index])
+            {
+                if (effect is not EquipmentInstance_Defense defense) continue;
+                covered = defense.CoversReceivedHit(durabilityReceiver.UsesBodyPartHealth, hit.BodyPartHits);
+                if (covered) break;
+            }
+            if (covered) TryConsumeEquippedItemDurability(equipped, 1f);
+        }
+    }
+
+    /// <summary>装备槽磨损和损坏共用库存事务并即时撤销装备效果。</summary>
+    public bool TryConsumeEquippedItemDurability(ItemData equipped, float wear)
+    {
+        Inventory_Data data = EquipmentInventory?.Data;
+        ItemSlot slot = data?.FindExactItemSlot(equipped);
+        if (slot == null || !data.TryConsumeDurability(equipped, wear, out _)) return false;
+        if (slot.itemData == null) UpdateEquipment(slot, null);
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        return true;
+    }
 
     /// <summary>从所有者的真实库存穿戴或交换装备，换下的物品由正式事务放回来源槽。</summary>
     public bool TryEquipFromSlot(Inventory sourceInventory, int sourceIndex)

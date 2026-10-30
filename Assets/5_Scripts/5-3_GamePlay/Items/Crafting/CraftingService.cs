@@ -45,9 +45,10 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities,
         RuntimeRecipe recipe,
-        Player actor = null)
+        Player actor = null,
+        CraftingRecipeMatch workingToolMatch = null)
     {
-        return CraftInternal(inputInventory, outputInventory, capabilities, recipe, actor);
+        return CraftInternal(inputInventory, outputInventory, capabilities, recipe, actor, workingToolMatch: workingToolMatch);
     }
 
     /// <summary>只创建配方产物数据，供候选列表和输出槽展示，不检查库存空间。</summary>
@@ -188,7 +189,8 @@ public static class CraftingService
         Player actor,
         IReadOnlyList<ItemData> suppliedOutputs = null,
         bool executeRecipeActions = true,
-        bool publishCrafting = true)
+        bool publishCrafting = true,
+        CraftingRecipeMatch workingToolMatch = null)
     {
         if (inputInventory == null || outputInventory == null)
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "输入或输出库存为空");
@@ -204,7 +206,8 @@ public static class CraftingService
                 recipe,
                 true,
                 out CraftingTransaction transaction,
-                suppliedOutputs);
+                suppliedOutputs,
+                workingToolMatch != null);
             if (!prepared.Success)
                 return prepared;
 
@@ -242,7 +245,8 @@ public static class CraftingService
         RuntimeRecipe requestedRecipe,
         bool createTransaction,
         out CraftingTransaction transaction,
-        IReadOnlyList<ItemData> suppliedOutputs = null)
+        IReadOnlyList<ItemData> suppliedOutputs = null,
+        bool wearWorkingTools = false)
     {
         transaction = null;
         if (inputInventory?.Data?.itemSlots == null || outputInventory?.Data?.itemSlots == null)
@@ -295,7 +299,8 @@ public static class CraftingService
                 outputs,
                 capabilities.AllowOutputIntoInput,
                 out transaction,
-                out transactionFailure);
+                out transactionFailure,
+                wearWorkingTools);
         }
         else
         {

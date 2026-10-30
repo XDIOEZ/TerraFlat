@@ -46,7 +46,7 @@
         { "match": "exact_item", "itemId": "Leather", "amount": 2 }
       ],
       "outputs": [{ "itemId": "Traveler_Hood", "amount": 1 }],
-      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+      "actions": []
     },
     {
       "id": "core:leather_vest",
@@ -59,7 +59,7 @@
         { "match": "exact_item", "itemId": "Leather", "amount": 6 }
       ],
       "outputs": [{ "itemId": "Traveler_Vest", "amount": 1 }],
-      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+      "actions": []
     },
     {
       "id": "core:leather_gloves",
@@ -72,7 +72,7 @@
         { "match": "exact_item", "itemId": "Leather", "amount": 2 }
       ],
       "outputs": [{ "itemId": "Traveler_Gloves", "amount": 1 }],
-      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+      "actions": []
     },
     {
       "id": "core:leather_trousers",
@@ -85,7 +85,7 @@
         { "match": "exact_item", "itemId": "Leather", "amount": 4 }
       ],
       "outputs": [{ "itemId": "Traveler_Trousers", "amount": 1 }],
-      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+      "actions": []
     },
     {
       "id": "core:leather_shoes",
@@ -98,7 +98,7 @@
         { "match": "exact_item", "itemId": "Leather", "amount": 3 }
       ],
       "outputs": [{ "itemId": "Traveler_Boots", "amount": 1 }],
-      "actions": [{ "type": "change_durability", "targetRole": "SewingNeedle", "value": 1 }]
+      "actions": []
     }
   ]
 }

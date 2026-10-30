@@ -1946,8 +1946,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27596267582427148
-    m_Localized: A sewing tool shaped from bone with 10 durability. Sewing one piece
-      of equipment consumes 1 durability; it breaks when depleted.
+    m_Localized: "A sewing tool shaped from bone with 10 durability. Each valid sewing action consumes 1 durability; it breaks when depleted."
     m_Metadata:
       m_Items: []
   - m_Id: 27596267582427149
@@ -2065,9 +2064,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128256
-    m_Localized: A metal sewing tool forged on an anvil. Has 100 durability and loses
-      1 for each completed item. Breaks at zero; stacked needles are used one at
-      a time.
+    m_Localized: "A metal sewing tool forged on an anvil. Has 100 durability and loses 1 per valid sewing action. Breaks at zero; stacked needles are used one at a time."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128257
@@ -2075,9 +2072,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128258
-    m_Localized: A metal sewing tool forged on an anvil. Has 200 durability and loses
-      1 for each completed item. Breaks at zero; stacked needles are used one at
-      a time.
+    m_Localized: "A metal sewing tool forged on an anvil. Has 200 durability and loses 1 per valid sewing action. Breaks at zero; stacked needles are used one at a time."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128259
@@ -2089,26 +2084,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128261
-    m_Localized: Place this anvil to forge metal plates or sewing needles. Has 1,000
-      durability and loses 1 per item produced. When worn out, drops 5 wrought iron
-      ingots and all contents.
+    m_Localized: "Place this anvil to forge metal plates or sewing needles. Has 1,000 durability and loses 1 per valid strike. When worn out, drops 5 wrought iron ingots and all contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128262
-    m_Localized: Place this anvil to forge metal plates or sewing needles. Has 1,000
-      durability and loses 1 per item produced. When worn out, drops 5 wrought iron
-      ingots and all contents.
+    m_Localized: "Place this anvil to forge metal plates or sewing needles. Has 1,000 durability and loses 1 per valid strike. When worn out, drops 5 wrought iron ingots and all contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128263
-    m_Localized: Place this anvil to forge metal plates or sewing needles. Each strike
-      adds 0.7 work seconds. Has 500 durability and loses 1 per item produced. When
-      worn out, drops half its recipe materials and all contents.
+    m_Localized: "Place this anvil to forge metal plates or sewing needles. Each strike adds 0.7 work seconds. Has 500 durability and loses 1 per valid strike. When worn out, drops half its recipe materials and all contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128264
-    m_Localized: Place on the ground to forge items. Has 500 durability and loses
-      1 per item produced. When worn out, drops 5 copper ingots.
+    m_Localized: "Place on the ground to forge items. Has 500 durability and loses 1 per valid strike. When worn out, drops 5 copper ingots."
     m_Metadata:
       m_Items: []
   - m_Id: 27608690188128265

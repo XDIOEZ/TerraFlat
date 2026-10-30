@@ -175,6 +175,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (HarvestKind == ResourceToolKind.Shovel)
             HoeTillingFeedback.PlayDigging(item, worldCell);
         UpdateTargetVisuals();
+        item.DecreaseDurability(1);
     }
 
     // 覆盖层锁定起手地格，动画完成后才逐次结算；挖空或取消后停止长按。
@@ -208,6 +209,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (HarvestKind == ResourceToolKind.Shovel)
             HoeTillingFeedback.PlayDigging(item, cell);
         UpdateTargetVisuals();
+        item.DecreaseDurability(1);
     }
 
     private void ClearPendingOverlay()

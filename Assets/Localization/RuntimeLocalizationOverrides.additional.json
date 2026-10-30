@@ -656,6 +656,13 @@
     "已禁用": "Disabled"
   },
   "itemDescriptions": {
+    "Needle_Bone": "A sewing tool shaped from bone with 10 durability. Each valid sewing action consumes 1 durability; it breaks when depleted.",
+    "Needle_Copper": "A metal sewing tool forged on an anvil. Has 100 durability and loses 1 per valid sewing action. Breaks at zero; stacked needles are used one at a time.",
+    "Needle_Iron": "A metal sewing tool forged on an anvil. Has 200 durability and loses 1 per valid sewing action. Breaks at zero; stacked needles are used one at a time.",
+    "IronAnvil": "Place this anvil to forge metal plates or sewing needles. Has 1,000 durability and loses 1 per valid strike. When worn out, drops 5 wrought iron ingots and all contents.",
+    "IronAnvil_Summoner": "Place this anvil to forge metal plates or sewing needles. Has 1,000 durability and loses 1 per valid strike. When worn out, drops 5 wrought iron ingots and all contents.",
+    "CopperAnvil": "Place this anvil to forge metal plates or sewing needles. Each strike adds 0.7 work seconds. Has 500 durability and loses 1 per valid strike. When worn out, drops half its recipe materials and all contents.",
+    "CopperAnvil_Summoner": "Place on the ground to forge items. Has 500 durability and loses 1 per valid strike. When worn out, drops 5 copper ingots.",
     "Creative_Ship_Engine": "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state.",
     "Creative_Ship_Engine_Summoner": "Creative mode only. Delivers 600,000 N of thrust without gas or liquid propellants. Requires power and follows the normal engine rules for hull edges, rotation, nozzle clearance and operating state.",
     "Creative_Gas_Tank": "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks.",

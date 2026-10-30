@@ -36,12 +36,16 @@ test.system("combat", "shield_hit_stamina", {steps={
     assert(s[2].damage==0 and s[2].hp==100 and s[2].stamina==90 and s[2].transactions==1,
         "完全挡住的零伤命中仍应消耗一次翻滚体力")
     assert(s[2].requestedCost==10 and s[2].source=="flatworld.combat.shield_guard_hit", "举盾受击费用或来源错误")
+    assert(s[2].shieldDurability==99 and s[3].shieldDurability==99 and s[4].shieldDurability==98,
+        "盾牌没有按有效受击扣耐久，或冷却拒绝重复扣除")
     assert(s[3].damage<0 and s[3].stamina==90 and s[3].hitEvents==1, "伤害冷却拒绝仍扣体力")
     assert(s[4].damage>0 and s[4].stamina==80 and s[4].transactions==2 and s[4].hitEvents==2,
         "破防命中没有独立扣一次体力")
     assert(s[6].damage<0 and s[6].stamina==80 and s[6].hitEvents==2, "无敌拒绝仍扣体力")
     assert(s[8].transactions==2 and s[9].transactions==2 and s[9].stamina==80,
         "环境或直接生命扣除误触发举盾受击费用")
+    assert(s[6].shieldDurability==98 and s[8].shieldDurability==98 and s[9].shieldDurability==98,
+        "无敌、环境或直接扣血错误消耗盾牌耐久")
 end, "举盾受击：正伤、全挡、冷却拒绝、无敌与环境来源")
 
 for _, action in ipairs({"press", "bash", "cancel", "disable", "unload"}) do

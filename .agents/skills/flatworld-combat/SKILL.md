@@ -32,7 +32,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 非均匀数量通过 `DiscreteTable/amountProbabilityTableId` 引用公共离散概率表；树叶引用 `loot.tree.leaf.amount`，GO 参数展开须保留表 ID，难度只在 `DiscreteProbabilityConfiguration.Modifying` 修正独立状态。`combat/discrete_probability` 覆盖原表/结构体复制隔离、最终百分比、抽样边界及冻结指纹。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
 - 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。
-- Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明。装备材质耐久由 `EquipmentDurabilityRules` 读取 `Resources/Config/Equipment/durability-materials.json` 在最终定义模板建立；未知材质保留定义值，黑曜石50仅适用武器。攻击装备在几何与逻辑命中确认后、伤害结算前每目标扣一点；逻辑未命中不扣，零伤或伤害拒绝仍扣。投射物冻结发射武器数据，在有效命中时磨损，再发布可回收回调。非攻击装备只定义上限，不新增磨损来源。
+- Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明。物品显式耐久优先，未填才按 `Resources/Config/Equipment/durability-materials.json` 给默认值；黑曜石50仅限武器。近战每次有效命中扣1，远程发射扣1且命中不再扣；正式受击只磨损覆盖命中部位的护甲，举盾/弹反另磨损盾牌，零伤也计入。
 - 战斗只读 `GameRuleConfiguration.Current.CreatureCombat`，纯值后端通过 `CombatTuning` 冻结参数；攻击修正在防御前，`CreatureCombatRuleSet.ResolveReceivedDamageMultiplier` 的玩家受击修正在防御后（含 ECS 转交命中），环境伤害、玩家攻击和非玩家目标不应用该受击修正。
 - 玩家死亡模块通过 `DropAllCarriedItems/SetDropAllCarriedItems/ClearDropAllCarriedItemsOverride` 接收来源无关的机制开关；角色覆盖随本模块保存，世界默认刷新不抹掉覆盖，卸载清运行缓存，新 Load 从自身载荷重建。回归 `combat/death_rule_override`。
 - 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。

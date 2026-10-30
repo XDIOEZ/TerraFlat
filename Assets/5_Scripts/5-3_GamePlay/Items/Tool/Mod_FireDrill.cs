@@ -121,12 +121,13 @@ public class Mod_FireDrill : FireMakingInventoryPanelModule
 
     protected override void OnFireMakingActionButtonClick()
     {
-        if (!GameNetwork.HasStateAuthority || Heater == null) return;
+        if (!GameNetwork.HasStateAuthority || Heater == null || !ItemDurabilityRules.CanConsume(item?.itemData, 1f)) return;
         SyncHeatingSettings();
-        bool transformed = Heater.Rub(GetAmbientTemperature(), _currentInteractingPlayer);
+        bool transformed = Heater.Rub(GetAmbientTemperature(), _currentInteractingPlayer, out bool worked);
         RefreshOutputPreview();
         Save();
         if (transformed) _outputPreview?.PlaySuccess();
+        if (worked) ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
     }
 
     private void SyncHeatingSettings()

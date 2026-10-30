@@ -11,7 +11,7 @@ public partial class Mod_DamageReceiver
         if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f) return 0f;
         if (!float.IsFinite(damage) || damage < 0f) throw new ArgumentOutOfRangeException(nameof(damage));
         // 罐壁自身超压直接扣真实生命，库存与世界载体使用同一数值。
-        return ResolveDamage(damage, null, 0f);
+        return ResolveDamage(damage, null);
     }
     public float HurtPressureExplosion(ulong eventId, Vector2 logicalOrigin, float physicalDamage)
         => HurtEnvironmentalDamage(eventId, logicalOrigin, physicalDamage, "explosion");

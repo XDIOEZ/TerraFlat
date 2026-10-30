@@ -27,7 +27,7 @@ public class FireDrillLogic : MachineLogic
     public override float Progress01 => Heater.Progress01;
     public override string ActionLabel => FlatWorldLocalizationService.GetUiText("摩擦");
     public override string Status => Heater.Status;
-    public override bool CanAct => Heater.CanRub;
+    public override bool CanAct => Heater.CanRub && Entity.Snapshot.Durability > 0f;
 
     public FireDrillLogic(MachineEntity entity) : base(entity)
     {
@@ -49,9 +49,12 @@ public class FireDrillLogic : MachineLogic
     [MethodImpl(MethodImplOptions.NoInlining)]
     public bool Rub(Player actor)
     {
-        if (!GameNetwork.HasStateAuthority || !Heater.CanRub) return false;
-        bool completed = Heater.Rub(GetAmbientTemperature(), actor);
+        if (!GameNetwork.HasStateAuthority || !CanAct) return false;
+        bool completed = Heater.Rub(GetAmbientTemperature(), actor, out bool worked);
+        if (worked) Entity.Snapshot.Durability = Mathf.Max(0f, Entity.Snapshot.Durability - 1f);
         NotifyChanged();
+        if (worked && Entity.Snapshot.Durability <= 0f && !MachineWorld.TryDestroyWornMachine(Entity, 0f, out string reason))
+            Debug.LogError("[取火工具损毁] " + reason);
         return completed;
     }
 
@@ -146,14 +149,20 @@ public sealed class MaterialHeatingProcessor
     #endregion
 
     #region 供热与物质转化
-    public bool Rub(float ambientTemperature, Player actor)
+    public bool Rub(float ambientTemperature, Player actor) => Rub(ambientTemperature, actor, out _);
+
+    public bool Rub(float ambientTemperature, Player actor, out bool worked)
     {
+        worked = false;
         if (!CanRub) return false;
         lastActor = actor;
         ItemData material = Material;
-        if (ItemMatterRuntime.AddHeat(material, ambientTemperature, SourceTemperature, TemperaturePerClick))
+        worked = ItemMatterRuntime.AddHeat(material, ambientTemperature, SourceTemperature, TemperaturePerClick);
+        if (worked)
             Input.Data.NotifyItemStateChanged(material);
-        return TryTransform();
+        bool transformed = TryTransform();
+        worked |= transformed;
+        return transformed;
     }
 
     public bool Tick(float ambientTemperature, float seconds)

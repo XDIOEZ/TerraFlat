@@ -60,7 +60,9 @@ public static partial class GameplayTestSystemProbe
         var shieldRoot = new GameObject("Shield");
         shieldRoot.transform.SetParent(root.transform, false);
         var shieldItem = shieldRoot.AddComponent<GameItem>();
-        shieldItem.BindData(new Data_GeneralItem { IDName = "test:guard_shield", Guid = shieldRoot.GetInstanceID(), inHand = true });
+        shieldItem.BindData(new Data_GeneralItem { IDName = "test:guard_shield", Guid = shieldRoot.GetInstanceID(),
+            inHand = true, Stack = new ItemStack(), MaxDurability = 100f, Durability = 100f,
+            Tags = new List<string> { EquipmentDurabilityRules.AttackEquipmentTag } });
         shieldItem.Owner = actor;
         var shield = shieldRoot.AddComponent<Mod_Shield>();
         shield.ModuleInit(shieldItem, new Ex_ModData { ID = Mod_Shield.ModuleId, Enabled = true });
@@ -118,6 +120,7 @@ public static partial class GameplayTestSystemProbe
                     ["accepted"] = accepted, ["state"] = combat.ActionKind.ToString(),
                     ["damage"] = damage, ["hp"] = health.Hp, ["hitEvents"] = hitEvents,
                     ["stamina"] = stamina.CurrentValue, ["transactions"] = transactions,
+                    ["shieldDurability"] = shieldItem.itemData.Durability,
                     ["requestedCost"] = requestedCost, ["source"] = source
                 });
             }

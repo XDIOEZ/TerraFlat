@@ -75,6 +75,7 @@ public static partial class MachineWorld
             {
                 if (processing.GetType() != typeof(RecipeProcessingState)) return false;
                 AddFloat(processing.Progress);
+                Add(processing.PausedForWorkingTool ? 1UL : 0UL);
                 Add(unchecked((uint)(processing.RecipeId?.Length ?? -1)));
                 if (processing.RecipeId != null) foreach (char value in processing.RecipeId) Add(value);
                 if (!TryCalculateMachineInventorySaveSignature(processing.Input, cache.Visiting, out ulong input) ||

@@ -88,7 +88,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
 
     protected override void OnFireMakingActionButtonClick()
     {
-        if (_isCommitting ||
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || !ItemDurabilityRules.CanConsume(item?.itemData, 1f) || _isCommitting ||
             MachineInventory.IsBeingDragged(InputInventory) || MachineInventory.IsBeingDragged(OutputInventory))
             return;
 
@@ -98,10 +98,14 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
             return;
         }
 
-        if (!IsSuccessfulRoll(UnityEngine.Random.value, SuccessChancePerClick))
-            return;
-
         ItemData fireSeedData = CreateFireSeedData();
+        if (!OutputInventory.Data.TryAddItem(fireSeedData, false)) return;
+        if (!IsSuccessfulRoll(UnityEngine.Random.value, SuccessChancePerClick))
+        {
+            ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
+            return;
+        }
+
         var match = new CraftingRecipeMatch(new RuntimeRecipe { Id = "flint-strike" }, false,
             new[] { new CraftingConsumption(tinderIndex, 1f) });
         _isCommitting = true;
@@ -115,6 +119,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
             InputInventory.RefreshUI();
             OutputInventory.RefreshUI();
             _outputPreview?.PlaySuccess();
+            ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
         }
         finally
         {

@@ -1,6 +1,7 @@
 using MemoryPack;
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 [System.Serializable]
 [MemoryPackable]
@@ -67,6 +68,17 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
 
     public override void Update()
     {
+    }
+
+    /// <summary>使用生命结算选出的部位判断本件护甲是否参与防护。</summary>
+    public bool CoversReceivedHit(bool usesBodyParts, IReadOnlyList<BodyPartDamageInfo> hits)
+    {
+        if (!usesBodyParts) return true;
+        if (hits == null) return false;
+        foreach (BodyPartDamageInfo hit in hits)
+            if (hit != null && (CoveredParts == null || CoveredParts.Length == 0 ||
+                System.Array.IndexOf(CoveredParts, hit.Part) >= 0)) return true;
+        return false;
     }
 
     /// <summary>兼容旧装备单值防御；新装备直接填写四类防御。</summary>

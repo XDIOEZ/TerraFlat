@@ -13,8 +13,9 @@ public static partial class MachineWorld
         if (!GameNetwork.HasStateAuthority || !Contains(node) || node.Snapshot.Durability > 0f)
         { reason = "损毁工作站已失效或耐久尚未耗尽"; return false; }
         string carrier = Mod_Building.GetSummonerPrefabId(node.Definition.Id);
-        if (!BuildingMaterialSalvage.TryCreateProportionalMaterialSalvage(carrier, recoveryFraction,
-                out List<ItemData> drops, out reason, node.Snapshot)) return false;
+        var drops = new List<ItemData>();
+        if (recoveryFraction > 0f && !BuildingMaterialSalvage.TryCreateProportionalMaterialSalvage(carrier, recoveryFraction,
+                out drops, out reason, node.Snapshot)) return false;
         var seen = new HashSet<Inventory_Data>();
         foreach (Inventory inventory in node.Logic.Inventories)
         {

@@ -342,7 +342,6 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         _deathConsumedByExternalHandler = false;
         lastDamageTime = double.NegativeInfinity;
         LastDamageSource = default; LastDamageCredit = default;
-        equipmentInventory = item.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module)?.EquipmentInventory;
 
         ReleaseWorldHealthPanel();
     }
@@ -625,7 +624,6 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             _deathCoroutine = null;
         }
         ReleaseWorldHealthPanel();
-        equipmentInventory = null;
 
         if (_handStateEventOwner != null)
         {
@@ -766,7 +764,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 if (Data.AttackersUIDs.Count > 3) Data.AttackersUIDs.RemoveAt(0);
             }
         }
-        return ResolveDamage(damage, legacySender, attackMultiplier > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
+        return ResolveDamage(damage, legacySender,
             GameplayCombatBridge.LegacyValues(values), context, preparedHits);
     }
 
@@ -788,7 +786,6 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private float ResolveDamage(
         float damage,
         IDamageSender sender,
-        float durabilityDamage,
         CombatDamage resolvedDamageValues = null,
         FlatWorld.Combat.CombatDamageContext? context = null,
         List<BodyPartDamageInfo> preparedHits = null,
@@ -804,6 +801,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             0f,
             hpBefore,
             hpBefore,
+            bodyPartHits: preparedHits,
             resolvedDamageValues: resolvedDamageValues,
             context: context);
         _resolvingDamage = true;
@@ -855,9 +853,6 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 // 有效零伤命中只补声音，不派发扣血、受击状态或死亡事件。
                 CombatAudioRouter.PlayImpact(this, damageInfo);
             }
-
-            if (durabilityDamage > 0f)
-                ApplyDurabilityDamageToEquipments(durabilityDamage);
 
             return damageInfo.DamageValue;
         }
@@ -983,7 +978,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
 
-        ResolveDamage(damage, null, durabilityDamage: 0f, deathCause: deathCause ?? new DeathCauseRecord());
+        ResolveDamage(damage, null, deathCause: deathCause ?? new DeathCauseRecord());
         return Hp;
     }
 
@@ -1621,47 +1616,9 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
     #endregion
 
-    [NonSerialized]
-    private Inventory equipmentInventory;
-
     [Header("调试开关")]
     [SerializeField]
     private bool enableDebugTools = false;
-
-    /// <summary>
-    /// 所有装备模块（Tag为"Equipment"）的耐久度下降指定数值，如果耐久为0则移除该装备
-    /// </summary>
-    /// <param name="amount">耐久下降的数值</param>
-    protected virtual void ApplyDurabilityDamageToEquipments(float amount = 1f)
-    {
-        if (equipmentInventory?.Data?.itemSlots == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < equipmentInventory.Data.itemSlots.Count; i++)
-        {
-            ItemSlot mod = equipmentInventory.Data.itemSlots[i];
-            if (mod.itemData == null) continue;
-
-            if (mod.itemData.Tags.ContainsTag(Tag.Armor))
-            {
-                // 使用物品自身提供的耐久变更方法，传入负值表示扣减
-                mod.itemData.AddDurability(-amount);
-
-                if (mod.itemData.Durability <= 0)
-                {
-                    // 通过库存事务移除，确保装备效果与 UI 同步卸载。
-                    equipmentInventory.Data.ChangeItemData_Default(i, new ItemSlot(-1));
-                }
-                else
-                {
-                    // 否则确保耐久不为负
-                    mod.itemData.Durability = Mathf.Max(0, mod.itemData.Durability);
-                }
-            }
-        }
-    }
 
     /// <summary>
     /// 根据战利品表掉落物品

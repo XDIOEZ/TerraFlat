@@ -10,7 +10,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
     public Ex_ModData_MemoryPackable Data = new() { ID = ModuleId };
     public string Station = "hand_forge"; // 由机械目录选择手动加工站点。
     public float WorkPerClick = 1f; // 每次手动操作推进的工作秒数。
-    public float DurabilityPerProduct; // 每成功产出一件物品消耗的耐久。
+    public float DurabilityPerClick; // 每次有效工作消耗的耐久。
     public float BreakRecoveryFraction = .5f; // 用坏后按自身制作配方返还的材料比例。
     public ResourceToolKind RequiredToolKind; // 没有要求的设备继续只使用材料槽。
     public string RequiredToolTag = string.Empty;
@@ -37,7 +37,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
         ManualProcessingState state = Data.BitData != null && Data.BitData.Length > 0
             ? Data.GetData<ManualProcessingState>()
             : new ManualProcessingState();
-        runtime = new ManualProcessingRuntime(() => item.itemData, Station, state, DurabilityPerProduct,
+        runtime = new ManualProcessingRuntime(() => item.itemData, Station, state, DurabilityPerClick,
             RequiredToolKind == ResourceToolKind.None ? null :
                 new ManualProcessingToolRequirement(RequiredToolKind, RequiredToolTag, ToolDurabilityPerClick));
         Processor = runtime.Processor;
@@ -87,8 +87,9 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
         if (!GameNetwork.HasStateAuthority || Processor == null || !CanUsePlacedStation())
             return;
 
-        Processor.AdvanceManually(WorkPerClick, actor);
+        Processor.AdvanceManually(WorkPerClick, actor, out bool worked);
         Save();
+        if (worked) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         if (runtime.Exhausted)
         {
             if (!TryDestroyWornStation(out string reason)) Debug.LogError("[工作站损毁] " + reason);

@@ -334,7 +334,7 @@ test.system("crafting", "metal_tools_catalog", {}, function(data)
         assert(item.durability == expected[item.id] and item.maxDurability == expected[item.id], "针、锤子或砧耐久配置错误")
         if item.id:find("Anvil") then
             local config = item.modules["手动加工模块"].parameters
-            assert(config.DurabilityPerProduct == 1 and config.BreakRecoveryFraction == .5, "砧未配置逐件磨损及一半返料")
+            assert(config.DurabilityPerClick == 1 and config.BreakRecoveryFraction == .5, "砧未配置逐次磨损及一半返料")
         elseif item.id:find("Hammer") then
             local tags = {}
             for _, tag in ipairs(item.tags) do tags[tag] = true end
@@ -436,22 +436,64 @@ for _, id in ipairs({"Needle_Copper", "Needle_Iron"}) do
     end, "针逐根消耗堆叠：" .. id)
 end
 
+test.system("crafting", "needle_work_clicks", {replace = true}, function(data)
+    local a, b, c = data.samples[1], data.samples[2], data.samples[3]
+    assert(a.worked and a.progress == 1 and a.durability == 1 and a.output == "", "第一次点击未单独磨损针")
+    assert(b.worked and b.progress == 2 and b.durability == 0 and b.paused, "针中途损坏未保留进度")
+    assert(b.restoredPaused and b.restoredProgress == 2 and b.restoredRecipeId == "core:leather_gloves",
+        "暂停状态或制作进度未随机器状态快照保存")
+    assert(c.worked and c.completed and c.progress == 0 and c.durability == 9 and c.output == "Traveler_Gloves",
+        "换针后未继续原进度或最后一次点击重复扣耐久")
+end, "缝针每次点击磨损，中途损坏换针继续")
+
+test.system("crafting", "needle_work_clicks", {durability = 3}, function(data)
+    local c = data.samples[3]
+    assert(c.worked and c.completed and c.durability == 0 and c.progress == 0 and c.output == "Traveler_Gloves",
+        "最后一点耐久没有完成当前制作")
+end, "最后一点针耐久完成产物后损坏")
+
+test.system("crafting", "needle_work_clicks", {}, function(data)
+    local b, c = data.samples[2], data.samples[3]
+    assert(b.paused and not c.worked and c.progress == 2 and c.paused and c.output == "",
+        "工具已损坏时再次点击错误清空进度")
+end, "缺少工具时重复点击保持进度")
+
+test.system("crafting", "needle_work_clicks", {durability = 10, failCommit = true}, function(data)
+    local a, b, c = data.samples[1], data.samples[2], data.samples[3]
+    assert(a.worked and b.worked and b.progress == 2 and b.durability == 8, "准备进度或针耐久错误")
+    assert(not c.worked and not c.completed and c.progress == 2 and c.durability == 8 and c.output == "",
+        "最终提交失败仍推进进度或消耗工具耐久")
+end, "最终提交失败不磨损或推进")
+
+test.system("crafting", "needle_work_clicks", {durability = 10, changeToolBeforeWear = true}, function(data)
+    local c = data.samples[3]
+    assert(not c.worked and not c.completed and c.progress == 2 and c.durability == 8 and c.output == "",
+        "末次点击工具槽变化时没有回滚产物和工具")
+end, "末次工具冲突回滚制作")
+
+test.system("crafting", "needle_work_clicks", {full = true}, function(data)
+    for _, sample in ipairs(data.samples) do
+        assert(not sample.worked and sample.progress == 0 and sample.durability == 2,
+            "输出满时仍推进工作或扣针耐久")
+    end
+end, "满输出不消耗缝针")
+
 for _, row in ipairs({
     {args = {durability = 500, products = 1}, accepted = true, after = 499},
-    {args = {durability = 1000, maximum = 1000, products = 10}, accepted = true, after = 990},
-    {args = {durability = 10, products = 10}, accepted = true, after = 0},
-    {args = {durability = 9, products = 10}, accepted = false, after = 9},
+    {args = {durability = 1000, maximum = 1000, products = 10}, accepted = true, after = 999},
+    {args = {durability = 1, products = 10}, accepted = true, after = 0},
+    {args = {durability = 9, products = 10}, accepted = true, after = 8},
     {args = {durability = 0, products = 1}, accepted = false, after = 0},
     {args = {durability = 10, products = 10, success = false}, accepted = true, after = 10}
 }) do
     test.system("crafting", "manual_station_wear", row.args, function(data)
         assert(data.accepted == row.accepted and data.previewUnchanged and data.durability == row.after,
-            "工作站逐件磨损、余量边界或失败不磨损错误")
+            "工作站逐次磨损、余量边界或失败不磨损错误")
         assert(data.stack == 1 and data.maximum == (row.args.maximum or 500), "加工磨损错误修改建筑数量或最大耐久")
         assert(math.abs(data.carrierDurability - row.after) < .001 and math.abs(data.replacedDurability - row.after) < .001,
             "拆回或重新放置将砧的剩余耐久补满")
         assert(data.genericRejected and data.workbenchRejected and data.forgeAccepted, "砧混入其他站点或普通手工配方")
-    end, "工作站按成功产物数量磨损")
+    end, "工作站按有效点击磨损")
 end
 
 

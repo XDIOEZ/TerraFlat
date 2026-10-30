@@ -191,6 +191,17 @@ test.system("combat", "equipment_durability", {}, function(data)
         "黑曜石武器特例误改非武器装备，或未知材质覆盖原定义耐久")
     assert(data.coldWeaponMaximum == 50 and data.coldWeaponTagged and data.obsidianToolMaximum == 777,
         "旧冷兵器漏接统一磨损，或黑曜石武器特例影响非武器工具")
+    assert(data.shieldAttackTagged and data.explicitNeedleMaximum == 10 and data.explicitNeedleDurability == 8,
+        "盾击未接入武器磨损，或材质覆盖了专用针耐久")
+    assert(data.blockedHeadCovered and not data.blockedChestCovered, "全挡命中没有使用真实受击部位选择护甲")
+    local expected = {ChippedTool=300, Scissors=1800, FlintStrike=200, StoneThrowingRope=80,
+        Needle_Bone=10, Needle_Copper=100, Needle_Iron=200, CopperHammer=100, IronHammer=200, SteelHammer=400,
+        Shield_Wood=100, FishingRod=100, Hoe_Wood=30, Hoe_Stone=300, Hoe_Iron=1800}
+    for _, row in ipairs(data.catalog) do
+        assert(row.maximum == expected[row.id] and row.durability == expected[row.id], "正式物品耐久与配置不一致：" .. row.id)
+        expected[row.id] = nil
+    end
+    assert(next(expected) == nil, "耐久目录样本缺失")
     assert(data.positiveHitWear == 49 and data.zeroDamageHitWear == 49 and
         data.damageRejectedAfterHitWear == 49 and data.missWear == 50 and data.lastPoint == 0,
         "命中后的耐久磨损时机错误，或末点磨损没有归零")

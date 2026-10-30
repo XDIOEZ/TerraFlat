@@ -108,10 +108,14 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
     private void HandleHitReceived(DamageReceiverDamageInfo info)
     {
         if (!GameNetwork.HasStateAuthority || !IsRuntimeLoaded || !isActiveAndEnabled || !Enabled ||
-            clock.Kind != ShieldActionKind.Guard || stamina?.Data == null || info == null || info.Receiver != health ||
+            (clock.Kind != ShieldActionKind.Guard && clock.Kind != ShieldActionKind.Parry) || info == null || info.Receiver != health ||
             !info.Context.Attack.Source.IsValid || info.Context.Attack.Source.Backend == FlatWorld.Combat.CombatBackend.Environment) return;
-        // 举盾每次有效受击复用本角色翻滚费用，体力不足由体力模块扣到零。
-        stamina.ConsumeStamina(GuardHitStaminaSourceId, Mathf.Max(0f, roll != null ? roll.StaminaCost : Mod_Roll.DefaultStaminaCost));
+        if (clock.Kind == ShieldActionKind.Guard)
+        {
+            stamina?.ConsumeStamina(GuardHitStaminaSourceId, Mathf.Max(0f, roll != null ? roll.StaminaCost : Mod_Roll.DefaultStaminaCost));
+            ItemDurabilityService.TryConsume(heldShield?.item, 1f);
+        }
+        else equipment?.TryConsumeEquippedItemDurability(parrySource, 1f);
     }
     private void HandleHandChanged(ItemData data)
     {

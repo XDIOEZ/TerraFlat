@@ -152,6 +152,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         LaunchedWeaponDurabilityData = null;
         LaunchedWeaponDurabilityOwner = null;
         LaunchedWeaponInventoryOwner = null;
+        WeaponDurabilityConsumedAtLaunch = false;
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = null;
         base.OnUnload();
@@ -179,6 +180,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     public ItemData LaunchedWeaponDurabilityData { get; set; }
     public Item LaunchedWeaponDurabilityOwner { get; set; }
     public Item LaunchedWeaponInventoryOwner { get; set; }
+    public bool WeaponDurabilityConsumedAtLaunch { get; set; }
 
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
     public event System.Action<Mod_DamageReceiver, float> OnReceiverDamageResolved;
@@ -298,10 +300,13 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>几何与逻辑命中确认后、生命结算前消耗攻击装备耐久。</summary>
-    public void ConsumeWeaponDurabilityForHit() => EquipmentDurabilityRules.ConsumeSuccessfulHit(
-        LaunchedWeaponDurabilityOwner != null ? LaunchedWeaponDurabilityOwner : item,
-        LaunchedWeaponDurabilityData,
-        LaunchedWeaponInventoryOwner);
+    public void ConsumeWeaponDurabilityForHit()
+    {
+        if (!WeaponDurabilityConsumedAtLaunch)
+            EquipmentDurabilityRules.ConsumeSuccessfulHit(
+                LaunchedWeaponDurabilityOwner != null ? LaunchedWeaponDurabilityOwner : item,
+                LaunchedWeaponDurabilityData, LaunchedWeaponInventoryOwner);
+    }
     #endregion
 
     #region IDamageSender 实现

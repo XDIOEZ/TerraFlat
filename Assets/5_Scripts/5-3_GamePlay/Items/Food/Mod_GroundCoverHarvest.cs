@@ -142,7 +142,10 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
 
         // 未完成时只累计有效挥动，不把采集次数当作角色台词。
         if (!workProgress.Advance(requiredUses))
+        {
+            item.DecreaseDurability(1);
             return;
+        }
 
         if (cuttingGrass)
         {
@@ -156,6 +159,7 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
             }
             workProgress.Reset();
             targetOutline?.Hide();
+            item.DecreaseDurability(1);
         }
         else if (GroundCoverSystem.TryHarvest(target))
         {
@@ -163,6 +167,7 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
             targetOutline?.Hide();
             ItemActionFeedback.Show(item.Owner, FlatWorldLocalizationService.GetUiFormat(
                 "已采集{0}。", FlatWorldLocalizationService.GetUiText(target.Definition.DisplayName)));
+            item.DecreaseDurability(1);
         }
     }
 

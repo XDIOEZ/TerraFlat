@@ -16,8 +16,11 @@ public class RecipeProcessor : IDisposable
     public RuntimeRecipe Recipe { get; private set; }
     public float RequiredWork { get; private set; } = 1f;
     public bool IsCommitting => committing;
+    public CraftingRecipeMatch CommittingWorkingToolMatch => committingWorkingToolMatch;
     public bool IsAdvancing { get; private set; }
-    public Func<bool> BeginWork; // 通过材料、容量和拖拽检查后才消耗本次工作的外部条件。
+    public bool PausedForWorkingTool { get => State.PausedForWorkingTool; private set => State.PausedForWorkingTool = value; }
+    public Func<bool> BeginWork; // 通过材料、容量和拖拽检查后确认本次工作条件。
+    public Action CompleteWork; // 当前工作有效推进后消耗工作站及其工具。
     public Func<CraftingResult> PreviewOverride;
     public Func<Player, CraftingResult> CommitOverride;
     private readonly bool registeredProcess;
@@ -28,6 +31,7 @@ public class RecipeProcessor : IDisposable
     public event Action Changed;
     public event Action<RecipeProcessor> StateChanged; // 世界快照增量同步入口。
     private bool committing;
+    private CraftingRecipeMatch committingWorkingToolMatch;
 
     public RecipeProcessor(string station, RecipeProcessingState state, string processCapability = null, int? processCapabilityLevel = null,
         bool catalogRecipes = false)
@@ -75,7 +79,11 @@ public class RecipeProcessor : IDisposable
         if (recipe != null && !MachineDefinition.Positive(requiredWork))
             throw new ArgumentOutOfRangeException(nameof(requiredWork));
         string id = recipe?.Id ?? string.Empty;
-        if (!string.Equals(State.RecipeId, id, StringComparison.Ordinal)) State.Progress = 0f;
+        if (!string.Equals(State.RecipeId, id, StringComparison.Ordinal))
+        {
+            State.Progress = 0f;
+            PausedForWorkingTool = false;
+        }
         State.RecipeId = id;
         Recipe = recipe;
         RequiredWork = recipe == null ? 1f : requiredWork;
@@ -95,40 +103,74 @@ public class RecipeProcessor : IDisposable
 
     /// <summary>按有效工作时间推进加工；提交成功之后才清空当前加工进度。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual bool Advance(float workSeconds, Player actor = null)
+    public virtual bool Advance(float workSeconds, Player actor = null) => AdvanceWork(workSeconds, actor, false, out _);
+
+    private bool AdvanceWork(float workSeconds, Player actor, bool manual, out bool worked)
     {
+        worked = false;
         if (disposed || committing || IsAdvancing || !MachineDefinition.Positive(workSeconds)) return false;
         // 玩家正在拖动加工槽时保留当前物品，避免高速生产在松手前消费或替换来源堆。
         if (MachineInventory.IsBeingDragged(Input) || MachineInventory.IsBeingDragged(Output)) return false;
         ReconcileRecipe();
         if (Recipe == null || !Preview().Success) return false;
+        CraftingRecipeMatch workingMatch = null;
+        if (manual && Capabilities.RecipeType == RecipeType.Crafting)
+            CraftingRecipeMatcher.TryMatchRecipe(Input, Recipe, Capabilities, out workingMatch);
+        float previousProgress = State.Progress;
         IsAdvancing = true;
         try
         {
             if (BeginWork?.Invoke() == false) return false;
             State.Progress += workSeconds;
+            bool requiresCompletion = State.Progress >= RequiredWork;
+            worked = true;
             bool success = false;
+            bool toolConsumedDuringCommit = false;
             int completed = 0;
             while (Recipe != null && State.Progress >= RequiredWork && completed < MaxCompletionsPerAdvance)
             {
                 float cost = RequiredWork;
                 committing = true;
+                committingWorkingToolMatch = manual && !toolConsumedDuringCommit ? workingMatch : null;
                 try
                 {
                     CraftingResult result = Commit(actor);
                     if (!result.Success) break;
+                    toolConsumedDuringCommit |= committingWorkingToolMatch != null;
                     State.Progress = Mathf.Max(0f, State.Progress - cost);
                     success = true;
                     completed++;
                 }
-                finally { committing = false; }
+                finally { committing = false; committingWorkingToolMatch = null; }
                 ReconcileRecipe();
                 if (!Preview().Success) break;
+            }
+            if (requiresCompletion && !success)
+            {
+                State.Progress = previousProgress;
+                worked = false;
+            }
+            if (toolConsumedDuringCommit)
+            {
+                PausedForWorkingTool = State.Progress > 0f &&
+                    !CraftingRecipeMatcher.TryMatchRecipe(Input, workingMatch.Recipe, Capabilities, out _);
+                workingMatch = null;
             }
             return success;
         }
         finally
         {
+            if (worked && workingMatch != null)
+            {
+                if (!workingMatch.TryConsumeWorkingToolDurability(Input))
+                {
+                    State.Progress = previousProgress;
+                    worked = false;
+                }
+                else PausedForWorkingTool = State.Progress > 0f &&
+                    !CraftingRecipeMatcher.TryMatchRecipe(Input, workingMatch.Recipe, Capabilities, out _);
+            }
+            if (worked) CompleteWork?.Invoke();
             IsAdvancing = false;
             Changed?.Invoke(); StateChanged?.Invoke(this);
         }
@@ -140,10 +182,12 @@ public class RecipeProcessor : IDisposable
     [MethodImpl(MethodImplOptions.NoInlining)]
     public virtual CraftingResult Commit(Player actor)
         => CommitOverride != null ? CommitOverride(actor)
-            : CraftingService.CraftRecipe(Input, Output, Capabilities, Recipe, actor);
+            : CraftingService.CraftRecipe(Input, Output, Capabilities, Recipe, actor, committingWorkingToolMatch);
 
     /// <summary>直接手动推进加工时沿用自动加工的预检、进度和原子提交。</summary>
-    public bool AdvanceManually(float workSeconds, Player actor = null) => Advance(workSeconds, actor);
+    public bool AdvanceManually(float workSeconds, Player actor = null) => AdvanceWork(workSeconds, actor, true, out _);
+    public bool AdvanceManually(float workSeconds, Player actor, out bool worked) => AdvanceWork(workSeconds, actor, true, out worked);
+    public void ResumeAfterWorkingToolReplacement() => PausedForWorkingTool = false;
 
     public float Progress01 => Recipe != null ? Mathf.Clamp01(State.Progress / RequiredWork) : 0f;
 
@@ -158,13 +202,14 @@ public class RecipeProcessor : IDisposable
             MachineInventory.ApplySnapshot(Output, incoming.Output);
             State.RecipeId = incoming.RecipeId;
             State.Progress = incoming.Progress;
+            State.PausedForWorkingTool = incoming.PausedForWorkingTool;
             ReconcileRecipe();
         }
         finally { committing = false; }
         Changed?.Invoke();
     }
     private void OnInputChanged(ItemSlot slot)
-    { if (!committing) { State.Progress = 0f; ReconcileRecipe(); Changed?.Invoke(); StateChanged?.Invoke(this); } }
+    { if (!committing && !IsAdvancing) { if (!PausedForWorkingTool) State.Progress = 0f; ReconcileRecipe(); Changed?.Invoke(); StateChanged?.Invoke(this); } }
     private void OnOutputChanged(ItemSlot slot)
     { if (!committing) { Changed?.Invoke(); StateChanged?.Invoke(this); } }
     private void ReconcileRecipe()
@@ -176,7 +221,12 @@ public class RecipeProcessor : IDisposable
             {
                 foreach (CraftingRecipeMatch match in matches)
                     if (match.Recipe.Id == State.RecipeId) { next = match.Recipe; break; }
-                if (next == null && matches.Count > 0) next = matches[0].Recipe;
+                if (next == null && !PausedForWorkingTool && matches.Count > 0) next = matches[0].Recipe;
+            }
+            if (PausedForWorkingTool)
+            {
+                if (next == null) return;
+                PausedForWorkingTool = false;
             }
             // 材料变化后保留合法选择，砧上的金属板和针共用正式配方列表。
             SelectRecipe(next, next?.ProcessingSeconds > 0f ? next.ProcessingSeconds : 1f);
@@ -224,6 +274,7 @@ public class RecipeProcessor : IDisposable
         PreviewOverride = null;
         CommitOverride = null;
         BeginWork = null;
+        CompleteWork = null;
     }
     #endregion
 

@@ -23,7 +23,8 @@ public sealed class CraftingTransaction
         IReadOnlyList<ItemData> outputs,
         bool allowOutputIntoInput,
         out CraftingTransaction transaction,
-        out CraftingResult failure)
+        out CraftingResult failure,
+        bool wearWorkingTools = false)
     {
         return TryBuild(
             inputInventory,
@@ -34,7 +35,8 @@ public sealed class CraftingTransaction
             true,
             true,
             out transaction,
-            out failure);
+            out failure,
+            wearWorkingTools);
     }
 
     /// <summary>只模拟扣料与全部产物放置，不保留回滚快照，也不创建可提交事务。</summary>
@@ -87,7 +89,8 @@ public sealed class CraftingTransaction
         bool requireOutput,
         bool retainTransaction,
         out CraftingTransaction transaction,
-        out CraftingResult failure)
+        out CraftingResult failure,
+        bool wearWorkingTools = false)
     {
         transaction = null;
         failure = null;
@@ -122,6 +125,12 @@ public sealed class CraftingTransaction
                     match.Recipe);
                 return false;
             }
+        }
+
+        if (wearWorkingTools && !inputState.TryConsumeWorkingToolDurability(match.WorkingToolSlots))
+        {
+            failure = CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "参与制作的工具已改变", match.Recipe);
+            return false;
         }
 
         foreach (ItemData output in outputs)
@@ -315,6 +324,21 @@ public sealed class CraftingTransaction
             itemData.Stack.Amount -= amount;
             if (itemData.Stack.Amount <= 0.0001f)
                 workingItems[slotIndex] = null;
+            return true;
+        }
+
+        /// <summary>在工作快照中扣除实际参与工具，损坏和产物一起提交。</summary>
+        public bool TryConsumeWorkingToolDurability(IReadOnlyList<int> slots)
+        {
+            foreach (int index in slots)
+                if ((uint)index >= (uint)workingItems.Count ||
+                    !ItemDurabilityRules.CanConsume(workingItems[index], 1f)) return false;
+            foreach (int index in slots)
+            {
+                ItemData tool = workingItems[index];
+                if (!ItemDurabilityRules.TryConsume(tool, 1f, out _)) return false;
+                if (tool.Stack.Amount <= 0f) workingItems[index] = null;
+            }
             return true;
         }
 

@@ -52,7 +52,7 @@ public class WorkbenchLogic : MachineLogic
     /// <summary>材料变化时保留仍然成立的所选配方，不能回退到目录首项消费错误材料。</summary>
     public void RefreshRecipes()
     {
-        if (refreshing || Processor == null || Processor.IsCommitting) return;
+        if (refreshing || Processor == null || Processor.IsCommitting || Processor.IsAdvancing) return;
         refreshing = true;
         try
         {
@@ -63,7 +63,17 @@ public class WorkbenchLogic : MachineLogic
             RuntimeRecipe next = null;
             foreach (CraftingRecipeMatch match in Candidates)
                 if (match.Recipe.Id == selected) { next = match.Recipe; break; }
-            if (next == null && Candidates.Count > 0) next = Candidates[0].Recipe;
+            if (Processor.PausedForWorkingTool)
+            {
+                if (next == null)
+                {
+                    next = Processor.Recipe;
+                    if (next == null && GameRes.ExistingInstance != null)
+                        GameRes.ExistingInstance.recipeById.TryGetValue(selected, out next);
+                }
+                else Processor.ResumeAfterWorkingToolReplacement();
+            }
+            else if (next == null && Candidates.Count > 0) next = Candidates[0].Recipe;
             Processor.SelectRecipe(next, RequiredClicks);
         }
         finally { refreshing = false; }
@@ -81,11 +91,11 @@ public class WorkbenchLogic : MachineLogic
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool PerformWork(float amount, Player actor)
+    public bool PerformWork(float amount, Player actor, bool manual = false)
     {
         if (!GameNetwork.HasStateAuthority) return false;
         RefreshRecipes();
-        bool result = Processor.Advance(amount, actor);
+        bool result = manual ? Processor.AdvanceManually(amount, actor) : Processor.Advance(amount, actor);
         RefreshRecipes();
         return result;
     }
@@ -94,7 +104,7 @@ public class WorkbenchLogic : MachineLogic
     {
         if (operation == "select") return SelectRecipe(argument);
         if (operation != "work") return false;
-        PerformWork(1f, actor);
+        PerformWork(1f, actor, true);
         return true;
     }
 
@@ -109,7 +119,8 @@ public class WorkbenchLogic : MachineLogic
     private void OnProgressChanged() => NotifyChanged();
     public override void Capture() => MachinePersistence.Write(Entity.Snapshot, "workbench", new RecipeProcessingState
     {
-        Input = Input.Data, Output = Output.Data, RecipeId = Processor.State.RecipeId, Progress = Processor.State.Progress
+        Input = Input.Data, Output = Output.Data, RecipeId = Processor.State.RecipeId, Progress = Processor.State.Progress,
+        PausedForWorkingTool = Processor.PausedForWorkingTool
     });
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
     {
@@ -120,6 +131,7 @@ public class WorkbenchLogic : MachineLogic
         linkedInput.RebuildSlots();
         Processor.State.RecipeId = incoming.RecipeId;
         Processor.State.Progress = incoming.Progress;
+        Processor.State.PausedForWorkingTool = incoming.PausedForWorkingTool;
         RefreshRecipes();
         NotifyRemoteChanged();
         return true;
@@ -150,7 +162,7 @@ public class WorkbenchLogic : MachineLogic
         }
         sharedNodeId = inventory != null ? cabinet.Id : 0;
         sharedNode = nextNode;
-        if (linkedInput.SetShared(inventory)) Processor.State.Progress = 0f;
+        if (linkedInput.SetShared(inventory) && !Processor.PausedForWorkingTool) Processor.State.Progress = 0f;
         Processor.Capabilities.InputSlotLimit = linkedInput.Data.itemSlots.Count;
     }
 

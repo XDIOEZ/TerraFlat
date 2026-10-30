@@ -121,6 +121,9 @@ for _, weaponCase in ipairs({
 end
 
 test.runtime("combat", "projectile_tick_lifecycle", {}, function(data)
+    assert(data.shotLaunched and data.weaponAfterShot == data.weaponBeforeShot - 1
+        and data.weaponAfterProjectileHit == data.weaponAfterShot, "远程发射未扣一次耐久或投射物命中重复扣除")
+    assert(data.wearSkipSampleLaunched and data.ammunitionWearSkipped, "自用弹药选项没有跳过武器耐久扣除")
     assert(data.idleProjectile and data.idleDamage, "石头待机时投射或伤害模块仍被逐帧调度")
     assert(data.projectileSourceRetained and data.discardSourceRetained and data.damageReloadRetainedSource,
         "单独停用或重载模块抹掉了另一个来源的休眠请求")
