@@ -81,26 +81,26 @@ public partial class Mod_Temperature
     private void UpdateTemperatureConditionBuffs(float deltaTime)
     {
         GetSafeTemperatureRange(out float minimum, out float maximum);
-        bool tooCold = Data.CurrentTemperature < minimum;
-        bool tooHot = Data.CurrentTemperature > maximum;
-        float seconds = Mathf.Max(0f, deltaTime);
         // 安全时逐秒补回缓冲，冷热切换与短暂脱离危险均不能直接重置。
-        Data.RemainingTemperatureBufferSeconds = Mathf.Clamp(
-            Data.RemainingTemperatureBufferSeconds +
-            (tooCold || tooHot ? -seconds : seconds * Data.TemperatureBufferRecoveryPerSecond),
-            0f,
-            Data.DangerTemperatureBufferSeconds);
+        var safety = new SurvivalNumericBatch.TemperatureSafety
+        {
+            Temperature = Data.CurrentTemperature, SafeMinimum = minimum, SafeMaximum = maximum,
+            Buffer = Data.RemainingTemperatureBufferSeconds, BufferMaximum = Data.DangerTemperatureBufferSeconds,
+            RecoveryPerSecond = Data.TemperatureBufferRecoveryPerSecond, Seconds = deltaTime
+        };
+        SurvivalNumericBatch.Advance(ref safety);
+        Data.RemainingTemperatureBufferSeconds = safety.Buffer;
 
         if (temperatureBuffManager == null)
             return;
 
         bool bufferExhausted = Data.RemainingTemperatureBufferSeconds <= 0f;
-        if (tooCold && bufferExhausted)
+        if (safety.TooCold && bufferExhausted)
             temperatureBuffManager.EnsureSourceBuff(TemperatureConditionBuffIds.Hypothermia, HypothermiaSource);
         else
             temperatureBuffManager.RemoveSourceBuff(HypothermiaSource);
 
-        if (tooHot && bufferExhausted)
+        if (safety.TooHot && bufferExhausted)
             temperatureBuffManager.EnsureSourceBuff(TemperatureConditionBuffIds.Heatstroke, HeatstrokeSource);
         else
             temperatureBuffManager.RemoveSourceBuff(HeatstrokeSource);

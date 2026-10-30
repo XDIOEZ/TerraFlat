@@ -13,7 +13,8 @@
 ## 自然传热与体温
 
 - ThermalRuntime.AdvanceAmbient 统一体表、普通物、罐/工业内容、停火炉、落地容器/坩埚：每游戏秒保留99%温差，最低0.5℃/秒（MinimumAmbientTemperatureChangePerSecond），到目标停；跨下限先指数后匀速，分步/累计一致。流体按真实热容换内能，共享罐每轮一次；冷热同速，不读传热率或湿度/火源倍率。AdvanceTowards 仅入水/岩浆接触/主动传热，衣物改安全区。
-- Mod_Temperature 持基础体温、来源增温、安全区、缓冲、避险；来源取最强有效值且上限仅限该源，保存基础、UI/伤害读最终；水冷保护多来源相加钳0～1。0.25秒体温步直接调 AdvanceAmbient 提交自然体温，保留增温/事件/疾病顺序。
+- Mod_Temperature 持基础体温、来源增温、安全区、缓冲、避险；来源取最强有效值且上限仅限该源，保存基础、UI/伤害读最终；水冷保护多来源相加钳0～1。0.25秒体温步按水冷、环境传热、疾病顺序执行，传热仍用 AdvanceAmbient。
+- `SurvivalNumericBatch` 统一氧气、气压及体温的纯数值阶段并提供 Span 入口；模块仍按原频率逐阶段采样/提交，供氧通知、死亡扣血和水冷后的环境传热保持原回调边界，不跨对象延迟事件。
 - 玩家默认安全5～40℃、普通生物5～50℃，Actor可覆写、装备 SetSafeTemperatureRangeModifier。越界且共用缓冲耗尽才挂冻伤/热射病，安全移除，TemperatureMgr 不直接扣血。
 - RemainingTemperatureBufferSeconds 冷热共用：危险扣1/秒，安全补1/秒，默认容量60；短暂安全/冷热切换/清Buff不重置，保存剩余量；RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点、向外随机引导，普通陆移也保留短期方向偏置，不回退旧安全点。
 - TemperatureWarningPresentationRules 共用体温条/TemperatureScreenRendererFeature，读最终体温与装备安全线；条提前3℃渐色（窄区取1/4宽），屏幕越线10℃满，以真实秒平滑、冷热有符号互斥；仅表现，不改缓冲/Buff。
@@ -21,6 +22,7 @@
 ## 氧气、压力与有限大气
 
 - Mod_Oxygen 只管耗氧/缺氧，公开 CanReceiveOxygen/GetOxygenSupplyAmount/SupplyOxygen；Mod_AtmosphericOxygenSupply 每0.2秒按真 O₂/CO₂ 分压、水体阻塞和装备隔离供氧，呼吸阻塞比较实际供给/基础耗氧。
+- SurvivalNumericBatch 管氧气、压力和体温各阶段的强类型数值规则，支持连续数组；当前模块仍按原 Item 顺序逐项结算，在供氧、伤害和体温通知后重读状态，不跨物品延迟提交。
 - SpacesuitSupport 查当前插槽气罐，先扣真氧后 Supply；IAmbientOxygenBlocker 报密封，空罐仍隔离。耐压按来源注册，Mod_Pressure 不识装备；低压/高压/缺氧各自伤害时钟，安全/死亡清债务。
 - AtmosphereService.CanSustainCombustion 要真氧占比≥5%，真空/未知拒绝；ItemEnvironmentSources 燃烧点允许密闭舱气覆星球气，组分实时读。
 - 大气按实际 Scene WorldKey 定星球，各维度共地表有限储量；创建/进世界完整校验，TryGetForWorld 仅读真状态，不逐生物全量校验；GetOrCreate/Validate 保留显式入口。

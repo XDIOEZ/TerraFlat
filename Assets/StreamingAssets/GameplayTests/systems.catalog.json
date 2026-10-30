@@ -199,7 +199,11 @@
         "Assets/5_Scripts/5-1_Data/CoreData/Food*",
         "Assets/5_Scripts/5-1_Data/CoreData/Nutrition.cs",
         "Assets/5_Scripts/5-1_Data/CoreData/GameValue_float.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.FoodTimerState.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/SurvivalNumericBatch.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SurvivalNumericBatch.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.NutritionCombustionData.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.FoodTimerState.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestActorWorldRuntimeProbe.SurvivalNumeric.cs"
       ],
       "dependsOn": [
         "buff",

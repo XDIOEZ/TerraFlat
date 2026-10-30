@@ -94,20 +94,27 @@ public sealed partial class Mod_Pressure : Module, IItemModuleDependencyBinder, 
             EnvironmentPressureKPa = AtmosphereService.PressureKPa(atmosphere);
         else return;
         GetSafePressureRange(out float min, out float max);
-        int next = EnvironmentPressureKPa < min ? -1 : EnvironmentPressureKPa > max ? 1 : 0;
-        if (next != Danger) { lowDamageClock = highDamageClock = 0f; Danger = next; }
-        float before = State.RemainingBufferSeconds;
-        State.RemainingBufferSeconds = Mathf.Clamp(before + (Danger == 0 ? deltaTime * BufferRecoveryPerSecond : -deltaTime), 0f, DangerBufferSeconds);
-        if (Danger == 0) { lowDamageClock = highDamageClock = 0f; Changed?.Invoke(); return; }
-        float exposure = Mathf.Max(0f, deltaTime - before);
-        if (exposure <= 0f) return;
-        if (Danger < 0) ApplyDamageClock(ref lowDamageClock, exposure, LowPressureDamage, "pressure_low");
-        else ApplyDamageClock(ref highDamageClock, exposure, HighPressureDamage, "pressure_high");
-        Changed?.Invoke();
+        var exposure = new SurvivalNumericBatch.PressureExposure
+        {
+            EnvironmentPressure = EnvironmentPressureKPa, SafeMinimum = min, SafeMaximum = max,
+            Buffer = State.RemainingBufferSeconds, BufferMaximum = DangerBufferSeconds,
+            RecoveryPerSecond = BufferRecoveryPerSecond, Seconds = deltaTime, Danger = Danger,
+            LowDamageClock = lowDamageClock, HighDamageClock = highDamageClock
+        };
+        SurvivalNumericBatch.Advance(ref exposure);
+        Danger = exposure.Danger;
+        State.RemainingBufferSeconds = exposure.Buffer;
+        lowDamageClock = exposure.LowDamageClock;
+        highDamageClock = exposure.HighDamageClock;
+        if (exposure.HasExposure)
+        {
+            if (Danger < 0) ApplyDamageClock(ref lowDamageClock, LowPressureDamage, "pressure_low");
+            else ApplyDamageClock(ref highDamageClock, HighPressureDamage, "pressure_high");
+        }
+        if (exposure.NotifyChanged) Changed?.Invoke();
     }
-    private void ApplyDamageClock(ref float clock, float seconds, float damage, string causeId)
+    private void ApplyDamageClock(ref float clock, float damage, string causeId)
     {
-        clock += seconds;
         while (clock >= DamageIntervalSeconds && health != null && health.Hp > 0f)
         {
             clock -= DamageIntervalSeconds;

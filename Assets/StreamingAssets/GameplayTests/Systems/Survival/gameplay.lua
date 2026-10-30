@@ -28,3 +28,15 @@ test.runtime("survival", "temperature_conditions", {}, function(data)
     assert(data.restoredMaximumBuffer == data.maximumBuffer, "正式加载改变体温配置容量")
     assert(data.actorRemoved, "体温测试自有生物没有在结束时清理")
 end, "真实体温缓冲、冷热疾病、安全恢复和模块存档重载")
+
+test.runtime("survival", "temperature_water_callback_order", {}, function(data)
+    assert(data.actorRemoved, "体温回调测试自有生物没有清理")
+    assert(#data.events == 3, "水冷、回调内改温与环境传热的通知数量错误")
+    assert(math.abs(data.events[1] - (data.initial - .5)) < .0001, "第一条通知不是入水降温")
+    assert(math.abs(data.events[2] - data.injected) < .0001, "回调内的基础体温修改未立即通知")
+    assert(math.abs(data.events[3] - data.expectedAfterCallback) < .0001 and
+        math.abs(data.afterCallback - data.expectedAfterCallback) < .0001,
+        "环境传热没有读取水冷回调后的最新体温")
+    assert(math.abs(data.afterTargetCleared - data.expectedAfterTargetCleared) < .0001,
+        "水冷回调令体温低于目标后，旧水冷目标仍继续生效")
+end, "真实生物入水通知、回调改温、环境传热与水冷目标清理顺序")

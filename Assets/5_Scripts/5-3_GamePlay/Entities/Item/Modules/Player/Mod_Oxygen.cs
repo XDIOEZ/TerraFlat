@@ -161,9 +161,10 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder, IPlayerSt
     }
 
     private void SetCurrentOxygen(float value)
+        => CommitClampedOxygenValue(SurvivalNumericBatch.ClampOxygen(value, MaxValue));
+
+    private void CommitClampedOxygenValue(float nextValue)
     {
-        float maxOxygen = Mathf.Max(0f, MaxValue);
-        float nextValue = Mathf.Clamp(value, 0f, maxOxygen);
         if (Mathf.Approximately(Data.CurrentOxygen, nextValue))
             return;
 
@@ -201,14 +202,27 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder, IPlayerSt
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || item == null || !float.IsFinite(deltaTime) || deltaTime <= 0f) return;
         if (breathingHealth == null || breathingHealth.Hp <= 0f) { hypoxiaClock = 0f; return; }
         float before = CurrentValue;
-        AddOxygen(-oxygenConsumePerSecond * deltaTime);
+        var consumption = new SurvivalNumericBatch.OxygenConsumption
+        {
+            Current = before, Maximum = MaxValue, ConsumePerSecond = oxygenConsumePerSecond, Seconds = deltaTime
+        };
+        SurvivalNumericBatch.Advance(ref consumption);
+        if (consumption.HasFiniteChange) CommitClampedOxygenValue(consumption.Next);
         // 只有供氧不足以维持基础呼吸才显示缺氧状态，额外的恢复速度不属于呼吸需求。
-        PublishBreathBlocked(suppliedOxygen + .0001f < oxygenConsumePerSecond * deltaTime);
+        var breathing = new SurvivalNumericBatch.OxygenBreathing
+        {
+            Supplied = suppliedOxygen, ConsumePerSecond = oxygenConsumePerSecond, Seconds = deltaTime
+        };
+        SurvivalNumericBatch.Advance(ref breathing);
+        PublishBreathBlocked(breathing.Blocked);
         suppliedOxygen = 0f;
-        if (CurrentValue > 0f) { hypoxiaClock = 0f; return; }
-        float depletedSeconds = before <= 0f ? deltaTime : oxygenConsumePerSecond > 0f
-            ? Mathf.Max(0f, deltaTime - before / oxygenConsumePerSecond) : 0f;
-        hypoxiaClock += depletedSeconds;
+        var hypoxia = new SurvivalNumericBatch.OxygenHypoxia
+        {
+            BeforeConsumption = before, Current = CurrentValue, ConsumePerSecond = oxygenConsumePerSecond,
+            Seconds = deltaTime, DamageClock = hypoxiaClock
+        };
+        SurvivalNumericBatch.Advance(ref hypoxia);
+        hypoxiaClock = hypoxia.DamageClock;
         // 所有缺氧情况共用同一伤害时钟，不由供给者自行扣血。
         while (hypoxiaClock >= 5f && breathingHealth != null && breathingHealth.Hp > 0f)
         {

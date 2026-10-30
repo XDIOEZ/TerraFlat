@@ -275,3 +275,96 @@ for _, case in ipairs(treatmentCases) do
         if case.first == "Running" then near(data.firstProgress, .5, "治疗等待进度") end
     end, "治疗会话：" .. case.name)
 end
+
+test.system("survival", "numeric_batch", {}, function(data)
+    local oxygen = data.oxygen
+    near(oxygen[1].next, 8, "批量氧气正常消耗")
+    near(oxygen[2].next, 0, "批量氧气耗尽钳制")
+    near(oxygen[3].next, 0, "批量零氧气容量")
+    assert(oxygen[1].finite and oxygen[2].finite and oxygen[3].finite and not oxygen[4].finite,
+        "批量非法消耗检查错误")
+    near(oxygen[4].next, 8, "批量非法消耗不修改储备")
+    assert(not data.breathing[1] and data.breathing[2] and not data.breathing[3],
+        "批量呼吸阻塞没有按实际供氧和基础耗氧比较")
+    near(data.hypoxia[1], 5.05, "耗尽瞬间只累计剩余缺氧时间")
+    near(data.hypoxia[2], 0, "有氧清除缺氧计时")
+    near(data.hypoxia[3], 5, "零氧持续计时")
+
+    local pressure = data.pressure
+    assert(pressure[1].danger == 0 and pressure[1].lowClock == 0 and pressure[1].highClock == 0 and pressure[1].notify,
+        "恢复安全气压后没有清除冷热伤害时钟或发通知")
+    near(pressure[1].buffer, 2, "安全气压缓冲恢复")
+    assert(pressure[2].danger == -1 and not pressure[2].exposed and not pressure[2].notify,
+        "低压缓冲尚未耗尽就产生危险暴露")
+    near(pressure[2].buffer, .1, "低压缓冲消耗")
+    assert(pressure[3].danger == -1 and pressure[3].exposed and pressure[3].notify,
+        "低压缓冲耗尽后未进入危险暴露")
+    near(pressure[3].buffer, 0, "低压缓冲耗尽")
+    near(pressure[3].lowClock, 5, "低压只累计缓冲耗尽后的时间")
+    assert(pressure[4].danger == 1 and pressure[4].lowClock == 0 and pressure[4].exposed,
+        "冷热气压切换没有清除旧伤害时钟")
+    near(pressure[4].highClock, 1, "高压独立伤害计时")
+
+    local cooling = data.cooling
+    assert(cooling[1].apply and not cooling[1].clear, "浸水降温没有推进")
+    near(cooling[1].next, 33, "入水保护降低传热速度")
+    assert(not cooling[2].apply and not cooling[2].clear, "完全保护仍产生入水降温")
+    assert(cooling[3].clear and not cooling[3].apply and cooling[4].clear and not cooling[4].apply,
+        "离水或到达目标没有清理入水状态")
+    assert(cooling[5].apply and not cooling[5].clear and cooling[5].next == 30,
+        "入水到达目标时必须先提交温度通知再检查清理")
+    near(data.ambient[1], 25, "批量环境降温")
+    near(data.ambient[2], 15, "批量环境升温")
+    near(data.ambient[3], 60, "批量环境同温")
+    local safety = data.safety
+    assert(safety[1].cold and not safety[1].hot and safety[1].buffer == 0, "低温缓冲未耗尽")
+    assert(safety[2].hot and not safety[2].cold and safety[2].buffer == 0, "高温未沿用共用缓冲")
+    assert(not safety[3].cold and not safety[3].hot and not safety[4].cold and not safety[4].hot,
+        "安全温度边界被判危险")
+    near(safety[3].buffer, .75, "安全时温度缓冲恢复")
+    near(safety[4].buffer, 60, "温度缓冲不超过容量")
+end, "氧气、气压与体温连续数值批处理及状态边界")
+
+test.system("survival", "oxygen_callback_order", {}, function(data)
+    assert(data.loaded and data.initiallyBlocked, "氧气夹具未加载或未建立原缺氧状态")
+    near(data.supplied, 2, "氧气变化回调中的实时供氧")
+    near(data.oxygen, 2, "供氧后储备")
+    assert(not data.blocked and data.hypoxiaSeconds == 0, "回调供氧后呼吸或缺氧时钟仍使用旧快照")
+    assert(#data.events == 3 and data.events[1].kind == "oxygen" and data.events[1].value == 0 and
+        data.events[2].kind == "oxygen" and data.events[2].value == 2 and
+        data.events[3].kind == "blocked" and not data.events[3].value,
+        "氧气消耗、回调供氧和呼吸状态通知顺序错误")
+end, "氧气变化回调供氧后再结算呼吸与缺氧")
+
+test.system("survival", "nutrition_drain_batch", {}, function(data)
+    local expected = {
+        {0, 3, 3, 14, 9.98, 12},
+        {0, 3, 3, 14, 9.988, 12},
+        {4, 5, 3, 17, 9.94, 6},
+        {0, 0, 0, 0, 9.4, 18},
+        {10, 5, 3, 20, 10, 0},
+        {10, 5, 3, 20, 10, 0},
+        {10, 5, 3, 21, 9.98, 0},
+        {10, 5, 3, 0, 0, 0}
+    }
+    local names = {"carbohydrates", "fat", "protein", "water", "vitamins", "energy"}
+    assert(#data.samples == #expected and data.matchesSingle and data.sliceUntouched,
+        "营养连续数组与单次计算不一致，或越界修改相邻样本")
+    for index, values in ipairs(expected) do
+        for column, key in ipairs(names) do
+            near(data.samples[index][key], values[column], "营养样本" .. index .. "的" .. key)
+        end
+    end
+    for _, row in ipairs({{sample = data.other, seconds = 6},
+                          {sample = data.player, seconds = 6 * data.hungerMultiplier}}) do
+        local sample, seconds = row.sample, row.seconds
+        assert(sample.sameNutrition, "持续消耗替换了原营养对象")
+        near(sample.energy, math.min(300, seconds), "真实食物服务消耗能量")
+        near(sample.carbohydrates, math.max(0, 100 - seconds), "真实食物服务碳水")
+        near(sample.fat, math.max(0, 100 - math.max(0, seconds - 100)), "真实食物服务脂肪")
+        near(sample.protein, math.max(0, 100 - math.max(0, seconds - 200)), "真实食物服务蛋白")
+        near(sample.water, math.max(0, 100 - seconds * .5), "真实食物服务水")
+    end
+    near(data.other.vitamins, 99.94, "非玩家维生素自然消耗")
+    near(data.player.vitamins, math.max(0, 100 - 6 * data.hungerMultiplier * .001), "玩家维生素自然消耗")
+end, "营养连续数组：扣减顺序、水分和维生素倍率、饥饿规则、零负时间与真实服务")

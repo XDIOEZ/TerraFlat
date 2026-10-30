@@ -115,8 +115,6 @@ public sealed class FoodNutritionService
     private float buffWaterConsumeMultiplier = 1f;
 
     private const float PlayerInitialFatMaximum = 100f;
-    private const float PlayerNaturalVitaminLossPerSecond = 0.001f;
-    private const float DefaultNaturalVitaminLossPerSecond = 0.01f;
     private const bool PlayerFatMaximumGrowthEnabled = false; // 暂停“吃满后继续提高脂肪上限”，保留规则便于后续重新调参。
     private const float PlayerFatMaximumCap = PlayerInitialFatMaximum * 2f;
     private const float PlayerFatMaximumGrowthRatio = 0.5f;
@@ -197,39 +195,33 @@ public sealed class FoodNutritionService
         if (food == null || food.nutrition == null || timeDelta <= 0f)
             return 0f;
 
-        timeDelta *= RuntimeNutritionConsumeMultiplier *
-                     MovementNutritionConsumeMultiplier *
-                     BuffNutritionConsumeMultiplier;
-
-        if (context.IsPlayer)
-            timeDelta *= GameRuleConfiguration.Current.PlayerSurvival.HungerDrainMultiplier;
-
-        GameValue_float nutritionConsumeSpeed = food.nutritionConsumeSpeed;
-        float foodDelta = timeDelta * (nutritionConsumeSpeed?.Value ?? 0f);
-        float remainingDelta = Mathf.Max(0f, foodDelta);
-        float totalEnergy = Drain(ref food.nutrition.Carbohydrates, ref remainingDelta);
-        totalEnergy += Drain(ref food.nutrition.Fat, ref remainingDelta);
-        totalEnergy += Drain(ref food.nutrition.Protein, ref remainingDelta);
-
-        float usedWater = timeDelta * food.WaterConsumeSpeedRate *
-                          MovementWaterConsumeMultiplier *
-                          BuffWaterConsumeMultiplier;
-        food.nutrition.Water = Mathf.Max(0f, food.nutrition.Water - usedWater);
-
-        float naturalVitaminLossPerSecond = context.IsPlayer
-            ? PlayerNaturalVitaminLossPerSecond
-            : DefaultNaturalVitaminLossPerSecond;
-        float naturalVitaminLoss = timeDelta * naturalVitaminLossPerSecond;
-        food.nutrition.Vitamins = Mathf.Max(0f, food.nutrition.Vitamins - naturalVitaminLoss);
-        return totalEnergy;
-    }
-
-    private static float Drain(ref float value, ref float amount)
-    {
-        float used = Mathf.Min(Mathf.Max(0f, value), amount);
-        value -= used;
-        amount -= used;
-        return used;
+        Nutrition nutrition = food.nutrition;
+        bool isPlayer = context.IsPlayer;
+        var state = new FoodNutritionConsumptionData.State
+        {
+            Carbohydrates = nutrition.Carbohydrates, Fat = nutrition.Fat, Protein = nutrition.Protein,
+            Water = nutrition.Water, Vitamins = nutrition.Vitamins
+        };
+        var input = new FoodNutritionConsumptionData.Input
+        {
+            Seconds = timeDelta,
+            NutritionSpeed = food.nutritionConsumeSpeed?.Value ?? 0f,
+            WaterSpeed = food.WaterConsumeSpeedRate,
+            RuntimeNutritionMultiplier = RuntimeNutritionConsumeMultiplier,
+            MovementNutritionMultiplier = MovementNutritionConsumeMultiplier,
+            BuffNutritionMultiplier = BuffNutritionConsumeMultiplier,
+            MovementWaterMultiplier = MovementWaterConsumeMultiplier,
+            BuffWaterMultiplier = BuffWaterConsumeMultiplier,
+            IsPlayer = isPlayer,
+            PlayerHungerMultiplier = isPlayer ? GameRuleConfiguration.Current.PlayerSurvival.HungerDrainMultiplier : 1f
+        };
+        FoodNutritionConsumptionData.Result result = FoodNutritionConsumptionData.CalculateNutritionConsumption(state, input);
+        nutrition.Carbohydrates = result.State.Carbohydrates;
+        nutrition.Fat = result.State.Fat;
+        nutrition.Protein = result.State.Protein;
+        nutrition.Water = result.State.Water;
+        nutrition.Vitamins = result.State.Vitamins;
+        return result.ConsumedEnergy;
     }
 
     public void RestoreNutritionToMaximum()

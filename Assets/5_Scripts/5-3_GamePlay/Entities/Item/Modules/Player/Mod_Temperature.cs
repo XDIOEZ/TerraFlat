@@ -128,9 +128,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
     // 直接提交温度计算结果，避免每轮模块 Tick 创建实例回调委托。
     internal void AdvanceAmbientTemperature(float deltaTime)
     {
-        float nextTemperature = ThermalRuntime.AdvanceAmbient(
-            NaturalTemperature, Data.AmbientTemperature, deltaTime);
-        SetNaturalTemperature(nextTemperature);
+        var transfer = new SurvivalNumericBatch.TemperatureAmbientTransfer
+        {
+            NaturalTemperature = NaturalTemperature, AmbientTemperature = Data.AmbientTemperature, Seconds = deltaTime
+        };
+        SurvivalNumericBatch.Advance(ref transfer);
+        SetNaturalTemperature(transfer.NextTemperature);
     }
 
     #endregion
@@ -290,33 +293,18 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable, IPlayerSt
     /// <summary>仅在真实浸水期间把体温平滑推进到本次入水目标，环境自身的温度变化仍独立结算。</summary>
     private void ProcessWaterEntryCooling(float deltaTime)
     {
-        if (!_hasWaterEntryCoolingTarget)
-            return;
-
-        if (!_isInWater)
+        if (!_hasWaterEntryCoolingTarget) return;
+        var cooling = new SurvivalNumericBatch.TemperatureWaterCooling
         {
-            if (Time.frameCount > _lastWaterExitFrame)
-                ClearWaterEntryCooling();
-            return;
-        }
-
-        if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)
-        {
-            ClearWaterEntryCooling();
-            return;
-        }
-
-        float waterCoolingSpeedMultiplier = Mathf.Clamp01(1f - _waterCoolingProtection);
-        if (waterCoolingSpeedMultiplier <= 0f)
-            return;
-
-        float nextTemperature = ThermalRuntime.AdvanceTowards(
-            NaturalTemperature,
-            _waterEntryCoolingTargetTemperature,
-            _waterEntryCoolingSpeed,
-            deltaTime,
-            waterCoolingSpeedMultiplier);
-        SetNaturalTemperature(nextTemperature);
+            NaturalTemperature = NaturalTemperature, TargetTemperature = _waterEntryCoolingTargetTemperature,
+            CoolingSpeed = _waterEntryCoolingSpeed, Protection = _waterCoolingProtection, Seconds = deltaTime,
+            HasTarget = _hasWaterEntryCoolingTarget, InWater = _isInWater,
+            WaterExitExpired = !_isInWater && Time.frameCount > _lastWaterExitFrame
+        };
+        SurvivalNumericBatch.Advance(ref cooling);
+        if (cooling.ClearTarget) { ClearWaterEntryCooling(); return; }
+        if (!cooling.ApplyTemperature) return;
+        SetNaturalTemperature(cooling.NextTemperature);
 
         if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)
             ClearWaterEntryCooling();

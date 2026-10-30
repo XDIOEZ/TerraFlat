@@ -242,8 +242,15 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
             return;
         }
 
-        float elapsed = currentTime - Data.LastWorldTime;
-        Data.LastWorldTime = currentTime;
+        var timeState = new CombustionFuelDemandData.State { LastWorldTime = Data.LastWorldTime };
+        var demandInput = new CombustionFuelDemandData.Input
+        {
+            CurrentWorldTime = currentTime,
+            FuelConsumptionMultiplier = fuelConsumptionMultiplier
+        };
+        CombustionFuelDemandData.Result demand = CombustionFuelDemandData.CalculateWorldTimeFuelDemand(timeState, demandInput);
+        float elapsed = demand.ElapsedWorldTime;
+        Data.LastWorldTime = demand.State.LastWorldTime;
         if (elapsed <= 0f)
         {
             if (elapsed < 0f && commit)
@@ -253,7 +260,7 @@ public sealed class Mod_Combustion : Module, IItemModuleDependencyBinder
         }
 
         if (Data.IsBurning && fuel.HasFuel())
-            fuel.ConsumeFuel(elapsed * Mathf.Max(0f, fuelConsumptionMultiplier));
+            fuel.ConsumeFuel(demand.FuelDemand);
         if (!fuel.HasFuel())
             Data.IsBurning = false;
 
