@@ -1,4 +1,41 @@
 -- 正式端点解析和网络物品字节协议无需创建 Host/Client。
+test.system("networking", "space_snapshot_delta", {}, function(data)
+    local shared, motion, changes = data.shared, data.motion, data.changes
+    assert(shared.firstFull and shared.secondFull and shared.capturedFirst > 0 and
+        shared.capturedFirst == shared.capturedSecond and shared.encodedFirst == shared.encodedSecond,
+        "两个观察者没有独立完整首包，或同轮重复采集/编码了共享实体")
+    assert(shared.compressedFirst > 0 and shared.firstWorlds == 1 and shared.secondWorlds == 1 and
+        shared.firstWorldPayload and shared.secondWorldPayload,
+        "大字段未压缩，或第二个观察者缺少独立船内世界首包")
+    assert(motion.deltaBytes < shared.firstBytes and motion.encodedFields > 0 and motion.compressedFields == 0,
+        "移动差量重发了完整结构或重复压缩未变化的大字段")
+    assert(motion.shipX == 120.5 and motion.secondShipX == 120.5 and motion.passengerX == 4.5 and
+        motion.pieceHealth == 100 and motion.inventoryIntact and motion.sectorIntact,
+        "运动没有同步到两个观察者，或表现状态/未提交解码污染了冻结基线")
+    assert(motion.worlds == 0 and motion.secondWorlds == 0, "船内世界载荷在普通差量中被重复回放")
+    assert(changes.doorOpen and changes.health == 73 and changes.inventoryChanged and changes.gas == 81 and
+        changes.configuration == 42 and changes.configurationNative and changes.height == 35,
+        "门、耐久、库存、真实气体、设备配置或飞行状态的原位变化丢失")
+    assert(changes.looseSnapshot == "changed-loose" and changes.looseX == 33 and
+        changes.added and changes.removed and changes.transferred and not changes.oldDoorOpen and changes.oldHealth == 100,
+        "散物、船件增删/转移或新旧表现状态隔离错误")
+    local views, visibility = data.differentViews, data.visibility
+    assert(views.wideShipA and views.wideShipB and not views.narrowShipA and views.narrowShipB and
+        views.narrowFlights == 1 and views.narrowFlightShip == "ship-b" and views.narrowPassengers == 0 and
+        views.narrowLooseItems == 0 and views.narrowWorlds == 0, "两个观察者串用了其他玩家的可见集合")
+    assert(visibility.left and visibility.returned and visibility.returnedHealth == 73 and
+        visibility.returnedInventory and visibility.returnedWorlds == 1 and visibility.returnedWorldPayload,
+        "离开视野未删除实体，或重新可见后缺少完整结构/船内资料")
+    local corrupt, recovery = data.corrupt, data.recovery
+    assert(corrupt.truncatedRejected and corrupt.invalidLengthRejected and corrupt.validAfterRejection,
+        "坏包未拒绝，或拒绝后污染了同序号正常包的接收基线")
+    assert(recovery.missingRejected and recovery.fullAgain and recovery.recoveredX == 202 and
+        recovery.recoveredHealth == 73 and recovery.recoveredWorlds == 1 and recovery.immediateX == 203 and recovery.worlds == 0,
+        "缺前序基线后没有全量恢复，或即时发送复用了上一轮旧状态")
+    assert(data.gasOnly.encodedFields == 1 and data.gasOnly.geometryIntact and data.gasOnly.gas == 82 and
+        data.gasOnly.bytes < shared.firstBytes, "单独舱气变化重发了舱室格子或破坏了容积与气体状态")
+end, "太空差量：共享编码、独立视野、动态字段、结构增删、坏包与全量恢复")
+
 test.system("networking", "building_request_ledger", {}, function(data)
     assert(data.placeToken ~= 0 and data.dismantleToken ~= 0 and data.placeToken ~= data.dismantleToken,
         "建造与拆除回执没有独立非零令牌")

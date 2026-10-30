@@ -15,7 +15,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `Gameplay/{NetworkGameBootstrap,FlatWorldGameNetworkManager,NetworkWorldPlayer}.cs`：启动、连接与玩家。
 - `Gameplay/Network{ChunkStreaming,ItemState,WeatherState}Coordinator.cs`：区块、物品、天气复制。
 - `NetworkItemStateCoordinator` 的 `Spawning/Buildings/MachineReplication` 分管生成、建造事务与机器复制；`NetworkBuildingRequestLedger` 统一建造/拆除回执、到期与断线清理，等待帧不复制键数组。规则 `networking/building_request_ledger`。
-- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现；Gameplay 协议为 26。
+- `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
@@ -48,7 +48,8 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## 快照与复制
 
-- `NetworkGameplayProtocol.CurrentVersion=30`，天气地表雪格同时携带 `IceMeltProgress`；客户端仅恢复权威进度，不执行融冰。
+- `NetworkGameplayProtocol.CurrentVersion=33`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
+- 天气地表雪格同时携带 `IceMeltProgress`；客户端仅恢复权威进度，不执行融冰。
 
 - 玩家公开快照经 `Item.ModuleSavePublicNetworkState` 调用模块保存：实现 `IPublicNetworkStateSaver` 的模块仅刷新公开字段，未实现的模块仍执行完整保存。`Mod_Inventory` 跳过私有槽位保存和装备收纳袋拆装；正式存档仍走完整 `ModuleSave`。回归 `networking/public_network_save_route`。
 

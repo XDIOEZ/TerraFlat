@@ -59,7 +59,7 @@ namespace FlatWorld.GameplayMCP
                 binding.Player != player || binding.PlayerGeneration != player.RuntimeGeneration ||
                 binding.Scene != SceneManager.GetActiveScene().handle || !ReferenceEquals(binding.World, world))
             { error = "目标句柄已过期或不属于当前玩家/世界，请重新查询 source=world。"; return false; }
-            using var worldScope = world != null ? GameplayWorldRegistry.UseWorld(world.WorldKey) : null;
+            using GameplayWorldRegistry.WorldExecutionScope? worldScope = world != null ? GameplayWorldRegistry.UseWorld(world.WorldKey) : null;
             if (binding.Target.Refresh?.Invoke() != true)
             { bindings.Remove(token); error = "目标已删除、卸载、换代或离开观察范围，请重新查询 source=world。"; return false; }
             target = binding.Target;
@@ -93,7 +93,7 @@ namespace FlatWorld.GameplayMCP
                 !string.IsNullOrWhiteSpace(parameters.Value<string>("query"));
             var all = new List<Target>();
             var dedupe = new HashSet<string>(StringComparer.Ordinal);
-            using var worldScope = GameplayWorldRegistry.TryGet(player.gameObject.scene.name, out _)
+            using GameplayWorldRegistry.WorldExecutionScope? worldScope = GameplayWorldRegistry.TryGet(player.gameObject.scene.name, out _)
                 ? GameplayWorldRegistry.UseWorld(player.gameObject.scene.name) : null;
             void Add(Target target)
             {

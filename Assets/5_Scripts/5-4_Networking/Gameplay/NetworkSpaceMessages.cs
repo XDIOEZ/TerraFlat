@@ -9,7 +9,7 @@ namespace FlatWorld.Networking.Gameplay
     public struct NetworkSpaceSnapshotBegin : NetworkMessage
     {
         public ulong Sequence;
-        public int CompressedBytes, ExpandedBytes, ChunkCount;
+        public int PayloadBytes, ChunkCount;
         public uint Hash;
     }
     public struct NetworkSpaceSnapshotChunk : NetworkMessage

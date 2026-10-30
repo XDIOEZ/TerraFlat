@@ -78,3 +78,6 @@ PlayMode 的 `bots-actions.lua` 及其余偏协议 Lua 都由宿主自动定时�
 隔离测试宿主附带 `GameplayTestAutomaticSessionLease`，在入世前暂缓自动单人 Host，测试结束随宿主释放；它不停止已有用户会话。BotWorld 继续拒绝接管已运行的 Server/Client。假人命令和拾取消息带连接当前 RealmRevision，保留正式旧世界拒绝；移动/库存命令的 Weaver 签名与新增版本字段同步。
 
 2026-10-21：`world_request_gate` 采样正式世界门禁的就绪、迁移、观察者、世界身份和修订号拒绝原因；建造/拆除接入即时失败回执。`local_observer_window` 覆盖本机预测跨块、远端使用权威位置、非法预测回退与环绕后本机中心。未复现用户那次偶发边界卡住和熔炉超时；规则仅验证静态修复的选择与门禁，不证明真实 Host/Client、断网或整段加载链路已通过。
+2026-10-30：太空快照改为共享采集和字段级二进制差量，Gameplay 协议 33。`networking/space_snapshot_delta` 覆盖共享编码、独立视野、门/耐久/库存/气体/设备配置变化、船件增删转移、离视野重入、冻结基线隔离、坏包拒绝与完整补拉；船内世界载荷只在本包需要时应用。
+
+离线入口：`dotnet run --project Tools/Tests/SpaceCruise/SpaceCruise.Tests.csproj -c Release -- --space-network-snapshot-delta`，复用正式 codec 与规则采样；气体/配置的离线替身不代替 Unity 真实字段规则。共享采集轮、分片实际传输、完整应用后的船内资源重绑、Mirror Weaver 和真实多端 CPU/GC/带宽仍需现场验证。

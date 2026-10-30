@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Diagnostics;
 using FlatWorld.Networking;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace FlatWorld.Spaceflight
@@ -12,7 +11,7 @@ namespace FlatWorld.Spaceflight
         #region 观察者快照性能诊断
         private static readonly PerformanceDebugPoint NetworkCapturePoint = new("FlatWorld.Space.Network.CaptureContents");
         private static readonly PerformanceDebugPoint NetworkFilterPoint = new("FlatWorld.Space.Network.Filter");
-        private static readonly PerformanceDebugPoint NetworkJsonPoint = new("FlatWorld.Space.Network.Json");
+        private static readonly PerformanceDebugPoint NetworkEncodePoint = new("FlatWorld.Space.Network.EncodeDelta");
         #endregion
 
         #region 连接身份与权威输入
@@ -246,13 +245,50 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 按真实距离复制唯一数据
-        public string CaptureNetworkSnapshot(string profile, double rangeMeters)
+        private readonly SpaceNetworkSnapshotDeltaCodec networkSnapshotCodec = new();
+        private int networkSnapshotBatchDepth;
+        private bool networkSnapshotContentsCaptured;
+        public readonly struct NetworkSnapshotCaptureBatch : IDisposable
+        {
+            private readonly SpaceSession session;
+            internal NetworkSnapshotCaptureBatch(SpaceSession session)
+            {
+                this.session = session;
+                if (session.networkSnapshotBatchDepth++ != 0) return;
+                session.networkSnapshotContentsCaptured = false;
+            }
+            public void Dispose() { if (session != null) session.networkSnapshotBatchDepth--; }
+        }
+        public NetworkSnapshotCaptureBatch BeginNetworkSnapshotCaptureBatch() => new(this);
+
+        public SpaceNetworkSnapshotDeltaPacket CaptureNetworkSnapshotDelta(string profile, double rangeMeters,
+            SpaceNetworkSnapshotDeltaCursor cursor, ulong sequence)
+        {
+            // 定时广播共用采集轮；操作回执的即时快照另开一轮，不能复用同帧旧状态。
+            using var batch = networkSnapshotBatchDepth == 0 ? BeginNetworkSnapshotCaptureBatch() : default;
+            SpaceSessionState snapshot = CaptureNetworkObserverSnapshot(profile, rangeMeters);
+            if (snapshot == null) return null;
+            using (NetworkEncodePoint.Measure())
+            {
+                var packet = networkSnapshotCodec.Encode(snapshot, cursor, sequence);
+                NetworkEncodePoint.SetGauge(packet.Payload.LongLength);
+                return packet;
+            }
+        }
+
+        private SpaceSessionState CaptureNetworkObserverSnapshot(string profile, double rangeMeters)
         {
             if (!TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return null;
-            using (NetworkCapturePoint.Measure())
+            if (!networkSnapshotContentsCaptured)
             {
-                CaptureContents(); CaptureLooseItems();
-                NetworkCapturePoint.SetGauge(contents.Count + looseData.Count);
+                networkSnapshotCodec.BeginCaptureBatch();
+                foreach (SpacePassengerState passenger in State.Passengers) TryGetNetworkObserver(passenger.ProfileId, out _);
+                using (NetworkCapturePoint.Measure())
+                {
+                    CaptureContents(); CaptureLooseItems();
+                    NetworkCapturePoint.SetGauge(contents.Count + looseData.Count);
+                }
+                networkSnapshotContentsCaptured = true;
             }
             SpaceSessionState snapshot;
             using (NetworkFilterPoint.Measure(State.Ships.Count + State.Devices.Count + State.Passengers.Count +
@@ -318,21 +354,14 @@ namespace FlatWorld.Spaceflight
                 CaptureNetworkLocalWorldStates(profile, snapshot);
                 NetworkFilterPoint.SetGauge(includedShips.Count);
             }
-            using (NetworkJsonPoint.Measure(snapshot.Ships.Count + snapshot.Devices.Count +
-                       snapshot.Passengers.Count + snapshot.LooseItems.Count))
-            {
-                string json = JsonConvert.SerializeObject(snapshot);
-                NetworkJsonPoint.SetGauge(json.Length);
-                return json;
-            }
+            return snapshot;
         }
-        public void ApplyNetworkSnapshot(string json)
+        public bool ApplyNetworkSnapshot(SpaceSessionState received, bool fullSnapshot)
         {
-            if (GameNetwork.HasStateAuthority || string.IsNullOrWhiteSpace(json)) return;
-            SpaceSessionState received = SaveDataMgr.DeserializeSpaceState(json);
-            if (State != null && received.SimulationSeconds < State.SimulationSeconds) return;
+            if (GameNetwork.HasStateAuthority || received == null) return false;
+            if (!fullSnapshot && State != null && received.SimulationSeconds < State.SimulationSeconds) return false;
             double presentationSeconds = State == null ? Time.fixedDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
-            InteriorNetworkSnapshot interior = PrepareInteriorNetworkSnapshot(received);
+            InteriorNetworkSnapshot interior = PrepareInteriorNetworkSnapshot(received, fullSnapshot);
             CapturePresentationState(false);
             RemoveObsoleteInteriorNetworkItems(interior);
             State = received;
@@ -367,6 +396,7 @@ namespace FlatWorld.Spaceflight
             PrimeInitialNetworkFlightAudio();
             if (presentationSeconds > 0d) CompletePresentationSample(presentationSeconds, Time.timeAsDouble);
             else ResetPresentationHistory();
+            return true;
         }
         public bool TryGetNetworkLooseItem(int guid, out ItemData data, out SpaceSectorPosition position)
         {

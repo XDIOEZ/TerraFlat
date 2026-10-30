@@ -6,8 +6,8 @@ namespace FlatWorld.Networking.Gameplay
 {
     public static class NetworkGameplayProtocol
     {
-        // 世界生成预设、实例覆盖与实体运动快照统一使用新结构。
-        public const int CurrentVersion = 32;
+        // 太空快照使用每连接基线和共享字段差量。
+        public const int CurrentVersion = 33;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 

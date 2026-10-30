@@ -14,12 +14,13 @@ namespace FlatWorld.Spaceflight
             internal readonly HashSet<string> AllShips = new(StringComparer.Ordinal);
             internal readonly HashSet<string> Ships = new(StringComparer.Ordinal);
             internal Dictionary<string, IncomingLocalWorld> Worlds;
+            internal bool ForceRefresh;
         }
         private readonly HashSet<int> interiorItemsWithRemoteAuthority = new();
 
-        private InteriorNetworkSnapshot PrepareInteriorNetworkSnapshot(SpaceSessionState received)
+        private InteriorNetworkSnapshot PrepareInteriorNetworkSnapshot(SpaceSessionState received, bool forceRefresh)
         {
-            var snapshot = new InteriorNetworkSnapshot();
+            var snapshot = new InteriorNetworkSnapshot { ForceRefresh = forceRefresh };
             if (State != null)
                 foreach (ShipState ship in State.Ships)
                     foreach (ShipPieceState piece in ship.Pieces)
@@ -85,7 +86,8 @@ namespace FlatWorld.Spaceflight
                 ShipPieceState piece = pair.Value.Piece;
                 ItemData data = pair.Value.Data;
                 ShipInteriorWorldRuntime world = EnsureShipInteriorWorld(ship);
-                bool changed = !snapshot.Previous.TryGetValue(pair.Key, out var previous) ||
+                bool wasPresent = snapshot.Previous.TryGetValue(pair.Key, out var previous);
+                bool changed = snapshot.ForceRefresh || !wasPresent ||
                     previous.Piece.SnapshotJson != piece.SnapshotJson || previous.Ship.ShipId != ship.ShipId ||
                     previous.Piece.CellX != piece.CellX || previous.Piece.CellY != piece.CellY ||
                     previous.Piece.QuarterTurns != piece.QuarterTurns;
@@ -107,7 +109,7 @@ namespace FlatWorld.Spaceflight
                     existing != null && ReferenceEquals(existing.PersistenceOwner, this))
                 {
                     item = existing;
-                    if (GameplayWorldRegistry.GetItemWorldKey(item) != world.WorldKey ||
+                    if (snapshot.ForceRefresh || GameplayWorldRegistry.GetItemWorldKey(item) != world.WorldKey ||
                         previous.Piece != null && (previous.Piece.CellX != piece.CellX || previous.Piece.CellY != piece.CellY ||
                             previous.Piece.QuarterTurns != piece.QuarterTurns))
                         TransferExistingItemToShipInterior(ship, piece, item);

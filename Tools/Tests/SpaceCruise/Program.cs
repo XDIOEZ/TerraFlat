@@ -6,8 +6,10 @@ internal static partial class Program
     #region 离线回归入口
     private static int passed;
     private static readonly SpaceGameplaySettings Settings = new();
-    private static void Main()
+    private static void Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--space-network-snapshot-delta")
+        { Run("太空网络差量共享、变更与恢复", NetworkSnapshotDelta); return; }
         Run("会话身份索引增删、替换与保存恢复", QueryIndexMutations);
         Run("星体完整身份索引注册、重建和无分配查询", BodyIdentityIndexLifecycle);
         Run("星区负向、多区、高位整数与空域惯性", SectorCoordinates);
@@ -23,6 +25,7 @@ internal static partial class Program
         Run("稳定船体身份查询无临时分配", QueryIndexAllocations);
         Run("散落物缩放仅保存分量并完整往返", LooseItemScaleSnapshot);
         Run("完整太空会话散落物保存、读回和重复保存", LooseItemSessionSnapshot);
+        Run("太空网络差量共享、变更与恢复", NetworkSnapshotDelta);
         Run("限速、反向制动、部分燃料", Velocity);
         Run("松键滑行、横向推力、无动力及超速碰撞惯性", ManualInertia);
         Run("四向与斜向喷嘴、船体旋转和对接成员朝向", ThrusterDirectionRules);

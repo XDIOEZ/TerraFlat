@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <DefineConstants>$(DefineConstants);SPACE_SNAPSHOT_OFFLINE</DefineConstants>
     <RepoRoot>$(MSBuildThisFileDirectory)../../../</RepoRoot>
   </PropertyGroup>
   <ItemGroup>
@@ -12,6 +13,8 @@
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSectorStreaming.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpacePassengerContacts.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSessionState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceNetworkSnapshotDeltaCodec.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SpaceNetworkSnapshotDelta.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpacePresentationPose.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceSession.QueryIndex.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceLooseItemState.cs" />
