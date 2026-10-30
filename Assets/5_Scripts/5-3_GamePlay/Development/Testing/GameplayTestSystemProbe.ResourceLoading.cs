@@ -295,6 +295,90 @@ public static partial class GameplayTestSystemProbe
 
     #region 资源队列规则采样
 
+    private static JObject ServiceItemSpriteCompilationPipeline(JObject args)
+    {
+        string mode = Text(args, "mode", "complete");
+        var definitions = new List<ItemDefinitionDto>
+        {
+            new() { Id = "empty" },
+            new() { Id = "both", Visual = new ItemVisualDefinitionDto
+            {
+                SpriteAddress = " A ", SpriteStates = new Dictionary<string, string> { ["same"] = "A", ["other"] = "B" }
+            } },
+            new() { Id = "a", Visual = new ItemVisualDefinitionDto { SpriteAddress = "A" } },
+            new() { Id = "b", Visual = new ItemVisualDefinitionDto { SpriteAddress = "B" } },
+            new() { Id = "abstract", Abstract = true, Visual = new ItemVisualDefinitionDto { SpriteAddress = "C" } }
+        };
+        var readiness = new ItemDefinitionCatalogLoader.SpriteDefinitionCompilationReadiness(definitions);
+        var caseReadiness = new ItemDefinitionCatalogLoader.SpriteDefinitionCompilationReadiness(new[]
+        {
+            new ItemDefinitionDto { Visual = new ItemVisualDefinitionDto { SpriteAddress = "A" } },
+            new ItemDefinitionDto { Visual = new ItemVisualDefinitionDto { SpriteAddress = "a" } }
+        });
+        var addresses = new JArray();
+        foreach (string address in readiness.SpriteAddresses) addresses.Add(address);
+        var compiled = new bool[definitions.Count];
+        var order = new JArray();
+        int frame = 0, blockedFrame = -1, started = 0, disposed = 0, beforeAllSprites = 0;
+        int lastWorkFrame = -1, workInFrame = 0, maxWorkPerFrame = 0;
+        bool loadedA = false, loadedB = false, builtWithoutDependencies = false, failed = false, finished = false;
+        bool ShouldYield() => blockedFrame == frame;
+        bool CompileOne()
+        {
+            if (!readiness.TryTakeReadyDefinition(out int index)) return false;
+            if (lastWorkFrame != frame) { lastWorkFrame = frame; workInFrame = 0; }
+            maxWorkPerFrame = Math.Max(maxWorkPerFrame, ++workInFrame);
+            if (readiness.HasPendingSprites) beforeAllSprites++;
+            builtWithoutDependencies |= index == 1 && (!loadedA || !loadedB) || index == 2 && !loadedA || index == 3 && !loadedB;
+            compiled[index] = true;
+            order.Add(index);
+            if (mode == "failed" && index == 2) failed = true;
+            if (mode == "budget") blockedFrame = frame;
+            return !failed;
+        }
+        IEnumerator Requests()
+        {
+            IEnumerator queue = ResourceLoadQueue.Run<int>(2, index => { started++; return index; },
+                index => frame >= (index == 0 ? 2 : 4), (index, _) =>
+                {
+                    if (index == 0) loadedA = true; else loadedB = true;
+                    readiness.MarkSpriteReady(index == 0 ? "A" : "B");
+                    readiness.MarkSpriteReady(index == 0 ? "A" : "B");
+                }, ShouldYield);
+            try { while (queue.MoveNext()) yield return queue.Current; }
+            finally { (queue as IDisposable)?.Dispose(); disposed++; }
+        }
+        IEnumerator runner = ItemDefinitionCatalogLoader.RunAssetQueueWithAvailableMainThreadWork(
+            Requests(), CompileOne, ShouldYield, () => failed);
+        try
+        {
+            while (runner.MoveNext())
+            {
+                if (mode == "cancel") break;
+                if (++frame > 32) throw new InvalidOperationException("物品 Sprite 流水测试超过步数上限。");
+            }
+            finished = mode != "cancel";
+        }
+        finally { (runner as IDisposable)?.Dispose(); }
+        var published = new JArray();
+        if (finished && !failed)
+        {
+            while (readiness.HasReadyDefinitions)
+            {
+                if (ShouldYield()) frame++;
+                if (!CompileOne()) break;
+            }
+            for (int i = 0; i < compiled.Length; i++) if (compiled[i]) published.Add(i);
+        }
+        return new JObject
+        {
+            ["started"] = started, ["disposed"] = disposed, ["beforeAllSprites"] = beforeAllSprites,
+            ["builtWithoutDependencies"] = builtWithoutDependencies, ["failed"] = failed,
+            ["maxWorkPerFrame"] = maxWorkPerFrame, ["order"] = order, ["published"] = published, ["addresses"] = addresses,
+            ["pendingSprites"] = readiness.HasPendingSprites, ["readinessCaseSensitive"] = caseReadiness.SpriteAddresses.Count == 2
+        };
+    }
+
     private static JObject ServiceResourceQueue(JObject args)
     {
         string mode = Text(args, "mode", "slow");

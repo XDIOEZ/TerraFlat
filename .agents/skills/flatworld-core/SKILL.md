@@ -47,6 +47,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 本地 Item、Actor、Recipes、Buff 的私有输入由资源计划轮流预取；首屏预算耗尽时最多额外推进一个预取步骤，菜单与原位更新仍遵守后台预算。目录发布、Actor 行为树及 Buff 处理器仍在各自阶段执行。预取失败由消费阶段报告，取消逆序释放，完成后清除结果和阶段闭包；Android/WebGL 继续走原逐包 UnityWebRequest。
 - 本地 Items/Actor/Recipes/Buff 分包先校验路径，再批量后台读取；Actor 直接合并已解析的 JSON 树。配方/Buff 整包缓存内直接解析分包，不为相同数据重复生成文档缓存；独立解析入口保留文档缓存。
 - `audio-request` 先发出音库请求，与 UI/内容目录重叠加载；主菜单依赖就绪后由 Update 非阻塞接入音库并只发布一次，`audio` 阶段在最终校验前收齐。通用资源、物品视觉和世界液体外观共用四槽队列，液体按资源类型和地址去重，句柄归会话。编辑器 Sprite 冷加载异步预读主纹理，普通 Sprite 由真实句柄校验，具名子图继续严格检查；ProfilerMarker 不跨 yield，阶段日志分别记录前台与预取工作。
+- 物品材质与控制器就绪后，Sprite 队列在等待异步请求时用剩余帧预算编译已齐备主图和状态图的定义；全部成功才按原顺序注册，失败与取消释放会话。规则 `core_lifecycle/item_sprite_compilation_pipeline`。
 - 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
 - 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
 - Editor Fast Mode 的默认 AssetDatabase 请求由 Scope 映射到独立即时 Provider（SDK延迟 -1；0仍排延迟回调），保留子资源、依赖、数据与句柄所有权；不替换原 Provider/缓存，不接管自定义 Provider 或 Bundle。启动 UI 也复用四槽队列。目录复查复用模块严格编译结果，仍检查原型类型、碰撞体和模块自有约束；回归 `core_lifecycle/editor_asset_loading`（真实Prefab立即完成与释放）、`item_runtime/compiled_module_parameters`。

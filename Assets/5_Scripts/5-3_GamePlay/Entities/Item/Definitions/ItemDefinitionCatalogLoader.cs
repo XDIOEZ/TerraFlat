@@ -283,36 +283,36 @@ public static class ItemDefinitionCatalogLoader
         var materials = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
         var controllers = new Dictionary<string, RuntimeAnimatorController>(StringComparer.OrdinalIgnoreCase);
         sectionTimer.Restart();
-        yield return LoadVisualAssets(gameRes, dtos, sprites, SelectVisualSpriteAddresses, progress);
-        long spriteMilliseconds = sectionTimer.ElapsedMilliseconds;
-        sectionTimer.Restart();
-        yield return LoadVisualAssets(gameRes, dtos, materials, dto => SelectOptionalAddress(dto.Visual?.MaterialAddress), progress);
+        yield return LoadVisualAssets(gameRes, dtos, materials, dto => SelectOptionalAddress(dto.Visual?.MaterialAddress), null);
         long materialMilliseconds = sectionTimer.ElapsedMilliseconds;
         sectionTimer.Restart();
-        yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), progress);
+        yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), null);
         long controllerMilliseconds = sectionTimer.ElapsedMilliseconds;
 
-        sectionTimer.Restart();
         var prototypeCache = new ItemModulePrototypeCache();
-        var definitions = new List<RuntimeItemDefinition>(dtos.Count);
+        var compiledDefinitions = new RuntimeItemDefinition[dtos.Count];
+        var spriteReadiness = new SpriteDefinitionCompilationReadiness(dtos);
+        Exception compilationError = null;
         double compilationWorkMilliseconds = 0;
         double slowestDefinitionMilliseconds = 0;
         string slowestDefinitionId = null;
-        foreach (ItemDefinitionDto dto in dtos)
+        int compiledWhileSpritesPending = 0;
+        long lastSpriteMilliseconds = 0;
+        sectionTimer.Restart();
+
+        bool CompileNextReadyDefinition()
         {
+            if (compilationError != null || !spriteReadiness.TryTakeReadyDefinition(out int index)) return false;
+            ItemDefinitionDto dto = dtos[index];
+            if (spriteReadiness.HasPendingSprites) compiledWhileSpritesPending++;
             long definitionStarted = System.Diagnostics.Stopwatch.GetTimestamp();
             try
             {
-                if (!dto.Abstract)
-                    definitions.Add(BuildRuntimeDefinition(
-                        gameRes,
-                        dto,
-                        sprites,
-                        controllers,
-                        preloadedMaterials: materials,
-                        prototypeCache: prototypeCache));
+                compiledDefinitions[index] = BuildRuntimeDefinition(
+                    gameRes, dto, sprites, controllers,
+                    preloadedMaterials: materials, prototypeCache: prototypeCache);
             }
-            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            catch (Exception exception) { compilationError = exception; }
             double definitionMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - definitionStarted) *
                                             1000d / System.Diagnostics.Stopwatch.Frequency;
             compilationWorkMilliseconds += definitionMilliseconds;
@@ -321,12 +321,37 @@ public static class ItemDefinitionCatalogLoader
                 slowestDefinitionMilliseconds = definitionMilliseconds;
                 slowestDefinitionId = dto.Id;
             }
-            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            return compilationError == null;
         }
-        long compilationMilliseconds = sectionTimer.ElapsedMilliseconds;
-        sectionTimer.Restart();
-        foreach (RuntimeItemDefinition definition in definitions)
+
+        // Sprite 请求等待期间编译已具备全部视觉资源的定义，最终仍按原顺序发布。
+        yield return LoadVisualAssets(gameRes, dtos, sprites, SelectVisualSpriteAddresses, progress,
+            onLoaded: (address, _) =>
+            {
+                spriteReadiness.MarkSpriteReady(address);
+                lastSpriteMilliseconds = sectionTimer.ElapsedMilliseconds;
+            }, availableWork: CompileNextReadyDefinition, stopWork: () => compilationError != null,
+            preparedAddresses: spriteReadiness.SpriteAddresses);
+        if (compilationError != null) { failed?.Invoke(compilationError); yield break; }
+        while (spriteReadiness.HasReadyDefinitions)
         {
+            if (gameRes.ShouldYieldResourceWork()) yield return null;
+            if (!CompileNextReadyDefinition()) break;
+        }
+        if (compilationError != null) { failed?.Invoke(compilationError); yield break; }
+        long spriteAndCompilationMilliseconds = sectionTimer.ElapsedMilliseconds;
+        int definitionCount = 0;
+        for (int i = 0; i < dtos.Count; i++)
+        {
+            if (dtos[i].Abstract) continue;
+            if (compiledDefinitions[i] == null)
+                throw new InvalidDataException($"物品 {dtos[i].Id} 的 Sprite 资源尚未就绪。");
+            definitionCount++;
+        }
+        sectionTimer.Restart();
+        foreach (RuntimeItemDefinition definition in compiledDefinitions)
+        {
+            if (definition == null) continue;
             try { gameRes.RegisterItemDefinition(definition); }
             catch (Exception exception) { failed?.Invoke(exception); yield break; }
             if (gameRes.ShouldYieldResourceWork()) yield return null;
@@ -335,33 +360,37 @@ public static class ItemDefinitionCatalogLoader
         long registrationMilliseconds = sectionTimer.ElapsedMilliseconds;
         progress?.Invoke(1f);
         Debug.Log($"[ItemDefinitionCatalog] 已异步加载 " +
-                  $"{definitions.Count} 个物品：{BuiltInManifestPath}；" +
-                  $"外壳 {shells.Length} 个/{shellMilliseconds} ms，Sprite {sprites.Count} 个/{spriteMilliseconds} ms，" +
-                  $"材质 {materials.Count} 个/{materialMilliseconds} ms，控制器 {controllers.Count} 个/{controllerMilliseconds} ms，" +
-                  $"定义编译 {compilationMilliseconds} ms（实际工作 {compilationWorkMilliseconds:F1} ms，" +
+                  $"{definitionCount} 个物品：{BuiltInManifestPath}；" +
+                  $"外壳 {shells.Length} 个/{shellMilliseconds} ms，材质 {materials.Count} 个/{materialMilliseconds} ms，" +
+                  $"控制器 {controllers.Count} 个/{controllerMilliseconds} ms，" +
+                  $"Sprite {sprites.Count} 个最后就绪 {lastSpriteMilliseconds} ms，Sprite 与定义流水 {spriteAndCompilationMilliseconds} ms，" +
+                  $"等待期间编译 {compiledWhileSpritesPending} 个（实际工作 {compilationWorkMilliseconds:F1} ms，" +
                   $"最慢 {slowestDefinitionId}/{slowestDefinitionMilliseconds:F1} ms），注册 {registrationMilliseconds} ms");
-        completed?.Invoke(definitions.Count);
+        completed?.Invoke(definitionCount);
     }
 
     /// <summary>批量加载某类视觉资源；地址去重、句柄所有权和失败语义由资源会话统一负责。</summary>
     internal static IEnumerator LoadVisualAssets<T>(GameRes gameRes, IEnumerable<ItemDefinitionDto> definitions,
         IDictionary<string, T> output, Func<ItemDefinitionDto, IEnumerable<string>> select, Action<float> progress,
-        IDictionary<string, Exception> failures = null)
+        IDictionary<string, Exception> failures = null, Action<string, T> onLoaded = null,
+        Func<bool> availableWork = null, Func<bool> stopWork = null, IReadOnlyList<string> preparedAddresses = null)
         where T : UnityEngine.Object
     {
-        string[] addresses = definitions.Where(dto => !dto.Abstract)
+        IReadOnlyList<string> addresses = preparedAddresses ?? definitions.Where(dto => !dto.Abstract)
             .SelectMany(dto => select(dto) ?? Enumerable.Empty<string>())
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
 #if UNITY_EDITOR
-        var preloadedTextures = new Dictionary<string, AssetDatabaseLoadOperation>(StringComparer.OrdinalIgnoreCase);
+        var preloadedTextures = typeof(T) == typeof(Sprite)
+            ? new Dictionary<string, AssetDatabaseLoadOperation>(StringComparer.OrdinalIgnoreCase)
+            : null;
         // 单次加载中的同一图集只解析一次子 Sprite 表，避免重复扫描 AssetDatabase。
         var editorSprites = typeof(T) == typeof(Sprite)
             ? new Dictionary<string, EditorSpriteAssetSet>(StringComparer.OrdinalIgnoreCase)
             : null;
 #endif
-        var results = new T[addresses.Length];
-        yield return ResourceLoadQueue.Run<VisualAssetRequest<T>>(addresses.Length,
+        var results = onLoaded == null ? new T[addresses.Count] : null;
+        IEnumerator resourceQueue = ResourceLoadQueue.Run<VisualAssetRequest<T>>(addresses.Count,
             index =>
             {
                 string address = addresses[index];
@@ -413,18 +442,97 @@ public static class ItemDefinitionCatalogLoader
                 try
                 {
                     if (request.Error != null) throw request.Error;
-                    results[index] = ResourceAssetScope.Require(request.Handle, $"{typeof(T).Name} -> {addresses[index]}");
+                    T asset = ResourceAssetScope.Require(request.Handle, $"{typeof(T).Name} -> {addresses[index]}");
+                    if (onLoaded != null)
+                    {
+                        output.Add(addresses[index], asset);
+                        onLoaded(addresses[index], asset);
+                    }
+                    else results[index] = asset;
                 }
                 // Actor 热更新按地址保留失败原因，由所属定义决定拒绝并保留旧版。
                 catch (Exception exception) when (failures != null) { failures[addresses[index]] = exception; }
             },
             gameRes.ShouldYieldResourceWork,
-            completed => progress?.Invoke(0.2f + 0.6f * completed / addresses.Length));
-        for (int i = 0; i < addresses.Length; i++)
+            completed => progress?.Invoke(0.2f + 0.6f * completed / addresses.Count));
+        if (availableWork == null) yield return resourceQueue;
+        else yield return RunAssetQueueWithAvailableMainThreadWork(
+            resourceQueue, availableWork, gameRes.ShouldYieldResourceWork, stopWork);
+        if (stopWork?.Invoke() == true || onLoaded != null) yield break;
+        for (int i = 0; i < addresses.Count; i++)
         {
             if (failures?.ContainsKey(addresses[i]) == true) continue;
             output.Add(addresses[i], results[i]);
             if (gameRes.ShouldYieldResourceWork()) yield return null;
+        }
+    }
+
+    /// <summary>资源异步等待时使用剩余帧预算，取消时释放正在等待的队列。</summary>
+    internal static IEnumerator RunAssetQueueWithAvailableMainThreadWork(IEnumerator queue,
+        Func<bool> availableWork, Func<bool> shouldYield, Func<bool> stopWork)
+    {
+        try
+        {
+            while (true)
+            {
+                bool moved = queue.MoveNext();
+                while (availableWork != null && shouldYield?.Invoke() != true && availableWork()) { }
+                if (stopWork?.Invoke() == true || !moved) yield break;
+                yield return queue.Current;
+            }
+        }
+        finally { (queue as IDisposable)?.Dispose(); }
+    }
+
+    /// <summary>追踪每个定义的主图与状态图，只有全部就绪后才允许编译。</summary>
+    internal sealed class SpriteDefinitionCompilationReadiness
+    {
+        private readonly Dictionary<string, List<int>> waiting = new(StringComparer.Ordinal);
+        private readonly Queue<int> ready = new();
+        private readonly int[] remaining;
+        private readonly List<string> spriteAddresses = new();
+        public bool HasPendingSprites => waiting.Count != 0;
+        public bool HasReadyDefinitions => ready.Count != 0;
+        public IReadOnlyList<string> SpriteAddresses => spriteAddresses;
+
+        public SpriteDefinitionCompilationReadiness(IReadOnlyList<ItemDefinitionDto> definitions)
+        {
+            remaining = new int[definitions.Count];
+            for (int i = 0; i < definitions.Count; i++)
+            {
+                ItemDefinitionDto definition = definitions[i];
+                if (definition.Abstract) continue;
+                var addresses = new HashSet<string>(StringComparer.Ordinal);
+                foreach (string source in SelectVisualSpriteAddresses(definition))
+                {
+                    if (string.IsNullOrWhiteSpace(source)) continue;
+                    string address = source.Trim();
+                    if (!addresses.Add(address)) continue;
+                    if (!waiting.TryGetValue(address, out List<int> dependents))
+                    {
+                        waiting.Add(address, dependents = new List<int>());
+                        spriteAddresses.Add(address);
+                    }
+                    dependents.Add(i);
+                }
+                remaining[i] = addresses.Count;
+                if (addresses.Count == 0) ready.Enqueue(i);
+            }
+        }
+
+        public void MarkSpriteReady(string address)
+        {
+            if (!waiting.TryGetValue(address, out List<int> dependents)) return;
+            waiting.Remove(address);
+            foreach (int index in dependents)
+                if (--remaining[index] == 0) ready.Enqueue(index);
+        }
+
+        public bool TryTakeReadyDefinition(out int index)
+        {
+            if (ready.Count == 0) { index = default; return false; }
+            index = ready.Dequeue();
+            return true;
         }
     }
 
