@@ -14,12 +14,12 @@ internal static partial class Program
         };
         ShipState actual = Make(), expected = Make();
         var ledger = new ShipMassLedger();
-        ledger.Set("base", 100d, 1d, .5d, 100d * 5d / 12d, persistent: true);
+        ledger.Set("base", 100d, 1d, .5d, 100d * 5d / 12d);
         for (int i = 0; i < 100; i++)
         {
             ShipMassContribution cargo = expected.MassContributions[0];
             cargo.MassKg = 7d + i * .1d; cargo.LocalX = 2d + i * .03d; cargo.LocalY = 1d - i * .02d;
-            ledger.Begin(); ledger.Set("cargo", cargo.MassKg, cargo.LocalX, cargo.LocalY, cargo.IntrinsicInertiaKgM2); ledger.Commit(actual);
+            ledger.Set("cargo", cargo.MassKg, cargo.LocalX, cargo.LocalY, cargo.IntrinsicInertiaKgM2); ledger.Commit(actual);
             ShipStructureService.RecalculateMass(expected);
             Near(expected.MassKg, actual.MassKg, "incremental real mass");
             Near(expected.CenterOfMassLocalX, actual.CenterOfMassLocalX, "incremental center x");
@@ -32,13 +32,15 @@ internal static partial class Program
         }
         ulong revision = actual.MassRevision;
         ShipMassContribution unchanged = expected.MassContributions[0];
-        ledger.Begin(); ledger.Set("cargo", unchanged.MassKg, unchanged.LocalX, unchanged.LocalY, unchanged.IntrinsicInertiaKgM2); ledger.Commit(actual);
+        ledger.Set("cargo", unchanged.MassKg, unchanged.LocalX, unchanged.LocalY, unchanged.IntrinsicInertiaKgM2); ledger.Commit(actual);
         Check(actual.MassRevision == revision, "unchanged contribution must not reapply mass properties");
-        ledger.Begin(); ledger.Commit(actual);
+        ledger.Commit(actual);
+        Near(expected.MassKg, actual.MassKg, "unvisited stationary load remains registered");
+        ledger.Remove("cargo"); ledger.Commit(actual);
         expected.MassContributions.Clear(); ShipStructureService.RecalculateMass(expected);
         Near(expected.MassKg, actual.MassKg, "departed load removed in same step");
         Near(expected.InertiaKgM2, actual.InertiaKgM2, "departed load inertia removed");
-        ledger.Clear(); ledger.Begin(); ledger.Commit(actual); Near(0d, actual.MassKg, "empty ledger resets mass");
+        ledger.Clear(); ledger.Commit(actual); Near(0d, actual.MassKg, "empty ledger resets mass");
     }
     #endregion
 }

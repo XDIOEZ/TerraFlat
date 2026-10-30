@@ -35,6 +35,8 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(domains and domains.category == "projected-world" and domains.firstDomainKeyMatchesCategory and
         domains.secondDomainKeyMatchesCategory and domains.distinctShipDomains,
         "独立船世界没有使用正式排序类别，或两个船域发生混用")
+    assert(domains.sharedInverseMatchesWorlds,
+        "各船排序域共享的逆矩阵必须匹配各自当前船姿，不能串船或沿用旧浮动原点")
     assert(domains.passengerEnteredFirstDomain and domains.passengerMatchesShipPose and
         domains.passengerSwitchedToSecondDomain and domains.passengerReturnedToFirstDomain and
         domains.passengerProjectionInFirstDomain and domains.passengerKeepsLocalLayerAndPose,

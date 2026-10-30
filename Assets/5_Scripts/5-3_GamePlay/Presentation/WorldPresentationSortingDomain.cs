@@ -23,6 +23,9 @@ public sealed class WorldPresentationSortingDomain : IDisposable
     private bool localGroupsDirty;
     private bool preparing;
     private int lastPreparedFrame = -1;
+    private Matrix4x4 synchronizedWorldToDisplay;
+    private Matrix4x4 synchronizedDisplayToWorld;
+    private bool hasSynchronizedTransform;
 
     public Transform Root => !disposed && root != null ? root.transform : null;
     public string WorldKey { get; }
@@ -69,11 +72,24 @@ public sealed class WorldPresentationSortingDomain : IDisposable
     public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
     {
         if (disposed || root == null) return;
+        if (!hasSynchronizedTransform || synchronizedWorldToDisplay != worldToDisplay)
+        {
+            synchronizedWorldToDisplay = worldToDisplay;
+            synchronizedDisplayToWorld = worldToDisplay.inverse;
+            hasSynchronizedTransform = true;
+        }
         Vector3 anchor = worldToDisplay.MultiplyPoint3x4(Vector3.zero);
         if (root.transform.position != anchor) root.transform.position = anchor;
         if (root.transform.rotation != Quaternion.identity) root.transform.rotation = Quaternion.identity;
         if (root.transform.localScale != Vector3.one) root.transform.localScale = Vector3.one;
         if (root.activeSelf != visible) root.SetActive(visible);
+    }
+
+    // 同一船姿的显示副本共用逆矩阵，其他独立投影仍使用自己的变换。
+    internal bool TryGetSynchronizedDisplayToWorld(Matrix4x4 worldToDisplay, out Matrix4x4 displayToWorld)
+    {
+        displayToWorld = synchronizedDisplayToWorld;
+        return !IsDisposed && hasSynchronizedTransform && synchronizedWorldToDisplay == worldToDisplay;
     }
 
     public void Dispose() => DisposeCore(true);

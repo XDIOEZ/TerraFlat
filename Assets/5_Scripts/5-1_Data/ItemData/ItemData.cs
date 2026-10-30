@@ -69,7 +69,13 @@ public abstract partial class ItemData
     #endregion
 
     [Tooltip("物品特殊数据")]
-    [MemoryPackIgnore] public string ItemSpecialData;
+    [SerializeField, FormerlySerializedAs("ItemSpecialData"), MemoryPackIgnore, JsonIgnore] private string itemSpecialData;
+    [MemoryPackIgnore]
+    public string ItemSpecialData
+    {
+        get => itemSpecialData;
+        set { if (itemSpecialData == value) return; itemSpecialData = value; NotifyMassChanged(); }
+    }
 
     [Tooltip("此物品是否在手上?")]
     [MemoryPackIgnore] public bool inHand = false;

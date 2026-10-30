@@ -415,6 +415,7 @@ namespace FlatWorld.Spaceflight
                 {
                     ShipMassContribution value = AddMassContribution(ship, "loose:", cargo.Id);
                     value.LocalX = x; value.LocalY = y; value.MassKg = mass;
+                    CommitMassContribution(ship, value);
                 }
             }
         }

@@ -526,6 +526,16 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         result["category"] = WorldSortingManager.ProjectedWorldCategory;
         result["firstDomainKeyMatchesCategory"] = firstDomainKeyMatches;
         result["secondDomainKeyMatchesCategory"] = secondDomainKeyMatches;
+        bool SharedInverseMatchesWorld(WorldPresentationSortingDomain domain, string worldKey)
+        {
+            if (domain == null || !WorldPresentationTransformRegistry.TryGet(worldKey, out Matrix4x4 projection, out _) ||
+                !domain.TryGetSynchronizedDisplayToWorld(projection, out Matrix4x4 inverse)) return false;
+            Matrix4x4 expected = projection.inverse;
+            for (int i = 0; i < 16; i++) if (Mathf.Abs(inverse[i] - expected[i]) > .00001f) return false;
+            return true;
+        }
+        result["sharedInverseMatchesWorlds"] = SharedInverseMatchesWorld(firstDomain, firstWorld.WorldKey) &&
+            SharedInverseMatchesWorld(secondDomain, secondWorld.WorldKey);
         result["distinctShipDomains"] = firstDomain != null && secondDomain != null &&
             firstDomain.WorldKey == firstWorld.WorldKey && secondDomain.WorldKey == secondWorld.WorldKey &&
             firstDomain.Root != secondDomain.Root && firstRootId != secondRootId;

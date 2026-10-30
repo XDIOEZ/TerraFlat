@@ -75,6 +75,7 @@ namespace FlatWorld.Spaceflight
         private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.SpaceSimulation);
         private void OnDestroy()
         {
+            ResetMassWorkspace();
             CaptureShipInteriorWorldStates();
             ReleaseAllShipInteriorPresentations();
             MoveAllPassengersOutOfShipInteriorWorlds();

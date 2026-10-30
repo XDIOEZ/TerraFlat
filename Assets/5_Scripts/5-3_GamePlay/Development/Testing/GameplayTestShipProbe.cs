@@ -544,12 +544,41 @@ public static class GameplayTestShipProbe
         ship.MassContributions.Add(new ShipMassContribution { SourceId = "invalid", MassKg = -1d });
         try { ShipStructureService.RecalculateMass(ship); }
         catch (System.IO.InvalidDataException) { invalidMassRejected = true; }
+        var retainedShip = NewShip("retained-mass");
+        retainedShip.PositionX = 100d; retainedShip.VelocityY = 4d;
+        var ledger = new ShipMassLedger();
+        ledger.Set("floor", 12d, 1d, .5d, 5d); ledger.Commit(retainedShip);
+        JObject ledgerInitial = ShipReading(retainedShip);
+        ledger.Commit(retainedShip);
+        JObject ledgerUnchanged = ShipReading(retainedShip);
+        JObject ledgerPointBefore = PointReading(retainedShip, .25d, .5d);
+        ledger.Set("cargo", 6d, 3d, .5d, 0d); ledger.Commit(retainedShip);
+        JObject ledgerLoaded = ShipReading(retainedShip);
+        JObject ledgerPointAfter = PointReading(retainedShip, .25d, .5d);
+        ledger.Remove("cargo"); ledger.Commit(retainedShip);
+        JObject ledgerUnloaded = ShipReading(retainedShip);
+        var pool = new ShipMassContributionPool();
+        pool.Clear(retainedShip); pool.Begin(retainedShip);
+        ShipMassContribution stableCargo = pool.Add(retainedShip, "cargo:", "retained", persistent: true);
+        stableCargo.MassKg = 6d;
+        pool.Add(retainedShip, "person:", "leaving").MassKg = 4d;
+        int withPassenger = retainedShip.MassContributions.Count;
+        pool.Begin(retainedShip); pool.CompleteDynamicSources(ledger);
+        int withoutPassenger = retainedShip.MassContributions.Count;
+        bool stableIdentity = ReferenceEquals(stableCargo, pool.Add(retainedShip, "cargo:", "retained", persistent: true));
+        pool.Remove("cargo:", "retained", 0, ledger);
         return new JObject
         {
             ["floorInputMass"] = floor.MassKg, ["cargoInputMass"] = cargo.MassKg,
             ["initial"] = initial, ["loaded"] = loaded, ["unloaded"] = unloaded,
             ["pointBefore"] = pointBefore, ["pointAfter"] = pointAfter,
-            ["invalidMassRejected"] = invalidMassRejected
+            ["invalidMassRejected"] = invalidMassRejected,
+            ["retainedLedger"] = new JObject { ["initial"] = ledgerInitial, ["unchanged"] = ledgerUnchanged,
+                ["loaded"] = ledgerLoaded, ["unloaded"] = ledgerUnloaded,
+                ["pointBefore"] = ledgerPointBefore, ["pointAfter"] = ledgerPointAfter },
+            ["retainedContributions"] = new JObject { ["withPassenger"] = withPassenger,
+                ["withoutPassenger"] = withoutPassenger, ["stableIdentity"] = stableIdentity,
+                ["afterRemoval"] = retainedShip.MassContributions.Count }
         };
     }
 

@@ -16,6 +16,7 @@
 - ShipCombatBridge 按攻击实际世界和升高后形状查询，空中需 Projectile|AirborneTargets，不依赖 Host 镜头。ShipSurfaceShadowPresenter 合并去重占地 Mesh、复用 ActorBlobShadow/ground-shadow，地面投影不叠高度，随真高度缩淡，结构/柔化变才重建，离地表/结束释放。
 - 起飞迁移前捕获外观，ShipTakeoffLoadingPresentation 随原加载页以非缩放秒滚动气流，成功/失败随页释放。FlightHud.TryGetShipFlightHudSnapshot 只读真实高度；普通建筑移交成功才写/复制 LastShipLanding，不把退驾驶/删船当落地。主动 RequestConsoleExit 通知 HUD，手动 EnterConsole 解退出锁，自动接管/释放不发这两类通知。
 - ShipColliderPresenter 只管仍归会话的船，一个外部表现刚体+共享 CustomCollider2D；舱内碰撞由普通世界物理推进。`WorldPresentationProjection` 将真实 ChunkView/Item 的渲染投到船姿，源物理坐标保持舱内；BRG、光、粒子与阴影共用世界映射。
+- 船内投影成员按世界归属修订、注册/注销/手持与区块绑定事件维护，稳态不复制物品名单或重新发现区块；同帧回池/跨船迁移先释放旧绑定。同船共用排序域逆矩阵，动态姿态与源图像仍逐帧同步。
 - 每个投影船内世界共用一个 `WorldPresentationSortingDomain`，区块只继承，不各加全局偏移。域外 `projected-world` / Player299；域内保留物品配置并显式按脚点分配临时 Order，嵌套物品组内相对序不改。乘员和受支撑散货按实际归属进入同域，离船/落地/隐藏/销毁清理；源根与物理世界不换父级。跨世界独立背景与游离星区物体仍按各自类别显示。
 - vehicle 层序：地板 -2、管道 -1、电线 0、光纤 1，机器线路 VisualLayer+1，设备 building。管臂共用 FluidPipeConnectionVisual；pipe0..15/wire0..15 读本船正式拓扑，格/朝向/端口签名变化才刷本格/四邻，结束退订。光纤 ShipOpticalGraph.GetConnectionMask/ShipFiberConnectionVisual 按结构修订，创建/休眠重建。
 - 舱内门直接复用普通 `Mod_Door`、`DoorSlideVisual` 和原生碰撞；物品模块按所属世界执行，交互把显示指针反投影到舱内，世界账本隔离同坐标的其它船。

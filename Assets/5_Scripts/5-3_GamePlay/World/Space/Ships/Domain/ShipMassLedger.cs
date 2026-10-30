@@ -9,27 +9,26 @@ namespace FlatWorld.Spaceflight
         private sealed class Entry
         {
             public double Mass, X, Y, Inertia;
-            public ulong Stamp;
-            public bool Persistent;
         }
         private readonly Dictionary<object, Entry> entries = new();
-        private readonly List<object> removed = new();
         private double total, sumX, sumY, originInertia;
-        private ulong stamp;
         private bool changed;
-        public void Begin() { unchecked { stamp++; } }
         public void Clear()
         { entries.Clear(); total = sumX = sumY = originInertia = 0d; changed = true; }
-        public void Set(object source, double mass, double x, double y, double inertia, bool persistent = false)
+        public void Set(object source, double mass, double x, double y, double inertia)
         {
             if (source == null || !FluidUnits.IsFinite(mass) || mass < 0d || !FluidUnits.IsFinite(x) || !FluidUnits.IsFinite(y) ||
                 !FluidUnits.IsFinite(inertia) || inertia < 0d) throw new InvalidOperationException("船体质量贡献必须是有限非负数。");
             if (!entries.TryGetValue(source, out Entry entry)) entries.Add(source, entry = new Entry());
-            entry.Stamp = stamp; entry.Persistent = persistent;
             if (entry.Mass == mass && entry.X == x && entry.Y == y && entry.Inertia == inertia) return;
             Accumulate(entry, -1d);
             entry.Mass = mass; entry.X = x; entry.Y = y; entry.Inertia = inertia;
             Accumulate(entry, 1d); changed = true;
+        }
+        public void Remove(object source)
+        {
+            if (!entries.Remove(source, out Entry entry)) return;
+            Accumulate(entry, -1d); changed = true;
         }
         private void Accumulate(Entry entry, double sign)
         {
@@ -39,9 +38,6 @@ namespace FlatWorld.Spaceflight
         }
         public void Commit(ShipState ship)
         {
-            removed.Clear();
-            foreach (var pair in entries) if (!pair.Value.Persistent && pair.Value.Stamp != stamp) removed.Add(pair.Key);
-            foreach (object key in removed) { Accumulate(entries[key], -1d); entries.Remove(key); changed = true; }
             if (!changed) return;
             // 在船本地坐标算矩；微小消减误差不能产生负质量或负惯量。
             double mass = Math.Max(0d, total);

@@ -17,7 +17,8 @@ namespace FlatWorld.Spaceflight
             public double ReadContents(ItemData data, Item live = null, MachineEntity machine = null)
                 => reader.ReadItemContents(data, live, machine, 0);
             public double ReadFluidMass(FluidInventoryState state) => reader.ReadFluidMass(state);
-            public void BeginIncremental() => reader.BeginIncrementalStep();
+            public void BeginIncremental(bool retained = false) => reader.BeginIncrementalStep(retained);
+            public Action<object> SourceInvalidated { set => reader.SourceInvalidated = value; }
             public bool EndIncremental() => reader.EndIncrementalStep();
             public double CachedItem(object key, ItemData data, Item live = null) => reader.ReadCachedItem(key, data, live);
             public double CachedFluid(object key, FluidInventoryState data) => reader.ReadCachedFluid(key, data);
@@ -56,7 +57,12 @@ public class ItemData
     public string IDName = "test";
     public StackData Stack = new();
     public object SharedConfiguration = new();
-    public string ItemSpecialData;
+    private string itemSpecialData;
+    public string ItemSpecialData
+    {
+        get => itemSpecialData;
+        set { if (itemSpecialData == value) return; itemSpecialData = value; NotifyMassChanged(); }
+    }
     public Dictionary<string, ModuleData> ModuleDataDic = new(StringComparer.Ordinal);
     public FluidInventory PortableTank;
     public bool inHand;

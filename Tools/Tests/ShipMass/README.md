@@ -14,4 +14,6 @@ dotnet run --project Tools/Tests/ShipMass/ShipMass.Tests.csproj -c Release
 
 `TestDoubles.cs` 仅替代非测试目标的物品、库存、模块、流体定义及资源入口。二进制解码使用可计数的内存登记表，网络快照替身严格检查正式 FWI1 包头和大小，冷库存通过可计数的工厂还原；JSON 使用实际 Newtonsoft.Json。测试不验证建造材料复制、MemoryPack 编码格式、物品定义载入或 Unity 场景生命周期。
 
+常驻来源回归覆盖1000个固定部件连续1000空闲步不重复访问且线程分配为零、单个货物只通知所属来源、首次冷库存载荷出现与运行库存引用替换。直接编译生产 `ShipMassLedger`/`ShipMassContributionPool`，检查固定贡献保留、替换/撤账、人员离船和补位删除；物理提交使用替身，实际点速度连续性由 Space Lua 的正式领域采样检查。
+
 末尾输出热缓存下 165 个部件重复读取 1000 次的耗时、线程分配和解码次数。它能确认重复读取不会重新解析载荷，不代表 Unity 整场景帧率。实际起降、供燃料、货物移动、重心与碰撞表现由游戏场景验收。

@@ -293,7 +293,9 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (synchronizedProjection != worldToDisplay)
         {
             synchronizedProjection = worldToDisplay;
-            synchronizedDisplayToSource = worldToDisplay.inverse;
+            synchronizedDisplayToSource = sortingDomain != null &&
+                sortingDomain.TryGetSynchronizedDisplayToWorld(worldToDisplay, out Matrix4x4 sharedInverse)
+                ? sharedInverse : worldToDisplay.inverse;
         }
         if (sourceRoot == null) { SetVisible(false); return; }
         SetVisible(visible);

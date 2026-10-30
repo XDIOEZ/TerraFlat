@@ -30,6 +30,9 @@ internal static partial class Program
         Run("增量来源共享身份去重及同一步移交", IncrementalOwnership);
         Run("同一机器的库存和流体腔引用替换失效", IncrementalMachineReplacement);
         Run("增量来源稳定读取无分配", IncrementalAllocations);
+        Run("常驻来源按变化入队且稳定步无分配", RetainedSourceQueue);
+        Run("常驻质量账本与动态载荷撤账", RetainedLedgerAndContributions);
+        Run("常驻运行模块库存引用替换后重新计重", RetainedRuntimeInventoryRebinding);
         Benchmark();
         Console.WriteLine($"PASS: {passed} regression groups");
     }

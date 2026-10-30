@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Building;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -415,8 +414,7 @@ namespace FlatWorld.Spaceflight
         private void ProcessStructureChanges()
         {
             if (destroyed.Count == 0) return;
-            // 分裂会把旧载荷分给新船，丢弃样本池以免复用这些已移交的对象。
-            massContributionPools = new();
+            // 分裂前释放来源订阅，新船按实际移交后的载荷重新登记。
             foreach (ShipMassRuntimeCache cache in shipMassCaches.Values) cache.Dispose();
             shipMassCaches.Clear();
             viewBindingsDirty = true;
@@ -605,7 +603,6 @@ namespace FlatWorld.Spaceflight
         private readonly ShipMassReader contactMassReader = new();
         private readonly Dictionary<ShipState, ShipMassRuntimeCache> shipMassCaches = new();
         private readonly List<int> transferMassPieceIds = new();
-        private ConditionalWeakTable<ShipState, ShipMassContributionPool> massContributionPools = new();
 
         private void ResetMassWorkspace()
         {
@@ -614,7 +611,6 @@ namespace FlatWorld.Spaceflight
             assignedMassPassengers.Clear();
             massFluidGroups.Clear();
             contactMassReader.ClearCache();
-            massContributionPools = new();
         }
         #endregion
 
@@ -624,48 +620,17 @@ namespace FlatWorld.Spaceflight
             foreach (ShipState ship in State.Ships)
             {
                 if (!shipMassCaches.TryGetValue(ship, out ShipMassRuntimeCache cache)) shipMassCaches.Add(ship, cache = new ShipMassRuntimeCache());
-                if (!cache.Matches(ship)) cache.Rebuild(this, ship);
+                using var machines = MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId));
+                massFluidGroups.Clear(); MachineWorld.CollectFluidTankGroups(massFluidGroups);
+                if (!cache.Matches(ship) || !cache.MatchesFluidGroups(massFluidGroups)) cache.Rebuild(this, ship, massFluidGroups);
                 cache.AssignedPassengers.Clear();
                 // 正常固定步只读取脏来源；移交身份后同一步补算一次以消除旧归属。
                 for (int pass = 0; pass < 2; pass++)
                 {
-                    cache.Ledger.Begin();
-                    massContributionPools.GetValue(ship, _ => new ShipMassContributionPool()).Begin(ship);
+                    cache.Contributions.Begin(ship);
                     ShipMassReader reader = cache.Reader;
-                    reader.BeginIncrementalStep();
-                    using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
-                    {
-                        massFluidGroups.Clear();
-                        MachineWorld.CollectFluidTankGroups(massFluidGroups);
-                        if (!ReferenceEquals(cache.FluidTopology, MachineWorld.FluidGraph))
-                        {
-                            cache.FluidTopology = MachineWorld.FluidGraph;
-                            reader.InvalidateRuntimeSources();
-                        }
-                        foreach (MachineWorld.FluidTankGroup group in massFluidGroups)
-                        {
-                            double mass = reader.ReadCachedFluid(group, group.Inventory?.State);
-                            if (mass <= 0d) continue;
-                            double remaining = mass;
-                            for (int i = 0; i < group.Members.Count; i++)
-                            {
-                                MachineEntity member = group.Members[i];
-                                if (!cache.ById.TryGetValue(member.Id, out ShipMassRuntimeCache.PieceBinding binding))
-                                    throw new InvalidOperationException("飞船流体网含有不属于船体的储罐。");
-                                double portion = i == group.Members.Count - 1 ? remaining : mass * member.Definition.Fluid.VolumeLiters / group.TotalVolume;
-                                remaining -= portion; AddCargoMass(ship, binding.Piece, "fluid-group:", portion, group.OwnerId);
-                            }
-                        }
-                        foreach (ShipMassRuntimeCache.PieceBinding binding in cache.Pieces)
-                        {
-                            ItemData data = GetMassPieceData(binding.Piece, out Item live);
-                            cache.UpdateData(binding, data);
-                            if (binding.Id == 0) continue;
-                            MachineEntity node = MachineWorld.GetById(binding.Id);
-                            double cargo = reader.ReadCachedPiece(binding.Piece, data, live, node);
-                            AddCargoMass(ship, binding.Piece, "cargo:", cargo);
-                        }
-                    }
+                    reader.BeginIncrementalStep(retainStationarySources: true);
+                    cache.RefreshStationaryMassSources(this, ship);
                     cache.RefreshBases();
                     foreach (SpacePassengerState passenger in State.Passengers)
                     {
@@ -680,12 +645,12 @@ namespace FlatWorld.Spaceflight
                         if (mass <= 0d) continue;
                         ShipMassContribution value = AddMassContribution(ship, "person:", passenger.ProfileId);
                         value.Kind = ShipMassKind.Occupant; value.LocalX = x; value.LocalY = y; value.MassKg = mass;
+                        CommitMassContribution(ship, value);
                     }
                     AddLooseCargoMass(ship, reader);
-                    cache.RefreshRooms(ship);
-                    foreach (ShipMassContribution value in ship.MassContributions)
-                        cache.Ledger.Set(value.SourceId, value.MassKg, value.LocalX, value.LocalY, value.IntrinsicInertiaKgM2);
-                    if (reader.EndIncrementalStep() && pass == 0) continue;
+                    bool ownershipChanged = reader.EndIncrementalStep();
+                    cache.Contributions.CompleteDynamicSources(cache.Ledger);
+                    if (ownershipChanged && pass == 0) continue;
                     cache.Ledger.Commit(ship); break;
                 }
             }
@@ -695,19 +660,27 @@ namespace FlatWorld.Spaceflight
             TryGetShipInteriorItem(piece.PieceId, out live);
             return live != null ? live.itemData : GetPieceData(piece);
         }
-        private ShipMassContribution AddMassContribution(ShipState ship, string prefix, string identity, int ownerId = 0)
-            => massContributionPools.GetValue(ship, _ => new ShipMassContributionPool()).Add(ship, prefix, identity, ownerId);
+        private ShipMassContribution AddMassContribution(ShipState ship, string prefix, string identity, int ownerId = 0, bool persistent = false)
+            => shipMassCaches[ship].Contributions.Add(ship, prefix, identity, ownerId, persistent);
+        private void CommitMassContribution(ShipState ship, ShipMassContribution value)
+            => shipMassCaches[ship].Ledger.Set(value.SourceId, value.MassKg, value.LocalX, value.LocalY, value.IntrinsicInertiaKgM2);
         private void AddCargoMass(ShipState ship, ShipPieceState piece, string prefix, double mass, int ownerId = 0)
         {
-            if (mass <= 0d) return;
+            if (mass <= 0d)
+            {
+                ShipMassRuntimeCache cache = shipMassCaches[ship];
+                cache.Contributions.Remove(prefix, piece.PieceId, ownerId, cache.Ledger);
+                return;
+            }
             int width = (piece.QuarterTurns & 1) == 0 ? piece.Width : piece.Height;
             int height = (piece.QuarterTurns & 1) == 0 ? piece.Height : piece.Width;
             double w = width * ship.CellSizeMeters, h = height * ship.CellSizeMeters;
-            ShipMassContribution value = AddMassContribution(ship, prefix, piece.PieceId, ownerId);
+            ShipMassContribution value = AddMassContribution(ship, prefix, piece.PieceId, ownerId, persistent: true);
             value.SupportPieceId = piece.PieceId;
             value.LocalX = (piece.CellX + width * .5d) * ship.CellSizeMeters;
             value.LocalY = (piece.CellY + height * .5d) * ship.CellSizeMeters; value.MassKg = mass;
             value.IntrinsicInertiaKgM2 = mass * (w * w + h * h) / 12d;
+            CommitMassContribution(ship, value);
         }
         private bool TryGetPassengerMassPosition(SpacePassengerState passenger, ShipState ship, Player player,
             Data_Player data, out double localX, out double localY)

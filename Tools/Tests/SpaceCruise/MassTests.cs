@@ -179,17 +179,20 @@ internal static partial class Program
     {
         var ship = new ShipState(); var pool = new ShipMassContributionPool();
         pool.Begin(ship);
-        var original = pool.Add(ship, "cargo:", "crate");
+        var original = pool.Add(ship, "cargo:", "crate", persistent: true);
         Check(original.SourceId == "cargo:crate", "cargo source identity");
         original.SupportPieceId = "floor"; original.Kind = ShipMassKind.Other;
         original.LocalX = 4d; original.LocalY = 5d; original.MassKg = 99d; original.IntrinsicInertiaKgM2 = 100d;
         pool.Begin(ship);
+        var retained = pool.Add(ship, "cargo:", "crate", persistent: true);
+        Check(ReferenceEquals(original, retained), "stationary source retains its own contribution object");
+        Near(99d, retained.MassKg, "stationary mass survives next step without rewriting");
         var reused = pool.Add(ship, "person:", "player");
-        Check(ReferenceEquals(original, reused), "contribution object reused across source change");
-        Check(reused.SourceId == "person:player", "prefix and identity change rebuild source");
-        Check(reused.SupportPieceId == null && reused.Kind == ShipMassKind.Cargo, "support and kind are reset");
-        Near(0d, reused.LocalX, "local x cleared"); Near(0d, reused.LocalY, "local y cleared");
-        Near(0d, reused.MassKg, "mass cleared"); Near(0d, reused.IntrinsicInertiaKgM2, "intrinsic inertia cleared");
+        Check(!ReferenceEquals(original, reused), "different live sources never share one contribution object");
+        Check(reused.SourceId == "person:player" && reused.SupportPieceId == null && reused.Kind == ShipMassKind.Cargo,
+            "new source starts with its own identity and default fields");
+        Near(0d, reused.LocalX, "new local x"); Near(0d, reused.LocalY, "new local y");
+        Near(0d, reused.MassKg, "new mass"); Near(0d, reused.IntrinsicInertiaKgM2, "new intrinsic inertia");
 
         pool.Begin(ship); var fluid = pool.Add(ship, "fluid-group:", "tank", 10);
         Check(fluid.SourceId == "fluid-group:10:tank", "fluid source includes owner id");
@@ -204,7 +207,7 @@ internal static partial class Program
 
     private static void ContributionPoolIsolation()
     {
-        var first = new ShipState(); var firstPool = new ShipMassContributionPool();
+        var first = new ShipState(); var firstPool = new ShipMassContributionPool(); var ledger = new ShipMassLedger();
         firstPool.Begin(first);
         var firstValue = firstPool.Add(first, "cargo:", "a"); firstValue.MassKg = 5d;
         var secondValue = firstPool.Add(first, "cargo:", "b"); secondValue.MassKg = 7d;
@@ -212,13 +215,15 @@ internal static partial class Program
         Near(21d, ShipStructureService.RecalculateMass(first).MassKg, "all initial loads counted");
         firstPool.Begin(first);
         var remaining = firstPool.Add(first, "cargo:", "a"); remaining.MassKg = 3d;
+        firstPool.CompleteDynamicSources(ledger);
         Check(first.MassContributions.Count == 1 && ReferenceEquals(firstValue, remaining), "shorter load list keeps only current contributions");
         Near(3d, ShipStructureService.RecalculateMass(first).MassKg, "removed loads do not persist in mass calculation");
         firstPool.Begin(first);
+        firstPool.CompleteDynamicSources(ledger);
         Check(first.MassContributions.Count == 0, "begin without add clears all current loads");
         Near(0d, ShipStructureService.RecalculateMass(first).MassKg, "empty load list has no stale mass");
         firstPool.Add(first, "cargo:", "a");
-        Check(ReferenceEquals(secondValue, firstPool.Add(first, "cargo:", "b")), "pool can regrow using prior unused entries");
+        Check(!ReferenceEquals(secondValue, firstPool.Add(first, "cargo:", "b")), "re-entered source cannot retain removed contribution state");
 
         var second = new ShipState(); var secondPool = new ShipMassContributionPool();
         secondPool.Begin(second); var isolated = secondPool.Add(second, "cargo:", "a"); isolated.MassKg = 42d;

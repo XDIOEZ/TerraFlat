@@ -170,6 +170,11 @@ namespace FlatWorld.Spaceflight
                 }
                 return mass;
             }
+            private double ReadRuntimeInventory(Inventory inventory, int depth)
+            {
+                if (inventory != null && activeSource != null) activeSource.LiveInventories.Add((inventory, inventory.Data));
+                return ReadInventory(inventory?.Data, depth);
+            }
             public double ReadItemContents(ItemData data, Item live, MachineEntity machine, int depth)
             {
                 WatchItem(data);
@@ -195,8 +200,8 @@ namespace FlatWorld.Spaceflight
                         }
                         else if (module is Mod_Inventory storage)
                         {
-                            if (storage.InventoryInstances != null) foreach (Inventory inventory in storage.InventoryInstances) mass += ReadInventory(inventory?.Data, depth + 1);
-                            if (storage.InventoryRefDic != null) foreach (Inventory inventory in storage.InventoryRefDic.Values) mass += ReadInventory(inventory?.Data, depth + 1);
+                            if (storage.InventoryInstances != null) foreach (Inventory inventory in storage.InventoryInstances) mass += ReadRuntimeInventory(inventory, depth + 1);
+                            if (storage.InventoryRefDic != null) foreach (Inventory inventory in storage.InventoryRefDic.Values) mass += ReadRuntimeInventory(inventory, depth + 1);
                             liveModules.Add(entry.Key);
                         }
                         else if (module is Mod_VesselContents vessel)

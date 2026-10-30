@@ -10,7 +10,8 @@ namespace FlatWorld.Spaceflight
             #region 载荷源增量缓存与实际身份归属
             private sealed class MassSource
             {
-                public bool Dirty = true, Used;
+                public object Key;
+                public bool Dirty = true, Used, Retained;
                 public double Mass;
                 public ItemData Data;
                 public Item Live;
@@ -23,6 +24,7 @@ namespace FlatWorld.Spaceflight
                 public readonly List<Inventory_Data> MachineInventories = new();
                 public readonly Dictionary<string, FluidInventoryState> Chambers = new(StringComparer.Ordinal);
                 public readonly List<(Module Module, bool Enabled, bool Loaded)> LiveModules = new();
+                public readonly List<(Inventory View, Inventory_Data Data)> LiveInventories = new();
                 public uint LiveModuleStructureVersion;
                 public readonly HashSet<object> Dependencies = new();
                 public readonly List<Action> Unsubscribe = new();
@@ -35,7 +37,7 @@ namespace FlatWorld.Spaceflight
                 public void Unbind()
                 {
                     foreach (Action unsubscribe in Unsubscribe) unsubscribe();
-                    Unsubscribe.Clear(); Dependencies.Clear(); Inventories.Clear(); Fluids.Clear();
+                    Unsubscribe.Clear(); Dependencies.Clear(); Inventories.Clear(); Fluids.Clear(); LiveInventories.Clear();
                 }
             }
             private readonly Dictionary<object, MassSource> cachedSources = new();
@@ -44,36 +46,61 @@ namespace FlatWorld.Spaceflight
             private readonly HashSet<ItemData> structuralItems = new();
             private readonly HashSet<int> structuralIds = new();
             private readonly List<object> unusedSources = new();
+            private readonly HashSet<MassSource> transientSources = new(), contextSources = new(), dirtySources = new();
             private MassSource activeSource;
-            private bool ownershipDirty;
+            private bool ownershipDirty, retainStationarySources;
+            public Action<object> SourceInvalidated;
 
-            public void BeginIncrementalStep()
+            public void BeginIncrementalStep(bool retainStationarySources = false)
             {
                 Reset();
-                foreach (MassSource source in cachedSources.Values)
+                this.retainStationarySources = retainStationarySources;
+                if (retainStationarySources)
                 {
-                    source.Used = false;
-                    // 兼容直接增删列表；正常数值变化由事件在修改处标脏。
-                    foreach (Inventory_Data inventory in source.Inventories) _ = inventory.MassRevision;
-                    foreach (FluidInventoryState fluid in source.Fluids) _ = fluid.MassRevision;
+                    foreach (MassSource source in transientSources)
+                    { source.Used = false; PollSourceDependencies(source); }
+                    // 仅动态库存提供者保留引用检查，固定船板不再逐步访问。
+                    foreach (MassSource source in contextSources)
+                    {
+                        PollSourceDependencies(source);
+                        if (source.ColdPayload != (source.Machine == null ? source.Data?.ItemSpecialData : null) ||
+                            !LiveContextMatches(source, source.Live) ||
+                            source.Machine != null && !MachineContextMatches(source, source.Machine)) MarkSourceDirty(source);
+                    }
                 }
+                else
+                    foreach (MassSource source in cachedSources.Values)
+                    { source.Used = false; PollSourceDependencies(source); }
                 if (ownershipDirty)
                 {
-                    foreach (MassSource source in cachedSources.Values) { source.Dirty = true; ReleaseOwnership(source); }
-                    sourceOwners.Clear(); idOwners.Clear();
-                    ownershipDirty = false;
+                    foreach (MassSource source in cachedSources.Values) { MarkSourceDirty(source); ReleaseOwnership(source); }
+                    sourceOwners.Clear(); idOwners.Clear(); ownershipDirty = false;
                 }
-                foreach (MassSource source in cachedSources.Values) if (source.Dirty) ReleaseOwnership(source);
+                foreach (MassSource source in dirtySources) ReleaseOwnership(source);
+                dirtySources.Clear();
             }
+            private static void PollSourceDependencies(MassSource source)
+            {
+                foreach (Inventory_Data inventory in source.Inventories) _ = inventory.MassRevision;
+                foreach (FluidInventoryState fluid in source.Fluids) _ = fluid.MassRevision;
+            }
+            private void MarkSourceDirty(MassSource source)
+            {
+                source.Dirty = true;
+                if (dirtySources.Add(source)) SourceInvalidated?.Invoke(source.Key);
+            }
+            public void InvalidateCachedSource(object key)
+            { if (cachedSources.TryGetValue(key, out MassSource source)) MarkSourceDirty(source); }
             public bool EndIncrementalStep()
             {
                 unusedSources.Clear();
-                foreach (var pair in cachedSources) if (!pair.Value.Used) unusedSources.Add(pair.Key);
+                foreach (MassSource source in transientSources) if (!source.Used) unusedSources.Add(source.Key);
                 bool released = false;
                 foreach (object key in unusedSources)
                 {
                     MassSource source = cachedSources[key]; released |= source.Owned.Count != 0 || source.OwnedIds.Count != 0;
                     ReleaseOwnership(source); source.Unbind(); cachedSources.Remove(key);
+                    transientSources.Remove(source); contextSources.Remove(source); dirtySources.Remove(source);
                 }
                 if (released) InvalidateOwnership();
                 return released || ownershipDirty;
@@ -105,9 +132,11 @@ namespace FlatWorld.Spaceflight
                 if (idOwners.TryGetValue(id, out MassSource owner)) return ReferenceEquals(owner, activeSource);
                 idOwners.Add(id, activeSource); activeSource.OwnedIds.Add(id); return true;
             }
-            private MassSource BeginSource(object key, ItemData data = null, Item live = null, MachineEntity machine = null)
+            private MassSource BeginSource(object key, ItemData data = null, Item live = null, MachineEntity machine = null, bool stationary = false)
             {
-                if (!cachedSources.TryGetValue(key, out MassSource source)) cachedSources.Add(key, source = new MassSource());
+                if (!cachedSources.TryGetValue(key, out MassSource source)) cachedSources.Add(key, source = new MassSource { Key = key });
+                source.Retained = stationary && retainStationarySources;
+                if (source.Retained) transientSources.Remove(source); else transientSources.Add(source);
                 source.Used = true;
                 string coldPayload = machine == null ? data?.ItemSpecialData : null;
                 bool liveChanged = !ReferenceEquals(source.Live, live);
@@ -130,6 +159,8 @@ namespace FlatWorld.Spaceflight
             {
                 if (live == null) return source.LiveModules.Count == 0;
                 if (source.LiveModuleStructureVersion != live.itemMods.StructureVersion) return false;
+                foreach (var binding in source.LiveInventories)
+                    if (!ReferenceEquals(binding.View.Data, binding.Data)) return false;
                 // 结构不变时复用模块引用，仍检查每步可能改变的启用和载入状态。
                 foreach (var previous in source.LiveModules)
                     if (previous.Enabled != (previous.Module?.Enabled == true) || previous.Loaded != (previous.Module?.IsRuntimeLoaded == true)) return false;
@@ -165,12 +196,20 @@ namespace FlatWorld.Spaceflight
             private double EndSource(MassSource source, double mass)
             {
                 if (!source.PreviousIds.SetEquals(source.OwnedIds)) InvalidateOwnership();
-                source.Released = false; source.Mass = mass; source.Dirty = false; activeSource = null; return mass;
+                source.Released = false; source.Mass = mass; source.Dirty = false; activeSource = null;
+                dirtySources.Remove(source);
+                bool pollContext = source.Machine != null ||
+                    source.Inventories.Count != 0 || source.Fluids.Count != 0;
+                foreach (var module in source.LiveModules)
+                    pollContext |= module.Module is Mod_Equipment or Mod_Inventory or Mod_VesselContents or Mod_WaterVessel or
+                        Mod_Hand or Mod_HotBar or Mod_HandCraftTable or Mod_HandMade or Mod_ManualProcessor;
+                if (source.Retained && pollContext) contextSources.Add(source); else contextSources.Remove(source);
+                return mass;
             }
 
             public double ReadCachedFluid(object key, FluidInventoryState state, bool gasOnly = false)
             {
-                MassSource source = BeginSource(key);
+                MassSource source = BeginSource(key, stationary: true);
                 if (!ReferenceEquals(source.State, state))
                 {
                     source.State = state; source.Dirty = true;
@@ -185,6 +224,8 @@ namespace FlatWorld.Spaceflight
                         mass += (double)component.GasMoles * FluidCatalog.Default.Find(component.FluidId).MolarMassKgPerMol;
                 return EndSource(source, mass);
             }
+            public bool IsFluidSourceReplaced(object key, FluidInventoryState state)
+                => !cachedSources.TryGetValue(key, out MassSource source) || !ReferenceEquals(source.State, state);
             public double ReadCachedItem(object key, ItemData data, Item live)
             {
                 MassSource source = BeginSource(key, data, live);
@@ -192,7 +233,7 @@ namespace FlatWorld.Spaceflight
             }
             public double ReadCachedPiece(object key, ItemData data, Item live, MachineEntity machine)
             {
-                MassSource source = BeginSource(key, data, live, machine);
+                MassSource source = BeginSource(key, data, live, machine, stationary: true);
                 if (!source.Dirty) return source.Mass;
                 double mass = ReadItemContents(data, live, machine, 0);
                 if (machine?.Definition.Fluid != null)
@@ -213,8 +254,8 @@ namespace FlatWorld.Spaceflight
                 MassSource source = activeSource;
                 if (data == null || source == null || !source.Dependencies.Add(data)) return;
                 _ = data.Stack;
-                Action<ItemData> mass = _ => source.Dirty = true;
-                Action<ItemData> structure = _ => { source.Dirty = true; InvalidateOwnership(); };
+                Action<ItemData> mass = _ => MarkSourceDirty(source);
+                Action<ItemData> structure = _ => { MarkSourceDirty(source); InvalidateOwnership(); };
                 data.MassChanged += mass; data.ModuleStructureChanged += structure;
                 source.Unsubscribe.Add(() => { data.MassChanged -= mass; data.ModuleStructureChanged -= structure; });
             }
@@ -226,8 +267,8 @@ namespace FlatWorld.Spaceflight
                 if (inventory == null || source == null || !source.Dependencies.Add(inventory)) return;
                 _ = inventory.MassRevision;
                 source.Inventories.Add(inventory);
-                Action<Inventory_Data> mass = _ => source.Dirty = true;
-                Action<Inventory_Data> structure = _ => { source.Dirty = true; InvalidateOwnership(); };
+                Action<Inventory_Data> mass = _ => MarkSourceDirty(source);
+                Action<Inventory_Data> structure = _ => { MarkSourceDirty(source); InvalidateOwnership(); };
                 inventory.MassChanged += mass; inventory.RuntimeStructureChanged += structure;
                 source.Unsubscribe.Add(() => { inventory.MassChanged -= mass; inventory.RuntimeStructureChanged -= structure; });
             }
@@ -238,7 +279,7 @@ namespace FlatWorld.Spaceflight
                 MassSource source = activeSource;
                 if (state == null || source == null || !source.Dependencies.Add(state)) return;
                 _ = state.MassRevision; source.Fluids.Add(state);
-                Action<FluidInventoryState> handler = _ => source.Dirty = true;
+                Action<FluidInventoryState> handler = _ => MarkSourceDirty(source);
                 state.MassChanged += handler; source.Unsubscribe.Add(() => state.MassChanged -= handler);
             }
             private void WatchLiquid(LiquidContainerState state)
@@ -247,7 +288,7 @@ namespace FlatWorld.Spaceflight
             {
                 MassSource source = activeSource;
                 if (state == null || source == null || !source.Dependencies.Add(state)) return;
-                Action<LiquidContainerState> handler = _ => source.Dirty = true;
+                Action<LiquidContainerState> handler = _ => MarkSourceDirty(source);
                 state.MassChanged += handler; source.Unsubscribe.Add(() => state.MassChanged -= handler);
             }
             private void WatchPayload(ModuleData module)
@@ -256,7 +297,7 @@ namespace FlatWorld.Spaceflight
             {
                 MassSource source = activeSource;
                 if (module == null || source == null || !source.Dependencies.Add(module)) return;
-                Action<ModuleData> handler = _ => source.Dirty = true;
+                Action<ModuleData> handler = _ => MarkSourceDirty(source);
                 module.PayloadChanged += handler; source.Unsubscribe.Add(() => module.PayloadChanged -= handler);
             }
             private void ClearSources()
@@ -267,6 +308,7 @@ namespace FlatWorld.Spaceflight
             {
                 foreach (MassSource source in cachedSources.Values) source.Unbind();
                 cachedSources.Clear(); sourceOwners.Clear(); idOwners.Clear();
+                transientSources.Clear(); contextSources.Clear(); dirtySources.Clear();
                 activeSource = null; ownershipDirty = false;
             }
             #endregion

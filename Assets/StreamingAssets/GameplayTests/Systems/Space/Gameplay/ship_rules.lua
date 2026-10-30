@@ -154,6 +154,18 @@ do
             near(data.unloaded[field], data.initial[field], "卸载货物后物理属性未恢复：" .. field)
         end
         assert(data.invalidMassRejected == true, "负质量贡献必须被生产入口拒绝")
+        local ledger = data.retainedLedger
+        for _, field in ipairs({"mass", "centerX", "centerY", "inertia"}) do
+            near(ledger.unchanged[field], data.initial[field], "稳定步丢失已登记的结构质量：" .. field)
+            near(ledger.loaded[field], data.loaded[field], "增量载荷与完整质量汇总不一致：" .. field)
+            near(ledger.unloaded[field], data.initial[field], "显式撤账后未恢复结构质量：" .. field)
+        end
+        for _, field in ipairs({"x", "y", "velocityX", "velocityY"}) do
+            near(ledger.pointAfter[field], ledger.pointBefore[field], "增量计重改变船上世界点或点速度：" .. field)
+        end
+        local pool = data.retainedContributions
+        assert(pool.withPassenger == 2 and pool.withoutPassenger == 1 and pool.stableIdentity and pool.afterRemoval == 0,
+            "固定载荷应复用原登记，离船人员与卸空载荷必须立即撤账")
         return "覆盖部件质量、矩形惯量、来源去重、货物重心、点速度守恒、卸载恢复和负质量拒绝。"
     end, "船体质量重心与惯量")
 end
