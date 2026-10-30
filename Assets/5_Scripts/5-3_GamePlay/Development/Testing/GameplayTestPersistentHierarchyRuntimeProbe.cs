@@ -23,10 +23,12 @@ public static class GameplayTestPersistentHierarchyRuntimeProbe
         public Scene Scene;
         public GameObject Owner;
         public GameObject Peer;
+        public GameObject SceneHierarchyRoot;
         public void Dispose()
         {
             if (Owner != null) Object.Destroy(Owner);
             if (Peer != null) Object.Destroy(Peer);
+            if (SceneHierarchyRoot != null) Object.Destroy(SceneHierarchyRoot);
         }
         public IEnumerator ReleaseScene()
         {
@@ -51,6 +53,10 @@ public static class GameplayTestPersistentHierarchyRuntimeProbe
             child.transform.SetParent(fixture.Owner.transform, false);
             var transient = new GameObject("PersistentHierarchyProbe.Transient");
             SceneManager.MoveGameObjectToScene(transient, fixture.Scene);
+            Transform sceneCategory = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                fixture.Scene, RuntimeSceneObjectCategory.Preparation);
+            fixture.SceneHierarchyRoot = sceneCategory.root.gameObject;
+            transient.transform.SetParent(sceneCategory, false);
             fixture.Owner.transform.position = new Vector3(17, -11, 3);
             fixture.Owner.transform.localScale = new Vector3(2, 3, 1);
             Matrix4x4 pose = fixture.Owner.transform.localToWorldMatrix;
@@ -65,6 +71,8 @@ public static class GameplayTestPersistentHierarchyRuntimeProbe
             bool nested = PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(child, PersistentRuntimeObjectCategory.Debug);
             var result = new JObject
             {
+                ["persistentRootHideFlags"] = (int)hierarchy.gameObject.hideFlags,
+                ["sceneRootHideFlags"] = (int)sceneCategory.root.gameObject.hideFlags,
                 ["persistentScene"] = moved && fixture.Owner.scene.name == "DontDestroyOnLoad",
                 ["idempotent"] = repeated && fixture.Owner.transform.parent == category,
                 ["ownedChildPreserved"] = nested && child.transform.parent == fixture.Owner.transform,
@@ -75,6 +83,7 @@ public static class GameplayTestPersistentHierarchyRuntimeProbe
             PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(fixture.Peer, PersistentRuntimeObjectCategory.Testing);
             yield return SceneManager.UnloadSceneAsync(fixture.Scene);
             result["sourceSceneUnloaded"] = !fixture.Scene.IsValid() || !fixture.Scene.isLoaded;
+            result["sceneHierarchyDestroyedWithScene"] = sceneCategory == null;
             result["transientDestroyed"] = transient == null;
             result["persistentTreeSurvived"] = fixture.Owner != null && child != null && fixture.Peer != null;
             result["activeSceneUnchanged"] = SceneManager.GetActiveScene() == initialScene;

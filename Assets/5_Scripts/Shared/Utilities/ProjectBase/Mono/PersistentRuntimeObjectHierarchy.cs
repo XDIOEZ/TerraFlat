@@ -74,7 +74,8 @@ public sealed class PersistentRuntimeObjectHierarchy : MonoBehaviour
 
         if (instance == null)
         {
-            var root = new GameObject(RootName) { hideFlags = HideFlags.DontSave };
+            // 常驻范围由 DontDestroyOnLoad 决定，退出运行时仍随会话销毁。
+            var root = new GameObject(RootName);
             DontDestroyOnLoad(root);
             instance = root.AddComponent<PersistentRuntimeObjectHierarchy>();
         }

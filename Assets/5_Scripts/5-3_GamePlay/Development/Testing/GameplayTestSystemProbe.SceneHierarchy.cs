@@ -24,16 +24,20 @@ public static partial class GameplayTestSystemProbe
 #if UNITY_EDITOR
         Scene first = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
         Scene second = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        GameObject firstRoot = null, secondRoot = null;
         try
         {
             Transform items = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(first, RuntimeSceneObjectCategory.Items);
             Transform chunks = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(first, RuntimeSceneObjectCategory.Chunks);
             Transform otherItems = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(second, RuntimeSceneObjectCategory.Items);
+            firstRoot = items.root.gameObject;
+            secondRoot = otherItems.root.gameObject;
             var sample = new JObject
             {
                 ["available"] = true,
                 ["reused"] = items == RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(first, RuntimeSceneObjectCategory.Items),
                 ["sharedRoot"] = items.parent == chunks.parent && items != chunks,
+                ["rootHideFlags"] = (int)items.root.gameObject.hideFlags,
                 ["sceneIsolation"] = items.root != otherItems.root && items.gameObject.scene == first && otherItems.gameObject.scene == second,
                 ["identityTransform"] = items.localToWorldMatrix == Matrix4x4.identity && otherItems.localToWorldMatrix == Matrix4x4.identity
             };
@@ -69,6 +73,7 @@ public static partial class GameplayTestSystemProbe
             sample["categoryRecreated"] = replacement != null && replacement.parent == chunks.parent;
             Object.DestroyImmediate(chunks.root.gameObject);
             Transform recreated = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(first, RuntimeSceneObjectCategory.Items);
+            firstRoot = recreated.root.gameObject;
             sample["rootRecreated"] = recreated != null && recreated.gameObject.scene == first;
             sample["otherSceneSurvives"] = otherItems != null && item != null && item.transform.parent == otherItems;
             sample["oneSceneRoot"] = first.GetRootGameObjects().Length == 1 && second.GetRootGameObjects().Length == 1;
@@ -76,6 +81,8 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
+            Object.DestroyImmediate(firstRoot);
+            Object.DestroyImmediate(secondRoot);
             UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(first);
             UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(second);
         }

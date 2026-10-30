@@ -23,6 +23,9 @@ test.runtime("core_lifecycle", "live_entry", {}, function(data)
 end, "正式入世、玩家生命周期和表现就绪")
 
 test.runtime("core_lifecycle", "persistent_object_hierarchy", {}, function(data)
+    assert(data.persistentRootHideFlags == 0 and data.sceneRootHideFlags == 0,
+        "运行时分类根使用了会让整棵对象树残留的 HideFlags")
+    assert(data.sceneHierarchyDestroyedWithScene, "场景卸载后分类根和子对象仍然残留")
     assert(data.persistentScene and data.idempotent and data.ownedChildPreserved and data.inactiveAndPosePreserved,
         "常驻挂接改变了所有权、激活状态或姿态，或重复创建了分类")
     assert(data.sourceSceneUnloaded and data.transientDestroyed and data.persistentTreeSurvived,

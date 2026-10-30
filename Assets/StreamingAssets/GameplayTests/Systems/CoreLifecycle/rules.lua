@@ -45,6 +45,7 @@ end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)
     assert(data.available, "场景分类规则需要编辑器现场")
+    assert(data.rootHideFlags == 0, "场景分类根使用了会脱离场景并阻止卸载的 HideFlags")
     assert(data.reused and data.sharedRoot and data.oneSceneRoot, "同场景分类重复创建或没有共用根节点")
     assert(data.sceneIsolation and data.otherSceneSurvives, "不同场景的分类互相干扰")
     assert(data.identityTransform and data.posePreserved and data.migrationPosePreserved, "分类改变了物品位置、旋转或缩放")
