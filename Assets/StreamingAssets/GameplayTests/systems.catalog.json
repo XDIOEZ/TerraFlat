@@ -1060,7 +1060,8 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
-        "core_lifecycle_rules"
+        "core_lifecycle_rules",
+        "core_lifecycle_startup"
       ],
       "rulesSuite": "GameplayTests/Systems/CoreLifecycle/rules-suite.json",
       "integrationSuites": [

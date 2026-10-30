@@ -28,6 +28,11 @@ public partial class GameRes
     public string LoadStatusText => GetResourceLoadStatusText();
     private int cacheBuildStartRevision;
     private bool resourceSessionStarted;
+    private bool completingInitialResourceLoad;
+    /// <summary>完整资源会话的验收目标；菜单提前开放不计作加载完成。</summary>
+    public const double InitialResourceLoadTargetMilliseconds = 10000d;
+    /// <summary>最后一次成功资源会话的真实耗时，失败或尚未完成时为零。</summary>
+    public double LastResourceLoadMilliseconds { get; private set; }
     private string cachedHintSource, cachedHintLocale, cachedHintStatus;
     private const string FirstCacheBuildHint = "首次加载可能较慢，请稍候";
     private bool ShowCacheBuildHint => LoadState == ResourceLoadState.Loading && !resourceLoadFailed &&
@@ -66,12 +71,17 @@ public partial class GameRes
     private ThreadPriority previousLoadingPriority;
     private int previousUploadTimeSlice;
 
-    internal static bool ShouldKeepStartupResourceLoadingInBackground(bool startupReady, bool enteringWorld)
-        => startupReady && !enteringWorld;
+    internal static bool ShouldKeepStartupResourceLoadingInBackground(bool startupReady, bool enteringWorld,
+        bool initialLoad = false)
+        => startupReady && !enteringWorld && !initialLoad;
+
+    // 首次启动用同一有界预算收齐全部内容，游戏内原位更新仍交回交互预算。
+    internal static double? ResolveResourceWorkBudget(bool initialLoad, bool inPlaceReload, bool testCache)
+        => testCache ? 8d : initialLoad && !inPlaceReload ? 32d : null;
 
     private bool ShouldKeepCurrentResourceLoadingInBackground =>
         ShouldKeepStartupResourceLoadingInBackground(IsStartupReady,
-            GameManager.ExistingInstance?.IsWorldEntryInProgress == true);
+            GameManager.ExistingInstance?.IsWorldEntryInProgress == true, completingInitialResourceLoad);
 
     /// <summary>定义构建和请求发出使用统一帧预算，不能让同帧的多个阶段各自重新计时。</summary>
     internal bool ShouldYieldResourceWork() => loadPipeline?.ShouldYield() == true;
@@ -179,6 +189,7 @@ public partial class GameRes
         }
 
         LoadState = ResourceLoadState.Loading;
+        LastResourceLoadMilliseconds = 0;
         IsStartupReady = false;
         LastLoadError = null;
         resourceLoadFailed = false;
@@ -208,6 +219,7 @@ public partial class GameRes
         try
         {
             cacheBuildStartRevision = resourceSessionStarted ? BinaryContentCache.BuildRevision : 0;
+            completingInitialResourceLoad = !resourceSessionStarted;
             resourceSessionStarted = true;
             GameplayTestResourceCache.Begin();
             ItemMgr.GetInstance()?.ClearResourcePools();
@@ -238,8 +250,14 @@ public partial class GameRes
         showLoadingGUI = false;
         double totalResourceLoadMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - resourceSessionStartedTimestamp) *
                                                1000d / System.Diagnostics.Stopwatch.Frequency;
+        LastResourceLoadMilliseconds = totalResourceLoadMilliseconds;
+        bool initialLoadOverBudget = completingInitialResourceLoad &&
+                                     totalResourceLoadMilliseconds > InitialResourceLoadTargetMilliseconds;
+        completingInitialResourceLoad = false;
         Debug.Log($"<color=#7EDC8A><b>[GameRes] 全部资产加载完成</b></color>，总耗时：" +
                   $"<color=#FFD166><b>{totalResourceLoadMilliseconds / 1000d:F2} 秒（{totalResourceLoadMilliseconds:F0} ms）</b></color>。", this);
+        if (initialLoadOverBudget)
+            Debug.LogWarning($"[GameRes] 首次完整加载超出 10 秒目标：{totalResourceLoadMilliseconds:F0} ms；请按阶段计时继续定位。", this);
         Debug.Log($"[GameRes] 资源目录就绪：{ItemDefinitions.Count} 个物品/Actor，{TileBlockDict.Count} 个 TileBlock，" +
                   $"{recipeById.Count} 个配方，持有 {resourceAssets.HandleCount} 个资源请求。");
         Debug.Log($"[启动二进制缓存] 其他 JSON 配置：命中 {JsonConfigurationCache.Hits}，" +
@@ -253,6 +271,7 @@ public partial class GameRes
         try { ClearResourceSession(); }
         catch (Exception cleanupError) { exception = new AggregateException(exception, cleanupError); }
         LoadState = ResourceLoadState.Failed;
+        completingInitialResourceLoad = false;
         IsStartupReady = false;
         resourceLoadFailed = true;
         loadCoroutine = null;
@@ -485,9 +504,9 @@ public partial class GameRes
     {
         IsStartupReady = true;
         if (preparingInPlaceReload) return;
-        BeginMenuBackgroundLoading();
+        RefreshResourceLoadingPriorityForCurrentInteraction();
         showLoadingGUI = false;
-        Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
+        Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；同一资源会话继续收齐完整内容。");
         StartupResourcesReady?.Invoke(this);
     }
 

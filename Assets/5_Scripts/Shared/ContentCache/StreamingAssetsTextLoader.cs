@@ -136,13 +136,21 @@ public static class StreamingAssetsTextLoader
     /// <summary>后台只处理私有字符串和 DTO，完成回调仍由资源协程在主线程执行。</summary>
     public static IEnumerator RunPureDataAsync<T>(Func<T> work, Action<T> completed, Action<Exception> failed)
     {
+        IEnumerator operation = BeginPureDataAsync(work, completed, failed);
+        try { while (operation.MoveNext()) yield return operation.Current; }
+        finally { (operation as IDisposable)?.Dispose(); }
+    }
+
+    /// <summary>立即发出私有数据任务，回调仍等调用方推进；避免预算耗尽后又空等一帧才启动读盘。</summary>
+    public static IEnumerator BeginPureDataAsync<T>(Func<T> work, Action<T> completed, Action<Exception> failed)
+    {
+        if (work == null) throw new ArgumentNullException(nameof(work));
         T result = default;
         Exception error = null;
 #if UNITY_WEBGL && !UNITY_EDITOR
         // WebGL 无托管工作线程，仍保持相同的回调与错误契约。
         try { result = work(); }
         catch (Exception exception) { error = exception; }
-        yield return null;
 #else
         Task task = Task.Run(() =>
         {
@@ -150,10 +158,19 @@ public static class StreamingAssetsTextLoader
             try { result = work(); }
             catch (Exception exception) { error = exception; }
         });
-        while (!task.IsCompleted) yield return null;
 #endif
-        if (error != null) failed?.Invoke(error);
-        else completed?.Invoke(result);
+        return Complete();
+
+        IEnumerator Complete()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            yield return null;
+#else
+            while (!task.IsCompleted) yield return null;
+#endif
+            if (error != null) failed?.Invoke(error);
+            else completed?.Invoke(result);
+        }
     }
 
     #endregion

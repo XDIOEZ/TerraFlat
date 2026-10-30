@@ -96,6 +96,25 @@ public static class ModuleJsonConfigurator
             serializer = JsonSerializer.Create(Settings);
         }
 
+        /// <summary>复用私有只读参数树，每个定义仍独占错误身份与应用序列化器。</summary>
+        internal PreparedParameters BindDefinitionIdentity(string newItemId, string newModuleName, string newModuleId)
+            => new(moduleType, newItemId, newModuleName, newModuleId,
+                regular, transform, collider, colliderType, customValidationParameters);
+
+        /// <summary>目录只读取需要的普通字段快照，不重新解析整段 JSON，也不暴露共享参数树。</summary>
+        internal JObject CopyRegularFields(IReadOnlyList<string> names)
+        {
+            JObject result = null;
+            foreach (string name in names)
+            {
+                JToken value = regular.GetValue(name, StringComparison.OrdinalIgnoreCase);
+                if (value == null) continue;
+                result ??= new JObject();
+                result[name] = value.DeepClone();
+            }
+            return result;
+        }
+
         /// <summary>配置语法和字段类型已在编译时检查，只复查当前原型结构与模块自有约束。</summary>
         internal void ValidateTarget(Module module)
         {

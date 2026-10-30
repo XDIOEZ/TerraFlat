@@ -108,6 +108,27 @@ public static class ItemDefinitionCatalogLoader
         Action<List<ItemDefinitionDto>> completed, Action<Exception> failed, Action<float> progress = null)
     {
         BinaryContentCache cache = CreateBinaryCache();
+        string itemRoot = BuiltInItemRoot;
+        string manifestPath = BuiltInManifestPath;
+        if (!StreamingAssetsTextLoader.RequiresWebRequest(itemRoot))
+        {
+            // 本地命中、读盘、继承解析与缓存写入只跨一次线程边界，路径在主线程捕获。
+            return StreamingAssetsTextLoader.BeginPureDataAsync(
+                () => LoadLocalDefinitions(cache, itemRoot, manifestPath),
+                value =>
+                {
+                    cache.Report("物品", value.Count);
+                    progress?.Invoke(0.2f);
+                    completed(value);
+                }, failed);
+        }
+        return LoadPackagedDefinitionsAsync(cache, completed, failed, progress);
+    }
+
+    /// <summary>包内资源沿 UnityWebRequest 逐步读取，本地入口不再套一层延迟启动的迭代器。</summary>
+    private static IEnumerator LoadPackagedDefinitionsAsync(BinaryContentCache cache,
+        Action<List<ItemDefinitionDto>> completed, Action<Exception> failed, Action<float> progress)
+    {
         List<ItemDefinitionDto> cached = null;
         yield return cache.TryReadAsync<List<ItemDefinitionDto>>(value => cached = value);
         if (cached != null)
@@ -144,43 +165,6 @@ public static class ItemDefinitionCatalogLoader
         ItemDefinitionPackageDto[] enabledPackages = manifest.Packages
             .Where(package => package.Enabled)
             .ToArray();
-
-        // 本地分包一次后台读取、合并与继承解析，避免每个文件反复跨帧派发线程任务。
-        if (!StreamingAssetsTextLoader.RequiresWebRequest(BuiltInItemRoot))
-        {
-            var packagePaths = new string[enabledPackages.Length];
-            try
-            {
-                for (int i = 0; i < enabledPackages.Length; i++)
-                    packagePaths[i] = ResolvePackagePath(BuiltInItemRoot, enabledPackages[i].Path);
-            }
-            catch (Exception exception) { failed?.Invoke(exception); yield break; }
-
-            List<ItemDefinitionDto> localDefinitions = null;
-            readError = null;
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
-            {
-                var packages = new List<LoadedItemPackage>(enabledPackages.Length);
-                for (int i = 0; i < enabledPackages.Length; i++)
-                {
-                    string packageJson;
-                    try { packageJson = cache.ReadText(packagePaths[i]); }
-                    catch (Exception exception)
-                    {
-                        throw new IOException($"物品分包 {enabledPackages[i].Id} 读取失败：{packagePaths[i]}", exception);
-                    }
-                    packages.Add(new LoadedItemPackage(enabledPackages[i], packageJson));
-                }
-                return ResolveLoadedPackages(packages);
-            }, value => localDefinitions = value, exception => readError = exception);
-            if (readError != null) { failed?.Invoke(readError); yield break; }
-
-            progress?.Invoke(0.2f);
-            yield return cache.StoreAsync(localDefinitions);
-            cache.Report("物品", localDefinitions.Count);
-            completed(localDefinitions);
-            yield break;
-        }
 
         var loadedPackages = new List<LoadedItemPackage>(enabledPackages.Length);
         for (int i = 0; i < enabledPackages.Length; i++)
@@ -657,12 +641,41 @@ public static class ItemDefinitionCatalogLoader
         if (StreamingAssetsTextLoader.RequiresWebRequest(itemRoot))
             return combinedPath;
 
+        return ResolveLocalPackagePath(itemRoot, relativePath);
+    }
+
+    private static string ResolveLocalPackagePath(string itemRoot, string relativePath)
+    {
+        string combinedPath = StreamingAssetsTextLoader.CombinePath(itemRoot, relativePath);
         string normalizedRoot = Path.GetFullPath(itemRoot)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         string fullPath = Path.GetFullPath(combinedPath);
         if (!fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"物品分包路径越出 Items 目录：{relativePath}");
         return fullPath;
+    }
+
+    /// <summary>只处理私有数据与本地文件，失败不会发布部分定义，缓存失败仍返回已验证 JSON。</summary>
+    internal static List<ItemDefinitionDto> LoadLocalDefinitions(BinaryContentCache cache,
+        string itemRoot, string manifestPath)
+    {
+        if (cache.TryRead(out List<ItemDefinitionDto> cached)) return cached;
+        ItemDefinitionManifestDto manifest = DeserializeManifest(cache.ReadText(manifestPath));
+        ValidateManifest(manifest);
+        var packages = new List<LoadedItemPackage>();
+        foreach (ItemDefinitionPackageDto package in manifest.Packages)
+        {
+            if (!package.Enabled) continue;
+            string path = ResolveLocalPackagePath(itemRoot, package.Path);
+            string json;
+            try { json = cache.ReadText(path); }
+            catch (Exception exception)
+            { throw new IOException($"物品分包 {package.Id} 读取失败：{path}", exception); }
+            packages.Add(new LoadedItemPackage(package, json));
+        }
+        List<ItemDefinitionDto> definitions = ResolveLoadedPackages(packages);
+        cache.Store(definitions);
+        return definitions;
     }
 
     private static List<LoadedItemPackage> ReadBuiltInPackages(BinaryContentCache cache = null)
@@ -862,7 +875,7 @@ public static class ItemDefinitionCatalogLoader
     }
 
     /// <summary>同图集只发出一次主纹理异步请求，由资源队列跟进完成和子 Sprite 接续。</summary>
-    private static AssetDatabaseLoadOperation BeginEditorSpriteTexture(string address,
+    internal static AssetDatabaseLoadOperation BeginEditorSpriteTexture(string address,
         IDictionary<string, AssetDatabaseLoadOperation> preloadedTextures)
     {
         int bracket = address.LastIndexOf('[');
@@ -870,7 +883,8 @@ public static class ItemDefinitionCatalogLoader
             ? address.Substring(0, bracket) : address;
         path = path.Replace('\\', '/');
         if (preloadedTextures.TryGetValue(path, out AssetDatabaseLoadOperation operation)) return operation;
-        if (AssetImporter.GetAtPath(path) is TextureImporter)
+        // 已驻留纹理直接接续正式 Sprite 句柄，不重复排入异步预读队列。
+        if (!AssetDatabase.IsMainAssetAtPathLoaded(path) && AssetImporter.GetAtPath(path) is TextureImporter)
         {
             using (EditorTextureRequestMarker.Auto())
                 operation = AssetDatabase.LoadObjectAsync(path, ImportedTextureMainLocalId);

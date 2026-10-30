@@ -12,7 +12,7 @@ public enum ResourceLoadState { NotStarted, Loading, Ready, Failed, Disposed }
 /// 单个栈驱动所有嵌套迭代器，统一捕获异常与释放 finally；不启动脱离会话的子协程。
 /// 每个阶段最多等待 180 秒，超时按失败处理并释放请求，不让启动界面无限等待。
 /// </summary>
-internal sealed class ResourceLoadPipeline : IDisposable
+internal sealed partial class ResourceLoadPipeline : IDisposable
 {
     #region 阶段契约
 
@@ -35,6 +35,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
     private readonly Func<bool> isInteractive;
     private readonly Func<double?> workBudget;
     private readonly Func<int> frameNumber;
+    private readonly bool concurrentStages;
     private readonly List<IPrefetchedResourceData> prefetched = new();
     private int prefetchFrame = -1, nextPrefetch;
     private static readonly Unity.Profiling.ProfilerMarker PrefetchMarker = new("FlatWorld.Resources.Prefetch");
@@ -45,12 +46,13 @@ internal sealed class ResourceLoadPipeline : IDisposable
     public Exception Failure { get; private set; }
 
     public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null,
-        Func<double?> workBudget = null, Func<int> frameNumber = null)
+        Func<double?> workBudget = null, Func<int> frameNumber = null, bool concurrentStages = false)
     {
         this.report = report;
         this.isInteractive = isInteractive;
         this.workBudget = workBudget;
         this.frameNumber = frameNumber ?? (() => UnityEngine.Time.frameCount);
+        this.concurrentStages = concurrentStages;
     }
 
     /// <summary>所有嵌套阶段共用同帧预算，菜单显示后累计工作超过 1ms 就让出下一帧。</summary>
@@ -76,13 +78,18 @@ internal sealed class ResourceLoadPipeline : IDisposable
         steps.Add(new Step { Id = id, Title = title, Weight = weight, Load = load, Dependencies = dependencies });
     }
 
+    internal IReadOnlyDictionary<string, string[]> CaptureDependencies()
+        => steps.ToDictionary(step => step.Id, step => (string[])step.Dependencies.Clone(), StringComparer.Ordinal);
+
     /// <summary>阶段进度只允许前进；阶段完成由执行器统一处理。</summary>
     public void Report(float progress)
     {
         if (currentStep == null || disposed) return;
         if (float.IsNaN(progress) || float.IsInfinity(progress)) return;
         stepProgress = Math.Max(stepProgress, Math.Min(1f, Math.Max(0f, progress)));
-        report(currentStep.Title, (completedWeight + currentStep.Weight * stepProgress) / totalWeight);
+        if (concurrentExecution != null) concurrentExecution.Progress = stepProgress;
+        report(currentStep.Title, concurrentExecutions != null ? GetConcurrentProgress() :
+            (completedWeight + currentStep.Weight * stepProgress) / totalWeight);
     }
 
     /// <summary>预取只推进私有纯数据，结果仍由依赖阶段接收和发布。</summary>
@@ -216,7 +223,9 @@ internal sealed class ResourceLoadPipeline : IDisposable
     #region 执行与释放
 
     /// <summary>执行完整计划；失败保留原始异常和阶段 ID，交给资源所有者统一清理。</summary>
-    public IEnumerator Run()
+    public IEnumerator Run() => concurrentStages ? RunConcurrent() : RunSequential();
+
+    private IEnumerator RunSequential()
     {
         List<Step> ordered;
         try { ordered = OrderSteps(); }
@@ -328,6 +337,7 @@ internal sealed class ResourceLoadPipeline : IDisposable
             try { prefetched[i].Dispose(); }
             catch (Exception exception) { Failure ??= exception; }
         }
+        DisposeConcurrentSteps();
         while (routines.Count > 0)
         {
             try { (routines.Pop() as IDisposable)?.Dispose(); }

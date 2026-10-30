@@ -27,6 +27,8 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     public override ModuleData _Data { get => ModData; set => ModData = (Ex_ModData)value; }
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    // 行为树来自 JSON 配置，不让 Unity 域重载递归序列化运行时定义。
+    [field: NonSerialized]
     [JsonProperty("behaviorTree")] public AnimalBehaviorTreeDefinition BehaviorTree { get; set; }
     [JsonProperty("damageThreatMemoryDuration")] public float DamageThreatMemoryDuration { get; set; } = 5f;
     [JsonProperty("detectorRefreshInterval")] public float DetectorRefreshInterval { get; set; } = .8f;

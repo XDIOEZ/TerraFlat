@@ -15,9 +15,9 @@ public partial class GameRes
         if (preparingInPlaceReload) yield break;
 
         BuffAttributeEffects.ModifyAttackDamage(null, Unity.Mathematics.float4.zero);
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
         FlatWorld.Spaceflight.ShipCombatBridge.PrewarmQueryPools();
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
 
         var roots = new HashSet<GameObject>(AllPrefabs.Values);
         foreach (RuntimeItemDefinition definition in ItemDefinitions.Values)
@@ -44,7 +44,7 @@ public partial class GameRes
         foreach (GameEffect prefab in effects)
         {
             while (manager.PrewarmGameEffect(prefab, InitialHitEffectInstances))
-                yield return null;
+                if (ShouldYieldResourceWork()) yield return null;
             completed++;
             loadPipeline.Report((float)completed / effects.Count);
         }

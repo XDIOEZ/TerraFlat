@@ -305,6 +305,12 @@
       "enabled": true
     },
     {
+      "id": "core_lifecycle_startup",
+      "name": "首次加载十秒预算与并行配置发布",
+      "luaPath": "GameplayTests/Systems/CoreLifecycle/startup.lua",
+      "enabled": true
+    },
+    {
       "id": "item_runtime_drop_motion_rules",
       "name": "轻量掉落物运动表、身份补位与工作区复用",
       "luaPath": "GameplayTests/Systems/ItemRuntime/drop-motion.lua",

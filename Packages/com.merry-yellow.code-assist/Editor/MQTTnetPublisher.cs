@@ -160,13 +160,27 @@ namespace Meryel.UnityCodeAssist.Editor
 
             Serilog.Log.Debug("MQTTnet server initializing, initialized");
 
-            // need to sleep here, clients will take some time to start subscribing
-            // https://github.com/zeromq/netmq/issues/482#issuecomment-182200323
-            Thread.Sleep(1000);
-            SendConnect();
+            // 等待客户端订阅时只登记到期回调，不阻塞 Unity 启动主线程。
+            startupConnectReadyAt = EditorApplication.timeSinceStartup + 1d;
+            EditorApplication.update += PublishStartupConnectWhenSubscriptionsReady;
 
             Serilog.Log.Debug("MQTTnet server initializing, initialized at {port} with {projectPath}", port, Self!.ProjectPath);
         }
+
+        #region 启动连接通知
+
+        private double startupConnectReadyAt;
+
+        private void PublishStartupConnectWhenSubscriptionsReady()
+        {
+            if (EditorApplication.timeSinceStartup < startupConnectReadyAt) return;
+            EditorApplication.update -= PublishStartupConnectWhenSubscriptionsReady;
+            if (broker == null || cancellationTokenSource == null || cancellationTokenSource.IsCancellationRequested) return;
+            try { SendConnect(); }
+            catch (Exception exception) { Serilog.Log.Error(exception, "MQTTnet startup connect notification failed"); }
+        }
+
+        #endregion
 
         private Task Broker_ClientDisconnectedAsync(ClientDisconnectedEventArgs arg)
         {
@@ -208,6 +222,7 @@ namespace Meryel.UnityCodeAssist.Editor
 
         public void Clear()
         {
+            EditorApplication.update -= PublishStartupConnectWhenSubscriptionsReady;
             // LogContext();
 
             Serilog.Log.Verbose("MQTTnet clearing {HasBroker}", (broker != null));

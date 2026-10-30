@@ -23,6 +23,7 @@ public static partial class GameplayTestSystemProbe
         RegisterConveyorLoadOperations(result);
         RegisterRailwayOperations(result);
         RegisterServiceOperations(result);
+        RegisterStartupPerformanceOperations(result);
         RegisterEcologyFrozenSnapshotCacheOperations(result);
         RegisterFixedStepSimulationOperations(result);
         result.Add("rendering/dropped_combustion_material", ServiceDroppedCombustionMaterial);

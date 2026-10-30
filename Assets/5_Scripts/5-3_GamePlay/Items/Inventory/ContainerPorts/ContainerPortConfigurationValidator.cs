@@ -8,6 +8,10 @@ using Newtonsoft.Json.Linq;
 public static class ContainerPortConfigurationValidator
 {
     #region 最终目录校验
+    private static readonly string[] ConfigurationFields =
+    {
+        nameof(Mod_WaterVessel.capacity), nameof(Mod_Inventory.ContainerPorts), nameof(Mod_Inventory.InventoryInstances)
+    };
     public static List<ContainerPortConfiguration> Read(JToken token)
     {
         if (token == null) return new();
@@ -25,22 +29,22 @@ public static class ContainerPortConfigurationValidator
             foreach (RuntimeItemModuleDefinition module in definition.ModuleDefinitions)
             {
                 if (!module.Enabled) continue;
-                JObject parameters = string.IsNullOrWhiteSpace(module.ParametersJson) ? new() : JObject.Parse(module.ParametersJson);
                 definition.TryGetModuleAssembly(module.StableName, out var assembly);
-                Module prototype = assembly?.ModulePrefab != null
-                    ? Array.Find(assembly.ModulePrefab.GetComponentsInChildren<Module>(true), assembly.MatchesImplementation)
-                    : assembly != null && definition.ShellPrefab != null ? assembly.ResolveEmbeddedModule(definition.ShellPrefab.transform) : null;
+                // 复用装配时锁定的真实原型和字段编译，完整端口规则仍逐轮执行。
+                JObject parameters = assembly != null ? assembly.CopyConfigurationFields(ConfigurationFields) :
+                    string.IsNullOrWhiteSpace(module.ParametersJson) ? null : JObject.Parse(module.ParametersJson);
+                Module prototype = assembly?.ResolveImplementationPrototype(definition.ShellPrefab != null ? definition.ShellPrefab.transform : null);
                 Mod_Inventory inventoryModule = prototype as Mod_Inventory;
                 Mod_WaterVessel liquidModule = prototype as Mod_WaterVessel;
                 if (module.ModuleId == Mod_WaterVessel.ModuleId)
                 {
-                    JToken declaredCapacity = parameters.GetValue(nameof(Mod_WaterVessel.capacity), StringComparison.OrdinalIgnoreCase);
+                    JToken declaredCapacity = parameters?.GetValue(nameof(Mod_WaterVessel.capacity), StringComparison.OrdinalIgnoreCase);
                     int capacity = declaredCapacity != null ? declaredCapacity.Value<int>() : liquidModule?.capacity ?? Mod_WaterVessel.DefaultCapacity;
                     if (capacity < 1) throw new InvalidDataException($"{definition.Id} 的液体容器容量必须大于零。");
                 }
-                JToken declared = parameters.GetValue(nameof(Mod_Inventory.ContainerPorts), StringComparison.OrdinalIgnoreCase);
+                JToken declared = parameters?.GetValue(nameof(Mod_Inventory.ContainerPorts), StringComparison.OrdinalIgnoreCase);
                 var configurations = declared != null ? Read(declared) : inventoryModule != null ? inventoryModule.ContainerPorts :
-                    liquidModule != null ? liquidModule.ContainerPorts : new List<ContainerPortConfiguration>();
+                    liquidModule != null ? liquidModule.ContainerPorts : null;
                 foreach (ContainerPortConfiguration configuration in configurations ?? new())
                 {
                     Validate(configuration, definition.Id, ports, id => all.ContainsKey(id), liquid);
@@ -56,7 +60,7 @@ public static class ContainerPortConfigurationValidator
                         if (string.IsNullOrWhiteSpace(configuration.InventoryId)) throw new InvalidDataException($"{definition.Id}/{configuration.Id} 缺少稳定 InventoryId。");
                         bool exists = false;
                         int? slotCount = null;
-                        var inventoryArray = parameters.GetValue(nameof(Mod_Inventory.InventoryInstances), StringComparison.OrdinalIgnoreCase) as JArray;
+                        var inventoryArray = parameters?.GetValue(nameof(Mod_Inventory.InventoryInstances), StringComparison.OrdinalIgnoreCase) as JArray;
                         foreach (JToken inventory in inventoryArray ?? new JArray())
                             if (inventory["Data"]?["Name"]?.Value<string>() == configuration.InventoryId)
                             { exists = true; slotCount = (inventory["Data"]?["itemSlots"] as JArray)?.Count; }

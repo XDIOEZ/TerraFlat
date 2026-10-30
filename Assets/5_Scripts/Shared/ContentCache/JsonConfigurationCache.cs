@@ -20,6 +20,8 @@ public static class JsonConfigurationCache
     public static int Hits => Volatile.Read(ref hits);
     public static int Builds => Volatile.Read(ref builds);
     public static int WriteFailures => Volatile.Read(ref writeFailures);
+    public const int MinimumAutomaticCacheCharacters = 16 * 1024;
+    public static bool ShouldCacheConfiguration(int characterCount) => characterCount >= MinimumAutomaticCacheCharacters;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 #if UNITY_EDITOR
@@ -53,7 +55,8 @@ public static class JsonConfigurationCache
         [CallerFilePath] string parser = "", [CallerLineNumber] int line = 0) where T : class
     {
         if (parse == null) throw new ArgumentNullException(nameof(parse));
-        if (string.IsNullOrEmpty(directory) || json == null) return parse();
+        // 小配置直接解析，避免首次启动为少量字段反而生成序列化器和单独缓存文件。
+        if (string.IsNullOrEmpty(directory) || json == null || !ShouldCacheConfiguration(json.Length)) return parse();
         return ParseBytes(Encoding.UTF8.GetBytes(json), parse, parser, line);
     }
 
@@ -64,12 +67,8 @@ public static class JsonConfigurationCache
         [CallerFilePath] string parser = "", [CallerLineNumber] int line = 0) where T : class
     {
         if (token == null) return null;
-        T Read() => serializer == null ? token.ToObject<T>() : token.ToObject<T>(serializer);
-        if (string.IsNullOrEmpty(directory)) return Read();
-        byte[] bytes;
-        try { bytes = MemoryPackSerializer.Serialize(token); }
-        catch (Exception) { return Read(); }
-        return ParseBytes(bytes, Read, parser, line);
+        // 已解析的参数树直接投影为独立 DTO，不先重新序列化再落盘恢复相同内容。
+        return serializer == null ? token.ToObject<T>() : token.ToObject<T>(serializer);
     }
 
     private static T ParseBytes<T>(byte[] bytes, Func<T> parse, string parser, int line) where T : class

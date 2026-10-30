@@ -21,15 +21,22 @@ public static class AnimalBehaviorTreeNodeCatalog
     public static void SetSharedSubtrees(JObject source)
     {
         sharedSubtrees = source?.ToObject<Dictionary<string, AnimalBehaviorSubtreeDefinition>>() ?? new(StringComparer.Ordinal);
+        // 共享库换代只替换本会话缓存，不能清空热更新上下文仍持有的正式模板。
+        templates = new(StringComparer.Ordinal);
     }
 
+    /// <summary>返回只读目录的独立快照，外部修改不能绕过共享库发布与模板失效。</summary>
     public static AnimalBehaviorSubtreeDefinition GetSharedSubtree(string name)
-        => name != null && sharedSubtrees.TryGetValue(name, out AnimalBehaviorSubtreeDefinition subtree) ? subtree : null;
+        => name != null && sharedSubtrees.TryGetValue(name, out AnimalBehaviorSubtreeDefinition subtree)
+            ? JObject.FromObject(subtree).ToObject<AnimalBehaviorSubtreeDefinition>() : null;
 
     public static AnimalBehaviorTreeTemplate Compile(AnimalBehaviorTreeDefinition definition)
     {
         EnsureRegistered();
         if (definition == null) throw new InvalidOperationException("生物缺少行为树定义。");
+        // 共享库在发布时统一失效，重复校验只序列化当前物种，不再遍历整个共享库。
+        string key = JsonConvert.SerializeObject(definition);
+        if (templates.TryGetValue(key, out AnimalBehaviorTreeTemplate cached)) return cached;
         var subtrees = new Dictionary<string, AnimalBehaviorSubtreeDefinition>(sharedSubtrees, StringComparer.Ordinal);
         if (definition.Subtrees != null)
             foreach (var pair in definition.Subtrees) subtrees[pair.Key] = pair.Value;
@@ -38,12 +45,8 @@ public static class AnimalBehaviorTreeNodeCatalog
             SchemaVersion = definition.SchemaVersion, Root = definition.Root,
             Capabilities = definition.Capabilities, Subtrees = subtrees
         };
-        string key = JsonConvert.SerializeObject(resolved);
-        if (!templates.TryGetValue(key, out AnimalBehaviorTreeTemplate template))
-        {
-            template = AnimalBehaviorTreeCompiler.Compile(resolved);
-            templates.Add(key, template);
-        }
+        AnimalBehaviorTreeTemplate template = AnimalBehaviorTreeCompiler.Compile(resolved);
+        templates.Add(key, template);
         return template;
     }
 

@@ -14,23 +14,23 @@ public partial class GameRes
 
         var stateSample = new Data_GeneralItem { IDName = "preparation:machine" };
         MachinePersistence.Write(stateSample, "core", new MachineState());
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
         _ = MachinePersistence.Read<MachineState>(stateSample, "core");
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
 
         MachinePersistence.Write(stateSample, "furnace", CreateEmptyFurnacePreparationState());
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
         _ = MachinePersistence.Read<FurnaceRuntimeState>(stateSample, "furnace");
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
 
         // 空图只创建自身的索引与泛型缓存，不登记节点、网络或世界服务。
         var noNodes = Array.Empty<MachineEntity>();
         new MechanicalNetworkGraph(new Vector2Int(16, 16), Vector2Int.zero, default(WorldTopologyDomain)).Rebuild(noNodes);
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
         new ElectricalNetworkGraph(default).Rebuild(noNodes);
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
         new FluidNetworkGraph(static cell => cell).Rebuild(noNodes);
-        yield return null;
+        if (ShouldYieldResourceWork()) yield return null;
 
         foreach (RuntimeItemDefinition source in ItemDefinitions.Values)
         {
@@ -51,32 +51,32 @@ public partial class GameRes
                 continue;
             }
             MachineContent.GetOrCreateDefinitionContent(definition, this);
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
             ItemData instance = source.CreateItemData();
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
             ItemData snapshot = ItemInstanceDataFactory.CloneRuntime(instance);
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
             MachinePersistence.Write(snapshot, "core", new MachineState());
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
             MachinePersistence.Write(snapshot, "furnace", CreateEmptyFurnacePreparationState());
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
             var entity = new MachineEntity { Definition = definition, Snapshot = snapshot, State = new MachineState() };
-            yield return null;
+            if (ShouldYieldResourceWork()) yield return null;
 
             // 不经可被 MOD 替换的玩法工厂；取消或失败也释放这份私有库存订阅。
             using (var furnace = new FurnaceLogic(entity))
             {
                 if (furnace.Data.IsSmelting || furnace.IsBurning || !FurnacePreparationInventoriesAreEmpty(furnace))
                     throw new InvalidOperationException("炉体缓存预备必须使用熄火且全空的独立库存：" + source.Id);
-                yield return null;
+                if (ShouldYieldResourceWork()) yield return null;
                 furnace.Capture();
-                yield return null;
+                if (ShouldYieldResourceWork()) yield return null;
                 furnace.Tick(0f);
                 _ = furnace.CalculateMaximumTemperature(0f);
                 furnace.ConsumeFuel(0f);
-                yield return null;
+                if (ShouldYieldResourceWork()) yield return null;
                 FurnaceMaterialHeating.Process(furnace.Input, furnace.Output, TemperatureMgr.DefaultAmbientTemperature, .1f);
-                yield return null;
+                if (ShouldYieldResourceWork()) yield return null;
             }
         }
     }

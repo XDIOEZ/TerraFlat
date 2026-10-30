@@ -27,7 +27,8 @@ public partial class GameRes
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
         }, () => preparingInPlaceReload || ShouldKeepCurrentResourceLoadingInBackground,
-            () => GameplayTestResourceCache.Active ? 8d : (double?)null);
+            () => ResolveResourceWorkBudget(completingInitialResourceLoad, preparingInPlaceReload,
+                GameplayTestResourceCache.Active), concurrentStages: completingInitialResourceLoad && !preparingInPlaceReload);
         List<ItemDefinitionDto> itemSources = null;
         ResourceLoadPipeline.PrefetchedResourceData<List<ItemDefinitionDto>> itemInputs = null;
         ResourceLoadPipeline.PrefetchedResourceData<BuffCatalogLoader.BuffCatalogPreparation> buffInputs = null;
@@ -71,15 +72,15 @@ public partial class GameRes
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
         plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
         plan.Add("players", "加载玩家创建配置", 1,
-            () => LoadCatalog<PlayerCreationTemplateCatalogConfig>(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
+            PrepareConfigurationCatalog<PlayerCreationTemplateCatalogConfig>(plan, PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
         plan.Add("time", "加载时间系统配置", 1,
-            () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+            PrepareConfigurationCatalog<TimeSystemConfigCatalog>(plan, TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
         plan.Add("greenhouse", "加载大气温室效应配置", 1,
-            () => LoadCatalog<AtmosphericGreenhouseConfiguration>(AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
+            PrepareConfigurationCatalog<AtmosphericGreenhouseConfiguration>(plan, AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
                 AtmosphericGreenhouseConfigurationService.ReplaceConfiguration));
         plan.Add("water-current", "加载水流推动配置", 1,
-            () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
+            PrepareConfigurationCatalog<WaterCurrentPushCatalog>(plan, WaterCurrentPushConfigLoader.LoadBuiltInAsync,
                 WaterCurrentPushConfigService.ReplaceCatalog));
         plan.Add("startup-ready", "准备主菜单", 0.5f,
             PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
@@ -90,7 +91,7 @@ public partial class GameRes
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
-        plan.Add("prefabs", "加载运行时预制体", 20, () => LoadPrefabCatalog(itemSources), "item-manifest");
+        plan.Add("prefabs", "加载运行时预制体", 20, () => LoadPrefabCatalog(itemSources), "item-manifest", "startup-ui");
         plan.Add("tiles", "加载地形图块", 3, () => LoadAssetGroup<TileBase>("TileBase", tileBaseDict, tile => tile.name, true), "addressables");
         plan.Add("tile-blocks", "加载地块 JSON 定义", 3,
             () => LoadCatalog<int>((done, fail) => TileDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "tiles");
@@ -99,7 +100,7 @@ public partial class GameRes
         plan.Add("skills", "加载技能资源", 2, () => LoadAssetGroup<BaseSkill>("Skill", SkillDict, asset => asset.name, true), "addressables");
         plan.Add("items", "构建物品定义", 25,
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
-            "prefabs", "loot", "tile-blocks");
+            "prefabs", "loot", "tile-blocks", "skills");
         plan.Add("actors", "构建生物定义", 15,
             LoadActorCatalog, "items");
         plan.Add("animal-skills", "加载动物技能", 1,
@@ -113,11 +114,11 @@ public partial class GameRes
             () => LoadCatalog<RiverGenerationConfigCatalog>(RiverGenerationConfigLoader.LoadBuiltInAsync,
                 RiverGenerationConfigService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
-            LoadRecipeCatalog, "items");
+            LoadRecipeCatalog, "items", "actors");
         plan.Add("buffs", "加载状态效果", 2,
-            LoadBuffCatalog, "items");
+            LoadBuffCatalog, "addressables");
         plan.Add("liquids", "加载液体定义", 1,
-            () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items", "actors", "buffs");
         plan.Add("fluids", "加载工业流体与星球大气", 1,
             () => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "liquids");
         plan.Add("space", "构建 JSON 星球模板与独立地表", 1,
@@ -126,7 +127,7 @@ public partial class GameRes
         plan.Add("contamination", "加载污染层定义", 1,
             () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,
-            () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items");
+            () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items", "actors");
         plan.Add("texts", "加载文字库", 1,
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
@@ -145,6 +146,13 @@ public partial class GameRes
         plan.Add("machine-prewarm", "预备机器快照与炉体缓存", 2,
             PrewarmMachineResources, "combat-prewarm");
         return plan;
+    }
+
+    /// <summary>诊断读取正式阶段依赖副本，不启动资源请求或修改当前目录。</summary>
+    internal IReadOnlyDictionary<string, string[]> CaptureResourceStageDependencies()
+    {
+        using ResourceLoadPipeline plan = CreateResourceLoadPlan();
+        return plan.CaptureDependencies();
     }
 
     private IEnumerator ValidateFinalResourceCatalog()
@@ -167,6 +175,16 @@ public partial class GameRes
     #endregion
 
     #region 目录加载契约
+
+    /// <summary>独立配置与资源目录初始化重叠读取，只有原阶段执行时才校验结果并发布。</summary>
+    internal static Func<IEnumerator> PrepareConfigurationCatalog<T>(ResourceLoadPipeline plan,
+        Func<Action<T>, Action<Exception>, IEnumerator> load, Action<T> register)
+    {
+        if (StreamingAssetsTextLoader.RequiresWebRequest(Application.streamingAssetsPath))
+            return () => LoadCatalog(load, register);
+        ResourceLoadPipeline.PrefetchedResourceData<T> preparation = plan.Prefetch(load);
+        return () => LoadCatalog<T>((done, _) => preparation.Wait(done), register);
+    }
 
     /// <summary>将目录加载器的回调转换为统一异常语义；漏报完成与返回空目录都属于错误。</summary>
     private static IEnumerator LoadCatalog<T>(Func<Action<T>, Action<Exception>, IEnumerator> load, Action<T> register)
