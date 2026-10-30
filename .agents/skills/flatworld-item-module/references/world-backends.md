@@ -7,6 +7,7 @@
 
 - `Mod_BaseDroper.StaticDropItem_Pos` 是旧入口的唯一装配流程，先交 `DroppedItemService.ScheduleLegacyDrop`，拒绝后才用完整 Item 轨迹；`Mod_Droping` 共用入口及曲线/本机投影计算，归属、旋转和落水生命周期仍由各调用方维护。
 - 单机 DroppedItemService.Spawn/SpawnLoot：passive 为纯C#载荷+近镜头池Sprite，interactive 为完整 Item，需飞行模块效果用后者+IDroppedItemSpawnContextReceiver。两者复制独立载荷/新GUID，完整Item注册前清载荷GUID，不改来源身份。普通掉落缩放0.5、destination定精确点；联机仍Item权威链。
+- 轻量运动的基础/飞行/入水状态由三张复用结构体数组持有；外部按稳定ID查询，步进只按活动下标读写。删除用末项补位并修正双向索引，Clear只清计数和身份表，冷世界可复用容量。回归 `item_runtime/drop_motion_storage`。
 - 太空 SpaceSession 接管，SpaceDropView 仅冷载荷/Sprite，不 Load/ModuleInit 或实例化原建筑设备。ShipWreck 一个无设备模块Item存组成，回收后才释载荷；拾取走正式库存事务。
 - 两后端共 WorldItemMatterRules/ThermalRuntime.AdvanceAmbient，完整Item注册/加载建立基线、逐件累计间隔分帧。高温液体接触读物质 temperature/contactHeatingPerSecond，到 matter.ignitionTemperature 才点燃，设备可显式速率；airExposure 仅普通干燥。已有 Mod_Combustion 复用且不再扣材料堆，两后端共火焰粒子。
 - 完整散物结构/燃烧引用依结构事件、模块版本、载荷引用、运行代际失效；同件末尾可用已验结构更新火焰，帧表现再验。启停/燃烧/登记/飞行/附着实时读。轻量单Tick共地形寻址，世界/代际变重建，每样本权威，入水/浮力/接触共液体定义，不跨燃烧回调存温度源。

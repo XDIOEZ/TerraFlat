@@ -13,6 +13,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("processing/cold_fuel_candidates", ColdFuelCandidates);
         operations.Add("processing/cold_fuel_transfer", ColdFuelTransfer);
         operations.Add("processing/cold_motion_workspace", ColdMotionWorkspace);
+        operations.Add("item_runtime/drop_motion_storage", DroppedMotionStorage);
         operations.Add("item_runtime/drop_visibility_broadphase", DropVisibilityBroadphase);
         operations.Add("surface_fluids/bottom_recovery", BottomRecovery);
     }
@@ -232,6 +233,122 @@ public static partial class GameplayTestSystemProbe
             ["recoveredPosition"] = recovered[0].Position.x, ["repeatedMotionBytes"] = allocated
         };
     }
+    #endregion
+
+    #region 掉落物运动表增删与复用采样
+
+    private static JObject CaptureDroppedMotionStorage(LightweightDroppedItemSimulation simulation,
+        List<LightweightDroppedChange> changes)
+    {
+        var items = new JObject();
+        foreach (int id in simulation.Ids)
+        {
+            LightweightDroppedBody body = simulation.Get(id);
+            bool flying = simulation.TryGetFlight(id, out LightweightDroppedFlight flight);
+            bool enteringWater = simulation.TryGetWater(id, out LightweightDroppedWaterTransition water);
+            items[id.ToString()] = new JObject
+            {
+                ["x"] = body.Position.x, ["amount"] = body.Amount, ["rotation"] = body.Rotation,
+                ["height"] = body.VisualHeight, ["waterKind"] = body.WaterKind, ["depth"] = body.LiquidDepth,
+                ["flying"] = flying, ["flightElapsed"] = flight.Elapsed,
+                ["enteringWater"] = enteringWater, ["waterElapsed"] = water.Elapsed
+            };
+        }
+        var events = new JArray();
+        foreach (LightweightDroppedChange change in changes)
+            events.Add(new JObject { ["id"] = change.Id, ["kind"] = change.Kind });
+        return new JObject { ["count"] = simulation.Count, ["items"] = items, ["changes"] = events };
+    }
+
+    // 只通过正式接口交错增删，Lua 核对补位后的身份、轨迹、水态和稳态分配。
+    private static JObject DroppedMotionStorage(JObject args)
+    {
+        using var simulation = new LightweightDroppedItemSimulation();
+        var changes = new List<LightweightDroppedChange>(128);
+        for (int id = 1; id <= 9; id++)
+        {
+            bool flying = id % 2 == 0 || id == 9;
+            bool enteringWater = id % 3 == 0;
+            float2 start = new(id * 10f, 0f), end = start + new float2(4f, 0f);
+            simulation.Create(new LightweightDroppedBody
+            {
+                Id = id, Position = start, Scale = new float2(.5f), Amount = id,
+                WaterKind = (byte)(enteringWater ? 1 : 0)
+            }, flying ? new LightweightDroppedFlight
+            {
+                Start = start, End = end, Control = (start + end) * .5f,
+                Duration = id == 2 ? .25f : 2f, ArcHeight = 2f, RotationSpeed = 10f
+            } : null, enteringWater ? new LightweightDroppedWaterTransition
+            {
+                TargetDepth = .8f, Duration = id == 3 ? .25f : 2f
+            } : null);
+        }
+        simulation.Remove(1);
+        simulation.Remove(4);
+        simulation.Remove(6);
+        simulation.Remove(999);
+        var result = new JObject { ["removed"] = CaptureDroppedMotionStorage(simulation, changes) };
+        simulation.Step(.25f, default, changes);
+        result["stepped"] = CaptureDroppedMotionStorage(simulation, changes);
+
+        LightweightDroppedBody edited = simulation.Get(9);
+        edited.Amount = 37f;
+        simulation.Set(edited);
+        edited = simulation.Get(8);
+        edited.WaterKind = 2;
+        simulation.Set(edited);
+        simulation.SetWater(9, new LightweightDroppedWaterTransition
+            { StartDepth = .1f, TargetDepth = .6f, Duration = 1f });
+        simulation.SetWater(8, new LightweightDroppedWaterTransition
+            { TargetDepth = 1f, Duration = .25f, RecedeDuration = .25f });
+        simulation.SetWater(999, null);
+        simulation.Remove(2);
+        simulation.Remove(3);
+        simulation.Step(.25f, default, changes);
+        result["updated"] = CaptureDroppedMotionStorage(simulation, changes);
+        simulation.Remove(9);
+        simulation.SetWater(8, null);
+        changes.Clear();
+        result["cancelled"] = CaptureDroppedMotionStorage(simulation, changes);
+        simulation.SetWater(8, new LightweightDroppedWaterTransition
+            { StartDepth = 1f, TargetDepth = 1f, Duration = .25f, RecedeDuration = .25f });
+        simulation.Step(.5f, default, changes);
+        result["sunk"] = CaptureDroppedMotionStorage(simulation, changes);
+        simulation.Create(new LightweightDroppedBody { Id = 1, Amount = 99f, Position = new float2(-.5f) });
+        simulation.Step(2f, default, changes);
+        result["landed"] = CaptureDroppedMotionStorage(simulation, changes);
+
+        simulation.Clear();
+        result["clearedCount"] = simulation.Count;
+        result["clearedContains"] = simulation.Contains(8);
+        simulation.Create(new LightweightDroppedBody { Id = 8, Amount = 3f, Position = new float2(-3f, -2f) });
+        simulation.Step(1f, default, changes);
+        result["reused"] = CaptureDroppedMotionStorage(simulation, changes);
+
+        simulation.Clear();
+        for (int id = 1; id <= 64; id++)
+            simulation.Create(new LightweightDroppedBody { Id = id, Amount = 1f, WaterKind = 1 },
+                new LightweightDroppedFlight { End = new float2(1f), Duration = 10000f },
+                new LightweightDroppedWaterTransition { TargetDepth = .5f, Duration = 10000f });
+        for (int i = 0; i < 32; i++) simulation.Step(.001f, default, changes);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 128; i++) simulation.Step(.001f, default, changes);
+        result["motionAllocatedBytes"] = GC.GetAllocatedBytesForCurrentThread() - before;
+        before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 32; i++)
+        {
+            simulation.Clear();
+            simulation.Create(new LightweightDroppedBody { Id = 9, Amount = 1f },
+                new LightweightDroppedFlight { Duration = 1f },
+                new LightweightDroppedWaterTransition { Duration = 1f });
+            simulation.Step(.25f, default, changes);
+            simulation.Remove(9);
+        }
+        result["reuseAllocatedBytes"] = GC.GetAllocatedBytesForCurrentThread() - before;
+        result["finalCount"] = simulation.Count;
+        return result;
+    }
+
     #endregion
 
     #region 河底物品状态与拾取采样

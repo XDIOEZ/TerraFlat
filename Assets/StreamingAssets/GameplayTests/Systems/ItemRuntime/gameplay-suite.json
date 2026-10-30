@@ -5,6 +5,12 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "item_runtime_drop_motion_gameplay",
+      "name": "轻量掉落物真实拾取、余量保存与原地续捡",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/drop-motion-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "item_mod_network_gameplay",
       "name": "真实物品生命周期、MOD Lua与网络副本链路",
       "luaPath": "GameplayTests/Systems/ItemRuntime/gameplay.lua",

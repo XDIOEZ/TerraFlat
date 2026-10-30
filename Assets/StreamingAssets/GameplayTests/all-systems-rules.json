@@ -293,6 +293,12 @@
       "enabled": true
     },
     {
+      "id": "item_runtime_drop_motion_rules",
+      "name": "轻量掉落物运动表、身份补位与工作区复用",
+      "luaPath": "GameplayTests/Systems/ItemRuntime/drop-motion.lua",
+      "enabled": true
+    },
+    {
       "id": "item_runtime_rules",
       "name": "物品实体与模块运行规则与边界",
       "luaPath": "GameplayTests/Systems/ItemRuntime/rules.lua",

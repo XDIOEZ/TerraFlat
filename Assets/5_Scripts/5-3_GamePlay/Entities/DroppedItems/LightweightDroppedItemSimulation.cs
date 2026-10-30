@@ -60,18 +60,44 @@ namespace FlatWorld.DroppedItems
     /// </summary>
     public sealed class LightweightDroppedItemSimulation : IDisposable
     {
-        #region 轻量运动与水态推进
+        #region 连续热数据与活动表索引
 
-        private readonly Dictionary<int, LightweightDroppedBody> bodies = new();
-        private readonly Dictionary<int, LightweightDroppedFlight> flights = new();
-        private readonly Dictionary<int, LightweightDroppedWaterTransition> waters = new();
-        private readonly List<int> flightScratch = new();
-        private readonly List<int> waterScratch = new();
+        private struct DroppedBodyStorageEntry
+        {
+            public LightweightDroppedBody Body;
+            public int FlightIndex;
+            public int WaterIndex;
+        }
+
+        private struct DroppedFlightStorageEntry
+        {
+            public int BodyIndex;
+            public LightweightDroppedFlight State;
+        }
+
+        private struct DroppedWaterStorageEntry
+        {
+            public int BodyIndex;
+            public LightweightDroppedWaterTransition State;
+        }
+
+        // ID 只用于外部寻址，运动表通过下标直接读写唯一一份物体状态。
+        private readonly Dictionary<int, int> bodyIndices = new();
+        private DroppedBodyStorageEntry[] bodies = Array.Empty<DroppedBodyStorageEntry>();
+        private DroppedFlightStorageEntry[] flights = Array.Empty<DroppedFlightStorageEntry>();
+        private DroppedWaterStorageEntry[] waters = Array.Empty<DroppedWaterStorageEntry>();
+        private int bodyCount;
+        private int flightCount;
+        private int waterCount;
         private bool disposed;
 
-        public int Count => bodies.Count;
+        public int Count => bodyCount;
         public bool IsCreated => !disposed;
-        public IEnumerable<int> Ids => bodies.Keys;
+        public IEnumerable<int> Ids => bodyIndices.Keys;
+
+        #endregion
+
+        #region 物体和短期运动登记
 
         public void Create(
             LightweightDroppedBody body,
@@ -79,7 +105,7 @@ namespace FlatWorld.DroppedItems
             LightweightDroppedWaterTransition? water = null)
         {
             ThrowIfDisposed();
-            if (body.Id == 0 || bodies.ContainsKey(body.Id))
+            if (body.Id == 0 || bodyIndices.ContainsKey(body.Id))
                 throw new ArgumentException("轻量掉落物 ID 为空或重复。", nameof(body));
             if (!math.all(math.isfinite(body.Position)) || !math.all(math.isfinite(body.Scale)) ||
                 !math.all(math.isfinite(new float4(body.Amount, body.Rotation, body.VisualHeight, body.LiquidDepth))) ||
@@ -105,53 +131,113 @@ namespace FlatWorld.DroppedItems
                     throw new ArgumentException("轻量掉落物水线过渡无效。", nameof(water));
             }
 
-            bodies.Add(body.Id, body);
-            if (flight.HasValue) flights.Add(body.Id, flight.Value);
-            if (water.HasValue) waters.Add(body.Id, water.Value);
+            EnsureStorageCapacity(ref bodies, bodyCount + 1);
+            int bodyIndex = bodyCount++;
+            bodyIndices.Add(body.Id, bodyIndex);
+            bodies[bodyIndex] = new DroppedBodyStorageEntry { Body = body, FlightIndex = -1, WaterIndex = -1 };
+            if (flight.HasValue)
+            {
+                EnsureStorageCapacity(ref flights, flightCount + 1);
+                bodies[bodyIndex].FlightIndex = flightCount;
+                flights[flightCount++] = new DroppedFlightStorageEntry { BodyIndex = bodyIndex, State = flight.Value };
+            }
+            if (water.HasValue) SetWater(body.Id, water);
         }
 
-        public bool Contains(int id) => !disposed && bodies.ContainsKey(id);
-        public LightweightDroppedBody Get(int id) => bodies[id];
+        public bool Contains(int id) => !disposed && bodyIndices.ContainsKey(id);
+        public LightweightDroppedBody Get(int id) => bodies[bodyIndices[id]].Body;
         public void Set(LightweightDroppedBody body)
         {
             ThrowIfDisposed();
-            if (!bodies.ContainsKey(body.Id))
-                throw new KeyNotFoundException($"轻量掉落物不存在：{body.Id}");
-            bodies[body.Id] = body;
+            bodies[bodyIndices[body.Id]].Body = body;
         }
 
-        public bool TryGetFlight(int id, out LightweightDroppedFlight flight) => flights.TryGetValue(id, out flight);
-        public bool TryGetWater(int id, out LightweightDroppedWaterTransition water) => waters.TryGetValue(id, out water);
+        public bool TryGetFlight(int id, out LightweightDroppedFlight flight)
+        {
+            flight = default;
+            if (!bodyIndices.TryGetValue(id, out int bodyIndex) || bodies[bodyIndex].FlightIndex < 0) return false;
+            flight = flights[bodies[bodyIndex].FlightIndex].State;
+            return true;
+        }
+
+        public bool TryGetWater(int id, out LightweightDroppedWaterTransition water)
+        {
+            water = default;
+            if (!bodyIndices.TryGetValue(id, out int bodyIndex) || bodies[bodyIndex].WaterIndex < 0) return false;
+            water = waters[bodies[bodyIndex].WaterIndex].State;
+            return true;
+        }
 
         public void SetWater(int id, LightweightDroppedWaterTransition? transition)
         {
             ThrowIfDisposed();
-            if (!bodies.ContainsKey(id)) return;
-            if (transition.HasValue) waters[id] = transition.Value;
-            else waters.Remove(id);
+            if (!bodyIndices.TryGetValue(id, out int bodyIndex)) return;
+            ref DroppedBodyStorageEntry entry = ref bodies[bodyIndex];
+            if (!transition.HasValue) { RemoveWaterStorageEntry(entry.WaterIndex); return; }
+            if (entry.WaterIndex < 0)
+            {
+                EnsureStorageCapacity(ref waters, waterCount + 1);
+                entry.WaterIndex = waterCount;
+                waters[waterCount++] = new DroppedWaterStorageEntry { BodyIndex = bodyIndex };
+            }
+            waters[entry.WaterIndex].State = transition.Value;
         }
 
         public void Remove(int id)
         {
-            if (disposed) return;
-            bodies.Remove(id);
-            flights.Remove(id);
-            waters.Remove(id);
+            if (disposed || !bodyIndices.Remove(id, out int bodyIndex)) return;
+            RemoveFlightStorageEntry(bodies[bodyIndex].FlightIndex);
+            RemoveWaterStorageEntry(bodies[bodyIndex].WaterIndex);
+            int lastIndex = --bodyCount;
+            if (bodyIndex == lastIndex) return;
+            bodies[bodyIndex] = bodies[lastIndex];
+            ref DroppedBodyStorageEntry moved = ref bodies[bodyIndex];
+            bodyIndices[moved.Body.Id] = bodyIndex;
+            if (moved.FlightIndex >= 0) flights[moved.FlightIndex].BodyIndex = bodyIndex;
+            if (moved.WaterIndex >= 0) waters[moved.WaterIndex].BodyIndex = bodyIndex;
         }
+
+        private static void EnsureStorageCapacity<T>(ref T[] entries, int required)
+        {
+            if (entries.Length < required)
+                Array.Resize(ref entries, Math.Max(required, Math.Max(4, entries.Length * 2)));
+        }
+
+        // 活动条目删除后用末项补位，并修正所属物体的反向索引。
+        private void RemoveFlightStorageEntry(int index)
+        {
+            if (index < 0) return;
+            bodies[flights[index].BodyIndex].FlightIndex = -1;
+            int lastIndex = --flightCount;
+            if (index == lastIndex) return;
+            flights[index] = flights[lastIndex];
+            bodies[flights[index].BodyIndex].FlightIndex = index;
+        }
+
+        private void RemoveWaterStorageEntry(int index)
+        {
+            if (index < 0) return;
+            bodies[waters[index].BodyIndex].WaterIndex = -1;
+            int lastIndex = --waterCount;
+            if (index == lastIndex) return;
+            waters[index] = waters[lastIndex];
+            bodies[waters[index].BodyIndex].WaterIndex = index;
+        }
+
+        #endregion
+
+        #region 飞行和入水过渡连续推进
 
         public void Step(float deltaTime, WorldTopologyDomain domain, List<LightweightDroppedChange> changes)
         {
             changes.Clear();
-            if (disposed || deltaTime <= 0f || bodies.Count == 0) return;
+            if (disposed || deltaTime <= 0f || bodyCount == 0) return;
 
-            flightScratch.Clear();
-            flightScratch.AddRange(flights.Keys);
-            for (int i = 0; i < flightScratch.Count; i++)
+            for (int i = 0; i < flightCount;)
             {
-                int id = flightScratch[i];
-                if (!bodies.TryGetValue(id, out LightweightDroppedBody body) ||
-                    !flights.TryGetValue(id, out LightweightDroppedFlight flight))
-                    continue;
+                ref DroppedFlightStorageEntry entry = ref flights[i];
+                ref LightweightDroppedBody body = ref bodies[entry.BodyIndex].Body;
+                ref LightweightDroppedFlight flight = ref entry.State;
 
                 flight.Elapsed = math.min(flight.Duration, flight.Elapsed + deltaTime);
                 float t = math.saturate(flight.Elapsed / math.max(0.0001f, flight.Duration));
@@ -163,22 +249,17 @@ namespace FlatWorld.DroppedItems
                     ? 0f
                     : visual.y - ground.y + math.sin(t * math.PI) * flight.ArcHeight;
                 body.Rotation += flight.RotationSpeed * deltaTime;
-                bodies[id] = body;
-
                 bool landed = t >= 1f;
-                if (landed) flights.Remove(id);
-                else flights[id] = flight;
-                changes.Add(new LightweightDroppedChange { Id = id, Kind = (byte)(landed ? 1 : 0) });
+                if (landed) RemoveFlightStorageEntry(i);
+                else i++;
+                changes.Add(new LightweightDroppedChange { Id = body.Id, Kind = (byte)(landed ? 1 : 0) });
             }
 
-            waterScratch.Clear();
-            waterScratch.AddRange(waters.Keys);
-            for (int i = 0; i < waterScratch.Count; i++)
+            for (int i = 0; i < waterCount;)
             {
-                int id = waterScratch[i];
-                if (!bodies.TryGetValue(id, out LightweightDroppedBody body) ||
-                    !waters.TryGetValue(id, out LightweightDroppedWaterTransition transition))
-                    continue;
+                ref DroppedWaterStorageEntry entry = ref waters[i];
+                ref LightweightDroppedBody body = ref bodies[entry.BodyIndex].Body;
+                ref LightweightDroppedWaterTransition transition = ref entry.State;
 
                 float endTime = transition.Duration +
                     (body.WaterKind == 2 ? math.max(0f, transition.RecedeDuration) : 0f);
@@ -194,12 +275,11 @@ namespace FlatWorld.DroppedItems
                 bool reachedBottom = finished && body.WaterKind == 2;
                 // 沉没结束只转为河底静止态，实体、位置和数量继续保留给拾取与存档。
                 if (reachedBottom) body.WaterKind = LightweightDroppedBody.BottomWaterKind;
-                bodies[id] = body;
-                if (finished) waters.Remove(id);
-                else waters[id] = transition;
+                if (finished) RemoveWaterStorageEntry(i);
+                else i++;
                 changes.Add(new LightweightDroppedChange
                 {
-                    Id = id,
+                    Id = body.Id,
                     Kind = (byte)(finished ? (reachedBottom ? 3 : 2) : 0)
                 });
             }
@@ -219,11 +299,8 @@ namespace FlatWorld.DroppedItems
         public void Clear()
         {
             ThrowIfDisposed();
-            bodies.Clear();
-            flights.Clear();
-            waters.Clear();
-            flightScratch.Clear();
-            waterScratch.Clear();
+            bodyIndices.Clear();
+            bodyCount = flightCount = waterCount = 0;
         }
 
         private void ThrowIfDisposed()

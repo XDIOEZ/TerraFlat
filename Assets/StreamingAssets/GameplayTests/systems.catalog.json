@@ -1076,6 +1076,7 @@
       ],
       "dependsOn": [],
       "ruleCaseIds": [
+        "item_runtime_drop_motion_rules",
         "item_runtime_rules",
         "mineral_property_rules"
       ],
@@ -1086,6 +1087,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/ItemRuntime/README.md",
       "integrationCaseIds": [
+        "item_runtime_drop_motion_gameplay",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
