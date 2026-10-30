@@ -158,17 +158,18 @@ public static class GameplayWorldRegistry
     public static void Add(GameplayWorldRuntime world) => worlds.Add(world.Key, world);
     public static void Remove(string key) => worlds.Remove(key);
     public static bool TryGet(string key, out GameplayWorldRuntime world) => worlds.TryGetValue(key ?? "", out world);
-    public static IDisposable UseWorld(string key)
+    public static WorldExecutionScope UseWorld(string key)
     {
         var old = current;
         current = worlds[key];
-        return new Restore(() => current = old);
+        return new WorldExecutionScope(old);
     }
-    private sealed class Restore : IDisposable
+    public struct WorldExecutionScope : IDisposable
     {
-        private readonly Action action;
-        public Restore(Action action) => this.action = action;
-        public void Dispose() => action();
+        private readonly GameplayWorldRuntime previous;
+        private bool active;
+        public WorldExecutionScope(GameplayWorldRuntime previous) { this.previous = previous; active = true; }
+        public void Dispose() { if (!active) return; active = false; current = previous; }
     }
 }
 

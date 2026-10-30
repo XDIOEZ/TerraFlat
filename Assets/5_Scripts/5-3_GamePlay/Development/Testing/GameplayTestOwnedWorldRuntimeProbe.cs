@@ -28,13 +28,19 @@ public static class GameplayTestOwnedWorldRuntimeProbe
         string owner = ChunkMgr.ResolveOwnedWorldRuntimeIdentity("ship:probe", "surface:probe");
         string context = ChunkMgr.ResolveOwnedWorldRuntimeIdentity(null, "surface:probe");
         string fallback = ChunkMgr.ResolveOwnedWorldRuntimeIdentity(null, null);
+        string initialWorld = GameplayWorldRegistry.ExecutionWorldKey;
+        var emptyScope = default(GameplayWorldRegistry.WorldExecutionScope);
+        emptyScope.Dispose();
         using var world = new WorldRuntime(owner, 1);
         return new JObject
         {
             ["owner"] = owner,
             ["worldId"] = world.WorldId,
             ["context"] = context,
-            ["fallback"] = fallback
+            ["fallback"] = fallback,
+            ["valueExecutionScope"] = typeof(GameplayWorldRegistry.WorldExecutionScope).IsValueType,
+            ["valueMachineScope"] = typeof(MachineWorld.ScopeLease).IsValueType,
+            ["emptyScopePreservedContext"] = !emptyScope.IsActive && GameplayWorldRegistry.ExecutionWorldKey == initialWorld
         };
     }
 

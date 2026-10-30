@@ -262,7 +262,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>每个模拟 Tick 同步外部代理、少量战略中心、地图版本和事件，不逐个读取 AI GameObject。</summary>
         public void Step(float deltaTime, double time, AiecsSimulationRange range = default)
         {
-            using var worldScope = GameplayWorldRegistry.ExecutionWorldKey == worldKey ? null : GameplayWorldRegistry.UseWorld(worldKey);
+            using var worldScope = GameplayWorldRegistry.ExecutionWorldKey == worldKey ? default : GameplayWorldRegistry.UseWorld(worldKey);
             if (suspended)
             {
                 double paused = math.max(0d, time - suspendedAt);

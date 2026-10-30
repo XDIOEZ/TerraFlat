@@ -583,7 +583,7 @@ public static partial class DroppedItemService
         foreach (var pair in worlds) if (pair.Value.Runtime?.IsCreated == true) tickWorldKeys.Add(pair.Key);
         foreach (string key in tickWorldKeys)
         {
-            using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : default;
             if (GameplayWorldRegistry.ExecutionWorldKey == key)
             {
                 worlds[key].Runtime.BindScenePresentation(ResolvePresentationSceneForWorld(key));

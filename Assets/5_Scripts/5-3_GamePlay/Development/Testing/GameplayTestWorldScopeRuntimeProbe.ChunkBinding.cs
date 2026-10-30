@@ -44,6 +44,7 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
             }
             yield return GameplayWorldRegistry.PrepareWorld(targetWorld, point);
             GameplayWorldRuntime target = GameplayWorldRegistry.GetOrCreate(targetWorld);
+            result["executionScopes"] = CaptureWorldExecutionScopeSample(initialWorld, targetWorld);
             double deadline = Time.realtimeSinceStartupAsDouble + 90d;
             while (!target.Chunks.AreRuntimeWindowPresentationsReady || target.Chunks.PendingRuntimeChunkPresentationCount > 0)
             {

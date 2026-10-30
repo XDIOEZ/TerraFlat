@@ -24,7 +24,7 @@ public static partial class MachineWorld
         foreach (string key in backgroundWorldKeys)
         {
             bool loaded = GameplayWorldRegistry.TryGet(key, out _);
-            using var worldScope = loaded ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var worldScope = loaded ? GameplayWorldRegistry.UseWorld(key) : default;
             using var lease = UseScope(key);
             ScopeState background = scope;
             background.BackgroundSimulation = true;

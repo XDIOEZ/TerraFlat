@@ -18,7 +18,7 @@ public static partial class GameplayTestRuntimeProbe
     // 独立坩埚绑定正式模块，出料和失败撤销均走生产事务，不在夹具里扣量。
     private static JObject CaptureVesselContentsSpill(Player player, JObject args)
     {
-        using IDisposable scope = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
+        using var scope = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
         var root = new GameObject("Lua Contents Crucible") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
         SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);

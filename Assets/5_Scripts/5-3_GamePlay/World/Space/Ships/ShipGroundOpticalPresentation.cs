@@ -63,7 +63,7 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrEmpty(world)) return;
             if (!occupancySubscriptions.ContainsKey(world))
             {
-                using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+                using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
                 occupancySubscriptions.Add(world, BuildingOccupancyRegistry.SubscribeCells(cell => RefreshNeighborhood(world, cell)));
             }
         }
@@ -98,7 +98,7 @@ namespace FlatWorld.Spaceflight
         private static void AddCell(Entry entry)
         {
             entry.World = GameplayWorldRegistry.GetItemWorldKey(entry.Item) ?? entry.Item.gameObject.scene.name;
-            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : null;
+            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : default;
             Vector2 logical = WorldLocalPresentation.ToLogical((Vector2)entry.Item.transform.position);
             entry.Cell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(Mathf.FloorToInt(logical.x), Mathf.FloorToInt(logical.y)));
             var key = (entry.World, entry.Cell);
@@ -163,7 +163,7 @@ namespace FlatWorld.Spaceflight
             if (module == null || module.Configuration.Kind != ShipPieceKind.Fiber ||
                 !entries.TryGetValue(module, out Entry entry) || !IsInstalled(entry)) return 0;
             int mask = 0;
-            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : null;
+            using var scope = GameplayWorldRegistry.TryGet(entry.World, out _) ? GameplayWorldRegistry.UseWorld(entry.World) : default;
             if (HasNode(entry.World, entry.Cell + Vector2Int.up)) mask |= 1;
             if (HasNode(entry.World, entry.Cell + Vector2Int.right)) mask |= 2;
             if (HasNode(entry.World, entry.Cell + Vector2Int.down)) mask |= 4;

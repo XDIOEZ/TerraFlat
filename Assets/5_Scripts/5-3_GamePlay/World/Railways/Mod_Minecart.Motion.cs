@@ -355,8 +355,8 @@ public sealed partial class Mod_Minecart
         public void Step(float seconds)
         {
             string worldKey = Cars[0].gameObject.scene.name;
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
-                ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(worldKey) : default;
             if (!(seconds > 0f) || !RefreshPositions())
             {
                 foreach (Mod_Minecart cart in Cars)

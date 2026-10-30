@@ -48,7 +48,7 @@ public static class WorldLiquidFlowObstacles
     {
         if (owner == null || !ownerWorlds.TryGetValue(owner, out string key)) return;
         using var scope = key != GameplayWorldRegistry.ExecutionWorldKey && GameplayWorldRegistry.TryGet(key, out _)
-            ? GameplayWorldRegistry.UseWorld(key) : null;
+            ? GameplayWorldRegistry.UseWorld(key) : default;
         if (!states.TryGetValue(key, out WorldState state) || !state.Owners.Remove(owner, out HashSet<Vector2Int> cells)) return;
         ownerWorlds.Remove(owner);
         foreach (Vector2Int cell in cells)

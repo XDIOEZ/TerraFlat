@@ -631,8 +631,8 @@ public partial class ItemMgr
 
                 DetectorQuerySnapshot query = _inFlightQueries[queryIndex];
                 string worldKey = detector?.item != null ? GameplayWorldRegistry.GetItemWorldKey(detector.item) : GameplayWorldRegistry.ExecutionWorldKey;
-                using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
-                    ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+                using var worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
+                    ? GameplayWorldRegistry.UseWorld(worldKey) : default;
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
                     using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
@@ -841,7 +841,7 @@ public partial class ItemMgr
         int worldId = excludedItem != null ? GameplayWorldRegistry.GetItemWorldIdentity(excludedItem) : GameplayWorldRegistry.ExecutionWorldIdentity;
         if (worldId == 0) return;
         bool hasWorld = GameplayWorldRegistry.TryGet(world, out _);
-        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(world) : null;
+        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(world) : default;
         if (!float.IsFinite(radius) || radius < 0f || !float.IsFinite(center.x) || !float.IsFinite(center.y))
             return;
 

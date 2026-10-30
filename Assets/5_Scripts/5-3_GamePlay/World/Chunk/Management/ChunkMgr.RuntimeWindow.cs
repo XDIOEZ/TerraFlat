@@ -993,7 +993,7 @@ public partial class ChunkMgr
     /// <summary>每帧按管理器归属恢复查询上下文，启动、续步和取消共用同一同步边界。</summary>
     private bool ProcessRuntimePresentationFrame()
     {
-        if (!TryUseRuntimeWorldContext(out IDisposable scope)) return false;
+        if (!TryUseRuntimeWorldContext(out GameplayWorldRegistry.WorldExecutionScope scope)) return false;
         using (scope)
         {
             int startBudget = RuntimeChunkPresentationStartBudget;
@@ -1245,7 +1245,7 @@ public partial class ChunkMgr
         if (binding == null)
             return;
 
-        using var scope = binding.PresentationRoutine != null ? RequireRuntimeWorldContext() : null;
+        using var scope = binding.PresentationRoutine != null ? RequireRuntimeWorldContext() : default;
         if (binding.PresentationRoutine is IDisposable disposable)
             disposable.Dispose();
         binding.PresentationRoutine = null;
@@ -1531,7 +1531,7 @@ public partial class ChunkMgr
             return;
 
         ChunkView view = binding.View;
-        using var scope = view.Model != null ? RequireRuntimeWorldContext() : null;
+        using var scope = view.Model != null ? RequireRuntimeWorldContext() : default;
         binding.View = null;
         bool completed = view.IsBound;
         view.Unbind();
@@ -1547,7 +1547,7 @@ public partial class ChunkMgr
         if (view == null)
             return;
 
-        using var scope = view.Model != null ? RequireRuntimeWorldContext() : null;
+        using var scope = view.Model != null ? RequireRuntimeWorldContext() : default;
         view.Unbind();
         if (view.gameObject.activeSelf)
             view.gameObject.SetActive(false);
@@ -1579,7 +1579,7 @@ public partial class ChunkMgr
             return;
         }
         using var scope = binding.RestoredTerrainChunk != null || binding.PresentationRoutine != null ||
-                          binding.View?.Model != null ? RequireRuntimeWorldContext() : null;
+                          binding.View?.Model != null ? RequireRuntimeWorldContext() : default;
         // 建筑与地形共同离开表现窗；快照失败时保留绑定，不能留下无地形的半艘船。
         if (!GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) &&
             SaveDataMgr.Instance != null && !SaveDataMgr.Instance.TryUnloadRuntimeBuildingsForChunk(address))

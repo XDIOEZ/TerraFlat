@@ -61,7 +61,7 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
 
         if (!ReferenceEquals(world, context.Chunks.WorldRuntime) || manager != context.Chunks)
             BindWorld(context);
-        using var scope = worldKey != GameplayWorldRegistry.ExecutionWorldKey ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+        using var scope = worldKey != GameplayWorldRegistry.ExecutionWorldKey ? GameplayWorldRegistry.UseWorld(worldKey) : default;
         if (deltaTime <= 0f) return;
 
         Vector2 listener = WorldLocalPresentation.ToLogical(player.transform.position);

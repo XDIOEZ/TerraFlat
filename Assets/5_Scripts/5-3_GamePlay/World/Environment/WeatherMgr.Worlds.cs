@@ -77,8 +77,8 @@ public partial class WeatherMgr
         return Vector2.zero;
     }
 
-    private IDisposable EnterOwnedWorld() => !string.IsNullOrEmpty(ownedWorld) &&
-        GameplayWorldRegistry.TryGet(ownedWorld, out _) ? GameplayWorldRegistry.UseWorld(ownedWorld) : null;
+    private GameplayWorldRegistry.WorldExecutionScope EnterOwnedWorld() => !string.IsNullOrEmpty(ownedWorld) &&
+        GameplayWorldRegistry.TryGet(ownedWorld, out _) ? GameplayWorldRegistry.UseWorld(ownedWorld) : default;
 
     private void SetPresentationActive(bool active)
     {

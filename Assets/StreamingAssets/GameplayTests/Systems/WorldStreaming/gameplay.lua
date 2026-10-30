@@ -24,6 +24,13 @@ test.runtime("world_streaming", "incremental_window_roundtrip", {}, function(dat
 end, "真实窗口边界增量、快速折返、数据表现复用与稳定零待办")
 
 test.runtime("world_streaming", "incremental_world_scope", {}, function(data)
+    local scopes = data.executionScopes
+    assert(scopes.outerWorld and scopes.innerWorld and scopes.innerMachineWorld and scopes.nestedRestored
+        and scopes.exceptionRestored and scopes.repeatedDisposePreservedContext and scopes.contextRestored
+        and scopes.machineContextRestored and scopes.scenePreserved,
+        "跨世界作用域的嵌套、异常或重复释放没有正确恢复上下文")
+    assert(scopes.stable and scopes.iterations == 1024 and scopes.allocatedBytes == 0,
+        "真实世界作用域预热后仍产生GC或执行上下文泄漏")
     assert(data.sourceWorld ~= data.targetWorld and data.targetWindowReady and data.targetViewBound
         and data.targetViewWorld == data.targetWorld,
         "地表仍活动时，洞穴真实窗口或 ChunkView 没有在所属世界完成绑定")

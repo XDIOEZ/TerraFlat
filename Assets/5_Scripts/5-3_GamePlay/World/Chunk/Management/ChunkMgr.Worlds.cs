@@ -16,9 +16,9 @@ public partial class ChunkMgr
     public void BindNetworkWorld(string worldKey) => OwnedWorldKey = worldKey;
 
     /// <summary>分帧任务只借用仍归本管理器所有的世界，不补建已经注销的世界。</summary>
-    private bool TryUseRuntimeWorldContext(out IDisposable scope)
+    private bool TryUseRuntimeWorldContext(out GameplayWorldRegistry.WorldExecutionScope scope)
     {
-        scope = null;
+        scope = default;
         string worldKey = !string.IsNullOrEmpty(OwnedWorldKey) ? OwnedWorldKey : WorldRuntime?.WorldId;
         if (string.IsNullOrEmpty(worldKey)) return false;
         if (GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime registered))
@@ -36,12 +36,12 @@ public partial class ChunkMgr
             ReferenceEquals(ExistingInstance, this);
     }
 
-    private IDisposable RequireRuntimeWorldContext()
+    private GameplayWorldRegistry.WorldExecutionScope RequireRuntimeWorldContext()
     {
         // 仅销毁解绑允许复用已核对归属的卸载中上下文，正常流送仍要求世界已加载。
         if (isReleasingOwnedWorldContext && ReferenceEquals(GameplayWorldRegistry.ExecutionChunks, this))
-            return null;
-        if (!TryUseRuntimeWorldContext(out IDisposable scope))
+            return default;
+        if (!TryUseRuntimeWorldContext(out GameplayWorldRegistry.WorldExecutionScope scope))
             throw new InvalidOperationException("[ChunkMgr] 所属世界已注销或管理器已更换，不能在另一世界解绑区块表现。");
         return scope;
     }

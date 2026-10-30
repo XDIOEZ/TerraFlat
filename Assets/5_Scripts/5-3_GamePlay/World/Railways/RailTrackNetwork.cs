@@ -72,7 +72,7 @@ public static class RailTrackNetwork
             world = new WorldTracks();
             string key = track.item.gameObject.scene.name;
             bool knownWorld = GameplayWorldRegistry.TryGet(key, out _);
-            using IDisposable context = knownWorld ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var context = knownWorld ? GameplayWorldRegistry.UseWorld(key) : default;
             if ((knownWorld || UnityEngine.SceneManagement.SceneManager.GetActiveScene() == track.item.gameObject.scene) &&
                 WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)) world.Topology = bounds.ToDomain();
             worlds.Add(scene, world);

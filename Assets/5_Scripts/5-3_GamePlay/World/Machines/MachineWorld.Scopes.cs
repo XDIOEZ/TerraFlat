@@ -125,43 +125,31 @@ public static partial class MachineWorld
 
     #region 销毁阶段借用现有机器作用域
     // 世界释放只切换已有机器状态，不加载目录、建图或登记新作用域。
-    internal static IDisposable UseExistingScopeForOwnerRelease(string key)
+    internal static ScopeLease UseExistingScopeForOwnerRelease(string key)
     {
-        if (string.IsNullOrEmpty(key) || !scopes.TryGetValue(key, out ScopeState existing)) return null;
-        var lease = new ExistingScopeOwnerReleaseLease(scope, scopeOverride);
+        if (string.IsNullOrEmpty(key) || !scopes.TryGetValue(key, out ScopeState existing)) return default;
+        var lease = new ScopeLease(scopeOverride, restoreExistingState: true);
         scope = existing;
         scopeOverride = key;
         return lease;
-    }
-
-    private sealed class ExistingScopeOwnerReleaseLease : IDisposable
-    {
-        private readonly ScopeState previousScope;
-        private readonly string previousOverride;
-        private bool disposed;
-        public ExistingScopeOwnerReleaseLease(ScopeState previousScope, string previousOverride)
-        { this.previousScope = previousScope; this.previousOverride = previousOverride; }
-        public void Dispose()
-        {
-            if (disposed) return;
-            disposed = true;
-            scope = previousScope;
-            scopeOverride = previousOverride;
-        }
     }
     #endregion
 
     public struct ScopeLease : IDisposable
     {
         private readonly string previous;
+        private readonly ScopeState previousScope;
+        private readonly bool restoreExistingState;
         private bool active;
-        internal ScopeLease(string value) { previous = value; active = true; }
+        internal ScopeLease(string value, bool restoreExistingState = false)
+        { previous = value; previousScope = scope; this.restoreExistingState = restoreExistingState; active = true; }
         public void Dispose()
         {
             if (!active) return;
             active = false;
             scopeOverride = previous;
-            EnsureScope();
+            if (restoreExistingState) scope = previousScope;
+            else EnsureScope();
         }
     }
 

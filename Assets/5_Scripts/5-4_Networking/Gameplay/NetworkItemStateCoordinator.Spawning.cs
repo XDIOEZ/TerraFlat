@@ -90,7 +90,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
 
             string world = GameplayWorldRegistry.GetItemWorldKey(item);
-            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
 
             byte[] payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
@@ -157,8 +157,8 @@ namespace FlatWorld.Networking.Gameplay
             byte[] preparedPayload = null)
         {
             string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
-                ? GameplayWorldRegistry.UseWorld(itemWorld) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
+                ? GameplayWorldRegistry.UseWorld(itemWorld) : default;
             if (!NetworkServer.active || !CanSynchronizeWorldItem(item) || item.PersistenceOwner is SpaceSession)
                 return false;
 

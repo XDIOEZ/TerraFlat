@@ -78,7 +78,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (string.IsNullOrEmpty(worldKey)) return;
         bool hasWorld = GameplayWorldRegistry.TryGet(worldKey, out _);
         if (!hasWorld && worldKey != GameplayWorldRegistry.ExecutionWorldKey) return;
-        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+        using var worldScope = hasWorld ? GameplayWorldRegistry.UseWorld(worldKey) : default;
         UpdateWaterState(Mathf.Max(0f, Time.deltaTime));
         ApplyDriftVisualPosition();
     }

@@ -90,8 +90,8 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         return lease;
     }
 
-    private IDisposable EnterWorld() => !string.IsNullOrEmpty(worldKey) && GameplayWorldRegistry.TryGet(worldKey, out _)
-        ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+    private GameplayWorldRegistry.WorldExecutionScope EnterWorld() => !string.IsNullOrEmpty(worldKey) && GameplayWorldRegistry.TryGet(worldKey, out _)
+        ? GameplayWorldRegistry.UseWorld(worldKey) : default;
 
     #endregion
 

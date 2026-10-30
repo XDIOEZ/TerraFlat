@@ -62,7 +62,7 @@ public static class GameplayTestDiscardThrowStaminaProbe
 
     private static JObject CaptureDiscardThrowStaminaTransaction(Player player, JObject args)
     {
-        using IDisposable world = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
+        using var world = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
         var root = new GameObject("[LuaDiscardThrowStamina]");
         root.SetActive(false);
         SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);

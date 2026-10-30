@@ -237,7 +237,7 @@ namespace FlatWorld.Networking.Gameplay
                 using (OwnedStatePoint.Measure()) UpdateOwnedItemState();
             }
             else
-                using (isServer ? NetworkGameplayWorldScope.Use(this) : null) UpdateRemoteMovement();
+                using (isServer ? NetworkGameplayWorldScope.Use(this) : default) UpdateRemoteMovement();
 
             // 本机与服务器共用角色，只在本帧动作完成后统一发布最终状态。
             if (isServer) PublishServerPlayerState();

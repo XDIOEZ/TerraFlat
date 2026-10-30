@@ -51,11 +51,11 @@ public sealed partial class WorldNavigationManager
         return manager;
     }
 
-    public IDisposable UseWorldContext() => string.IsNullOrEmpty(ownedWorldKey) ? null : GameplayWorldRegistry.UseWorld(ownedWorldKey);
+    public GameplayWorldRegistry.WorldExecutionScope UseWorldContext() => string.IsNullOrEmpty(ownedWorldKey) ? default : GameplayWorldRegistry.UseWorld(ownedWorldKey);
 
-    internal bool TryUseExistingWorldForRelease(out IDisposable scope)
+    internal bool TryUseExistingWorldForRelease(out GameplayWorldRegistry.WorldExecutionScope scope)
     {
-        scope = null;
+        scope = default;
         return string.IsNullOrEmpty(ownedWorldKey) ||
             GameplayWorldRegistry.TryUseExistingWorldForOwnerRelease(ownedWorldKey, this, out scope);
     }

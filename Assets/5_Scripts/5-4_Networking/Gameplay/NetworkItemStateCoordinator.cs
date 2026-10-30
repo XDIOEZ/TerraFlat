@@ -310,8 +310,8 @@ namespace FlatWorld.Networking.Gameplay
         private void ProcessServerItem(Item item)
         {
             string itemWorld = GameplayWorldRegistry.GetItemWorldKey(item);
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
-                ? GameplayWorldRegistry.UseWorld(itemWorld) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(itemWorld, out _)
+                ? GameplayWorldRegistry.UseWorld(itemWorld) : default;
             if (!ShouldSynchronize(item))
                 return;
 
@@ -353,8 +353,8 @@ namespace FlatWorld.Networking.Gameplay
                 state.WorldKey != requestedItemWorld || GameplayWorldRegistry.GetItemWorldKey(item) != requestedItemWorld)
                 return;
 
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(state.WorldKey, out _)
-                ? GameplayWorldRegistry.UseWorld(state.WorldKey) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(state.WorldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(state.WorldKey) : default;
             byte[] payload = CaptureSafely(item, out ulong captureVersion, out uint hash);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
                 return;
@@ -512,8 +512,8 @@ namespace FlatWorld.Networking.Gameplay
             // 局部世界的船件和作物由各自的权威快照负责卸载与迁移。
             if (GameplayWorldRegistry.UsesLocalCoordinates(message.WorldKey) &&
                 item.PersistenceOwner is SpaceSession or ChunkAgricultureRenderer) return;
-            using IDisposable worldScope = GameplayWorldRegistry.TryGet(message.WorldKey, out _)
-                ? GameplayWorldRegistry.UseWorld(message.WorldKey) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(message.WorldKey, out _)
+                ? GameplayWorldRegistry.UseWorld(message.WorldKey) : default;
             ItemMgr.Instance.DespawnItem(item, saveData: false);
         }
 
@@ -652,7 +652,7 @@ namespace FlatWorld.Networking.Gameplay
                 return false;
 
             string world = GameplayWorldRegistry.GetItemWorldKey(item);
-            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
 
             Mod_Droping dropping = item.GetComponentInChildren<Mod_Droping>(true);
             if (dropping?.drop == null)

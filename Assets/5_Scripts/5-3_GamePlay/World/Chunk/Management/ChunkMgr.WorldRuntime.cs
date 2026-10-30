@@ -440,7 +440,7 @@ public partial class ChunkMgr
     /// <summary>切换场景时释放表现和生成器，世界数据继续由游戏会话持有。</summary>
     private void ResetWorldRuntimeForSceneChange(bool retainPresentationPool = false)
     {
-        using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
+        using var scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : default;
         try
         {
             PrepareRuntimeSceneUnbinding();
@@ -471,12 +471,12 @@ public partial class ChunkMgr
         if (IsWorldRuntimeShuttingDown)
             return;
 
-        IDisposable scope = null;
+        GameplayWorldRegistry.WorldExecutionScope scope = default;
         bool canReleaseWorld = !destroyingOwner;
         try
         {
             if (!destroyingOwner)
-                scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : null;
+                scope = runtimeChunkManager != null ? RequireRuntimeWorldContext() : default;
             else if (!presentationSceneUnloaded)
             {
                 string worldKey = !string.IsNullOrEmpty(OwnedWorldKey) ? OwnedWorldKey : WorldRuntime?.WorldId;
@@ -543,7 +543,7 @@ public partial class ChunkMgr
         finally
         {
             isReleasingOwnedWorldContext = false;
-            scope?.Dispose();
+            scope.Dispose();
         }
     }
 

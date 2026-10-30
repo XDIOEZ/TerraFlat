@@ -4,6 +4,8 @@ test.system("world_streaming", "runtime_owner_identity", {}, function(data)
         "区块世界模型没有保留已绑定的逻辑所有者身份")
     assert(data.context == "surface:probe" and data.fallback == "world",
         "未绑定所有者时没有沿用正式世界上下文或原有兜底身份")
+    assert(data.valueExecutionScope and data.valueMachineScope and data.emptyScopePreservedContext,
+        "世界/机器作用域没有使用值类型，或默认空作用域改变了执行上下文")
 end, "区块世界模型使用逻辑所有者身份")
 
 test.system("world_streaming", "runtime_owner_handoff", {}, function(data)

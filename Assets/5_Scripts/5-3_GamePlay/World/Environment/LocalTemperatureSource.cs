@@ -82,7 +82,7 @@ public sealed class LocalTemperatureSource : MonoBehaviour, IGameplayFixedStepSi
                 registeredManager.RemoveLocalTemperatureSource(this);
             return;
         }
-        using var worldScope = registeredWorld ? GameplayWorldRegistry.UseWorld(gameObject.scene.name) : null;
+        using var worldScope = registeredWorld ? GameplayWorldRegistry.UseWorld(gameObject.scene.name) : default;
         registeredManager = TemperatureMgr.Instance;
         if (registeredManager != null)
             registeredManager.SetLocalTemperatureSource(this, transform.position, radius, targetTemperature, cooling);

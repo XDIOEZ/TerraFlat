@@ -115,7 +115,7 @@ namespace FlatWorld.NaturalEntities
                         GameplayWorldRegistry.AssignItemToWorld(weapon.item, uniqueWorld);
                 }
                 if (sourceWorld != worldKey) return;
-                using var scope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+                using var scope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : default;
                 QueryWeapon(weapon, shape, context);
             }
         }

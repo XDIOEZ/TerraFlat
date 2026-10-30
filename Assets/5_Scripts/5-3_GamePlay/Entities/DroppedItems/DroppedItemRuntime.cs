@@ -279,16 +279,14 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     private void OnTransportCellChanged(string worldKey, Vector2Int cell)
     {
         if (worldKey != matterWorldKey) return;
-        using IDisposable scope = GameplayWorldRegistry.TryGet(worldKey, out _)
-            ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
+        using var scope = GameplayWorldRegistry.UseExistingWorldOrMachineScope(worldKey);
         RefreshTransportCell(cell);
     }
 
     private void OnTransportCellsChanged(string worldKey, IReadOnlyList<Vector2Int> cells)
     {
         if (worldKey != matterWorldKey) return;
-        using IDisposable scope = GameplayWorldRegistry.TryGet(worldKey, out _)
-            ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
+        using var scope = GameplayWorldRegistry.UseExistingWorldOrMachineScope(worldKey);
         foreach (Vector2Int cell in cells) RefreshTransportCell(cell);
     }
 

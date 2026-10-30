@@ -155,7 +155,7 @@ internal static class BuildingDepthMeshBridge
         internal void Present()
         {
             string worldKey = GameplayWorldRegistry.GetItemWorldKey(Item);
-            using var world = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+            using var world = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : default;
             Vector3 anchor = Item.transform.position;
             if (building == null || !Item.isActiveAndEnabled || Item.InHand || !building.IsInstalled() ||
                 ChunkMgr.ExistingInstance == null ||

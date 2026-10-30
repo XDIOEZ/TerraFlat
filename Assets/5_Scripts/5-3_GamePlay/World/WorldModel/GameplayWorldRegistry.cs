@@ -228,7 +228,7 @@ public static partial class GameplayWorldRegistry
         GameplayWorldPresentationOwner presentation = item.GetComponent<GameplayWorldPresentationOwner>();
         try
         {
-            using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : null)
+            using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : default)
                 WorldPhysicsService2D.ReleaseItem(item, preserveNativeMotion: true);
             if (item == null || !manager.IsRuntimeItemRegistered(item) || !ReferenceEquals(item.itemData, originalData)) return;
             snapshotPosition = originalData?.transform?.position ?? sourceWorldPosition;
@@ -280,7 +280,7 @@ public static partial class GameplayWorldRegistry
                     originalData.PhysicsState.AngularVelocity = snapshotAngularVelocity;
                 }
                 else if (originalData != null) originalData.PhysicsState = null;
-                using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : null)
+                using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : default)
                 {
                     if (hadSourceProxy) RegisterItemPhysics(item);
                     if (sourceBody != null)
@@ -414,36 +414,39 @@ public static partial class GameplayWorldRegistry
     }
 
     // 同步事务只切查询上下文，不切活动场景，不向其它玩家广播世界退出。
-    public static IDisposable UseWorld(string worldKey)
+    public static WorldExecutionScope UseWorld(string worldKey)
     {
         GameplayWorldRuntime next = GetOrCreate(worldKey);
         GameplayWorldRuntime previous = execution;
         execution = next;
-        try { return new WorldScope(previous, MachineWorld.UseScope(worldKey)); }
+        try { return new WorldExecutionScope(previous, MachineWorld.UseScope(worldKey)); }
         catch { execution = previous; throw; }
     }
 
+    public static WorldExecutionScope UseExistingWorldOrMachineScope(string worldKey)
+        => TryGet(worldKey, out _) ? UseWorld(worldKey) : new WorldExecutionScope(execution, MachineWorld.UseScope(worldKey));
+
     // 销毁只借用仍属于调用方的注册记录，场景卸载中也绝不补建世界。
-    internal static bool TryUseExistingWorldForOwnerRelease(string worldKey, object expectedOwner, out IDisposable scope)
+    internal static bool TryUseExistingWorldForOwnerRelease(string worldKey, object expectedOwner, out WorldExecutionScope scope)
     {
-        scope = null;
+        scope = default;
         if (string.IsNullOrEmpty(worldKey) || expectedOwner == null ||
             !worlds.TryGetValue(worldKey, out GameplayWorldRuntime existing) ||
             !ReferenceEquals(existing.Chunks, expectedOwner) && !ReferenceEquals(existing.Navigation, expectedOwner))
             return false;
         GameplayWorldRuntime previous = execution;
         execution = existing;
-        try { scope = new WorldScope(previous, MachineWorld.UseExistingScopeForOwnerRelease(worldKey)); }
+        try { scope = new WorldExecutionScope(previous, MachineWorld.UseExistingScopeForOwnerRelease(worldKey)); }
         catch { execution = previous; throw; }
         return true;
     }
 
-    public static IDisposable UseSpaceScene(string worldKey)
+    public static WorldExecutionScope UseSpaceScene(string worldKey)
     {
         if (!SpaceMgr.IsSpaceScene(worldKey)) throw new ArgumentException("必须指定已存在的真实星区场景。", nameof(worldKey));
         BindSceneCache();
         Scene scene = SceneManager.GetSceneByName(worldKey);
-        if (!scene.IsValid() || !scene.isLoaded) return null;
+        if (!scene.IsValid() || !scene.isLoaded) return default;
         GameplayWorldRuntime previous = execution;
         if (!spaceContexts.TryGetValue(worldKey, out GameplayWorldRuntime context) || context.Scene != scene ||
             !worldSceneBindings.IsCurrentWorldOwner(scene.handle, worldKey, context))
@@ -457,7 +460,7 @@ public static partial class GameplayWorldRegistry
             RefreshLocalWorldAfterSceneBindingChange(scene);
         }
         execution = context;
-        return new WorldScope(previous, null);
+        return new WorldExecutionScope(previous, default);
     }
 
     public static void ReleaseSpaceContext(string worldKey)
@@ -492,20 +495,21 @@ public static partial class GameplayWorldRegistry
         }
     }
 
-    private sealed class WorldScope : IDisposable
+    // 值类型贯穿世界与机器上下文，默认值为空作用域，避免逐建筑创建对象和接口装箱。
+    public struct WorldExecutionScope : IDisposable
     {
         private readonly GameplayWorldRuntime previous;
-        private IDisposable machines;
-        private bool disposed;
-        public WorldScope(GameplayWorldRuntime previous, IDisposable machines)
-        { this.previous = previous; this.machines = machines; }
+        private MachineWorld.ScopeLease machines;
+        private bool active;
+        public bool IsActive => active;
+        internal WorldExecutionScope(GameplayWorldRuntime previous, MachineWorld.ScopeLease machines)
+        { this.previous = previous; this.machines = machines; active = true; }
         public void Dispose()
         {
-            if (disposed) return;
-            disposed = true;
+            if (!active) return;
+            active = false;
             execution = previous;
-            try { machines?.Dispose(); }
-            finally { machines = null; }
+            machines.Dispose();
         }
     }
 

@@ -156,7 +156,7 @@ namespace FlatWorld.Gameplay.Building
             float originalAmount = request?.SourceData?.Stack?.Amount ?? 0f;
             string actorWorld = GameplayWorldRegistry.GetItemWorldKey(request?.Actor);
             using var worldScope = GameplayWorldRegistry.TryGet(actorWorld, out _)
-                ? GameplayWorldRegistry.UseWorld(actorWorld) : null;
+                ? GameplayWorldRegistry.UseWorld(actorWorld) : default;
             try
             {
                 if (request == null || !GameNetwork.HasStateAuthority)

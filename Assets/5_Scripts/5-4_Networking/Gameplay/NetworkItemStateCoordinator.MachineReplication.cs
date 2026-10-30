@@ -98,7 +98,7 @@ namespace FlatWorld.Networking.Gameplay
                 foreach (int id in mechanicalFlushKeys)
                 {
                     if (!dirtyMechanicalWorlds.Remove(id, out string worldKey)) continue;
-                    using IDisposable worldScope = GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : MachineWorld.UseScope(worldKey);
+                    using var worldScope = GameplayWorldRegistry.UseExistingWorldOrMachineScope(worldKey);
                     MachineEntity node = MachineWorld.GetById(id);
                     if (node != null) BroadcastSnapshot(node);
                 }

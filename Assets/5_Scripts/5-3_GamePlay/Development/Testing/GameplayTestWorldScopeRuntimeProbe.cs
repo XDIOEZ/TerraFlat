@@ -23,6 +23,67 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "incremental_world_scope", CaptureIncrementalWorldScope);
     }
 
+    #region 世界执行作用域与分配采样
+    // 直接反复调用正式世界入口，JSON 构造与异常测试放在分配计量之外。
+    private static JObject CaptureWorldExecutionScopeSample(string first, string second)
+    {
+        string initialWorld = GameplayWorldRegistry.ExecutionWorldKey, initialMachines = MachineWorld.WorldKey;
+        bool initialContext = GameplayWorldRegistry.HasExecutionContext;
+        Scene initialScene = SceneManager.GetActiveScene();
+        bool outerWorld, innerWorld, innerMachineWorld, nestedRestored, exceptionRestored;
+        bool repeatedDisposePreservedContext;
+        using (GameplayWorldRegistry.UseWorld(first))
+        {
+            outerWorld = GameplayWorldRegistry.ExecutionWorldKey == first && MachineWorld.WorldKey == first;
+            using (GameplayWorldRegistry.UseWorld(second))
+            {
+                innerWorld = GameplayWorldRegistry.ExecutionWorldKey == second;
+                innerMachineWorld = MachineWorld.WorldKey == second;
+            }
+            nestedRestored = GameplayWorldRegistry.ExecutionWorldKey == first && MachineWorld.WorldKey == first;
+            try
+            {
+                using var inner = GameplayWorldRegistry.UseWorld(second);
+                throw new InvalidOperationException("Lua 自有作用域异常退出采样");
+            }
+            catch (InvalidOperationException)
+            { exceptionRestored = GameplayWorldRegistry.ExecutionWorldKey == first && MachineWorld.WorldKey == first; }
+            var repeated = GameplayWorldRegistry.UseWorld(second);
+            repeated.Dispose();
+            repeated.Dispose();
+            repeatedDisposePreservedContext = !repeated.IsActive && GameplayWorldRegistry.ExecutionWorldKey == first && MachineWorld.WorldKey == first;
+        }
+        bool stable = true;
+        const int iterations = 1024;
+        for (int i = 0; i < 16; i++)
+        {
+            using var outer = GameplayWorldRegistry.UseWorld(first);
+            using var inner = GameplayWorldRegistry.UseWorld(second);
+        }
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < iterations; i++)
+        {
+            using (GameplayWorldRegistry.UseWorld(first))
+            {
+                using (GameplayWorldRegistry.UseWorld(second))
+                    stable &= GameplayWorldRegistry.ExecutionWorldKey == second && MachineWorld.WorldKey == second;
+                stable &= GameplayWorldRegistry.ExecutionWorldKey == first && MachineWorld.WorldKey == first;
+            }
+        }
+        long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+        return new JObject
+        {
+            ["outerWorld"] = outerWorld, ["innerWorld"] = innerWorld, ["innerMachineWorld"] = innerMachineWorld,
+            ["nestedRestored"] = nestedRestored, ["exceptionRestored"] = exceptionRestored,
+            ["repeatedDisposePreservedContext"] = repeatedDisposePreservedContext,
+            ["contextRestored"] = GameplayWorldRegistry.ExecutionWorldKey == initialWorld && GameplayWorldRegistry.HasExecutionContext == initialContext,
+            ["machineContextRestored"] = MachineWorld.WorldKey == initialMachines,
+            ["scenePreserved"] = SceneManager.GetActiveScene() == initialScene,
+            ["iterations"] = iterations, ["stable"] = stable, ["allocatedBytes"] = allocatedBytes
+        };
+    }
+    #endregion
+
     private sealed class Fixture : IDisposable
     {
         public readonly List<ShipGroundBuildingStore.Entry> Buildings = new();
@@ -54,7 +115,8 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
         {
             yield return GameplayWorldRegistry.PrepareWorld(first, point);
             yield return GameplayWorldRegistry.PrepareWorld(second, point);
-            var result = new JObject { ["firstWorld"] = first, ["secondWorld"] = second };
+            var result = new JObject { ["firstWorld"] = first, ["secondWorld"] = second,
+                ["executionScopes"] = CaptureWorldExecutionScopeSample(first, second) };
             Vector2Int cell = new(Mathf.FloorToInt(point.x), Mathf.FloorToInt(point.y));
             foreach (string world in new[] { first, second })
                 using (GameplayWorldRegistry.UseWorld(world))

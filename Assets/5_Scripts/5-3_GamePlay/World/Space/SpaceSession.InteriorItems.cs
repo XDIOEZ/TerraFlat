@@ -100,7 +100,7 @@ namespace FlatWorld.Spaceflight
                 !manager.WorldRunTimeItems.TryGetValue(id, out Item item) || item == null ||
                 !ReferenceEquals(item.PersistenceOwner, this)) return;
             string world = GameplayWorldRegistry.GetItemWorldKey(item);
-            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+            using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
             if (capture)
             {
                 item.Save();

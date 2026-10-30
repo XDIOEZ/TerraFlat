@@ -58,7 +58,7 @@ public class RuntimeSkill
                 skillInstanceDict.Add(action.name, actionInstance);
                 added = true;
                 string worldKey = GameplayWorldRegistry.GetItemWorldKey(skillSender);
-                using (GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : null)
+                using (GameplayWorldRegistry.TryGet(worldKey, out _) ? GameplayWorldRegistry.UseWorld(worldKey) : default)
                     actionInstance.Load();
                 actionInstance.gameObject.SetActive(action.gameObject.activeSelf);
             }

@@ -68,8 +68,8 @@ internal sealed class IndependentNaturalEntityRegistry : IDisposable
     private static RuntimeWorldAddress CreateSourceAddress(string sourceWorldKey, int x, int y)
         => new(global::WorldAddress.FromWorldKey(sourceWorldKey).DimensionId, new Int2(x, y));
 
-    private IDisposable EnterWorld() => !string.IsNullOrEmpty(worldKey) && GameplayWorldRegistry.TryGet(worldKey, out _)
-        ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+    private GameplayWorldRegistry.WorldExecutionScope EnterWorld() => !string.IsNullOrEmpty(worldKey) && GameplayWorldRegistry.TryGet(worldKey, out _)
+        ? GameplayWorldRegistry.UseWorld(worldKey) : default;
 
     private void AddCurrentChunk(Entry entry)
     {

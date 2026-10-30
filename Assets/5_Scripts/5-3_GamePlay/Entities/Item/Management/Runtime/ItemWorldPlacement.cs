@@ -115,7 +115,7 @@ internal static class ItemWorldPlacement
 
         string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
         using var worldScope = GameplayWorldRegistry.TryGet(worldKey, out _)
-            ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+            ? GameplayWorldRegistry.UseWorld(worldKey) : default;
         Transform root = ItemMgr.Instance?.GetRuntimeEntityRoot(itemObject.scene);
         itemObject.transform.SetParent(root, true);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);

@@ -61,7 +61,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnContainerIntent(NetworkConnectionToClient connection, NetworkContainerIntentRequest request)
         {
             if (!AcceptMachineToken(connection, request.Token) || string.IsNullOrEmpty(request.IntentJson) || request.IntentJson.Length > 4096) return;
-            if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
+            if (!TryEnterMachineRequestScope(connection, request.ShipId, out MachineWorld.ScopeLease scope)) return;
             using (scope) ExecuteContainerIntent(connection, request);
         }
         private void ExecuteContainerIntent(NetworkConnectionToClient connection, NetworkContainerIntentRequest request)

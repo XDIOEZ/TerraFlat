@@ -293,7 +293,7 @@ namespace FlatWorld.AIECS.Gameplay
             AiecsGameplayBridge oldBridge = bridge;
             string oldWorld = oldBridge?.WorldKey ?? suspendedWorldKey;
             bool worldRetained = !string.IsNullOrEmpty(oldWorld) && GameplayWorldRegistry.TryGet(oldWorld, out _);
-            using var worldScope = worldRetained ? GameplayWorldRegistry.UseWorld(oldWorld) : null;
+            using var worldScope = worldRetained ? GameplayWorldRegistry.UseWorld(oldWorld) : default;
             if (worldRetained) WorldEntityRuntime.DevelopmentSuspended = false;
             suspendedWorldKey = null;
             display = null;

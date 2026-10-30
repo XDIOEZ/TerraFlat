@@ -61,9 +61,9 @@ public static class GameplayTestSpacePresentationProbe
             WorldPhysicsEntityProxy2D fixedProxy, movingProxy;
             var regions = new[] { new WorldPhysicsEntityRegion2D("blocking", WorldPhysicsPurpose2D.Blocking,
                 new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D), Enabled = true, Size = Vector2.one }) };
-            using (IDisposable scope = GameplayWorldRegistry.UseSpaceScene(key) ??
-                throw new InvalidOperationException("独立星区场景未能登记物理上下文。"))
+            using (var scope = GameplayWorldRegistry.UseSpaceScene(key))
             {
+                if (!scope.IsActive) throw new InvalidOperationException("独立星区场景未能登记物理上下文。");
                 physics = GameplayWorldRegistry.CurrentPhysics;
                 ItemData snapshot = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
                 fixedProxy = physics.AllocateEntityProxy(new object(), snapshot, new ItemPhysicsDefinitionDto(), regions, null);

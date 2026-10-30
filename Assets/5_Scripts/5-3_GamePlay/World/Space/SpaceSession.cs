@@ -230,9 +230,9 @@ namespace FlatWorld.Spaceflight
         private void CaptureContents()
         {
             foreach (ShipState ship in State.Ships)
-            using (IDisposable scope = TryGetShipInteriorWorld(ship.ShipId, out var world)
-                ? GameplayWorldRegistry.UseWorld(world.WorldKey)
-                : MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+            using (var scope = TryGetShipInteriorWorld(ship.ShipId, out var world)
+                ? GameplayWorldRegistry.UseWorld(world.WorldKey) : default)
+            using (var machines = scope.IsActive ? default : MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
             foreach (ShipPieceState piece in ship.Pieces)
             {
                 if (!piece.IsAlive) continue;

@@ -269,7 +269,7 @@ namespace FlatWorld.Spaceflight
                     weapon.ConsumeWeaponDurabilityForHit();
                     float received;
                     using (GameplayWorldRegistry.TryGet(targetWorld, out _)
-                        ? GameplayWorldRegistry.UseWorld(targetWorld) : null)
+                        ? GameplayWorldRegistry.UseWorld(targetWorld) : default)
                         received = target.Receiver.Hurt(playerHit);
                     CombatDamageContext sourceHit = context; sourceHit.HitPoint = contact.Point;
                     weapon.PublishExternalDamage(sourceHit, received);

@@ -68,18 +68,18 @@ namespace FlatWorld.Networking.Gameplay
                 return !string.IsNullOrEmpty(playerWorld) && string.Equals(playerWorld, itemWorld, StringComparison.Ordinal);
             return !observer.InSpace && item.gameObject.scene.name == observer.WorldKey;
         }
-        public static IDisposable Use(NetworkWorldPlayer player)
+        public static GameplayWorldRegistry.WorldExecutionScope Use(NetworkWorldPlayer player)
         {
-            if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true) return null;
+            if (player?.TryGetSpaceObserver(out SpaceNetworkObserver observer) != true) return default;
             string playerWorld = GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer);
             if (GameplayWorldRegistry.UsesLocalCoordinates(playerWorld) && GameplayWorldRegistry.TryGet(playerWorld, out _))
                 return GameplayWorldRegistry.UseWorld(playerWorld);
             return Use(observer);
         }
-        private static IDisposable Use(SpaceNetworkObserver observer)
+        private static GameplayWorldRegistry.WorldExecutionScope Use(SpaceNetworkObserver observer)
         {
             if (observer.InSpace) return GameplayWorldRegistry.UseSpaceScene(SpaceSectorCoordinates.SceneKey(observer.Position.Sector));
-            return string.IsNullOrWhiteSpace(observer.WorldKey) ? null : GameplayWorldRegistry.UseWorld(observer.WorldKey);
+            return string.IsNullOrWhiteSpace(observer.WorldKey) ? default : GameplayWorldRegistry.UseWorld(observer.WorldKey);
         }
         // 客户端只提交操作；服务器从当前连接已绑定的玩家读取世界。
         internal static string GetRequestRejection(bool ready, bool transferring, bool hasObserver,

@@ -50,7 +50,7 @@ public static partial class MachineWorld
         {
             bool hasWorld = GameplayWorldRegistry.TryGet(key, out _);
             bool canRefreshOccupancy = hasWorld || key == GameplayWorldRegistry.ExecutionWorldKey;
-            using var world = hasWorld ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var world = hasWorld ? GameplayWorldRegistry.UseWorld(key) : default;
             using var machine = UseScope(key);
             if (canRefreshOccupancy)
                 foreach (Vector2Int cell in changes.Mechanical)
@@ -93,7 +93,7 @@ public static partial class MachineWorld
         else
         {
             using var world = GameplayWorldRegistry.TryGet(worldKey, out _)
-                ? GameplayWorldRegistry.UseWorld(worldKey) : null;
+                ? GameplayWorldRegistry.UseWorld(worldKey) : default;
             BuildingOccupancyRegistry.NotifyMechanicalChanged(cell);
         }
     }

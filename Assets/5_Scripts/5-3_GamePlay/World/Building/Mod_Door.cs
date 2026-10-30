@@ -174,7 +174,7 @@ public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
     {
         if (DoorCollider == null || item == null) return false;
         string world = GameplayWorldRegistry.GetItemWorldKey(item);
-        using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+        using var scope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
         Vector3 scale = DoorCollider.transform.lossyScale;
         Vector2 size = Vector2.Scale(DoorCollider.size, new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y))) * .95f;
         Vector2 center = DoorCollider.transform.TransformPoint(DoorCollider.offset);

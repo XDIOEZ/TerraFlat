@@ -37,8 +37,8 @@ public partial class MonsterSpawnerManager
         return manager;
     }
 
-    private IDisposable EnterOwnedWorld() => GameplayWorldRegistry.TryGet(_ownedWorld, out _)
-        ? GameplayWorldRegistry.UseWorld(_ownedWorld) : null;
+    private GameplayWorldRegistry.WorldExecutionScope EnterOwnedWorld() => GameplayWorldRegistry.TryGet(_ownedWorld, out _)
+        ? GameplayWorldRegistry.UseWorld(_ownedWorld) : default;
 
     private bool IsOwnedWorldReady => _gameManager != null && _gameManager.IsInGameWorld &&
         (_gameManager.IsGameplayReady || GameNetwork.IsOnline && GameNetwork.HasStateAuthority);

@@ -22,6 +22,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 权威、所有权与坐标
 
+- `GameplayWorldRegistry.UseWorld/UseSpaceScene` 返回具体 `WorldExecutionScope` 值类型，机器作用域也保持具体 `ScopeLease`；局部用 `using var`，可选作用域用 `default`，包装入口返回具体类型，避免 `IDisposable` 装箱。每份租约按 LIFO 唯一释放，不复制到多个独立持有者；销毁借用仍只恢复已有机器状态，不触发 EnsureScope。快速规则 `world_streaming/runtime_owner_identity`，真实嵌套/异常恢复与预热1024轮GC采样见 `incremental_world_scope`、`networking/world_scope`。
+
 - `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；飞船 `ship:<id>` 经 `CreateLocalWorld` 拥有独立 Scene/PhysicsScene2D、16×16 空区块和普通 ChunkView。`UsesLocalCoordinates` 禁止星球环绕，`SimulateWithoutObservers` 保持无人船运行；切地表/太空只撤投影，正式结束才清退世界。
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 本机可见性与投影源恢复使用 `LocalPresentationWorldKey`，不能用角色所属船内世界替换实际显示场景。

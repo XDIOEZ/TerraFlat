@@ -3,6 +3,13 @@ test.check("player_ready", "多世界隔离测试玩家就绪")
 test.runtime("networking", "world_scope", {}, function(data)
     assert(data.scope == "live-isolated-world", "必须在正式隔离存档采样")
     assert(data.firstWorld ~= data.secondWorld, "没有准备两个真实世界")
+    local scopes = data.executionScopes
+    assert(scopes.outerWorld and scopes.innerWorld and scopes.innerMachineWorld and scopes.nestedRestored
+        and scopes.exceptionRestored and scopes.repeatedDisposePreservedContext and scopes.contextRestored
+        and scopes.machineContextRestored and scopes.scenePreserved,
+        "世界作用域嵌套、异常退出或重复释放没有恢复对应世界、机器上下文与活动场景")
+    assert(scopes.stable and scopes.iterations == 1024 and scopes.allocatedBytes == 0,
+        "预热后连续切换真实地表/洞穴仍产生GC或串用了世界上下文")
     assert(data.firstOccupied and data.secondOccupied and data.secondStillOccupied,
         "同坐标建筑占地串世界，或删除甲世界影响乙世界")
     assert(data.distinctEcsWorlds and data.distinctResourceHandles,

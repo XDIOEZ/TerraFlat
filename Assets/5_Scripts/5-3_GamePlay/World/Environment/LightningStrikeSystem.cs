@@ -62,7 +62,7 @@ public static class LightningStrikeSystem
         if (string.IsNullOrWhiteSpace(strike.WorldKey)) return;
         bool registered = GameplayWorldRegistry.TryGet(strike.WorldKey, out _);
         if (!registered && GameplayWorldRegistry.CurrentScene.name != strike.WorldKey) return;
-        using var worldScope = registered ? GameplayWorldRegistry.UseWorld(strike.WorldKey) : null;
+        using var worldScope = registered ? GameplayWorldRegistry.UseWorld(strike.WorldKey) : default;
         if (!GameNetwork.HasStateAuthority || string.IsNullOrWhiteSpace(strike.WorldKey) || strike.Sequence <= 0 ||
             !WorldAddress.FromWorldKey(strike.WorldKey).IsSurface ||
             SaveDataMgr.Instance?.SaveData?.PlanetData_Dict?.ContainsKey(strike.WorldKey) != true ||

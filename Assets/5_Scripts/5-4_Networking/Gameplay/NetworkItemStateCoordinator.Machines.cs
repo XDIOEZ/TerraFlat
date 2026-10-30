@@ -196,7 +196,7 @@ namespace FlatWorld.Networking.Gameplay
                 { reason = "操作请求已过期，请重试"; return; }
                 if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true)
                 { reason = "正在等待服务器确认拾取库存"; return; }
-                if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope))
+                if (!TryEnterMachineRequestScope(connection, request.ShipId, out MachineWorld.ScopeLease scope))
                 { reason = "设备所在世界已变化，请重新打开面板"; return; }
                 using (scope) accepted = ExecuteMachineOperation(connection, request, out reason);
             }
@@ -304,7 +304,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnMachineTransfer(NetworkConnectionToClient connection, NetworkMachineTransferRequest request)
         {
             if (!AcceptMachineToken(connection, request.Token)) return;
-            if (!TryEnterMachineRequestScope(connection, request.ShipId, out IDisposable scope)) return;
+            if (!TryEnterMachineRequestScope(connection, request.ShipId, out MachineWorld.ScopeLease scope)) return;
             using (scope) ExecuteMachineTransfer(connection, request);
         }
         private void ExecuteMachineTransfer(NetworkConnectionToClient connection, NetworkMachineTransferRequest request)
@@ -441,9 +441,9 @@ namespace FlatWorld.Networking.Gameplay
             if (world?.StartsWith("ship:", StringComparison.Ordinal) == true) return world.Substring(5);
             return MachineWorld.IsShipScope ? MachineWorld.WorldKey.Substring(5) : string.Empty;
         }
-        private static bool TryEnterMachineRequestScope(NetworkConnectionToClient connection, string shipId, out IDisposable scope)
+        private static bool TryEnterMachineRequestScope(NetworkConnectionToClient connection, string shipId, out MachineWorld.ScopeLease scope)
         {
-            scope = null;
+            scope = default;
             NetworkWorldPlayer player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
             if (player?.CorePlayer == null || (shipId?.Length ?? 0) > 128) return false;
             string actorWorld = GameplayWorldRegistry.GetItemWorldKey(player.CorePlayer);

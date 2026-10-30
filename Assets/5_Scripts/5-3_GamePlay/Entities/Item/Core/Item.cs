@@ -1309,12 +1309,12 @@ public abstract class Item : MonoBehaviour
             !GameplayWorldRegistry.SimulatesWithoutObservers(GameplayWorldRegistry.GetItemWorldKey(this));
     }
 
-    internal IDisposable UseOwnedWorldForItemCallbacks()
+    internal GameplayWorldRegistry.WorldExecutionScope UseOwnedWorldForItemCallbacks()
     {
         string world = GameplayWorldRegistry.GetItemWorldKey(this);
-        if (string.IsNullOrEmpty(world) || world == GameplayWorldRegistry.ExecutionWorldKey) return null;
+        if (string.IsNullOrEmpty(world) || world == GameplayWorldRegistry.ExecutionWorldKey) return default;
         if (GameplayWorldRegistry.TryGet(world, out _)) return GameplayWorldRegistry.UseWorld(world);
-        return SpaceMgr.IsSpaceScene(world) ? GameplayWorldRegistry.UseSpaceScene(world) : null;
+        return SpaceMgr.IsSpaceScene(world) ? GameplayWorldRegistry.UseSpaceScene(world) : default;
     }
 
     /// <summary>只在跨越三级边界时切换模块和根刚体，范围外不保留物理速度。</summary>

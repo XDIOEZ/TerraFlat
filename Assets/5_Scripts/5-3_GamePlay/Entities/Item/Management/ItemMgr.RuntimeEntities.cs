@@ -385,7 +385,7 @@ public partial class ItemMgr
         if (item == null || item.itemData == null || !runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner)) return;
         string targetWorld = GameplayWorldRegistry.GetItemWorldKey(item);
         bool movedWorld = BindRuntimeAiLogicalOwnership(item, targetWorld, owner.Guid, markDirty: true);
-        if (!TryUseRuntimeAiWorld(targetWorld, out IDisposable scope)) return;
+        if (!TryUseRuntimeAiWorld(targetWorld, out GameplayWorldRegistry.WorldExecutionScope scope)) return;
         using (scope)
         {
             ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
@@ -464,9 +464,9 @@ public partial class ItemMgr
         return false;
     }
 
-    private static bool TryUseRuntimeAiWorld(string worldKey, out IDisposable scope)
+    private static bool TryUseRuntimeAiWorld(string worldKey, out GameplayWorldRegistry.WorldExecutionScope scope)
     {
-        scope = null;
+        scope = default;
         if (string.IsNullOrEmpty(worldKey)) return false;
         if (string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal))
             return !GameplayWorldRegistry.HasExecutionContext || GameplayWorldRegistry.ExecutionChunks != null;

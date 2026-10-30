@@ -332,7 +332,7 @@ namespace FlatWorld.Spaceflight
             try
             {
                 using var scope = GameplayWorldRegistry.UseSpaceScene(world);
-                if (scope == null) { manager.ReleaseAuthoritySector(lease); return false; }
+                if (!scope.IsActive) { manager.ReleaseAuthoritySector(lease); return false; }
                 GameplayWorldRegistry.AssignItemToWorld(projectile, world);
                 if (GameplayWorldRegistry.GetItemWorldKey(projectile) != world)
                     throw new InvalidOperationException("投射物星区移交未完成。" );
@@ -372,7 +372,7 @@ namespace FlatWorld.Spaceflight
             try
             {
                 using var scope = GameplayWorldRegistry.UseSpaceScene(world);
-                if (scope == null) { manager.ReleaseAuthoritySector(nextLease); return false; }
+                if (!scope.IsActive) { manager.ReleaseAuthoritySector(nextLease); return false; }
                 GameplayWorldRegistry.AssignItemToWorld(Projectile, world);
                 if (GameplayWorldRegistry.GetItemWorldKey(Projectile) != world)
                     throw new InvalidOperationException("投射物跨星区移交未完成。" );

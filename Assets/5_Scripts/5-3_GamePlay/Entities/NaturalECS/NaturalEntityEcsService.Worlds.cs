@@ -55,15 +55,15 @@ namespace FlatWorld.NaturalEntities
                 cachedWorldKey = key; return cachedState = state;
             }
         }
-        private static IDisposable UseHandle(NaturalEntityHandle handle)
+        private static GameplayWorldRegistry.WorldExecutionScope UseHandle(NaturalEntityHandle handle)
             => handle.Generation != WorldEntityRuntime.Generation && generations.TryGetValue(handle.Generation, out string key) &&
                 key != GameplayWorldRegistry.ExecutionWorldKey && GameplayWorldRegistry.TryGet(key, out _)
-                ? GameplayWorldRegistry.UseWorld(key) : null;
+                ? GameplayWorldRegistry.UseWorld(key) : default;
 
         private static void ReleaseOwnedWorld(string key)
         {
             if (!worlds.TryGetValue(key, out WorldState state)) return;
-            using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : null;
+            using var scope = GameplayWorldRegistry.TryGet(key, out _) ? GameplayWorldRegistry.UseWorld(key) : default;
             WorldState previous = releaseOverride;
             releaseOverride = state;
             try { ReleaseWorld(); }
@@ -75,7 +75,7 @@ namespace FlatWorld.NaturalEntities
             foreach (WorldState state in new List<WorldState>(worlds.Values))
             {
                 using var scope = GameplayWorldRegistry.TryGet(state.WorldKey, out _)
-                    ? GameplayWorldRegistry.UseWorld(state.WorldKey) : null;
+                    ? GameplayWorldRegistry.UseWorld(state.WorldKey) : default;
                 WorldState previous = releaseOverride;
                 releaseOverride = state;
                 try { ReleaseWorld(); }

@@ -47,7 +47,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (owner.ownsWorldObject) Destroy(owner.gameObject);
         }
 
-        private IDisposable UseOwnedWorld() => string.IsNullOrEmpty(ownedWorldKey) ? null : GameplayWorldRegistry.UseWorld(ownedWorldKey);
+        private GameplayWorldRegistry.WorldExecutionScope UseOwnedWorld() => string.IsNullOrEmpty(ownedWorldKey) ? default : GameplayWorldRegistry.UseWorld(ownedWorldKey);
 
         // 每个世界从自己的玩家集合取得观察和战斗代理，不依赖主机正在看哪一层。
         private Player RefreshWorldPlayers()

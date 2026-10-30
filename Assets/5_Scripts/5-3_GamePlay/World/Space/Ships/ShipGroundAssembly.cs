@@ -28,7 +28,7 @@ namespace FlatWorld.Spaceflight
                 world = observer.WorldKey; position = observer.Position.LocalMeters.ToVector2();
             }
             if (string.IsNullOrWhiteSpace(world) || SpaceMgr.IsSpaceScene(world)) return false;
-            using var worldScope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : null;
+            using var worldScope = GameplayWorldRegistry.TryGet(world, out _) ? GameplayWorldRegistry.UseWorld(world) : default;
             using (MachineWorld.UseScope(world))
             {
                 MachineEntity candidate = MachineWorld.GetById(consoleGuid);
