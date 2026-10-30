@@ -586,6 +586,10 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
 
     #region 物品实例化
 
+    // 入世前复制生态存档，运行物品不能原位改写保存快照。
+    internal static ItemData CreateRuntimeItemFromEcologySnapshot(ItemData snapshot) =>
+        snapshot == null ? null : ItemInstanceDataFactory.CloneRuntime(snapshot);
+
     /// <summary>应用删除/状态覆盖后实例化一个自然物；返回本次是否尝试创建实体。</summary>
     private bool SpawnPlacement(NaturalItemPlacement placement)
     {
@@ -620,6 +624,7 @@ public sealed partial class ChunkNaturalItemRenderer : MonoBehaviour, IIncrement
         Item item = null;
         try
         {
+            changedData = CreateRuntimeItemFromEcologySnapshot(changedData);
             // 内存快照保留只读定义，重新入世仍须合并当前资源与嵌套库存配置。
             if (changedData?.SharedConfiguration != null)
                 changedData = ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, changedData);

@@ -18,6 +18,7 @@ public abstract class MachineLogic : IDisposable
     public virtual string Status => string.Empty;
     public virtual string ActionLabel => string.Empty;
     public virtual bool CanAct => true;
+    public virtual bool SupportsUnchangedSaveSnapshotReuse => false;
     // 逻辑按自身工作状态缩放已配置需求，其他机器默认保持原功率。
     public virtual float ElectricalDemandFactor => 1f;
     public event Action Changed;

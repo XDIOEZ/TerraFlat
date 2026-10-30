@@ -51,7 +51,7 @@ public static partial class MachineWorld
         dirty = true;
         NotifySurfaceMechanicalChanged(entity.Cell);
         NotifySurfaceCellChanged(entity.Cell);
-        NodeStateChanged?.Invoke(entity);
+        PublishMachineStateChanged(entity);
         return entity;
     }
 

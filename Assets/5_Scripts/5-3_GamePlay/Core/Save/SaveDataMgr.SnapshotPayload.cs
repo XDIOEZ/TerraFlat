@@ -10,7 +10,7 @@ using UnityEngine;
 public partial class SaveDataMgr
 {
     #region 存档封装格式
-    private const int CompactSaveVersion = 35; // 星球数据去掉预制体身份，外观改由 JSON 模板保存。
+    private const int CompactSaveVersion = 36; // 机器与掉落物分别保存可复用的独立实例载荷。
     private const int ModdedSaveVersion = 15;
     // 实例状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
@@ -43,7 +43,7 @@ public partial class SaveDataMgr
 
     private CompactSaveEnvelope BuildCoreCompactSavePayload(GameSaveData saveData)
     {
-
+        using var machineCapture = MachineWorld.BeginSaveSnapshotCapture();
         MonsterSpawnerManager.CaptureAll(saveData);
 
         // 先捕获所有移动作用域，再序列化核心数据，避免船体和设备库存落在不同时间点。
@@ -317,6 +317,17 @@ public partial class SaveDataMgr
             }
         }
 
+        IEnumerator machinePreparation = MachineWorld.PrepareSaveSnapshotCache(capturedSave, budget);
+        while (machinePreparation.MoveNext())
+        {
+            yield return machinePreparation.Current;
+            if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
+            {
+                onQueued?.Invoke(Task.FromResult(false));
+                yield break;
+            }
+        }
+
         // 玩家、机器与掉落物之间会转移真实物品，必须同帧冻结，避免重复或丢失。
         if (captureCoreState == null) throw new ArgumentNullException(nameof(captureCoreState));
         // 采收会在让帧期间改动删除记录，最终点按现有成员重组，只重捕获新增或替换的独立快照。
@@ -324,13 +335,15 @@ public partial class SaveDataMgr
         using (SaveEcologyFinalizePoint.Measure())
             foreach (int work in FreezeEcologyChunks(capturedSave, ecologyRecords, ecologyItems)) { }
         ecologyItems.Clear();
-        using (SavePlayerCapturePoint.Measure()) captureCoreState();
-        byte[] machines;
-        using (SaveMachinesCapturePoint.Measure()) machines = MachineWorld.CaptureArchive(capturedSave);
-        using (SaveSpaceCapturePoint.Measure()) FlatWorld.Spaceflight.SpaceSession.Capture(capturedSave);
-        byte[] coreSaveData = SerializeCoreDataWithoutChunks(capturedSave);
-        byte[] droppedItems;
-        using (SaveDropsCapturePoint.Measure()) droppedItems = DroppedItemService.CaptureArchive(capturedSave);
+        byte[] machines, coreSaveData, droppedItems;
+        using (MachineWorld.BeginSaveSnapshotCapture())
+        {
+            using (SavePlayerCapturePoint.Measure()) captureCoreState();
+            using (SaveMachinesCapturePoint.Measure()) machines = MachineWorld.CaptureArchive(capturedSave);
+            using (SaveSpaceCapturePoint.Measure()) FlatWorld.Spaceflight.SpaceSession.Capture(capturedSave);
+            coreSaveData = SerializeCoreDataWithoutChunks(capturedSave);
+            using (SaveDropsCapturePoint.Measure()) droppedItems = DroppedItemService.CaptureArchive(capturedSave);
+        }
         yield return budget.WaitForNextSlice();
         if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
         {
@@ -471,46 +484,8 @@ public partial class SaveDataMgr
         GameSaveData saveData, List<FrozenEcologyChunkSaveRecord> destination,
         Dictionary<ItemData, byte[]> frozenItems = null)
     {
-        if (saveData.PlanetData_Dict == null)
-            yield break;
-        List<string> worldKeys = new(saveData.PlanetData_Dict.Keys);
-        worldKeys.Sort(StringComparer.Ordinal);
-        foreach (string worldKey in worldKeys)
-        {
-            List<EcologyChunkSaveData> chunks = saveData.PlanetData_Dict[worldKey]?.Ecology?.Chunks;
-            if (chunks == null)
-                continue;
-            foreach (EcologyChunkSaveData chunk in chunks.ToArray())
-            {
-                if (chunk == null)
-                    throw new InvalidDataException("生态存档包含空区块。");
-                List<ItemData> items = chunk.ChangedItems;
-                ItemData[] itemSources = items?.ToArray() ?? Array.Empty<ItemData>();
-                var record = new FrozenEcologyChunkSaveRecord { WorldKey = worldKey };
-                try
-                {
-                    chunk.ChangedItems = null;
-                    using (SaveEcologyMetadataPoint.Measure())
-                        record.ChunkData = MemoryPackSerializer.Serialize(chunk);
-                }
-                finally { chunk.ChangedItems = items; }
-                destination.Add(record);
-                yield return 1;
-                foreach (ItemData item in itemSources)
-                {
-                    byte[] bytes;
-                    if (item == null || frozenItems == null || !frozenItems.TryGetValue(item, out bytes))
-                    {
-                        using (SaveEcologyItemPoint.Measure())
-                            bytes = MemoryPackSerializer.Serialize<ItemData>(item);
-                        if (item != null && frozenItems != null)
-                            frozenItems[item] = bytes;
-                    }
-                    record.ChangedItems.Add(bytes);
-                    yield return 1;
-                }
-            }
-        }
+        foreach (int work in FreezeEcologyChunksWithReusableSnapshots(saveData, destination, frozenItems))
+            yield return work;
     }
 
     private sealed class EcologyItemReferenceComparer : IEqualityComparer<ItemData>

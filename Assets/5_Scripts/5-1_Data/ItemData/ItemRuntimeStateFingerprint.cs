@@ -10,7 +10,8 @@ public static class ItemRuntimeStateFingerprint
     private const int MaxNestedItems = 64;
 
     public static bool TryCalculate(ItemData data, bool includeTransform, bool publicState,
-        HashSet<ItemData> visiting, out ulong signature)
+        HashSet<ItemData> visiting, out ulong signature, bool includeRootStackState = true,
+        bool includeRootDynamicState = true)
     {
         signature = 0;
         if (data == null || visiting == null || visiting.Count >= MaxNestedItems ||
@@ -24,9 +25,13 @@ public static class ItemRuntimeStateFingerprint
             hash.Add(data.IDName);
             hash.Add(data.Guid);
             if (data.Stack != null && data.Stack.GetType() != typeof(ItemStack)) return false;
-            hash.Add(data.Stack?.Amount ?? 1f);
-            hash.Add(data.Stack?.CanBePickedUp ?? true);
-            hash.Add(data.MaxDurability > 0f ? Mathf.Clamp01(data.Durability / data.MaxDurability) : 1f);
+            if (includeRootStackState)
+            {
+                hash.Add(data.Stack?.Amount ?? 1f);
+                hash.Add(data.Stack?.CanBePickedUp ?? true);
+            }
+            if (includeRootDynamicState)
+                hash.Add(data.MaxDurability > 0f ? Mathf.Clamp01(data.Durability / data.MaxDurability) : 1f);
             float multiplier = data.CraftedDurabilityMultiplier;
             hash.Add(!float.IsNaN(multiplier) && !float.IsInfinity(multiplier) && multiplier > 0f ? multiplier : 1f);
             hash.Add(data.ItemSpecialData);
@@ -41,12 +46,21 @@ public static class ItemRuntimeStateFingerprint
                 hash.Add(data.transform.rotation);
                 hash.Add(data.transform.scale);
             }
-            if (data.MatterState != null && data.MatterState.GetType() != typeof(ItemMatterState)) return false;
-            hash.Add(data.MatterState?.Initialized ?? false);
-            hash.Add(data.MatterState?.TemperatureCelsius ?? 20f);
-            hash.Add(data.MatterState?.Moisture ?? 0f);
-            hash.Add(data.MatterState?.IsBurning ?? false);
-            hash.Add(data.MatterState?.CombustionElapsedSeconds ?? 0f);
+            if (includeRootDynamicState)
+            {
+                if (data.MatterState != null && data.MatterState.GetType() != typeof(ItemMatterState)) return false;
+                hash.Add(data.MatterState?.Initialized ?? false);
+                hash.Add(data.MatterState?.TemperatureCelsius ?? 20f);
+                hash.Add(data.MatterState?.Moisture ?? 0f);
+                hash.Add(data.MatterState?.IsBurning ?? false);
+                hash.Add(data.MatterState?.CombustionElapsedSeconds ?? 0f);
+            }
+            if (includeTransform && !data.inHand)
+            {
+                hash.Add(data.PhysicsState?.Velocity ?? Vector2.zero);
+                hash.Add(data.PhysicsState?.AngularVelocity ?? 0f);
+                hash.Add(data.PhysicsState?.PersistentWorldResident == true);
+            }
 
             // 标签差量依赖当前配置基线；直接读取两侧列表，不建立临时集合。
             AppendStrings(ref hash, data.Tags);

@@ -4,7 +4,7 @@
 
 2026-10-15：本系统登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`save/snapshot_memory、special_namespace、space_item_chain、autosave_budget、autosave_chunk_payload、autosave_ecology_payload、load_failure_state`。真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
+快速入口：`rules.lua`、`ecology-cache.lua`、`machine-payload-cache.lua`、`dropped-payload-cache.lua`；真实入口：`gameplay.lua` / `save/isolated_roundtrip`。
 
 已编写的规则覆盖：正式 ItemInstanceSnapshot 的内存二进制往返、持久身份、当前定义耐久与模块状态恢复；特殊状态命名空间隔离；JSON/Base64/MemoryPack/实例克隆的嵌套库存链、Vector3字段转换、严格版本和时钟边界。真实场景使用正式 SaveToDisk 首次写入、原子替换、备份和临时文件清理，并读取自己的文件恢复库存。
 
@@ -23,5 +23,9 @@
 写盘门禁要求当前正式存档目录严格位于 `Library/FlatWorldGameplayTests/Saves/<本轮ID>`，拒绝目录联接。保存源为当前档案的冷克隆，测试文件保留在本轮目录的唯一 `Roundtrips` 子目录。读取使用停用独立 SaveDataMgr，调用正式核心解析，校验 MOD 元数据但不发布全局 MOD 状态；Lua 同时检查活跃存档、角色、管理器引用及必要标量没有被修改。
 
 后续修改触及以上关键流程时，需增强本组 Lua 和真实隔离场景夹具，再执行相关系统；不能把快速规则通过当成全路径覆盖。
+
+2026-10-30 大型存档缓存新增三组规则：生态区块跨次复用、增删替换、最终元数据对齐与入世副本；机械节点未变复用、进度/嵌套库存/槽布局/时间/归属失效、同批船机共享、未知逻辑回退及独立档案往返；掉落物内容与数量/耐久/物质/运动分离、稳定编码、冷世界回写和迁移副本。公开/私有捕获策略与嵌套玩家另核对隔离。当前 CompactSaveEnvelope/36，机器与掉落物独立档案均为2。
+
+本轮 Unity 自动编译加载新增类型；规则运行 `20261030T083359780Z_da95423c` 先因 Editor 排队触发 CLI 等待超时，Editor 恢复后实际完成，最终报告为4份 Lua 全部通过、0失败，未进入 PlayMode。C# / Lua 语法与存档清单映射检查通过。真实拾取、加工、上下船、跨世界恢复及大档帧耗时仍未验收；完整太空状态仍使用 JSON，活跃未跟踪设备仍在最终同帧捕获。总清单同步脚本被现有 Space 域超过10份 Lua 阻断，本轮手动同步存档域的三份新增规则及索引。
 
 2026-10-21 资源更新失败反馈规则补充：正式嵌套迭代器驱动器跨过一次让帧后抛错，断言回收实际失败原因，覆盖发布后玩家重建的异常捕获基础；未执行，仍不代替真实资源发布和玩家重建流程验收。

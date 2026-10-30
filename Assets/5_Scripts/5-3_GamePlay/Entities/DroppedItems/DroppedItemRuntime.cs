@@ -11,6 +11,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     private const float SpatialCellSize = 2f;
     private readonly LightweightDroppedItemSimulation simulation = new();
     private readonly Dictionary<int, ItemData> payloads = new();
+    private readonly Dictionary<int, DroppedItemPayloadCaptureCache> savePayloads = new();
     private readonly Dictionary<int, DroppedItemVisual> visuals = new();
     private readonly Dictionary<(string, Sprite), DroppedItemVisual> visualCache = new();
     private readonly Dictionary<Vector2Int, HashSet<int>> spatial = new();
@@ -104,7 +105,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         transportItems.Remove(id);
         wetItems.Remove(id); pendingEnvironmentSet.Remove(id);
         lastMatterTimes.Remove(id);
-        visuals.Remove(id); payloads.Remove(id); simulation.Remove(id);
+        visuals.Remove(id); payloads.Remove(id); savePayloads.Remove(id); simulation.Remove(id);
         DroppedItemService.NotifyWorldItemsChanged(matterWorldKey);
     }
 
@@ -200,9 +201,14 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     public List<DroppedItemSaveRecord> Capture(bool includeUnresolved = true)
     {
         List<DroppedItemSaveRecord> records = new(simulation.Count + unresolved.Count);
-        foreach (int id in simulation.Ids) records.Add(DroppedItemSaveRecord.Capture(payloads[id], simulation, id));
+        foreach (int id in simulation.Ids)
+        {
+            if (!savePayloads.TryGetValue(id, out DroppedItemPayloadCaptureCache cache))
+                savePayloads.Add(id, cache = new DroppedItemPayloadCaptureCache());
+            records.Add(DroppedItemSaveRecord.Capture(payloads[id], simulation, id, cache));
+        }
         if (includeUnresolved) records.AddRange(unresolved);
-        records.Sort((left, right) => (left?.Data?.Guid ?? 0).CompareTo(right?.Data?.Guid ?? 0));
+        records.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
         return records;
     }
 
@@ -235,7 +241,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         {
             // MOD 资源暂缺时保留原记录，下次保存不会把无法显示的库存载荷悄悄删除。
             unresolved.Add(record);
-            Debug.LogWarning($"[DroppedItems] 无法恢复掉落物，原快照已保留：{record?.Data?.IDName}，{exception.Message}");
+            Debug.LogWarning($"[DroppedItems] 无法恢复掉落物，原快照已保留：{record?.Guid}，{exception.Message}");
         }
     }
 
@@ -247,7 +253,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         environmentMotionOwners.Clear();
         ClearTerrainSubscriptions();
         DetachScenePresentation(); simulation.Dispose();
-        payloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
+        payloads.Clear(); savePayloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();
         pickupAttempts.Clear();
         pickupAttemptCapacityRevisions.Clear();
         matterScratch.Clear(); lastMatterTimes.Clear();

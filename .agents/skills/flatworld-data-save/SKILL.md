@@ -6,7 +6,7 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 # 数据与存档
 
 - 存档/角色改名的 `out reason` 由存档服务按真实校验与写盘阶段给出，UI原样呈现；资源重载结果区分目录发布前后，保留实际错误而不一概宣称旧资源仍在运行。
-- 当前核心封装版本为 CompactSaveEnvelope/35，PlanetData 不再保存 Prefab 身份；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
+- 当前核心封装版本为 CompactSaveEnvelope/36；`SaveDataMgr.SaveData` 根属性在磁盘/网络替换时同步装配业务配置，构建失败恢复旧根，业务配置入口不反查存档或难度。
 
 ## 代码入口
 
@@ -27,7 +27,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 - `GameManager.SaveGame` 为设置按钮和帐篷共用的手动保存入口：主线程立即采集完整快照、后台原子写盘，保存状态等待真实任务结果；自动保存单独走 `SaveGameInBackgroundCoroutine` 的分帧预算。睡眠先记重生点并保存，再应用临时时间倍率。
 
-- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/35，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
+- 当前外层 FWD6/15，直接包含 CompactSaveEnvelope/36，避免多层整档字节复制；同步、自动和网络快照共用格式。地形区块逐条冻结，生态动态块的 ChangedItems 逐物品独立冻结，不进入核心整档重捕获；载入时在主线程恢复 Item/扩展状态。格式头先校验，仅支持当前格式，拒绝的文件保留。磁盘载入失败清空当前档案和角色，完整解析与 MOD 验证成功后才替换区块差量；普通损坏仍依次尝试备份和临时文件。正式位置为 persistentDataPath/Saves/LocalSaveData，临时文件/原子替换提交。
 - ItemData 的持久化边界是 InstanceSnapshot，JSON/Unity 字段是配置外壳。冷数据不查 GameRes；入世/入包先按当前定义恢复重量/标签/耐久/模块，再合并稳定模块实例状态，未知扩展负载保留。
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。
@@ -35,7 +35,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - CraftedDurabilityMultiplier 保存实例品质；恢复按当前基础耐久重算，再保持损伤比例。IRuntimeDataLifecycle.Save 只捕获，Unload 才清事件/资源。
 - 自动保存共用 AutoSaveWorkBudget：每片目标 0.5ms/最多16单元，耗尽让出两帧再计时；单区块建筑合并保持原子，玩家/机器/船体/掉落联合采集也不跨帧。玩家时钟与 ModuleSave 通过 captureCoreState 在最终联合冻结点执行，不能提前到分帧区块扫描之前，否则快捷栏字节会保留转移前库存。主线程冻结独立字节，后台只封装和原子写盘，不调用 Item codec/Lua。开始采集即登记 revision，并固定场景/WorldRuntime/Epoch；换世界、退出或新保存使旧任务失效。保存完成后才释放 MachineWorld/掉落运行态；旧生产者移交早于区块快照。
 - PlayerData_Dict 用不可变角色 ID，Name_User 仅显示名。改档名同时更新 saveName、磁盘名与退出元数据；特殊 JSON 状态按命名空间保留未知根属性，未来版本扩展拒绝写回。
-- 生态存档 ItemData 是生产者移交的独立快照；分帧先缓存每个快照的冻结字节，最终玩家联合采集点重读当前生态成员、删除 GUID/恢复年份，仅补冻新增/替换快照，避免期间采收导致重生。缓存不得用于活跃可变 ItemData；新增原位修改存档快照的生产者时须同步调整冻结契约。
+- 生态存档 ItemData 是生产者移交的独立快照，入世前复制；弱引用缓存按存档根/区块跨次复用记录。最终联合点仍重读成员、删除 GUID/恢复年份，仅补冻新增/替换快照和变化元数据；新增生态持久字段须同步 `EcologyFrozenChunkMetadata`。缓存不得用于活跃可变 ItemData；编解码器变更失效，公开角色策略单独捕获。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
 - 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。
 - 世界退出后写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。
@@ -57,8 +57,8 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 
 ## 独立载荷
 
-- CompactSaveEnvelope.MechanicalNetworks 保存 MachineArchive；GameSaveData.Mechanical 为 MemoryPackIgnore。落地机器不在 Item 档双写，冷 ItemData 不创建运行 Item，缺失 MOD 机器保留原快照；专用加工库存恢复当前定义。
-- 外层 DroppedItems 保存独立版本掉落快照，GameSaveData.DroppedItems 为 MemoryPackIgnore；按实际维度 WorldKey 隔离，存稳定 ID/库存/轨迹，不存 Entity 地址或显示对象，缺失定义保留记录。
+- MechanicalNetworks 使用 FrozenMachineArchivePayload/2：逐机器实例字节与 MachineArchive/2 元数据分开冻结。同轮机器与船件共用一次捕获；自动保存分帧预冻支持变化跟踪的节点，最终校验版本、归属及完整库存指纹。默认领域逻辑、Item 外壳及气液设备仍最终捕获；StorageLogic 显式支持复用。新增机器持久字段须同步专用指纹，扩展状态修改调用 `StateChanged`。缺失 MOD 机器与压力事件继续保留。
+- DroppedItemArchive/2 把稳定实例载荷与数量、耐久、物质及运动状态分开；内部实例动态值归一化，已知模块按纯值指纹复用，未知 codec 重新捕获。冷 Data 按需独立恢复并在写盘前回填，跨世界复制轻量记录；后台实际运动前恢复当前定义。按 WorldKey 隔离，不存 Entity 或表现对象。
 - SpaceStateJson v3 在核心封装前捕获星区目录、星球 Visual、唯一模拟时钟、船/接口身份、局部乘员、实际 ItemInstanceSnapshot、船作用域 MachineArchive、舱气、导航/下降阶段及未结算预算。恢复先校验版本和星区身份，按乘员真实星区/飞行阶段选场景；游戏运行中无人星区继续推进纯数据，离线/加载不补模拟。冷地表撞击读取目标冻结地形与最新差量，按 GUID 去重。
 - SpaceLooseItemState 是独立散落物保存模型；Scale 用字段专属 JSON 转换器只读写 x/y/z，不能直接展开 Unity Vector3 的计算属性。SpaceCruise 离线回归覆盖缩放及完整会话快照往返，不操作 Play Mode。
 - LiquidContainerState.Composition 保存真实份数、尾量、PendingOutputs/随机态；FluidInventoryState 保存 decimal 气液 mol、内能和各口预留，预留已计入库存，温压/比例派生。

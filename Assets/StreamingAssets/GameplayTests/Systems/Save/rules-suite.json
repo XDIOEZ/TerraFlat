@@ -9,6 +9,24 @@
       "name": "存档与恢复规则与边界",
       "luaPath": "GameplayTests/Systems/Save/rules.lua",
       "enabled": true
+    },
+    {
+      "id": "save_ecology_snapshot_cache",
+      "name": "生态冻结载荷跨次复用与最终重检",
+      "luaPath": "GameplayTests/Systems/Save/ecology-cache.lua",
+      "enabled": true
+    },
+    {
+      "id": "save_machine_payload_cache",
+      "name": "机械载荷缓存与同轮船体复用",
+      "luaPath": "GameplayTests/Systems/Save/machine-payload-cache.lua",
+      "enabled": true
+    },
+    {
+      "id": "save_dropped_payload_cache",
+      "name": "掉落物稳定载荷与实时状态分离",
+      "luaPath": "GameplayTests/Systems/Save/dropped-payload-cache.lua",
+      "enabled": true
     }
   ]
 }

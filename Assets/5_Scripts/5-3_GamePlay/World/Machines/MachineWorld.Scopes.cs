@@ -431,7 +431,7 @@ public static partial class MachineWorld
             {
                 NotifyScopeTransferChange(() => NotifySurfaceMechanicalChanged(candidate.Placement.Cell));
                 NotifyScopeTransferChange(() => NotifySurfaceCellChanged(candidate.Placement.Cell));
-                NotifyScopeTransferChange(() => NodeStateChanged?.Invoke(candidate.Node));
+                NotifyScopeTransferChange(() => PublishMachineStateChanged(candidate.Node));
             }
         }
     }

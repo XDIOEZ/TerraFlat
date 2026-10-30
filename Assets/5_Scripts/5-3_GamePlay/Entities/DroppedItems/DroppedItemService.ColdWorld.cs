@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using FlatWorld.DroppedItems;
 using FlatWorld.Networking;
 using Unity.Mathematics;
@@ -50,13 +51,24 @@ public static partial class DroppedItemService
     private static readonly Dictionary<string, uint> coldTransportSteps = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, HashSet<int>> coldTransported = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, (ulong Step, HashSet<int> Items)> coldEnvironmentMotion = new(StringComparer.Ordinal);
-    private static readonly HashSet<ItemData> coldRebasedData = new();
+    private static ConditionalWeakTable<ItemData, object> coldRebasedData = new();
+    private static readonly object coldRebasedMarker = new();
     private static GameSaveData coldWorldSave;
+
+    // 冷载荷在读取重量、体积和标签前需要合并当前物品定义。
+    private static void EnsureColdDropDefinition(ItemData data)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (data == null || resources == null || coldRebasedData.TryGetValue(data, out _)) return;
+        coldRebasedData.Add(data, coldRebasedMarker);
+        ItemDefinitionRuntime.RebasePersistedData(resources, data);
+    }
+
     private static void BindColdWorldSave()
     {
         GameSaveData save = SaveDataMgr.Instance?.SaveData;
         if (ReferenceEquals(save, coldWorldSave)) return;
-        coldWorldSave = save; coldRebasedData.Clear(); coldTransportSteps.Clear(); coldTransported.Clear();
+        coldWorldSave = save; coldRebasedData = new(); coldTransportSteps.Clear(); coldTransported.Clear();
         coldEnvironmentMotion.Clear();
     }
     private static List<DroppedItemSaveRecord> WorldRecords(string world)
@@ -90,6 +102,7 @@ public static partial class DroppedItemService
             DroppedItemSaveRecord record = records[index];
             if (record?.Data?.Stack == null || record.HasFlight || !(record.HasWaterTransition || record.WaterKind != 0 ||
                 coldLanded.Contains(record.Data.Guid) || LooseItemMotion.HasVelocitySources)) continue;
+            EnsureColdDropDefinition(record.Data);
             if (record.WaterKind != 0)
             {
                 Vector2 velocity = Vector2.zero;
@@ -173,7 +186,7 @@ public static partial class DroppedItemService
             DroppedItemSaveRecord record = records[index];
             if (record?.Data != null && worldDropIdentities.Add(record.Data.Guid))
             {
-                if (coldRebasedData.Add(record.Data)) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, record.Data);
+                EnsureColdDropDefinition(record.Data);
                 worldDrops.Add(new WorldDrop(world, record, records: records, index: index));
             }
         }
@@ -224,7 +237,7 @@ public static partial class DroppedItemService
         for (int index = firstCold; index < coldFuelCandidates.Count; index++)
         {
             ItemData data = coldFuelCandidates[index].Drop.Data;
-            if (coldRebasedData.Add(data)) ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data);
+            EnsureColdDropDefinition(data);
         }
     }
 

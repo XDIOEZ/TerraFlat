@@ -17,6 +17,16 @@ public class StorageLogic : MachineLogic, IContainerPortProvider
 {
     #region 储物设施
     public MachineStorageState State { get; }
+    public override bool SupportsUnchangedSaveSnapshotReuse
+    {
+        get
+        {
+            if (GetType() != typeof(StorageLogic) || State.Inventories.Count != inventories.Count) return false;
+            for (int i = 0; i < inventories.Count; i++)
+                if (!ReferenceEquals(State.Inventories[i], inventories[i].Data)) return false;
+            return true;
+        }
+    }
     public override GameObject PanelPrefab => inventories.Count > 0 ? inventories[0].InventoryPanel_Prefab : null;
     private readonly List<IContainerPort> containerPorts = new();
     private readonly List<(int Index, ContainerPortConfiguration Config)> portBindings = new();

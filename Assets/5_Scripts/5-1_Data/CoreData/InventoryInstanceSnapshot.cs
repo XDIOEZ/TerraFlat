@@ -29,7 +29,7 @@ public sealed partial class InventoryInstanceSnapshot
             slots = new ItemInstanceSnapshot[data.itemSlots?.Count ?? 0]
         };
         for (int i = 0; i < state.slots.Length; i++)
-            if (data.itemSlots[i]?.itemData != null) state.slots[i] = ItemInstanceSnapshot.Capture(data.itemSlots[i].itemData);
+            if (data.itemSlots[i]?.itemData != null) state.slots[i] = ItemSnapshotSerialization.Capture(data.itemSlots[i].itemData);
         return state;
     }
 

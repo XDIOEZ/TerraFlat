@@ -116,7 +116,7 @@ public static partial class MachineWorld
         group.PublishedContentRevision = group.Inventory.State.ContentRevision;
         group.CombinedInventory.SynchronizeLocalShares();
         foreach (MachineEntity member in group.Members)
-            if (Contains(member)) NodeStateChanged?.Invoke(member);
+            if (Contains(member)) PublishMachineStateChanged(member);
     }
 
     private static void PublishPendingCombinedFluidTankStateChanges()
@@ -139,7 +139,7 @@ public static partial class MachineWorld
         var pending = new List<MachineEntity>(scope.CombinedTankNotifications);
         scope.CombinedTankNotifications.Clear();
         foreach (MachineEntity member in pending)
-            if (Contains(member)) { SynchronizeCombinedFluidTankLocalShares(member); NodeStateChanged?.Invoke(member); }
+            if (Contains(member)) { SynchronizeCombinedFluidTankLocalShares(member); PublishMachineStateChanged(member); }
     }
     #endregion
 }

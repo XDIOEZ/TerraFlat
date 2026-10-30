@@ -55,8 +55,8 @@ public static partial class DroppedItemService
             {
                 foreach (DroppedItemSaveRecord record in records)
                 {
-                    if (record?.Data == null || record.Data.Guid == 0) throw new InvalidOperationException("掉落物提取载荷无效。");
-                    world.Runtime.RemoveCapturedWorldItem(record.Data.Guid);
+                    if (record == null || !record.HasItemPayload || record.Guid == 0) throw new InvalidOperationException("掉落物提取载荷无效。");
+                    world.Runtime.RemoveCapturedWorldItem(record.Guid);
                     removed.Add(record);
                 }
                 finished = true;

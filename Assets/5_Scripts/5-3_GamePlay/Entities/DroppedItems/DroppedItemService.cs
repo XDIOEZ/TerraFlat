@@ -647,7 +647,7 @@ public static partial class DroppedItemService
     {
         DroppedItemArchive archive = bytes == null || bytes.Length == 0
             ? new DroppedItemArchive() : MemoryPackSerializer.Deserialize<DroppedItemArchive>(bytes);
-        if (archive == null || archive.Version != 1 || archive.Worlds == null)
+        if (archive == null || archive.Version != DroppedItemArchive.CurrentVersion || archive.Worlds == null)
             throw new InvalidOperationException("掉落物快照版本不兼容或数据损坏。");
         save.DroppedItems = archive;
     }

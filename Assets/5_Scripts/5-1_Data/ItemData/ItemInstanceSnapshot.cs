@@ -42,6 +42,15 @@ public sealed partial class ItemInstanceSnapshot
 
     #region 捕获与恢复
 
+    // 外层记录持有实时数量、耐久和物质时，内部载荷保持确定的稳定基线。
+    public void ResetSeparatelyPersistedQuantityDurabilityAndMatterState()
+    {
+        amount = 1f;
+        canBePickedUp = true;
+        durabilityFraction = 1f;
+        matterPayload = ItemSnapshotSerialization.SerializePayload(new ItemMatterState());
+    }
+
     public static ItemInstanceSnapshot Capture(ItemData data, bool includeTransform = true,
         bool publicPlayerState = false, Func<string, string> publicSpecialData = null,
         Func<ModuleData, bool, ModuleInstanceSnapshot> captureModule = null)
@@ -285,6 +294,15 @@ public static class ItemSnapshotSerialization
 
     [ThreadStatic] private static Func<string, string> publicSpecialDataFilter;
 
+    public static bool IsPublicPlayerStateCapture => publicSpecialDataFilter != null;
+
+    public static IDisposable BeginPrivatePlayerState()
+    {
+        var scope = new CaptureScope(publicSpecialDataFilter);
+        publicSpecialDataFilter = null;
+        return scope;
+    }
+
     public static IDisposable BeginPublicPlayerState(Func<string, string> specialDataFilter)
     {
         if (specialDataFilter == null) throw new ArgumentNullException(nameof(specialDataFilter));
@@ -293,9 +311,10 @@ public static class ItemSnapshotSerialization
         return scope;
     }
 
-    internal static ItemInstanceSnapshot Capture(ItemData data) => ItemInstanceSnapshot.Capture(data,
+    public static ItemInstanceSnapshot Capture(ItemData data, bool includeTransform = true,
+        Func<ModuleData, bool, ModuleInstanceSnapshot> captureModule = null) => ItemInstanceSnapshot.Capture(data, includeTransform,
         publicPlayerState: data is Data_Player && publicSpecialDataFilter != null,
-        publicSpecialData: publicSpecialDataFilter);
+        publicSpecialData: publicSpecialDataFilter, captureModule: captureModule);
 
     private sealed class CaptureScope : IDisposable
     {

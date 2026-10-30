@@ -173,6 +173,7 @@ namespace FlatWorld.Spaceflight
         public static void Capture(GameSaveData save)
         {
             if (Current == null || !ReferenceEquals(Current.owner, save)) return;
+            using var capture = MachineWorld.BeginSaveSnapshotCapture();
             Current.CaptureContents();
             Current.CaptureShipInteriorWorldStates();
             Current.CaptureLooseItems();
@@ -238,7 +239,11 @@ namespace FlatWorld.Spaceflight
             {
                 if (!piece.IsAlive) continue;
                 if (int.TryParse(piece.PieceId, out int id) && MachineWorld.GetById(id) is MachineEntity node)
-                    contents[piece.PieceId] = MachineWorld.CaptureSnapshot(node);
+                {
+                    piece.SnapshotJson = MachineWorld.CaptureEncodedSaveSnapshot(node);
+                    contents[piece.PieceId] = node.Snapshot;
+                    continue;
+                }
                 else if (TryGetShipInteriorItem(piece.PieceId, out Item item))
                 { item.Save(); contents[piece.PieceId] = item.itemData; }
                 if (contents.TryGetValue(piece.PieceId, out ItemData data)) piece.SnapshotJson = Encode(data);

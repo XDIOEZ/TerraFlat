@@ -1166,7 +1166,10 @@
         "inventory"
       ],
       "ruleCaseIds": [
-        "save_rules"
+        "save_rules",
+        "save_ecology_snapshot_cache",
+        "save_machine_payload_cache",
+        "save_dropped_payload_cache"
       ],
       "rulesSuite": "GameplayTests/Systems/Save/rules-suite.json",
       "integrationSuites": [

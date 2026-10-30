@@ -191,7 +191,7 @@ public static partial class MachineWorld
         dirty = true;
         NotifySurfaceMechanicalChanged(cell);
         NotifySurfaceCellChanged(cell);
-        NodeStateChanged?.Invoke(node);
+        PublishMachineStateChanged(node);
         return node;
     }
 
@@ -382,7 +382,7 @@ public static partial class MachineWorld
     {
         if (!Contains(node)) return;
         if (NotifyCombinedFluidTankGroupStateChanged(node)) return;
-        NodeStateChanged?.Invoke(node);
+        PublishMachineStateChanged(node);
 
     }
 
@@ -1094,14 +1094,11 @@ public static partial class MachineWorld
     private static int CompareSnapshots(ItemData a, ItemData b) => a.Guid.CompareTo(b.Guid);
     public static byte[] CaptureArchive(GameSaveData save)
     {
-        CaptureAllScopes(save);
-        return MemoryPackSerializer.Serialize(save.Mechanical ?? new MachineArchive());
+        return CaptureFrozenMachineArchive(save);
     }
     public static void RestoreArchive(GameSaveData save, byte[] bytes)
     {
-        var archive = bytes == null || bytes.Length == 0 ? new MachineArchive() : MemoryPackSerializer.Deserialize<MachineArchive>(bytes);
-        if (archive == null || archive.Version != 1 || archive.Worlds == null) throw new InvalidOperationException("不支持的机械存档版本。");
-        save.Mechanical = archive;
+        save.Mechanical = RestoreFrozenMachineArchive(bytes);
     }
     public static void ReleaseWorld(bool capture)
     {

@@ -35,7 +35,7 @@ public partial class MachineState
 [Serializable, MemoryPackable]
 public partial class MachineArchive
 {
-    public int Version = 1;
+    public int Version = 2;
     public Dictionary<string, List<ItemData>> Worlds = new(StringComparer.Ordinal);
     public Dictionary<string, HashSet<int>> RemovedGenerated = new(StringComparer.Ordinal);
 }

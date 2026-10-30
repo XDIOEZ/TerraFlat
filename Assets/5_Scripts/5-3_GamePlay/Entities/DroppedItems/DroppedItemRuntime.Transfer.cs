@@ -12,7 +12,7 @@ internal sealed partial class DroppedItemRuntime
     internal void RemoveCapturedWorldItem(int id)
     {
         Remove(id);
-        unresolved.RemoveAll(record => record?.Data?.Guid == id);
+        unresolved.RemoveAll(record => record?.Guid == id);
     }
 
     internal void RestoreCapturedWorldItem(DroppedItemSaveRecord record) => Restore(record);
@@ -22,13 +22,13 @@ internal sealed partial class DroppedItemRuntime
         var incoming = new Dictionary<int, DroppedItemSaveRecord>();
         foreach (DroppedItemSaveRecord record in records)
         {
-            int id = record?.Data?.Guid ?? 0;
+            int id = record?.Guid ?? 0;
             if (id == 0 || !incoming.TryAdd(id, record))
                 throw new InvalidOperationException("网络掉落物身份无效或重复。");
         }
         foreach (DroppedItemSaveRecord previous in Capture())
         {
-            int id = previous.Data.Guid;
+            int id = previous.Guid;
             if (incoming.TryGetValue(id, out var next) &&
                 MemoryPackSerializer.Serialize(previous).AsSpan().SequenceEqual(MemoryPackSerializer.Serialize(next)))
             {
@@ -36,7 +36,7 @@ internal sealed partial class DroppedItemRuntime
                 continue;
             }
             Remove(id);
-            unresolved.RemoveAll(record => record?.Data?.Guid == id);
+            unresolved.RemoveAll(record => record?.Guid == id);
         }
         foreach (DroppedItemSaveRecord record in incoming.Values) Restore(record);
     }
@@ -52,13 +52,13 @@ internal sealed partial class DroppedItemRuntime
         foreach (DroppedItemSaveRecord record in records)
         {
             if (record == null || !select(record.Position)) continue;
-            int id = record.Data?.Guid ?? 0;
+            int id = record.Guid;
             if (onlyIds != null && !onlyIds.Contains(id)) continue;
             if (id <= 0 || !identities.Add(id) || target.simulation.Contains(id) ||
-                target.unresolved.Exists(value => value?.Data?.Guid == id))
+                target.unresolved.Exists(value => value?.Guid == id))
                 throw new InvalidOperationException("掉落物迁移包含无效或重复身份。");
             selected.Add(record);
-            DroppedItemSaveRecord copy = FastCloner.FastCloner.DeepClone(record);
+            DroppedItemSaveRecord copy = record.CopyForWorldTransfer();
             copy.Position = project(copy.Position);
             copy.Rotation += rotationDegrees;
             if (copy.HasFlight)
@@ -67,9 +67,6 @@ internal sealed partial class DroppedItemRuntime
                 copy.FlightEnd = project(copy.FlightEnd);
                 copy.FlightControl = project(copy.FlightControl);
             }
-            copy.Data.transform ??= new ItemTransform();
-            copy.Data.transform.position = copy.Position;
-            copy.Data.transform.rotation = Quaternion.Euler(0f, 0f, copy.Rotation);
             projected.Add(copy);
         }
 
@@ -82,19 +79,19 @@ internal sealed partial class DroppedItemRuntime
             {
                 DroppedItemSaveRecord original = selected[i];
                 DroppedItemSaveRecord copy = projected[i];
-                if (!simulation.Contains(original.Data.Guid))
+                if (!simulation.Contains(original.Guid))
                 {
                     target.unresolved.Add(copy);
                     unresolvedCopies.Add(copy);
                     continue;
                 }
                 target.Restore(copy);
-                if (!target.simulation.Contains(copy.Data.Guid))
+                if (!target.simulation.Contains(copy.Guid))
                 {
                     target.unresolved.Remove(copy);
                     throw new InvalidOperationException("目标世界不能恢复掉落物：" + copy.Data.IDName);
                 }
-                imported.Add(copy.Data.Guid);
+                imported.Add(copy.Guid);
             }
         }
         catch
@@ -107,7 +104,7 @@ internal sealed partial class DroppedItemRuntime
 
         using (GameplayWorldRegistry.UseWorld(sourceWorld))
             foreach (DroppedItemSaveRecord record in selected)
-                if (simulation.Contains(record.Data.Guid)) Remove(record.Data.Guid);
+                if (simulation.Contains(record.Guid)) Remove(record.Guid);
                 else unresolved.Remove(record);
         return new List<int>(identities);
     }
