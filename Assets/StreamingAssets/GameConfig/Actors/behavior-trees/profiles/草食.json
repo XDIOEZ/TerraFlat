@@ -1,0 +1,33 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "selector",
+        "children": [
+          {
+            "type": "subtree",
+            "name": "flee"
+          },
+          {
+            "type": "subtree",
+            "name": "sleep"
+          },
+          {
+            "type": "subtree",
+            "name": "forage"
+          },
+          {
+            "type": "action",
+            "name": "land.wander",
+            "id": "wander"
+          }
+        ]
+      }
+    ]
+  }
+}

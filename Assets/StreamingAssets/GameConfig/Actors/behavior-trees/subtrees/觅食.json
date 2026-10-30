@@ -1,0 +1,22 @@
+{
+  "parameters": {
+    "phase": "any"
+  },
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.forageNeeded",
+        "parameters": {
+          "phase": "$phase"
+        }
+      },
+      {
+        "type": "action",
+        "name": "land.forage",
+        "id": "forage"
+      }
+    ]
+  }
+}

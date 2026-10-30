@@ -162,6 +162,7 @@ public static partial class GameplayTestSystemProbe
                     ["shellActors"] = shellActors, ["missingScripts"] = missingScripts,
                     ["treeLoaded"] = host.IsRuntimeLoaded && host.BehaviorTree?.Root != null,
                     ["hasSharedSubtrees"] = host.BehaviorTree?.Subtrees?.Count > 0,
+                    ["subtreeDefinitions"] = new JArray(host.BehaviorTree.Subtrees.Keys),
                     ["subtreeReferences"] = new JArray(subtreeReferences),
                     ["hasPack"] = hasPack, ["hasTerritory"] = hasTerritory,
                     ["hasProduction"] = hasProduction, ["hasProductionModule"] = definition.Modules.ContainsKey("生产模块"),

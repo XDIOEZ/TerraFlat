@@ -58,7 +58,7 @@ internal static class Program
             AnimalBehaviorTreeRegistry.RegisterAction((string)name, (_, _) => new CatalogAction());
         foreach (JToken name in (JArray)names["conditions"])
             AnimalBehaviorTreeRegistry.RegisterCondition((string)name, (_, _) => () => false);
-        JObject shared = (JObject)JObject.Parse(System.IO.File.ReadAllText(sharedPath))["subtrees"];
+        JObject shared = ActorDefinitionCatalogLoader.LoadSharedBehaviorSubtreeFiles(sharedPath);
         var catalogs = new System.Collections.Generic.List<string>();
         foreach (string file in System.IO.Directory.GetFiles(actorFolder, "*.json"))
         {

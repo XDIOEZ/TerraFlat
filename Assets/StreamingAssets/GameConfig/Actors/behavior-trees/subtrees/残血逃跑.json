@@ -1,0 +1,32 @@
+{
+  "parameters": {
+    "enter": 0.2,
+    "exit": 0.4,
+    "source": "threat",
+    "runDistance": 30,
+    "recentDamage": false
+  },
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.healthBelow",
+        "parameters": {
+          "enter": "$enter",
+          "exit": "$exit"
+        }
+      },
+      {
+        "type": "action",
+        "name": "land.flee",
+        "id": "flee",
+        "parameters": {
+          "source": "$source",
+          "runDistance": "$runDistance",
+          "recentDamage": "$recentDamage"
+        }
+      }
+    ]
+  }
+}

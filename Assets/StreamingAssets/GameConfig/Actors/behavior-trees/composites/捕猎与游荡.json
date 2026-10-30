@@ -1,0 +1,27 @@
+{
+  "parameters": {
+    "source": "hunting",
+    "distance": 30,
+    "continueDistance": 30
+  },
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "combat",
+        "parameters": {
+          "source": "$source",
+          "requireCooldown": true,
+          "distance": "$distance",
+          "continueDistance": "$continueDistance"
+        }
+      },
+      {
+        "type": "action",
+        "name": "land.wander",
+        "id": "wander"
+      }
+    ]
+  }
+}

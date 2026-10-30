@@ -23,9 +23,9 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## JSON 行为树
 
-- 所有正式生物的 `modules.ai` 使用 `Module_AnimalBehaviorTree` / 能力 ID `AI`；物种只配置 `behaviorTree.capabilities` 和根节点。跨物种子树集中在 `GameConfig/Actors/behavior-subtrees.json`，Manifest 的 `behaviorSubtrees` 指向该文件；不要复制物种 C# 主控或在通用能力里恢复物种优先级。
+- 所有正式生物的 `modules.ai` 使用 `Module_AnimalBehaviorTree` / 能力 ID `AI`；物种只配置 `behaviorTree.capabilities` 和根节点。Manifest 的 `behaviorSubtrees` 指向 `GameConfig/Actors/behavior-subtrees.json`，该文件只登记 `subtrees: { 稳定ID: 相对Actors根目录的JSON路径 }`；每棵树独立放在 `behavior-trees/subtrees`、`composites` 或 `profiles`，文件只写可选 `parameters` 与 `root`，空参数省略。不要复制物种 C# 主控或在通用能力里恢复物种优先级。
 - 树支持 `selector`、记忆式 `sequence`、`condition`、`action`、`inverter`、`subtree`、`service`。Selector 每 Tick 复核高优先守卫；Sequence 不重做已完成动作，但继续检查前置条件。旧分支退出后新分支才进入；节点返回 Success/Failure/Running，正常完成只 OnExit，中断再调用 OnAbort。
-- 子树参数用 `$名称` 引用，引用节点的 `parameters` 覆盖默认值；子树可以再引用子树。服务节点前面的子节点每 Tick 更新伴随事实，最后一个是主树，服务不改变主动作身份。未知节点、缺参数和子树循环在初始化编译时失败。
+- 子树参数用 `$名称` 引用，引用节点的 `parameters` 覆盖默认值并逐层传递；组合子树继续引用其他子树，例如群猎→群体残血撤退→残血逃跑，独行/领地捕猎共用捕猎与游荡。基础、组合和完整模板使用同一种树结构，新增行为优先组合现有子树。服务节点前面的子节点每 Tick 更新伴随事实，最后一个是主树，服务不改变主动作身份。未知节点、缺参数和子树循环在初始化编译时失败。
 - Actor 加载沿正式 StreamingAssets/BinaryContentCache 入口读取共享库并冷编译模板，Android 走异步读取，F5 候选隔离且保留逐定义回滚。模板共用，每只生物独立节点、黑板与能力状态；死亡同步 Abort、关闭本体攻击窗并取消所有组合技能，卸载解除订阅和目标占位。
 - 子物种完整声明另一套 AI 时用通用模块标记 `inherit:false`，整体替换父 AI 参数，其他模块继续继承；该标记在 JObject 解析阶段消费，不进入持久 DTO。
 - ItemWiki 顶部「行为树」可只读查看生物、公共/局部子树、调用实参和引用生物；来源为正式 Actor Manifest 与共享库，刷新读取当前 JSON，不是运行态节点监视器。

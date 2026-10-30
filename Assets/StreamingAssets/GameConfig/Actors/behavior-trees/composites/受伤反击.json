@@ -1,0 +1,45 @@
+{
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.retaliating"
+      },
+      {
+        "type": "selector",
+        "children": [
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.skillReady",
+                "parameters": {
+                  "source": "retaliation"
+                }
+              },
+              {
+                "type": "action",
+                "name": "land.skill",
+                "id": "skill",
+                "parameters": {
+                  "source": "retaliation"
+                }
+              }
+            ]
+          },
+          {
+            "type": "subtree",
+            "name": "combat",
+            "parameters": {
+              "source": "retaliation",
+              "distance": 10000,
+              "continueDistance": 10000
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

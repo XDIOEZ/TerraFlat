@@ -1,0 +1,43 @@
+{
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "flight.canHunt"
+      },
+      {
+        "type": "action",
+        "name": "flight.acquireAquaticPrey"
+      },
+      {
+        "type": "action",
+        "name": "flight.approachAquaticPrey"
+      },
+      {
+        "type": "action",
+        "name": "flight.diveForPrey"
+      },
+      {
+        "type": "action",
+        "name": "flight.recoverFromDive"
+      },
+      {
+        "type": "action",
+        "name": "flight.carryPreyToLand"
+      },
+      {
+        "type": "action",
+        "name": "flight.landWithPrey"
+      },
+      {
+        "type": "action",
+        "name": "flight.finishPrey"
+      },
+      {
+        "type": "action",
+        "name": "flight.eatPrey"
+      }
+    ]
+  }
+}

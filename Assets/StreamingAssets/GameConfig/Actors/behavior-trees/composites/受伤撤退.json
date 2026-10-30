@@ -1,0 +1,57 @@
+{
+  "parameters": {
+    "enter": 0.2,
+    "exit": 0.4,
+    "source": "threat",
+    "distance": 8,
+    "safeDistance": 30,
+    "runDistance": 30,
+    "recentDamage": false
+  },
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "inverter",
+        "children": [
+          {
+            "type": "condition",
+            "name": "land.retaliating"
+          }
+        ]
+      },
+      {
+        "type": "selector",
+        "children": [
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "subtree",
+                "name": "lowHealthFlee",
+                "parameters": {
+                  "enter": "$enter",
+                  "exit": "$exit",
+                  "source": "$source",
+                  "runDistance": "$runDistance",
+                  "recentDamage": "$recentDamage"
+                }
+              }
+            ]
+          },
+          {
+            "type": "subtree",
+            "name": "flee",
+            "parameters": {
+              "source": "$source",
+              "distance": "$distance",
+              "safeDistance": "$safeDistance",
+              "runDistance": "$runDistance",
+              "recentDamage": "$recentDamage"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

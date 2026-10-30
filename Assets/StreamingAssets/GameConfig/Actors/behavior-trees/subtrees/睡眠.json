@@ -1,0 +1,16 @@
+{
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.sleepNeeded"
+      },
+      {
+        "type": "action",
+        "name": "land.sleep",
+        "id": "sleep"
+      }
+    ]
+  }
+}

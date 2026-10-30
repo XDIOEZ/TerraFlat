@@ -605,6 +605,14 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 if lower == prefix + manifest_name:
                     return True
                 manifest = read_json(config_root / manifest_name)
+                if directory == "Actors":
+                    subtree_index = normalize_package_path(manifest.get("behaviorSubtrees", "behavior-subtrees.json"))
+                    if lower == prefix + subtree_index.lower():
+                        return True
+                    for relative in read_json(config_root / subtree_index).get("subtrees", {}).values():
+                        relative = normalize_package_path(relative)
+                        if lower == prefix + relative.lower():
+                            return True
                 if directory == "Actors" and lower == prefix + str(manifest.get("behaviorSubtrees", "behavior-subtrees.json")).lower():
                     return True
                 for package in manifest.get("packages", []):

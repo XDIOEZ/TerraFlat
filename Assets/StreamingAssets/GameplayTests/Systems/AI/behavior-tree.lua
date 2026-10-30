@@ -32,7 +32,7 @@ test.system("ai", "behavior_tree_subtrees", {}, function(data)
     assert(table.concat(data.firstEvents, ",") == expected and table.concat(data.secondEvents, ",") == expected,
         "共享子树的调用位置或不同运行实例共享了动作状态")
     assert(data.firstStatus == "Success" and data.secondStatus == "Success" and data.sourceUnchanged,
-        "嵌套参数化子树没有完成，或编译时修改了源定义")
+        "三层组合子树没有完成，或编译时修改了源定义")
     assert(data.defaultParameter == "default" and data.overrideParameter == "override",
         "共享子树默认参数或引用处覆盖没有生效")
     assert(data.firstInitialAction == "alpha" and data.secondInitialAction == "alpha" and
@@ -123,6 +123,11 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
             "正式生物没有装配并加载唯一行为树：" .. actor.id)
         assert(actor.shellActors == 1 and actor.missingScripts == 0 and actor.hasSharedSubtrees,
             "正式外壳残留重复 AI、失效脚本或缺少共享子树：" .. actor.id)
+        local definitions = {}
+        for _, name in ipairs(actor.subtreeDefinitions) do definitions[name] = true end
+        for _, name in ipairs({"huntAndWander", "damageRetreat", "aquaticPredation", "packLowHealthFlee"}) do
+            assert(definitions[name], "独立文件中的组合子树没有加载：" .. actor.id .. "/" .. name)
+        end
         for _, name in ipairs(actor.subtreeReferences) do
             if references[name] then sharedUsed = true end
             references[name] = true

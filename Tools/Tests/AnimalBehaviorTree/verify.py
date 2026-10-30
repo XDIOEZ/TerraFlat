@@ -93,6 +93,8 @@ def compile_and_capture():
         extract_expression(flight_hunt, "public void CancelAquaticHunt()") + "\n" +
         extract_block(flight_hunt, "private void ResetFishHunting(bool releaseCaptured)") + "\n}\n" +
         "public static partial class ActorDefinitionCatalogLoader {\n" +
+        extract_expression(actor_loader, "private static Dictionary<string, string> ReadBehaviorSubtreeFilePaths(string json)") + "\n" +
+        extract_expression(actor_loader, "private static JObject ReadBehaviorSubtrees(IEnumerable<KeyValuePair<string, string>> sources)") + "\n" +
         extract_block(actor_loader, "private static void ApplySharedBehaviorSubtrees(IEnumerable<JObject> sources, JObject shared)") + "\n}\n" +
         "public static class GameplayCombatBridge {\n" +
         extract_expression(combat_bridge, "public static float4 Values(CombatDamage damage)") + "\n}\n" +

@@ -530,7 +530,14 @@
     async function fetchJson(path) {
         const response = await fetch(path, { cache: "no-store" });
         if (!response.ok) throw new Error(`${response.status} ${response.statusText} · ${path}`);
-        return response.json();
+        const data = await response.json();
+        // 子树索引只登记文件路径，浏览时按同一索引加载独立定义。
+        if (data.subtrees && Object.values(data.subtrees).every(value => typeof value === "string")) {
+            data.subtreePaths = data.subtrees;
+            data.subtrees = Object.fromEntries(await Promise.all(Object.entries(data.subtreePaths).map(async ([name, file]) =>
+                [name, await fetchJson(new URL(file, response.url).href)])));
+        }
+        return data;
     }
 
     // 独立命名空间避免 BUFF 与 Item 同名或分包同名时互相覆盖。

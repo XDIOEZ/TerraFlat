@@ -1,0 +1,37 @@
+{
+  "parameters": {
+    "source": "threat",
+    "distance": 6.0,
+    "safeDistance": 36.0,
+    "runDistance": 36.0,
+    "recentDamage": true,
+    "action": "flee"
+  },
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.fleeThreat",
+        "parameters": {
+          "source": "$source",
+          "distance": "$distance",
+          "safeDistance": "$safeDistance",
+          "recentDamage": "$recentDamage",
+          "activeAction": "$action"
+        }
+      },
+      {
+        "type": "action",
+        "name": "land.flee",
+        "id": "flee",
+        "parameters": {
+          "source": "$source",
+          "runDistance": "$runDistance",
+          "recentDamage": "$recentDamage",
+          "action": "$action"
+        }
+      }
+    ]
+  }
+}

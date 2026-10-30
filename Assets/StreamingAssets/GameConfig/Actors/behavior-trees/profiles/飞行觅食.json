@@ -1,0 +1,149 @@
+{
+  "root": {
+    "type": "service",
+    "children": [
+      {
+        "type": "action",
+        "name": "flight.containerFoodService"
+      },
+      {
+        "type": "selector",
+        "children": [
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.hooked"
+              },
+              {
+                "type": "action",
+                "name": "flight.stop"
+              }
+            ]
+          },
+          {
+            "type": "subtree",
+            "name": "temperatureRetreat"
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.forcedLanding"
+              },
+              {
+                "type": "action",
+                "name": "flight.fatigueLand"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.threat"
+              },
+              {
+                "type": "action",
+                "name": "flight.flee"
+              }
+            ]
+          },
+          {
+            "type": "subtree",
+            "name": "aquaticPredation"
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.fatigued"
+              },
+              {
+                "type": "action",
+                "name": "flight.fatigueLand"
+              }
+            ]
+          },
+          {
+            "type": "action",
+            "name": "flight.forage"
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.shouldTakeOff"
+              },
+              {
+                "type": "action",
+                "name": "flight.takeOff"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.shouldLand"
+              },
+              {
+                "type": "action",
+                "name": "flight.land"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.transitioning"
+              },
+              {
+                "type": "action",
+                "name": "flight.transition"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.grounded"
+              },
+              {
+                "type": "action",
+                "name": "flight.wanderGround"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "flight.flying"
+              },
+              {
+                "type": "action",
+                "name": "flight.wanderAir"
+              }
+            ]
+          },
+          {
+            "type": "action",
+            "name": "flight.stop"
+          }
+        ]
+      }
+    ]
+  }
+}

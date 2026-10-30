@@ -95,8 +95,11 @@ public static class ActorDefinitionCatalogLoader
         }
 
         List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
-        ApplySharedBehaviorSubtrees(resolved, ReadBehaviorSubtrees(cache.ReadText(
-            ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees))));
+        Dictionary<string, string> subtreeFiles = ReadBehaviorSubtreeFilePaths(cache.ReadText(
+            ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees)));
+        ApplySharedBehaviorSubtrees(resolved, ReadBehaviorSubtrees(subtreeFiles.Select(entry =>
+            new KeyValuePair<string, string>(entry.Key, cache.ReadText(
+                ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, entry.Value))))));
         CacheResolvedSources(resolved);
         List<ItemDefinitionDto> definitions = ConvertResolvedDefinitions(resolved);
         cache.Store(new ActorDefinitionInputs { Sources = resolved, Definitions = definitions });
@@ -104,7 +107,7 @@ public static class ActorDefinitionCatalogLoader
     }
 
     private static BinaryContentCache CreateBinaryCache()
-        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 2);
+        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 3);
 
     private static IEnumerator LoadBuiltInSourcesAsync(BinaryContentCache cache,
         Action<List<JObject>> completed, Action<Exception> failed, Action<float> progress)
@@ -147,10 +150,25 @@ public static class ActorDefinitionCatalogLoader
         yield return cache.ReadTextAsync(ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees),
             value => subtreeJson = value, exception => readError = exception);
         if (readError != null) { failed?.Invoke(readError); yield break; }
+        Dictionary<string, string> subtreeFiles;
+        try { subtreeFiles = ReadBehaviorSubtreeFilePaths(subtreeJson); }
+        catch (Exception exception) { failed?.Invoke(exception); yield break; }
+        var subtreeSources = new Dictionary<string, string>(StringComparer.Ordinal);
+        // 独立子树逐文件走同一缓存和异步入口，运行时只使用已编译的树。
+        foreach (KeyValuePair<string, string> entry in subtreeFiles)
+        {
+            string subtreePath;
+            try { subtreePath = ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, entry.Value); }
+            catch (Exception exception) { failed?.Invoke(exception); yield break; }
+            readError = null;
+            yield return cache.ReadTextAsync(subtreePath,
+                value => subtreeSources.Add(entry.Key, value), exception => readError = exception);
+            if (readError != null) { failed?.Invoke(readError); yield break; }
+        }
         yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
         {
             List<JObject> sources = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
-            ApplySharedBehaviorSubtrees(sources, ReadBehaviorSubtrees(subtreeJson));
+            ApplySharedBehaviorSubtrees(sources, ReadBehaviorSubtrees(subtreeSources));
             return sources;
         }, completed, failed);
     }
@@ -612,8 +630,12 @@ public static class ActorDefinitionCatalogLoader
         return sources.Select(ConvertResolvedActor).ToList();
     }
 
-    private static JObject ReadBehaviorSubtrees(string json)
-        => JObject.Parse(json)["subtrees"] as JObject ?? throw new InvalidDataException("公共行为树目录缺少 subtrees。");
+    private static Dictionary<string, string> ReadBehaviorSubtreeFilePaths(string json)
+        => JObject.Parse(json)["subtrees"]?.ToObject<Dictionary<string, string>>()
+            ?? throw new InvalidDataException("公共行为树索引缺少 subtrees 文件路径。");
+
+    private static JObject ReadBehaviorSubtrees(IEnumerable<KeyValuePair<string, string>> sources)
+        => new JObject(sources.Select(entry => new JProperty(entry.Key, JObject.Parse(entry.Value))));
 
     private static void ApplySharedBehaviorSubtrees(IEnumerable<JObject> sources, JObject shared)
     {

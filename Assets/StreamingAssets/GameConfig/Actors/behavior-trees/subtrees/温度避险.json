@@ -1,0 +1,15 @@
+{
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "temperature.pending"
+      },
+      {
+        "type": "action",
+        "name": "temperature.retreat"
+      }
+    ]
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "parameters": {
+    "fleeEnter": 0.22,
+    "fleeExit": 0.45,
+    "chaseDistance": 28,
+    "chaseLossDistance": 44,
+    "avoidDistance": 28,
+    "avoidSafeDistance": 30,
+    "runDistance": 30
+  },
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "selector",
+        "children": [
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.skillActive"
+              },
+              {
+                "type": "action",
+                "name": "land.skill",
+                "id": "skill",
+                "parameters": {
+                  "source": "pack"
+                }
+              }
+            ]
+          },
+          {
+            "type": "subtree",
+            "name": "packLowHealthFlee",
+            "parameters": {
+              "fleeEnter": "$fleeEnter",
+              "fleeExit": "$fleeExit",
+              "runDistance": "$runDistance"
+            }
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.attackLocked"
+              },
+              {
+                "type": "condition",
+                "name": "land.target",
+                "parameters": {
+                  "source": "pack"
+                }
+              },
+              {
+                "type": "action",
+                "name": "land.attack",
+                "id": "attack",
+                "parameters": {
+                  "source": "pack",
+                  "trySkills": true
+                }
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "selector",
+                "children": [
+                  {
+                    "type": "condition",
+                    "name": "land.groupSize",
+                    "parameters": {
+                      "min": 2
+                    }
+                  },
+                  {
+                    "type": "condition",
+                    "name": "land.aggressiveAdvance"
+                  }
+                ]
+              },
+              {
+                "type": "subtree",
+                "name": "combat",
+                "parameters": {
+                  "source": "pack",
+                  "requireCooldown": false,
+                  "trySkills": true,
+                  "distance": "$chaseDistance",
+                  "continueDistance": "$chaseLossDistance"
+                }
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.searchReady"
+              },
+              {
+                "type": "action",
+                "name": "land.search",
+                "id": "search"
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "inverter",
+                "children": [
+                  {
+                    "type": "condition",
+                    "name": "land.aggressiveAdvance"
+                  }
+                ]
+              },
+              {
+                "type": "condition",
+                "name": "land.groupSize",
+                "parameters": {
+                  "min": 1,
+                  "max": 1
+                }
+              },
+              {
+                "type": "subtree",
+                "name": "flee",
+                "parameters": {
+                  "source": "pack",
+                  "distance": "$avoidDistance",
+                  "safeDistance": "$avoidSafeDistance",
+                  "runDistance": "$runDistance",
+                  "recentDamage": false,
+                  "action": "avoid"
+                }
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.alert"
+              },
+              {
+                "type": "action",
+                "name": "land.alert",
+                "id": "alert",
+                "parameters": {
+                  "source": "pack"
+                }
+              }
+            ]
+          },
+          {
+            "type": "sequence",
+            "children": [
+              {
+                "type": "condition",
+                "name": "land.advanceReady"
+              },
+              {
+                "type": "action",
+                "name": "land.advance",
+                "id": "advance"
+              }
+            ]
+          },
+          {
+            "type": "action",
+            "name": "land.wander",
+            "id": "wander",
+            "parameters": {
+              "packKey": "pack"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

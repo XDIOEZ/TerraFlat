@@ -1,0 +1,71 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "aquatic.externallyControlled"
+          },
+          {
+            "type": "action",
+            "name": "aquatic.stop"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "aquatic.stranded"
+          },
+          {
+            "type": "action",
+            "name": "aquatic.returnWater"
+          }
+        ]
+      },
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "aquatic.hooked"
+          },
+          {
+            "type": "action",
+            "name": "aquatic.stop"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "aquatic.threat"
+          },
+          {
+            "type": "action",
+            "name": "aquatic.flee"
+          }
+        ]
+      },
+      {
+        "type": "action",
+        "name": "aquatic.forage"
+      },
+      {
+        "type": "action",
+        "name": "aquatic.wander"
+      }
+    ]
+  }
+}

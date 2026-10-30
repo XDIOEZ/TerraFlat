@@ -1,0 +1,18 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "subtree",
+        "name": "huntAndWander",
+        "parameters": {
+          "source": "territory"
+        }
+      }
+    ]
+  }
+}

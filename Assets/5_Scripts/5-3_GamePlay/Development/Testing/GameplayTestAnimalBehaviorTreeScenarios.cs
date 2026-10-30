@@ -115,6 +115,11 @@ internal static class GameplayTestAnimalBehaviorTreeScenarios
         ["inner"] = new JObject
         {
             ["parameters"] = new JObject { ["label"] = "inner-default" },
+            ["root"] = Subtree("leaf", "$label")
+        },
+        ["leaf"] = new JObject
+        {
+            ["parameters"] = new JObject { ["label"] = "leaf-default" },
             ["root"] = new JObject
             {
                 ["type"] = "action", ["name"] = "test_param", ["id"] = "$label",

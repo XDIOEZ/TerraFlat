@@ -1,0 +1,39 @@
+{
+  "parameters": {
+    "fleeEnter": 0.22,
+    "fleeExit": 0.45,
+    "runDistance": 30
+  },
+  "root": {
+    "type": "sequence",
+    "children": [
+      {
+        "type": "condition",
+        "name": "land.groupSize",
+        "parameters": {
+          "min": 2,
+          "max": 2
+        }
+      },
+      {
+        "type": "condition",
+        "name": "land.target",
+        "parameters": {
+          "source": "pack",
+          "visible": false
+        }
+      },
+      {
+        "type": "subtree",
+        "name": "lowHealthFlee",
+        "parameters": {
+          "enter": "$fleeEnter",
+          "exit": "$fleeExit",
+          "source": "pack",
+          "runDistance": "$runDistance",
+          "recentDamage": false
+        }
+      }
+    ]
+  }
+}

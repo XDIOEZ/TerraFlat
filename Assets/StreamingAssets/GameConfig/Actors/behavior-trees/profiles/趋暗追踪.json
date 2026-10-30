@@ -1,0 +1,68 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "light.playerVisible"
+          },
+          {
+            "type": "action",
+            "name": "light.chaseDirect"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "light.known"
+          },
+          {
+            "type": "selector",
+            "children": [
+              {
+                "type": "sequence",
+                "children": [
+                  {
+                    "type": "condition",
+                    "name": "light.illuminated"
+                  },
+                  {
+                    "type": "selector",
+                    "children": [
+                      {
+                        "type": "action",
+                        "name": "light.seekDark"
+                      },
+                      {
+                        "type": "action",
+                        "name": "light.waitInLight"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "action",
+                "name": "light.wanderDark"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "action",
+        "name": "light.stop"
+      }
+    ]
+  }
+}

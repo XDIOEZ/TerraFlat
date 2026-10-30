@@ -1,0 +1,46 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "land.damageReaction"
+          },
+          {
+            "type": "selector",
+            "children": [
+              {
+                "type": "subtree",
+                "name": "damageRetreat"
+              },
+              {
+                "type": "subtree",
+                "name": "retaliateAfterDamage"
+              },
+              {
+                "type": "subtree",
+                "name": "sleep"
+              },
+              {
+                "type": "subtree",
+                "name": "forage"
+              },
+              {
+                "type": "action",
+                "name": "land.wander",
+                "id": "wander"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

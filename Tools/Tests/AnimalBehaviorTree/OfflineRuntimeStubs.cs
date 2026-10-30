@@ -71,8 +71,12 @@ public static partial class ActorDefinitionCatalogLoader
             .Select(path => new JObject { ["schemaVersion"] = 1,
                 ["items"] = JObject.Parse(File.ReadAllText(path))["actors"].DeepClone() }.ToString(Formatting.None));
         List<JObject> sources = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
-        ApplySharedBehaviorSubtrees(sources, (JObject)JObject.Parse(File.ReadAllText(SharedPath))["subtrees"]);
+        ApplySharedBehaviorSubtrees(sources, LoadSharedBehaviorSubtreeFiles(SharedPath));
         return sources.Select(source => source.ToObject<ItemDefinitionDto>()).ToList();
     }
+
+    public static JObject LoadSharedBehaviorSubtreeFiles(string indexPath)
+        => ReadBehaviorSubtrees(ReadBehaviorSubtreeFilePaths(File.ReadAllText(indexPath)).Select(entry =>
+            new KeyValuePair<string, string>(entry.Key, File.ReadAllText(Path.Combine(Path.GetDirectoryName(indexPath), entry.Value)))));
 }
 #endregion

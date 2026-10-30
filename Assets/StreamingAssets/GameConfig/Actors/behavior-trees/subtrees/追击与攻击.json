@@ -1,0 +1,58 @@
+{
+  "parameters": {
+    "source": "hunting",
+    "requireCooldown": true,
+    "trySkills": false,
+    "distance": 10000.0,
+    "continueDistance": 10000.0
+  },
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "land.attackReady",
+            "parameters": {
+              "source": "$source",
+              "requireCooldown": "$requireCooldown"
+            }
+          },
+          {
+            "type": "action",
+            "name": "land.attack",
+            "id": "attack",
+            "parameters": {
+              "source": "$source",
+              "trySkills": "$trySkills"
+            }
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "land.target",
+            "parameters": {
+              "source": "$source",
+              "distance": "$distance",
+              "continueDistance": "$continueDistance"
+            }
+          },
+          {
+            "type": "action",
+            "name": "land.chase",
+            "id": "chase",
+            "parameters": {
+              "source": "$source"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "subtree",
+        "name": "temperatureRetreat"
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.defense"
+          },
+          {
+            "type": "action",
+            "name": "colony.pursue"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.sleepReturn"
+          },
+          {
+            "type": "action",
+            "name": "colony.returnForSleep"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.hasLockedTarget"
+          },
+          {
+            "type": "action",
+            "name": "colony.pursue"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.searching"
+          },
+          {
+            "type": "action",
+            "name": "colony.search"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.angry"
+          },
+          {
+            "type": "action",
+            "name": "colony.angryPatrol"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.orphaned"
+          },
+          {
+            "type": "action",
+            "name": "colony.independentWander"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.returningHoney"
+          },
+          {
+            "type": "action",
+            "name": "colony.returnHoney"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.canForage"
+          },
+          {
+            "type": "action",
+            "name": "colony.forage"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.needsMeal"
+          },
+          {
+            "type": "action",
+            "name": "colony.meal"
+          }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          {
+            "type": "condition",
+            "name": "colony.hasHome"
+          },
+          {
+            "type": "action",
+            "name": "colony.patrol"
+          }
+        ]
+      },
+      {
+        "type": "action",
+        "name": "colony.stop"
+      }
+    ]
+  }
+}
