@@ -166,13 +166,10 @@ public static partial class GameplayTestSystemProbe
         Mod_TurnBack turning = prefab != null ? prefab.GetComponentInChildren<Mod_TurnBack>(true) : null;
         FlatWorld.Dialogue.ScreenSpaceSpeechBubblePresenter speech = prefab != null
             ? prefab.GetComponent<FlatWorld.Dialogue.ScreenSpaceSpeechBubblePresenter>() : null;
-        PlayerOxygenWorldBar oxygenBar = prefab != null
-            ? prefab.GetComponentInChildren<PlayerOxygenWorldBar>(true) : null;
-        RectTransform oxygenRect = oxygenBar != null ? oxygenBar.GetComponent<RectTransform>() : null;
         BoxCollider2D body = prefab != null ? prefab.GetComponent<BoxCollider2D>() : null;
         BoxCollider2D hitbox = receiver != null ? receiver.GetComponent<BoxCollider2D>() : null;
         if (visual == null || receiver == null || heldAnchor == null || turning == null ||
-            speech == null || oxygenRect == null ||
+            speech == null ||
             oxygenBarRect == null || oxygenBarRect.parent != prefab.transform ||
             body == null || hitbox == null ||
             appearance?.profile == null || appearance.profile.PixelsPerUnit <= 0f)
@@ -194,7 +191,6 @@ public static partial class GameplayTestSystemProbe
             ["heldAnchorY"] = heldAnchor.position.y - prefab.transform.position.y,
             ["turnMirrorY"] = turning.DefaultPosition.y,
             ["bubbleY"] = bubbleY,
-            ["oxygenAnchorY"] = oxygenRect.anchoredPosition.y,
             ["oxygenBarY"] = oxygenBarRect.anchoredPosition.y,
             ["oxygenBarOffsetFromSpriteTop"] = oxygenBarRect.anchoredPosition.y - (spriteBottom + spriteHeight),
             ["hitBottom"] = hitCenterY - hitHalfHeight,

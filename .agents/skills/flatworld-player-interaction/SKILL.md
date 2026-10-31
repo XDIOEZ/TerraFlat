@@ -64,7 +64,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
 - 玩家脚底为立绘与受击框的共同 Y=0 基准，阻挡框仍独立占脚边；头顶 `PlayerOxygenWorldBar` 挂玩家根（不随 `RollVisual` 旋转），随角色身位变化校准，回归 `player/collider_visual_alignment`。
 - `Player` 根原点即脚底；`RollVisual` 与 `Module_Animator` 的局部 Y 分别为 +0.767/-0.767，角色底锚在 (0,0)。根非 Trigger 碰撞框只占脚下（0.4×0.3，Y=-0.07）；`Module_DamageReciver` 受击 Trigger 按 32×48/PPU32 画布居中于 Y=0.75（高1.5）；手持挂点与转身恢复 Y 同为 0.453125，回归 `player/collider_visual_alignment`。
-- 玩家根下的头顶气泡 `worldOffset.y=1.517`、世界氧气条 `anchoredPosition.y=1.334` 按脚底为零点配置，避免变更角色视觉锚点后遮挡头部。
+- 玩家根下的头顶气泡 `worldOffset.y=1.517`、世界氧气条 `anchoredPosition.y=1.067` 按脚底为零点配置，避免变更角色视觉锚点后遮挡头部。
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。

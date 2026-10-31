@@ -307,9 +307,7 @@ test.system("player", "collider_visual_alignment", {}, function(data)
         near(data.bodyCenter, -.07) and near(data.bodyWidth, .4), "玩家实体阻挡框不再跨脚底占地")
     assert(near(data.heldAnchorY, .453125) and near(data.turnMirrorY, data.heldAnchorY),
         "玩家手持挂点与转身目标未跟随脚底锚点调整")
-    assert(near(data.bubbleY - data.spriteTop, .017) and
-        near(data.oxygenAnchorY - data.spriteTop, -.166),
-        "玩家头顶气泡或氧气条未跟随新的脚底锚点")
+    assert(near(data.bubbleY - data.spriteTop, .017), "玩家头顶气泡未跟随新的脚底锚点")
     assert(near(data.oxygenBarY, 1.067) and near(data.oxygenBarOffsetFromSpriteTop, -.433),
         "玩家头顶氧气条未跟随立绘同步位移")
 end, "玩家脚底锚点：立绘、受击框、翻滚中心和脚下阻挡统一基准")
