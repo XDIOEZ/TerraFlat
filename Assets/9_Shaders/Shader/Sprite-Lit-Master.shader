@@ -43,6 +43,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _HitFlash ("Hit Flash", Range(0,1)) = 0
         _HitFlashColor ("Hit Flash Color", Color) = (1,0.08,0.08,1)
         [HideInInspector] _CombatHitOffset ("Combat Hit World Offset", Vector) = (0,0,0,0)
+        [HideInInspector] _HarvestShake ("Harvest Shake Local Pivot, Start And Enabled", Vector) = (0,0,0,0)
 
         _Dissolve ("Dissolve", Range(0,1)) = 0
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
@@ -112,6 +113,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         float4 _ConveyorAnimation, _ConveyorSurface, _ConveyorRegion;
         float4 _DeviceIndicatorRect, _DeviceIndicatorTint;
         float4 _CombatHitOffset;
+        float4 _HarvestShake;
 
         // 指示灯只在指定本地矩形内重染，透明度为零时保留原图绿蓝色。
         float4 ApplyDeviceIndicatorTint(float4 source, float2 localPosition)
@@ -265,6 +267,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(v.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;
@@ -421,6 +424,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 float3 hitPositionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(hitPositionWS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
@@ -560,6 +564,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;

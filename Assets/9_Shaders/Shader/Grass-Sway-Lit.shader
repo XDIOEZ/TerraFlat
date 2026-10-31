@@ -26,12 +26,14 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         [Toggle] _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
         [Toggle] _GrassFollowWind("强风跟随天气风向", Float) = 0
         _GrassDirection("风向", Vector) = (1, 0, 0, 0)
+        [HideInInspector] _HarvestShake("Harvest Shake Local Pivot, Start And Enabled", Vector) = (0,0,0,0)
     }
 
     HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
         #include "VegetationSway.hlsl"
+        float4 _HarvestShake;
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -112,7 +114,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
                 #ifdef UNITY_INSTANCING_ENABLED
                 v.positionOS = UnityFlipSprite(v.positionOS, unity_SpriteFlip);
                 #endif
-                v.positionOS = ApplyGrassSway(v.positionOS);
+                v.positionOS = ApplyManualHarvestShakeSprite(ApplyGrassSway(v.positionOS), _HarvestShake);
 
                 o.positionCS = TransformObjectToHClip(v.positionOS);
                 #if defined(DEBUG_DISPLAY)
@@ -180,7 +182,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
                 #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
                 #endif
-                attributes.positionOS = ApplyGrassSway(attributes.positionOS);
+                attributes.positionOS = ApplyManualHarvestShakeSprite(ApplyGrassSway(attributes.positionOS), _HarvestShake);
 
                 o.positionCS = TransformObjectToHClip(attributes.positionOS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
@@ -248,7 +250,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
                 #ifdef UNITY_INSTANCING_ENABLED
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
                 #endif
-                attributes.positionOS = ApplyGrassSway(attributes.positionOS);
+                attributes.positionOS = ApplyManualHarvestShakeSprite(ApplyGrassSway(attributes.positionOS), _HarvestShake);
 
                 o.positionCS = TransformObjectToHClip(attributes.positionOS);
                 #if defined(DEBUG_DISPLAY)

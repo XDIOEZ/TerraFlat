@@ -231,6 +231,16 @@ internal sealed partial class ChunkDepthMeshRenderer
                 foreach (Vector3 vertex in entry.Geometry.Vertices)
                     bounds.Encapsulate(matrix.MultiplyPoint3x4(new Vector3(vertex.x, vertex.y * compressed, vertex.z)));
             }
+            else if (mode == HarvestShakeMode)
+            {
+                // 旋转在 GPU 执行，CPU 包围盒仍覆盖绕植株公共根点的最大七度偏移。
+                Vector3 pivot = Row.Root.InverseTransformPoint(new Vector3(visual.Animation.z,
+                    visual.Animation.w, Row.Root.position.z));
+                float dx = Mathf.Max(Mathf.Abs(bounds.min.x - pivot.x), Mathf.Abs(bounds.max.x - pivot.x));
+                float dy = Mathf.Max(Mathf.Abs(bounds.min.y - pivot.y), Mathf.Abs(bounds.max.y - pivot.y));
+                float padding = new Vector2(dx, dy).magnitude * .13f;
+                bounds.Expand(new Vector3(padding * 2f, padding * 2f, 0f));
+            }
             float matrixScale = Mathf.Max(new Vector2(matrix.m00, matrix.m10).magnitude,
                 new Vector2(matrix.m01, matrix.m11).magnitude);
             bounds.Expand(new Vector3(material.SwayMargin * matrixScale * 2f + .05f,

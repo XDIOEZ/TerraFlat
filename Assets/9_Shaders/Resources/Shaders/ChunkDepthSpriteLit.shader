@@ -168,6 +168,9 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                 positionWS.xy += ResolveVegetationSwayOffset(positionWS.xy,
                     GrassBendWeight(float3(input.localClip.xy, 0)), basisX, basisY, swayRootWS);
             }
+            // 模式11直接使用每株顶点流的开始时间及共同根点，不产生逐帧 CPU 网格更新。
+            if (input.animation.x > 10.5 && input.animation.x < 11.5)
+                positionWS.xy = ApplyManualHarvestShake(positionWS.xy, input.animation.zw, input.animation.y);
             output.positionCS = TransformWorldToHClip(positionWS);
             output.worldRoot = float4(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y, 0);
             // 单株/单设备自带原图范围，整行合批和机械动画仍共用世界水平雪线。

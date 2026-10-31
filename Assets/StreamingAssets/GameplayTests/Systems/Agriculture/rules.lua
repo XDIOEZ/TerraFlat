@@ -195,3 +195,13 @@ end, "徒手采集：作物和两个实体后端共用五次工作规则")
 test.system("agriculture", "manual_harvest_work", { steps = 0 }, function(data)
     for _, complete in ipairs(data.completed) do assert(complete, "非法采集配置没有钳制到至少一次") end
 end, "徒手采集：工作次数配置下限")
+
+test.system("agriculture", "manual_harvest_shader", {}, function(data)
+    assert(data.mainShaderSupported and data.plantShaderSupported, "采摘 GPU 参数没有加入 Sprite/植被 Shader")
+    assert(data.rootShared, "灌木和附属果实没有使用同一个摇摆根点与时间")
+    assert(data.projectedSharedRoot and data.projectedCleared, "世界显示副本没有跟随摇摆或结束后残留参数")
+    assert(data.boundsExpanded and data.boundsStable, "GPU 摇摆裁剪边界没有正常扩张或连点发生累加")
+    assert(data.sameComponent and data.transformsUntouched, "采摘仍在创建多份状态或移动 Transform")
+    assert(data.unrelatedPropertyKept, "采摘覆盖了水态等已有材质属性")
+    assert(data.cleared and data.boundsRestored, "采摘结束没有恢复 GPU 参数和裁剪边界")
+end, "徒手采摘：Shader共用根点、连点、裁剪与结束清理")

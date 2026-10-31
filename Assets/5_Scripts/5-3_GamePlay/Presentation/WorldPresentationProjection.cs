@@ -234,6 +234,24 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             watcher.Invalidate();
     }
 
+    /// <summary>短暂视觉效果只在参数变化时同步显示副本，不触发层级重扫或逐帧重建。</summary>
+    public static void RefreshItemVisualProperties(Item item, IReadOnlyList<SpriteRenderer> sources)
+    {
+        if (item == null || sources == null || !itemProjectionOwners.TryGetValue(item, out var owners)) return;
+        foreach (WorldPresentationProjection owner in owners)
+        {
+            if (owner == null || owner.released) continue;
+            for (int i = 0; i < sources.Count; i++)
+            {
+                SpriteRenderer source = sources[i];
+                if (source == null || !owner.copies.TryGetValue(source, out RenderCopy copy) ||
+                    copy.Target == null || copy.Target is not SpriteRenderer display) continue;
+                owner.SynchronizeRenderer(copy);
+                display.localBounds = source.localBounds;
+            }
+        }
+    }
+
     internal static bool IsSourceProjected(Renderer source)
         => source != null && projectedSources.ContainsKey(source);
 

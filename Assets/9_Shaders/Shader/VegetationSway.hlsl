@@ -18,6 +18,27 @@ float4 _GrassDirection;
 float _GlobalWindStrength;
 float4 _GlobalWindDirection;
 
+// 徒手采摘仅在 GPU 旋转画面，主体与附属果实使用同一个世界根点。
+float2 ApplyManualHarvestShake(float2 positionWS, float2 rootWS, float startedAt)
+{
+    float elapsed = _Time.y - startedAt;
+    if (elapsed < 0.0 || elapsed >= 0.24) return positionWS;
+    float angle = sin(elapsed * (6.0 * 3.14159265359 / 0.24)) * (7.0 * 3.14159265359 / 180.0)
+        * (1.0 - elapsed / 0.24);
+    float s, c; sincos(angle, s, c);
+    float2 offset = positionWS - rootWS;
+    return rootWS + float2(offset.x * c - offset.y * s, offset.x * s + offset.y * c);
+}
+
+float3 ApplyManualHarvestShakeSprite(float3 positionOS, float4 shake)
+{
+    if (shake.w < 0.5) return positionOS;
+    float3 positionWS = TransformObjectToWorld(positionOS);
+    float3 rootWS = TransformObjectToWorld(float3(shake.xy, 0));
+    positionWS.xy = ApplyManualHarvestShake(positionWS.xy, rootWS.xy, shake.z);
+    return TransformWorldToObject(positionWS);
+}
+
 // Tilemap 按单元锚点取局部高度；独立 Sprite 可在树干上方才开始弯曲。
 float GrassBendWeight(float3 positionOS)
 {
