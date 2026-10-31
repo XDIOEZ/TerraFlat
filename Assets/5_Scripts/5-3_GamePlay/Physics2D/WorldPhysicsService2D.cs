@@ -126,6 +126,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
 
     internal Rigidbody2D EnsureMovableItemBody(Item target)
     {
+        if (TryGetItemProxy(target, out var detached) && detached.Shell.OwnsRoot)
+            return EnsureDetachedItemMovableBody(target);
         ItemPhysicsDefinitionDto configured = GetConfiguredItemPhysics(target);
         Rigidbody2D body = RentItemRigidbody(target, target.transform);
         if (!ConfigureItemBodyForIndependentMotion(target, body, refreshRegistration: false))
@@ -165,13 +167,13 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         return true;
     }
 
-    internal void RegisterItem(Item item)
+    internal void RegisterItem(Item item, bool requestIndependent = false)
     {
         if (item == null || disposed) return;
         ItemData originalData = item.itemData;
         ItemMgr manager = ItemMgr.GetExistingInstance();
         bool wasRuntimeRegistered = manager != null && manager.IsRuntimeItemRegistered(item);
-        Rigidbody2D previousBody = item.GetComponent<Rigidbody2D>();
+        Rigidbody2D previousBody = GetItemRigidbody(item);
         WorldPhysicsEntityProxy2D previousProxy = null;
         bool hadPreviousProxy = itemOwners.TryGetValue(item, out var previousOwner) &&
             previousOwner.entityProxies.TryGetValue(item, out previousProxy);
@@ -180,6 +182,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         bool previousSimulated = previousBody != null && previousBody.simulated;
         Vector2 previousVelocity = previousBody != null ? previousBody.velocity : Vector2.zero;
         float previousAngularVelocity = previousBody != null ? previousBody.angularVelocity : 0f;
+        WorldPhysicsItemBodyRepresentation2D? previousRepresentation = previousBody != null
+            ? CaptureItemBodyRepresentation(previousBody) : null;
         ReleaseItem(item, preserveNativeMotion: true);
         if (item == null || item.DestructionHandled || item.IsInPool || !ReferenceEquals(item.itemData, originalData) ||
             wasRuntimeRegistered && !manager.IsRuntimeItemRegistered(item))
@@ -195,6 +199,9 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         itemOwners[item] = this;
         try
         {
+        if (TryRegisterDetachedRootItemPhysics(item, registered,
+                hadPreviousProxy && previousMode == WorldPhysicsProxyMode2D.IndependentDynamic,
+                requestIndependent, previousRepresentation)) return;
         RentItemPhysicsComponents(item);
         if (previousBody == null)
         {

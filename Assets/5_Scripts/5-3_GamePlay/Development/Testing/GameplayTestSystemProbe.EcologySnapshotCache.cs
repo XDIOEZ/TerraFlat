@@ -45,7 +45,7 @@ public static partial class GameplayTestSystemProbe
         bool frozenBytesReused = ReferenceEquals(initial[0].ChunkData, repeated[0].ChunkData) &&
             ReferenceEquals(initial[0].ChangedItems[0], repeated[0].ChangedItems[0]);
 
-        ItemData runtime = ChunkNaturalItemRenderer.CreateRuntimeItemFromEcologySnapshot(first);
+        ItemData runtime = ChunkNaturalItemRuntime.CreateRuntimeItemFromEcologySnapshot(first);
         ItemData runtimeNested = ((Inventory_ModuleData)runtime.ModuleDataDic["cargo"]).Data["cargo"].itemSlots[0].itemData;
         runtime.Stack.Amount = 42;
         runtimeNested.Stack.Amount = 55;

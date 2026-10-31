@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("world_streaming/world_physics_ownership", ServiceWorldPhysicsOwnership);
         operations.Add("world_streaming/world_physics_definition", ServiceWorldPhysicsDefinition);
+        operations.Add("world_streaming/detached_item_projection", DetachedItemProjection);
     }
 
     // 自有原生场景实测隔离与接触，采样只调用正式登记和解析入口。

@@ -56,6 +56,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemUnregistered += UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
         Item.RuntimeStructureChanged += RefreshItemRendering;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentNaturalItemViews;
         RegisterRuntimeItems();
     }
 
@@ -83,6 +85,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemRegistered -= HandleRuntimeItemRegistered;
         ItemMgr.RuntimeItemUnregistered -= UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
         try { ClearItemRenderingRegistrations(); }
         finally
         {
@@ -140,12 +143,15 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         RegisterItemSorting(item);
         ApplyItemShadowRegistration(item, itemRenderingRegistrations[item], true);
         RefreshItemRenderingFeatures(item);
+        RefreshHeldFoodPresentation(item);
     }
 
     /// <summary>死亡、回池和世界退出共用回收入口，不查找或创建新的管理器。</summary>
     public void UnregisterItemRendering(Item item)
     {
         if (ReferenceEquals(item, null)) return;
+        ClearHeldFoodPresentation(item);
+        ReleaseNaturalItemView(item);
         itemRenderingRegistrations.Remove(item);
         item.OnItemDestroy -= UnregisterItemRendering;
         try { UnregisterItemShadows(item); }
@@ -172,6 +178,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
 
     private void ClearItemRenderingRegistrations()
     {
+        ClearHeldFoodPresentations();
+        ClearNaturalItemViews();
         using var scope = UnityEngine.Pool.ListPool<Item>.Get(out var items);
         using var errorScope = UnityEngine.Pool.ListPool<Exception>.Get(out var errors);
         items.AddRange(itemRenderingRegistrations.Keys);

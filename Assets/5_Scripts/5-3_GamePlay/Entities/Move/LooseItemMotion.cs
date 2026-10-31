@@ -203,13 +203,14 @@ public static partial class LooseItemMotion
     {
         if (item == null || item.DestructionHandled || !Finite(position)) return false;
         if (WorldPhysicsService2D.GetConfiguredItemPhysics(item) != null)
-            return WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, item.GetComponent<Rigidbody2D>(), position);
+            return WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, WorldPhysicsService2D.GetItemRigidbody(item), position);
         string world = item.gameObject.scene.name;
         Vector2 before = item.transform.position;
         Vector2 movement = PressureExplosionQueue.DeltaInWorld(world, before, position);
         if (movement.sqrMagnitude <= .00000001f) return false;
         Vector3 display = new(before.x + movement.x, before.y + movement.y, item.transform.position.z);
-        if (item.TryGetComponent(out Rigidbody2D body)) { body.position = display; body.velocity = Vector2.zero; }
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
+        if (body != null) { body.position = display; body.velocity = Vector2.zero; }
         item.transform.position = display;
         item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
         if (world == GameplayWorldRegistry.ExecutionWorldKey)

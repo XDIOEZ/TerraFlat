@@ -27,7 +27,7 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     public static void Ensure(Item target)
     {
         if (target == null || target is Map) return;
-        Rigidbody2D rigidbody = target.GetComponent<Rigidbody2D>();
+        Rigidbody2D rigidbody = WorldPhysicsService2D.GetItemRigidbody(target);
         ItemPhysicsProjection2D projection = target.GetComponent<ItemPhysicsProjection2D>();
         if (rigidbody == null || rigidbody.bodyType == RigidbodyType2D.Static)
         {
@@ -49,7 +49,7 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     private void Awake()
     {
         item = GetComponent<Item>();
-        body = GetComponent<Rigidbody2D>();
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
     }
 
     private void OnDestroy() => WorldPhysicsService2D.ReleaseItem(item);
@@ -118,7 +118,7 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision) => RecordContact(collision);
     private void OnCollisionStay2D(Collision2D collision) => RecordContact(collision);
 
-    private void RecordContact(Collision2D collision)
+    internal void RecordContact(Collision2D collision)
     {
         if (!CanWriteBack() || collision.contactCount == 0) return;
         ContactPoint2D contact = collision.GetContact(0);

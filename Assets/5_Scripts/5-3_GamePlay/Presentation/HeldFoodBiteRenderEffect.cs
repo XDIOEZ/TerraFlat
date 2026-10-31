@@ -73,7 +73,8 @@ public sealed class HeldFoodBiteRenderEffect : ActorRenderEffectModule
     {
         block.SetVector(BitesId, new Vector4(completedBites >= maximumBites ? -1 : circlesTexture != null ? circlesTexture.width : 0,
             circlesTexture != null ? 1f / circlesTexture.width : 0f, target.flipX ? -1f : 1f, target.flipY ? -1f : 1f));
-        block.SetTexture(CirclesId, circlesTexture);
+        // Unity 的 MPB 不接受空纹理，零咬痕由计数关闭并借用公共空纹理清除旧引用。
+        block.SetTexture(CirclesId, circlesTexture != null ? circlesTexture : Texture2D.blackTexture);
     }
 
     public void ClearBites()

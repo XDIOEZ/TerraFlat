@@ -214,13 +214,15 @@ public static partial class GameplayWorldRegistry
         Vector3 sourceWorldPosition = item.transform.position;
         Quaternion sourceWorldRotation = item.transform.rotation;
         ItemData originalData = item.itemData;
-        Rigidbody2D sourceBody = item.GetComponent<Rigidbody2D>();
+        Rigidbody2D sourceBody = WorldPhysicsService2D.GetItemRigidbody(item);
         WorldPhysicsItemBodyRepresentation2D sourceRepresentation = sourceBody != null
             ? WorldPhysicsService2D.CaptureItemBodyRepresentation(sourceBody) : default;
         Vector2 sourceVelocity = sourceBody != null ? sourceBody.velocity : Vector2.zero;
         float sourceAngularVelocity = sourceBody != null ? sourceBody.angularVelocity : 0f;
+        WorldPhysicsEntityProxy2D sourceProxy = null;
         bool hadSourceProxy = TryGetPhysics(sourceWorld, out var sourcePhysics) &&
-            sourcePhysics.TryGetItemProxy(item, out _);
+            sourcePhysics.TryGetItemProxy(item, out sourceProxy);
+        bool independent = hadSourceProxy && sourceProxy.Mode == WorldPhysicsProxyMode2D.IndependentDynamic;
         Vector3 snapshotPosition = originalData?.transform?.position ?? sourceWorldPosition;
         Quaternion snapshotRotation = originalData?.transform?.rotation ?? sourceWorldRotation;
         Vector3 snapshotScale = originalData?.transform?.scale ?? sourceLocalScale;
@@ -241,7 +243,10 @@ public static partial class GameplayWorldRegistry
             snapshotAngularVelocity = originalData?.PhysicsState?.AngularVelocity ?? 0f;
             if (!worldItems.AssignItemToWorld(item, worldKey)) return;
             if (presentation != null) presentation.Release();
-            RegisterItemPhysics(item);
+            RegisterItemPhysics(item, independent);
+            if (sourceBody != null)
+                WorldPhysicsService2D.RestoreItemBodyRepresentation(item,
+                    WorldPhysicsService2D.GetItemRigidbody(item), sourceRepresentation);
             manager.NotifyRuntimeItemMoved(item);
             RegisterItemPresentation(item);
         }
@@ -284,12 +289,13 @@ public static partial class GameplayWorldRegistry
                 else if (originalData != null) originalData.PhysicsState = null;
                 using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : default)
                 {
-                    if (hadSourceProxy) RegisterItemPhysics(item);
+                    if (hadSourceProxy) RegisterItemPhysics(item, independent);
                     if (sourceBody != null)
                     {
-                        WorldPhysicsService2D.RestoreItemBodyRepresentation(item, sourceBody, sourceRepresentation);
-                        if (sourceBody.bodyType != RigidbodyType2D.Static)
-                        { sourceBody.velocity = sourceVelocity; sourceBody.angularVelocity = sourceAngularVelocity; }
+                        Rigidbody2D restoredBody = WorldPhysicsService2D.GetItemRigidbody(item);
+                        WorldPhysicsService2D.RestoreItemBodyRepresentation(item, restoredBody, sourceRepresentation);
+                        if (restoredBody != null && restoredBody.bodyType != RigidbodyType2D.Static)
+                        { restoredBody.velocity = sourceVelocity; restoredBody.angularVelocity = sourceAngularVelocity; }
                     }
                     manager.NotifyRuntimeItemMoved(item);
                     RegisterItemPresentation(item);

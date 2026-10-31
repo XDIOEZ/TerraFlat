@@ -126,7 +126,8 @@ public sealed partial class WorldPhysicsService2D
 
     internal static bool ConfigureItemBodyForIndependentMotion(Item item, Rigidbody2D body, bool refreshRegistration = true)
     {
-        if (item == null || body == null || body.gameObject != item.gameObject || !CanItemUseIndependentMotion(item))
+        if (item == null || body == null || (body.gameObject != item.gameObject &&
+                (!TryGetRegisteredItemProxy(item, out var owned) || owned.Body != body)) || !CanItemUseIndependentMotion(item))
             return false;
         ItemPhysicsDefinitionDto definition = GetConfiguredItemPhysics(item);
         body.bodyType = GameNetwork.HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;

@@ -92,8 +92,8 @@ public static partial class GameplayTestSystemProbe
 
         return new JObject
         {
-            ["mainShaderSupported"] = mainShader != null && mainShader.HasProperty(shakeId),
-            ["plantShaderSupported"] = plantShader != null && plantShader.HasProperty(shakeId),
+            ["mainShaderSupported"] = mainShader != null && mainShader.FindPropertyIndex("_HarvestShake") >= 0,
+            ["plantShaderSupported"] = plantShader != null && plantShader.FindPropertyIndex("_HarvestShake") >= 0,
             ["rootShared"] = bodyShake.w > .5f && fruitShake.w > .5f &&
                 Mathf.Approximately(bodyShake.z, fruitShake.z) && Vector3.Distance(bodyRoot, fruitRoot) < .0001f,
             ["projectedSharedRoot"] = projectedSharedRoot,

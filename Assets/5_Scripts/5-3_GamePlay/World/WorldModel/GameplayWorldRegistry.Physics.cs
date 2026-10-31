@@ -82,7 +82,9 @@ public static partial class GameplayWorldRegistry
         return !string.IsNullOrEmpty(worldKey) && worldPhysics.TryGetValue(worldKey, out service) && service.IsValid;
     }
 
-    internal static void RegisterItemPhysics(Item item)
+    internal static void RegisterItemPhysics(Item item) => RegisterItemPhysics(item, false);
+
+    internal static void RegisterItemPhysics(Item item, bool requestIndependent)
     {
         string key = GetItemWorldKey(item);
         if (string.IsNullOrEmpty(key)) { WorldPhysicsService2D.ReleaseItem(item); return; }
@@ -90,7 +92,7 @@ public static partial class GameplayWorldRegistry
             spaceContexts.TryGetValue(key, out var space) ? space.Scene : SceneManager.GetSceneByName(key);
         if (!scene.IsValid() || !scene.isLoaded) scene = item.gameObject.scene;
         using var scope = TryGet(key, out _) ? UseWorld(key) : default;
-        GetOrCreatePhysics(key, scene).RegisterItem(item);
+        GetOrCreatePhysics(key, scene).RegisterItem(item, requestIndependent);
     }
 
     private static void RequireAssignedItemPhysicsWorld(string worldKey)

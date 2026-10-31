@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 
-public sealed partial class ChunkNaturalItemRenderer
+public sealed partial class ChunkNaturalItemRuntime
 {
     #region 跨区块资源引用
     private readonly Dictionary<int, SharedNaturalEntityRegistry.Lease> sharedEntities = new();

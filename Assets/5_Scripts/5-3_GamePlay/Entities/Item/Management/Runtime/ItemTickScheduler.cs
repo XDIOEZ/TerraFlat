@@ -92,7 +92,7 @@ internal sealed class ItemTickScheduler
 
         ItemTickTier tier = item.GetTickTier();
         int bucket = tier == ItemTickTier.EveryFrame ? -1 :
-            tier == ItemTickTier.Dormant && !item.TryGetComponent<Rigidbody2D>(out _)
+            tier == ItemTickTier.Dormant && WorldPhysicsService2D.GetItemRigidbody(item) == null
                 ? -1 : (item.GetInstanceID() & int.MaxValue) % BucketCount;
         bool alreadyRegistered = locations.TryGetValue(item, out Location existing);
         bool newGeneration = !alreadyRegistered || existing.Entry.Generation != item.RuntimeGeneration;

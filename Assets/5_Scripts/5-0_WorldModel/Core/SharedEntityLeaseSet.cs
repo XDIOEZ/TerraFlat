@@ -10,6 +10,7 @@ namespace FlatWorld.WorldModel
         private readonly List<T> members = new();
         public int Count => members.Count;
         public T Primary => members.Count > 0 ? members[0] : null;
+        public IReadOnlyList<T> Members => members;
         public bool Add(T member)
         {
             if (member == null) throw new ArgumentNullException(nameof(member));

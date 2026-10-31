@@ -81,3 +81,19 @@ test.system("world_streaming", "world_physics_proxy_modes", {}, function(data)
         and interaction.boundsOffsetError < 0.0001 and interaction.boundsSizeError < 0.0001,
         "自然资源默认交互区域没有保留非零渲染TRS或准确Sprite边界几何")
 end, "JSON游戏代理模式、固定格约束与共享合批资格")
+
+test.system("world_streaming", "detached_item_projection", {}, function(data)
+    assert(data.noNativePhysicsOnItem and data.separatePhysicsRoot and data.declaredGeometry,
+        "普通物品仍携带原生物理组件，或独立代理丢失声明几何")
+    assert(data.hitResolvesLogicalItem and data.nativeQueryFindsProxy,
+        "独立物理代理没有保留真实物品身份或无法被原生空间查询")
+    assert(data.viewHasNoLogicOrPhysics and data.noLogicPlaceholderNodes and data.realVisualCopied,
+        "视觉副本包含逻辑/碰撞组件或多余模块空节点，或没有绘制真实贴图")
+    assert(data.viewReleaseKeepsLogicAndPhysics and data.poseAndScaleFollowOwner,
+        "撤销绘制销毁了逻辑或物理，或位置代理没有同步姿态和尺寸")
+    assert(data.heldItemDisablesPhysics and data.dropReusesSameLease and data.releasedProxyCannotResolve
+        and data.reuseKeepsItemFreeOfNativePhysics,
+        "手持/落地、卸载或复租破坏了代理生命周期或重新给视觉外壳添加碰撞体")
+    assert(data.independentBodyDetached and data.nativeMovementWritesBack and data.reregisterPreservesRepresentation,
+        "独立运动仍依赖物品根刚体、原生结果未回写，或重新登记重置了临时运动接管状态")
+end, "普通物品逻辑、纯视觉投影和独立物理代理生命周期")

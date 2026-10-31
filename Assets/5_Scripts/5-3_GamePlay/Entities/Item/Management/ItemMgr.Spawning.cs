@@ -401,6 +401,7 @@ public partial class ItemMgr
 
         RefreshRuntimeItemIndexes(item);
         _tickScheduler.NotifyMoved(item);
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(item);
         RuntimeItemMoved?.Invoke(item);
     }
 

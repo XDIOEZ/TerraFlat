@@ -271,6 +271,7 @@ public partial class ChunkMgr
         {
             runtimeChunkManager?.CommitCompleted(RuntimeChunkCommitBudget, RuntimeChunkCommitMillisecondsBudget);
             RestorePendingLocalWorldChunks();
+            AdvanceNaturalItemRuntimes();
             AdvanceLiquidFlowStreamingFrame();
             liquidBodies?.AdvanceStreamingFrame();
             return;
@@ -284,6 +285,7 @@ public partial class ChunkMgr
             WorldRuntimeAdvanceMarker.SetGauge(runtimeChunkManager?.PendingCommitCount ?? 0);
         }
         ReconcileRuntimeWindowBindings();
+        AdvanceNaturalItemRuntimes();
         AdvanceLiquidFlowStreamingFrame();
         liquidBodies?.AdvanceStreamingFrame();
     }
@@ -546,6 +548,7 @@ public partial class ChunkMgr
         {
             PrepareRuntimeSceneUnbinding();
             ClearRuntimeWindowBindings(retainPresentationPool);
+            ReleaseNaturalItemRuntimes();
             EnsureRuntimeSceneBindingsWereReleased();
             StopLiquidBodies();
             StopLiquidFlowExperiment();
@@ -597,6 +600,7 @@ public partial class ChunkMgr
                 {
                     PrepareRuntimeSceneUnbinding();
                     ClearRuntimeWindowBindings();
+                    ReleaseNaturalItemRuntimes();
                     EnsureRuntimeSceneBindingsWereReleased();
                     StopLiquidBodies();
                     StopLiquidFlowExperiment();
@@ -665,6 +669,7 @@ public partial class ChunkMgr
                 try
                 {
                     runtimeBuildings.Clear();
+                    ReleaseNaturalItemRuntimes();
                     ReleaseIndependentNaturalEntities();
                     ReleaseSharedNaturalEntities();
                 }

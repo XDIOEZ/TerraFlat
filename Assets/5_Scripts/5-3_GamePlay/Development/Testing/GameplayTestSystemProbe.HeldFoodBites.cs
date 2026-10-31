@@ -10,8 +10,12 @@ public static partial class GameplayTestSystemProbe
         var scene = CreateGameplayTestProbeScene("[LuaHeldFoodBites]");
         var root = new GameObject("[LuaHeldFoodBites]");
         var actor = new GameObject("[LuaHeldFoodOwner]");
+        var services = new GameObject("[LuaHeldFoodRendering]");
         SceneManager.MoveGameObjectToScene(root, scene);
         SceneManager.MoveGameObjectToScene(actor, scene);
+        SceneManager.MoveGameObjectToScene(services, scene);
+        if (WorldSortingManager.GetInstance() == null) services.AddComponent<WorldSortingManager>();
+        WorldRenderingManager rendering = WorldRenderingManager.EnsureForOwner(services.transform);
         root.SetActive(false);
         var item = root.AddComponent<GameplayTestRenderingLifecycleItem>();
         item.BindData(new Data_GeneralItem { IDName = "probe:food", Guid = 75831, inHand = true,
@@ -26,6 +30,8 @@ public static partial class GameplayTestSystemProbe
         var renderer = root.AddComponent<SpriteRenderer>();
         renderer.sprite = sprite;
         renderer.sharedMaterial = originalMaterial;
+        item.Sprite = renderer;
+        rendering.RegisterItemRendering(item);
         renderer.sortingOrder = 17;
         int originalLayer = renderer.sortingLayerID;
         item.Sprite = renderer;
@@ -76,7 +82,7 @@ public static partial class GameplayTestSystemProbe
                 ownerController.RenderFrame(0f);
                 renderer.GetPropertyBlock(block);
                 Vector4 parameters = block.GetVector(bitesId);
-                var circlesTexture = block.GetTexture(circlesId) as Texture2D;
+                var circlesTexture = parameters.x > 0 ? block.GetTexture(circlesId) as Texture2D : null;
                 var circles = new JArray();
                 if (circlesTexture != null)
                     foreach (Vector4 circle in circlesTexture.GetPixelData<Vector4>(0))
@@ -103,8 +109,10 @@ public static partial class GameplayTestSystemProbe
         {
             if (registered) ownerController.UnregisterExternalRenderers(root.transform);
             held.Unload();
+            rendering.UnregisterItemRendering(item);
             Object.DestroyImmediate(root);
             Object.DestroyImmediate(actor);
+            Object.DestroyImmediate(services);
             Object.DestroyImmediate(sprite);
             Object.DestroyImmediate(texture);
             Object.DestroyImmediate(material);

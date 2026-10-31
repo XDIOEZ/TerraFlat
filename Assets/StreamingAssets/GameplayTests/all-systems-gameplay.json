@@ -429,6 +429,12 @@
       "name": "Lua专用GameRes跨编译缓存与正式目录",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
       "enabled": true
+    },
+    {
+      "id": "natural_item_decoupling_gameplay",
+      "name": "真实自然物的逻辑物理视觉分离",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/natural-decoupling-gameplay.lua",
+      "enabled": true
     }
   ]
 }

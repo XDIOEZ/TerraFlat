@@ -57,6 +57,9 @@ public abstract class Item : MonoBehaviour
     // 独立世界容器负责保存所属表现对象，区块不再重复保存同一份库存。
     public object PersistenceOwner { get; set; }
 
+    // 生态所有权由运行时账本显式绑定，不能通过视觉父节点推断。
+    internal ChunkNaturalItemRuntime NaturalRuntimeOwner { get; set; }
+
     /// <summary>
     /// 被其他实体感知时的范围倍率。1 为标准感知体型，数值越大越容易在更远处被发现。
     /// 观察者的检测半径与该目标倍率共同决定最终感知范围。
@@ -302,9 +305,12 @@ public abstract class Item : MonoBehaviour
 
     private void OnEnable()
     {
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
         FlushPendingInitialAnimatorState();
         WorldRenderingManager.ExistingInstance?.RefreshItemRendering(this);
     }
+
+    private void OnDisable() => WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
 
     #endregion
 
@@ -654,6 +660,7 @@ public abstract class Item : MonoBehaviour
         ClearPendingInitialAnimatorState();
         VisualDefinition = null;
         PersistenceOwner = null;
+        NaturalRuntimeOwner = null;
         GameplayWorldRegistry.AssignItemToWorld(this, null);
         ModuleUnload();
         ClearPerceptionRadiusLimits();
@@ -1233,6 +1240,7 @@ public abstract class Item : MonoBehaviour
             return;
 
         itemData.inHand = inHand;
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
         MarkModuleScheduleDirty();
         OnInHandChanged?.Invoke(inHand);
     }

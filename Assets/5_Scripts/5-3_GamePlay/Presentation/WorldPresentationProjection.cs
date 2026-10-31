@@ -147,6 +147,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private bool released;
     private Item sourceItem;
     private bool excludeNestedItems;
+    private bool visualHierarchyOnly;
     private bool hierarchyDirty = true;
     public bool IsReleased => released;
     public WorldPresentationSortingDomain SortingDomain => sortingDomain;
@@ -160,13 +161,14 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     // 停用父节点和编辑态可先调用同步，不能把材质参数初始化只交给 Awake。
     private void EnsureProjectionPropertyBlock() => properties ??= new MaterialPropertyBlock();
 
-    public static WorldPresentationProjection Create(Transform source, Transform parent = null)
+    public static WorldPresentationProjection Create(Transform source, Transform parent = null, bool visualHierarchyOnly = false)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         var root = new GameObject("WorldPresentationProjection") { hideFlags = HideFlags.DontSave };
         if (parent != null) root.transform.SetParent(parent, false);
         var projection = root.AddComponent<WorldPresentationProjection>();
         projection.sourceRoot = source;
+        projection.visualHierarchyOnly = visualHierarchyOnly;
         projection.originalParent = parent;
         projection.sourceItem = source.GetComponent<Item>();
         projection.excludeNestedItems = projection.sourceItem == null;
@@ -398,6 +400,15 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         sourceRoot.GetComponentsInChildren(true, sourceRenderers);
         sourceRoot.GetComponentsInChildren(true, sourceLights);
         sourceRoot.GetComponentsInChildren(true, sourceShadows);
+        if (visualHierarchyOnly)
+        {
+            seenNodes.Add(sourceRoot);
+            foreach (Renderer renderer in sourceRenderers) IncludeVisualAncestors(renderer.transform);
+            foreach (Light2D light in sourceLights) IncludeVisualAncestors(light.transform);
+            foreach (ShadowCaster2D shadow in sourceShadows) IncludeVisualAncestors(shadow.transform);
+            sourceNodes.RemoveAll(node => !seenNodes.Contains(node));
+            seenNodes.Clear();
+        }
         foreach (Transform source in sourceNodes)
         {
             if (source == null) continue;
@@ -561,6 +572,16 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         var result = new NodeCopy { Source = source, Target = target, Watcher = watcher };
         nodes.Add(source, result);
         return result;
+    }
+
+    // 只保留绘制所需的祖先变换，食物等纯逻辑模块不会在视图中复制空节点。
+    private void IncludeVisualAncestors(Transform source)
+    {
+        for (Transform current = source; current != null; current = current.parent)
+        {
+            seenNodes.Add(current);
+            if (current == sourceRoot) break;
+        }
     }
 
     private void SynchronizeRenderer(RenderCopy copy)

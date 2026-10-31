@@ -25,6 +25,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "proxy_chunk_streaming", CaptureProxyChunkStreaming);
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "resource_proxy_world_isolation", CaptureResourceProxyWorldIsolation);
         GameplayTestRuntimeProbe.Register("world_streaming", "resource_proxy_native_triggers", CaptureResourceProxyNativeTriggers);
+        GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "natural_item_decoupling", CaptureNaturalItemDecoupling);
     }
 
     private sealed class Fixture : IDisposable

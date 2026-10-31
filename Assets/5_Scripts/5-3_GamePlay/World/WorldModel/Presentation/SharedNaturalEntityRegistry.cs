@@ -19,6 +19,8 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         internal string ItemId;
         internal NaturalEntityHandle Handle;
         internal bool Removed;
+        internal Lease PresentationLease;
+        internal ChunkTilemapRenderer PresentedOwner;
         internal readonly SharedEntityLeaseSet<Lease> Owners = new();
     }
 
@@ -46,8 +48,8 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         ChunkTilemapRenderer owner)
     {
         if (disposed) throw new ObjectDisposedException(nameof(SharedNaturalEntityRegistry));
-        if (!placement.IsShared || !definition.UsesResourceEntities || owner == null)
-            throw new ArgumentException("共享资源引用缺少有效实体或表现宿主。");
+        if (!placement.IsShared || !definition.UsesResourceEntities)
+            throw new ArgumentException("共享资源引用缺少有效实体。");
         using var scope = EnterWorld();
         Int2 anchor = placement.SharedAnchor.Value;
         Vector3 position = new(anchor.X + .5f, anchor.Y + .5f, 0f);
@@ -84,7 +86,7 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         entry.Owners.Add(lease);
         try
         {
-            if (entry.Owners.Primary == lease) NaturalEntityEcsService.BindPresentation(entry.Handle, owner);
+            RefreshPresentationOwner(entry);
         }
         catch { Release(lease, false); throw; }
         return lease;
@@ -99,9 +101,30 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
 
     internal bool IsPrimaryLease(Lease lease) => IsLive(lease) && lease.Entry.Owners.Primary == lease;
 
+    // 逻辑引用和可见宿主分开选择，无画面的区块也能持有同一个共享实体。
+    internal void SetPresentationOwner(Lease lease, ChunkTilemapRenderer owner)
+    {
+        if (!IsLive(lease)) return;
+        using var scope = EnterWorld();
+        lease.Owner = owner;
+        RefreshPresentationOwner(lease.Entry);
+    }
+
+    private static void RefreshPresentationOwner(Entry entry)
+    {
+        Lease selected = null;
+        foreach (Lease candidate in entry.Owners.Members)
+            if (!candidate.Released && candidate.Owner != null) { selected = candidate; break; }
+        if (entry.PresentationLease == selected && ReferenceEquals(entry.PresentedOwner, selected?.Owner)) return;
+        entry.PresentationLease = selected;
+        entry.PresentedOwner = selected?.Owner;
+        if (!entry.Removed && NaturalEntityEcsService.Contains(entry.Handle))
+            NaturalEntityEcsService.BindPresentation(entry.Handle, selected?.Owner);
+    }
+
     internal void Refresh(Lease lease)
     {
-        if (!IsLive(lease) || lease.Entry.Owners.Primary != lease) return;
+        if (!IsLive(lease) || (lease.Entry.PresentationLease ?? lease.Entry.Owners.Primary) != lease) return;
         using var scope = EnterWorld();
         Entry entry = lease.Entry;
         if (GameRes.ExistingInstance != null &&
@@ -109,7 +132,7 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         {
             if (!NaturalEntityEcsService.TryRefreshDefinition(entry.Handle, definition))
                 Debug.LogError($"共享资源 {entry.ItemId} 配置刷新失败，保留原实体。");
-            NaturalEntityEcsService.BindPresentation(entry.Handle, lease.Owner);
+            NaturalEntityEcsService.BindPresentation(entry.Handle, entry.PresentationLease?.Owner);
         }
     }
 
@@ -129,13 +152,11 @@ internal sealed class SharedNaturalEntityRegistry : IDisposable
         if (lease == null || lease.Released || lease.Registry != this) return;
         using var scope = EnterWorld();
         Entry entry = lease.Entry;
-        bool wasPrimary = entry.Owners.Primary == lease;
         lease.Released = true;
         entry.Owners.Remove(lease);
         if (entry.Owners.Count > 0)
         {
-            if (wasPrimary && !entry.Removed && NaturalEntityEcsService.Contains(entry.Handle))
-                NaturalEntityEcsService.BindPresentation(entry.Handle, entry.Owners.Primary.Owner);
+            RefreshPresentationOwner(entry);
             return;
         }
         try

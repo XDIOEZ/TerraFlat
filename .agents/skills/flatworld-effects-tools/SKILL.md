@@ -16,6 +16,8 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 
 ## 共用契约
 
+- 完整自然物的可见副本由 WorldRenderingManager.NaturalItems 持有，复用 WorldPresentationProjection 的 visualHierarchyOnly 模式，只复制绘制必需的节点；逻辑外壳暂保留隐藏的外观输入，不复制 Item、Module 或原生物理。撤销 ChunkView 只解绑投影，不销毁生态。Mod_HeldFood 只提交进食进度，WorldRenderingManager.HeldFood 持有排序和咬痕资源；MPB 清空咬痕用计数关闭及共享空纹理，不传 null。规则 world_streaming/detached_item_projection、rendering/held_food_bites，正式 Leaf 重绑见 natural_item_decoupling_gameplay。
+
 - 排序类别由 WorldSorting JSON 经 GamePlay 桥接 AIECS。动态实体共用 Player，地面印记/水花/预览走 Shadow，离体特效走 world-effect；SortingGroup 只设最外层键，内部保持相对序，代理继承外层有效键。贴地设施为 ground-building，Carrier 判定先于 Building。
 - 投影世界各持有 `WorldPresentationSortingDomain`，同世界区块与实体共用域。域内显式提交原层序与脚点，渲染前计算临时 Order 恢复 Y 混排；不能把整个 SortingGroup 内的相机距离当排序依据。静态键、模拟根和存档不改，退出恢复并注销。
 - 模拟与增量输入保持规范坐标，本机镜像/深度偏移只在表现层投影；实例、裁剪和 CPU 包围盒同步，Shader 位移必须外扩 CPU 边界。按实际排序键/姿态/源帧变化提交原生属性，仍保留每帧必要的状态读取。

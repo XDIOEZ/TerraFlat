@@ -212,6 +212,7 @@ namespace FlatWorld.WorldModel
             if (chunk.SimulationLeaseCount > 0 || chunk.PresentationLeaseCount > 0 ||
                 chunk.NavigationLeaseCount > 0 || chunk.DataRetentionLeaseCount > 0)
                 return false;
+            Events.Publish(new ChunkEvicting(address));
             chunk.BeginEviction();
             chunks.Remove(address);
             chunk.Dispose();

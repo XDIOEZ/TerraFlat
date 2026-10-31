@@ -156,7 +156,7 @@ public static partial class GameplayTestSystemProbe
         {
             selected.Clear();
             foreach (NaturalItemPlacement placement in placements)
-                ChunkNaturalItemRenderer.CollectInitialCompanion(placement, selected);
+                ChunkNaturalItemRuntime.CollectInitialCompanion(placement, selected);
         }
         Collect();
         bool ordered = selected.Count == expected.Count;
@@ -167,11 +167,11 @@ public static partial class GameplayTestSystemProbe
         // 全宿主与全伴生两种边界都按源列表过滤，不插入假候选或改变相对次序。
         selected.Clear();
         for (int i = 0; i < 16; i++)
-            ChunkNaturalItemRenderer.CollectInitialCompanion(
+            ChunkNaturalItemRuntime.CollectInitialCompanion(
                 new NaturalItemPlacement(1 + i, "probe:tree", i, 0, 0, 0, "tree"), selected);
         bool hostIgnored = selected.Count == 0;
         for (int i = 0; i < 16; i++)
-            ChunkNaturalItemRenderer.CollectInitialCompanion(
+            ChunkNaturalItemRuntime.CollectInitialCompanion(
                 new NaturalItemPlacement(101 + i, "probe:hive", i, 0, 0, 0, "hive", hostGuid: 1 + i), selected);
         bool companionAccepted = selected.Count == 16;
         for (int i = 0; companionAccepted && i < selected.Count; i++)

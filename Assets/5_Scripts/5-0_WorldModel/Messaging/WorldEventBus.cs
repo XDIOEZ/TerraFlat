@@ -272,6 +272,13 @@ namespace FlatWorld.WorldModel
         public long RequestVersion { get; }
     }
 
+    /// <summary>数据仍可访问时完成逻辑快照，失败将阻止本次数据逐出。</summary>
+    public readonly struct ChunkEvicting
+    {
+        public ChunkEvicting(WorldAddress address) => Address = address;
+        public WorldAddress Address { get; }
+    }
+
     /// <summary>通知大家：某个区块已经从世界里删除了。</summary>
     public readonly struct ChunkEvicted
     {

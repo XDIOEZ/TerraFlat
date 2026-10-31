@@ -28,6 +28,9 @@ public sealed partial class WorldPhysicsService2D
     internal static bool HasRentedItemTemplateCollider(ItemPhysicsTemplate2D template)
     {
         Item item = template != null ? template.GetComponentInParent<Item>(true) : null;
+        if (item != null && template.transform == item.transform &&
+            TryGetRegisteredItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
+            return proxy.Colliders.Count > 0;
         return item != null && itemComponentCaches.TryGetValue(item, out var cache) &&
             cache.Leased && cache.Templates.TryGetValue(template, out Collider2D collider) && collider != null;
     }
@@ -224,6 +227,11 @@ public sealed partial class WorldPhysicsService2D
     {
         if (!itemOwners.TryGetValue(item, out var owner) || owner.disposed ||
             target is Module module && (!module.enabled || !module.Enabled)) return;
+        if (owner.TryGetItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
+        {
+            owner.RegisterItem(item);
+            return;
+        }
         ItemPhysicsComponentCache cache = itemComponentCaches.GetOrCreateValue(item);
         Collider2D collider = RentDeclaredItemCollider(cache, target, definition, out bool created);
         ItemPhysicsDefinitionRuntime.ApplyColliderParameters(collider, definition);
@@ -269,6 +277,8 @@ public sealed partial class WorldPhysicsService2D
     {
         if (item == null || !itemOwners.TryGetValue(item, out var owner))
             throw new InvalidOperationException("物品必须登记所属世界后才能领取刚体。");
+        if (owner.TryGetItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
+            return owner.EnsureDetachedItemMovableBody(item);
         Rigidbody2D body = owner.RentItemRigidbody(item, item.transform);
         body.simulated = true;
         return body;
@@ -278,6 +288,8 @@ public sealed partial class WorldPhysicsService2D
     {
         if (item == null || !itemOwners.TryGetValue(item, out var owner))
             throw new InvalidOperationException("物品必须登记所属世界后才能领取实体碰撞体。");
+        if (owner.TryGetItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
+            return owner.RentDetachedItemSolidBox(item, proxy, out created);
         using var scope = ListPool<BoxCollider2D>.Get(out var candidates);
         item.GetComponents(candidates);
         foreach (BoxCollider2D candidate in candidates)
