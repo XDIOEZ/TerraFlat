@@ -9,6 +9,7 @@
 - 液体用 radiantHeatRadius/radiantTargetTemperature 同模型（岩浆环境目标180℃）；LiquidTemperatureField 仅索引加载液体，按目标温度缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录失效。接触岩浆仍用1100℃物质温度/接触伤害，不强制环境到液体温度。
 - 单格按格中心算当地源/邻区稀疏液体源，不重建全块权重；雨雪批采仍走全块。液体源只在 Terrain 身份/液体修订变时扫描，重载清源/权重，两路共用最强规则。
 - 自然物同批 PointSamplingContext + LiquidTemperatureField.PointSamplingBatch 按目标块收已规范邻区，绑定 WorldRuntime/Epoch/Dimension；每格仍算真距离，下批重读地形身份/液体修订。跨程序集用 BeginAmbientPointSampling()。仅同步只读作用域，不跨帧缓存或中途改地形/源/目录；嵌套独立、退出释放、旧代际拒用。
+- `TemperatureMgr.ReplaceDynamicGridTemperatureExchangeTargets/RemoveDynamicGridTemperatureExchangeTargets` 按来源替换/撤销动态交换层；偏移相对不含交换层的实时环境，多来源同格取平均，以真实地形实例隔离重载，不改生成基温。单点、批量、最低温资格与冻结快照共用结果，修改使温度上下文版本失效；来源负责空网、拆除及退出撤销。工业液网先采样后统一发布，回归 `environment/dynamic_grid_temperature_exchange` 与 `industrial_fluids/liquid_grid_exchange`。
 
 ## 自然传热与体温
 

@@ -1,5 +1,7 @@
 # 渲染与光影
 
+- 从已有 Sprite 派生切片统一走 `SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite`：输入原图像素矩形，内部换成实际 `textureRect` 并同步缩放 PPU，兼容图集打包/缩小且保持世界尺寸。管臂、罐体、指示灯、门扇、光纤和草变体共用；图集保持禁旋转/禁紧密打包。
+
 ## 统一物品渲染入口
 
 - `WorldRenderingManager.Instance` 提供排序、阴影、水态、手动高亮与特效接口，partial 文件按功能拆分并复用原后端；启动由 GameManager 安装，清理只读 ExistingInstance。物品注册、结构刷新、回池/销毁与世界退出统一维护，正常显示不要求每帧重新注册。

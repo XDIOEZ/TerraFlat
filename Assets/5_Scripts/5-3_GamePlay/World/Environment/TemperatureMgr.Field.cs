@@ -92,6 +92,8 @@ public partial class TemperatureMgr
                 ? new LocalTemperatureField(fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
             liquidTemperatureField = world != null && planet != null && dimensionId != null && width > 0 && height > 0
                 ? new LiquidTemperatureField(world, dimensionId, fieldChunkWidth, fieldChunkHeight, fieldBounds) : null;
+            state.gridTemperatureExchange = localTemperatureField != null ? new DynamicGridTemperatureExchangeField() : null;
+            state.gridExchangeOffsets.Clear();
         }
 
         state.fieldAtmosphere = planet?.Atmosphere;
@@ -244,6 +246,7 @@ public partial class TemperatureMgr
         foreach (LocalTemperatureField.Influence influence in localTemperatureField.GetChunkInfluences(origin))
             if (influence.Source.Cooling && influence.Source.Strength > 0f)
                 minimum = Mathf.Min(minimum, influence.Source.TargetTemperature);
+        minimum += FieldState.gridTemperatureExchange?.GetMinimumOffset(chunk.Terrain) ?? 0f;
         return !float.IsFinite(minimum) || minimum <= freezingTemperature;
     }
 
@@ -255,6 +258,7 @@ public partial class TemperatureMgr
         private readonly float ambientOffset, globalOffset, seasonOffset, orbitalFactor, weatherOffset;
         private readonly FrozenInfluence[] influences;
         private readonly float[] fireWeights;
+        private readonly float[] gridExchangeOffsets;
 
         private readonly struct FrozenInfluence
         {
@@ -268,7 +272,8 @@ public partial class TemperatureMgr
         // 来源数值复制，几何权重只在缓存重建时替换，因此旧数组可由快照安全持有。
         internal AmbientChunkSnapshot(ChunkRuntime chunk, WorldTopologyBounds bounds, float ambientOffset,
             float globalOffset, float seasonOffset, float orbitalFactor, float weatherOffset,
-            ReadOnlySpan<LocalTemperatureField.Influence> local, ReadOnlySpan<LiquidTemperatureField.Influence> liquid)
+            ReadOnlySpan<LocalTemperatureField.Influence> local, ReadOnlySpan<LiquidTemperatureField.Influence> liquid,
+            float[] gridExchangeOffsets = null)
         {
             terrain = chunk.Terrain;
             origin = new Vector2Int(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y);
@@ -278,6 +283,7 @@ public partial class TemperatureMgr
             this.seasonOffset = seasonOffset;
             this.orbitalFactor = orbitalFactor;
             this.weatherOffset = weatherOffset;
+            this.gridExchangeOffsets = gridExchangeOffsets;
             influences = local.Length + liquid.Length == 0 ? Array.Empty<FrozenInfluence>() :
                 new FrozenInfluence[local.Length + liquid.Length];
             for (int i = 0; i < local.Length; i++)
@@ -317,7 +323,8 @@ public partial class TemperatureMgr
                 if (fireWeights != null)
                     ThermalInfluenceRuntime.Accumulate(ambient, WorldFireSystem.AmbientTargetTemperature,
                         fireWeights[index], ref heating, ref cooling);
-                temperatures[index] = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+                temperatures[index] = ThermalInfluenceRuntime.Compose(ambient, heating, cooling) +
+                    (gridExchangeOffsets == null ? 0f : gridExchangeOffsets[index]);
             }
             return true;
         }
@@ -329,6 +336,10 @@ public partial class TemperatureMgr
             foreach (FrozenInfluence influence in influences)
                 if (influence.Cooling && influence.Strength > 0f)
                     minimum = Mathf.Min(minimum, influence.Target);
+            float minimumExchange = 0f;
+            if (gridExchangeOffsets != null)
+                foreach (float offset in gridExchangeOffsets) minimumExchange = Mathf.Min(minimumExchange, offset);
+            minimum += minimumExchange;
             return !float.IsFinite(minimum) || minimum <= freezingTemperature;
         }
     }
@@ -351,7 +362,8 @@ public partial class TemperatureMgr
             ambientFieldOffset, seasonTiltOffsetAtPole,
             orbitalTemperatureFactor, WeatherMgr.ExistingInstance?.GetTemperatureOffsetAt(samplePosition) ?? 0f,
             localTemperatureField.GetChunkInfluences(origin), liquidTemperatureField != null
-                ? liquidTemperatureField.GetChunkInfluences(origin) : ReadOnlySpan<LiquidTemperatureField.Influence>.Empty);
+                ? liquidTemperatureField.GetChunkInfluences(origin) : ReadOnlySpan<LiquidTemperatureField.Influence>.Empty,
+            FieldState.gridTemperatureExchange?.CaptureChunkOffsets(origin, chunk.Terrain.Width, chunk.Terrain.Height, chunk.Terrain));
         return true;
     }
 
@@ -406,7 +418,7 @@ public partial class TemperatureMgr
             if (fieldBounds.IsWrapped)
                 position = fieldBounds.NormalizePosition(position);
             Vector2Int cell = new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
-            temperatures[index] = ComposeAmbientTemperature(position, baseline, index, localSources, liquidSources);
+            temperatures[index] = ComposeAmbientTemperature(position, baseline, index, localSources, liquidSources, terrain);
         }
         return true;
     }
@@ -426,7 +438,7 @@ public partial class TemperatureMgr
 
     private bool TrySamplePreparedTemperature(Vector2 worldPosition, bool includeTransient, out float temperature,
         out float climateBaseline, bool includePlanetOffset,
-        LiquidTemperatureField.PointSamplingBatch liquidBatch = default)
+        LiquidTemperatureField.PointSamplingBatch liquidBatch = default, bool includeGridExchange = true)
     {
         temperature = 0f;
         climateBaseline = 0f;
@@ -463,6 +475,8 @@ public partial class TemperatureMgr
                     liquidTemperatureField?.AccumulateAtPoint(cell, ambient, ref heating, ref cooling);
                 heating = Mathf.Max(heating, WorldFireSystem.GetWorldFireHeating(GameplayWorldRegistry.ExecutionWorldKey, worldPosition, ambient));
                 temperature = ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+                if (includeGridExchange)
+                    temperature += FieldState.gridTemperatureExchange?.GetOffset(cell, terrain) ?? 0f;
             }
         }
         else
@@ -473,14 +487,16 @@ public partial class TemperatureMgr
     // 单格与批量入口共用温度合成，避免雨雪和角色读到不同规则。
     private float ComposeAmbientTemperature(Vector2 position, float baseline, int index,
         ReadOnlySpan<LocalTemperatureField.Influence> localSources,
-        ReadOnlySpan<LiquidTemperatureField.Influence> liquidSources)
+        ReadOnlySpan<LiquidTemperatureField.Influence> liquidSources, ChunkTerrainData terrain)
     {
         float ambient = CalculateAmbientBaseline(position, baseline);
         float heating = 0f, cooling = 0f;
         LocalTemperatureField.Accumulate(localSources, index, ambient, ref heating, ref cooling);
         LiquidTemperatureField.Accumulate(liquidSources, index, ambient, ref heating, ref cooling);
         heating = Mathf.Max(heating, WorldFireSystem.GetWorldFireHeating(GameplayWorldRegistry.ExecutionWorldKey, position, ambient));
-        return ThermalInfluenceRuntime.Compose(ambient, heating, cooling);
+        Vector2Int cell = new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+        return ThermalInfluenceRuntime.Compose(ambient, heating, cooling) +
+            (FieldState.gridTemperatureExchange?.GetOffset(cell, terrain) ?? 0f);
     }
 
     private float CalculateAmbientBaseline(Vector2 position, float baseline)

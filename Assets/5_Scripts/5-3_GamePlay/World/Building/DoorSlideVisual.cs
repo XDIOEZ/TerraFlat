@@ -38,8 +38,8 @@ public sealed class DoorSlideVisual : IDisposable
             var leaf = new GameObject(side == 0 ? "左舱门" : "右舱门");
             leaf.transform.SetParent(renderer.transform, false);
             SpriteRenderer part = leaves[side] = leaf.AddComponent<SpriteRenderer>();
-            part.sprite = Sprite.Create(sprite.texture, half, new Vector2(.5f, .5f),
-                sprite.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            part.sprite = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(sprite, half,
+                new Vector2(.5f, .5f), sprite.pixelsPerUnit);
             part.sprite.name = sprite.name + "_DoorLeaf_" + side;
             part.sprite.hideFlags = HideFlags.DontSave;
             part.spriteSortPoint = SpriteSortPoint.Pivot;

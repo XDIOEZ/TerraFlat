@@ -24,7 +24,7 @@ public static class FluidPipeConnectionVisual
         float width = Mathf.Round(bounds.width * .27f);
         float height = Mathf.Round(bounds.height * .29f);
         Rect cut = new(Mathf.Round(bounds.center.x - width * .5f), Mathf.Round(bounds.yMax - height), width, height);
-        arm = Sprite.Create(north.texture, cut, new Vector2(.5f, .5f), north.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+        arm = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(north, cut, new Vector2(.5f, .5f), north.pixelsPerUnit);
         arm.name = north.name + "_StandardArm"; arm.hideFlags = HideFlags.DontSave;
         arms[north] = arm;
         return arm;

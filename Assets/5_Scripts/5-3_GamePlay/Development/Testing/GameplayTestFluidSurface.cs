@@ -294,6 +294,7 @@ internal static class GameplayTestFluidSurface
         using var f = new GameplayFluidScope(surface: true); using var cell = new LiquidCell(f.SurfacePoint());
         using var boundary = new IsolatedPumpCellBoundary(cell.Sample.WorldCell);
         cell.Set(100);
+        TemperatureMgr.Instance.TryGetAmbientTemperature(cell.Position, out float inputTemperature);
         var pump = f.Add("LiquidPump_Electric",1); var tank = f.Add("LiquidStorageTank",2);
         f.Begin(); pump.ElectricalSuppliedWatts=0; FluidDeviceOperations.AdvanceLiquidPump(pump,f.Seconds);
         int unpowered=cell.Level;
@@ -313,6 +314,7 @@ internal static class GameplayTestFluidSurface
         int restartedLevel = cell.Level;
         for (int i = 1; i < steps; i++) PumpStep();
         int firstBatchLevel = cell.Level; double firstBatchLiters = target.GetLiquidLiters();
+        double firstBatchTemperature = target.GetTemperatureKelvin() - 273.15d;
         FluidInventoryState firstBatchState = target.State.Clone();
         FluidDefinition water = FluidCatalog.Default.Find("core:dirty_water");
         double fillLiters = GetFluidVolumeLiters(tank) - target.GetLiquidLiters() - 5d;
@@ -327,6 +329,7 @@ internal static class GameplayTestFluidSurface
         return new JObject { ["unpoweredLevel"]=unpowered,["level"]=cell.Level,["initialLevel"]=100,
             ["stepsPerBatch"] = steps, ["beforeBatchLevel"] = beforeBatchLevel, ["beforeBatchLiters"] = beforeBatchLiters,
             ["restartedLevel"] = restartedLevel, ["firstBatchLevel"] = firstBatchLevel, ["firstBatchLiters"] = firstBatchLiters,
+            ["inputTemperature"] = inputTemperature, ["firstBatchTemperature"] = firstBatchTemperature,
             ["blockedStable"] = blockedStable, ["reopenedLevel"] = reopenedLevel,
             ["sourceLiters"]=source.GetLiquidLiters(),["targetLiters"]=target.GetLiquidLiters(),["seconds"]=f.Seconds,
             ["rate"]=pump.Definition.Fluid.ThroughputLitersPerSecond,["servingLiters"]=LiquidCellValue.LitersPerUnit,

@@ -1,4 +1,15 @@
 test.check("world_ready")
+test.runtime("industrial_fluids", "liquid_grid_exchange", {}, function(d)
+    local function near(a,b) return math.abs(a-b) < .0001 end
+    assert(near(d.after, (10 + d.beforeFirst + d.beforeSecond) / 3), "真实环境网格没有与液网逐项平均")
+    assert(near(d.first, d.after) and near(d.second, d.after) and near(d.batch, d.after),
+        "液网、单点和批量温度不一致")
+    assert(near(d.repeated, d.after) and near(d.frozen, d.after), "重复Tick累加温度或旧冻结快照被覆盖")
+    assert(d.heated > d.after and d.afterHeater > d.after, "既有热源变化没有影响液网")
+    assert(near(d.clearedFirst, d.beforeFirst) and near(d.clearedSecond, d.beforeSecond), "空网没有撤销动态温度覆盖")
+    assert(d.volumeStable and d.geographicStable, "均温改变了实际液量或永久地理温度")
+end, "真实组合罐与动态网格均温、重复Tick、采样冻结、外部热源和空网清理")
+
 test.fluid("surface_liquid_transactions", "共用正式地表抽排拒绝与回滚")
 test.runtime("industrial_fluids", "surface_outlet", {}, function(d)
     assert(d.stoppedLevel==0, "液体出口零速率仍排放")

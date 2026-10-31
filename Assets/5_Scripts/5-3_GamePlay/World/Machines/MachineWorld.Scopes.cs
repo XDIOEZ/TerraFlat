@@ -76,6 +76,12 @@ public static partial class MachineWorld
         public readonly Dictionary<int, double> GasNodeBudget = new(), LiquidNodeBudget = new();
         public readonly Dictionary<MachineEntity, double> MechanicalPower = new();
         public readonly Dictionary<int, int> Appearance = new();
+        public readonly HashSet<FluidNetworkGraph.LiquidTemperatureComponent> LiquidTemperatureComponents = new();
+        public readonly Dictionary<Vector2Int, (double Sum, int Count)> LiquidTemperatureTargets = new();
+        public readonly Dictionary<Vector2Int, float> LiquidTemperaturePublishedTargets = new();
+        public readonly Dictionary<(int Node, string Chamber), (ulong Sequence, double Kelvin)> RemoteLiquidTemperatures = new();
+        public ulong RemoteLiquidTemperatureSequence;
+        public bool SynchronizingLiquidTemperature, RemoteLiquidTemperatureDirty;
     }
 
     private static ScopeState scope = new();

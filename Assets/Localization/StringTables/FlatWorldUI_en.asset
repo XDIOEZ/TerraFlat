@@ -9008,6 +9008,10 @@ MonoBehaviour:
     m_Localized: "Unlimited gas supply (composition sample: {0:0.###} standard L)"
     m_Metadata:
       m_Items: []
+  - m_Id: 28103100000100001
+    m_Localized: "Liquid network {0:0.##}°C · Total {1:0.###} L"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

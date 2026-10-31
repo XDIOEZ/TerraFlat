@@ -2,6 +2,21 @@ local function near(a, b, message, tolerance)
     assert(type(a) == "number" and a == a and math.abs(a - b) <= (tolerance or 0.0001), message)
 end
 
+test.system("environment", "dynamic_grid_temperature_exchange", {}, function(d)
+    near(d.initial, 20, "动态交换层修改了未覆盖环境")
+    near(d.first, 10, "动态交换结果没有替换本格温度")
+    near(d.repeated, 10, "重复发布把温度偏移叠加了")
+    near(d.heaterChanged, 30, "交换层屏蔽了外部热源变化")
+    near(d.overlap, 15, "同格多来源没有平均或依赖写入顺序")
+    near(d.reverseOverlap, d.overlap, "来源更新顺序改变网格温度")
+    near(d.frozen, 15, "冻结快照被后续交换覆盖")
+    near(d.remaining, 20, "撤销来源影响了另一来源")
+    near(d.cleared, 20, "最后来源撤销后仍残留交换偏移")
+    near(d.reloaded, 20, "同地址重载地形沿用了旧交换偏移")
+    assert(d.unchangedRevision and d.changedRevision, "交换版本没有区分重复发布与实际变化")
+    assert(d.mayFreeze, "最低温资格遗漏了动态制冷偏移")
+end, "动态网格交换替换、重叠平均、外部变温、冻结与卸载重载隔离")
+
 local function assert_precipitation_mesh(mesh, sampleCount, hasSwayPhase, label)
     assert(mesh.vertexCount == sampleCount * 4 and mesh.indexCount == sampleCount * 6,
         label .. "固定网格顶点或索引数改变")
@@ -125,15 +140,14 @@ for _, id in ipairs({"rain", "wind", "thunder", "fog"}) do
         near(data.recoveryDelay, 0, "统一天气仍启用概率恢复期")
         assert(data.associations == 0, "旧天气关联仍额外增加触发率")
         local durations = {300, 427, 553, 680, 807, 933, 1060, 1187, 1313, 1440}
+        local duration_indices = {}
+        for index, duration in ipairs(durations) do duration_indices[duration] = index end
         local counts, pairs = {}, {}
         for _, sample in ipairs(data.samples) do
             local level = math.floor(sample.intensity * 10 + 0.0001)
             assert(level >= 1 and level <= 10, "天气强度越界")
             near(sample.intensity, level / 10, "天气强度落在档位之间")
-            local duration_index = nil
-            for index, duration in ipairs(durations) do
-                if sample.duration == duration then duration_index = index end
-            end
+            local duration_index = duration_indices[sample.duration]
             assert(duration_index ~= nil, "天气时长不在JSON的十档之中")
             counts[level] = (counts[level] or 0) + 1
             local key = level * 100 + duration_index

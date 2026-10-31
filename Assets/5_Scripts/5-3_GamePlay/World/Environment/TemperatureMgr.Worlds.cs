@@ -6,6 +6,7 @@ using UnityEngine;
 public partial class TemperatureMgr
 {
     #region 每个世界独立的环境温度场
+    public static TemperatureMgr ExistingInstance => instance != null ? instance : null;
     private sealed class TemperatureWorld
     {
         public ChunkMgr fieldChunkManager;
@@ -16,6 +17,8 @@ public partial class TemperatureMgr
         public WorldTopologyBounds fieldBounds;
         public LocalTemperatureField localTemperatureField;
         public LiquidTemperatureField liquidTemperatureField;
+        public DynamicGridTemperatureExchangeField gridTemperatureExchange;
+        public readonly Dictionary<Vector2Int, DynamicGridTemperatureExchangeField.CellOffset> gridExchangeOffsets = new();
         public int fieldContextFrame = -1;
         public ulong fieldContextSimulationTick;
         public AtmosphereState fieldAtmosphere;
@@ -33,6 +36,7 @@ public partial class TemperatureMgr
     }
     private readonly Dictionary<string, TemperatureWorld> thermalWorlds = new(StringComparer.Ordinal);
     private readonly Dictionary<object, LocalTemperatureField> sourceOwners = new();
+    private readonly Dictionary<object, TemperatureWorld> gridExchangeOwners = new();
     private string cachedThermalWorld;
     private TemperatureWorld cachedThermalState;
     private GameManager temperatureLifecycle;
@@ -61,7 +65,7 @@ public partial class TemperatureMgr
     }
     private void ClearThermalWorlds()
     {
-        thermalWorlds.Clear(); sourceOwners.Clear(); cachedThermalState = null; cachedThermalWorld = null;
+        thermalWorlds.Clear(); sourceOwners.Clear(); gridExchangeOwners.Clear(); cachedThermalState = null; cachedThermalWorld = null;
     }
     #endregion
 }

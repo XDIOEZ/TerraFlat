@@ -43,6 +43,7 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
     }
     public bool ReserveLiquid(out LiquidTransferBatch batch)
     {
+        MachineWorld.SynchronizeLiquidNetworkTemperatureForTransfer(logic.Entity, chamber);
         bool existing = Inventory.GetReservation(reservationId) != null;
         if (!Inventory.TryReserve(reservationId, FluidPhase.Liquid, FluidInventory.MaximumMoles, out FluidBatch selected))
         { batch = default; return false; }
@@ -61,7 +62,9 @@ public sealed class IndustrialLiquidTransferPort : ContainerPortBase, ILiquidTra
         float available = AvailableServings(fluid, moles);
         if (!float.IsFinite(available) || available <= 0f)
         { batch = default; return false; }
-        batch = new LiquidTransferBatch(fluid.LiquidId, available, (float)(Inventory.GetTemperatureKelvin() - 273.15));
+        float temperature = MachineWorld.TryGetLiquidNetworkTemperatureCelsius(logic.Entity, out float networkTemperature, chamber)
+            ? networkTemperature : (float)(Inventory.GetTemperatureKelvin() - 273.15d);
+        batch = new LiquidTransferBatch(fluid.LiquidId, available, temperature);
         return moles > 0 && fluid.AllowIndustrialTransport && !string.IsNullOrEmpty(fluid.LiquidId);
     }
     // 对外份数向下取到可回转的浮点值，保留真实尾量而不预览超过库存的液体。

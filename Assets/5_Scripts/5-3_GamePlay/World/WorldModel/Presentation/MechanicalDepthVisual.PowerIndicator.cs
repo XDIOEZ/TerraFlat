@@ -30,9 +30,9 @@ public sealed partial class MechanicalDepthVisual
         if (!powerIndicatorSprites.TryGetValue(key, out Sprite sprite) || sprite == null)
         {
             Rect pixels = source.rect;
-            sprite = Sprite.Create(source.texture,
+            sprite = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(source,
                 new Rect(pixels.x + rect.x, pixels.y + pixels.height - rect.y - rect.w, rect.z, rect.w),
-                new Vector2(.5f, .5f), source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+                new Vector2(.5f, .5f), source.pixelsPerUnit);
             sprite.hideFlags = HideFlags.DontSave;
             powerIndicatorSprites[key] = sprite;
         }

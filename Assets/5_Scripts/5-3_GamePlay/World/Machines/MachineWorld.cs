@@ -381,6 +381,7 @@ public static partial class MachineWorld
     public static void StateChanged(MachineEntity node)
     {
         if (!Contains(node)) return;
+        SynchronizeNodeLiquidNetworkTemperature(node);
         if (NotifyCombinedFluidTankGroupStateChanged(node)) return;
         PublishMachineStateChanged(node);
 
@@ -578,6 +579,12 @@ public static partial class MachineWorld
         CopyTopology(node); dirty = true;
         NotifySurfaceCellChanged(node.Cell);
         StateChanged(node);
+        if (node.Definition.Fluid != null && GameNetwork.HasStateAuthority &&
+            scope.SimulationStepDepth == 0 && scope.TopologyMutationDepth == 0)
+        {
+            RebuildGraphsIfDirty();
+            AdvanceLiquidNetworkTemperatureExchange(false);
+        }
     }
     private static void CopyTopology(MachineEntity node)
     {
@@ -625,7 +632,16 @@ public static partial class MachineWorld
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static void Tick(float deltaTime)
     {
-        if (!GameNetwork.HasStateAuthority) return;
+        if (!GameNetwork.HasStateAuthority)
+        {
+            EnsureScope();
+            if (scope.RemoteLiquidTemperatureDirty)
+            {
+                RebuildGraphsIfDirty(); AdvanceLiquidNetworkTemperatureExchange(true);
+                scope.RemoteLiquidTemperatureDirty = false;
+            }
+            return;
+        }
         EnsureScope();
         elapsed += Mathf.Max(0, deltaTime);
         float step = MachineCatalog.Settings.TickSeconds;
