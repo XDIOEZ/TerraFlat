@@ -199,6 +199,15 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         itemOwners[item] = this;
         try
         {
+        if (UsesPrefabCreaturePhysics(item))
+        {
+            // 生物沿用自身刚体和碰撞模板，世界物理管理器只登记已有形状。
+            RentItemPhysicsComponents(item);
+            RegisterItemColliders(item, registered);
+            ItemPhysicsProjection2D.Ensure(item);
+            ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);
+            return;
+        }
         if (TryRegisterDetachedRootItemPhysics(item, registered,
                 hadPreviousProxy && previousMode == WorldPhysicsProxyMode2D.IndependentDynamic,
                 requestIndependent, previousRepresentation)) return;
@@ -259,21 +268,30 @@ public sealed partial class WorldPhysicsService2D : IDisposable
                 }
             }
         }
-            using var scratch = ListPool<Collider2D>.Get(out var shapes);
-            item.GetComponentsInChildren(true, shapes);
-            for (int i = 0; i < shapes.Count; i++)
-            {
-                Collider2D collider = shapes[i];
-                if (collider.GetComponentInParent<Item>(true) != item) continue;
-                RegisterItemColliderBinding(item, collider);
-                registered.Add(collider);
-            }
+            RegisterItemColliders(item, registered);
             ItemPhysicsDefinitionDto effectiveDefinition = ResolveEntityPhysicsDefinition(definition, defaultIndependent);
             RegisterConfiguredItemProxy(item, effectiveDefinition, registered);
             ItemPhysicsProjection2D.Ensure(item);
             ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);
         }
         catch { ReleaseItem(item); throw; }
+    }
+
+    private static bool UsesPrefabCreaturePhysics(Item item)
+        => item is not Player && item?.itemData != null && GameRes.ExistingInstance != null &&
+           GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out var definition) && definition.IsActor;
+
+    private void RegisterItemColliders(Item item, List<Collider2D> registered)
+    {
+        using var scratch = ListPool<Collider2D>.Get(out var shapes);
+        item.GetComponentsInChildren(true, shapes);
+        for (int i = 0; i < shapes.Count; i++)
+        {
+            Collider2D collider = shapes[i];
+            if (collider.GetComponentInParent<Item>(true) != item) continue;
+            RegisterItemColliderBinding(item, collider);
+            registered.Add(collider);
+        }
     }
 
     private void RegisterItemColliderBinding(Item item, Collider2D collider)
