@@ -73,6 +73,7 @@ namespace FlatWorld.Localization.Editor
                 { "Meat_Dehydrate", "Dehydrated meat." },
                 { "Meat_Rotten", "Rotten meat. It should not be eaten." },
                 { "Seed_Apple", "A seed that can grow into an apple tree." },
+                { "Twine", "A flexible wild vine useful for tying and weaving. Two vines can be twisted into one rope; vines are also used for vine armor and plant bandages." },
                 { "WoodAsh", "Ash left after burning plant matter, used as a lightweight basic processing material." },
                 { "Tea", "A warm drink made from tea leaves." }
             };
