@@ -318,9 +318,8 @@ namespace FlatWorld.NaturalEntities
                 0f, settings?.FootOverlap);
             if (record.Profile.CropVisual != null) foot = anchor;
             record.ShadowFoot = foot;
-            var contact = WorldRenderingConfigCatalog.Default.shadows.contact;
-            float width = settings?.ContactWidth * Mathf.Abs(body.Scale.x) ?? visible.size.x * contact.widthRatio;
-            record.ShadowWidth = width <= 0f ? 0f : Mathf.Clamp(width, contact.minimumWidth, contact.maximumWidth);
+            record.ShadowWidth = ShadowFootprintResolver.ResolveContactShadowWidth(
+                settings?.ContactWidth, visible.size.x, matrix.MultiplyVector(Vector3.right).magnitude);
             Vector4 shadowCrop = crop; shadowCrop.z = 1f;
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix,
                 new Color(1f, 1f, 1f, tint.a), localAnchor, shadowCrop, Vector4.zero,

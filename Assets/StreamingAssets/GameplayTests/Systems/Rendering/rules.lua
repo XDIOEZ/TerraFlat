@@ -471,6 +471,15 @@ test.system("rendering", "shadow_footprint_matrix", {}, function(data)
         "缩小物品的阴影没有与可见底边重叠")
     assert(math.abs(data.explicitFootY + 0.4) < 0.00001,
         "默认贴地调整覆盖了物品显式配置的零重叠脚点")
+    assert(math.abs(data.normalContactWidth - 0.9) < 0.0001 and
+           math.abs(data.normalWidthCap - 2.5) < 0.0001,
+        "普通物品底影宽度或未放大时的默认上限发生回归")
+    assert(math.abs(data.giantContactWidth - 14.02 * 0.9) < 0.0001 and
+           math.abs(data.giantConfiguredWidth - 14.02 * 0.8) < 0.0001,
+        "巨型物品的自动/显式底影宽度没有跟随实际显示缩放")
+    assert(math.abs(data.giantMirroredWidth - data.giantContactWidth) < 0.0001 and
+           math.abs(data.giantRootedWidth - 12) < 0.0001 and data.disabledContactWidth == 0,
+        "负缩放、巨型植物或显式关闭底影的行为不正确")
 end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
 
 test.system("rendering", "contact_shadow_culling_indices", {}, function(data)

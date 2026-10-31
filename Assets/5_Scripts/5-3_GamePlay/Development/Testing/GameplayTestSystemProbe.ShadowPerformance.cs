@@ -275,12 +275,28 @@ public static partial class GameplayTestSystemProbe
             new Vector2(0f, -.4f), footOverlap: 0f);
         var halfSize = new Bounds(paddedItem.center * .5f, paddedItem.size * .5f);
         Vector3 smallContactFoot = ShadowFootprintResolver.ResolveFoot(Matrix4x4.identity, halfSize, null);
+        Matrix4x4 giantMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity,
+            new Vector3(-14.02f, 14.02f, 1f));
+        Bounds giantVisible = ShadowFootprintResolver.TransformVisibleBounds(
+            new Bounds(Vector3.zero, Vector3.one), giantMatrix);
+        float giantScale = giantMatrix.MultiplyVector(Vector3.right).magnitude;
         return new JObject
         {
             ["cases"] = cases, ["maximumError"] = maximumError,
             ["contactFootY"] = contactFoot.y, ["opaqueBottomY"] = -.3125f,
             ["smallContactFootY"] = smallContactFoot.y, ["smallOpaqueBottomY"] = -.15625f,
-            ["explicitFootY"] = explicitFoot.y
+            ["explicitFootY"] = explicitFoot.y,
+            ["normalContactWidth"] = ShadowFootprintResolver.ResolveContactShadowWidth(null, 1f, 1f),
+            ["normalWidthCap"] = ShadowFootprintResolver.ResolveContactShadowWidth(null, 8f, 1f),
+            ["giantContactWidth"] = ShadowFootprintResolver.ResolveContactShadowWidth(
+                null, giantVisible.size.x, giantScale),
+            ["giantConfiguredWidth"] = ShadowFootprintResolver.ResolveContactShadowWidth(
+                .8f, giantVisible.size.x, giantScale),
+            ["giantMirroredWidth"] = ShadowFootprintResolver.ResolveContactShadowWidth(
+                null, giantVisible.size.x, -giantScale),
+            ["giantRootedWidth"] = ShadowFootprintResolver.ClampScaledContactShadowWidth(12f, giantScale),
+            ["disabledContactWidth"] = ShadowFootprintResolver.ResolveContactShadowWidth(
+                0f, giantVisible.size.x, giantScale)
         };
     }
 

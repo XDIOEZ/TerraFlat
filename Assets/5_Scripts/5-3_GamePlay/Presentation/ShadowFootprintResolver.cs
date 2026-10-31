@@ -89,6 +89,28 @@ public static class ShadowFootprintResolver
 
     #endregion
 
+    #region 接触阴影宽度
+
+    /// <summary>配置宽度随实际模型缩放；自动宽度直接取放大后的可见范围。</summary>
+    public static float ResolveContactShadowWidth(float? configuredWidth, float visibleWidth, float visualHorizontalScale)
+    {
+        float width = configuredWidth.HasValue
+            ? configuredWidth.Value * Mathf.Abs(visualHorizontalScale)
+            : visibleWidth * WorldRenderingConfigCatalog.Default.shadows.contact.widthRatio;
+        return ClampScaledContactShadowWidth(width, visualHorizontalScale);
+    }
+
+    /// <summary>未放大物体仍受默认上限约束，大型物体按显示倍率扩展上限。</summary>
+    public static float ClampScaledContactShadowWidth(float width, float visualHorizontalScale)
+    {
+        if (width <= 0f) return 0f;
+        WorldRenderingConfig.ContactShadow settings = WorldRenderingConfigCatalog.Default.shadows.contact;
+        return Mathf.Clamp(width, settings.minimumWidth,
+            settings.maximumWidth * Mathf.Max(1f, Mathf.Abs(visualHorizontalScale)));
+    }
+
+    #endregion
+
     #region 统一脚点
 
     /// <summary>允许配置覆盖脚点，但不允许其低于可见底边的内缩位置。</summary>
