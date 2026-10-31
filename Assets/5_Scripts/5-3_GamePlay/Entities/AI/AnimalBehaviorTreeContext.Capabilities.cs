@@ -85,8 +85,17 @@ public sealed partial class AnimalBehaviorTreeContext
     }
 
     public bool IsActionActive(string key)
-        => string.Equals(CurrentAction, key, StringComparison.Ordinal) ||
-           CurrentAction != null && CurrentAction.EndsWith("." + key, StringComparison.Ordinal);
+    {
+        string action = CurrentAction;
+        if (string.Equals(action, key, StringComparison.Ordinal)) return true;
+        if (action == null) return false;
+
+        // 直接比较末段动作名称，避免每次行为树判断都拼接临时字符串。
+        string suffix = key ?? string.Empty;
+        int dotIndex = action.Length - suffix.Length - 1;
+        return dotIndex >= 0 && action[dotIndex] == '.' &&
+               string.CompareOrdinal(action, dotIndex + 1, suffix, 0, suffix.Length) == 0;
+    }
 
     public void EndAction() => CurrentAction = null;
 }
