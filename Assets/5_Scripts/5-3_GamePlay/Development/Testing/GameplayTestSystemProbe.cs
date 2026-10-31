@@ -102,6 +102,40 @@ public static partial class GameplayTestSystemProbe
     }
     #endregion
 
+    #region 规则采样场景生命周期
+
+    // 临时组件直接接收 Unity 的编辑态回调，密封模块也无需另造子类。
+    private static T EnableGameplayTestProbeLifecycleCallbacks<T>(T component) where T : UnityEngine.MonoBehaviour
+    {
+#if UNITY_EDITOR
+        component.runInEditMode = true;
+#endif
+        return component;
+    }
+
+    // 同步规则在编辑器使用独立预览场景，不切换或污染用户当前场景。
+    private static UnityEngine.SceneManagement.Scene CreateGameplayTestProbeScene(string name)
+    {
+#if UNITY_EDITOR
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
+        scene.name = name;
+        return scene;
+#else
+        return UnityEngine.SceneManagement.SceneManager.CreateScene(name);
+#endif
+    }
+
+    private static void CloseGameplayTestProbeScene(UnityEngine.SceneManagement.Scene scene)
+    {
+#if UNITY_EDITOR
+        UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
+#else
+        UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene);
+#endif
+    }
+
+    #endregion
+
     #region 参数读取
     public static double Number(JObject arguments, string name, double fallback)
     {

@@ -20,7 +20,7 @@ public static partial class GameplayTestSystemProbe
         {
             IDName = "probe:wanted", Guid = 601,
             Stack = new ItemStack { Amount = 3f, Weight = 1f, Volume = 1f, Stackable = true },
-            Durability = 13f, ItemSpecialData = "preserved-state"
+            Durability = 13f, MaxDurability = 20f, ItemSpecialData = "preserved-state"
         };
         ItemData previous = new Data_GeneralItem
         {
@@ -56,12 +56,12 @@ public static partial class GameplayTestSystemProbe
         InventoryDragTransaction drag = mode == "dragged" ? bag.OnMouseDragBegin(0) :
             mode == "existing_dragged" ? hotbar.OnMouseDragBegin(2) : null;
         if (mode == "existing_dragged") bag.RuntimeAccessGuard = () => false;
+        var actions = new PlayerInputActions();
         try
         {
             // 夹具只准备独立库存，搬运、拒绝和交换均调用正式快速拿取服务。
             bool accepted = WorldItemQuickPickService.TryMoveMatchingBagItemToHotbar(target, bag, hotbar, 0, 3,
                 out int selected, out int expectedGuid);
-            using var actions = new PlayerInputActions();
             using var bindings = new InputBindingService(actions.asset, new InputSettingsMemoryStore());
             var action = actions.asset.FindAction("Win10/PickWorldItem", true);
             bool rebindable = false;
@@ -75,13 +75,18 @@ public static partial class GameplayTestSystemProbe
                 ["currentPrevious"] = ReferenceEquals(hotbar.Data.itemSlots[0].itemData, previous),
                 ["destinationIncoming"] = selected >= 0 && ReferenceEquals(hotbar.Data.itemSlots[selected].itemData, incoming),
                 ["destinationAmount"] = selected >= 0 ? hotbar.Data.itemSlots[selected].itemData?.Stack?.Amount ?? 0f : 0f,
+                ["destinationDurability"] = selected >= 0 ? hotbar.Data.itemSlots[selected].itemData?.Durability ?? 0f : 0f,
                 ["destinationSpecial"] = selected >= 0 ? hotbar.Data.itemSlots[selected].itemData?.ItemSpecialData : null,
                 ["amount"] = incoming.Stack.Amount, ["durability"] = incoming.Durability,
                 ["special"] = incoming.ItemSpecialData, ["binding"] = action.bindings[0].path,
                 ["rebindable"] = rebindable, ["dragStarted"] = drag != null
             };
         }
-        finally { drag?.Complete(false); }
+        finally
+        {
+            drag?.Complete(false);
+            Object.DestroyImmediate(actions.asset);
+        }
     }
     #endregion
 }

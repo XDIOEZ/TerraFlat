@@ -294,6 +294,9 @@ public static partial class GameplayTestSystemProbe
     // 夹具走正式绑定和光照刷新，只返回对象、网格和变换状态给 Lua 断言。
     private static JObject CaveShadowLazyCreation(JObject args)
     {
+        DimensionManager originalDimensions = DimensionManager.ExistingInstance;
+        DimensionCatalogSO dimensions = Resources.Load<DimensionCatalogSO>("Config/DimensionCatalog_Default");
+        DimensionDefinition cave = dimensions.Find(global::WorldAddress.CaveDimensionId);
         using var world = new FlatWorld.WorldModel.WorldRuntime("probe:shadow_lazy", 1);
         var address = new FlatWorld.WorldModel.WorldAddress("probe:shadow_lazy", new FlatWorld.WorldModel.Int2(0, 0));
         var profile = new FlatWorld.WorldModel.ChunkGenerationProfileSnapshot("probe:shadow_lazy", 1, 4, 2);
@@ -373,16 +376,24 @@ public static partial class GameplayTestSystemProbe
                 if (!caveWorld.TryCommit(generated, out string caveReason)) throw new InvalidOperationException(caveReason);
             caveWorld.TryGetChunk(caveAddress, out var caveChunk);
             caveChunk.Terrain.SetCell(0, 0, wall);
-            renderer.Bind(caveChunk);
+            renderer.Bind(caveChunk, cave.SuppressTerrainWallShadows);
             renderer.RefreshShadowVisibility(near, true, true);
             samples["caveCandidates"] = renderer.ActiveOccluderCount;
             samples["caveEnabled"] = renderer.EnabledOccluderCount;
             samples["caveCasterActive"] = first.gameObject.activeSelf;
 
+            renderer.Bind(caveChunk, false);
+            renderer.RefreshShadowVisibility(noLights, true, true);
+            samples["sameChunkPolicyRestored"] = renderer.EnabledOccluderCount;
+            renderer.Bind(caveChunk, cave.SuppressTerrainWallShadows);
+            renderer.RefreshShadowVisibility(noLights, true, true);
+            samples["sameChunkPolicySuppressed"] = renderer.ActiveOccluderCount;
+
             renderer.Bind(chunk);
             renderer.RefreshShadowVisibility(noLights, true, true);
             samples["surfaceRecovered"] = renderer.EnabledOccluderCount;
             samples["surfaceCasterReused"] = first == root.GetComponentInChildren<ShadowCaster2D>(true);
+            samples["dimensionServicePreserved"] = ReferenceEquals(originalDimensions, DimensionManager.ExistingInstance);
             return samples;
         }
         finally

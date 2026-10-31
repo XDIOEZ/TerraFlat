@@ -63,7 +63,7 @@ public static partial class GameplayTestSystemProbe
             BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(.4f, .3f);
             collider.offset = new Vector2(0f, -.07f);
-            Mod_Mover mover = root.AddComponent<Mod_Mover>();
+            Mod_Mover mover = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<Mod_Mover>());
             mover.ModuleInit(player, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             mover.rb = body;
             mover.IsLock = serverRemote;
@@ -80,7 +80,7 @@ public static partial class GameplayTestSystemProbe
             var sprite = new GameObject("Sprite");
             sprite.transform.SetParent(visual.transform, false);
             sprite.transform.localRotation = Quaternion.Euler(0f, 180f, 7f);
-            roll = root.AddComponent<Mod_Roll>();
+            roll = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<Mod_Roll>());
             roll.ModuleInit(player, new Ex_ModData { ID = Mod_Roll.ModuleId, Enabled = true });
             roll.visualRoot = visual.transform;
             roll.bodyColliders = Flag(args, "missingBody", false) ? Array.Empty<Collider2D>() :

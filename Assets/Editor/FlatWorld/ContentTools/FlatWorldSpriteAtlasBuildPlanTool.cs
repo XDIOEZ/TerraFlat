@@ -35,6 +35,7 @@ public static class FlatWorldSpriteAtlasBuildPlanTool
     private const string ReportPath = "Library/FlatWorldSpriteAtlasPlan/atlas-plan.json";
     private const int MaxAtlasTextureSize = 2048;
     private const int SpritePadding = 4;
+    internal const string PreserveSourceSpriteSheetUvLabel = "PreserveSourceSpriteSheetUV";
 
     [Serializable]
     public sealed class PlanReport
@@ -506,7 +507,11 @@ public static class FlatWorldSpriteAtlasBuildPlanTool
             int width = Mathf.CeilToInt(candidate.Sprite.rect.width);
             int height = Mathf.CeilToInt(candidate.Sprite.rect.height);
             bool isPlayerAppearance = excludedPlayerSprites.Contains($"{candidate.Guid}:{candidate.LocalId}");
-            bool eligible = !isPlayerAppearance && width + SpritePadding <= MaxAtlasTextureSize && height + SpritePadding <= MaxAtlasTextureSize;
+            // 按源表移动 UV 的 GPU 动画不能把独立帧重排进 SpriteAtlas。
+            bool preservesSourceSheetUv = AssetDatabase.GetLabels(AssetDatabase.LoadMainAssetAtPath(candidate.Path))
+                .Contains(PreserveSourceSpriteSheetUvLabel, StringComparer.Ordinal);
+            bool eligible = !isPlayerAppearance && !preservesSourceSheetUv &&
+                width + SpritePadding <= MaxAtlasTextureSize && height + SpritePadding <= MaxAtlasTextureSize;
             string usage = ResolveSpriteAtlasUsageFromSharedDependencies(candidate.Usages);
             result.Add(new SpritePlanEntry
             {
@@ -519,7 +524,8 @@ public static class FlatWorldSpriteAtlasBuildPlanTool
                 width = width,
                 height = height,
                 eligible = eligible,
-                exclusionReason = eligible ? string.Empty : isPlayerAppearance ? "PlayerAppearance保持独立图集" : "Sprite尺寸超过2048"
+                exclusionReason = eligible ? string.Empty : isPlayerAppearance ? "PlayerAppearance保持独立图集" :
+                    preservesSourceSheetUv ? "GPU动画保持源表UV" : "Sprite尺寸超过2048"
             });
         }
 

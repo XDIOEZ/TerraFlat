@@ -275,7 +275,8 @@ internal sealed partial class ChunkDepthMeshRenderer
         private void Refresh()
         {
             Material source = key.Item1;
-            Material.CopyPropertiesFromMaterial(source);
+            // 跨 Shader 仅复制共有属性，保留合批 Shader 自有属性的默认值。
+            Material.CopyMatchingPropertiesFromMaterial(source);
             Material.renderQueue = key.Item4;
             Material.SetTexture("_MainTex", key.Item2);
             Material.SetTexture("_AlphaTex", key.Item3 != null ? key.Item3 : Texture2D.whiteTexture);

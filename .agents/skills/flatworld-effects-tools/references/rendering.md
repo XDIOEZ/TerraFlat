@@ -1,6 +1,9 @@
 # 渲染与光影
 
 - 从已有 Sprite 派生切片统一走 `SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite`：输入原图像素矩形，内部换成实际 `textureRect` 并同步缩放 PPU，兼容图集打包/缩小且保持世界尺寸。管臂、罐体、指示灯、门扇、光纤和草变体共用；图集保持禁旋转/禁紧密打包。
+- `WorldPresentationProjection` 自建的网格、组件与节点统一按运行/编辑态销毁，释放和层级增删都适用；不销毁共享源资源。地形墙影可显式传入维度的 `SuppressTerrainWallShadows` 策略，同区块策略变化也须重绑。
+- 高炉烟雾偏移相对火焰锚点：下炉门 `-0.40625` 加烟雾 `0.78125`，顶部炉口为 Sprite 局部 Y `0.375`，再经主体缩放/偏移投影；回归读取实际 Transform。
+- 跨 Shader 派生合批材质用 `CopyMatchingPropertiesFromMaterial` 保留目标默认属性；按源表 UV 切帧的贴图标记 `PreserveSourceSpriteSheetUV`，图集计划会排除。火场现场同时断言未打包、材质默认状态和真实火焰像素，不能只查 Draw Calls 或 PNG 存在。
 
 ## 统一物品渲染入口
 

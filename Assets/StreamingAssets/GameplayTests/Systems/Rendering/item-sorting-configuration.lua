@@ -21,6 +21,8 @@ test.system("rendering", "item_sorting_configuration", {}, function(data)
         "地表植被未按实际固定图层和顺序校验")
     assert(data.naturalCustom and data.naturalFallback, "自然资源实体没有消费当前定义的排序或类别回退")
     local ecs = data.aiecs
+    assert(ecs.probeSceneIsolated and ecs.probeSceneReleased and ecs.activeSceneUnchanged,
+        "AIECS 规则没有隔离和释放预览场景，或切换了用户的活动场景")
     assert(ecs.batches == 3 and ecs.uploadedBytes == 928 and ecs.sharedYBatch and ecs.otherYBatch and ecs.customBatch,
         "ECS 生物没有按物种配置及脚点 Y 提交原生排序")
     assert(ecs.updated and ecs.reused and ecs.culledBatches == 2 and ecs.activeAfterCull == 2 and ecs.hidden,
@@ -127,6 +129,7 @@ test.system("rendering", "presentation_sorting_domain", {}, function(data)
         "直接释放排序域未清除投影，或共享源在最后一个投影释放前提前恢复")
     assert(data.registryReleased and data.domainsDisposed,
         "投影排序域释放后仍残留注册或根对象")
+    assert(data.ownedParticleMeshReleased, "编辑态投影释放后仍残留自建粒子网格")
     assert(data.sameRawYRankedAndSwapped and data.domainsRankIndependently,
         "相同原始层序的组没有按显示脚底 Y 交换真实排序序号，或两个域的 rank 互相影响")
     assert(data.fixedFloorBelowActor and data.sourceGroupRemainsAtomic,

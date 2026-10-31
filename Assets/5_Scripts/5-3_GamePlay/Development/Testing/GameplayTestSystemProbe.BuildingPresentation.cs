@@ -206,10 +206,15 @@ public static partial class GameplayTestSystemProbe
                 catch (ArgumentException) { invalid.Add(true); }
             }
             var defaults = new JArray();
-            foreach (var sample in new[] { ("receiver", 0), ("receiver", 2), ("mechanical-probe", 4) })
-                defaults.Add(new FluidMachineDefinition { Kind = sample.Item1 }.ResolveBodySizeCells(sample.Item2));
+            var configuredSizes = new JArray();
+            foreach (int layer in new[] { 0, 2, 4 })
+            {
+                defaults.Add(new FluidMachineDefinition { Kind = "receiver" }.ResolveBodySizeCells(layer));
+                configuredSizes.Add(new FluidMachineDefinition { BodySizeCells = .32f }.ResolveBodySizeCells(layer));
+            }
             return new JObject { ["orientations"] = orientations, ["invalidRejected"] = invalid,
                 ["defaultBodySizes"] = defaults,
+                ["configuredBodySizes"] = configuredSizes,
                 ["engineSize"] = MachineCatalog.Get("ShipChemicalEngine").Fluid.ResolveBodySizeCells(0),
                 ["gmEngineSize"] = MachineCatalog.Get("ShipChemicalEngine_GM").Fluid.ResolveBodySizeCells(0) };
         }

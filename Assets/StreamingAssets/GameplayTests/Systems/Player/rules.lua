@@ -23,7 +23,7 @@ test.system("player", "bicycle_carrier", {}, function(data)
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
     near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
     near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
-    assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射或完整外壳缺失")
+    assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射、表现或按世界租借的物理声明缺失")
     local recipe = data.recipe
     assert(recipe.requiredStation == "workbench" and recipe.outputs[1].itemId == "Bicycle" and recipe.outputs[1].amount == 1,
         "自行车未接入工作台制作")
@@ -477,12 +477,16 @@ for _, case in ipairs({
 }) do
     test.system("player", "world_item_quick_pick", {mode = case.mode}, function(data)
         assert(data.accepted == case.accepted, "快速拿取成功或拒绝结果不符：" .. case.mode)
-        assert(data.amount == (case.mode == "partial" and 2 or 3) and data.durability == 13 and data.special == "preserved-state", "快速拿取损坏数量或实例状态")
+        assert(data.amount == (case.mode == "partial" and 2 or 3) and
+            data.durability == (case.mode == "partial" and 20 or 13) and data.special == "preserved-state",
+            "快速拿取损坏数量或实例状态")
         assert(data.binding == "<Mouse>/middleButton" and data.rebindable, "中键没有接入正式可重绑输入")
         if case.accepted then
             assert(data.selected == case.selected, "没有选择真实目标槽")
             if case.mode == "partial" then
-                assert(data.expectedGuid ~= 0 and data.expectedGuid ~= 601 and data.destinationAmount == 1 and data.destinationSpecial == "preserved-state" and data.bagIncoming, "部分搬运没有保留余量或拆分身份")
+                assert(data.expectedGuid ~= 0 and data.expectedGuid ~= 601 and data.destinationAmount == 1
+                    and data.destinationDurability == 13 and data.destinationSpecial == "preserved-state" and data.bagIncoming,
+                    "部分搬运没有带走当前件耐久、保留余量或拆分身份")
             else
                 assert(data.expectedGuid == 601 and data.destinationIncoming, "丢失原物品实例")
             end

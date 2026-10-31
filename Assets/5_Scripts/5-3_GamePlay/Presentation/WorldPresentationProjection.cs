@@ -481,10 +481,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             RestoreSourceRenderer(copy);
             if (copy.Target != null)
             {
-                if (copy.ParticleMesh != null) Destroy(copy.Target.gameObject);
-                else Destroy(copy.Target);
+                if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.Target.gameObject);
+                else DestroyProjectionOwnedObject(copy.Target);
             }
-            if (copy.ParticleMesh != null) Destroy(copy.ParticleMesh);
+            if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.ParticleMesh);
             copies.Remove(source);
         }
         removedLights.Clear();
@@ -493,7 +493,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             LightCopy copy = lights[source];
             Light2DSortingLayerUtility.EndProjectedLight(copy.Source);
-            if (copy.Target != null) Destroy(copy.Target);
+            if (copy.Target != null) DestroyProjectionOwnedObject(copy.Target);
             lights.Remove(source);
         }
         removedShadows.Clear();
@@ -502,7 +502,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             ShadowCopy copy = shadows[source];
             Light2DSortingLayerUtility.EndProjectedShadow(copy.Source);
-            if (copy.Target != null) Destroy(copy.Target);
+            if (copy.Target != null) DestroyProjectionOwnedObject(copy.Target);
             shadows.Remove(source);
         }
         removedNodes.Clear();
@@ -512,7 +512,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             NodeCopy node = nodes[source];
             if (node.SortingRegistered) sortingDomain?.RemoveLocalSortingKey(node.TargetSorting);
             if (node.Watcher != null) node.Watcher.Remove(this);
-            if (node.Target != null && node.Target != transform) Destroy(node.Target.gameObject);
+            if (node.Target != null && node.Target != transform) DestroyProjectionOwnedObject(node.Target.gameObject);
             nodes.Remove(source);
         }
         foreach (NodeCopy node in nodes.Values) node.QueueSource = null;
@@ -766,8 +766,14 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (released) return;
         ReleaseBindings();
         gameObject.SetActive(false);
-        if (Application.isPlaying) Destroy(gameObject);
-        else DestroyImmediate(gameObject);
+        DestroyProjectionOwnedObject(gameObject);
+    }
+
+    // 投影自建对象在编辑态立即释放，运行态保留帧末销毁契约。
+    private static void DestroyProjectionOwnedObject(UnityEngine.Object ownedObject)
+    {
+        if (Application.isPlaying) Destroy(ownedObject);
+        else DestroyImmediate(ownedObject);
     }
 
     private void OnDestroy() => ReleaseBindings();
@@ -790,7 +796,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             ForgetProjectedSource(copy.Source);
             RestoreSourceRenderer(copy);
-            if (copy.ParticleMesh != null) Destroy(copy.ParticleMesh);
+            if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.ParticleMesh);
         }
         foreach (LightCopy copy in lights.Values) Light2DSortingLayerUtility.EndProjectedLight(copy.Source);
         foreach (ShadowCopy copy in shadows.Values) Light2DSortingLayerUtility.EndProjectedShadow(copy.Source);

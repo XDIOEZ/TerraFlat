@@ -4,6 +4,7 @@ test.runtime("rendering", "world_fire_render_benchmark", {warmupFrames = 12, sam
         and data.depthMeshShaderName == "FlatWorld/2D/Chunk Depth Sprite Lit"
         and data.benchmarkScope == "isolated-scene-single-camera-render-texture",
         "火场基准没有使用ChunkView正式资源和隔离相机")
+    assert(not data.fireSpritePacked, "GPU横向切帧的火焰源表被SpriteAtlas重排")
     assert(data.cellCount == 10000 and data.cellsPerChunk == 16 and data.expectedChunkCount == 49,
         "火场现场规模或16×16分组错误")
     assert(data.renderTextureCreated and data.renderTextureWidth == 1920 and data.renderTextureHeight == 1080,
@@ -19,6 +20,11 @@ test.runtime("rendering", "world_fire_render_benchmark", {warmupFrames = 12, sam
     assert(type(data.previewImagePath) == "string" and #data.previewImagePath > 0
         and data.previewImageBytes > 0,
         "1920×1080火场RT没有在采样结束后读回PNG视觉证据")
+    assert(data.previewVisiblePixelCount > data.cellCount and data.previewFirePixelCount > data.cellCount,
+        "火场RT没有实际绘出足量火焰像素，绘制计数不能代替画面")
+    assert(data.fireSurfaceMaterial._SnowCoverage == 0 and data.fireSurfaceMaterial._ActorTintStrength == 0
+        and data.fireSurfaceMaterial._HitFlash == 0 and data.fireSurfaceMaterial._DepthUnlit == 1,
+        "跨Shader复制源材质覆盖了火场Shader的默认状态")
     assert(data.initialUploads.indexBufferUploadCount == 49 and data.initialUploads.vertexBufferUploadCount == 49
         and data.initialUploads.indexBufferUploadBytes > 0 and data.initialUploads.vertexBufferUploadBytes > 0
         and data.initialUploads.topologyRebuildCount == 49 and data.initialUploads.partCount == 10000

@@ -23,6 +23,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_terrain_shadow_masks",
+      "name": "地形阴影八邻域全部256种组合",
+      "luaPath": "GameplayTests/Systems/Rendering/terrain-shadow-masks.lua",
+      "enabled": true
+    },
+    {
       "id": "rendering_building_liquid_surface",
       "name": "建筑水面覆盖：平台与液体增量规则",
       "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",

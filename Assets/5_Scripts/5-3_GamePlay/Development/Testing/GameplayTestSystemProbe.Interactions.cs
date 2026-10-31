@@ -4,6 +4,7 @@ using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public static partial class GameplayTestSystemProbe
@@ -366,13 +367,18 @@ public static partial class GameplayTestSystemProbe
     // 源层级保持活动以遵守命中解析契约，禁用碰撞和行为，不登记到游戏世界。
     private static JObject InteractionPhysicsSource(JObject args)
     {
-        var originalRoot = new GameObject("GameplayTest Independent Collider Source") { hideFlags = HideFlags.HideAndDontSave };
-        var mirrorRoot = new GameObject("GameplayTest Independent Collider Image") { hideFlags = HideFlags.HideAndDontSave };
-        originalRoot.SetActive(false); mirrorRoot.SetActive(false);
-        GameItem owner = originalRoot.AddComponent<GameItem>();
-        owner.enabled = false;
+        Scene scene = default;
+        GameItem owner = null;
         try
         {
+            scene = CreateGameplayTestProbeScene("[InteractionPhysicsSource]");
+            var originalRoot = new GameObject("GameplayTest Independent Collider Source") { hideFlags = HideFlags.HideAndDontSave };
+            SceneManager.MoveGameObjectToScene(originalRoot, scene);
+            var mirrorRoot = new GameObject("GameplayTest Independent Collider Image") { hideFlags = HideFlags.HideAndDontSave };
+            SceneManager.MoveGameObjectToScene(mirrorRoot, scene);
+            originalRoot.SetActive(false); mirrorRoot.SetActive(false);
+            owner = originalRoot.AddComponent<GameItem>();
+            owner.enabled = false;
             var body = new GameObject("Body");
             body.transform.SetParent(originalRoot.transform, false);
             Collider2D original = body.AddComponent<BoxCollider2D>();
@@ -415,12 +421,8 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
-            try { owner.PrepareForDespawn(saveData: false); }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(mirrorRoot);
-                UnityEngine.Object.DestroyImmediate(originalRoot);
-            }
+            try { if (owner != null) owner.PrepareForDespawn(saveData: false); }
+            finally { if (scene.IsValid()) CloseGameplayTestProbeScene(scene); }
         }
     }
 

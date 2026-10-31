@@ -889,7 +889,7 @@ public static partial class GameplayTestSystemProbe
             bool sameWorldNear = index.ResolveTier(target) == SimulationRangeTier.Near;
             bool sameWorldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(target) == GameplayWorldRegistry.GetItemWorldIdentity(observer);
             Scene initialScene = target.gameObject.scene;
-            Scene otherScene = WindShelterProbeScene("[LogicalWorldPerceptionProbe]");
+            Scene otherScene = CreateGameplayTestProbeScene("[LogicalWorldPerceptionProbe]");
             try
             {
                 SceneManager.MoveGameObjectToScene(target.gameObject, otherScene);
@@ -957,7 +957,7 @@ public static partial class GameplayTestSystemProbe
             {
                 if (target != null && initialScene.IsValid() && initialScene.isLoaded && target.gameObject.scene != initialScene)
                     SceneManager.MoveGameObjectToScene(target.gameObject, initialScene);
-                CloseWindShelterProbeScene(otherScene);
+                CloseGameplayTestProbeScene(otherScene);
             }
         }));
 

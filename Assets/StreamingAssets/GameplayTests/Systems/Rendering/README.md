@@ -1,10 +1,22 @@
 # 渲染、光照与特效
 
-2026-10-30 区块火场资源断言已加入 `rendering/combustion_visual`：检查 ChunkView 的 Unlit 源材质绑定、八帧贴图与 FullRect 导入。以下新增采样仍未运行。
+2026-10-31 渲染失败修复：AIECS 和火场掉落物规则统一使用隔离预览场景，检查释放和活动场景不变；`WorldPresentationProjection` 的自建粒子网格、组件和节点在编辑态立即销毁，运行态保持帧末销毁。256种邻格组合完整移到 `terrain-shadow-masks.lua`，其余边界仍在 `rules.lua`，不提高编排上限。高炉烟雾相对火焰偏移改为0.78125，顶部实际局部Y为0.375，下方火焰仍为-0.40625；采样实走正式Transform。洞穴阴影规则显式传入正式维度目录策略，增加同区块策略切换与全局管理器保持断言；机身尺寸规则替换已删除的mechanical-probe样本，另检查显式尺寸跨层优先级。
+
+快速回归 `20261031T083207368Z_6af35447`：渲染7份规则全部通过，连同玩家、物品、环境、AI归属和测试框架共13/13，零失败、零跳过。烟口实际局部Y=0.375、火焰=-0.40625、锚点误差=0；实际256种掩码完整执行。相关旧夹具修复说明见对应系统README。
+
+现场夹具改用正式数据建筑放置并在创建前登记自有GUID，结束截图后统一撤销；耐火船板补齐与铁船板一致的机械目录配置。火场的横排动画源表标记 `PreserveSourceSpriteSheetUV`，自动图集计划保留原始UV，生成资源只移除该表8帧；三类合批材质跨Shader改用 `CopyMatchingPropertiesFromMaterial`，避免丢失目标Shader默认属性。火场新增未打包、材质默认状态、可见像素和火焰颜色断言，拦截空白PNG及白色火焰的假通过。
+
+最终回归：`20261031T093431753Z_0d305617` 的15/15快速规则通过（渲染7项、玩家、物品、环境2项、AI归属、机械、核心启动及测试框架），零失败、零跳过、零错误；4条Warning为Burst入口和预期缺失Animator的负例日志。`20261031T092234393Z_7d0b2268` 的29/29 EditMode和2/2现场Lua通过；两船板同属测试世界、保持Default/0且实际队列2992，火场60/60帧、382,378可见像素及329,975火焰像素，稳定渲染零网格重传。已实际复核完整联系表和RT原图，角色/HUD/船板与火焰原色正常。现场仅有首次完整资源加载22秒的目标耗时Warning；末次Console检查0错误，未把Warning记成消失。
+
+船板采样按真实占地格读取已提交排序根，不将业务GUID当作区块绘制ID；主体排序根查询同时复用于灯、火焰和行重组恢复。机械快照的合法旋转、Addressables预期失败日志和伤害窗口自有物理上下文修复见对应系统README。
+
+渲染目录共9份Lua、7个规则案例。`sync_catalog.py` 仍被既有Space目录超过10份Lua阻断，本轮已按渲染子清单精确同步总规则入口、catalog映射和索引，并核对一致性；没有修改Space清单或放宽限制。
+
+2026-10-30 区块火场资源断言已加入 `rendering/combustion_visual`：检查 ChunkView 的 Unlit 源材质绑定、八帧贴图与 FullRect 导入。当前验证结果见顶部。
 
 `rendering/world_fire_batches` 使用 ChunkView 的正式 Sprite/材质，实际创建100×100个 fire domain 四边形，按16×16格构造49个 `ChunkDepthMeshRenderer(useParentSortingAnchor:true)`，显式 Flush 后读取每个 Mesh 的 submesh 顶点/索引、真实 MeshRenderer/SortingGroup、排序键和 `SetIndexBufferData` / `SetVertexBufferData` 调用点的 Editor 计数/字节。相同火格重提应无上传；单火颜色变化应只增加顶点上传，不增加索引上传或拓扑重建。该同步规则只验证 Unity Mesh 构造和 CPU 上传路径；实际相机帧数据由 `rendering/world_fire_render_benchmark` 另行采集。
 
-`rendering/world_fire_render_benchmark` 是显式 PlayMode Lua 操作：建临时 Scene、1920×1080 RenderTexture 与只看专用 Layer 的正交相机，使用相同49个正式深度合批 Renderer 提交10,000个 Sprite Quad；采样前暂时关闭其他已启用 Camera，取12帧预热和60帧实渲染，之后立即恢复相机。结果包含摄像机是否完整覆盖火格与真实 Mesh bounds、预热与正式采样期 Camera 实际渲染帧数、Profiler `Render/Draw Calls Count`、`Memory/GC Allocated In Frame`、FrameTimingManager 的 CPU 主线程/渲染线程/整帧与 GPU 时间，以及真实 `SetIndexBufferData` / `SetVertexBufferData` 的 Editor 计数和字节增量。采样完成后单独从 RT 读回 PNG 到 `Library/FlatWorldGameplayTests/WorldFireRenderBenchmark/`，JSON 的 `previewImagePath` 给出绝对路径；Lua 宿主结束截图仍是普通游戏现场。Lua只检查 PNG 文件生成，不做非黑像素或火焰着色断言，需人工查看这张基准PNG。Profiler 项不可用时标记 `unavailable`；GPU 样本为0时按不可用记录，不会伪报为通过。FrameTimingManager 是整帧计时，Draw Calls/GC 是隔离采样期间的整帧计数，并非每 Camera 的GPU计时；离屏 RT 测量不等于真实显示器刷新率或 Frame Debugger 验收。此夹具只在被 Lua 明确调用时建场景、启相机和 Recorder，无常驻玩法开销。本轮只添加采样入口，没有启动 Unity 或执行该规则。
+`rendering/world_fire_render_benchmark` 是显式 PlayMode Lua 操作：建临时 Scene、1920×1080 RenderTexture 与只看专用 Layer 的正交相机，使用相同49个正式深度合批 Renderer 提交10,000个 Sprite Quad；采样前暂时关闭其他已启用 Camera，取12帧预热和60帧实渲染，之后立即恢复相机。结果包含摄像机是否完整覆盖火格与真实 Mesh bounds、预热与正式采样期 Camera 实际渲染帧数、Profiler `Render/Draw Calls Count`、`Memory/GC Allocated In Frame`、FrameTimingManager 的 CPU 主线程/渲染线程/整帧与 GPU 时间，以及真实 `SetIndexBufferData` / `SetVertexBufferData` 的 Editor 计数和字节增量。采样完成后单独从 RT 读回 PNG 到 `Library/FlatWorldGameplayTests/WorldFireRenderBenchmark/`，JSON 的 `previewImagePath` 给出绝对路径；Lua 宿主结束截图仍是普通游戏现场。Lua检查未打包、目标材质默认状态，以及超过10,000个非黑像素和红橙火焰像素；仍需人工查看基准PNG的布局和最终表现。Profiler 项不可用时标记 `unavailable`；GPU 样本为0时按不可用记录，不会伪报为通过。FrameTimingManager 是整帧计时，Draw Calls/GC 是隔离采样期间的整帧计数，并非每 Camera 的GPU计时；离屏 RT 测量不等于真实显示器刷新率或 Frame Debugger 验收。此夹具只在被 Lua 明确调用时建场景、启相机和 Recorder，无常驻玩法开销。执行与画面结果见本页顶部记录。
 
 同一规则还提交正式16×16 `ChunkRuntime` 地形并写入真实火格，让 `DroppedItemPresentation.Present` 依次采样同格抑制、移动到无火格恢复、原格灭火后恢复；测试使用独立 owned `WorldRuntime` 和临时 Scene，并在清理阶段通过 `ReleaseOwnedWorldModel` 释放。尚未覆盖 `ItemMgr.Matter` 的散落物表现入口。
 

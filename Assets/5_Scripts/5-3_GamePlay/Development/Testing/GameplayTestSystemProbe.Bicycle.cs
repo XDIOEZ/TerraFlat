@@ -84,9 +84,12 @@ public static partial class GameplayTestSystemProbe
             GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Gameplay/Items/Common/BicycleBodyShell.prefab");
             CarrierWheelPresentation presentation = prefab != null ? prefab.GetComponent<CarrierWheelPresentation>() : null;
+            ItemPhysicsTemplate2D physics = prefab != null ? prefab.GetComponent<ItemPhysicsTemplate2D>() : null;
             samples["prefabReady"] = presentation != null && presentation.FrameSprite != null &&
                 presentation.FrameRenderer != null && presentation.RearWheel != null && presentation.FrontWheel != null &&
-                prefab.GetComponent<UnityEngine.Rendering.SortingGroup>() != null && prefab.GetComponent<Rigidbody2D>() != null;
+                prefab.GetComponent<UnityEngine.Rendering.SortingGroup>() != null && physics != null &&
+                physics.hasBody && physics.bodyType == RigidbodyType2D.Kinematic &&
+                prefab.GetComponent<Rigidbody2D>() == null;
 #endif
             return samples;
         }

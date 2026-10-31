@@ -880,7 +880,7 @@ internal static class ChunkBatchRendererGroupService
                 // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段；统一按世界渲染 JSON 配置透明队列。
                 renderQueue = renderQueue
             };
-            runtimeMaterial.CopyPropertiesFromMaterial(sourceMaterial);
+            runtimeMaterial.CopyMatchingPropertiesFromMaterial(sourceMaterial);
             runtimeMaterial.shaderKeywords = sourceMaterial.shaderKeywords;
             runtimeMaterial.SetTexture("_MainTex", texture);
             runtimeMaterial.renderQueue = renderQueue;

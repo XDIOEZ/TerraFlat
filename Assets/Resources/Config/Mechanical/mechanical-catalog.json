@@ -1194,6 +1194,14 @@
       "CastVisualShadows": false
     },
     {
+      "Id": "ShipFloor_Refractory",
+      "Kind": "building",
+      "Ports": "none",
+      "PlacementLayer": 6,
+      "BlocksMovement": false,
+      "CastVisualShadows": false
+    },
+    {
       "Id": "ShipConsole",
       "Kind": "consumer",
       "Ports": "none",

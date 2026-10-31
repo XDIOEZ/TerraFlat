@@ -37,11 +37,19 @@ public static partial class GameplayTestSystemProbe
             bool preserved = ReferenceEquals(scope.Load<Sprite>("probe/shared-sprite").Result, source);
             scope.Dispose();
             // 已停止消费者之后模拟迟到的目录回调，不能产生成功-null。
-            var late = scope.CompleteSpritePurposeRequest(() =>
-                UnityEngine.AddressableAssets.Addressables.ResourceManager.CreateCompletedOperation(source, (string)null));
+            var previousExceptionHandler = UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler;
+            Exception lateFailure = null;
+            UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<Sprite> late;
+            try
+            {
+                UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler = (_, error) => lateFailure = error;
+                late = scope.CompleteSpritePurposeRequest(() =>
+                    UnityEngine.AddressableAssets.Addressables.ResourceManager.CreateCompletedOperation(source, (string)null));
+            }
+            finally { UnityEngine.ResourceManagement.ResourceManager.ExceptionHandler = previousExceptionHandler; }
             bool lateAfterDisposeFailed = late.IsDone &&
                 late.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Failed &&
-                late.Result == null;
+                late.Result == null && lateFailure != null;
             if (late.IsValid()) UnityEngine.AddressableAssets.Addressables.Release(late);
             return new JObject
             {

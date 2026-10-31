@@ -27,8 +27,8 @@ end, "全目录冷机器：直接读取、落地预备、只读状态、失败�
 test.runtime("rendering", "player_external_effects", {}, function(data)
     assert(#data.floors == 2, "没有创建两种正式船板物品")
     for _, floor in ipairs(data.floors) do
-        assert(floor.loaded and floor.layer == "Default" and floor.order == 0 and
-            floor.layerValue < data.playerLayerValue and not floor.projectedIntoDynamicBatch,
+        assert(floor.loaded and floor.worldKey == data.worldKey and floor.layer == "Default" and floor.order == 0 and
+            floor.layerValue < data.playerLayerValue and floor.renderQueue == data.groundFacilityQueue,
             "正式船板在跨帧后被动态排序或合批覆盖：" .. floor.id)
     end
     assert(data.scope == "live-isolated-world" and data.realItemLoaded and data.itemId == "Axe_Stone", "真实物品没有通过正式加载流程")

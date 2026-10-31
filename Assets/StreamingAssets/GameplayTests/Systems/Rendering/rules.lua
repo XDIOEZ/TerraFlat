@@ -209,19 +209,6 @@ test.system("rendering", "terrain_shadow_surface_cache", {}, function(data)
 end, "地形阴影每轮复用表面样本并保持邻区边界")
 
 do
-    local function has(mask, index) return math.floor(mask / (2 ^ (index - 1))) % 2 == 1 end
-    local adjacent = { { 1, 3 }, { 2, 3 }, { 1, 4 }, { 2, 4 } }
-    for mask = 0, 255 do
-        test.system("rendering", "terrain_shadow_masks", { mask = mask }, function(data)
-            assert(data.visible == (mask ~= 0), "仅有斜对角高地时没有提交阴影格，或平地多画阴影")
-            for index = 1, 4 do
-                assert(data.edges[index] == (has(mask, index) and 1 or 0), "四向高差改变了原有直边")
-                local corner = has(mask, index + 4) and not has(mask, adjacent[index][1])
-                    and not has(mask, adjacent[index][2])
-                assert(data.corners[index] == (corner and 1 or 0), "圆角缺失、方向颠倒或重复补已覆盖的边")
-            end
-        end, "地形阴影八邻域全部组合：" .. mask)
-    end
     for index = 1, 4 do
         for _, row in ipairs({
             { args = { difference = 6 }, delta = 6, label = "多层高差仍补角" },
@@ -264,6 +251,9 @@ test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
         "洞穴仍在生成墙体遮黑效果，或池化阴影从地表泄漏到洞穴")
     assert(data.surfaceRecovered == 1 and data.surfaceCasterReused,
         "返回地表后未恢复正常墙体阴影，或重复创建阴影网格")
+    assert(data.sameChunkPolicyRestored == 1 and data.sameChunkPolicySuppressed == 0
+        and data.dimensionServicePreserved,
+        "同一区块切换阴影策略未重绑，或规则改动了全局维度管理器")
 end, "洞穴移除墙体视野遮黑，地表阴影仍按需创建并安全复用")
 
 for _, row in ipairs({
@@ -875,9 +865,11 @@ test.system("rendering", "ship_block_visual", {}, function(data)
         assert(row.sourceRestored and row.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
     end
     assert(data.engineSize == 1 and data.gmEngineSize == 1, "普通或GM化学引擎仍被缩成非满格")
-    local expected = {0.85, 0.55, 0.32}
+    local expected = {0.85, 0.55, 0.85}
+    assert(#data.defaultBodySizes == 3 and #data.configuredBodySizes == 3, "缺少设备占地层尺寸采样")
     for i, value in ipairs(data.defaultBodySizes) do
         assert(math.abs(value - expected[i]) < 0.0001, "引擎满格改动改变了其它设备默认尺寸")
+        assert(math.abs(data.configuredBodySizes[i] - 0.32) < 0.0001, "显式机身尺寸被占地层默认值覆盖")
     end
     for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
 end, "化学引擎满格、四朝向双扇门世界滑动、反转恢复与回收")

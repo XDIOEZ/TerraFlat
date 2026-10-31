@@ -201,7 +201,7 @@ public static partial class GameplayTestSystemProbe
             scheduler.GetRegisteredCountForWorld(worldB) == 0 &&
             GameplayWorldRegistry.GetWorldItemCount(worldA) == 2 && GameplayWorldRegistry.GetWorldItemCount(worldB) == 0;
         Scene initialScene = second.gameObject.scene;
-        Scene otherScene = WindShelterProbeScene("[LogicalWorldTickProbe]");
+        Scene otherScene = CreateGameplayTestProbeScene("[LogicalWorldTickProbe]");
         try
         {
             SceneManager.MoveGameObjectToScene(second.gameObject, otherScene);
@@ -234,7 +234,7 @@ public static partial class GameplayTestSystemProbe
         {
             if (second != null && initialScene.IsValid() && initialScene.isLoaded && second.gameObject.scene != initialScene)
                 SceneManager.MoveGameObjectToScene(second.gameObject, initialScene);
-            CloseWindShelterProbeScene(otherScene);
+            CloseGameplayTestProbeScene(otherScene);
         }
     }));
 

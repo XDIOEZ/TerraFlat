@@ -47,6 +47,10 @@ public sealed partial class ChunkTilemapRenderer
     private readonly Dictionary<Vector3Int, int> submittedPipeMasks = new(); // 管口增删和旋转只刷新连接外形变化的邻管。
     private readonly Dictionary<Vector3Int, int> submittedTankMasks = new(); // 储罐边框只在四邻连接变化时重新提交。
     internal HashSet<Vector3Int> MechanicalShadowKeys => submittedMechanicalCells; // 供阴影注册表按区块卸载。
+    // 按真实占地格读取提交结果，业务 GUID 与区块绘制 ID 不混用。
+    internal Transform GetMechanicalDepthPartSortingRoot(Vector3Int localCellAndLayer, int partIndex)
+        => mechanicalDepthVisuals.TryGetValue(localCellAndLayer, out MechanicalDepthVisual visual)
+            ? visual.GetSubmittedPartSortingRoot(partIndex) : null;
     private static Material mechanicalFallbackMaterial;
     private static Sprite mechanicalAxisPortSprite;
     private static Sprite fluidIndicatorSprite;

@@ -8,7 +8,6 @@ using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -318,6 +317,7 @@ public static partial class GameplayTestSystemProbe
         string worldKey = "__lua_world_fire_visual_" + Guid.NewGuid().ToString("N");
         WorldRuntime world = null;
         Scene testScene = default;
+        Scene originalActiveScene = SceneManager.GetActiveScene();
         LightweightDroppedItemSimulation simulation = null;
         DroppedItemPresentation presentation = null;
         JObject result = null;
@@ -344,7 +344,7 @@ public static partial class GameplayTestSystemProbe
             bool firePresent = WorldFireSystem.TryGetWorldFireIntensity(worldKey, firePosition, out float fireIntensity) &&
                 fireIntensity > 0f;
 
-            testScene = SceneManager.CreateScene("LuaWorldFireVisual_" + worldKey.Substring(worldKey.Length - 8));
+            testScene = CreateGameplayTestProbeScene("LuaWorldFireVisual_" + worldKey.Substring(worldKey.Length - 8));
             var cameraRoot = new GameObject("Lua World Fire Camera");
             SceneManager.MoveGameObjectToScene(cameraRoot, testScene);
             Camera camera = cameraRoot.AddComponent<Camera>();
@@ -434,14 +434,15 @@ public static partial class GameplayTestSystemProbe
             simulation?.Dispose();
             if (world != null)
                 worldModelReleased = GameplayWorldRegistry.ReleaseOwnedWorldModel(worldKey, world);
-            if (testScene.IsValid() && testScene.isLoaded)
-            {
-                if (Application.isPlaying) SceneManager.UnloadSceneAsync(testScene);
-                else EditorSceneManager.CloseScene(testScene, true);
-            }
+            if (testScene.IsValid()) CloseGameplayTestProbeScene(testScene);
         }
 
-        if (result != null) result["worldModelReleased"] = worldModelReleased;
+        if (result != null)
+        {
+            result["worldModelReleased"] = worldModelReleased;
+            result["probeSceneReleased"] = !testScene.IsValid();
+            result["activeSceneUnchanged"] = SceneManager.GetActiveScene() == originalActiveScene;
+        }
         return result;
     }
 

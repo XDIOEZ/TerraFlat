@@ -20,6 +20,7 @@ test.system("rendering", "dropped_combustion_material", {}, function(data)
         "区块火场没有绑定有效的 Unlit 源材质或燃烧贴图")
     assert(data.chunkFireFrameCount == 8 and data.chunkFireFullRect,
         "区块火场的 8 帧横向图集未使用 FullRect，GPU 切帧可能被首帧裁剪")
+    assert(data.chunkFirePreservesSourceUv, "GPU切帧源表没有声明保留原始UV布局")
     assert(math.abs(data.attachedUpX + math.sin(math.rad(75))) < .0001
         and math.abs(data.attachedUpY - math.cos(math.rad(75))) < .0001,
         "显式跟随锚点的火焰丢失宿主倾斜")
@@ -81,6 +82,8 @@ test.system("rendering", "world_fire_batches", {}, function(data)
         "区块火场 GPU 动画参数没有保持八帧、12 FPS")
 
     local display = data.displayEntry
+    assert(display.probeSceneReleased and display.activeSceneUnchanged,
+        "火场掉落物规则遗留预览场景或切换了用户的活动场景")
     assert(display.movementCellAvailable and display.firePresentAtSameCell and display.initialFireIntensity > 0
         and display.independentFlameSuppressedInSameCell,
         "真实掉落物 Present 没有抑制同格火场下的独立火焰")

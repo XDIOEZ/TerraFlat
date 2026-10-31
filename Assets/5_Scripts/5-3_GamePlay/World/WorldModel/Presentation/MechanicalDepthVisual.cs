@@ -98,9 +98,7 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
 
     internal void RestoreDepthSortingAttachments()
     {
-        PartVisual body = parts[facilityBodyPart];
-        Transform sortingRoot = body?.SubmittedRenderer?.GetPartSortingRoot(
-            ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id);
+        Transform sortingRoot = GetSubmittedPartSortingRoot(facilityBodyPart);
         if (sortingRoot != null)
         {
             if (emissionDetachedForRegroup && poweredEmission != null) poweredEmission.transform.SetParent(sortingRoot, true);
@@ -108,6 +106,13 @@ public sealed partial class MechanicalDepthVisual : MonoBehaviour, ISpatialInter
         }
         emissionDetachedForRegroup = combustionDetachedForRegroup = false;
     }
+
+    internal Transform GetSubmittedPartSortingRoot(int partIndex)
+    {
+        PartVisual part = parts[partIndex];
+        return part?.SubmittedRenderer?.GetPartSortingRoot(ChunkDepthMeshRenderer.MachineDomain, entityId, part.Id);
+    }
+
     internal void SetPartTint(int index, Color tint)
     {
         PartVisual part = parts[index];

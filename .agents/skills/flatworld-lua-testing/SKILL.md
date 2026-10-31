@@ -44,6 +44,9 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 气液 PlayMode 的无库存连接图、过滤、独立罐、固定容量、三槽装填和地表泵/出口通过 `test.runtime("industrial_fluids",...)` 返回原始采样，Lua持有业务断言；既有 `test.fluid` 用于尚未迁移的子案例，新增判断不堆回C#。
 - 联机假人专项在 `Systems/Networking/gameplay-suite.json`，`test.runtime("networking","bots_*",...)` 接正式 Mirror 内存传输/独立连接和服务端处理；检查实际回复、权威状态及收尾，不将传输送达或服务端删物当成真实 Client 库存接收。
 - 规则模式只允许system/log且至少一个system；不进入Test Framework/PlayMode，不建资源/存档世界。场景模式默认 EditMode→PlayMode；显式 `--playmode-only` 则直接进入 PlayMode，保留清单预检与 Lua 断言但不启动 EditMode 测试。
+- 同步规则需要 Scene 时复用 `CreateGameplayTestProbeScene/CloseGameplayTestProbeScene`，Editor 使用预览场景并配对释放；不要读取临时隐藏对象的 Scene 或在 EditMode 调用运行时 `CreateScene`。
+- 要验证 Unity 启停/销毁回调的编辑态夹具，调用 `EnableGameplayTestProbeLifecycleCallbacks` 启用临时组件的 `runInEditMode`，或用已有 `ExecuteAlways` 子类；不手工重算复位状态。
+- 预期失败的 Addressables 请求在同步负例范围捕获并恢复 `ResourceManager.ExceptionHandler`，同时断言真实 Failed 状态和异常，避免负例日志误算为引擎故障。
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。
 - 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。

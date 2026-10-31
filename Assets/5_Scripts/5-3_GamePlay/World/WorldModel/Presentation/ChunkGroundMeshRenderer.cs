@@ -359,7 +359,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 int renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(layer);
                 Material = new Material(shader) { name = $"Chunk_{layer}_{texture.name}",
                     hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
-                Material.CopyPropertiesFromMaterial(sourceMaterial);
+                Material.CopyMatchingPropertiesFromMaterial(sourceMaterial);
                 Material.shaderKeywords = sourceMaterial.shaderKeywords;
                 Material.SetTexture("_MainTex", texture);
                 Material.SetVector("_ChunkSize", new Vector4(width, height,

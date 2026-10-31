@@ -5,6 +5,8 @@ test.system("rendering", "combustion_shader_smoke", {}, function(data)
         and math.abs(data.configuredWidth - 0.65) < 0.0001
         and math.abs(data.configuredHeight - 1.25) < 0.0001,
         "高炉烟雾没有从上方炉口按正式尺寸冒出")
+    assert(math.abs(data.flameLocalY + 0.40625) < 0.0001,
+        "调整顶部烟雾时移动了下方炉门的火焰")
     assert(data.shader == "Game/Effects/ShaderSmoke" and data.supported and data.passes,
         "烟雾缺少可用的 URP 2D / Forward Shader Pass")
     assert(data.sharedMaterial and data.sharedMesh and data.vertices == 4 and data.particles == 0,

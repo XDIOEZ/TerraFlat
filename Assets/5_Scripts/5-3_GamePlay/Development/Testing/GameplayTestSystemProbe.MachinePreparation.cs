@@ -134,7 +134,8 @@ public static partial class GameplayTestSystemProbe
             MaxDurability = 200, Durability = 120, CraftedDurabilityMultiplier = 1.5f,
             ItemSpecialData = "{\"mod-state\":{\"value\":7}}", FactionId = "probe:faction",
             Tags = new List<string> { "Machine" },
-            transform = new ItemTransform { position = new Vector3(4, 8, 0), scale = Vector3.one * 2 },
+            transform = new ItemTransform { position = new Vector3(4, 8, 0),
+                rotation = Quaternion.Euler(0f, 0f, 15f), scale = Vector3.one * 2 },
             MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 81, Moisture = .2f },
             ModuleDataDic = new Dictionary<string, ModuleData> { ["furnace"] = binary, ["inventory"] = inventory }
         });

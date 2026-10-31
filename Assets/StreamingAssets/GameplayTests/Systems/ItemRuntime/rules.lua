@@ -378,6 +378,9 @@ for _, geometry in ipairs({
     }
     test.system("item_runtime", "single_sprite_animation", geometry, function(data)
         checkAnimationBoundary(data)
+        if geometry.withHeldAim then
+            assert(data.heldFocusCreatedWithIdentity, "冷创建瞄准组件没有默认能力身份")
+        end
         assert(data.samples[1].heldOffset > .001 and data.samples[3].heldOffset > .001,
             "走路或奔跑时手持物没有跟随身体手部位置")
         for _, sample in ipairs(data.samples) do
@@ -686,7 +689,8 @@ test.system("item_runtime", "single_sprite_animation", {withHealth = true, withS
 end, "单图死亡抢占动作、固定图片、旧状态接入和重复死亡不重播")
 
 test.system("item_runtime", "single_sprite_animation", {withHealth = true, withSpriteStates = true, withMotionSource = true, steps = {
-    {legacyState = "Flying", source = {y = .6, roll = 12}, deltaTime = 0},
+    -- 中性朝向建立死亡起始高度，倾斜脚点补偿由动作源矩阵规则覆盖。
+    {legacyState = "Flying", source = {y = .6}, deltaTime = 0},
     {kill = true, deltaTime = 0},
     {source = {available = false}, legacyState = "Ground", deltaTime = .1},
     {source = {y = 8, roll = 70, moving = true}, deltaTime = .67},
@@ -804,8 +808,10 @@ end, "真实狼外壳稳定槽位编译、内嵌动画复用与重复视觉拒�
 
 test.system("item_runtime", "compiled_module_parameters", {}, function(data)
     assert(data.repeatedValidations == 3 and data.customRejected, "配置复用跳过了当前原型的自有校验")
-    assert(data.missingColliderRejected and data.changedColliderRejected and data.nullTargetRejected,
-        "配置复用接受了缺失、变型的碰撞体或空模块")
+    assert(data.missingColliderAccepted and data.coldColliderDeclared,
+        "冷装配要求提前创建原生碰撞体，或丢失按世界租借的碰撞配置")
+    assert(data.changedColliderRejected and data.nullTargetRejected,
+        "配置复用接受了变型的碰撞体或空模块")
     assert(data.independent and data.reapplied and data.colliderApplied, "配置复用共享了实例状态或漏写特殊参数")
     assert(#data.invalidInputs == 4, "缺少严格参数编译的拒绝用例")
     for _, rejected in ipairs(data.invalidInputs) do

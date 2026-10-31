@@ -8,7 +8,9 @@ public partial class Mod_FocusPoint : Module
 {
     #region Fields
     public FocusPoint_Data Data = new FocusPoint_Data();
-    public Ex_ModData_MemoryPackable ModData;
+    // 默认能力在装配前可读，运行时身份交由统一模块绑定维护。
+    public Ex_ModData_MemoryPackable ModData = new() { ID = ModText.FocusPoint };
+    public override string CanonicalModuleId => ModText.FocusPoint;
     public override ModuleData _Data { get { return ModData; } set { ModData = (Ex_ModData_MemoryPackable)value; } }
     public Mod_GameController Mod_GameController;
     public Mod_TurnBack turnBody; // 添加TurnBody引用
@@ -25,16 +27,6 @@ public partial class Mod_FocusPoint : Module
     #endregion
 
     #region Unity Methods
-    public override void Awake()
-    {
-        _Data.ID = ModText.FocusPoint;
-    }
-
-    public void OnValidate()
-    {
-        _Data.ID = ModText.FocusPoint;
-    }
-
     private void LateUpdate()
     {
         if (!IsRuntimeLoaded || !Enabled || Mod_GameController == null) return;

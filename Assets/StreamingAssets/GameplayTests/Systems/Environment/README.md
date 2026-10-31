@@ -1,5 +1,7 @@
 # 环境规则与真实流程回归
 
+- 2026-10-31：雾感知纯规则只限制PlayMode；已有ItemMgr不代表运行中的世界，独立夹具仍按正式模块卸载使旧感知请求失效并释放自身物品。
+
 - 2026-10-31：`dynamic_grid_temperature_exchange` 覆盖动态偏移替换、多来源平均、重复发布版本、外部热源变化、冻结及地形重载身份；工业液罐接入由气液现场 `liquid_grid_exchange` 检查。永久地理温度与库存液量不变。
 
 - 大气检测仪 `environment/atmosphere_measurement` 直接读取正式快照，检查真实库存比例、标准 m³ 换算、排序、微量气体、真空、未就绪拒绝、多星球与洞穴来源，以及旧快照不被后续库存修改。`gameplay-suite.json` 的 `atmosphere_analyzer_gameplay` 走正式手持道具使用、重复开关、离手关闭/拒绝及模块卸载重载，结束截图前保留仪器屏幕；覆盖不替代多人联机与所有分辨率验收。

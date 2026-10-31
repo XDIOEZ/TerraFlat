@@ -571,13 +571,13 @@ public static partial class GameplayTestSystemProbe
             bool customRejected = Rejected(() => prepared.ValidateTarget(prototype));
             prototype.RejectParameters = false;
             UnityEngine.Object.DestroyImmediate(source.GetComponent<BoxCollider2D>());
-            bool missingColliderRejected = Rejected(() => prepared.ValidateTarget(prototype));
+            bool missingColliderAccepted = !Rejected(() => prepared.ValidateTarget(prototype));
             source.AddComponent<CircleCollider2D>();
             bool changedColliderRejected = Rejected(() => prepared.ValidateTarget(prototype));
 
+            GameItem coldOwner = first.AddComponent<GameItem>();
             var a = first.AddComponent<GameplayTestPreparedParameterModule>();
             var b = second.AddComponent<GameplayTestPreparedParameterModule>();
-            first.AddComponent<BoxCollider2D>();
             second.AddComponent<BoxCollider2D>();
             prepared.Apply(a);
             prepared.Apply(b);
@@ -590,10 +590,13 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["repeatedValidations"] = repeatedValidations, ["customRejected"] = customRejected,
-                ["missingColliderRejected"] = missingColliderRejected, ["changedColliderRejected"] = changedColliderRejected,
+                ["missingColliderAccepted"] = missingColliderAccepted, ["changedColliderRejected"] = changedColliderRejected,
+                ["coldColliderDeclared"] = first.GetComponent<Collider2D>() == null &&
+                    ItemPhysicsDefinitionRuntime.GetItemPhysicsConfiguration(coldOwner).Colliders.TryGetValue(a, out var declared) &&
+                    declared.Type == "BoxCollider2D" && declared.Size == new Vector2(2, 3),
                 ["nullTargetRejected"] = Rejected(() => prepared.ValidateTarget(null)),
                 ["independent"] = independent, ["reapplied"] = a.Values[0] == 1,
-                ["colliderApplied"] = first.GetComponent<BoxCollider2D>().size == new Vector2(2, 3),
+                ["colliderApplied"] = second.GetComponent<BoxCollider2D>().size == new Vector2(2, 3),
                 ["invalidInputs"] = invalidInputs
             };
         }
