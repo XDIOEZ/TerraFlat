@@ -39,9 +39,9 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private readonly List<StatusBarTransition> statusBarTransitions = new List<StatusBarTransition>(8);
     private Coroutine statusBarTransitionCoroutine;
     private BasePanel boundPanel;
-    private Slider carbohydratesSlider;
-    private Slider fatSlider;
-    private Slider proteinSlider;
+    private ThreeSegmentStatusBarGraphic foodFillGraphic;
+    private TMPro.TextMeshProUGUI foodText;
+    private DisplayedRange foodDisplay;
     private Slider waterSlider;
     private Slider vitaminsSlider;
     private Slider healthSlider;
@@ -119,12 +119,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         if (context.Data?.nutrition != null)
         {
-            UpdateNutrition(carbohydratesSlider, carbohydratesText, ref carbohydratesDisplay,
-                context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
-            UpdateNutrition(fatSlider, fatText, ref fatDisplay,
-                context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
-            UpdateNutrition(proteinSlider, proteinText, ref proteinDisplay,
-                context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
+            UpdateCombinedFoodUI(context.Data.nutrition);
             UpdateNutrition(waterSlider, waterText, ref waterDisplay,
                 context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
             UpdateNutrition(vitaminsSlider, vitaminsText, ref vitaminsDisplay,
@@ -256,9 +251,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         ClearPanelBindings();
         boundPanel = panel;
-        carbohydratesSlider = panel.GetSlider("碳水");
-        fatSlider = panel.GetSlider("脂肪");
-        proteinSlider = panel.GetSlider("蛋白质");
+        foodFillGraphic = panel.GetComponentInChildren<ThreeSegmentStatusBarGraphic>(true);
+        panel.TryGetText("DataText_食物", out foodText);
         waterSlider = panel.GetSlider("水");
         vitaminsSlider = panel.GetSlider("维生素");
         healthSlider = FindSliderOnce(panel, "血量");
@@ -305,9 +299,9 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         StopStatusBarTransitions();
         ResetTemperatureWarningColor();
         boundPanel = null;
-        carbohydratesSlider = null;
-        fatSlider = null;
-        proteinSlider = null;
+        foodFillGraphic = null;
+        foodText = null;
+        foodDisplay = default;
         waterSlider = null;
         vitaminsSlider = null;
         healthSlider = null;
@@ -367,6 +361,26 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             graphic.raycastTarget = false;
     }
 
+    #region 食物合并显示
+
+    // 只合并显示三项能量及其容量，保留各营养原有的进食、消耗与存档规则。
+    private void UpdateCombinedFoodUI(Nutrition nutrition)
+    {
+        float carbohydrates = Mathf.Clamp(nutrition.Carbohydrates, 0f, Mathf.Max(0f, nutrition.Max_Carbohydrates));
+        float fat = Mathf.Clamp(nutrition.Fat, 0f, Mathf.Max(0f, nutrition.Max_Fat));
+        float protein = Mathf.Clamp(nutrition.Protein, 0f, Mathf.Max(0f, nutrition.Max_Protein));
+        float maximum = Mathf.Max(0f, nutrition.Max_Carbohydrates) +
+            Mathf.Max(0f, nutrition.Max_Fat) + Mathf.Max(0f, nutrition.Max_Protein);
+        if (foodFillGraphic != null)
+            foodFillGraphic.SetSegmentValues(new Vector3(carbohydrates, fat, protein), maximum, StatusBarTransitionDuration);
+        UpdateRangeText(foodText, ref foodDisplay, carbohydrates + fat + protein, maximum);
+        UpdateRangeText(carbohydratesText, ref carbohydratesDisplay, carbohydrates, nutrition.Max_Carbohydrates, false);
+        UpdateRangeText(fatText, ref fatDisplay, fat, nutrition.Max_Fat, false);
+        UpdateRangeText(proteinText, ref proteinDisplay, protein, nutrition.Max_Protein, false);
+    }
+
+    #endregion
+
     private void UpdateNutrition(
         Slider slider,
         TMPro.TextMeshProUGUI text,
@@ -385,7 +399,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         TMPro.TextMeshProUGUI text,
         ref DisplayedRange displayed,
         float currentValue,
-        float maxValue)
+        float maxValue,
+        bool showMaximum = true)
     {
         if (text == null)
             return;
@@ -398,7 +413,10 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         displayed.Current = current;
         displayed.Maximum = maximum;
         displayed.Initialized = true;
-        text.SetText("{0:0}/{1:0}", current, maximum);
+        if (showMaximum)
+            text.SetText("{0:0}/{1:0}", current, maximum);
+        else
+            text.SetText("{0:0}", current);
     }
 
     /// <summary>把本地玩家的权威生命值同步到常驻参数面板。</summary>
@@ -640,6 +658,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         while (owner != null && boundPanel == owner)
         {
             AdvanceStatusBarTransitions(Time.unscaledDeltaTime);
+            if (foodFillGraphic != null)
+                foodFillGraphic.AdvanceTransition(Time.unscaledDeltaTime);
             AdvanceTemperatureWarningColor(Time.unscaledDeltaTime);
             yield return null;
         }

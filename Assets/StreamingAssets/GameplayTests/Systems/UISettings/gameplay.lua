@@ -34,12 +34,36 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
     local function luminance(color)
         return .2126 * linear(color[1]) + .7152 * linear(color[2]) + .0722 * linear(color[3])
     end
-    assert(data.panelVisible and #data.bars == 7, "本地玩家的生存状态条不完整")
+    assert(data.panelVisible and #data.bars == 5 and data.sliderCount == 4, "生存状态条未合并为五项，或仍有旧营养滑条")
     for _, bar in ipairs(data.bars) do
         local fill, text = luminance(bar.fill), luminance(bar.text)
         local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)
         assert(bar.visible and bar.fill[4] > .99 and bar.text[4] > .99 and contrast >= 4,
             bar.name .. "状态条的填充遮住数值文字")
+        if bar.name == "食物" then
+            assert(#bar.segmentColors == 3, "食物条缺少三种营养颜色")
+            for index, color in ipairs(bar.segmentColors) do
+                assert((text + .05) / (luminance(color) + .05) >= 4 and color[4] > .99,
+                    "食物分段遮住总量文字")
+                local nextColor = bar.segmentColors[index % 3 + 1]
+                assert(math.abs(color[1] - nextColor[1]) + math.abs(color[2] - nextColor[2]) +
+                    math.abs(color[3] - nextColor[3]) > .2, "食物三段颜色无法区分")
+            end
+        end
+    end
+    local total, maximum = 0, 0
+    for index = 1, 3 do
+        total = total + data.nutrition[index]
+        maximum = maximum + data.maxima[index]
+        local shown = tonumber(data.legend[index])
+        assert(shown and math.abs(shown - data.nutrition[index]) <= .501, "图例数值没有同步真实营养")
+    end
+    local shownTotal, shownMaximum = string.match(data.foodText, "^(%d+)/(%d+)$")
+    assert(shownTotal and math.abs(tonumber(shownTotal) - total) <= .501 and
+        math.abs(tonumber(shownMaximum) - maximum) <= .501, "食物总量不是三项加算")
+    for index = 1, 3 do
+        local expected = maximum > 0 and data.nutrition[index] / maximum or 0
+        assert(math.abs(data.fractions[index] - expected) < .0001, "食物段按剩余总量而非总容量缩放")
     end
 end, "真实生存状态条文字与填充可读性")
 

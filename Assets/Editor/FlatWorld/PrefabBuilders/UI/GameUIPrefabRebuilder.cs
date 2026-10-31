@@ -90,7 +90,7 @@ public static partial class GameUIPrefabRebuilder
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
         { CombatStatusRoot + "UI_DamageReceiverStatus.prefab", new[] { "整体血量", "部位耐久列表", "部位耐久模板" } },
-        { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_血量", "DataText_体温" } },
+        { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "食物", "FoodTrack", "FoodSegments", "FoodLegend", "水", "维生素", "体温", "DataText_食物", "DataText_碳水", "DataText_脂肪", "DataText_蛋白质", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
 

@@ -37,13 +37,13 @@ public static partial class GameplayTestPresentationRuntimeProbe
     private static JObject CaptureStatusHudReadability(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
-        BasePanel panel = UnityEngine.Object.FindObjectsOfType<BasePanel>()
-            .FirstOrDefault(candidate => candidate != null &&
-                (candidate.name == "UI_Food" || candidate.name == "UI_Food(Clone)"));
+        Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+        food?.RefreshUI();
+        BasePanel panel = food?.panelUI;
         if (panel == null) throw new InvalidOperationException("没有找到本地玩家的生存状态面板。");
         UnityEngine.UI.Slider[] sliders = panel.GetComponentsInChildren<UnityEngine.UI.Slider>(true);
         var bars = new JArray();
-        foreach (string name in new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" })
+        foreach (string name in new[] { "血量", "水", "维生素", "体温" })
         {
             UnityEngine.UI.Slider slider = Array.Find(sliders, value => value != null && value.name == name);
             UnityEngine.UI.Graphic fill = slider != null && slider.fillRect != null ? slider.fillRect.GetComponent<UnityEngine.UI.Graphic>() : null;
@@ -55,7 +55,30 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["fill"] = new JArray(fillColor.r, fillColor.g, fillColor.b, fillColor.a),
                 ["text"] = new JArray(textColor.r, textColor.g, textColor.b, textColor.a) });
         }
-        return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars };
+        ThreeSegmentStatusBarGraphic segments = panel.GetComponentInChildren<ThreeSegmentStatusBarGraphic>(true);
+        panel.TryGetText("DataText_食物", out TextMeshProUGUI foodText);
+        if (segments == null || foodText == null)
+            throw new InvalidOperationException("食物状态条缺少三色填充或合计数值。");
+        Color foodTextColor = foodText.color;
+        var colors = new JArray();
+        foreach (Color color in new[] { segments.FirstColor, segments.SecondColor, segments.ThirdColor })
+            colors.Add(new JArray(color.r, color.g, color.b, color.a));
+        bars.Add(new JObject { ["name"] = "食物", ["visible"] = segments.gameObject.activeInHierarchy,
+            ["fill"] = colors[0].DeepClone(), ["segmentColors"] = colors,
+            ["text"] = new JArray(foodTextColor.r, foodTextColor.g, foodTextColor.b, foodTextColor.a) });
+        var legend = new JArray();
+        foreach (string name in new[] { "碳水", "脂肪", "蛋白质" })
+        {
+            panel.TryGetText("DataText_" + name, out TextMeshProUGUI value);
+            legend.Add(value != null && value.gameObject.activeInHierarchy ? value.text : null);
+        }
+        Nutrition nutrition = food.Data.nutrition;
+        Vector3 targets = segments.TargetFractions;
+        return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars,
+            ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text, ["legend"] = legend,
+            ["nutrition"] = new JArray(nutrition.Carbohydrates, nutrition.Fat, nutrition.Protein),
+            ["maxima"] = new JArray(nutrition.Max_Carbohydrates, nutrition.Max_Fat, nutrition.Max_Protein),
+            ["fractions"] = new JArray(targets.x, targets.y, targets.z) };
     }
     #endregion
 

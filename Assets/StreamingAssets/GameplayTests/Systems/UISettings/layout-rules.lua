@@ -1,4 +1,33 @@
 -- 独立布局规则，避免 UI 综合清单超过每份 Lua 的 256 步预算。
+-- 三段长度共用总容量；复用正式控件验证空值、耗尽、补充及途中改向。
+for _, case in ipairs({
+    {values={38,50,50}, maximum=300, expected={38/300,1/6,1/6}},
+    {values={100,100,100}, maximum=300, expected={1/3,1/3,1/3}},
+    {values={0,50,50}, maximum=300, expected={0,1/6,1/6}},
+    {values={0,0,50}, maximum=300, expected={0,0,1/6}},
+    {values={0,0,0}, maximum=300, expected={0,0,0}},
+    {values={20,30,100}, maximum=200, expected={.1,.15,.5}},
+    {values={10,20,30}, maximum=0, expected={0,0,0}},
+    {values={0,50,50}, previous={100,50,50}, maximum=300, expected={0,1/6,1/6}, middle={1/24,1/6,1/6}},
+    {values={0,50,50}, previous={100,50,50}, redirect={100,100,100}, maximum=300,
+        expected={1/3,1/3,1/3}, middle={1/24,1/6,1/6}}
+}) do
+    test.system("ui_settings", "food_segmented_bar", case, function(data)
+        assert(data.rowCount == 5 and data.ordinarySliders == 4, "正式生存 HUD 仍保留旧营养条")
+        assert(data.bounded and data.inputTransparent and data.themePreserved,
+            "食物图例越界、拦截操作或三色被主题覆盖")
+        for index = 1, 3 do
+            assert(math.abs(data.final[index] - case.expected[index]) < .0001, "三段合计或满值比例错误")
+            if case.middle then
+                assert(math.abs(data.middle[index] - case.middle[index]) < .0001, "三段没有同步平滑过渡")
+                assert(math.abs(data.redirectedStart[index] - data.middle[index]) < .0001, "途中更新时出现跳变")
+                assert(math.abs(data.initial[index] - case.previous[index] / case.maximum) < .0001,
+                    "动画没有从当前显示状态开始")
+            end
+        end
+    end, "食物三段容量、耗尽与连续过渡 / " .. table.concat(case.values, ","))
+end
+
 local function scroll_near(actual, expected, message)
     assert(type(actual) == "number" and math.abs(actual - expected) < 0.001, message)
 end
