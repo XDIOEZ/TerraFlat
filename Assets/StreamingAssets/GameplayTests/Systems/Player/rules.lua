@@ -295,15 +295,19 @@ for _, case in ipairs({
     end, "翻滚方向：移动优先、静止朝准星、准星重合回退朝向、对角归一化")
 end
 
--- 角色受击框覆盖视觉画布，实际阻挡仍只占脚下，避免空地受击或头部漏判。
+-- 玩家根原点就是脚底，角色旋转中心、受击框和脚下实体碰撞各自对齐该基准。
 test.system("player", "collider_visual_alignment", {}, function(data)
     local function near(a, b) return type(a) == "number" and math.abs(a - b) < .001 end
     assert(data.hitTrigger and not data.bodyTrigger, "玩家受击与移动阻挡碰撞职责混淆")
+    assert(near(data.spriteBottom, 0) and math.abs(data.rollPivotY - data.spriteTop / 2) < .02,
+        "玩家锚点没有落在脚底，或翻滚旋转轴脱离角色中心")
     assert(near(data.hitBottom, data.spriteBottom) and near(data.hitTop, data.spriteTop) and
         near(data.hitWidth, data.spriteWidth), "受击框未跟随人物画布上下对齐")
-    assert(data.bodyCenter > data.spriteBottom and data.bodyTop < data.spriteBottom + .4,
-        "玩家实体阻挡框已脱离脚下占地")
-end, "玩家碰撞：受击框包住完整画布，物理阻挡留在脚下")
+    assert(data.bodyBottom < 0 and data.bodyTop > 0 and
+        near(data.bodyCenter, -.07) and near(data.bodyWidth, .4), "玩家实体阻挡框不再跨脚底占地")
+    assert(near(data.heldAnchorY, .453125) and near(data.turnMirrorY, data.heldAnchorY),
+        "玩家手持挂点与转身目标未跟随脚底锚点调整")
+end, "玩家脚底锚点：立绘、受击框、翻滚中心和脚下阻挡统一基准")
 
 test.system("player", "roll_input", {}, function(data)
     assert(data.path == "<Keyboard>/space" and data.actionType == "Button", "翻滚默认空格按钮没有接入输入资产")

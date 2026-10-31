@@ -158,17 +158,21 @@ public static partial class GameplayTestSystemProbe
             "Assets/2_Prefabs/Gameplay/Player/Player.prefab");
         Transform visual = prefab != null ? prefab.transform.Find("RollVisual/Module_Animator") : null;
         Transform receiver = prefab != null ? prefab.transform.Find("Module_DamageReciver") : null;
+        Transform heldAnchor = prefab != null ? prefab.transform.Find("Module_Hotbar") : null;
         Mod_CharacterAppearance appearance = prefab != null
             ? prefab.GetComponentInChildren<Mod_CharacterAppearance>(true) : null;
+        Mod_TurnBack turning = prefab != null ? prefab.GetComponentInChildren<Mod_TurnBack>(true) : null;
         BoxCollider2D body = prefab != null ? prefab.GetComponent<BoxCollider2D>() : null;
         BoxCollider2D hitbox = receiver != null ? receiver.GetComponent<BoxCollider2D>() : null;
-        if (visual == null || receiver == null || body == null || hitbox == null ||
+        if (visual == null || receiver == null || heldAnchor == null || turning == null ||
+            body == null || hitbox == null ||
             appearance?.profile == null || appearance.profile.PixelsPerUnit <= 0f)
             throw new InvalidOperationException("玩家预制体缺少外观、实体碰撞或独立受击框。");
 
         float spriteBottom = visual.position.y - prefab.transform.position.y;
         float spriteHeight = appearance.profile.Height / appearance.profile.PixelsPerUnit * visual.lossyScale.y;
         float spriteWidth = appearance.profile.Width / appearance.profile.PixelsPerUnit * visual.lossyScale.x;
+        float rollPivotY = visual.parent.position.y - prefab.transform.position.y;
         float hitCenterY = receiver.TransformPoint(hitbox.offset).y - prefab.transform.position.y;
         float hitHalfHeight = hitbox.size.y * receiver.lossyScale.y * 0.5f;
         return new JObject
@@ -176,13 +180,18 @@ public static partial class GameplayTestSystemProbe
             ["spriteBottom"] = spriteBottom,
             ["spriteTop"] = spriteBottom + spriteHeight,
             ["spriteWidth"] = spriteWidth,
+            ["rollPivotY"] = rollPivotY,
+            ["heldAnchorY"] = heldAnchor.position.y - prefab.transform.position.y,
+            ["turnMirrorY"] = turning.DefaultPosition.y,
             ["hitBottom"] = hitCenterY - hitHalfHeight,
             ["hitTop"] = hitCenterY + hitHalfHeight,
             ["hitWidth"] = hitbox.size.x * receiver.lossyScale.x,
             ["hitTrigger"] = hitbox.isTrigger,
             ["bodyTrigger"] = body.isTrigger,
+            ["bodyBottom"] = body.offset.y - body.size.y * 0.5f,
             ["bodyTop"] = body.offset.y + body.size.y * 0.5f,
-            ["bodyCenter"] = body.offset.y
+            ["bodyCenter"] = body.offset.y,
+            ["bodyWidth"] = body.size.x
         };
     }
 #endif

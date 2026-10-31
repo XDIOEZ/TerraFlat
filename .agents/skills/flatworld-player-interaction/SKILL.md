@@ -62,7 +62,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 位置突变后调用 `Mod_Mover.ResetMotion()`，统一撤销临时主动租约、清速度/输入/动画和位移音效基线，保留奔跑偏好；外部承载归属由调用方先释放。动作订阅 `MotionReset` 自行收尾，重置期间禁止重新驱动或取租约。回归 `player/motion_reset` 与 `roll_action`。
 - 地表速度沿用 `SpaceGameplaySettings.WalkingMultiplier`（低重力最高2倍）；起步/转向/刹停共用 `WalkingResponseMultiplier`，按当地重力/地球重力降低响应，月球级约慢6倍，最低重力沿用0.25，普通及高重力响应不变。玩家、GO动物导航和无人工重力的地表船内复用；人工重力按地球值，太空自由漂浮沿用独立规则。回归 `player/surface_gravity_movement`。
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
-- 玩家根非 Trigger 碰撞框只占脚下，不随立绘上移；`Module_DamageReciver` 的受击 Trigger 对齐 `RollVisual/Module_Animator` 底锚 32×48 画布（含局部偏移），回归 `player/collider_visual_alignment`。
+- `Player` 根原点即脚底；`RollVisual` 与 `Module_Animator` 的局部 Y 分别为 +0.767/-0.767，角色底锚在 (0,0)。根非 Trigger 碰撞框只占脚下（0.4×0.3，Y=-0.07）；`Module_DamageReciver` 受击 Trigger 按 32×48/PPU32 画布居中于 Y=0.75（高1.5）；手持挂点与转身恢复 Y 同为 0.453125，回归 `player/collider_visual_alignment`。
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
