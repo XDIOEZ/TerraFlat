@@ -38,6 +38,17 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         _GrassUseObjectRoot("Object Root", Float) = 1
         _GrassFollowWind("Follow Strong Wind", Float) = 0
         _GrassDirection("Wind Direction", Vector) = (1,0,0,0)
+        [HDR] _EdgeColor("Outer Flame", Color) = (1, 0.075, 0.008, 1)
+        [HDR] _BodyColor("Orange Flame", Color) = (1, 0.32, 0.018, 1)
+        [HDR] _InnerColor("Golden Flame", Color) = (1, 0.72, 0.08, 1)
+        [HDR] _CoreColor("Hot Core", Color) = (1, 0.85, 0.26, 1)
+        _Speed("Flame Rise Speed", Float) = 1.4
+        _Turbulence("Flame Turbulence", Float) = 0.85
+        _Wind("Flame Sideways Bend", Float) = 0
+        _Brightness("Flame Brightness", Float) = 1
+        _Embers("Flame Embers", Float) = 0.65
+        _PixelsPerUnit("Flame Pixels Per Unit", Float) = 32
+        _AnimationFPS("Flame Animation FPS", Float) = 12
     }
     SubShader
     {
@@ -52,6 +63,7 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
+        #include "../../Shader/ShaderFlameCommon.hlsl"
         TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
         TEXTURE2D(_AlphaTex); SAMPLER(sampler_AlphaTex);
         TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
@@ -60,6 +72,8 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         CBUFFER_START(UnityPerMaterial)
             float4 _MainTex_TexelSize;
             float4 _Color, _RendererColor, _HitFlashColor, _ActorTint, _GrassDirection;
+            half4 _EdgeColor, _BodyColor, _InnerColor, _CoreColor;
+            float _Speed, _Turbulence, _Wind, _Brightness, _Embers, _PixelsPerUnit, _AnimationFPS;
             float _EnableExternalAlpha, _DepthUnlit, _DepthDissolveEnabled, _Dissolve;
             float _DepthEmissive, _DepthSrcBlend, _DepthDstBlend, _DepthSrcBlendAlpha, _DepthDstBlendAlpha, _DepthBlendOp;
             float _SnowCoverage, _HitFlash, _ActorTintStrength, _ActorTintPulseSpeed, _ActorTintPulseAmplitude;
@@ -157,7 +171,8 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             output.positionCS = TransformWorldToHClip(positionWS);
             output.worldRoot = float4(positionWS.xy, TransformObjectToWorld(float3(0,0,0)).y, 0);
             // 单株/单设备自带原图范围，整行合批和机械动画仍共用世界水平雪线。
-            if ((input.state.w > .5 ? input.state.y : _SnowCoverage) > 0.0)
+            if ((input.animation.x < 4.5 || input.animation.x > 5.5) &&
+                (input.state.w > .5 ? input.state.y : _SnowCoverage) > 0.0)
             {
                 float2 snowWorldYBasis = float2(
                     TransformObjectToWorldDir(float3(tangent, 0), false).y,
@@ -175,6 +190,15 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
             output.region = input.region;
             output.effects = input.effects;
             output.state = input.state;
+            if (input.animation.x > 4.5 && input.animation.x < 5.5)
+            {
+                // 复用火焰专属顶点状态槽传递世界像素格，不增加顶点或片元插值通道。
+                float2 worldSize = float2(
+                    length(TransformObjectToWorldDir(float3(input.basis.xy, 0), false)),
+                    length(TransformObjectToWorldDir(float3(input.basis.zw, 0), false)));
+                worldSize *= max(input.spriteBounds.zw * 2.0, 0.0001);
+                output.state.xy = max(floor(worldSize * _PixelsPerUnit + 0.5), 1.0);
+            }
             return output;
         }
 
@@ -189,13 +213,6 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
                 float inset = min(width * .49, _MainTex_TexelSize.x * .5);
                 uv.x = input.region.x + inset + frac(u + phase / 6.28318530718) * (width - inset * 2);
             }
-            else if (input.animation.x > 4.5 && input.animation.x < 5.5)
-            {
-                // 世界火焰：首帧 Sprite 提供几何和 UV 宽度，GPU 只沿横向图集切帧。
-                float frameCount = max(1, floor(input.animation.w + .5));
-                float frame = fmod(floor(_Time.y * input.animation.y + input.animation.z), frameCount);
-                uv.x += frame * max(.000001, input.region.z - input.region.x);
-            }
             if (input.animation.x > 5.5 && input.animation.x < 7.5)
                 uv = ConveyorSurfaceUv(uv, input.region, input.animation,
                     float4(input.effects.xy, input.localClip.z, input.animation.w), _Time.y);
@@ -203,6 +220,20 @@ Shader "FlatWorld/2D/Chunk Depth Sprite Lit"
         }
         half4 Surface(Varyings input, float2 uv)
         {
+            if (input.animation.x > 4.5 && input.animation.x < 5.5)
+            {
+                // 模式5不采样贴图，直接在已有区块四边形上生成与独立火焰相同的像素火舌。
+                float2 localUv = saturate((uv - input.region.xy) /
+                    max(input.region.zw - input.region.xy, 0.000001));
+                float fps = max(_AnimationFPS, 1.0);
+                float flameTime = floor(_Time.y * fps) / fps * _Speed + input.animation.z;
+                half4 flame = FlatWorldEvaluateProceduralFlame(localUv, input.state.xy,
+                    flameTime, input.animation.z, input.animation.w, _Wind, _Turbulence, _Embers,
+                    _Brightness, _EdgeColor.rgb, _BodyColor.rgb, _InnerColor.rgb, _CoreColor.rgb);
+                flame *= input.tint;
+                clip(flame.a - 0.0001);
+                return flame;
+            }
             // 屏幕导数在裁剪前求出，贴图分辨率和对象缩放不再改变描边宽度。
             float2 pixelScale = InteractionOutlinePixelScale();
             float2 pixelX = ddx(input.uv.xy) * pixelScale.x;

@@ -22,12 +22,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     [SerializeField] private Material realisticWaterMaterial;
     [SerializeField] private Material unityStylizedWaterMaterial;
     [SerializeField] private Material lowSpecWaterMaterial;
-    [SerializeField] private Sprite fireSprite;
     [SerializeField] private Material fireMaterial;
 
-    private const int FireAnimationMode = 5;
-    private const int FireFrameCount = 8;
-    private const float FireFramesPerSecond = 12f;
+    private const int FireShaderMode = 5;
     private const int FireDepthOrder = 1;
     private const int LavaGlowBucketSize = 8;
     private const float LavaGlowMinIntensity = 0.55f;
@@ -512,7 +509,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 RefreshFireVisual(terrain, x, y);
     }
 
-    /// <summary>火格复用树木的整格 Y 行合批；动画完全由 GPU 根据时间切换横向图集帧。</summary>
+    /// <summary>火格复用世界特效行合批，GPU直接生成火焰而不切换贴图帧。</summary>
     private void RefreshFireVisual(ChunkTerrainData terrain, int x, int y)
     {
         int entityId = y * terrain.Width + x;
@@ -522,8 +519,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             fireDepthMesh?.Remove(ChunkDepthMeshRenderer.FireDomain, entityId, 0);
             return;
         }
-        if (fireSprite == null || fireMaterial == null)
-            throw new InvalidOperationException("ChunkView 缺少世界火焰 Sprite 或材质配置。");
+        if (fireMaterial == null)
+            throw new InvalidOperationException("ChunkView 缺少程序化世界火焰材质配置。");
 
         Int2 origin = boundChunk.Address.ChunkOrigin;
         Vector3 local = new(x + 0.5f, y, 0f);
@@ -532,11 +529,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         float scale = Mathf.Lerp(0.65f, 1f, strength);
         Matrix4x4 matrix = Matrix4x4.TRS(world, Quaternion.identity, new Vector3(scale, scale, 1f));
         uint phaseSeed = unchecked((uint)(origin.X + x) * 73856093u ^ (uint)(origin.Y + y) * 19349663u);
-        float phase = phaseSeed % FireFrameCount;
-        Vector4 animation = new(FireAnimationMode, FireFramesPerSecond, phase, FireFrameCount);
-        Color tint = new(1f, 1f, 1f, Mathf.Lerp(0.72f, 1f, strength));
-        FireDepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0, fireSprite, fireMaterial,
-            matrix, world, FireDepthOrder, tint, animation: animation);
+        float phase = (phaseSeed & 65535u) * (8f / 65535f);
+        Vector4 animation = new(FireShaderMode, 0f, phase, Mathf.Lerp(0.72f, 1f, strength));
+        FireDepthMesh.Set(ChunkDepthMeshRenderer.FireDomain, entityId, 0,
+            SharedSpriteMeshCache.GetWorldEffectQuad(), fireMaterial,
+            matrix, world, FireDepthOrder, Color.white, animation: animation);
     }
 
     #endregion

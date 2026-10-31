@@ -44,11 +44,12 @@ public static partial class GameplayTestSystemProbe
         ChunkTilemapRenderer chunkView = chunkViewPrefab != null
             ? chunkViewPrefab.GetComponent<ChunkTilemapRenderer>() : null;
         var serializedChunkView = chunkView != null ? new SerializedObject(chunkView) : null;
-        Sprite fireSprite = serializedChunkView?.FindProperty("fireSprite")?.objectReferenceValue as Sprite;
+        Sprite fireSprite = SharedSpriteMeshCache.GetWorldEffectQuad();
         Material fireMaterial = serializedChunkView?.FindProperty("fireMaterial")?.objectReferenceValue as Material;
         Shader depthMeshShader = Resources.Load<Shader>("Shaders/ChunkDepthSpriteLit");
-        if (fireSprite == null || fireMaterial == null || depthMeshShader == null)
-            throw new InvalidOperationException("火场现场基准缺少 ChunkView 正式 Sprite、材质或深度 Shader。");
+        if (fireSprite == null || fireMaterial == null || fireMaterial.shader == null ||
+            fireMaterial.shader.name != ShaderFlameEffect.ShaderName || depthMeshShader == null)
+            throw new InvalidOperationException("火场现场基准缺少正式程序化火焰材质、共享 Quad 或深度 Shader。");
 
         int warmupFrames = ReadFireBenchmarkFrameCount(args, "warmupFrames", 12, 2, 120);
         int sampleFrames = ReadFireBenchmarkFrameCount(args, "sampleFrames", FireRenderBenchmarkSampleFrames, 10, 600);
@@ -315,6 +316,8 @@ public static partial class GameplayTestSystemProbe
                 ["benchmarkScope"] = "isolated-scene-single-camera-render-texture",
                 ["fireSpriteName"] = fireSpriteName,
                 ["fireSpritePacked"] = fireSpritePacked,
+                ["fireQuadUsesWhiteTexture"] = root != null && sourceMaterial != null &&
+                    root.GetComponentInChildren<MeshRenderer>().sharedMaterial.mainTexture == Texture2D.whiteTexture,
                 ["fireMaterialShader"] = sourceMaterial != null && sourceMaterial.shader != null
                     ? sourceMaterial.shader.name : null,
                 ["depthMeshShaderName"] = rendererShader != null ? rendererShader.name : null,
@@ -427,7 +430,9 @@ public static partial class GameplayTestSystemProbe
         {
             Material material = root.GetComponentInChildren<MeshRenderer>().sharedMaterial;
             var result = new JObject { ["texture"] = material.mainTexture.name };
-            foreach (string property in new[] { "_SnowCoverage", "_ActorTintStrength", "_HitFlash", "_DepthUnlit", "_DepthDissolveEnabled" })
+            foreach (string property in new[] { "_SnowCoverage", "_ActorTintStrength", "_HitFlash",
+                "_DepthUnlit", "_DepthDissolveEnabled", "_DepthSrcBlend", "_DepthDstBlend",
+                "_PixelsPerUnit", "_AnimationFPS" })
                 result[property] = material.GetFloat(property);
             return result;
         }

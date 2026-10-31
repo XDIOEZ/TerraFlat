@@ -283,10 +283,11 @@ internal sealed partial class ChunkDepthMeshRenderer
             Material.SetFloat("_EnableExternalAlpha", key.Item3 != null ? 1f : 0f);
             Material.SetFloat("_DepthDissolveEnabled", source.IsKeywordEnabled("DISSOLVE_ON") ? 1f : 0f);
             bool emissive = source.shader.name == "Game/2D/Emissive-Sprite-Overlay";
-            Material.SetFloat("_DepthUnlit", emissive || source.shader.name == "Sprites/Default" ||
+            bool proceduralFlame = source.shader.name == "Game/Effects/ShaderFlame";
+            Material.SetFloat("_DepthUnlit", emissive || proceduralFlame || source.shader.name == "Sprites/Default" ||
                 source.shader.name.IndexOf("Unlit", StringComparison.OrdinalIgnoreCase) >= 0 ? 1f : 0f);
             Material.SetFloat("_DepthEmissive", emissive ? 1f : 0f);
-            Material.SetFloat("_DepthSrcBlend", (float)(emissive ? BlendMode.One : BlendMode.SrcAlpha));
+            Material.SetFloat("_DepthSrcBlend", (float)(emissive || proceduralFlame ? BlendMode.One : BlendMode.SrcAlpha));
             Material.SetFloat("_DepthDstBlend", (float)(emissive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             Material.SetFloat("_DepthSrcBlendAlpha", (float)BlendMode.One);
             Material.SetFloat("_DepthDstBlendAlpha", (float)(emissive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));

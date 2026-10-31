@@ -15,12 +15,11 @@ test.system("rendering", "dropped_combustion_material", {}, function(data)
     assert(data.staysExtinguished and data.zeroIntensityHidden and data.finiteBounds,
         "回池后重新点燃、零火势残留，或无效配置污染网格边界")
     assert(data.adapterLights and data.adapterExtinguishes, "燃烧模块没有转发点燃和熄灭状态")
-    assert(data.chunkFireMaterialAssigned and data.chunkFireMaterialPath == "Assets/9_Shaders/Material/Chunk-Fire-Unlit.mat"
-        and data.chunkFireMaterialShader == "Sprites/Default" and data.chunkFireSpriteAssigned,
-        "区块火场没有绑定有效的 Unlit 源材质或燃烧贴图")
-    assert(data.chunkFireFrameCount == 8 and data.chunkFireFullRect,
-        "区块火场的 8 帧横向图集未使用 FullRect，GPU 切帧可能被首帧裁剪")
-    assert(data.chunkFirePreservesSourceUv, "GPU切帧源表没有声明保留原始UV布局")
+    assert(data.chunkFireMaterialAssigned
+        and data.chunkFireMaterialPath == "Assets/9_Shaders/Resources/Combustion_Flame.mat"
+        and data.chunkFireMaterialShader == "Game/Effects/ShaderFlame"
+        and data.chunkFireSharesFlameMaterial and data.chunkFireUsesProceduralQuad,
+        "区块火场未与独立火焰共用Shader材质，或仍依赖8帧贴图")
     assert(math.abs(data.attachedUpX + math.sin(math.rad(75))) < .0001
         and math.abs(data.attachedUpY - math.cos(math.rad(75))) < .0001,
         "显式跟随锚点的火焰丢失宿主倾斜")
@@ -39,9 +38,10 @@ test.system("rendering", "dropped_combustion_material", {}, function(data)
 end, "Shader 火焰共享资源、生命周期与熔炉炉口定位")
 
 test.system("rendering", "world_fire_batches", {}, function(data)
-    assert(data.assetsReady and data.fireSpriteName and data.fireMaterialShader == "Sprites/Default"
+    assert(data.assetsReady and data.fireSpriteName == "WorldEffectShaderQuad"
+        and data.fireQuadUsesWhiteTexture and data.fireMaterialShader == "Game/Effects/ShaderFlame"
         and data.depthMeshShaderName == "FlatWorld/2D/Chunk Depth Sprite Lit",
-        "100×100区块火场采样没有加载 ChunkView 的正式 Sprite 与 Unlit 材质")
+        "100×100区块火场采样没有加载正式Shader材质或共享白色Quad")
     assert(data.cellCount == 10000 and data.cellsPerChunk == 16 and data.expectedChunkCount == 49,
         "火场采样尺寸没有覆盖一万格与16×16区块边界")
     local initial = data.initial
@@ -78,8 +78,14 @@ test.system("rendering", "world_fire_batches", {}, function(data)
         and incremental.vertexBufferUploadCount == unchanged.vertexBufferUploadCount + 1
         and incremental.vertexBufferUploadBytes > unchanged.vertexBufferUploadBytes,
         "单火色彩变化没有只增量上传顶点，或意外重建了索引/绘制组")
-    assert(data.fireAnimationMode == 5 and data.fireFrameCount == 8 and data.fireFramesPerSecond == 12,
-        "区块火场 GPU 动画参数没有保持八帧、12 FPS")
+    assert(data.intensityWasIncrementalVertexUpload and data.intensityChangedShaderInputs
+        and data.meshInstancesStableAfterIntensity and data.indicesStableAfterIntensity
+        and data.intensityIncremental.drawGroupCount == initial.drawGroupCount
+        and data.intensityIncremental.topologyRebuildCount == incremental.topologyRebuildCount,
+        "火势强度变化未同时更新缩放与Shader透明度，或引发了不必要的索引/拓扑重建")
+    assert(data.fireAnimationMode == 5 and data.fireShaderPixelsPerUnit == 32
+        and data.fireShaderFramesPerSecond == 12,
+        "区块火场的程序化GPU火焰模式或像素帧率不正确")
 
     local display = data.displayEntry
     assert(display.probeSceneReleased and display.activeSceneUnchanged,

@@ -74,31 +74,20 @@ public static partial class GameplayTestSystemProbe
             JObject smelterFlame = (JObject)smelter["modules"]["combustionVisual"];
             JObject smelterParameters = (JObject)smelterFlame["parameters"];
             Material chunkFireMaterial = null;
-            Sprite chunkFireSprite = null;
             string chunkFireMaterialPath = null;
-            int chunkFireFrameCount = 0;
-            bool chunkFireFullRect = false;
-            bool chunkFirePreservesSourceUv = false;
+            bool chunkFireUsesProceduralQuad = false;
 #if UNITY_EDITOR
             const string chunkViewPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
-            const string chunkFireSheetPath = "Assets/6_Art/PracticalEffects/Burning/CreatureBurning_Sheet.png";
             GameObject chunkViewPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(chunkViewPath);
             ChunkTilemapRenderer chunkViewRenderer = chunkViewPrefab != null
                 ? chunkViewPrefab.GetComponent<ChunkTilemapRenderer>() : null;
             var chunkViewFields = chunkViewRenderer != null
                 ? new UnityEditor.SerializedObject(chunkViewRenderer) : null;
             chunkFireMaterial = chunkViewFields?.FindProperty("fireMaterial")?.objectReferenceValue as Material;
-            chunkFireSprite = chunkViewFields?.FindProperty("fireSprite")?.objectReferenceValue as Sprite;
             chunkFireMaterialPath = chunkFireMaterial != null
                 ? UnityEditor.AssetDatabase.GetAssetPath(chunkFireMaterial) : null;
-            chunkFireFrameCount = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(chunkFireSheetPath).OfType<Sprite>().Count();
-            var chunkFireImporter = UnityEditor.AssetImporter.GetAtPath(chunkFireSheetPath) as UnityEditor.TextureImporter;
-            var chunkFireImporterSettings = new UnityEditor.TextureImporterSettings();
-            chunkFireImporter?.ReadTextureSettings(chunkFireImporterSettings);
-            chunkFireFullRect = chunkFireImporter != null &&
-                chunkFireImporterSettings.spriteMeshType == UnityEngine.SpriteMeshType.FullRect;
-            chunkFirePreservesSourceUv = UnityEditor.AssetDatabase.GetLabels(
-                UnityEditor.AssetDatabase.LoadMainAssetAtPath(chunkFireSheetPath)).Contains("PreserveSourceSpriteSheetUV");
+            chunkFireUsesProceduralQuad = chunkViewFields?.FindProperty("fireSprite") == null &&
+                SharedSpriteMeshCache.GetWorldEffectQuad().texture == Texture2D.whiteTexture;
 #endif
 
             return new JObject
@@ -135,10 +124,8 @@ public static partial class GameplayTestSystemProbe
                 ["chunkFireMaterialPath"] = chunkFireMaterialPath,
                 ["chunkFireMaterialShader"] = chunkFireMaterial != null && chunkFireMaterial.shader != null
                     ? chunkFireMaterial.shader.name : null,
-                ["chunkFireSpriteAssigned"] = chunkFireSprite != null,
-                ["chunkFireFrameCount"] = chunkFireFrameCount,
-                ["chunkFireFullRect"] = chunkFireFullRect,
-                ["chunkFirePreservesSourceUv"] = chunkFirePreservesSourceUv,
+                ["chunkFireSharesFlameMaterial"] = chunkFireMaterial == material,
+                ["chunkFireUsesProceduralQuad"] = chunkFireUsesProceduralQuad,
                 ["attachedUpX"] = attachedUp.x,
                 ["attachedUpY"] = attachedUp.y,
                 ["uprightUpX"] = uprightUp.x,

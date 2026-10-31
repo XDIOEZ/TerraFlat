@@ -14,9 +14,9 @@
 
 渲染目录共9份Lua、7个规则案例。`sync_catalog.py` 仍被既有Space目录超过10份Lua阻断，本轮已按渲染子清单精确同步总规则入口、catalog映射和索引，并核对一致性；没有修改Space清单或放宽限制。
 
-2026-10-30 区块火场资源断言已加入 `rendering/combustion_visual`：检查 ChunkView 的 Unlit 源材质绑定、八帧贴图与 FullRect 导入。当前验证结果见顶部。
+2026-10-31 地面火场已改用 `Combustion_Flame` 共享材质、统一程序化火舌算法与会话级白色 FullRect Quad；`rendering/combustion_visual` 现在检查 Shader/材质共用和旧贴图字段移除。原2026-10-30八帧源表检查仅是历史方案；本次用户正在 PlayMode，尚未执行 Unity Shader 编译或新火场GPU现场验收。
 
-`rendering/world_fire_batches` 使用 ChunkView 的正式 Sprite/材质，实际创建100×100个 fire domain 四边形，按16×16格构造49个 `ChunkDepthMeshRenderer(useParentSortingAnchor:true)`，显式 Flush 后读取每个 Mesh 的 submesh 顶点/索引、真实 MeshRenderer/SortingGroup、排序键和 `SetIndexBufferData` / `SetVertexBufferData` 调用点的 Editor 计数/字节。相同火格重提应无上传；单火颜色变化应只增加顶点上传，不增加索引上传或拓扑重建。该同步规则只验证 Unity Mesh 构造和 CPU 上传路径；实际相机帧数据由 `rendering/world_fire_render_benchmark` 另行采集。
+`rendering/world_fire_batches` 使用 ChunkView 的正式 `Combustion_Flame` 材质及共享白色Quad，实际提交100×100个 fire domain 四边形，按16×16格构造49个 `ChunkDepthMeshRenderer(useParentSortingAnchor:true)`，检查真实 MeshRenderer/SortingGroup、排序与增量 GPU 上传。相同火格不重复上传；单火颜色或火势变化只上传顶点（火势同步改变尺寸和Shader强度），不重建索引/拓扑。该同步规则只验证 Unity Mesh 构造和 CPU 上传；实帧数据由 `rendering/world_fire_render_benchmark` 采集。
 
 `rendering/world_fire_render_benchmark` 是显式 PlayMode Lua 操作：建临时 Scene、1920×1080 RenderTexture 与只看专用 Layer 的正交相机，使用相同49个正式深度合批 Renderer 提交10,000个 Sprite Quad；采样前暂时关闭其他已启用 Camera，取12帧预热和60帧实渲染，之后立即恢复相机。结果包含摄像机是否完整覆盖火格与真实 Mesh bounds、预热与正式采样期 Camera 实际渲染帧数、Profiler `Render/Draw Calls Count`、`Memory/GC Allocated In Frame`、FrameTimingManager 的 CPU 主线程/渲染线程/整帧与 GPU 时间，以及真实 `SetIndexBufferData` / `SetVertexBufferData` 的 Editor 计数和字节增量。采样完成后单独从 RT 读回 PNG 到 `Library/FlatWorldGameplayTests/WorldFireRenderBenchmark/`，JSON 的 `previewImagePath` 给出绝对路径；Lua 宿主结束截图仍是普通游戏现场。Lua检查未打包、目标材质默认状态，以及超过10,000个非黑像素和红橙火焰像素；仍需人工查看基准PNG的布局和最终表现。Profiler 项不可用时标记 `unavailable`；GPU 样本为0时按不可用记录，不会伪报为通过。FrameTimingManager 是整帧计时，Draw Calls/GC 是隔离采样期间的整帧计数，并非每 Camera 的GPU计时；离屏 RT 测量不等于真实显示器刷新率或 Frame Debugger 验收。此夹具只在被 Lua 明确调用时建场景、启相机和 Recorder，无常驻玩法开销。执行与画面结果见本页顶部记录。
 
