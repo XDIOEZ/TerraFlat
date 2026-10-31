@@ -74,10 +74,10 @@ public partial class SaveDataMgr
 
     private void HandleRuntimeFireTerrainChanged(RuntimeFireChunkWatch watch, ChunkTerrainChanged changed)
     {
-        if (restoringRuntimeFireStates || changed.Kind != TerrainChangeKind.Fire || !GameNetwork.HasStateAuthority)
+        if (restoringRuntimeFireStates || (changed.Kind != TerrainChangeKind.Fire && changed.Kind != TerrainChangeKind.Combustibility) || !GameNetwork.HasStateAuthority)
             return;
         runtimeFireDirtyChunks.Add(watch);
-        AuthoritativeTerrainFireChanged?.Invoke(watch.WorldKey, watch.Chunk, changed);
+        if (changed.Kind == TerrainChangeKind.Fire) AuthoritativeTerrainFireChanged?.Invoke(watch.WorldKey, watch.Chunk, changed);
     }
 
     private void HandleRuntimeFireChunkStatusChanged(WorldRuntime world, ChunkDataStatusChanged changed)
@@ -98,10 +98,12 @@ public partial class SaveDataMgr
         {
             // 同一 ChunkRuntime 可在重新生成时更换 Terrain；先冻结旧格，再接管新地形。
             WorldFireCellState[] currentStates = watch.Terrain.CopyFireStates();
+            var combustibility = watch.Terrain.CopyCombustibilityChanges();
             bool retryPersistence = GameNetwork.HasStateAuthority && runtimeFireDirtyChunks.Contains(watch) &&
                 !CaptureRuntimeFireChunk(watch);
             StopWatchingRuntimeFireChunk(watch);
             WatchRuntimeFireChunk(readyChunk, world);
+            readyChunk.Terrain.RestoreCombustibilityChanges(combustibility);
             RestoreRuntimeFireStates(readyChunk, currentStates);
             if (retryPersistence && runtimeFireChunkWatches.TryGetValue((world, readyChunk.Address), out RuntimeFireChunkWatch replacement))
                 runtimeFireDirtyChunks.Add(replacement);
@@ -203,14 +205,18 @@ public partial class SaveDataMgr
         string chunkName = ToChunkName(watch.Chunk.Address);
         string key = BuildChunkKey(watch.WorldKey, chunkName);
         chunkDeltas.TryGetValue(key, out ChunkSaveRecord record);
-        if (HasSameRuntimeFireStates(record?.FireCells, states)) return;
+        var combustibility = watch.Terrain.CopyCombustibilityChanges();
+        if (HasSameRuntimeFireStates(record?.FireCells, states) &&
+            CombustibilityCellSaveData.Matches(record?.CombustibilityCells, combustibility)) return;
 
         if (record == null)
         {
-            if (states.Length == 0) return;
+            if (states.Length == 0 && combustibility.Length == 0) return;
             record = CreateRuntimeChunkDelta(watch.WorldKey, watch.Chunk.Address);
         }
 
+        record.CombustibilityCells = new List<CombustibilityCellSaveData>(combustibility.Length);
+        foreach (var state in combustibility) record.CombustibilityCells.Add(CombustibilityCellSaveData.Capture(state));
         record.FireCells = new List<FireCellSaveData>(states.Length);
         foreach (WorldFireCellState state in states)
         {
@@ -258,7 +264,13 @@ public partial class SaveDataMgr
         }
 
         restoringRuntimeFireStates = true;
-        try { terrain.RestoreFireStates(states); }
+        try
+        {
+            var combustion = new WorldCombustibilityCellState[record?.CombustibilityCells?.Count ?? 0];
+            for (int i = 0; i < combustion.Length; i++) combustion[i] = record.CombustibilityCells[i].ToRuntime();
+            terrain.RestoreCombustibilityChanges(combustion);
+            terrain.RestoreFireStates(states);
+        }
         finally { restoringRuntimeFireStates = false; }
     }
 

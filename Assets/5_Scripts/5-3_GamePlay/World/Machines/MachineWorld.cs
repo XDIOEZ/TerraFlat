@@ -128,6 +128,7 @@ public static partial class MachineWorld
         InitializeElectricalState(node, state);
         node.ScopeKey = worldKey;
         nodes.Add(snapshot.Guid, node);
+        PublishMachineCombustibility(node);
     }
 
     /// <summary>仅正式安装提交和世界存档恢复调用；手持召唤器不会登记到网络。</summary>
@@ -152,6 +153,7 @@ public static partial class MachineWorld
         else if (node.State == null) WakeNode(node);
         bool viewChanged = node.View != view;
         node.View = view;
+        PublishMachineCombustibility(node);
         if (added) NotifySurfaceMechanicalChanged(node.Cell);
         if (viewChanged) NotifySurfaceCellChanged(node.Cell); // 外壳接管阻挡时撤销数据 Box，避免重复碰撞。
         return node;
@@ -188,6 +190,7 @@ public static partial class MachineWorld
         EnsureProcessor(node);
         node.ScopeKey = worldKey;
         nodes.Add(node.Id, node);
+        PublishMachineCombustibility(node);
         dirty = true;
         NotifySurfaceMechanicalChanged(cell);
         NotifySurfaceCellChanged(cell);
@@ -203,6 +206,7 @@ public static partial class MachineWorld
         EnsureScope();
         if (!GameNetwork.HasStateAuthority) return false;
         if (!nodes.TryGetValue(id, out MachineEntity node)) return true;
+        RemoveMachineCombustibility(node);
         nodes.Remove(id);
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         dirty = true;
@@ -240,6 +244,7 @@ public static partial class MachineWorld
         RememberGeneratedRemoval(node);
         DisposeProcessor(node);
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
+        RemoveMachineCombustibility(node);
         nodes.Remove(id);
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         dirty = true;
@@ -358,6 +363,7 @@ public static partial class MachineWorld
         if (!nodes.TryGetValue(id, out MachineEntity node)) return;
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         DisposeProcessor(node);
+        RemoveMachineCombustibility(node);
         nodes.Remove(id);
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         fluidStates.Remove(id);
@@ -577,6 +583,7 @@ public static partial class MachineWorld
     {
         if (node == null) return;
         CopyTopology(node); dirty = true;
+        PublishMachineCombustibility(node);
         NotifySurfaceCellChanged(node.Cell);
         StateChanged(node);
         if (node.Definition.Fluid != null && GameNetwork.HasStateAuthority &&
@@ -605,6 +612,7 @@ public static partial class MachineWorld
         }
         node.View = null;
         DisposeProcessor(node);
+        RemoveMachineCombustibility(node);
         nodes.Remove(node.Id); dirty = true;
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
         NotifySurfaceCellChanged(node.Cell);
@@ -1127,7 +1135,8 @@ public static partial class MachineWorld
     {
         foreach (MachineInteractionTarget interaction in interactions.Values) interaction.Dispose();
         interactions.Clear();
-        foreach (var node in nodes.Values) DisposeProcessor(node);
+        foreach (var node in nodes.Values)
+        { RemoveMachineCombustibility(node, preserveFuelConsumption: true); DisposeProcessor(node); }
         processorOwners.Clear();
         nodes.Clear(); elapsed = 0;
         PhysicsSourcesReset?.Invoke(worldKey);

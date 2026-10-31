@@ -153,6 +153,9 @@ public sealed partial class ItemDefinitionDto
     [JsonProperty("matter", NullValueHandling = NullValueHandling.Ignore)]
     public ItemMatterDefinitionDto Matter;
 
+    [JsonProperty("combustibility")]
+    public WorldCombustibilityDefinitionDto Combustibility;
+
     /// <summary>多物料反应可声明在任一相关物品上；运行时按反应签名去重，不要求固定归属物。</summary>
     [JsonProperty("reactions", NullValueHandling = NullValueHandling.Ignore)]
     public List<ItemReactionDefinitionDto> Reactions = new();
@@ -683,7 +686,8 @@ public sealed class RuntimeItemDefinition
         IReadOnlyList<RuntimeItemReactionDefinition> reactions = null,
         GameRes moduleResources = null,
         ItemModulePrototypeCache modulePrototypeCache = null,
-        ItemPhysicsDefinitionDto physics = null)
+        ItemPhysicsDefinitionDto physics = null,
+        WorldCombustibilityDefinitionDto combustibility = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -756,7 +760,7 @@ public sealed class RuntimeItemDefinition
                 moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
-        FireFuel = WorldFireFuelProfile.Compile(this);
+        FireFuel = combustibility?.Compile() ?? WorldFireFuelProfile.Compile(this);
         moduleIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
             moduleIds.Add(module.ModuleId);

@@ -1337,7 +1337,8 @@ public static class ItemDefinitionCatalogLoader
             ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id),
             gameRes,
             prototypeCache,
-            dto.Physics);
+            dto.Physics,
+            dto.Combustibility);
     }
 
     /// <summary>运行时和构建期共用模块默认数据、战利品注入与自动生命模块的唯一装配规则。</summary>

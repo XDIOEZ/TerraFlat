@@ -285,7 +285,7 @@ namespace FlatWorld.NaturalEntities
             if (previousBody.Equals(record.BodyBounds) && previousHit.Equals(record.HitBounds) &&
                 previousVisual.Equals(record.VisualBounds) && previousInteraction.Equals(record.InteractionBounds) &&
                 previousBlocking == record.BlocksMovement) return;
-            UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false);
+            UnregisterSpatial(record, PhysicsBodyChangeReason.VisualRevision, notifyPhysics: false, removeCombustibility: false);
             RegisterSpatialCells(record);
             if (previousBlocking == record.BlocksMovement && previousBody.Equals(record.BodyBounds)) return;
             if (previousBlocking)
@@ -315,9 +315,10 @@ namespace FlatWorld.NaturalEntities
                 if (bucket.Add(record.Handle.Id)) record.SpatialCells.Add(cell);
             }
             RefreshContactDamageSource(record);
+            PublishNaturalCombustibility(record);
         }
 
-        private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed, bool notifyPhysics = true)
+        private static void UnregisterSpatial(Record record, PhysicsBodyChangeReason reason = PhysicsBodyChangeReason.Removed, bool notifyPhysics = true, bool removeCombustibility = true)
         {
             State.SpatialRevision++;
             if (notifyPhysics && record.BlocksMovement && record.SpatialCells.Count > 0)
@@ -329,6 +330,7 @@ namespace FlatWorld.NaturalEntities
                     if (bucket.Count == 0) spatialCells.Remove(cell);
                 }
             record.SpatialCells.Clear();
+            if (removeCombustibility) WorldCombustibilitySystem.RemoveCombustibilitySource(record.WorldKey, record);
         }
 
         /// <summary>给已加载区块提供纯数据障碍外形，物理组件不反向持有实体。</summary>
@@ -835,12 +837,11 @@ namespace FlatWorld.NaturalEntities
             if (!Contains(record.Handle)) return;
             simulation.TryGet(record.Handle.Id, out AiecsVital vital);
             if (vital.DeathPublished != 0) return;
-            if (!FinishCanopy(record, record.DeathByDamage && !record.DeathByFire)) return;
+            if (!FinishCanopy(record, record.DeathByDamage)) return;
             // 死亡先锁存；即使表现/第三方回调抛异常，也不能再次发放战利品。
             vital.DeathPublished = 1; simulation.Set(record.Handle.Id, vital);
             try
             {
-                if (record.DeathByFire) return;
                 // 被击杀的成熟作物沿用一次收获产物表，徒手进度不影响死亡产量。
                 if (record.DeathByDamage && record.Profile.HasCrop && record.Profile.HarvestOutputs != null &&
                     simulation.TryGet(record.Handle.Id, out EntityPlantLifecycle crop) && crop.Harvested == 0 &&

@@ -162,6 +162,10 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         Item.RuntimeStructureChanged += TrackWorldItemMatter;
         RuntimeItemRegistered += TrackWorldItemMatter;
         RuntimeItemUnregistered += ReleaseWorldItemMatter;
+        Item.RuntimeStructureChanged += TrackWorldItemCombustibility;
+        RuntimeItemRegistered += TrackWorldItemCombustibility;
+        RuntimeItemMoved += TrackWorldItemCombustibility;
+        RuntimeItemUnregistered += ReleaseWorldItemCombustibility;
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
 
@@ -208,6 +212,11 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         RuntimeItemRegistered -= TrackWorldItemMatter;
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;
         ClearWorldItemMatter();
+        Item.RuntimeStructureChanged -= TrackWorldItemCombustibility;
+        RuntimeItemRegistered -= TrackWorldItemCombustibility;
+        RuntimeItemMoved -= TrackWorldItemCombustibility;
+        RuntimeItemUnregistered -= ReleaseWorldItemCombustibility;
+        ClearWorldItemCombustibility();
         MachineWorld.ReleaseWorld(capture: false);
         WorldEntityRuntime.ReleaseAll();
         FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();

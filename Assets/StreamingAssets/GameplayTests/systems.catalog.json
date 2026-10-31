@@ -565,8 +565,9 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsWorldFireContactStage.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsService.Fire.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemRuntime.Fire.cs",
-        "Assets/5_Scripts/5-3_GamePlay/World/Building/TileBuildingSystem.Fire.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_DamageReceiver.Fire.cs"
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/ChunkTerrainData.Combustibility.cs",
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/WorldCombustibilitySourceField.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Management/ItemMgr.Combustibility.cs"
       ],
       "dependsOn": [],
       "ruleCaseIds": [

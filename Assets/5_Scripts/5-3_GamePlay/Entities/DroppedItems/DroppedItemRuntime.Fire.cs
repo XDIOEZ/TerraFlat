@@ -1,38 +1,46 @@
-using FlatWorld.WorldModel;
 using System.Collections.Generic;
 using UnityEngine;
 
 internal sealed partial class DroppedItemRuntime
 {
-    #region 地面燃料索引
-    private readonly HashSet<int> fireFuelVisited = new();
-    internal void CollectWorldFireFuel(WorldFireSimulationContext context)
+    #region 掉落物可燃性来源
+    private sealed class DroppedCombustibilitySource
     {
-        fireFuelVisited.Clear();
-        foreach (var cell in context.Indices.Keys)
-        {
-            Vector2Int bucketCell = new(Mathf.FloorToInt(cell.x / SpatialCellSize), Mathf.FloorToInt(cell.y / SpatialCellSize));
-            if (!spatial.TryGetValue(bucketCell, out var bucket)) continue;
-            foreach (int id in bucket)
-            {
-                if (!fireFuelVisited.Add(id) || !simulation.Contains(id) || simulation.TryGetFlight(id, out _) ||
-                    !payloads.TryGetValue(id, out ItemData data) ||
-                    !GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out RuntimeItemDefinition definition) ||
-                    !definition.FireFuel.IsCombustible) continue;
-                var body = simulation.Get(id);
-                if (body.Amount > 0f) context.AddFuel(body.Position, definition.WorldGridOccupancy, definition.FireFuel.Flammability);
-            }
-        }
+        internal Vector2Int Cell;
+        internal RuntimeItemDefinition Definition;
+        internal float Amount;
     }
-    #endregion
-}
+    private readonly Dictionary<int, DroppedCombustibilitySource> combustibilitySources = new();
 
-public static partial class DroppedItemService
-{
-    #region 世界火场燃料桥
-    internal static void CollectWorldFireFuel(WorldFireSimulationContext context)
+    private void PublishDroppedCombustibility(int id)
     {
-        if (worlds.TryGetValue(context.WorldKey, out var world)) world.Runtime?.CollectWorldFireFuel(context);
+        if (!payloads.TryGetValue(id, out var data) || simulation.TryGetFlight(id, out _) ||
+            !GameRes.ExistingInstance.TryGetItemDefinition(data.IDName, out var definition) || !definition.FireFuel.IsCombustible)
+        { RemoveDroppedCombustibility(id); return; }
+        var body = simulation.Get(id);
+        Vector2Int root = Vector2Int.FloorToInt(body.Position);
+        if (!combustibilitySources.TryGetValue(id, out var source))
+            combustibilitySources.Add(id, source = new DroppedCombustibilitySource());
+        if (source.Cell == root && ReferenceEquals(source.Definition, definition) && source.Amount == body.Amount) return;
+        var cells = new HashSet<Vector2Int>();
+        foreach (var offset in definition.WorldGridOccupancy) cells.Add(root + new Vector2Int(offset.X, offset.Y));
+        if (cells.Count == 0) cells.Add(root);
+        source.Cell = root; source.Definition = definition; source.Amount = body.Amount;
+        WorldCombustibilitySystem.ReplaceCombustibilitySource(matterWorldKey, source, cells,
+            definition.FireFuel.Flammability, definition.FireFuel.BurnDurationSeconds * body.Amount);
+    }
+
+    private void RemoveDroppedCombustibility(int id)
+    {
+        if (combustibilitySources.Remove(id, out var source))
+            WorldCombustibilitySystem.RemoveCombustibilitySource(matterWorldKey, source);
+    }
+
+    private void ClearDroppedCombustibility()
+    {
+        foreach (var source in combustibilitySources.Values)
+            WorldCombustibilitySystem.RemoveCombustibilitySource(matterWorldKey, source, preserveFuelConsumption: true);
+        combustibilitySources.Clear();
     }
     #endregion
 }

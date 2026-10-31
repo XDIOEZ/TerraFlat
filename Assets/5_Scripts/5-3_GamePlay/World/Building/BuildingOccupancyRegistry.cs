@@ -326,10 +326,11 @@ public static class BuildingOccupancyRegistry
         {
             foreach (Vector2Int cell in nextCells)
                 RefreshCell(cell);
+            PublishBuildingCombustibility(building, nextCells);
             return;
         }
 
-        Unregister(building);
+        Unregister(building, removeCombustibility: false);
         if (nextCells.Count == 0)
             return;
 
@@ -346,6 +347,7 @@ public static class BuildingOccupancyRegistry
             occupants.Add(building);
             RefreshCell(cell);
         }
+        PublishBuildingCombustibility(building, nextCells);
     }
 
     /// <summary>注册单格动态建筑；当前可交互建筑与墙体一样以格位置作为放置槽。</summary>
@@ -360,10 +362,11 @@ public static class BuildingOccupancyRegistry
             currentCells.Count == 1 && currentCells.Contains(cell))
         {
             RefreshCell(cell);
+            PublishBuildingCombustibility(building, currentCells);
             return;
         }
 
-        Unregister(building);
+        Unregister(building, removeCombustibility: false);
         var cells = new HashSet<Vector2Int> { cell };
         CellsByBuilding[building] = cells;
         buildingWorlds[building] = WorldKey;
@@ -375,9 +378,10 @@ public static class BuildingOccupancyRegistry
 
         occupants.Add(building);
         RefreshCell(cell);
+        PublishBuildingCombustibility(building, cells);
     }
 
-    public static void Unregister(Mod_Building building)
+    public static void Unregister(Mod_Building building, bool removeCombustibility = true)
     {
         if (building == null) return;
         using var worldScope = UseBuildingWorld(building, useRegistered: true);
@@ -385,6 +389,8 @@ public static class BuildingOccupancyRegistry
         if (building == null || !CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
             return;
 
+        if (removeCombustibility && ItemMgr.GetExistingInstance()?.IsRuntimeItemRegistered(building.item) != true)
+            WorldCombustibilitySystem.RemoveCombustibilitySource(WorldKey, building.item);
         CellsByBuilding.Remove(building);
         buildingWorlds.Remove(building);
         foreach (Vector2Int cell in cells)
@@ -398,6 +404,16 @@ public static class BuildingOccupancyRegistry
 
             RefreshCell(cell);
         }
+    }
+
+    private static void PublishBuildingCombustibility(Mod_Building building, HashSet<Vector2Int> cells)
+    {
+        if (building.item?.itemData == null ||
+            building.item.itemMods.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId) != null ||
+            GameRes.ExistingInstance?.TryGetItemDefinition(building.item.itemData.IDName, out var definition) != true ||
+            !definition.FireFuel.IsCombustible) return;
+        WorldCombustibilitySystem.ReplaceCombustibilitySource(WorldKey, building.item, cells,
+            definition.FireFuel.Flammability, definition.FireFuel.BurnDurationSeconds);
     }
 
     /// <summary>占地发生变化时通知导航并推进只读快照版本。</summary>

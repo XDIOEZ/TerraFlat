@@ -102,7 +102,8 @@ internal sealed partial class DroppedItemRuntime
             DroppedItemVisual visual = visuals[id];
             body.Amount = remaining;
             if (remaining > 0f) payload.Durability = candidate.Durability;
-            if (remaining <= 0f) Remove(id); else simulation.Set(body);
+            if (remaining <= 0f) Remove(id);
+            else { simulation.Set(body); PublishDroppedCombustibility(id); }
             PickupCommittedDebug.AddWork(1);
             // 数量提交先于表现；声音或短期动画失败不能复活已入包的物品。
             try

@@ -341,6 +341,7 @@ public static partial class MachineWorld
                     }
                     else if (interactions.Remove(node.Id, out MachineInteractionTarget target)) target.Dispose();
                     RemoveView(node);
+                    RemoveMachineCombustibility(node);
                     nodes.Remove(node.Id); dirty = true;
                     candidate.Detached = true;
                     if (node.Processor != null) processorOwners.Remove(node.Processor);
@@ -379,6 +380,7 @@ public static partial class MachineWorld
                         fluidStates[node.Id] = candidate.Fluid;
                     }
                     EnsureProcessor(node);
+                    PublishMachineCombustibility(node);
                 }
             }
             finally { destination.TopologyMutationDepth--; }
@@ -399,6 +401,7 @@ public static partial class MachineWorld
                     catch (Exception error) { Debug.LogException(error); }
                     candidate.Fluid = DetachFluidNodeForScopeTransfer(node);
                 }
+                RemoveMachineCombustibility(node);
                 nodes.Remove(node.Id);
                 if (node.Processor != null) processorOwners.Remove(node.Processor);
                 dirty = true;

@@ -62,10 +62,6 @@ def snapshot_definition(path, name):
             depth -= 1
             if depth == 0:
                 result = source[start:index + 1]
-                if name == "ChunkSaveRecord":
-                    # 外部火焰工作区改动不属于 SQLite 提交，也不能成为固定样本依赖。
-                    result = re.sub(r'^\s*\[[^\]]*MemoryPackOrder\(15\)[^\]]*\]\s*public\s+List<FireCellSaveData>\s+FireCells[^\r\n]*', '', result, flags=re.M)
-                    result = re.sub(r'\s*\|\|\s*\(FireCells\?\.Count\s*\?\?\s*0\)\s*>\s*0', '', result)
                 return result
     raise ValueError("missing snapshot end: " + name)
 
@@ -79,6 +75,8 @@ game_save = root / "Assets/5_Scripts/5-3_GamePlay/Core/Save"
 snapshot_source = "using System; using System.Collections.Generic; using System.IO; using MemoryPack; using Newtonsoft.Json; using UnityEngine; using Sirenix.OdinInspector; using FlatWorld.WorldModel;\n" + "\n".join([
     snapshot_definition(game_save / "SaveDataMgr.SnapshotPayload.cs", "FrozenEcologyChunkSaveRecord"),
     snapshot_definition(game_save / "SaveDataMgr.SqliteArchive.cs", "SqliteChunkSnapshot"),
+    snapshot_definition(game_save / "SaveDataMgr.Fire.cs", "FireCellSaveData"),
+    snapshot_definition(game_save / "CombustibilityCellSaveData.cs", "CombustibilityCellSaveData"),
     *[snapshot_definition(root / path, name) for path, name in [
         ("Assets/5_Scripts/5-3_GamePlay/World/Machines/CultivatorLogic.cs", "CultivatorHarvestOutput"),
         ("Assets/5_Scripts/5-3_GamePlay/World/Machines/CultivatorLogic.cs", "CultivatorPlotState"),

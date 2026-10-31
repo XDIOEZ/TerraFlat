@@ -29,6 +29,7 @@ public static partial class MachineWorld
             DisposeProcessor(entity);
             entity.Definition = definition;
             if (awake) { entity.State = null; WakeNode(entity); }
+            PublishMachineCombustibility(entity);
             changed.Add(entity.Cell);
         }
         dirty = true;
