@@ -12,7 +12,14 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterStartupPerformanceOperations(Dictionary<string, Func<JObject, JObject>> target)
     {
+        RegisterBuiltInBinaryCatalogOperations(target);
+        RegisterBakedDefinitionCompilationOperations(target);
         target.Add("core_lifecycle/startup_loading_policy", StartupLoadingPolicy);
+        target.Add("core_lifecycle/startup_request_batch", StartupRequestBatch);
+        target.Add("core_lifecycle/startup_editor_sprite_request_route", StartupEditorSpriteRequestRoute);
+        target.Add("core_lifecycle/startup_catalog_input_transaction", StartupCatalogInputTransaction);
+        target.Add("core_lifecycle/startup_supplemental_inputs", StartupSupplementalCatalogInputs);
+        target.Add("core_lifecycle/startup_private_text_parser", StartupPrivateTextParser);
         target.Add("core_lifecycle/startup_configuration_publication", StartupConfigurationPublication);
         target.Add("core_lifecycle/startup_local_item_catalog", StartupLocalItemCatalog);
         target.Add("core_lifecycle/startup_behavior_tree_templates", StartupBehaviorTreeTemplates);
@@ -63,11 +70,15 @@ public static partial class GameplayTestSystemProbe
             for (int i = 0; i < 4; i++) yield return null;
             initialized = true;
         }
-        Func<IEnumerator> publish = GameRes.PrepareConfigurationCatalog<string>(pipeline, Configuration, _ =>
+        void Publish(string value)
         {
             publishedTooEarly |= !initialized;
             publications++;
-        });
+        }
+        IEnumerator Bind(string value) { Publish(value); yield return null; }
+        Func<IEnumerator> publish = args.Value<bool>("deferredBinding")
+            ? GameRes.PrepareCatalogWithDeferredBinding<string>(pipeline, Configuration, Bind)
+            : GameRes.PrepareConfigurationCatalog<string>(pipeline, Configuration, Publish);
         pipeline.Add("initialization", "资源初始化", 1, Initialization);
         pipeline.Add("configuration", "发布配置", 1, publish, "initialization");
         IEnumerator runner = pipeline.Run();
@@ -89,6 +100,283 @@ public static partial class GameplayTestSystemProbe
             ["failure"] = pipeline.Failure?.GetType().Name,
             ["stage"] = pipeline.CurrentStage
         };
+    }
+
+    #endregion
+
+    #region 独立输入一次发出与后台事务
+
+    private static JObject StartupPrivateTextParser(JObject args)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "FlatWorldPrivateParser", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "value.json");
+        File.WriteAllText(path, "{\"value\":17}", new System.Text.UTF8Encoding(true));
+        int main = System.Threading.Thread.CurrentThread.ManagedThreadId, worker = 0, callback = 0, value = 0, errors = 0;
+        using var began = new System.Threading.ManualResetEventSlim();
+        try
+        {
+            IEnumerator request = StreamingAssetsTextLoader.ReadAndParsePrivateDataAsync(path, text =>
+            { worker = System.Threading.Thread.CurrentThread.ManagedThreadId; began.Set(); return JObject.Parse(text).Value<int>("value"); },
+                result => { callback = System.Threading.Thread.CurrentThread.ManagedThreadId; value = result; }, _ => errors++);
+            bool started = began.Wait(TimeSpan.FromSeconds(5)), pending = value == 0;
+            DrainStartupInputRoutine(request);
+            DrainStartupInputRoutine(StreamingAssetsTextLoader.ReadAndParsePrivateDataAsync<int>(path,
+                _ => throw new InvalidDataException("解析失败夹具"), _ => value = -1,
+                error => { if (error is InvalidDataException && System.Threading.Thread.CurrentThread.ManagedThreadId == main) errors++; }));
+            DrainStartupInputRoutine(StreamingAssetsTextLoader.ReadAndParsePrivateDataAsync(path + ".missing", text => text,
+                _ => value = -2, error => { if (error is IOException) errors++; }));
+            DrainStartupInputRoutine(StreamingAssetsTextLoader.ReadAndParsePrivateDataAsync<string>(null, text => text,
+                _ => value = -3, error => { if (error is ArgumentException) errors++; }));
+            return new JObject { ["startedImmediately"] = started, ["notPublishedEarly"] = pending,
+                ["workerIsPrivate"] = worker != main, ["callbackIsMain"] = callback == main,
+                ["value"] = value, ["errors"] = errors };
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    private static void DrainStartupInputRoutine(IEnumerator routine)
+    {
+        var pending = new Stack<IEnumerator>();
+        pending.Push(routine);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            while (pending.Count != 0)
+            {
+                if (timer.Elapsed.TotalSeconds > 5) throw new TimeoutException("输入事务夹具未结束");
+                IEnumerator current = pending.Peek();
+                if (!current.MoveNext()) { pending.Pop(); (current as IDisposable)?.Dispose(); }
+                else if (current.Current is IEnumerator nested) pending.Push(nested);
+                else System.Threading.Thread.Sleep(1);
+            }
+        }
+        finally { while (pending.Count != 0) (pending.Pop() as IDisposable)?.Dispose(); }
+    }
+
+    private static JObject StartupSupplementalCatalogInputs(JObject args)
+    {
+        string kind = Text(args, "kind", "tiles");
+        string root = Path.Combine(Path.GetTempPath(), "FlatWorldSupplementalInputs", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string source = Path.Combine(root, "source.json"), manifest = Path.Combine(root, "manifest.json");
+        string cachePath = Path.Combine(root, "catalog.fwbin");
+        try
+        {
+            if (kind == "tiles")
+            {
+                JObject originalManifest = JObject.Parse(File.ReadAllText(TileDefinitionCatalogLoader.BuiltInManifestPath));
+                JObject package = (JObject)originalManifest["packages"][0];
+                File.Copy(StreamingAssetsTextLoader.CombinePath(TileDefinitionCatalogLoader.BuiltInRoot, package.Value<string>("path")), source);
+                File.WriteAllText(manifest, "{\"schemaVersion\":1,\"packages\":[{\"id\":\"fixture\",\"path\":\"source.json\",\"enabled\":true}]}");
+            }
+            else File.Copy(AnimalSkillCatalogLoader.BuiltInConfigPath, source);
+            BinaryContentCache Session() => new(cachePath, "supplemental-v1", root, kind == "tiles" ? manifest : source);
+            int Read(BinaryContentCache cache)
+            {
+                Task<int> task = Task.Run(() => kind == "tiles"
+                    ? TileDefinitionCatalogLoader.LoadLocalCatalogInput(cache, root, manifest).Definitions.Count
+                    : AnimalSkillCatalogLoader.LoadLocalCatalogInput(cache, source).Skills.Count);
+                if (!task.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("补充目录输入超时");
+                return task.GetAwaiter().GetResult();
+            }
+            bool Rejected()
+            {
+                try { Read(Session()); return false; }
+                catch (Exception error) { return error.GetBaseException() is InvalidDataException or IOException or Newtonsoft.Json.JsonException; }
+            }
+            var cold = Session(); int count = Read(cold);
+            var warm = Session(); int warmCount = Read(warm);
+            var result = new JObject { ["coldBuilt"] = count > 0 && !cold.IsHit && File.Exists(cachePath),
+                ["warmRead"] = warm.IsHit && warmCount == count };
+            File.WriteAllText(cachePath, "corrupt");
+            result["corruptFallback"] = Read(Session()) == count;
+            File.WriteAllText(source, "{\"schemaVersion\":0}");
+            result["invalidRejected"] = Rejected();
+            File.Delete(source);
+            result["missingRejected"] = Rejected();
+            return result;
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private static JObject StartupEditorSpriteRequestRoute(JObject args)
+    {
+#if UNITY_EDITOR
+        var provider = new UnityEngine.ResourceManagement.ResourceProviders.AssetDatabaseProvider();
+        return new JObject
+        {
+            ["available"] = true,
+            ["initialUsesSingleRequest"] = ResourceAssetScope.ShouldLoadInitialEditorSpriteDirectly(provider, true),
+            ["reloadKeepsAsyncPreparation"] = !ResourceAssetScope.ShouldLoadInitialEditorSpriteDirectly(provider, false),
+            ["customNotOverridden"] = !ResourceAssetScope.ShouldLoadInitialEditorSpriteDirectly(new GameplayTestCustomAssetProvider(), true),
+            ["missingProviderRejected"] = !ResourceAssetScope.ShouldLoadInitialEditorSpriteDirectly(null, true)
+        };
+#else
+        return new JObject { ["available"] = false };
+#endif
+    }
+
+    private static JObject StartupRequestBatch(JObject args)
+    {
+        string mode = Text(args, "mode", "complete");
+        int frame = 0, requests = 0, callbacks = 0, publications = 0, beganAtFirstWork = -1;
+        bool initialized = false, publishedEarly = false;
+        using var plan = new ResourceLoadPipeline((_, _) => { }, () => false,
+            () => double.MaxValue, () => frame, concurrentStages: true);
+        IEnumerator Request(Action<int> done, Action<Exception> failed)
+        {
+            requests++;
+            if (mode == "failed") throw new InvalidDataException("独立输入发出失败夹具");
+            return Complete();
+            IEnumerator Complete()
+            {
+                yield return null;
+                callbacks++;
+                done(7);
+            }
+        }
+        var first = plan.Prefetch<int>(Request);
+        var second = plan.Prefetch<int>(Request);
+        IEnumerator Initialization()
+        {
+            beganAtFirstWork = requests;
+            for (int i = 0; i < 3; i++) yield return null;
+            initialized = true;
+        }
+        IEnumerator Publish()
+        {
+            void Accept(int value) { publishedEarly |= !initialized; publications += value; }
+            yield return first.Wait(Accept);
+            yield return second.Wait(Accept);
+        }
+        plan.Add("initialize", "独立初始化", 1, Initialization);
+        plan.Add("publish", "输入交接", 1, Publish, mode == "invalid_graph" ? "missing" : "initialize");
+        _ = plan.CaptureDependencies();
+        bool diagnosticIsLazy = requests == 0;
+        IEnumerator run = plan.Run();
+        try
+        {
+            while (run.MoveNext())
+            {
+                if (++frame > 32) throw new TimeoutException("输入批发出夹具没有收敛");
+                if (mode == "cancel") break;
+            }
+        }
+        finally { (run as IDisposable)?.Dispose(); }
+        int callbacksAtDispose = callbacks;
+        ((ResourceLoadPipeline.IPrefetchedResourceData)first).StartRequest();
+        ((ResourceLoadPipeline.IPrefetchedResourceData)first).Advance(++frame, () => false);
+        return new JObject
+        {
+            ["diagnosticIsLazy"] = diagnosticIsLazy, ["requests"] = requests,
+            ["beganAtFirstWork"] = beganAtFirstWork, ["callbacks"] = callbacks,
+            ["publications"] = publications, ["publishedEarly"] = publishedEarly,
+            ["noCallbackAfterDispose"] = callbacksAtDispose == callbacks,
+            ["failure"] = plan.Failure?.GetType().Name, ["stage"] = plan.CurrentStage
+        };
+    }
+
+    private static JObject StartupCatalogInputTransaction(JObject args)
+    {
+        string kind = Text(args, "kind", "recipes");
+        string root = Path.Combine(Path.GetTempPath(), "FlatWorldInputTransaction", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        string manifest = Path.Combine(root, "manifest.json"), package = Path.Combine(root, "package.json");
+        string cachePath = Path.Combine(root, "catalog.fwbin");
+        string manifestJson = "{\"schemaVersion\":1,\"packages\":[{\"id\":\"fixture\",\"path\":\"package.json\",\"enabled\":true}," +
+            "{\"id\":\"off\",\"path\":\"missing.json\",\"enabled\":false}]}";
+        string source = kind == "recipes" ? "{\"schemaVersion\":1,\"recipes\":[{\"id\":\"fixture-one\"}]}" :
+            kind == "buffs" ? "{\"schemaVersion\":1,\"buffs\":[{\"id\":\"fixture-one\",\"effects\":[]}]}" :
+            "{\"schemaVersion\":1,\"actors\":[{\"id\":\"fixture-one\",\"modules\":{\"ai\":{\"prefab\":\"fixture\"," +
+            "\"parameters\":{\"behaviorTree\":{\"root\":{\"type\":\"subtree\",\"name\":\"fixture\"}}}}}}]}";
+        BinaryContentCache Session() => new(cachePath, "input-transaction-v1", root, manifest);
+        object Read(BinaryContentCache cache, bool reload = false)
+        {
+            Task<object> task = Task.Run<object>(() => kind switch
+            {
+                "recipes" => RecipeCatalogLoader.LoadLocalCatalogInput(cache, root, manifest),
+                "buffs" => BuffCatalogLoader.LoadLocalCatalogInput(cache, root, manifest),
+                _ => ActorDefinitionCatalogLoader.LoadLocalCatalogInput(cache, root, manifest, reload)
+            });
+            if (!task.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("后台输入事务夹具超时");
+            return task.GetAwaiter().GetResult();
+        }
+        string Id(object value) => value switch
+        {
+            RecipeCatalogLoader.RecipeCatalogPreparation recipes => recipes.Catalog.Catalogs[0].Recipes[0].Id,
+            BuffCatalogLoader.BuffCatalogPreparation buffs => buffs.Catalog.Catalogs[0].Buffs[0].Id,
+            ActorDefinitionCatalogLoader.ActorCatalogPreparation actors => actors.Sources[0].Value<string>("id"),
+            _ => throw new InvalidOperationException("输入事务类型不匹配")
+        };
+        bool Store(BinaryContentCache cache, object value) => value switch
+        {
+            RecipeCatalogLoader.RecipeCatalogPreparation recipes => cache.Store(recipes.Catalog),
+            BuffCatalogLoader.BuffCatalogPreparation buffs => cache.Store(buffs.Catalog),
+            ActorDefinitionCatalogLoader.ActorCatalogPreparation actors => cache.Store(new ActorDefinitionInputs
+                { Sources = actors.Sources, Definitions = new List<ItemDefinitionDto>() }),
+            _ => false
+        };
+        bool Rejected()
+        {
+            try { Read(Session()); return false; }
+            catch (Exception error) { return error.GetBaseException() is InvalidDataException or IOException or Newtonsoft.Json.JsonException; }
+        }
+        try
+        {
+            File.WriteAllText(manifest, manifestJson);
+            File.WriteAllText(package, source);
+            File.WriteAllText(Path.Combine(root, "behavior-subtrees.json"),
+                "{\"subtrees\":{\"fixture\":\"tree.json\",\"nested\":\"leaf.json\",\"unused\":\"leaf.json\"}}");
+            File.WriteAllText(Path.Combine(root, "tree.json"), "{\"root\":{\"type\":\"subtree\",\"name\":\"nested\"}}");
+            File.WriteAllText(Path.Combine(root, "leaf.json"), "{\"root\":{\"type\":\"condition\",\"name\":\"always\"}}");
+            var cold = Session();
+            object original = Read(cold);
+            var result = new JObject { ["coldRead"] = !cold.IsHit && Id(original) == "fixture-one",
+                ["stored"] = Store(cold, original) };
+            var warm = Session();
+            result["warmRead"] = Id(Read(warm)) == "fixture-one" && warm.IsHit;
+            if (kind == "actors")
+            {
+                var reload = Session();
+                result["reloadBypassesCache"] = Id(Read(reload, true)) == "fixture-one" && !reload.IsHit;
+                var actors = (ActorDefinitionCatalogLoader.ActorCatalogPreparation)original;
+                result["sharedTreeAttached"] = actors.Sources[0]["modules"]?["ai"]?["parameters"]?["behaviorTree"]?["subtrees"]?["fixture"] != null;
+                ItemDefinitionDto compact = ActorDefinitionCatalogLoader.ConvertResolvedActor(actors.Sources[0]);
+                JObject compactTree = (JObject)compact.Modules["ai"].Parameters["behaviorTree"];
+                result["runtimeKeepsReferenceClosure"] = ((JObject)compactTree["subtrees"]).Count == 2 &&
+                    compactTree["subtrees"]["fixture"] != null && compactTree["subtrees"]["nested"] != null &&
+                    compactTree["subtrees"]["unused"] == null &&
+                    AnimalBehaviorTreeNodeCatalog.Compile(compactTree.ToObject<AnimalBehaviorTreeDefinition>())
+                        .CreateRuntime().Tick(0) == AnimalBehaviorTreeStatus.Success;
+                compactTree["subtrees"]["nested"]["root"]["name"] = "changed";
+                var originalLibrary = (JObject)actors.Sources[0]["modules"]["ai"]["parameters"]["behaviorTree"]["subtrees"];
+                result["completeSourceIsolated"] = originalLibrary.Count == 3 &&
+                    originalLibrary["nested"]["root"].Value<string>("name") == "always";
+                JObject invalid = (JObject)actors.Sources[0].DeepClone();
+                invalid["modules"]["ai"]["parameters"]["behaviorTree"]["subtrees"]["nested"]["root"]["name"] = "unknown-condition";
+                try { ActorDefinitionCatalogLoader.ConvertResolvedActor(invalid); result["invalidUsedTreeRejected"] = false; }
+                catch (Exception) { result["invalidUsedTreeRejected"] = true; }
+            }
+            DateTime timestamp = File.GetLastWriteTimeUtc(package);
+            File.WriteAllText(package, source.Replace("fixture-one", "fixture-two"));
+            File.SetLastWriteTimeUtc(package, timestamp);
+            var changed = Session();
+            result["sameLengthChangedRead"] = Id(Read(changed)) == "fixture-two" && !changed.IsHit && Id(original) == "fixture-one";
+            File.WriteAllText(cachePath, "broken");
+            result["corruptFallback"] = Id(Read(Session())) == "fixture-two";
+            File.Delete(package);
+            result["missingRejected"] = Rejected();
+            File.WriteAllText(package, "invalid json");
+            result["invalidRejected"] = Rejected();
+            File.WriteAllText(package, source);
+            File.WriteAllText(manifest, manifestJson.Replace("package.json", "../package.json"));
+            result["escapeRejected"] = Rejected();
+            File.WriteAllText(manifest, manifestJson.Replace("\"schemaVersion\":1", "\"schemaVersion\":0"));
+            result["schemaRejected"] = Rejected();
+            return result;
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     #endregion

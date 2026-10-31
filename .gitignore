@@ -124,3 +124,7 @@ crashlytics-build.properties
 __pycache__/
 __pycache__.meta
 /.codex/tmp
+
+# Build-time baked configuration output
+/Assets/Resources/CompiledContent/
+/Assets/Resources/CompiledContent.meta

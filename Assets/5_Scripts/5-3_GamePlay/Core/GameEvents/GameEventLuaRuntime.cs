@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -49,20 +50,20 @@ namespace FlatWorld.Gameplay.Events
 
         public void LoadCatalogs(List<GameEventConfigSource> sources, List<GameEventConfigIssue> issues)
         {
-            TextAsset[] assets = Resources.LoadAll<TextAsset>(ResourcePath);
-            Array.Sort(assets, (left, right) => string.CompareOrdinal(left.name, right.name));
-            foreach (TextAsset asset in assets)
+            foreach (GameEventLuaResourceDocument asset in ReadResourceScripts())
             {
-                string script = asset.name.EndsWith(".lua", StringComparison.Ordinal)
-                    ? asset.name[..^4] : asset.name;
+                if (asset == null)
+                    continue;
+                string script = asset.SourceName.EndsWith(".lua", StringComparison.Ordinal)
+                    ? asset.SourceName[..^4] : asset.SourceName;
                 string sourceName = $"lua/{script}.lua.txt";
                 LuaTable module = null;
                 try
                 {
                     if (modules.ContainsKey(script)) throw new InvalidOperationException($"重复 Lua 脚本名 '{script}'。");
-                    if (asset.bytes.Length > 2 * 1024 * 1024) throw new InvalidOperationException("Lua 事件文件超过 2MB。");
+                    if (asset.SourceByteLength > 2 * 1024 * 1024) throw new InvalidOperationException("Lua 事件文件超过 2MB。");
                     using LuaTable scope = (LuaTable)createEnvironment.Call()[0];
-                    object[] result = environment.DoString(asset.text, $"@{sourceName}", scope);
+                    object[] result = environment.DoString(asset.Source, $"@{sourceName}", scope);
                     module = result.Length == 1 ? result[0] as LuaTable : null;
                     if (module == null)
                     {
@@ -82,6 +83,42 @@ namespace FlatWorld.Gameplay.Events
                 }
                 finally { module?.Dispose(); }
             }
+        }
+
+        internal static GameEventLuaResourceDocument[] ReadResourceScripts()
+        {
+            string[] paths = BuiltInContentBinaryCatalog.ReadResourceDirectoryPaths(ResourcePath);
+            Array.Sort(paths, CompareResourcePaths);
+            GameEventLuaResourceDocument[] scripts = new GameEventLuaResourceDocument[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                string path = paths[i];
+                scripts[i] = BuiltInContentBinaryCatalog.ReadResource(
+                    path,
+                    source => new GameEventLuaResourceDocument
+                    {
+                        SourceName = GetResourceAssetName(path),
+                        Source = source ?? string.Empty,
+                        SourceByteLength = Encoding.UTF8.GetByteCount(source ?? string.Empty)
+                    });
+            }
+
+            return scripts;
+        }
+
+        private static int CompareResourcePaths(string left, string right)
+        {
+            int nameComparison = string.CompareOrdinal(GetResourceAssetName(left), GetResourceAssetName(right));
+            return nameComparison != 0 ? nameComparison : string.CompareOrdinal(left, right);
+        }
+
+        private static string GetResourceAssetName(string path)
+        {
+            int start = path.LastIndexOf('/') + 1;
+            int end = path.LastIndexOf('.');
+            if (end < start)
+                end = path.Length;
+            return path.Substring(start, end - start);
         }
 
         public void Tick() => environment.Tick();
@@ -180,5 +217,13 @@ namespace FlatWorld.Gameplay.Events
         public LuaTable CreateTable(JToken token) => GameEventLuaData.CreateTable(environment, token);
 
         #endregion
+    }
+
+    [MemoryPack.MemoryPackable]
+    internal sealed partial class GameEventLuaResourceDocument
+    {
+        public string SourceName;
+        public string Source;
+        public int SourceByteLength;
     }
 }

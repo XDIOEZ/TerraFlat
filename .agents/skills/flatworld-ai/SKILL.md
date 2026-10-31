@@ -25,6 +25,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## JSON 行为树
 
+- 行为树、飞行、水生模块通过 Detector 的来源半径接口声明/撤销最小范围，不覆盖基础值；重载降低范围或来源释放时使旧异步查询失效。构建期只保存展开树，运行时重绑当前工厂、隔离节点与能力实例。
 - 所有正式生物的 `modules.ai` 使用 `Module_AnimalBehaviorTree` / 能力 ID `AI`；物种只配置 `behaviorTree.capabilities` 和根节点。Manifest 的 `behaviorSubtrees` 指向 `GameConfig/Actors/behavior-subtrees.json`，该文件只登记 `subtrees: { 稳定ID: 相对Actors根目录的JSON路径 }`；每棵树独立放在 `behavior-trees/subtrees`、`composites` 或 `profiles`，文件只写可选 `parameters` 与 `root`，空参数省略。不要复制物种 C# 主控或在通用能力里恢复物种优先级。
 - 树支持 `selector`、记忆式 `sequence`、`condition`、`action`、`inverter`、`subtree`、`service`。Selector 每 Tick 复核高优先守卫；Sequence 不重做已完成动作，但继续检查前置条件。旧分支退出后新分支才进入；节点返回 Success/Failure/Running，正常完成只 OnExit，中断再调用 OnAbort。
 - 子树参数用 `$名称` 引用，引用节点的 `parameters` 覆盖默认值并逐层传递；组合子树继续引用其他子树，例如群猎→群体残血撤退→残血逃跑，独行/领地捕猎共用捕猎与游荡。基础、组合和完整模板使用同一种树结构，新增行为优先组合现有子树。服务节点前面的子节点每 Tick 更新伴随事实，最后一个是主树，服务不改变主动作身份。未知节点、缺参数和子树循环在初始化编译时失败。

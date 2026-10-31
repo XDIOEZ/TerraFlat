@@ -1,0 +1,205 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: FlatWorldSpriteAtlas_Menu
+  m_EditorClassIdentifier: 
+  m_GroupName: FlatWorldSpriteAtlas_Menu
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 76a4133815fbdb04794b084fe0823103
+  m_SerializeEntries:
+  - m_GUID: 0426f7891b648414fb89071a6f0276f7
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 17b596bac2f14f92b50423d142dc1b84
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1e02dd721a59db1498040b6ccd224c64
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_MainMenuSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 204de1cf958f977418a5ff4896ea0961
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3a7025b91062d1141a357528fe73ee61
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_CloseButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e32f389c0c274b4288fdff15830c523
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4018784394514384f85f46e5f9690fb4
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Dropdown.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4211cef457a224643b17e0433f6d9e72
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4e5c8017c39f04040bc676c996290508
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SliderControl.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5c0312d9a4c30ca42bc62b3bfb10074e
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6c3a1f4436d999445b39c197107ce458
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d28233e3a65781418a7cc4c0885be94
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70d725d8194078249a195891ee61da07
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7213ccb23a9d80848845ec3342cb9e9a
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 817e26a006be65341b7082d816c170d5
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c3e275eabc48b04c828e6162cc59129
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c7d41c0b2d84a7da6c650f2413eb182
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c8eb8cf412e3ca4d8845cecbc358d4d
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92c26ca78f387f246803a706b73bbfe9
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_InputField.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9a8e8edb7c184118b4587c4e402bc3dd
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a6d627d3b13bbc54bb2b613ad872b30d
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_WorldLoading.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae7d61a702120fe43a5c3fdcfea8279e
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Slider.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: be58e61687cd00241a96a8404cb301bb
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c56368145ed98b84da8f176212fb6b75
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cabd264e2311b684294e284a022cdeae
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DebugSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d053d623af3d3ba49a09e3bd67e7b696
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e40b3eaad88f90e47aa1d2cc888ddb57
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e5fdcf9dc2f05e34db60befbd3af28d8
+    m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenuExitConfirmation.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ea550192a53dad841a260370c15a6e94
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_ProgressBar.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f75861c6e3f25eb4eb01b03f0816e913
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: fcd689c788a43b94daa7291da2287343, type: 2}
+    - {fileID: 11400000, guid: 661073714a4b3404785f3b8e8c6041e3, type: 2}

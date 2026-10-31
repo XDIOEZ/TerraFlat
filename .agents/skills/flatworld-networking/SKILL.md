@@ -76,4 +76,4 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 菜单新游戏与读档均在世界/角色Ready后自动建立私有Host；工具隔离测试用 `NetworkGameBootstrap.SuppressAutomaticSession()` 显式租约阻止自动启动，不能停止用户现有会话。主菜单只加入，游戏内设置经 `GameNetwork.SettingsRequested` 打开同一个常驻面板。`PrepareHostWorld` 只接管已就绪世界与稳定 ProfileId；Host 不回放自身快照或重发玩家进入事件，关闭公开保留同一本机角色和正式联机流送。客户端经 `EnterWorldWithExternalPlayer` 复用正式进入流程；退出使进入代次失效并停网络，客户端不落盘主机存档。
 
-`NetworkModeUIController` 和面板挂常驻根，在场景加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。`RuntimeUIPrefabKeys.NetworkMode` 必须进入 `GameRes.StartupPrefabKeys`，联机面板和入口只等 `IsStartupReady`；公开/加入按钮仍等完整 `isLoadFinish`。Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。
+`NetworkModeUIController` 和面板挂常驻根，在场景加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。`RuntimeUIPrefabKeys.NetworkMode` 必须进入 `GameRes.StartupPrefabKeys`；菜单加入只等 `IsStartupReady`，点击后快照连接参数、请求世界资源，完整 Ready 且请求代次仍有效才连接。关闭/取消只撤销自身等待，不取消共享加载；公开 Host 仍要求完整目录、玩家和世界 Ready。Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。

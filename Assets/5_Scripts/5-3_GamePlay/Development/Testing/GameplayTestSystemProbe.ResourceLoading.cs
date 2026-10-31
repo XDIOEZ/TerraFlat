@@ -320,15 +320,16 @@ public static partial class GameplayTestSystemProbe
         var compiled = new bool[definitions.Count];
         var order = new JArray();
         int frame = 0, blockedFrame = -1, started = 0, disposed = 0, beforeAllSprites = 0;
-        int lastWorkFrame = -1, workInFrame = 0, maxWorkPerFrame = 0;
-        bool loadedA = false, loadedB = false, builtWithoutDependencies = false, failed = false, finished = false;
+        int lastWorkFrame = -1, workInFrame = 0, maxWorkPerFrame = 0, compiledInQueue = 0;
+        bool loadedA = false, loadedB = false, builtWithoutDependencies = false, failed = false, finished = false, insideQueue = false;
         bool ShouldYield() => blockedFrame == frame;
         bool CompileOne()
         {
-            if (!readiness.TryTakeReadyDefinition(out int index)) return false;
+            if (failed || !readiness.TryTakeReadyDefinition(out int index)) return false;
             if (lastWorkFrame != frame) { lastWorkFrame = frame; workInFrame = 0; }
             maxWorkPerFrame = Math.Max(maxWorkPerFrame, ++workInFrame);
             if (readiness.HasPendingSprites) beforeAllSprites++;
+            if (insideQueue && readiness.HasPendingSprites) compiledInQueue++;
             builtWithoutDependencies |= index == 1 && (!loadedA || !loadedB) || index == 2 && !loadedA || index == 3 && !loadedB;
             compiled[index] = true;
             order.Add(index);
@@ -339,13 +340,31 @@ public static partial class GameplayTestSystemProbe
         IEnumerator Requests()
         {
             IEnumerator queue = ResourceLoadQueue.Run<int>(2, index => { started++; return index; },
-                index => frame >= (index == 0 ? 2 : 4), (index, _) =>
+                index =>
+                {
+                    bool done = frame >= (index == 0 ? 2 : 4);
+                    if (mode == "busy" && !done) blockedFrame = frame;
+                    return done;
+                }, (index, _) =>
                 {
                     if (index == 0) loadedA = true; else loadedB = true;
                     readiness.MarkSpriteReady(index == 0 ? "A" : "B");
                     readiness.MarkSpriteReady(index == 0 ? "A" : "B");
-                }, ShouldYield);
-            try { while (queue.MoveNext()) yield return queue.Current; }
+                    if (mode == "busy") blockedFrame = frame;
+                }, () => failed || ShouldYield(),
+                _ => { if (mode == "busy" || mode == "completion") blockedFrame = frame; }, availableWork: CompileOne);
+            try
+            {
+                while (true)
+                {
+                    bool moved;
+                    insideQueue = true;
+                    try { moved = queue.MoveNext(); }
+                    finally { insideQueue = false; }
+                    if (!moved) break;
+                    yield return queue.Current;
+                }
+            }
             finally { (queue as IDisposable)?.Dispose(); disposed++; }
         }
         IEnumerator runner = ItemDefinitionCatalogLoader.RunAssetQueueWithAvailableMainThreadWork(
@@ -374,6 +393,7 @@ public static partial class GameplayTestSystemProbe
         {
             ["started"] = started, ["disposed"] = disposed, ["beforeAllSprites"] = beforeAllSprites,
             ["builtWithoutDependencies"] = builtWithoutDependencies, ["failed"] = failed,
+            ["compiledInQueue"] = compiledInQueue,
             ["maxWorkPerFrame"] = maxWorkPerFrame, ["order"] = order, ["published"] = published, ["addresses"] = addresses,
             ["pendingSprites"] = readiness.HasPendingSprites, ["readinessCaseSensitive"] = caseReadiness.SpriteAddresses.Count == 2
         };

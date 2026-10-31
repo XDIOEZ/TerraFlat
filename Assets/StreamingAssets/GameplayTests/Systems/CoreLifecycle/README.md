@@ -10,7 +10,7 @@
 
 # 核心生命周期与资源会话
 
-- 资源启动规则覆盖会话内纯数据预取、首屏预算耗尽时的预取推进、交互预算、候选隔离和取消释放；物品 Sprite 与定义编译流水检查共享图片、状态图、帧预算、失败和取消，另检查世界液体地址去重、Actor 分包继承及配方/Buff 分包解析。实际启动耗时仍需实测。
+- 资源启动规则覆盖会话内纯数据预取、首屏预算耗尽时的预取推进、交互预算、候选隔离和取消释放；物品 Sprite 与定义编译流水检查繁忙队列、共享图片、状态图、帧预算、失败和取消，另检查世界液体地址去重、Actor 分包继承及配方/Buff 分包解析。实际启动耗时仍需实测。
 
 - 启动调度回归：`resource_loading_priority` 覆盖首次启动、菜单、进入世界和取消进入的预算选择；`editor_asset_loading` 用真实公共 Prefab 检查即时完成、资源身份与句柄释放。Actor外壳与控制器共用四槽队列，组件索引只在当轮编译复用。核心快速规则已通过；关联AI/ItemRuntime规则另有ECS容器、生成规则和初始Animator断言失败，不将其记为通过。用户要求保留其他测试，本轮不做专门的完整启动计时。
 
@@ -65,3 +65,11 @@
 最新普通启动日志为15927ms，不能用上述较早的缓存命中结果代替这次验收。新增 `startup_definition_default_copies` 检查外壳跳过废弃模块图、来源所有权不变、子类型字段、原型引用身份、空身份、原始空值、二进制载荷和扩展列表隔离；`startup_execution_timing` 检查顺序/并行执行与等待拆分，取消仍恰好清理一次，不改完整加载起止点。
 
 本轮用户保持 PlayMode，未刷新程序集、未启动 Unity 规则/现场测试或重新测启动。隔离目录编译 Data/GamePlay，并以真实 Data 程序集、正式调度器源码及 XLua 执行本次5组与既有并行5组断言；仅替换离线不可用的 Unity 日志/Profiler/异步操作外壳，不把这些结果当作 Unity 性能达标。记录在 `Library/StartupLoadingFollowup/`。
+
+### 同日后续：二进制目录与菜单/世界资源分离
+
+内置纯配置、模块参数、展开行为树和配方接入构建期目录；菜单 Root 与世界 Scope 分开，世界资源仅在新建/继续/加入时请求，退出恢复菜单快照。Sprite 位置表不引用图片，按用途接入真实引用；同名图片按尺寸装箱，菜单及其显式 Addressables 依赖单独归组。
+
+快照 `20261031T063615094Z_43d90ff3` 中 CoreLifecycle 两份、Networking 和 Modding 各一份 Lua 通过，包含真实 Harmony Patch/Unpatch。随后构建回调改为在 Addressables 的 PrepareForBuild 前运行，并增加 Editor 专用十秒验收入口；这部分最终改动未回测。扩大规则曾遇到已有的 ECS 容器、Chicken animalAudio 与自然倒计时三项失败，之后被并行编译中断，不记为通过。
+
+按用户最新要求仅完成静态修改，后续自行在 `FlatWorld/测试/普通 Editor 启动十秒验收` 验证完整 Ready；报告位于 `Library/FlatWorldEditorStartupAcceptance/`，要求 Lua 缓存 disabled。当前没有最终小于10秒的实测结论，未继续 Player 构建或物理现场验收。

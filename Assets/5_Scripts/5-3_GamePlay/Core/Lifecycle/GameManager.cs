@@ -217,6 +217,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 标记退出后再关闭网络身份，断线回调不得重复启动退出流程。
         IsInGameWorld = false;
+        GameRes.ExistingInstance?.CancelWorldResourceLoadForMenuReturn();
         ResetWorldEntryLifecycle();
         FlatWorld.Networking.GameNetwork.Session.Stop();
 
@@ -339,6 +340,15 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 重置存档数据，准备下次游戏
         SaveDataMgr.Instance.ResetChunkDifferenceState();
         SaveDataMgr.Instance.SaveData = null;
+
+        try
+        {
+            GameRes.ExistingInstance?.ReleaseWorldResourcesAndRestoreStartup();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception, this);
+        }
 
         // 触发退出结束事件
         BackToHelloScene_Event_End?.Invoke();
@@ -874,6 +884,16 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         {
             completed?.Invoke(false);
             FailWorldEntry("游戏资源管理器不可用，无法进入世界。");
+            yield break;
+        }
+
+        if (!resources.RequestWorldResources())
+        {
+            string reason = string.IsNullOrWhiteSpace(resources.LastLoadError)
+                ? resources.LoadState.ToString()
+                : resources.LastLoadError;
+            completed?.Invoke(false);
+            FailWorldEntry($"无法启动世界资源加载：{reason}");
             yield break;
         }
 

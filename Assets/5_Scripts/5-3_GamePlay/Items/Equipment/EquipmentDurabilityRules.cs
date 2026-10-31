@@ -7,6 +7,7 @@ using UnityEngine;
 public static partial class EquipmentDurabilityRules
 {
     #region 材质耐久与攻击磨损
+    private const string ResourcePath = "Config/Equipment/durability-materials";
     public const string AttackEquipmentTag = "DurableAttackEquipment";
     public const string EquipmentTag = "DurableEquipment";
     private static MaterialCatalog materialCatalog;
@@ -63,23 +64,32 @@ public static partial class EquipmentDurabilityRules
     public static float ResolveMaterialMaximum(string materialIdentity, float fallback = 150f, bool weapon = true)
     {
         string value = materialIdentity ?? "";
-        if (materialCatalog == null)
-        {
-            TextAsset asset = Resources.Load<TextAsset>("Config/Equipment/durability-materials");
-            if (asset == null) throw new InvalidOperationException("缺少装备材质耐久配置");
-            MaterialCatalog catalog = JsonConfigurationCache.Deserialize<MaterialCatalog>(asset.text);
-            if (catalog?.Materials == null || catalog.Materials.Count == 0)
-                throw new InvalidOperationException("装备材质耐久配置为空");
-            foreach (MaterialRule rule in catalog.Materials)
-                if (rule == null || string.IsNullOrWhiteSpace(rule.Identity) || !float.IsFinite(rule.Maximum) || rule.Maximum <= 0f)
-                    throw new InvalidOperationException("装备材质耐久配置包含无效档位");
-            materialCatalog = catalog;
-        }
+        if (materialCatalog == null) materialCatalog = LoadMaterialCatalog();
         foreach (MaterialRule rule in materialCatalog.Materials)
             if (value.Contains(rule.Identity, StringComparison.OrdinalIgnoreCase))
                 return rule.AttackOnly && !weapon ? fallback : rule.Maximum;
         return fallback;
     }
+
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration() => _ = LoadMaterialCatalog();
+
+    private static MaterialCatalog LoadMaterialCatalog()
+    {
+        MaterialCatalog catalog = BuiltInContentBinaryCatalog.ReadResource(ResourcePath, ParseMaterialCatalog);
+        if (catalog == null)
+            throw new InvalidOperationException("缺少装备材质耐久配置");
+        if (catalog.Materials == null || catalog.Materials.Count == 0)
+            throw new InvalidOperationException("装备材质耐久配置为空");
+        foreach (MaterialRule rule in catalog.Materials)
+            if (rule == null || string.IsNullOrWhiteSpace(rule.Identity) || !float.IsFinite(rule.Maximum) || rule.Maximum <= 0f)
+                throw new InvalidOperationException("装备材质耐久配置包含无效档位");
+        return catalog;
+    }
+
+    private static MaterialCatalog ParseMaterialCatalog(string json)
+        => JsonConfigurationCache.Deserialize<MaterialCatalog>(json)
+           ?? throw new InvalidOperationException("装备材质耐久配置为空");
 
     public static bool IsBroken(ItemData data) => data?.Tags?.Contains(AttackEquipmentTag) == true &&
         (data.Stack?.Amount <= 0f || ItemDurabilityRules.IsEnabled(data) && data.Durability <= 0f);

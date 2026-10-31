@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using MemoryPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -13,10 +16,24 @@ public interface IModuleJsonParameterValidator
     void ValidateJsonParameters(JObject parameters);
 }
 
+/// <summary>构建时校验并拆分后的模块纯参数。</summary>
+[MemoryPackable]
+public sealed partial class BakedModuleJsonParameters
+{
+    public string ModuleType;
+    public string ColliderType;
+    [BinaryJsonObject] public JObject Regular;
+    [BinaryJsonObject] public JObject Transform;
+    public ItemColliderDefinitionDto Collider;
+    [BinaryJsonObject] public JObject CustomValidation;
+}
+
 /// <summary>把 ItemDefinition 中的参数应用到模块实例。</summary>
 public static class ModuleJsonConfigurator
 {
     #region 运行时配置计划
+
+    private const int BakedParametersVersion = 1;
 
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -101,6 +118,16 @@ public static class ModuleJsonConfigurator
             => new(moduleType, newItemId, newModuleName, newModuleId,
                 regular, transform, collider, colliderType, customValidationParameters);
 
+        internal BakedModuleJsonParameters CreateBakedSnapshot() => new()
+        {
+            ModuleType = GetStableTypeName(moduleType),
+            ColliderType = GetStableTypeName(colliderType),
+            Regular = regular,
+            Transform = transform,
+            Collider = collider,
+            CustomValidation = customValidationParameters
+        };
+
         /// <summary>目录只读取需要的普通字段快照，不重新解析整段 JSON，也不暴露共享参数树。</summary>
         internal JObject CopyRegularFields(IReadOnlyList<string> names)
         {
@@ -159,6 +186,74 @@ public static class ModuleJsonConfigurator
 
     /// <summary>根据当前模块结构解析并校验一次不可变配置。</summary>
     public static PreparedParameters Prepare(Module module, string itemId, string moduleName,
+        string moduleId, string json, bool requireBuiltInBakedParameters = false)
+    {
+        if (BuiltInContentBinaryCatalog.IsRecording)
+        {
+            PreparedParameters prepared = PrepareFromSource(module, itemId, moduleName, moduleId, json);
+            RecordPreparedParameters(module, itemId, moduleName, moduleId, json, prepared);
+            return prepared;
+        }
+        if (!BuiltInContentBinaryCatalog.IsActive)
+            return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+
+        string key = GetBakedParametersKey(module, itemId, moduleName, moduleId, json);
+        if (BuiltInContentBinaryCatalog.TryRead(key, BakedParametersVersion, out BakedModuleJsonParameters baked))
+        {
+            Type moduleType = module.GetType();
+            Type colliderType = baked.Collider != null
+                ? ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, baked.Collider.Type) : null;
+            if (baked.ModuleType != GetStableTypeName(moduleType) || baked.Regular == null ||
+                module is IModuleJsonParameterValidator && baked.CustomValidation == null)
+                throw new InvalidOperationException($"物品 {itemId} 的模块 {moduleName} 烘焙参数与当前原型不一致。");
+            // MOD 替换同类型 Prefab 后，碰撞声明变化必须按新原型重新编译。
+            if (baked.ColliderType != GetStableTypeName(colliderType))
+            {
+                if (requireBuiltInBakedParameters)
+                    throw new InvalidOperationException($"内置物品 {itemId} 模块 {moduleName} 的碰撞原型与烘焙不一致。");
+                return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+            }
+
+            var parameters = new PreparedParameters(moduleType, itemId, moduleName, moduleId,
+                baked.Regular, baked.Transform, baked.Collider, colliderType, baked.CustomValidation);
+            parameters.ValidateTarget(module);
+            return parameters;
+        }
+        if (requireBuiltInBakedParameters)
+            throw new InvalidOperationException($"构建期目录缺少内置物品 {itemId} 的模块参数：{moduleName}({moduleId})");
+        return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+    }
+
+    /// <summary>在 Editor 中用真实模块原型同步烘焙已合并定义的参数。</summary>
+    public static void Bake(Module module, string itemId, string moduleName, string moduleId, string json)
+    {
+        if (module == null || string.IsNullOrWhiteSpace(json)) return;
+        PreparedParameters prepared = PrepareFromSource(module, itemId, moduleName, moduleId, json);
+        RecordPreparedParameters(module, itemId, moduleName, moduleId, json, prepared);
+    }
+
+    internal static void RecordPreparedParameters(Module module, string itemId, string moduleName,
+        string moduleId, string json, PreparedParameters prepared)
+    {
+        if (!BuiltInContentBinaryCatalog.IsRecording) return;
+        BuiltInContentBinaryCatalog.Record(GetBakedParametersKey(module, itemId, moduleName, moduleId, json),
+            BakedParametersVersion, prepared.CreateBakedSnapshot());
+    }
+
+    private static string GetBakedParametersKey(Module module, string itemId, string moduleName,
+        string moduleId, string json)
+    {
+        var input = new StringBuilder();
+        void Append(string value) => input.Append(value?.Length ?? -1).Append(':').Append(value);
+        Append(itemId); Append(moduleName); Append(moduleId); Append(GetStableTypeName(module.GetType())); Append(json);
+        using var hash = SHA256.Create();
+        return "module-parameters/" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(input.ToString()))).Replace("-", "");
+    }
+
+    private static string GetStableTypeName(Type type)
+        => type == null ? null : type.Assembly.GetName().Name + ":" + type.FullName;
+
+    private static PreparedParameters PrepareFromSource(Module module, string itemId, string moduleName,
         string moduleId, string json)
     {
         JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);

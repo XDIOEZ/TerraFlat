@@ -54,7 +54,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
             new AnimalTargetMemoryCapability(context, context.GetCapabilityConfiguration(memoryKey), data));
         float radius = Mathf.Max(AnimalLandTargetRules.Number(config, "chaseDistance", 28f),
             AnimalLandTargetRules.Number(config, "avoidSafeDistance", 30f));
-        if (context.Detector != null) context.Detector.DetectionRadius = Mathf.Max(context.Detector.DetectionRadius, radius);
+        context.RequireMinimumDetectionRadius(radius);
         leader = this;
     }
 

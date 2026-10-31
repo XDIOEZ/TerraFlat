@@ -171,17 +171,31 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         Stage("resources");
         float deadline = Time.realtimeSinceStartup + resourceTimeoutSeconds;
-        while (GameRes.ExistingInstance == null || !GameRes.ExistingInstance.isLoadFinish)
+        GameRes resources = null;
+        while (true)
         {
-            GameRes resources = GameRes.ExistingInstance;
+            resources = GameRes.ExistingInstance;
             if (resources != null && resources.LoadState == ResourceLoadState.Failed)
                 throw new InvalidOperationException(resources.LastLoadError);
+            if (resources != null && resources.IsStartupReady)
+                break;
             if (Time.realtimeSinceStartup >= deadline)
                 throw new TimeoutException("等待游戏资源加载超时。当前状态：" +
                     (resources == null ? "GameRes 尚未创建" : resources.LoadState + " / " + resources.LoadStatusText));
             yield return null;
         }
-        Record("resources", "完整资源就绪", true, GameRes.ExistingInstance.LoadStatusText);
+        if (!resources.RequestWorldResources())
+            throw new InvalidOperationException("测试场景无法请求世界资源加载：" + resources.LastLoadError);
+        while (!resources.isLoadFinish)
+        {
+            if (resources.LoadState == ResourceLoadState.Failed)
+                throw new InvalidOperationException(resources.LastLoadError);
+            if (Time.realtimeSinceStartup >= deadline)
+                throw new TimeoutException("等待完整世界资源加载超时。当前状态：" +
+                    resources.LoadState + " / " + resources.LoadStatusText);
+            yield return null;
+        }
+        Record("resources", "完整资源就绪", true, resources.LoadStatusText);
 
         Stage("load_suite");
         testSuitePath = GameplayTestSelection.ResolveSuitePath(testSuitePath);

@@ -47,8 +47,15 @@ internal sealed partial class ResourceAssetScope : IDisposable
         if (string.IsNullOrWhiteSpace(address)) throw new ArgumentException("资源地址不能为空。", nameof(address));
         var key = (typeof(T), address.Trim());
         if (assets.TryGetValue(key, out AsyncOperationHandle existing)) return existing.Convert<T>();
-        AsyncOperationHandle<T> handle = LoadSource<T>("address|" + typeof(T).FullName + "|" + key.Item2,
-            () => LoadAddress<T>(key.Item2));
+        AsyncOperationHandle<T> handle;
+        if (typeof(T) == typeof(Sprite) && TryCreatePurposeSpriteRequest(key.Item2, out AsyncOperationHandle<Sprite> spriteHandle))
+            handle = (AsyncOperationHandle<T>)(object)Own(spriteHandle);
+        else
+        {
+            if (typeof(T) == typeof(Sprite)) FlatWorldSpriteAtlasDiagnostics.RecordSourceSpriteAddressRequest();
+            handle = LoadSource<T>("address|" + typeof(T).FullName + "|" + key.Item2,
+                () => LoadAddress<T>(key.Item2));
+        }
         assets.Add(key, handle);
         return handle;
     }
@@ -86,12 +93,16 @@ internal sealed partial class ResourceAssetScope : IDisposable
         return Addressables.LoadAssetAsync<T>(location);
     }
 
-    private AsyncOperationHandle<T> LoadSource<T>(string key, Func<AsyncOperationHandle<T>> load) where T : UnityEngine.Object
+    private AsyncOperationHandle<T> LoadSource<T>(string key, Func<AsyncOperationHandle<T>> load, bool ownHandle = true) where T : UnityEngine.Object
     {
         // 缓存只借用 Editor 持久源资产，当前会话仍持有自己的新请求句柄。
         if (GameplayTestResourceCache.TryAsset(key, out T cached))
-            return Own(Addressables.ResourceManager.CreateCompletedOperation(cached, (string)null));
-        AsyncOperationHandle<T> handle = Own(load());
+        {
+            AsyncOperationHandle<T> cachedHandle = Addressables.ResourceManager.CreateCompletedOperation(cached, (string)null);
+            return ownHandle ? Own(cachedHandle) : cachedHandle;
+        }
+        AsyncOperationHandle<T> handle = load();
+        if (ownHandle) Own(handle);
         if (GameplayTestResourceCache.Active)
             handle.Completed += completed =>
             {
@@ -117,7 +128,12 @@ internal sealed partial class ResourceAssetScope : IDisposable
         var errors = new List<Exception>();
         for (int i = runtimeTemplates.Count - 1; i >= 0; i--)
         {
-            try { if (runtimeTemplates[i] != null) UnityEngine.Object.Destroy(runtimeTemplates[i]); }
+            try
+            {
+                if (runtimeTemplates[i] == null) continue;
+                if (Application.isPlaying) UnityEngine.Object.Destroy(runtimeTemplates[i]);
+                else UnityEngine.Object.DestroyImmediate(runtimeTemplates[i]);
+            }
             catch (Exception exception) { errors.Add(exception); }
         }
         runtimeTemplates.Clear();
@@ -128,6 +144,9 @@ internal sealed partial class ResourceAssetScope : IDisposable
         }
         handles.Clear();
         assets.Clear();
+        startupSprites.Clear();
+        spritePurposeLocations = null;
+        boundSpritePurposeCatalogs.Clear();
 #if UNITY_EDITOR
         editorLoadLocations.Clear();
 #endif

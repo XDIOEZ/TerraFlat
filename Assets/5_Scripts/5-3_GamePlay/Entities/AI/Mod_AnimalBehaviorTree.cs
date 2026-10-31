@@ -62,17 +62,17 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
         AnimalBehaviorTreeTemplate template = AnimalBehaviorTreeNodeCatalog.Compile(BehaviorTree);
         Mod_Mover_AI mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI)
             ?? item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover);
-        Context = new AnimalBehaviorTreeContext(item, mover,
-            item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector),
-            item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp),
-            item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food),
-            item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver),
-            DamageThreatMemoryDuration, DetectorRefreshInterval,
-            saved?.Timers, 0f, saved?.RecentDamageRemaining ?? 0f,
-            saved == null ? default : new Vector3(saved.RecentDamageOriginX, saved.RecentDamageOriginY, saved.RecentDamageOriginZ));
-        Context.ConfigureCapabilities(template.Capabilities, saved?.Capabilities);
         try
         {
+            Context = new AnimalBehaviorTreeContext(item, mover,
+                item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector),
+                item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp),
+                item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food),
+                item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver),
+                DamageThreatMemoryDuration, DetectorRefreshInterval,
+                saved?.Timers, 0f, saved?.RecentDamageRemaining ?? 0f,
+                saved == null ? default : new Vector3(saved.RecentDamageOriginX, saved.RecentDamageOriginY, saved.RecentDamageOriginZ));
+            Context.ConfigureCapabilities(template.Capabilities, saved?.Capabilities);
             runtime = template.CreateRuntime(Context);
             runtime.ActionChanged += HandleActionChanged;
             bodyDamageSources.Clear();
@@ -85,7 +85,13 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
                 if (module is IActorDebugOverlayOwner) { detailedOverlay = true; break; }
             if (!detailedOverlay) AI_DebugOverlay.Register(this, DrawTreeDebugOverlay);
         }
-        catch { Context.Dispose(); Context = null; throw; }
+        catch (Exception buildError)
+        {
+            try { OnUnload(); }
+            catch (Exception cleanupError)
+            { throw new AggregateException("行为树初始化与回滚均失败。", buildError, cleanupError); }
+            throw;
+        }
     }
 
     public override void ModUpdate(float deltaTime)
@@ -105,14 +111,34 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     protected override void OnSave() => ModData.WriteData(CaptureSave());
     protected override void OnUnload()
     {
-        AI_DebugOverlay.Unregister(this);
-        if (Context?.Health != null) Context.Health.DeathStarted -= HandleDeathStarted;
-        runtime?.Abort();
-        ClearTemperatureSafetyDestination();
-        Context?.Dispose();
-        runtime = null;
-        Context = null;
-        bodyDamageSources.Clear();
+        try { AI_DebugOverlay.Unregister(this); }
+        finally
+        {
+            try
+            {
+                if (Context?.Health != null) Context.Health.DeathStarted -= HandleDeathStarted;
+            }
+            finally
+            {
+                try { runtime?.Abort(); }
+                finally
+                {
+                    try { ClearTemperatureSafetyDestination(); }
+                    finally
+                    {
+                        try { Context?.Dispose(); }
+                        finally
+                        {
+                            if (runtime != null) runtime.ActionChanged -= HandleActionChanged;
+                            runtime = null;
+                            Context = null;
+                            temperatureMovement = null;
+                            bodyDamageSources.Clear();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public override void OnResourcesReloaded()

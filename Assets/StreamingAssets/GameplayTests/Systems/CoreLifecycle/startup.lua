@@ -21,6 +21,69 @@ test.system("core_lifecycle", "startup_definition_default_copies", {}, function(
         "扩展多态字段丢失、原始空配置被归一化或接受空原型")
 end, "定义外壳免废弃模块拷贝，原型工厂复用与实例状态隔离")
 
+test.system("core_lifecycle", "startup_private_text_parser", {}, function(data)
+    assert(data.startedImmediately and data.notPublishedEarly and data.workerIsPrivate and data.callbackIsMain,
+        "读取解析没有合成后台任务，或提前/跨线程发布")
+    assert(data.value == 17 and data.errors == 3, "BOM 文本读取、解析错误、缺文件或空路径语义丢失")
+end, "文本读取与纯解析单任务、主线程交接及错误边界")
+
+for _, kind in ipairs({ "tiles", "skills" }) do
+    test.system("core_lifecycle", "startup_supplemental_inputs", { kind = kind }, function(data)
+        assert(data.coldBuilt and data.warmRead and data.corruptFallback and data.invalidRejected and data.missingRejected,
+            "补充目录的后台冷读、命中、坏缓存回退或严格拒绝错误")
+    end, "地块及技能的正式后台输入：" .. kind)
+end
+
+for _, mode in ipairs({ "complete", "failed", "null", "cancel" }) do
+    test.system("core_lifecycle", "startup_configuration_publication", { mode = mode, deferredBinding = true }, function(data)
+        assert(data.disposed == 1 and not data.publishedTooEarly, "异步绑定在依赖完成前发布或未回收输入")
+        if mode == "complete" then
+            assert(data.parsedBeforeInitialization and data.publications == 1 and data.failure == nil, "异步绑定没有复用已准备输入")
+        else
+            assert(data.publications == 0, "取消或失败的输入仍被绑定")
+            if mode ~= "cancel" then assert(data.failure ~= nil and data.stage == "configuration", "绑定错误归属丢失") end
+        end
+    end, "纯输入提前准备、绑定等待依赖：" .. mode)
+end
+
+test.system("core_lifecycle", "startup_editor_sprite_request_route", {}, function(data)
+    if not data.available then assert(data.available == false, "运行包不能走 Editor 入口"); return end
+    assert(data.initialUsesSingleRequest and data.reloadKeepsAsyncPreparation and data.customNotOverridden and data.missingProviderRejected,
+        "首次贴图仍重复排队，或接管了原位更新、自定义/缺失 Provider")
+end, "首次 Editor 贴图单请求与交互重载边界")
+
+for _, mode in ipairs({ "complete", "failed", "cancel", "invalid_graph" }) do
+    test.system("core_lifecycle", "startup_request_batch", { mode = mode }, function(data)
+        assert(data.diagnosticIsLazy and not data.publishedEarly and data.noCallbackAfterDispose,
+            "读取依赖图提前发出请求、未等依赖发布或取消后仍回调")
+        if mode == "invalid_graph" then
+            assert(data.requests == 0 and data.failure ~= nil, "非法依赖图仍启动了后台请求")
+        else
+            assert(data.requests == 2 and data.beganAtFirstWork == 2, "独立请求没有在首个前台阶段前发出")
+            if mode == "complete" then
+                assert(data.publications == 14 and data.callbacks == 2 and data.failure == nil, "结果漏交接或重复交接")
+            else
+                assert(data.publications == 0, "失败或取消结果污染正式目录")
+                if mode == "failed" then assert(data.failure ~= nil and data.stage == "publish", "发出失败没有归属消费阶段") end
+            end
+        end
+    end, "独立输入统一发出、错误归属与取消：" .. mode)
+end
+
+for _, kind in ipairs({ "recipes", "buffs", "actors" }) do
+    test.system("core_lifecycle", "startup_catalog_input_transaction", { kind = kind }, function(data)
+        assert(data.coldRead and data.stored and data.warmRead and data.sameLengthChangedRead,
+            "后台事务冷读、缓存命中或同长度内容失效错误")
+        assert(data.corruptFallback and data.missingRejected and data.invalidRejected and data.escapeRejected and data.schemaRejected,
+            "输入重构丢失坏缓存回退、缺包、非法JSON、越界或版本拒绝")
+        if kind == "actors" then
+            assert(data.reloadBypassesCache and data.sharedTreeAttached, "Actor重载误用缓存或丢失共享行为树")
+            assert(data.runtimeKeepsReferenceClosure and data.completeSourceIsolated and data.invalidUsedTreeRejected,
+                "行为树压缩丢失传递引用、污染完整来源或放过非法节点")
+        end
+    end, "配置输入完整后台事务：" .. kind)
+end
+
 test.system("core_lifecycle", "startup_resident_sprites", {}, function(data)
     if not data.available then assert(data.available == false, "运行包不使用 Editor 贴图入口"); return end
     assert(data.resident and data.noRepeatedRequest and data.atlasDeduplicated,
@@ -135,3 +198,67 @@ for _, mode in ipairs({ "complete", "failed", "null", "cancel" }) do
         end
     end, "配置预取的完成、失败、空结果与取消边界")
 end
+test.system("core_lifecycle", "baked_configuration_catalog", {}, function(data)
+    assert(data.entryCount == 1 and data.duplicateRejected, "烘焙目录重复键未去重或冲突覆盖了已有配置")
+    assert(data.independent, "二进制配置恢复共享了可变实例")
+    assert(data.mismatchRejected and data.invalidPreserved, "错误契约或损坏包覆盖了完整目录")
+    assert(data.deferred and data.asyncValue == 41 and data.parserCalls == 0, "二进制命中仍读取JSON或提前发布异步结果")
+    assert(data.sourcesDisabled and data.nestedPreserved and data.sourcesRestored and data.catalogRestored,
+        "源配置重载租约或临时目录没有完整恢复")
+end, "构建期目录直接读取、独立实例、契约拒绝与F5恢复")
+
+test.system("core_lifecycle", "baked_module_parameters", {}, function(data)
+    assert(data.prototypeUnchanged and data.moduleHit and data.validatorRan,
+        "模块烘焙改变了原型、没有命中二进制，或跳过当前原型的自有校验")
+    assert(data.independentValues and data.specialApplied and data.reapplyRestored,
+        "烘焙参数在实例间串用，或 Transform/Collider 及重复应用不正确")
+    assert(data.modFallback and data.sourceReloadFallback,
+        "未烘焙的 MOD 参数或 F5 源配置没有走原编译路径")
+    assert(data.missingBuiltInRejected and data.builtInColliderRejected,
+        "内置模块缺少烘焙键或碰撞原型变化时没有拒绝加载")
+    assert(data.replacementFallback and data.replacementInvalidRejected,
+        "替换碰撞体原型时没有重新校验，或错误拒绝合法参数")
+end, "模块烘焙命中、原型与实例隔离、MOD 和 F5 回源")
+
+test.system("core_lifecycle", "baked_behavior_tree", {}, function(data)
+    assert(data.bakeDidNotRunFactory and data.sourceUnchanged and data.treeHit,
+        "行为树烘焙执行了运行时工厂、修改源定义或没有命中二进制")
+    assert(data.factoryRebound and data.independentRuntime and data.actionId == "alpha" and data.abortCleared,
+        "行为树没有绑定当前工厂、隔离运行实例或保留展开后的动作身份")
+    assert(data.sharedChangeFallback and data.failedTreeRecovered,
+        "共享子树变更后仍命中旧包，或无效节点破坏后续正常编译")
+    assert(data.hostFactoryRollback and data.hostInitializationRollback,
+        "行为树宿主在节点工厂或后续初始化失败后残留运行态或检测范围")
+end, "行为树烘焙还原、运行时工厂绑定与共享子树回源")
+
+test.system("core_lifecycle", "baked_sprite_reference_catalog", {}, function(data)
+    assert(data.completed and data.reused and data.duplicateRejected,
+        "Sprite 批量请求没有完成或去重，或目录接受了重复地址")
+    assert(data.preserved and data.released and data.sourcePreserved and data.nativeRequests == 0,
+        "Sprite 引用、释放或源资源状态不正确，或重复发起了原生请求")
+    assert(data.lateAfterDisposeFailed, "Scope 释放后晚到回调不得伪装成成功-null")
+end, "Sprite批量真实引用、请求去重、目录拒绝与释放")
+
+test.system("core_lifecycle", "animal_detection_radius_contributions", {}, function(data)
+    assert(data.threat == 30 and data.hunting == 50 and data.territory == 65 and data.pack == 80,
+        "行为树能力没有按各自配置汇总检测范围")
+    assert(data.afterHighRemoved == 45 and data.afterSourceReduced == 30 and
+        data.afterOtherRemoved == 30 and data.whileLowRemains == 30,
+        "高范围来源退出或更新时覆盖了其他来源")
+    assert(data.afterAllRemoved == 14 and data.baseValue == 14,
+        "移除行为树能力后没有恢复最新基础检测半径")
+    assert(data.staleRejected and data.unchangedNotQueued and data.overlappingReloadInvalidated,
+        "范围变化未拒绝旧异步结果，或相同来源重复更新产生无效请求")
+    assert(data.factoryFailed and data.duringFailure == 90 and data.afterFailure == 14,
+        "行为能力工厂失败后残留检测范围")
+end, "行为树检测范围的来源聚合、高低替换、移除与异步失效")
+
+
+test.system("core_lifecycle", "sprite_atlas_rectangle_packing", {}, function(data)
+    assert(data.sameNamePages == 1 and data.sameNameCount == 32, "同名 Sprite 仍被强制拆成小图集")
+    assert(data.stable and data.paddedPages == 2 and data.paddedLargestPage == 9,
+        "分桶不稳定或没有按真实边距和二维尺寸限制装箱")
+    assert(data.filledEarlierPage and data.usagePages == 3 and data.usagesSeparated,
+        "没有回填旧页空间或把不同用途混装")
+    assert(data.menuSharingIsolated, "菜单共享图片混进了世界专用 Shared 用途包")
+end, "图集同名不拆页、二维边界、旧页回填与用途隔离")

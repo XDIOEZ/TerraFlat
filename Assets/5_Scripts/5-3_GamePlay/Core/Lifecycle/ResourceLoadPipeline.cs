@@ -137,6 +137,7 @@ internal sealed partial class ResourceLoadPipeline : IDisposable
     internal interface IPrefetchedResourceData : IDisposable
     {
         bool IsFinished { get; }
+        void StartRequest();
         void Advance(int frame, Func<bool> shouldYield);
     }
 
@@ -154,18 +155,26 @@ internal sealed partial class ResourceLoadPipeline : IDisposable
 
         bool IPrefetchedResourceData.IsFinished => disposed || finished;
 
+        public void StartRequest()
+        {
+            if (disposed || started) return;
+            started = true;
+            try
+            {
+                pending.Push(load(value => { result = value; returned = true; }, exception => error = exception)
+                    ?? throw new InvalidOperationException("资源预取没有返回加载流程。"));
+            }
+            catch (Exception exception) { error = exception; finished = true; }
+        }
+
         void IPrefetchedResourceData.Advance(int frame, Func<bool> shouldYield)
         {
             if (disposed || finished || lastFrame == frame) return;
             lastFrame = frame;
             try
             {
-                if (!started)
-                {
-                    started = true;
-                    pending.Push(load(value => { result = value; returned = true; }, exception => error = exception)
-                        ?? throw new InvalidOperationException("资源预取没有返回加载流程。"));
-                }
+                StartRequest();
+                if (finished) return;
                 while (pending.Count > 0)
                 {
                     IEnumerator routine = pending.Peek();

@@ -10,14 +10,13 @@ using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.U2D;
 
 /// <summary>构建前按用途生成SpriteAtlas、Addressables分组和直接Sprite引用索引。</summary>
-public sealed class FlatWorldSpriteAtlasPrebuildGenerator : IPreprocessBuildWithReport
+public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
 {
     #region 构建常量与报告
 
@@ -40,7 +39,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : IPreprocessBuildWith
         "Universal Render Pipeline/2D/Sprite-Lit-Default", "Universal Render Pipeline/2D/Sprite-Unlit-Default"
     };
 
-    public int callbackOrder => -20000;
+    public override int callbackOrder => -20000;
 
     [Serializable]
     private sealed class BuildReportData
@@ -115,7 +114,9 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : IPreprocessBuildWith
 
     #region 预构建入口
 
-    public void OnPreprocessBuild(BuildReport report)
+    public override void PrepareForBuild(BuildPlayerContext context) => GenerateSpriteAtlasesAndPurposeCatalogs();
+
+    public static void GenerateSpriteAtlasesAndPurposeCatalogs()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new BuildFailedException("SpriteAtlas 资源只能在非运行状态生成。");
@@ -711,7 +712,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : IPreprocessBuildWith
             catalogEntryCount = catalog.Locations.Length,
             purposeCatalogCount = generation.PurposeCatalogs.Count,
             // 根目录只有地址位置表，真实 Sprite 引用分散在按用途加载的目录中。
-            manifestSpriteReferenceCount = generation.PurposeCatalogs.Values.Sum(entries => entries.Length),
+            manifestSpriteReferenceCount = catalog.Entries.Length,
             liquidSpriteAddressReferenceCount = plan.liquidSpriteAddressReferenceCount,
             uniqueLiquidSpriteAddressCount = plan.uniqueLiquidSpriteAddressCount,
             managedSourceAssetCount = sources.Managed,

@@ -22,6 +22,7 @@ namespace MemoryPack
     public sealed class MemoryPackConstructorAttribute : Attribute { }
     public sealed class MemoryPackIgnoreAttribute : Attribute { }
 }
+public sealed class BinaryJsonObjectAttribute : Attribute { }
 namespace UnityEngine
 {
     public sealed class HeaderAttribute : Attribute { public HeaderAttribute(string text) { } }

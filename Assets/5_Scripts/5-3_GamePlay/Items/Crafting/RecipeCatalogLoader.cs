@@ -33,6 +33,11 @@ public static class RecipeCatalogLoader
     private static List<(RecipePackageDto Package, List<RuntimeRecipe> Recipes, List<string> Warnings)> PreparePackages(
         RecipeBinaryCatalog catalog, Func<string, bool> itemExists)
     {
+        if (BuiltInContentBinaryCatalog.TryRead("compiled:recipes", 1, out CompiledRecipePackage[] baked))
+        {
+            return baked.Select(package => (package.Package, package.Recipes,
+                ValidateCompiledRecipeItemReferences(package.Recipes, itemExists))).ToList();
+        }
         ValidateManifest(catalog?.Manifest);
         RecipePackageDto[] enabled = catalog.Manifest.Packages.Where(value => value.Enabled).ToArray();
         if (catalog.Catalogs == null || enabled.Length != catalog.Catalogs.Count)
@@ -47,7 +52,40 @@ public static class RecipeCatalogLoader
                 if (!ids.Add(recipe.Id)) throw new InvalidDataException($"跨分包存在重复配方 ID：{recipe.Id}");
             results.Add((enabled[index], recipes, warnings));
         }
+        BuiltInContentBinaryCatalog.Record("compiled:recipes", 1, results.Select(package =>
+            new CompiledRecipePackage { Package = package.Item1, Recipes = package.Item2 }).ToArray());
         return results;
+    }
+
+    /// <summary>构建时编译配方结构，当前物品目录的引用检查留在资源会话。</summary>
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+    {
+        string root = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeRecipeRoot);
+        string manifest = StreamingAssetsTextLoader.CombinePath(root, ManifestFileName);
+        BinaryContentCache cache = CreateBinaryCache(root, manifest);
+        if (!cache.TryRead(out RecipeBinaryCatalog catalog))
+        {
+            catalog = ReadLocalCatalog(cache, root, manifest);
+            cache.Store(catalog);
+        }
+        PreparePackages(catalog, _ => true);
+    }
+
+    private static List<string> ValidateCompiledRecipeItemReferences(IEnumerable<RuntimeRecipe> recipes, Func<string, bool> itemExists)
+    {
+        var warnings = new List<string>();
+        if (itemExists == null) return warnings;
+        foreach (RuntimeRecipe recipe in recipes)
+        {
+            foreach (RuntimeRecipeIngredient input in recipe.inputs.RowItems_List)
+                if (input.matchMode == MatchMode.ExactItem && !itemExists(input.ItemName))
+                    warnings.Add($"配方 {recipe.Id} 输入引用的物品尚未注册：{input.ItemName}");
+            foreach (RuntimeRecipeResult output in recipe.outputs.results)
+                if (!string.IsNullOrEmpty(output.ItemName) && !itemExists(output.ItemName))
+                    warnings.Add($"配方 {recipe.Id} 输出引用的物品尚未注册：{output.ItemName}");
+        }
+        return warnings;
     }
 
     #endregion
@@ -89,6 +127,7 @@ public static class RecipeCatalogLoader
         public BinaryContentCache Cache;
         public RecipeBinaryCatalog Catalog;
         public bool Hit;
+        public bool CacheWriteAttempted;
         public string ManifestPath;
         public double InputMilliseconds;
     }
@@ -116,7 +155,7 @@ public static class RecipeCatalogLoader
             () => PreparePackages(binary, knownItems.Contains),
             value => preparedPackages = value, exception => readError = exception);
         if (readError != null) { onFailed?.Invoke(readError); yield break; }
-        if (!prepared.Hit) yield return cache.StoreAsync(binary);
+        if (!prepared.Hit && !prepared.CacheWriteAttempted) yield return cache.StoreAsync(binary);
 
         int count = 0;
         foreach (var package in preparedPackages)
@@ -150,6 +189,38 @@ public static class RecipeCatalogLoader
     internal static IEnumerator LoadBuiltInCatalogInputAsync(Action<RecipeCatalogPreparation> completed,
         Action<Exception> failed)
     {
+        string root = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeRecipeRoot);
+        string manifest = StreamingAssetsTextLoader.CombinePath(root, ManifestFileName);
+        if (StreamingAssetsTextLoader.RequiresWebRequest(root))
+            return LoadPackagedCatalogInputAsync(completed, failed);
+        BinaryContentCache cache = CreateBinaryCache(root, manifest);
+        return StreamingAssetsTextLoader.BeginPureDataAsync(
+            () => LoadLocalCatalogInput(cache, root, manifest), completed, failed);
+    }
+
+    // 本地读盘、来源校验和解析在同一私有任务完成，物品引用与注册仍在正式阶段执行。
+    internal static RecipeCatalogPreparation LoadLocalCatalogInput(BinaryContentCache cache, string root, string manifestPath)
+    {
+        bool hit = cache.TryRead(out RecipeBinaryCatalog binary);
+        if (!hit)
+        {
+            RecipeManifestDto manifest = DeserializeManifest(cache.ReadText(manifestPath));
+            ValidateManifest(manifest);
+            binary = new RecipeBinaryCatalog { Manifest = manifest };
+            var paths = new List<string>();
+            foreach (RecipePackageDto package in manifest.Packages)
+                if (package.Enabled) paths.Add(StreamingAssetsTextLoader.CombinePath(root, package.Path));
+            foreach (string path in paths)
+                binary.Catalogs.Add(RecipeRuntimeFactory.DeserializeWithoutDocumentCache(cache.ReadText(path)));
+        }
+        if (!hit) cache.Store(binary);
+        return new RecipeCatalogPreparation
+        { Cache = cache, Catalog = binary, Hit = hit, CacheWriteAttempted = true, ManifestPath = manifestPath, InputMilliseconds = cache.ElapsedMilliseconds };
+    }
+
+    private static IEnumerator LoadPackagedCatalogInputAsync(Action<RecipeCatalogPreparation> completed,
+        Action<Exception> failed)
+    {
         string recipeRoot, manifestPath;
         try
         {
@@ -177,30 +248,17 @@ public static class RecipeCatalogLoader
                     .Select(package => ResolvePackagePath(recipeRoot, package.Path)).ToArray();
             }
             catch (Exception exception) { failed?.Invoke(exception); yield break; }
-            if (!StreamingAssetsTextLoader.RequiresWebRequest(recipeRoot))
+            binary = new RecipeBinaryCatalog { Manifest = manifest };
+            foreach (string path in paths)
             {
-                yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
-                {
-                    var result = new RecipeBinaryCatalog { Manifest = manifest };
-                    foreach (string path in paths)
-                        result.Catalogs.Add(RecipeRuntimeFactory.DeserializeWithoutDocumentCache(cache.ReadText(path)));
-                    return result;
-                }, value => binary = value, exception => readError = exception);
-            }
-            else
-            {
-                binary = new RecipeBinaryCatalog { Manifest = manifest };
-                foreach (string path in paths)
-                {
-                    string json = null;
-                    yield return cache.ReadTextAsync(path, value => json = value, exception => readError = exception);
-                    if (readError != null) { failed?.Invoke(readError); yield break; }
-                    RecipeCatalogDto parsed = null;
-                    yield return StreamingAssetsTextLoader.RunPureDataAsync(() => RecipeRuntimeFactory.DeserializeWithoutDocumentCache(json),
-                        value => parsed = value, exception => readError = exception);
-                    if (readError != null) { failed?.Invoke(readError); yield break; }
-                    binary.Catalogs.Add(parsed);
-                }
+                string json = null;
+                yield return cache.ReadTextAsync(path, value => json = value, exception => readError = exception);
+                if (readError != null) { failed?.Invoke(readError); yield break; }
+                RecipeCatalogDto parsed = null;
+                yield return StreamingAssetsTextLoader.RunPureDataAsync(() => RecipeRuntimeFactory.DeserializeWithoutDocumentCache(json),
+                    value => parsed = value, exception => readError = exception);
+                if (readError != null) { failed?.Invoke(readError); yield break; }
+                binary.Catalogs.Add(parsed);
             }
         }
         if (readError != null) { failed?.Invoke(readError); yield break; }
@@ -263,4 +321,12 @@ public sealed partial class RecipeBinaryCatalog
 {
     public RecipeManifestDto Manifest;
     public List<RecipeCatalogDto> Catalogs = new();
+}
+
+/// <summary>配方结构在构建时完成解析和规范化，启动只检查当前资源引用。</summary>
+[MemoryPack.MemoryPackable]
+public sealed partial class CompiledRecipePackage
+{
+    public RecipePackageDto Package;
+    public List<RuntimeRecipe> Recipes;
 }

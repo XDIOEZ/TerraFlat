@@ -66,6 +66,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("modding/patch", ServiceModPatch);
         operations.Add("modding/package_path", ServiceModPath);
         operations.Add("modding/candidate_patch", ServiceModCandidatePatch);
+        operations.Add("modding/managed_runtime", ProbeManagedRuntime);
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/frame_rate", ServiceFrameRate);
         operations.Add("ui_settings/water_visual_provider", ServiceWaterVisualProvider);

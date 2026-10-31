@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using MemoryPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -70,6 +71,24 @@ public sealed class AnimalBehaviorSubtreeDefinition
 {
     [JsonProperty("parameters")] public JObject Parameters = new();
     [JsonProperty("root")] public AnimalBehaviorTreeNodeDefinition Root;
+}
+
+/// <summary>构建期展开的行为树不持有运行时工厂或生物实例。</summary>
+[MemoryPackable]
+public sealed partial class BakedAnimalBehaviorTree
+{
+    [BinaryJsonObject] public JObject Capabilities;
+    public BakedAnimalBehaviorTreeNode Root;
+}
+
+[MemoryPackable]
+public sealed partial class BakedAnimalBehaviorTreeNode
+{
+    public string Type;
+    public string Name;
+    public string Action;
+    [BinaryJsonObject] public JObject Parameters;
+    public BakedAnimalBehaviorTreeNode[] Children;
 }
 
 #endregion
@@ -208,8 +227,20 @@ internal sealed class AnimalBehaviorServiceNode : AnimalBehaviorTreeNode
 /// <summary>通用能力注册一次，物种只在 JSON 中组合节点。</summary>
 public static class AnimalBehaviorTreeRegistry
 {
-    private static readonly Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, AnimalBehaviorTreeNode>> actions = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, Func<bool>>> conditions = new(StringComparer.Ordinal);
+    private static Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, AnimalBehaviorTreeNode>> actions = new(StringComparer.Ordinal);
+    private static Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, Func<bool>>> conditions = new(StringComparer.Ordinal);
+
+    /// <summary>在独立候选表登记节点，失败或烘焙结束时可恢复原注册表。</summary>
+    internal static Action BeginIsolatedFactoryRegistrations()
+    {
+        var previousActions = actions;
+        var previousConditions = conditions;
+        var candidateActions = new Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, AnimalBehaviorTreeNode>>(actions, StringComparer.Ordinal);
+        var candidateConditions = new Dictionary<string, Func<AnimalBehaviorTreeContext, JObject, Func<bool>>>(conditions, StringComparer.Ordinal);
+        actions = candidateActions;
+        conditions = candidateConditions;
+        return () => { actions = previousActions; conditions = previousConditions; };
+    }
 
     public static void RegisterAction(string name, Func<AnimalBehaviorTreeContext, JObject, AnimalBehaviorTreeNode> factory)
         => actions[name] = factory;
@@ -235,15 +266,37 @@ public static class AnimalBehaviorTreeRegistry
 public static class AnimalBehaviorTreeCompiler
 {
     public static AnimalBehaviorTreeTemplate Compile(AnimalBehaviorTreeDefinition definition)
+        => BindBakedTree(CreateBakedTree(definition));
+
+    /// <summary>只展开确定性的子树和参数，不捕获运行时委托。</summary>
+    public static BakedAnimalBehaviorTree CreateBakedTree(AnimalBehaviorTreeDefinition definition)
     {
         if (definition == null || definition.SchemaVersion != 1 || definition.Root == null)
             throw new InvalidDataException("行为树需要 schemaVersion=1 和 root。");
         var ancestors = new HashSet<string>(StringComparer.Ordinal);
-        AnimalBehaviorTreeTemplate.CompiledNode root = CompileNode(definition.Root, definition, new JObject(), ancestors);
-        return new AnimalBehaviorTreeTemplate(root, (JObject)(definition.Capabilities?.DeepClone() ?? new JObject()));
+        return new BakedAnimalBehaviorTree
+        {
+            Root = ExpandNode(definition.Root, definition, new JObject(), ancestors),
+            Capabilities = (JObject)(definition.Capabilities?.DeepClone() ?? new JObject())
+        };
     }
 
-    private static AnimalBehaviorTreeTemplate.CompiledNode CompileNode(AnimalBehaviorTreeNodeDefinition node,
+    /// <summary>将纯节点树绑定到本次会话的动作和条件注册表。</summary>
+    public static AnimalBehaviorTreeTemplate BindBakedTree(BakedAnimalBehaviorTree tree)
+        => new(BindNode(tree.Root), (JObject)(tree.Capabilities?.DeepClone() ?? new JObject()));
+
+    private static AnimalBehaviorTreeTemplate.CompiledNode BindNode(BakedAnimalBehaviorTreeNode node)
+    {
+        if (node.Type == "condition")
+            return new AnimalBehaviorTreeTemplate.CompiledNode(AnimalBehaviorTreeRegistry.CompileCondition(node.Name, node.Parameters));
+        if (node.Type == "action")
+            return new AnimalBehaviorTreeTemplate.CompiledNode(AnimalBehaviorTreeRegistry.CompileAction(node.Name, node.Parameters), node.Action);
+        var children = new AnimalBehaviorTreeTemplate.CompiledNode[node.Children.Length];
+        for (int i = 0; i < children.Length; i++) children[i] = BindNode(node.Children[i]);
+        return new AnimalBehaviorTreeTemplate.CompiledNode(node.Type, children);
+    }
+
+    private static BakedAnimalBehaviorTreeNode ExpandNode(AnimalBehaviorTreeNodeDefinition node,
         AnimalBehaviorTreeDefinition definition, JObject arguments, HashSet<string> ancestors)
     {
         if (node == null) throw new InvalidDataException("行为树包含空节点。");
@@ -256,26 +309,26 @@ public static class AnimalBehaviorTreeCompiler
                 if (!ancestors.Add(node.Name)) throw new InvalidDataException($"行为子树循环引用：{node.Name}");
                 var supplied = (JObject)(subtree.Parameters?.DeepClone() ?? new JObject());
                 foreach (JProperty pair in parameters.Properties()) supplied[pair.Name] = pair.Value.DeepClone();
-                AnimalBehaviorTreeTemplate.CompiledNode expanded = CompileNode(subtree.Root, definition, supplied, ancestors);
+                BakedAnimalBehaviorTreeNode expanded = ExpandNode(subtree.Root, definition, supplied, ancestors);
                 ancestors.Remove(node.Name);
                 return expanded;
             case "condition":
-                return new AnimalBehaviorTreeTemplate.CompiledNode(AnimalBehaviorTreeRegistry.CompileCondition(node.Name, parameters));
+                return new BakedAnimalBehaviorTreeNode { Type = node.Type, Name = node.Name, Parameters = parameters };
             case "action":
                 string actionId = node.Id == null ? node.Name : ResolveParameters(new JValue(node.Id), arguments).Value<string>();
-                return new AnimalBehaviorTreeTemplate.CompiledNode(AnimalBehaviorTreeRegistry.CompileAction(node.Name, parameters), actionId);
+                return new BakedAnimalBehaviorTreeNode { Type = node.Type, Name = node.Name, Action = actionId, Parameters = parameters };
             case "selector":
             case "sequence":
             case "service":
                 if (node.Children == null || node.Children.Count == 0)
                     throw new InvalidDataException($"行为树 {node.Type} 需要子节点。");
-                var children = new AnimalBehaviorTreeTemplate.CompiledNode[node.Children.Count];
-                for (int i = 0; i < children.Length; i++) children[i] = CompileNode(node.Children[i], definition, arguments, ancestors);
-                return new AnimalBehaviorTreeTemplate.CompiledNode(node.Type, children);
+                var children = new BakedAnimalBehaviorTreeNode[node.Children.Count];
+                for (int i = 0; i < children.Length; i++) children[i] = ExpandNode(node.Children[i], definition, arguments, ancestors);
+                return new BakedAnimalBehaviorTreeNode { Type = node.Type, Children = children };
             case "inverter":
                 if (node.Children?.Count != 1) throw new InvalidDataException("行为树 inverter 需要一个子节点。");
-                return new AnimalBehaviorTreeTemplate.CompiledNode(node.Type,
-                    new[] { CompileNode(node.Children[0], definition, arguments, ancestors) });
+                return new BakedAnimalBehaviorTreeNode
+                { Type = node.Type, Children = new[] { ExpandNode(node.Children[0], definition, arguments, ancestors) } };
             default:
                 throw new InvalidDataException($"行为树节点类型无效：{node.Type}");
         }

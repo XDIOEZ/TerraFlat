@@ -360,14 +360,14 @@ test.system("core_lifecycle", "catalog_package_deserialization", {}, function(da
     assert(data.noNestedCacheBuild and data.strictBuffRejected, "分包重复写缓存或丢失 Buff 严格解析")
 end, "整包缓存内的配方和 Buff 分包直接解析")
 
-for _, mode in ipairs({ "complete", "budget", "failed", "cancel" }) do
+for _, mode in ipairs({ "complete", "busy", "completion", "budget", "failed", "cancel" }) do
     test.system("core_lifecycle", "item_sprite_compilation_pipeline", { mode = mode }, function(data)
         assert(data.started == 2 and data.disposed == 1, "图片请求未并行发出或未释放")
         assert(#data.addresses == 2 and data.addresses[1] == "A" and data.addresses[2] == "B",
             "图片请求没有按首次出现顺序去重，或包含抽象定义")
         assert(data.readinessCaseSensitive, "就绪依赖索引错误合并了大小写不同的地址")
         assert(not data.builtWithoutDependencies, "物品在所需主图或状态图就绪前编译")
-        if mode == "complete" or mode == "budget" then
+        if mode == "complete" or mode == "busy" or mode == "completion" or mode == "budget" then
             assert(data.beforeAllSprites >= 2 and not data.pendingSprites,
                 "图片等待期间没有编译可用定义，或共享图片依赖未完成")
             assert(#data.order == 4 and data.order[1] == 0 and data.order[2] == 2
@@ -377,6 +377,7 @@ for _, mode in ipairs({ "complete", "budget", "failed", "cancel" }) do
                 and data.published[3] == 2 and data.published[4] == 3,
                 "编译乱序后没有按原定义顺序发布")
             if mode == "budget" then assert(data.maxWorkPerFrame == 1, "图片等待时超出帧预算") end
+            if mode == "completion" then assert(data.compiledInQueue > 0, "图片完成时没有及时推进就绪编译") end
         else
             assert(#data.published == 0 and data.pendingSprites, "失败或取消时发布了不完整定义")
             assert((mode == "failed") == data.failed, "流水失败状态不正确")

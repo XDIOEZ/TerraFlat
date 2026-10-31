@@ -18,20 +18,23 @@ namespace FlatWorld.Gameplay.Events
 
         internal static GameEventConfigLoadResult LoadFromResources(GameEventLuaRuntime luaRuntime, bool logIssues = true)
         {
-            TextAsset[] assets = Resources.LoadAll<TextAsset>(ResourcePath);
-            Array.Sort(assets, (left, right) => string.CompareOrdinal(left.name, right.name));
-
-            List<GameEventConfigSource> sources = new(assets.Length);
-            for (int i = 0; i < assets.Length; i++)
-                sources.Add(new GameEventConfigSource($"{assets[i].name}.json", assets[i].text));
+            List<GameEventConfigResourceDocument> documents = ReadResourceDocuments();
+            List<GameEventConfigSource> luaSources = new();
 
             List<GameEventConfigIssue> luaIssues = new();
-            luaRuntime?.LoadCatalogs(sources, luaIssues);
-            GameEventConfigLoadResult result = LoadSources(sources, logIssues);
+            luaRuntime?.LoadCatalogs(luaSources, luaIssues);
+            GameEventConfigLoadResult result = LoadResourceDocuments(documents, luaSources, logIssues);
             result.Issues.AddRange(luaIssues);
             if (logIssues)
                 foreach (GameEventConfigIssue issue in luaIssues) Debug.LogError(issue.ToString());
             return result;
+        }
+
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration()
+        {
+            _ = LoadResourceDocuments(ReadResourceDocuments(), false);
+            _ = GameEventLuaRuntime.ReadResourceScripts();
         }
 
         public static GameEventConfigLoadResult LoadSources(
@@ -39,28 +42,159 @@ namespace FlatWorld.Gameplay.Events
             bool logIssues = true)
         {
             GameEventConfigLoadResult result = new();
+            LoadSourcesInto(sources, new Dictionary<string, GameEventDefinition>(StringComparer.Ordinal), result, logIssues);
+            result.Definitions.Sort(CompareDefinitions);
+            return result;
+        }
+
+        private static void LoadSourcesInto(
+            IEnumerable<GameEventConfigSource> sources,
+            Dictionary<string, GameEventDefinition> definitionsById,
+            GameEventConfigLoadResult result,
+            bool logIssues)
+        {
             if (sources == null)
             {
                 AddIssue(result, "<sources>", "<file>", "Configuration source collection is null.", logIssues);
-                return result;
+                return;
             }
 
             List<GameEventConfigSource> orderedSources = new(sources);
             orderedSources.Sort((left, right) => string.CompareOrdinal(left.Name, right.Name));
-            Dictionary<string, GameEventDefinition> definitionsById = new(StringComparer.Ordinal);
 
             for (int sourceIndex = 0; sourceIndex < orderedSources.Count; sourceIndex++)
                 LoadSource(orderedSources[sourceIndex], definitionsById, result, logIssues);
+        }
+
+        private static List<GameEventConfigResourceDocument> ReadResourceDocuments()
+        {
+            List<GameEventConfigResourceDocument> documents = new();
+            string[] paths = BuiltInContentBinaryCatalog.ReadResourceDirectoryPaths(ResourcePath);
+            Array.Sort(paths, CompareResourcePaths);
+
+            for (int pathIndex = 0; pathIndex < paths.Length; pathIndex++)
+            {
+                string path = paths[pathIndex];
+                GameEventConfigResourceDocument document = BuiltInContentBinaryCatalog.ReadResource(
+                    path,
+                    text => ParseResourceDocument(path, text));
+                if (document != null)
+                    documents.Add(document);
+            }
+
+            return documents;
+        }
+
+        private static GameEventConfigLoadResult LoadResourceDocuments(
+            IReadOnlyList<GameEventConfigResourceDocument> documents,
+            bool logIssues)
+        {
+            GameEventConfigLoadResult result = new();
+            Dictionary<string, GameEventDefinition> definitionsById = new(StringComparer.Ordinal);
+            for (int i = 0; i < documents.Count; i++)
+                MergeResourceDocument(documents[i], definitionsById, result, logIssues);
+            result.Definitions.Sort(CompareDefinitions);
+            return result;
+        }
+
+        private static GameEventConfigLoadResult LoadResourceDocuments(
+            IReadOnlyList<GameEventConfigResourceDocument> documents,
+            List<GameEventConfigSource> sources,
+            bool logIssues)
+        {
+            GameEventConfigLoadResult result = new();
+            Dictionary<string, GameEventDefinition> definitionsById = new(StringComparer.Ordinal);
+            List<GameEventConfigSource> orderedSources = new(sources);
+            orderedSources.Sort((left, right) => string.CompareOrdinal(left.Name, right.Name));
+            int documentIndex = 0;
+            int sourceIndex = 0;
+
+            while (documentIndex < documents.Count || sourceIndex < orderedSources.Count)
+            {
+                bool readDocument = sourceIndex >= orderedSources.Count ||
+                    (documentIndex < documents.Count &&
+                     string.CompareOrdinal(documents[documentIndex].SourceName, orderedSources[sourceIndex].Name) <= 0);
+                if (readDocument)
+                    MergeResourceDocument(documents[documentIndex++], definitionsById, result, logIssues);
+                else
+                    LoadSource(orderedSources[sourceIndex++], definitionsById, result, logIssues);
+            }
 
             result.Definitions.Sort(CompareDefinitions);
             return result;
+        }
+
+        private static void MergeResourceDocument(
+            GameEventConfigResourceDocument document,
+            Dictionary<string, GameEventDefinition> definitionsById,
+            GameEventConfigLoadResult result,
+            bool logIssues)
+        {
+            GameEventConfigIssueData[] issues = document.Issues ?? Array.Empty<GameEventConfigIssueData>();
+            for (int issueIndex = 0; issueIndex < issues.Length; issueIndex++)
+            {
+                GameEventConfigIssueData issueData = issues[issueIndex];
+                AddIssue(result, issueData.SourceName, issueData.EventId, issueData.Message, logIssues);
+            }
+
+            GameEventDefinition[] definitions = document.Definitions ?? Array.Empty<GameEventDefinition>();
+            for (int definitionIndex = 0; definitionIndex < definitions.Length; definitionIndex++)
+            {
+                GameEventDefinition definition = definitions[definitionIndex];
+                if (definition == null)
+                    continue;
+                definition.SourceName = document.SourceName;
+                if (definitionsById.TryGetValue(definition.Id, out GameEventDefinition duplicate))
+                {
+                    AddIssue(
+                        result,
+                        document.SourceName,
+                        definition.Id,
+                        $"Duplicate id; already defined in '{duplicate.SourceName}'.",
+                        logIssues);
+                    continue;
+                }
+
+                definitionsById.Add(definition.Id, definition);
+                if (definition.Enabled)
+                    result.Definitions.Add(definition);
+            }
+        }
+
+        private static GameEventConfigResourceDocument ParseResourceDocument(string path, string text)
+        {
+            string sourceName = $"{GetResourceAssetName(path)}.json";
+            GameEventConfigLoadResult parsed = new();
+            Dictionary<string, GameEventDefinition> definitionsById = new(StringComparer.Ordinal);
+            List<GameEventDefinition> definitions = new();
+            LoadSource(new GameEventConfigSource(sourceName, text), definitionsById, parsed, false, definitions);
+
+            GameEventConfigIssueData[] issues = new GameEventConfigIssueData[parsed.Issues.Count];
+            for (int i = 0; i < issues.Length; i++)
+            {
+                GameEventConfigIssue issue = parsed.Issues[i];
+                issues[i] = new GameEventConfigIssueData
+                {
+                    SourceName = issue.SourceName,
+                    EventId = issue.EventId,
+                    Message = issue.Message
+                };
+            }
+
+            return new GameEventConfigResourceDocument
+            {
+                SourceName = sourceName,
+                Definitions = definitions.ToArray(),
+                Issues = issues
+            };
         }
 
         private static void LoadSource(
             GameEventConfigSource source,
             Dictionary<string, GameEventDefinition> definitionsById,
             GameEventConfigLoadResult result,
-            bool logIssues)
+            bool logIssues,
+            List<GameEventDefinition> acceptedDefinitions = null)
         {
             JObject root;
             try
@@ -142,6 +276,7 @@ namespace FlatWorld.Gameplay.Events
                 }
 
                 definitionsById.Add(definition.Id, definition);
+                acceptedDefinitions?.Add(definition);
                 if (definition.Enabled)
                     result.Definitions.Add(definition);
             }
@@ -262,9 +397,40 @@ namespace FlatWorld.Gameplay.Events
                 : string.CompareOrdinal(left.Id, right.Id);
         }
 
+        private static int CompareResourcePaths(string left, string right)
+        {
+            int nameComparison = string.CompareOrdinal(GetResourceAssetName(left), GetResourceAssetName(right));
+            return nameComparison != 0 ? nameComparison : string.CompareOrdinal(left, right);
+        }
+
+        private static string GetResourceAssetName(string path)
+        {
+            int start = path.LastIndexOf('/') + 1;
+            int end = path.LastIndexOf('.');
+            if (end < start)
+                end = path.Length;
+            return path.Substring(start, end - start);
+        }
+
         internal static string NormalizeType(string value)
         {
             return value?.Trim().ToLowerInvariant() ?? string.Empty;
         }
+    }
+
+    [MemoryPack.MemoryPackable]
+    internal sealed partial class GameEventConfigResourceDocument
+    {
+        public string SourceName;
+        public GameEventDefinition[] Definitions = Array.Empty<GameEventDefinition>();
+        public GameEventConfigIssueData[] Issues = Array.Empty<GameEventConfigIssueData>();
+    }
+
+    [MemoryPack.MemoryPackable]
+    internal sealed partial class GameEventConfigIssueData
+    {
+        public string SourceName;
+        public string EventId;
+        public string Message;
     }
 }

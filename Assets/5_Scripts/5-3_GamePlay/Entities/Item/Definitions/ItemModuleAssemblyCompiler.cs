@@ -16,6 +16,9 @@ public sealed class ItemModulePrototypeCache
     private readonly Dictionary<GameObject, Module[]> shellComponents = new();
     private readonly Dictionary<(Module Prototype, string Json), ModuleJsonConfigurator.PreparedParameters> parameterTemplates = new();
     private readonly Dictionary<ModuleData, Func<ModuleData>> moduleDefaultFactories = new(new ModuleDefaultSourceComparer());
+    private readonly bool requireBuiltInBakedParameters;
+    public ItemModulePrototypeCache(bool requireBuiltInBakedParameters = false)
+        => this.requireBuiltInBakedParameters = requireBuiltInBakedParameters;
     internal int PreparedParameterTemplateCount => parameterTemplates.Count;
     internal int PreparedParameterReuseCount { get; private set; }
     internal int ModuleDefaultFactoryCount => moduleDefaultFactories.Count;
@@ -47,12 +50,13 @@ public sealed class ItemModulePrototypeCache
         var key = (prototype, json);
         if (!parameterTemplates.TryGetValue(key, out var template))
         {
-            template = ModuleJsonConfigurator.Prepare(prototype, itemId, moduleName, moduleId, json);
+            template = ModuleJsonConfigurator.Prepare(prototype, itemId, moduleName, moduleId, json, requireBuiltInBakedParameters);
             parameterTemplates.Add(key, template);
             return template;
         }
         var parameters = template.BindDefinitionIdentity(itemId, moduleName, moduleId);
         parameters.ValidateTarget(prototype);
+        ModuleJsonConfigurator.RecordPreparedParameters(prototype, itemId, moduleName, moduleId, json, parameters);
         PreparedParameterReuseCount++;
         return parameters;
     }

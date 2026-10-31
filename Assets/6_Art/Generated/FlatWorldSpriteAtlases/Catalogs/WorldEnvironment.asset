@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef91755adc06b5243b450932f635a391, type: 3}
+  m_Name: WorldEnvironment
+  m_EditorClassIdentifier: 
+  Entries:
+  - Address: Assets/6_Art/Tilemap/Grass.png[Water_0]
+    Sprite: {fileID: 1348435465, guid: 8395331aa0b773b49bfe31f6dea8699a, type: 3}
+  - Address: Assets/6_Art/Tilemap/Winter.png[Winter_0]
+    Sprite: {fileID: 216088580, guid: 750d6e3853fe84b4bb2233569ea0618d, type: 3}
+  Locations: []

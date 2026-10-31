@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: FlatWorldSpriteAtlas_StartupCatalog
+  m_EditorClassIdentifier: 
+  m_GroupName: FlatWorldSpriteAtlas_StartupCatalog
+  m_Data:
+    m_SerializedData: []
+  m_GUID: bb4eda82c30fa7148b531af37989c48c
+  m_SerializeEntries:
+  - m_GUID: dcf2267166981d445b0a02660b66aab9
+    m_Address: FlatWorld/StartupSpriteAtlasCatalog
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 215e5162fc8f27140acd1745cc6f791b, type: 2}
+    - {fileID: 11400000, guid: 53010da4644c3a84fba5d714a03b7712, type: 2}

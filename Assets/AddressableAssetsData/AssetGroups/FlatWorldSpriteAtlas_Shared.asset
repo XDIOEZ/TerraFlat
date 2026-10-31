@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: FlatWorldSpriteAtlas_Shared
+  m_EditorClassIdentifier: 
+  m_GroupName: FlatWorldSpriteAtlas_Shared
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 62b3f04ed0b242d4bb09c87d1f88c048
+  m_SerializeEntries:
+  - m_GUID: 0a6cb9ccd2a6f2847bd475ad46e79804
+    m_Address: FlatWorld/StartupSpriteAtlasCatalog/Shared
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6cdab99f627a4000a238769bf2a911d0
+    m_Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Cast_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    - Sprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 81b4dc488d6e9914596d43f5ebd2e6a0
+    m_Address: Assets/6_Art/Items/Tools/Item_Tool_327.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aabc6c8ae162d2741b54cc5bdf76e984
+    m_Address: FlatWorld_Shared_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 19651b9ef5b4d6c4291473c73d91d0c8, type: 2}
+    - {fileID: 11400000, guid: be639ad4f58bb6042998ec6f6c708386, type: 2}

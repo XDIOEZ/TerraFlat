@@ -153,7 +153,7 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
         reacquireDelay = AnimalLandTargetRules.Number(config, "reacquireDelay", 10f);
         chaseAction = AnimalLandTargetRules.Text(config, "chaseAction", "chase");
         hungerRemaining = saved?["hungerRemaining"]?.Value<float>() ?? GetDayLength();
-        if (context.Detector != null) context.Detector.DetectionRadius = Mathf.Max(context.Detector.DetectionRadius, hungryRange, lossRange);
+        context.RequireMinimumDetectionRadius(Mathf.Max(hungryRange, lossRange));
     }
 
     public override void Tick(float deltaTime)

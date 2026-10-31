@@ -1,0 +1,222 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: FlatWorldSpriteAtlas_Creatures
+  m_EditorClassIdentifier: 
+  m_GroupName: FlatWorldSpriteAtlas_Creatures
+  m_Data:
+    m_SerializedData: []
+  m_GUID: a26f7723c962a4e4aae411b2f1734923
+  m_SerializeEntries:
+  - m_GUID: 00297b286ff6b9941b61d3f414c85963
+    m_Address: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 03d1ea40c4b0dfc45ac8796c9cadc129
+    m_Address: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 090f178416e041a99dba575c736b4bbe
+    m_Address: Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26f47517f43054148932c227eef3f983
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/TakingOff_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2c76a069ea6ce944eb6466d76686abfd
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Walk_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2da7e030fe99bcf49a3cf1e52ac529ee
+    m_Address: FlatWorld/StartupSpriteAtlasCatalog/Creatures
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3aa881da53222df4fa3e68fb3843764c
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Ground_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 45d4544a834e02e4a985d93e9273e15b
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Walk_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 472bd1ec1307ff3418fe591259f43e20
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Ground_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 504e9ed3d301d9a4da996faf515173bd
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Landing_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5465f53fd4106a644a2d418f9c8945df
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Ground_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 61564289e060f324f9e9e0b191c4d2eb
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Landing_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63472d3fc0bf5434195b79ce1052f3fb
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Landing_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6a2d7d60044a1854caf16a0eef6c964d
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Ground_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 783c2c793ed91c04e9b9f56937b516dd
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Flying_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7a8112e0d0f2b9747b2394b9932d5154
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Flying_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 871b9a79a5f462045a474371ec0a186b
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Flying_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8b76d67405d201944b84dc9fcb9ee544
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Flying_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8b7a9e84cfc97bc48827a9a94e02c18a
+    m_Address: Assets/8_Animations/Character/Birds/Bird/Walk_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8e1b6a3c5f7d9e0a2b4c6d8f1a3e5b7c
+    m_Address: flatworld.actor.sprite.ghost
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 96e40e82c6563a44586d9aedec13bb21
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/TakingOff_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a5dca44b1f544374990dd092608d51d3
+    m_Address: Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a738bbcdb3393c345a301d55c1387eb0
+    m_Address: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a761777a4411ce14d9064f8ed5f0efb8
+    m_Address: Assets/8_Animations/Character/Birds/Bird/TakingOff_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2e2fe7100b6c064698a52e24c3bbf7f
+    m_Address: Assets/6_Art/Characters/Hana Caraka - Livestock & Fish Sample/Chicken/Chicken.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b5d77e7892e513e44a5c31f65119a602
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Landing_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bcaec33fbf6a82a46b27fb8909782064
+    m_Address: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bfc83f93dab74896a1ed040d770bc5fd
+    m_Address: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c4e08b7db848a174ba81e3ab9e033b0d
+    m_Address: Assets/6_Art/Generated/AI/SmallFish/SmallFish.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf1ad0f47355fcb488d9bff25b95f68b
+    m_Address: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dcfe01c3c866ba64fa6da9c9cd063c46
+    m_Address: Assets/8_Animations/Character/Birds/Seagull/Walk_1.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e713df8d0bd7b1d4582ad03e3129f38e
+    m_Address: FlatWorld_Creatures_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fe0a8d7db8d84164f977d4f6b047cba8
+    m_Address: Assets/8_Animations/Character/Birds/Bird/TakingOff_0.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 0eab2494feb7cec48885408036d23657, type: 2}
+    - {fileID: 11400000, guid: ac1b7339b2e95ef4db3aa8c2d77887ec, type: 2}

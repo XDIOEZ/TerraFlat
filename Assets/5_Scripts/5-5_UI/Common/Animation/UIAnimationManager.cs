@@ -75,22 +75,27 @@ public sealed class UIAnimationManager
     /// <summary>重新读取随包发布的配置；缺失或无效时保留上一次有效配置。</summary>
     public bool ReloadDefaultConfiguration()
     {
-        TextAsset asset = Resources.Load<TextAsset>(ConfigurationResourcePath);
-        if (asset == null)
+        UIAnimationResourceConfiguration source = BuiltInContentBinaryCatalog.ReadResource(
+            ConfigurationResourcePath, ParseResourceConfiguration);
+        if (source == null)
         {
             Debug.LogWarning($"[UIAnimation] 缺少 {ConfigurationResourcePath}.json，保留默认动画配置。");
             return false;
         }
-        if (TryReloadJson(asset.text, out string error))
+        string error = source.Error;
+        if (error == null && TryApplyDocument(source.Document, out error))
             return true;
         Debug.LogWarning($"[UIAnimation] 配置未应用：{error}");
         return false;
     }
 
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+        => _ = BuiltInContentBinaryCatalog.ReadResource(ConfigurationResourcePath, ParseResourceConfiguration);
+
     /// <summary>整份配置校验通过才替换；错误 JSON、重复 ID 和非法数值不会破坏当前配置。</summary>
     public bool TryReloadJson(string json, out string error)
     {
-        Dictionary<string, UIAnimationProfile> replacement;
         UIAnimationDocument document;
         try
         {
@@ -101,6 +106,60 @@ public sealed class UIAnimationManager
                 TypeNameHandling = TypeNameHandling.None,
                 MissingMemberHandling = MissingMemberHandling.Error
             });
+        }
+        catch (Exception exception) when (exception is JsonException || exception is ArgumentException)
+        {
+            error = exception.Message;
+            return false;
+        }
+
+        return TryApplyDocument(document, out error);
+    }
+
+    private bool TryApplyDocument(UIAnimationDocument document, out string error)
+    {
+        if (!TryBuildProfiles(document, out Dictionary<string, UIAnimationProfile> replacement, out error))
+            return false;
+        profiles = replacement;
+        defaultId = document.defaultId;
+        foreach (BaseUIAnimation animation in animations)
+        {
+            if (animation != null)
+                animation.RefreshConfiguration();
+        }
+        error = null;
+        return true;
+    }
+
+    private static UIAnimationResourceConfiguration ParseResourceConfiguration(string json)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                throw new ArgumentException("配置不能为空。");
+            UIAnimationDocument document = JsonConfigurationCache.Deserialize<UIAnimationDocument>(json, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.None,
+                MissingMemberHandling = MissingMemberHandling.Error
+            });
+            if (!TryBuildProfiles(document, out _, out string error))
+                return new UIAnimationResourceConfiguration { Error = error };
+            return new UIAnimationResourceConfiguration { Document = document };
+        }
+        catch (Exception exception) when (exception is JsonException || exception is ArgumentException)
+        {
+            return new UIAnimationResourceConfiguration { Error = exception.Message };
+        }
+    }
+
+    private static bool TryBuildProfiles(
+        UIAnimationDocument document,
+        out Dictionary<string, UIAnimationProfile> replacement,
+        out string error)
+    {
+        replacement = null;
+        try
+        {
             if (document == null || document.version != 1 || document.profiles == null || document.profiles.Length == 0)
                 throw new ArgumentException("配置必须使用 version=1 并包含非空 profiles。");
             replacement = new Dictionary<string, UIAnimationProfile>(StringComparer.Ordinal);
@@ -114,22 +173,15 @@ public sealed class UIAnimationManager
             }
             if (string.IsNullOrWhiteSpace(document.defaultId) || !replacement.ContainsKey(document.defaultId))
                 throw new ArgumentException("defaultId 必须匹配 profiles 中的一项。");
+            error = null;
+            return true;
         }
-        catch (Exception exception) when (exception is JsonException || exception is ArgumentException)
+        catch (ArgumentException exception)
         {
+            replacement = null;
             error = exception.Message;
             return false;
         }
-
-        profiles = replacement;
-        defaultId = document.defaultId;
-        foreach (BaseUIAnimation animation in animations)
-        {
-            if (animation != null)
-                animation.RefreshConfiguration();
-        }
-        error = null;
-        return true;
     }
     #endregion
 
@@ -166,4 +218,11 @@ public sealed class UIAnimationManager
         }
     }
     #endregion
+}
+
+[MemoryPack.MemoryPackable]
+internal sealed partial class UIAnimationResourceConfiguration
+{
+    public UIAnimationDocument Document;
+    public string Error;
 }

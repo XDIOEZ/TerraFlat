@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef91755adc06b5243b450932f635a391, type: 3}
+  m_Name: Creatures
+  m_EditorClassIdentifier: 
+  Entries:
+  - Address: Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_4]
+    Sprite: {fileID: -1217903565, guid: a738bbcdb3393c345a301d55c1387eb0, type: 3}
+  - Address: Assets/6_Art/Characters/Hana Caraka - Livestock & Fish Sample/Chicken/Chicken.png[Chicken_0]
+    Sprite: {fileID: -1286042895, guid: b2e2fe7100b6c064698a52e24c3bbf7f, type: 3}
+  - Address: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniBunny.png[MiniBunny_Idle_1]
+    Sprite: {fileID: 21300001, guid: 03d1ea40c4b0dfc45ac8796c9cadc129, type: 3}
+  - Address: Assets/6_Art/Characters/MinifolksForestAnimals/Without outline/MiniWolf.png[MiniWolf_Idle_1]
+    Sprite: {fileID: 21300001, guid: 00297b286ff6b9941b61d3f414c85963, type: 3}
+  - Address: Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_0]
+    Sprite: {fileID: -72012255, guid: cf1ad0f47355fcb488d9bff25b95f68b, type: 3}
+  - Address: Assets/6_Art/Generated/AI/Bee/Bee_Flying_Left.png
+    Sprite: {fileID: 21300000, guid: 090f178416e041a99dba575c736b4bbe, type: 3}
+  - Address: Assets/6_Art/Generated/AI/SmallFish/SmallFish.png
+    Sprite: {fileID: 21300000, guid: c4e08b7db848a174ba81e3ab9e033b0d, type: 3}
+  - Address: Assets/6_Art/Generated/Actors/Bear/Bear_Idle_Right.png[Bear_Idle_Right]
+    Sprite: {fileID: 21300000, guid: a5dca44b1f544374990dd092608d51d3, type: 3}
+  - Address: Assets/6_Art/Generated/Actors/Ghost/Ghost_Idle_Sheet.png[Ghost_Idle_0]
+    Sprite: {fileID: 100000001, guid: bfc83f93dab74896a1ed040d770bc5fd, type: 3}
+  - Address: Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png[Character_Zombie_Idle_Right]
+    Sprite: {fileID: 100000002, guid: bcaec33fbf6a82a46b27fb8909782064, type: 3}
+  - Address: Assets/8_Animations/Character/Birds/Bird/Ground_0.png
+    Sprite: {fileID: 21300000, guid: 5465f53fd4106a644a2d418f9c8945df, type: 3}
+  - Address: Assets/8_Animations/Character/Birds/Seagull/Ground_0.png
+    Sprite: {fileID: 21300000, guid: 472bd1ec1307ff3418fe591259f43e20, type: 3}
+  Locations: []

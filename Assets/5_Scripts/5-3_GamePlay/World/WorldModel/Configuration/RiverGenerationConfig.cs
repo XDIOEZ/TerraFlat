@@ -107,30 +107,33 @@ public static class RiverGenerationConfigLoader
     public static string BuiltInConfigPath =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath);
 
+    [BuiltInContentBake]
     public static RiverGenerationConfigCatalog LoadBuiltIn() =>
-        Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInConfigPath));
+        new RiverGenerationConfigCatalog(BuiltInContentBinaryCatalog.ReadFile(
+            BuiltInConfigPath, ParseConfiguration, SupportedSchemaVersion));
 
     public static IEnumerator LoadBuiltInAsync(Action<RiverGenerationConfigCatalog> completed,
         Action<Exception> failed)
     {
-        string json = null;
+        RiverGenerationConfigFile source = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(BuiltInConfigPath,
-            value => json = value, error => readError = error);
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(BuiltInConfigPath,
+            ParseConfiguration, value => source = value, error => readError = error, SupportedSchemaVersion);
         if (readError != null) { failed?.Invoke(readError); yield break; }
-        try { completed?.Invoke(Deserialize(json)); }
+        try { completed?.Invoke(new RiverGenerationConfigCatalog(source)); }
         catch (Exception error) { failed?.Invoke(error); }
     }
 
     public static RiverGenerationConfigCatalog Deserialize(string json)
+        => new RiverGenerationConfigCatalog(ParseConfiguration(json));
+
+    private static RiverGenerationConfigFile ParseConfiguration(string json)
     {
         if (string.IsNullOrWhiteSpace(json) || json.Length > 32 * 1024)
             throw new InvalidDataException("河流生成 JSON 为空或超过大小限制。");
         try
         {
-            RiverGenerationConfigFile source =
-                JsonConfigurationCache.Deserialize<RiverGenerationConfigFile>(json, JsonSettings);
-            return new RiverGenerationConfigCatalog(source);
+            return JsonConfigurationCache.Deserialize<RiverGenerationConfigFile>(json, JsonSettings);
         }
         catch (JsonException error)
         {

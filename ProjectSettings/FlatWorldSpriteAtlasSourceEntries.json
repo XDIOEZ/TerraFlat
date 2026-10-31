@@ -101,6 +101,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "0426f7891b648414fb89071a6f0276f7",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "048749d43a4439245a979fb84e2e734b",
             "sourcePath": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Coal/Mine_Coal_Idle.png",
             "originalGroup": "Default",
@@ -461,6 +470,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "17b596bac2f14f92b50423d142dc1b84",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "1819d2e5e5b7464a8b693fafce330e38",
             "sourcePath": "Assets/6_Art/Generated/Environment/Ore_Diamond/Ore_Diamond_Icon.png",
             "originalGroup": "Default",
@@ -578,6 +596,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "1e02dd721a59db1498040b6ccd224c64",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_MainMenuSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_MainMenuSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_MainMenuSettings.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "1f3dac6330e148f886784644d4b875d3",
             "sourcePath": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png",
             "originalGroup": "PlantSprites",
@@ -602,6 +629,15 @@
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "204de1cf958f977418a5ff4896ea0961",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -683,15 +719,6 @@
             "originalAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "25f68045dd4059e4d891365ae77626d4",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Gauntlets.png",
             "previousManagedGroup": ""
         },
         {
@@ -785,15 +812,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "2b81860a35724874a4df17069a10d39b",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Cuirass.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "2c253515814d413db71c01b8b4fe5fbf",
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png",
             "originalGroup": "Default",
@@ -809,15 +827,6 @@
             "originalAddress": "Assets/8_Animations/Character/Birds/Bird/Walk_1.png",
             "managedGroup": "FlatWorldSpriteAtlas_Creatures",
             "managedAddress": "Assets/8_Animations/Character/Birds/Bird/Walk_1.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "2c8a3c57982a47faa5335ec882c165f9",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Gauntlets.png",
             "previousManagedGroup": ""
         },
         {
@@ -920,24 +929,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "31a05397f1d78f342a888503866c68b3",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Greaves.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "322c44d40f694f69b0e24d81dd8bf83f",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Greaves.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "325df49f06d14f0dad5e0e8ddedae891",
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Iron.png",
             "originalGroup": "Default",
@@ -1019,15 +1010,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "364888932f748504e93bc6624a340b26",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Gloves.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "36c89c668c76400449873f3dbe4d9962",
             "sourcePath": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
             "originalGroup": "Default",
@@ -1082,6 +1064,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "3a7025b91062d1141a357528fe73ee61",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_CloseButton.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_CloseButton.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_CloseButton.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "3a84785b10bfb014884e31ff4166f0b3",
             "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png",
             "originalGroup": "Default",
@@ -1127,12 +1118,30 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "3e32f389c0c274b4288fdff15830c523",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "3e34218712fa45d480ad1f84edf885b5",
             "sourcePath": "Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Combat/Spear_Iron/Spear_Iron_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "4018784394514384f85f46e5f9690fb4",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Dropdown.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Dropdown.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Dropdown.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -1181,6 +1190,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "4211cef457a224643b17e0433f6d9e72",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "428ec8a514cc430c8f090e8a5e65951d",
             "sourcePath": "Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
             "originalGroup": "Default",
@@ -1214,15 +1232,6 @@
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "4466af33be6349b4b2f87d3fa4099380",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Engineering_Goggles.png",
             "previousManagedGroup": ""
         },
         {
@@ -1334,15 +1343,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "4a2acdb7f2494e04496966fc28aaa2f4",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "4a7faf28d20c46dfb1450c6c680484e7",
             "sourcePath": "Assets/6_Art/Generated/Buff/StatusIcons/SpeedBoost.png",
             "originalGroup": "Default",
@@ -1424,6 +1424,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "4e5c8017c39f04040bc676c996290508",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SliderControl.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SliderControl.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SliderControl.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "4eb0d49d5b2296447903ab597f4132f8",
             "sourcePath": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Copper/Mine_Copper_Idle.png",
             "originalGroup": "Default",
@@ -1433,30 +1442,12 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "4eb1a2cdc07d42f48ad676def2ebe522",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Wood.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "4ee99636fb56424d91612618223508e5",
             "sourcePath": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
             "originalGroup": "PlayerAppearance",
             "originalAddress": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Equipment/Traveler_Boots/Traveler_Boots_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "50248c8f86d44464916f1d41245e3828",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Legs.png",
             "previousManagedGroup": ""
         },
         {
@@ -1601,6 +1592,15 @@
             "originalAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Farming/Rice/RiceGrain_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "5c0312d9a4c30ca42bc62b3bfb10074e",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -1937,6 +1937,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "6c3a1f4436d999445b39c197107ce458",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "6ca396415d99195c7e6fcf80f6f75fde",
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Flour/Flour_Icon.png",
             "originalGroup": "Default",
@@ -1964,12 +1973,12 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "6ce187a6f9f97534ba34b362082b785d",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Hood.png",
+            "guid": "6d28233e3a65781418a7cc4c0885be94",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -1991,12 +2000,30 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "70d725d8194078249a195891ee61da07",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "71e7014c314745d4ea8ce16c7cd267e2",
             "sourcePath": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Environment/PineTree/PineTree_Idle.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "7213ccb23a9d80848845ec3342cb9e9a",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -2108,15 +2135,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "788b48ec48ab94242ae2dd25f98cfa05",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Helmet.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "79debcbb3770407ebb396eda5fb4f64f",
             "sourcePath": "Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftHand.png",
             "originalGroup": "Default",
@@ -2225,21 +2243,21 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "80177cfcb20705540bba44ee0eae1707",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Cuirass.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "81191579e8ccd6841b113aaa97cb3890",
             "sourcePath": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "817e26a006be65341b7082d816c170d5",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -2267,15 +2285,6 @@
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "8273be03d4d073943971dc9c34f4f700",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Trousers.png",
             "previousManagedGroup": ""
         },
         {
@@ -2396,15 +2405,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "897226c917a141fa8dbb07983fdc7d31",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Boots.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "8988248f152845d4bcc8f1f58aa5d632",
             "sourcePath": "Assets/6_Art/Generated/Equipment/IronGuard_Cuirass/IronGuard_Cuirass_Icon.png",
             "originalGroup": "PlayerAppearance",
@@ -2483,6 +2483,33 @@
             "originalAddress": "Assets/8_Animations/Character/Birds/Bird/Walk_0.png",
             "managedGroup": "FlatWorldSpriteAtlas_Creatures",
             "managedAddress": "Assets/8_Animations/Character/Birds/Bird/Walk_0.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "8c3e275eabc48b04c828e6162cc59129",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "8c7d41c0b2d84a7da6c650f2413eb182",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "8c8eb8cf412e3ca4d8845cecbc358d4d",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -2585,6 +2612,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "92c26ca78f387f246803a706b73bbfe9",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_InputField.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_InputField.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_InputField.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "92ea84c9727393e40b0ac0d167838713",
             "sourcePath": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png",
             "originalGroup": "Default",
@@ -2609,15 +2645,6 @@
             "originalAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledPlank_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/Items/DrilledPlank_Idle.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "93eaf29a8b124dfebc65dfd04db9679c",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Steel_Helmet.png",
             "previousManagedGroup": ""
         },
         {
@@ -2711,6 +2738,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "9a8e8edb7c184118b4587c4e402bc3dd",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ModManager.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "9aa66d45b5b0406abcc5bc8e85187351",
             "sourcePath": "Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png",
             "originalGroup": "Default",
@@ -2762,15 +2798,6 @@
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "9c9575a507984ca49accd4bb2c98397e",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Head.png",
             "previousManagedGroup": ""
         },
         {
@@ -2891,6 +2918,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "a6d627d3b13bbc54bb2b613ad872b30d",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_WorldLoading.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_WorldLoading.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_WorldLoading.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "a738bbcdb3393c345a301d55c1387eb0",
             "sourcePath": "Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png",
             "originalGroup": "Default",
@@ -2963,15 +2999,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "aab5277269af419a83b806674664a35c",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Torso.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "aac1182fe8e947cdae3f59f963e649de",
             "sourcePath": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Pickaxe_Copper/Pickaxe_Copper_Icon.png",
             "originalGroup": "PrimitiveTools",
@@ -3014,6 +3041,15 @@
             "originalAddress": "Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryPelvis.png",
             "managedGroup": "FlatWorldSpriteAtlas_GameplayUI",
             "managedAddress": "Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryPelvis.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "ae7d61a702120fe43a5c3fdcfea8279e",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Slider.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Slider.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Slider.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -3251,6 +3287,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "be58e61687cd00241a96a8404cb301bb",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "bf652f961d274c748370c8bd5438c938",
             "sourcePath": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
             "originalGroup": "PrimitiveTools",
@@ -3386,21 +3431,21 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "c56368145ed98b84da8f176212fb6b75",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "c57f373bcb764811b0a14591a86aba2c",
             "sourcePath": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
             "originalGroup": "PlayerAppearance",
             "originalAddress": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Equipment/Traveler_Gloves/Traveler_Gloves_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "c5ae56247a444444995f337c04fb36a1",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Hands.png",
             "previousManagedGroup": ""
         },
         {
@@ -3455,6 +3500,15 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/BronzeIngot_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/BronzeIngot_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "cabd264e2311b684294e284a022cdeae",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DebugSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DebugSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DebugSettings.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -3545,6 +3599,15 @@
             "originalAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "d053d623af3d3ba49a09e3bd67e7b696",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -3662,15 +3725,6 @@
             "originalAddress": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "d7c72c25f10a4cd78ea7c43fd08b7409",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Spacesuit_Feet.png",
             "previousManagedGroup": ""
         },
         {
@@ -3836,15 +3890,6 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "dfbc5be90a134c28b8df43dec66158db",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "e037bfae795a4a2b9d0c44d8ad834e6c",
             "sourcePath": "Assets/6_Art/Generated/Building/WallMetal/Wall_Bronze_Medium.png",
             "originalGroup": "Default",
@@ -3890,6 +3935,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "e40b3eaad88f90e47aa1d2cc888ddb57",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "e45dbb4b42ea2744ca150b60da37aae0",
             "sourcePath": "Assets/6_Art/Food/Item_WildDogMilk.png",
             "originalGroup": "Default",
@@ -3914,6 +3968,15 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "e5fdcf9dc2f05e34db60befbd3af28d8",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenuExitConfirmation.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenuExitConfirmation.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenuExitConfirmation.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -3971,21 +4034,21 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "e8f9e71b7f08f2c4e81f1d0d105179d4",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/IronGuard_Boots.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "ea3ecc24900e417f99f9d6a5edaca108",
             "sourcePath": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
             "originalGroup": "PrimitiveTools",
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "ea550192a53dad841a260370c15a6e94",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_ProgressBar.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_ProgressBar.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_ProgressBar.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -4049,15 +4112,6 @@
             "originalAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "f02c1d362887ad749896ec5546a49f7c",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png",
             "previousManagedGroup": ""
         },
         {
@@ -4157,6 +4211,15 @@
             "originalAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "f75861c6e3f25eb4eb01b03f0816e913",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab",
             "previousManagedGroup": ""
         },
         {
@@ -4265,15 +4328,6 @@
             "originalAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
-            "previousManagedGroup": ""
-        },
-        {
-            "guid": "fd8fbecfa3a04b54b855dae6e66dab1e",
-            "sourcePath": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png",
-            "originalGroup": "PlayerAppearance",
-            "originalAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Boots.png",
             "previousManagedGroup": ""
         },
         {

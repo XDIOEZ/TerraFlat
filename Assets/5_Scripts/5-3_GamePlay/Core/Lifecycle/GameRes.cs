@@ -129,7 +129,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         bool altPressed = keyboard != null && (keyboard.leftAltKey.isPressed || keyboard.rightAltKey.isPressed);
         if (altPressed && keyboard.rKey.wasPressedThisFrame)
         {
-            RequestResourceReload();
+            RequestResourceReload(useSourceConfigurations: true);
         }
     }
 

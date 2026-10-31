@@ -40,6 +40,8 @@ internal sealed partial class ResourceLoadPipeline
             var byId = concurrentExecutions.ToDictionary(entry => entry.Step.Id, StringComparer.Ordinal);
             foreach (ConcurrentExecution entry in concurrentExecutions)
                 entry.Dependencies = entry.Step.Dependencies.Select(id => byId[id]).ToArray();
+            // 依赖图通过校验后先发出独立请求，回调交接仍遵守主线程预算和消费阶段的错误边界。
+            foreach (IPrefetchedResourceData input in prefetched) input.StartRequest();
         }
         catch (Exception exception) { Failure = exception; Dispose(); yield break; }
 

@@ -268,10 +268,14 @@ public static class PlayerCreationTemplateJsonLoader
     public static string BuiltInManifestPath =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeManifestPath);
 
-    /// <summary>同步读取内建配置，供编辑器和静态校验使用。</summary>
+    /// <summary>同步读取内建纯 DTO，供编辑器校验与构建烘焙使用。</summary>
+    [BuiltInContentBake]
     public static PlayerCreationTemplateCatalogConfig LoadBuiltIn()
     {
-        return Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInManifestPath));
+        PlayerCreationTemplateCatalogConfig catalog = BuiltInContentBinaryCatalog.ReadFile(
+            BuiltInManifestPath, ParseConfiguration, SupportedSchemaVersion);
+        Validate(catalog);
+        return catalog;
     }
 
     /// <summary>异步读取内建配置，兼容 Android/WebGL 的 StreamingAssets。</summary>
@@ -279,12 +283,14 @@ public static class PlayerCreationTemplateJsonLoader
         Action<PlayerCreationTemplateCatalogConfig> onCompleted,
         Action<Exception> onFailed)
     {
-        string json = null;
+        PlayerCreationTemplateCatalogConfig catalog = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
             BuiltInManifestPath,
-            text => json = text,
-            exception => readError = exception);
+            ParseConfiguration,
+            value => catalog = value,
+            exception => readError = exception,
+            SupportedSchemaVersion);
 
         if (readError != null)
         {
@@ -294,7 +300,8 @@ public static class PlayerCreationTemplateJsonLoader
 
         try
         {
-            onCompleted?.Invoke(Deserialize(json));
+            Validate(catalog);
+            onCompleted?.Invoke(catalog);
         }
         catch (Exception exception)
         {
@@ -305,14 +312,16 @@ public static class PlayerCreationTemplateJsonLoader
     /// <summary>反序列化并校验玩家创建目录。</summary>
     public static PlayerCreationTemplateCatalogConfig Deserialize(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new InvalidDataException("玩家创建 JSON 为空");
-
-        PlayerCreationTemplateCatalogConfig catalog = JsonConfigurationCache.Deserialize<PlayerCreationTemplateCatalogConfig>(
-            json,
-            StrictJsonSettings);
+        PlayerCreationTemplateCatalogConfig catalog = ParseConfiguration(json);
         Validate(catalog);
         return catalog;
+    }
+
+    private static PlayerCreationTemplateCatalogConfig ParseConfiguration(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            throw new InvalidDataException("玩家创建 JSON 为空");
+        return JsonConfigurationCache.Deserialize<PlayerCreationTemplateCatalogConfig>(json, StrictJsonSettings);
     }
 
     /// <summary>验证 schema、默认模板和数值边界。</summary>

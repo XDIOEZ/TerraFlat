@@ -1,4 +1,18 @@
 -- 正式端点解析和网络物品字节协议无需创建 Host/Client。
+test.system("networking", "menu_join_gate", {}, function(data)
+    assert(data.startupOnlyMenuJoin and data.readyCurrentOffline,
+        "菜单仅启动资源就绪时应可发起加入，完整目录就绪后才可连接")
+    for _, key in ipairs({ "rejectNoStartup", "rejectOnline", "rejectWorld", "rejectEntry", "rejectPending",
+        "rejectLoading", "rejectFailure", "rejectCancelled", "rejectSessionChange", "rejectWorldAtReady",
+        "rejectEntryAtReady" }) do
+        assert(data[key], "菜单加入门禁未拒绝：" .. key)
+    end
+    assert(data.hostFullReady, "Host 完整资源、世界、玩家与玩法就绪门禁未开放")
+    for _, key in ipairs({ "hostRejectLoading", "hostRejectNoWorld", "hostRejectNoPlayer", "hostRejectGameplayPending" }) do
+        assert(data[key], "Host 完整就绪门禁缺失：" .. key)
+    end
+end, "联机菜单加入：启动资源门禁、取消代次、连接就绪与 Host 完整门禁")
+
 test.system("networking", "space_snapshot_delta", {}, function(data)
     local shared, motion, changes = data.shared, data.motion, data.changes
     assert(shared.firstFull and shared.secondFull and shared.capturedFirst > 0 and

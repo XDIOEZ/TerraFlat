@@ -48,7 +48,7 @@ MyMod/
 
 生命周期为 `Initialize(context)` → `ContentReady()` → `Dispose()`。新增整类机器逻辑使用 `MachineLogicRegistry.Register`，注册租约交给 `context.Track`；Harmony 补丁由 MOD 自己创建，并在 `Dispose` 中只撤销自己的补丁 ID。`FurnaceLogic`、`WorkbenchLogic`、`RecipeProcessor` 和机械解算保留托管具名入口，不要求每台机器都存在 GameObject。
 
-编译和打包使用示例工程。桌面 Mono 发行包已包含 Harmony 2.3.3 的 `0Harmony.dll`；开发时引用游戏提供的同一文件，MOD 包不附带它，也不在 `managed.dependencies` 声明它。主菜单 MOD 页不显示代码 SHA256，也不要求额外授权。代码更新后重启游戏；进程已经加载的同名 DLL 不能换字节热替换。
+编译和打包使用示例工程。桌面 Mono 发行包在 `StreamingAssets/ManagedModRuntime/0Harmony.dll` 提供 Harmony 2.3.3，运行时按需加载；开发时引用同一文件，MOD 包不附带它，也不在 `managed.dependencies` 声明它。主菜单 MOD 页不显示代码 SHA256，也不要求额外授权。代码更新后重启游戏；进程已经加载的同名 DLL 不能换字节热替换。
 
 ## 稳定协议
 

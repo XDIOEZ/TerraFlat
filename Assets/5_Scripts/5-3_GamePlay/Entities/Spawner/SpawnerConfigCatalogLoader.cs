@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
-using UnityEngine;
 
 /// <summary>只在资源加载阶段读取 Resources JSON；独立规则文件自动发现，游玩帧内只使用已校验目录。</summary>
 public static class SpawnerConfigCatalogLoader
@@ -21,24 +20,33 @@ public static class SpawnerConfigCatalogLoader
         DateParseHandling = DateParseHandling.None
     };
 
+    [BuiltInContentBake]
     public static SpawnerConfigCatalog LoadBuiltIn()
     {
-        TextAsset settingsAsset = Resources.Load<TextAsset>(SettingsResourcePath);
-        if (settingsAsset == null)
+        SpawnerRuntimeSettings settings = BuiltInContentBinaryCatalog.ReadResource(
+            SettingsResourcePath, DeserializeSettings, SupportedSchemaVersion);
+        if (settings == null)
             throw new FileNotFoundException($"找不到生物生成全局设置：Resources/{SettingsResourcePath}.json");
 
-        TextAsset[] ruleAssets = Resources.LoadAll<TextAsset>(RuleResourcePath);
-        if (ruleAssets.Length == 0)
+        string[] rulePaths = BuiltInContentBinaryCatalog.ReadResourceDirectoryPaths(RuleResourcePath);
+        if (rulePaths.Length == 0)
             throw new InvalidDataException($"生物生成规则目录为空：Resources/{RuleResourcePath}");
 
-        Array.Sort(ruleAssets, CompareRuleAssets);
         var catalog = new SpawnerConfigCatalog
         {
             SchemaVersion = SupportedSchemaVersion,
-            Settings = DeserializeSettings(settingsAsset.text)
+            Settings = settings
         };
-        foreach (TextAsset ruleAsset in ruleAssets)
-            catalog.Configs.Add(DeserializeRule(ruleAsset.text, ruleAsset.name));
+        foreach (string resourcePath in rulePaths)
+        {
+            string sourceName = Path.GetFileName(resourcePath);
+            SpawnerConfigFile file = BuiltInContentBinaryCatalog.ReadResource(
+                resourcePath, json => ParseRuleFile(json, sourceName), SupportedSchemaVersion);
+            if (file == null)
+                throw new FileNotFoundException($"找不到生物生成规则：Resources/{resourcePath}.json");
+            ValidateRuleFile(file, sourceName);
+            catalog.Configs.Add(file.Config);
+        }
 
         Validate(catalog);
         return catalog;
@@ -63,18 +71,28 @@ public static class SpawnerConfigCatalogLoader
     /// <summary>解析一份独立规则；文件名只用于报错，身份由 JSON 的 id 决定。</summary>
     public static SpawnerConfigDefinition DeserializeRule(string json, string sourceName)
     {
+        SpawnerConfigFile file = ParseRuleFile(json, sourceName);
+        ValidateRuleFile(file, sourceName);
+        return file.Config;
+    }
+
+    private static SpawnerConfigFile ParseRuleFile(string json, string sourceName)
+    {
         ValidateText(json, sourceName);
         try
         {
-            SpawnerConfigFile file = JsonConfigurationCache.Deserialize<SpawnerConfigFile>(json, StrictJsonSettings);
-            if (file == null || file.SchemaVersion != SupportedSchemaVersion || file.Config == null)
-                throw new InvalidDataException($"生物生成规则 {sourceName} 缺少配置或 schemaVersion 不受支持");
-            return file.Config;
+            return JsonConfigurationCache.Deserialize<SpawnerConfigFile>(json, StrictJsonSettings);
         }
         catch (JsonException exception)
         {
             throw new InvalidDataException($"生物生成规则 {sourceName} 的 JSON 无效：{exception.Message}", exception);
         }
+    }
+
+    private static void ValidateRuleFile(SpawnerConfigFile file, string sourceName)
+    {
+        if (file == null || file.SchemaVersion != SupportedSchemaVersion || file.Config == null)
+            throw new InvalidDataException($"生物生成规则 {sourceName} 缺少配置或 schemaVersion 不受支持");
     }
 
     /// <summary>解析全局调度和容量设置。</summary>
@@ -99,9 +117,6 @@ public static class SpawnerConfigCatalogLoader
         if (json.Length > MaximumConfigCharacters)
             throw new InvalidDataException($"生物生成 JSON 超过字符限制：{sourceName}");
     }
-
-    private static int CompareRuleAssets(TextAsset left, TextAsset right) =>
-        StringComparer.Ordinal.Compare(left.name, right.name);
 
     #endregion
 

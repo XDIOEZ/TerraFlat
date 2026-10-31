@@ -92,14 +92,22 @@ public static class WaterCurrentPushConfigLoader
     public static string BuiltInConfigPath =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath);
 
+    [BuiltInContentBake]
+    public static WaterCurrentPushCatalog LoadBuiltIn() =>
+        BuildCatalog(ReadBuiltInConfiguration());
+
+    private static WaterCurrentPushConfigDto ReadBuiltInConfiguration() =>
+        BuiltInContentBinaryCatalog.ReadFile(BuiltInConfigPath, ParseConfiguration, SupportedSchemaVersion);
+
     /// <summary>异步读取资源目录中的唯一水流推动配置。</summary>
     public static IEnumerator LoadBuiltInAsync(
         Action<WaterCurrentPushCatalog> completed, Action<Exception> failed)
     {
-        string json = null;
+        WaterCurrentPushConfigDto dto = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            BuiltInConfigPath, text => json = text, exception => readError = exception);
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+            BuiltInConfigPath, ParseConfiguration, value => dto = value,
+            exception => readError = exception, SupportedSchemaVersion);
         if (readError != null)
         {
             failed?.Invoke(readError);
@@ -107,7 +115,7 @@ public static class WaterCurrentPushConfigLoader
         }
 
         WaterCurrentPushCatalog catalog;
-        try { catalog = Deserialize(json); }
+        try { catalog = BuildCatalog(dto); }
         catch (Exception exception)
         {
             failed?.Invoke(exception);
@@ -119,10 +127,19 @@ public static class WaterCurrentPushConfigLoader
     /// <summary>将 JSON 校验并冻结为可按稳定 Actor ID 查找的目录。</summary>
     public static WaterCurrentPushCatalog Deserialize(string json)
     {
+        return BuildCatalog(ParseConfiguration(json));
+    }
+
+    private static WaterCurrentPushConfigDto ParseConfiguration(string json)
+    {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("水流推动 JSON 为空。");
-        WaterCurrentPushConfigDto dto = JsonConfigurationCache.Deserialize<WaterCurrentPushConfigDto>(
+        return JsonConfigurationCache.Deserialize<WaterCurrentPushConfigDto>(
             json, StrictJsonSettings);
+    }
+
+    private static WaterCurrentPushCatalog BuildCatalog(WaterCurrentPushConfigDto dto)
+    {
         if (dto == null || dto.SchemaVersion != SupportedSchemaVersion)
             throw new InvalidDataException($"不支持的水流推动 schemaVersion：{dto?.SchemaVersion}");
         if (dto.WeightRule == null)

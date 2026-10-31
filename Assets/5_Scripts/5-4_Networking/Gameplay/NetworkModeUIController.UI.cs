@@ -49,6 +49,8 @@ namespace FlatWorld.Networking.Gameplay
         private object[] lastStatusArguments = Array.Empty<object>();
         private int lastDisplayedPlayerCount = -1;
         private bool lastContentReady;
+        private bool lastStartupReady;
+        private bool lastJoinPending;
         private bool lastInWorld;
         private bool showPanelWhenReady;
         private string lanAddressText = string.Empty;
@@ -168,6 +170,8 @@ namespace FlatWorld.Networking.Gameplay
             joinButton = panel.GetButton(JoinButtonKey);
             disconnectButton = panel.GetButton(DisconnectButtonKey);
             closeButton = panel.GetButton(CloseButtonKey);
+            panel.Closed -= OnNetworkPanelClosed;
+            panel.Closed += OnNetworkPanelClosed;
 
             if (playerNameInput != null)
                 playerNameInput.SetTextWithoutNotify(NewWorldCreationRequest.CreateRandomPlayerName());
@@ -225,8 +229,9 @@ namespace FlatWorld.Networking.Gameplay
             if (panel == null)
                 return;
 
-            // 面板随启动资源开放，创建和加入仍等待完整玩法目录就绪。
-            if (lastContentReady != IsContentReady || lastInWorld != IsInWorld ||
+            // 菜单阶段允许发起加入；Host 仍等待完整资源和世界就绪。
+            if (lastContentReady != IsContentReady || lastStartupReady != IsStartupReady ||
+                lastJoinPending != (pendingClientJoinCoroutine != null) || lastInWorld != IsInWorld ||
                 lastPrivateSession != (networkManager?.IsPrivateSession == true))
             {
                 RefreshInteractableState();
@@ -268,8 +273,14 @@ namespace FlatWorld.Networking.Gameplay
 
         public void I_ClosePanel()
         {
+            CancelPendingClientJoin("已取消加入。");
             if (panel != null)
                 panel.Close();
+        }
+
+        private void OnNetworkPanelClosed()
+        {
+            CancelPendingClientJoin("已取消加入。");
         }
 
         public void I_TogglePanel()
@@ -284,6 +295,8 @@ namespace FlatWorld.Networking.Gameplay
             bool privateHost = NetworkServer.active && networkManager?.IsPrivateSession == true;
             lastPrivateSession = networkManager?.IsPrivateSession == true;
             lastContentReady = IsContentReady;
+            lastStartupReady = IsStartupReady;
+            lastJoinPending = pendingClientJoinCoroutine != null;
             lastInWorld = IsInWorld;
             Player localPlayer = ItemMgr.Instance?.User_Player;
             if (lastInWorld && playerNameInput != null && localPlayer != null)
@@ -292,17 +305,21 @@ namespace FlatWorld.Networking.Gameplay
             panel?.SetButtonVisible(JoinButtonKey, !lastInWorld);
             SetHostButtonLabel("公开到局域网");
             if (hostButton != null)
-                hostButton.interactable = (offline || privateHost) && lastContentReady && lastInWorld && localPlayer != null &&
-                    GameManager.ExistingInstance.IsGameplayReady;
+                hostButton.interactable = CanEnableHostButton(offline, privateHost, lastContentReady,
+                    lastInWorld, localPlayer != null, GameManager.ExistingInstance.IsGameplayReady);
             if (joinButton != null)
-                joinButton.interactable = offline && lastContentReady && !lastInWorld;
+                joinButton.interactable = CanBeginClientJoinFromMenu(lastStartupReady,
+                    GameNetwork.Session.State, lastInWorld,
+                    GameManager.ExistingInstance?.IsWorldEntryInProgress == true, lastJoinPending);
             if (disconnectButton != null)
-                disconnectButton.interactable = !offline && !privateHost;
+                disconnectButton.interactable = lastJoinPending || (!offline && !privateHost);
             TMP_Text disconnectLabel = disconnectButton != null ? disconnectButton.GetComponentInChildren<TMP_Text>(true) : null;
             if (disconnectLabel != null)
             {
                 DisableStaticBinding(disconnectLabel);
-                disconnectLabel.text = FlatWorldLocalizationService.GetUiText(NetworkServer.active ? "关闭公开" : "断开连接");
+                disconnectLabel.text = FlatWorldLocalizationService.GetUiText(lastJoinPending
+                    ? "取消加入"
+                    : NetworkServer.active ? "关闭公开" : "断开连接");
             }
             if (playerNameInput != null)
                 playerNameInput.interactable = offline && !lastInWorld;
@@ -319,10 +336,13 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool IsContentReady => GameRes.ExistingInstance != null && GameRes.ExistingInstance.isLoadFinish;
 
+        private static bool IsStartupReady => GameRes.ExistingInstance?.IsStartupReady == true;
+
         private void RefreshOfflineStatus()
         {
-            SetStatus(IsContentReady
-                ? (IsInWorld ? "当前世界为单机，可公开到局域网供好友加入。" : "填写好友的连接地址，加入已有世界。")
+            SetStatus(IsStartupReady
+                ? (IsInWorld ? "当前世界为单机，可公开到局域网供好友加入。"
+                    : pendingClientJoinCoroutine != null ? "正在加载世界资源…" : "填写好友的连接地址，加入已有世界。")
                 : "正在加载资源…");
         }
 
@@ -439,6 +459,9 @@ namespace FlatWorld.Networking.Gameplay
         /// <summary>清理当前联机面板控件监听，保证面板重建不会叠加回调。</summary>
         private void ReleaseNetworkPanelBindings()
         {
+            CancelPendingClientJoin("已取消加入。");
+            if (panel != null)
+                panel.Closed -= OnNetworkPanelClosed;
             if (hostButton != null)
                 hostButton.onClick.RemoveListener(StartHost);
             if (joinButton != null)

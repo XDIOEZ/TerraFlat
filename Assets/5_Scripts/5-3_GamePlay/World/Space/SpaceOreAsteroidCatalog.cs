@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
     public sealed class SpaceOreAsteroidCatalog
     {
         #region 小行星矿带配置与确定性生成
+        private const string ResourcePath = "Config/Space/ore-asteroids";
         private static SpaceOreAsteroidCatalog current;
         private readonly Dictionary<string, SpaceOreAsteroidComposition> compositions = new(StringComparer.Ordinal);
         private readonly double totalCompositionWeight;
@@ -49,16 +50,31 @@ namespace FlatWorld.Spaceflight
         }
 
         public static SpaceOreAsteroidCatalog Parse(string json)
-            => new(JsonConvert.DeserializeObject<SpaceOreAsteroidConfiguration>(json,
-                new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }));
+            => new(ParseConfiguration(json));
 
         public static SpaceOreAsteroidCatalog LoadDefault()
         {
             if (current != null) return current;
-            TextAsset asset = Resources.Load<TextAsset>("Config/Space/ore-asteroids");
-            if (asset == null) throw new InvalidDataException("矿石小行星配置不存在。");
-            return current = Parse(asset.text);
+            SpaceOreAsteroidConfiguration configuration = ReadDefaultConfiguration();
+            return current = new SpaceOreAsteroidCatalog(configuration);
         }
+
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration()
+            => _ = new SpaceOreAsteroidCatalog(ReadDefaultConfiguration());
+
+        private static SpaceOreAsteroidConfiguration ReadDefaultConfiguration()
+        {
+            SpaceOreAsteroidConfiguration configuration = BuiltInContentBinaryCatalog.ReadResource(
+                ResourcePath, ParseConfiguration);
+            if (configuration == null) throw new InvalidDataException("矿石小行星配置不存在。");
+            return configuration;
+        }
+
+        private static SpaceOreAsteroidConfiguration ParseConfiguration(string json)
+            => JsonConvert.DeserializeObject<SpaceOreAsteroidConfiguration>(json,
+                new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error })
+               ?? throw new InvalidDataException("矿石小行星配置为空。");
 
         public static void Reset() => current = null;
 
@@ -113,8 +129,8 @@ namespace FlatWorld.Spaceflight
         #endregion
     }
 
-    [Serializable]
-    public sealed class SpaceOreAsteroidConfiguration
+    [Serializable, MemoryPack.MemoryPackable]
+    public sealed partial class SpaceOreAsteroidConfiguration
     {
         #region 矿带参数
         public int SchemaVersion = 1;
@@ -123,8 +139,8 @@ namespace FlatWorld.Spaceflight
         public SpaceOreAsteroidComposition[] Compositions;
         #endregion
     }
-    [Serializable]
-    public sealed class SpaceOreAsteroidField
+    [Serializable, MemoryPack.MemoryPackable]
+    public sealed partial class SpaceOreAsteroidField
     {
         #region 矿带分布
         public string Id;
@@ -134,8 +150,8 @@ namespace FlatWorld.Spaceflight
         public int StoneAmountMin, StoneAmountMax;
         #endregion
     }
-    [Serializable]
-    public sealed class SpaceOreAsteroidComposition
+    [Serializable, MemoryPack.MemoryPackable]
+    public sealed partial class SpaceOreAsteroidComposition
     {
         #region 可击碎的矿物组成
         public string Id, ItemId;

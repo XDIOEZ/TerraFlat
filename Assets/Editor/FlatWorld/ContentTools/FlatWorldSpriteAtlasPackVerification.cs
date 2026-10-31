@@ -103,15 +103,21 @@ internal static class FlatWorldSpriteAtlasPackVerification
                 {
                     // GetSprites 是 Unity 公开 API，返回绑定到打包纹理的 Sprite 副本。
                     Sprite[] actualSprites = new Sprite[atlas.spriteCount];
-                    int actualSpritesCount = atlas.GetSprites(actualSprites);
-                    textures = actualSprites.Take(actualSpritesCount)
-                        .Select(sprite => sprite?.texture).Where(texture => texture != null)
-                        .GroupBy(texture => texture.GetInstanceID()).Select(group => group.First()).ToArray();
+                    try
+                    {
+                        int actualSpritesCount = atlas.GetSprites(actualSprites);
+                        textures = actualSprites.Take(actualSpritesCount)
+                            .Select(sprite => sprite?.texture).Where(texture => texture != null)
+                            .GroupBy(texture => texture.GetInstanceID()).Select(group => group.First()).ToArray();
+                    }
+                    finally
+                    {
+                        foreach (Sprite clone in actualSprites)
+                            if (clone != null) UnityEngine.Object.DestroyImmediate(clone);
+                    }
                 }
                 if (textures == null || textures.Length == 0 || textures.Any(texture => texture == null))
                     throw new BuildFailedException("Unity 图集没有实际打包的预览纹理：" + page.Path);
-                if (textures.Any(texture => texture.width > 2048 || texture.height > 2048))
-                    throw new BuildFailedException("实际图集纹理超过 2048 像素上限：" + page.Path);
                 if (atlas.spriteCount != page.Sprites.Length ||
                     textures.Any(texture => texture.width > 2048 || texture.height > 2048))
                     throw new BuildFailedException("实际图集 Sprite 数或纹理尺寸超出构建计划：" + page.Path);

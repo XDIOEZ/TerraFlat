@@ -69,12 +69,13 @@ public static class ItemDefinitionCatalogLoader
         }
         ValidateLootTableItemIds(gameRes, dtos);
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
+        var prototypeCache = new ItemModulePrototypeCache(requireBuiltInBakedParameters: true);
 
         // 先完整构建，避免失败时只注册了一半目录。
         foreach (ItemDefinitionDto dto in dtos)
         {
             if (!dto.Abstract)
-                definitions.Add(BuildRuntimeDefinition(gameRes, dto));
+                definitions.Add(BuildRuntimeDefinition(gameRes, dto, prototypeCache: prototypeCache));
         }
 
         foreach (RuntimeItemDefinition definition in definitions)
@@ -85,6 +86,7 @@ public static class ItemDefinitionCatalogLoader
     }
 
     /// <summary>同步读取本体 Manifest，并在所有启用分包合并后统一解析继承。</summary>
+    [BuiltInContentBake]
     public static List<ItemDefinitionDto> LoadBuiltInDefinitions()
     {
         BinaryContentCache cache = CreateBinaryCache();
@@ -273,7 +275,7 @@ public static class ItemDefinitionCatalogLoader
         yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), null);
         long controllerMilliseconds = sectionTimer.ElapsedMilliseconds;
 
-        var prototypeCache = new ItemModulePrototypeCache();
+        var prototypeCache = new ItemModulePrototypeCache(requireBuiltInBakedParameters: true);
         var compiledDefinitions = new RuntimeItemDefinition[dtos.Count];
         var spriteReadiness = new SpriteDefinitionCompilationReadiness(dtos);
         Exception compilationError = null;
@@ -374,6 +376,12 @@ public static class ItemDefinitionCatalogLoader
             : null;
 #endif
         var results = onLoaded == null ? new T[addresses.Count] : null;
+        Func<bool> shouldYieldQueue = gameRes.ShouldYieldResourceWork;
+        if (stopWork != null) shouldYieldQueue = () => stopWork() || gameRes.ShouldYieldResourceWork();
+        int maxInFlight = 4;
+#if UNITY_EDITOR
+        if (typeof(T) == typeof(Sprite) && preparedAddresses != null) maxInFlight = 16;
+#endif
         IEnumerator resourceQueue = ResourceLoadQueue.Run<VisualAssetRequest<T>>(addresses.Count,
             index =>
             {
@@ -383,7 +391,12 @@ public static class ItemDefinitionCatalogLoader
                 {
 #if UNITY_EDITOR
                     if (typeof(T) == typeof(Sprite) && address.StartsWith("Assets/", StringComparison.Ordinal))
-                        request.TextureRequest = BeginEditorSpriteTexture(address, preloadedTextures);
+                    {
+                        request.StrictEditorSpriteRequest = gameRes.ResourceAssets.CanLoadInitialEditorSpriteDirectly(
+                            address, gameRes.IsCompletingInitialResourceLoad);
+                        if (!request.StrictEditorSpriteRequest)
+                            request.TextureRequest = BeginEditorSpriteTexture(address, preloadedTextures);
+                    }
                     else
 #endif
                     {
@@ -406,7 +419,7 @@ public static class ItemDefinitionCatalogLoader
                     if (texture != null && texture.LoadedObject is not Texture2D)
                         throw new InvalidDataException($"Sprite 主纹理异步加载失败：{request.Address}");
                     // 普通 Sprite 由实际资源句柄校验，只有具名子图需要提前核对切片。
-                    if (request.Address.EndsWith("]", StringComparison.Ordinal) &&
+                    if (!request.StrictEditorSpriteRequest && request.Address.EndsWith("]", StringComparison.Ordinal) &&
                         request.Address.LastIndexOf('[') > 0 &&
                         !TryLoadEditorSprite(request.Address, editorSprites, out _, out string error))
                         throw new InvalidDataException(error);
@@ -437,8 +450,9 @@ public static class ItemDefinitionCatalogLoader
                 // Actor 热更新按地址保留失败原因，由所属定义决定拒绝并保留旧版。
                 catch (Exception exception) when (failures != null) { failures[addresses[index]] = exception; }
             },
-            gameRes.ShouldYieldResourceWork,
-            completed => progress?.Invoke(0.2f + 0.6f * completed / addresses.Count));
+            shouldYieldQueue,
+            completed => progress?.Invoke(0.2f + 0.6f * completed / addresses.Count),
+            maxInFlight: maxInFlight, availableWork: availableWork);
         if (availableWork == null) yield return resourceQueue;
         else yield return RunAssetQueueWithAvailableMainThreadWork(
             resourceQueue, availableWork, gameRes.ShouldYieldResourceWork, stopWork);
@@ -455,13 +469,23 @@ public static class ItemDefinitionCatalogLoader
     internal static IEnumerator RunAssetQueueWithAvailableMainThreadWork(IEnumerator queue,
         Func<bool> availableWork, Func<bool> shouldYield, Func<bool> stopWork)
     {
+        bool prioritizeReadyWork = false;
         try
         {
             while (true)
             {
+                if (prioritizeReadyWork)
+                {
+                    prioritizeReadyWork = false;
+                    if (shouldYield?.Invoke() != true) availableWork?.Invoke();
+                    if (stopWork?.Invoke() == true) yield break;
+                    if (shouldYield?.Invoke() == true) { yield return null; continue; }
+                }
                 bool moved = queue.MoveNext();
+                if (stopWork?.Invoke() == true) yield break;
                 while (availableWork != null && shouldYield?.Invoke() != true && availableWork()) { }
                 if (stopWork?.Invoke() == true || !moved) yield break;
+                prioritizeReadyWork = true;
                 yield return queue.Current;
             }
         }
@@ -528,6 +552,7 @@ public static class ItemDefinitionCatalogLoader
         public Exception Error;
 #if UNITY_EDITOR
         public AssetDatabaseLoadOperation TextureRequest;
+        public bool StrictEditorSpriteRequest;
 #endif
     }
 
@@ -1259,10 +1284,72 @@ public static class ItemDefinitionCatalogLoader
         if (dto.RequiredGroundSupport < 0)
             throw new InvalidDataException($"物品 {id} 的 requiredGroundSupport 不能为负数");
 
+        PrepareDefinitionModuleDefaultsAndParameters(gameRes, dto, shell, template, lootTable, prototypeCache,
+            out Dictionary<string, string> moduleParameters, out Dictionary<string, string> modulePrefabIds);
+        if (!isActor) EquipmentDurabilityRules.ApplyDefaults(dto, template);
+
+        // Actor 与普通物品共用正式 Sprite 解析，单图控制器在首次启用前就能取得首帧。
+        Sprite sprite = ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
+        if (isActor && sprite == null)
+            throw new InvalidDataException($"Actor {id} 缺少初始 Sprite，请配置 visual.spriteAddress。");
+        if (dto.Visual?.LiquidSurface != null && (sprite == null || sprite.texture == null || !sprite.texture.isReadable))
+            throw new InvalidDataException($"物品 {id} 配置了 visual.liquidSurface，但基础 Sprite 没有启用 Read/Write。");
+        Dictionary<string, Sprite> stateSprites = isActor
+            ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
+            : ResolveVisualStateSprites(gameRes, dto.Visual?.SpriteStates, id, preloadedSprites);
+        Material material = ResolveMaterial(gameRes, dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
+                            ResolveShellRendererMaterial(shell, dto.Visual?.RendererPath);
+        RuntimeAnimatorController animatorController = ResolveAnimatorController(
+            gameRes, dto.Visual?.AnimatorControllerAddress,
+            id,
+            preloadedControllers);
+        if (dto.GroundCover && (isActor || sprite == null || template.Stack?.CanBePickedUp != true))
+            throw new InvalidDataException($"地表植被 {id} 必须提供 Sprite，并定义为可拾取的普通物品。");
+        if (dto.GroundCover) ValidateGroundCoverWorldSortingConfiguration(id, dto.Visual);
+        return new RuntimeItemDefinition(
+            id,
+            shellId,
+            shell,
+            template,
+            dto.Visual,
+            dto.Health,
+            lootTable?.Id,
+            dto.WaterEntryTransformItemId,
+            sprite,
+            moduleParameters,
+            modulePrefabIds,
+            dto.LabelKey,
+            dto.DescriptionKey,
+            animatorController,
+            isActor,
+            material,
+            stateSprites,
+            dto.GroundCover,
+            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
+            dto.RequiredGroundSupport,
+            dto.Ecs,
+            dto.EntityRuntime,
+            ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
+            ResolveProcessingDefinitions(dto.Processing, id),
+            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
+            dto.FormerIds,
+            ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
+            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id),
+            gameRes,
+            prototypeCache,
+            dto.Physics);
+    }
+
+    /// <summary>运行时和构建期共用模块默认数据、战利品注入与自动生命模块的唯一装配规则。</summary>
+    private static void PrepareDefinitionModuleDefaultsAndParameters(GameRes gameRes, ItemDefinitionDto dto,
+        GameObject shell, ItemData template, RuntimeLootTable lootTable, ItemModulePrototypeCache prototypeCache,
+        out Dictionary<string, string> moduleParameters, out Dictionary<string, string> modulePrefabIds)
+    {
+        string id = dto.Id.Trim();
         // JSON 是模块初始状态的唯一来源，不继承外壳 Prefab 上的 ModuleData。
         template.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
-        var moduleParameters = new Dictionary<string, string>(StringComparer.Ordinal);
-        var modulePrefabIds = new Dictionary<string, string>(StringComparer.Ordinal);
+        moduleParameters = new Dictionary<string, string>(StringComparer.Ordinal);
+        modulePrefabIds = new Dictionary<string, string>(StringComparer.Ordinal);
         bool lootTableBound = false;
         foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in dto.Modules ?? new())
         {
@@ -1319,8 +1406,6 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds.Add(moduleName, moduleId);
         }
 
-        if (!isActor) EquipmentDurabilityRules.ApplyDefaults(dto, template);
-
         AddAutomaticHealthModule(
             gameRes,
             shell,
@@ -1335,56 +1420,27 @@ public static class ItemDefinitionCatalogLoader
         if (lootTable != null && !lootTableBound)
             throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 Mod_DamageReceiver");
 
-        // Actor 与普通物品共用正式 Sprite 解析，单图控制器在首次启用前就能取得首帧。
-        Sprite sprite = ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
-        if (isActor && sprite == null)
-            throw new InvalidDataException($"Actor {id} 缺少初始 Sprite，请配置 visual.spriteAddress。");
-        if (dto.Visual?.LiquidSurface != null && (sprite == null || sprite.texture == null || !sprite.texture.isReadable))
-            throw new InvalidDataException($"物品 {id} 配置了 visual.liquidSurface，但基础 Sprite 没有启用 Read/Write。");
-        Dictionary<string, Sprite> stateSprites = isActor
-            ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
-            : ResolveVisualStateSprites(gameRes, dto.Visual?.SpriteStates, id, preloadedSprites);
-        Material material = ResolveMaterial(gameRes, dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
-                            ResolveShellRendererMaterial(shell, dto.Visual?.RendererPath);
-        RuntimeAnimatorController animatorController = ResolveAnimatorController(
-            gameRes, dto.Visual?.AnimatorControllerAddress,
-            id,
-            preloadedControllers);
-        if (dto.GroundCover && (isActor || sprite == null || template.Stack?.CanBePickedUp != true))
-            throw new InvalidDataException($"地表植被 {id} 必须提供 Sprite，并定义为可拾取的普通物品。");
-        if (dto.GroundCover) ValidateGroundCoverWorldSortingConfiguration(id, dto.Visual);
-        return new RuntimeItemDefinition(
-            id,
-            shellId,
-            shell,
-            template,
-            dto.Visual,
-            dto.Health,
-            lootTable?.Id,
-            dto.WaterEntryTransformItemId,
-            sprite,
-            moduleParameters,
-            modulePrefabIds,
-            dto.LabelKey,
-            dto.DescriptionKey,
-            animatorController,
-            isActor,
-            material,
-            stateSprites,
-            dto.GroundCover,
-            ResolveWorldGridOccupancy(dto.WorldGridOccupancy, id),
-            dto.RequiredGroundSupport,
-            dto.Ecs,
-            dto.EntityRuntime,
-            ResolveWorldDropBehavior(dto.WorldDropBehavior, id),
-            ResolveProcessingDefinitions(dto.Processing, id),
-            ResolveProcessingCapabilityLevels(dto.ProcessingCapabilities, id),
-            dto.FormerIds,
-            ItemMatterReactionCompiler.CompileMatter(dto.Matter, dto.Tags, id),
-            ItemMatterReactionCompiler.CompileReactions(dto.Reactions, id),
-            gameRes,
-            prototypeCache,
-            dto.Physics);
+    }
+
+    /// <summary>用最终模块参数和真实原型烘焙严格配置，不加载 Sprite 或创建玩法实例。</summary>
+    public static void BakeDefinitionModuleParameters(GameRes resources, ItemDefinitionDto dto,
+        GameObject shell, ItemModulePrototypeCache prototypeCache)
+    {
+        if (dto.Abstract) return;
+        RuntimeLootTable loot = null;
+        if (!string.IsNullOrWhiteSpace(dto.LootTableId) && !resources.TryGetLootTable(dto.LootTableId, out loot))
+            throw new InvalidDataException($"物品 {dto.Id} 引用了不存在的战利品表：{dto.LootTableId}");
+        var template = new Data_GeneralItem();
+        PrepareDefinitionModuleDefaultsAndParameters(resources, dto, shell, template, loot, prototypeCache,
+            out Dictionary<string, string> parameters, out Dictionary<string, string> prefabIds);
+        var modules = new List<RuntimeItemModuleDefinition>(parameters.Count);
+        foreach (KeyValuePair<string, string> pair in parameters)
+        {
+            ModuleData data = template.ModuleDataDic[pair.Key];
+            modules.Add(new RuntimeItemModuleDefinition(pair.Key, data.ModuleId, prefabIds[pair.Key], pair.Value, data.Enabled));
+        }
+        ItemModuleAssemblyCompiler.Compile(resources, dto.Id.Trim(), shell, modules,
+            string.Equals(dto.EntityRuntime?.Trim(), "resource", StringComparison.OrdinalIgnoreCase), prototypeCache);
     }
 
     private static Dictionary<string, int> ResolveProcessingCapabilityLevels(

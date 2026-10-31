@@ -17,7 +17,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 | `Save/` | SaveDataMgr、AutoSaveController：持久化 |
 | `Rules/` | GameRuleConfiguration：独立基础配置、任意来源修正与不可变业务快照；GameRuleMath：通用数量取整 |
 
-`启动场景 → 主菜单必需资源 → 完整内容 Ready → 新建/继续 → 加载页 → 世界存档 → WorldEnter → 玩家创建/Load → PlayerEnter → 可见 ChunkView 绑定/物理收尾 → 解锁`
+`启动场景 → 主菜单必需资源 → 新建/继续/加入 → 请求世界资源 → 完整内容 Ready → 世界存档 → WorldEnter → 玩家创建/Load → PlayerEnter → 可见 ChunkView 绑定/物理收尾 → 解锁`
 
 ## 世界生命周期
 
@@ -36,7 +36,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 迁移开始、等待加载页之前冻结源显示 Scene，再传给 `LoadPresentationSceneAndInvokeWhenReady`；乘员先退出太空时，星区租约会在等待加载页期间回收。复用或 Additive 加载目标后只卸载该源 Scene，失败恢复也只清理本次明确指定的目标 Scene。不能误用回退激活的船内 Scene；船内世界及物理岛保持原实例，不能用 Single 连带卸载或因显示切换重建。
 - 联机本机 realm 切换走 GameManager.Space 的观察者接口，只改变本机显示与动态场景归属；不全局迁移、释放地表或重锁输入。换星区保留浮动原点，退出世界清本机显示缓存；地表恢复必须对应已保留的真实 ChunkMgr 运行时，缺目标时拒绝并提示。太空玩家关闭默认 Rigidbody2D 模拟，运动和跨界接触用纯数据，回地表恢复原值。
 - 地表/太空往返保留会话纯数据 `WorldRuntime`，回程重新建立场景侧区块调度器并绑定视图；表现缓存开关只决定显示壳和星区实例复用，不能据此销毁会话模型。正式退出才释放会话模型。
-- IsStartupReady 只开放主菜单，完整内容仍在同会话后台加载；isLoadFinish/LoadState.Ready 才允许进入世界。加载页 Completed 等待脚下区块及完整可见窗口绑定/物理完成，生成队列清空不等于完成。
+- IsStartupReady 开放主菜单；菜单必要资源完成后保持 LoadState.Loading、无加载协程，世界输入不在菜单阶段预取。GameManager 入世显式调用 RequestWorldResources，完整计划 Ready 后才创建世界；返回菜单在清理实体/存档后释放 world Scope 并从独立 startup Root Scope 恢复菜单。加载页 Completed 等待脚下区块及完整可见窗口绑定/物理完成，生成队列清空不等于完成。
 - 新角色由 ItemMgr 在 Player.Load 前注入 GameConfig/Players 模板，已有存档/跨维度不重复注入。创建、网络提升与远程副本显式设置 ProfileContext，玩家事件一次发布。
 - GameManager 从种子锚点沿固定右上斜线逐格找新角色出生点，首个无水可走格即停，不扩圈/铺二维网格；只受采样预算限制，环绕回起点结束。后台与同步回退共用正式单格规则，预搜索使用冻结纯数据并共享生成器/水文缓存，退出/失败取消。
 - 跨场景单例保留有效实例，重复 GameRes 不开启资源协程。停止/退出通过已绑定引用清理，不重新查单例创建对象；终止流送直接销毁 View、取消后台任务，正常流送才回池。
@@ -45,23 +45,16 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 ## 资源会话
 
-- LoadPlan 声明阶段和依赖，嵌套 IEnumerator 受 ResourceLoadPipeline 统一异常/超时/取消管理。首次完整加载使用32ms工作时间片以减少编辑器/渲染往返，加载期间不保证60帧；提前开放菜单不降资源接入/上传优先级。后续菜单重载1ms、进入世界加载页4ms、原位更新1ms，Lua缓存测试仍为8ms，不改变世界模拟频率。Ready 前的真实完整耗时记录在 `LastResourceLoadMilliseconds`，超过10秒明确警告，菜单开放不算验收；规则 `core_lifecycle/startup_loading_policy、resource_loading_priority`。PureDataAsync 只处理私有字符串/DTO/ID，Unity 对象与发布留主线程。
-- 首次加载由 `ResourceLoadPipeline.Concurrent` 在主线程按依赖交错推进；请求等待期间继续独立阶段，共享帧预算，进度按全部阶段加权，取消按启动顺序逆序释放。菜单重载和原位更新仍顺序执行。Prefab 等菜单去重，物品等技能，配方/任务等 Actor，液体等物品/Actor/Buff；新增读取关系必须显式声明。并行阶段墙钟相互重叠，不能相加当总耗时。回归 `startup_concurrent_stages、startup_production_dependencies`。
-- 本地 Item、Actor、Recipes、Buff 与玩家/时间/温室/水流配置轮流预取，目录只由依赖就绪的正式阶段发布；预取失败由消费阶段报告，取消逆序释放，完成清除结果/闭包。`BeginPureDataAsync` 立即发出私有任务但回调仍等主线程推进，原 `RunPureDataAsync` 保留惰性语义；Android/WebGL 保留平台路径。回归 `startup_eager_data_request、startup_configuration_publication、item_sprite_compilation_pipeline`。
-- 本地 Items 的命中校验、分包读取、继承解析和缓存写入合成一个后台任务，Unity 路径先在主线程捕获；缺包、越界和循环仍失败，缓存损坏/写入失败回退 JSON。Actor/Recipes/Buff 分包批量后台读取，Actor 直接合并 JSON 树；配方/Buff 整包缓存不再逐分包生成文档缓存。规则 `core_lifecycle/startup_local_item_catalog`。
-- `audio-request` 先发出音库请求，与 UI/内容目录重叠加载；主菜单依赖就绪后由 Update 非阻塞接入音库并只发布一次，`audio` 阶段在最终校验前收齐。通用资源、物品视觉和世界液体外观共用四槽队列，液体按资源类型和地址去重，句柄归会话。编辑器 Sprite 冷加载异步预读主纹理，已驻留主纹理不再重复异步预读，普通 Sprite 由真实句柄校验，具名子图继续严格检查；ProfilerMarker 不跨 yield，阶段日志分别记录前台与预取工作。
-- 物品材质与控制器就绪后，Sprite 队列在等待异步请求时用剩余帧预算编译已齐备主图和状态图的定义；全部成功才按原顺序注册，失败与取消释放会话。规则 `core_lifecycle/item_sprite_compilation_pipeline`。
-- 单次目录编译按实际模块原型和参数全文复用严格字段编译；各定义保留独立错误身份/序列化器，实例状态不共享，命中后仍检查当前结构和模块自有约束。端口校验读取已编译的指定字段副本，不反复解析整段配置；回归 `startup_module_parameter_templates`。
-- 本体先校验、MOD 合并后再 validate-final；领域引用通过 IResourceCatalogValidator/增量版本扩展。正式世界生成资源用 worldAuthoringResourcePaths，完整会话在 Ready 前预热最终 BRG Sprite Mesh。
-- 战斗与机器预热同样使用会话帧预算，不为每个轻量操作固定空等一帧；所有实例/库存检查仍在 Ready 前完成，原位候选仍跳过共享预热。
-- 具体资源请求立即归 ResourceAssetScope，失败/取消释放；Addressables 初始化句柄归 GameRes、跨会话保留。卸载顺序为 MOD/池、表现/共享 Mesh、目录、源资源；销毁清理使用现有引用。
-- Editor Fast Mode 的默认 AssetDatabase 请求由 Scope 映射到独立即时 Provider（SDK延迟 -1；0仍排延迟回调），保留子资源、依赖、数据与句柄所有权；不替换原 Provider/缓存，不接管自定义 Provider 或 Bundle。启动 UI 也复用四槽队列。目录复查复用模块严格编译结果，仍检查原型类型、碰撞体和模块自有约束；回归 `core_lifecycle/editor_asset_loading`（真实Prefab立即完成与释放）、`item_runtime/compiled_module_parameters`。
-- 启动 JSON 由共享程序集 `Shared/ContentCache/` 自动缓存到 `persistentDataPath/ContentCache/`，玩家仍编辑 `StreamingAssets/GameConfig/` 原始 JSON。Item/Actor/Tile/Recipes/Buffs 按 Manifest 与启用分包生成各自 MemoryPack 二进制包，逐文件 SHA-256 核对后命中跳过 JSON 解析；动物技能按来源摘要复用 DTO；强类型配置的 `Deserialize/FromUnityJson/Parse` 仅为不少于16K字符的文档自动生成缓存，小配置和已解析 `FromToken` 树直接生成独立 DTO；显式 `ReadOrBuild` 及整目录二进制包仍严格核对内容。新增配置模型需支持 MemoryPack，派生值/Unity 引用/运行态排除，字典比较器须保留；配置校验、当前物品引用及资源绑定每轮重新执行，缓存损坏或写盘失败回退原解析器。Actor 保留原始继承来源，世界内逐个容错重载绕过整目录缓存。真实重建通过 BuildRevision 让加载页补充首次较慢提示，命中不提示；回归 `core_lifecycle/binary_content_cache、json_configuration_cache`。
-- 编辑器 FullPlayModeReloadPolicy 保持 Domain/Scene Reload 开启；Prefab 标签空结果在 GameRes 入口失败。TimeSystem JSON 在允许新世界前完成，玩家覆盖配置无效时保留内建。
-- Lua 测试入口可通过 `GameplayTestResourceCache` 恢复 Editor 持久源资产和物品 DTO；每轮新建 Scope/句柄、运行时模板和当前 C# 绑定，仅 Ready 后写缓存，失败/取消撤销暂存。缓存清理及诊断见 [Lua 测试](../flatworld-lua-testing/SKILL.md)。
-
-- 定义冷编译通过 `ItemData.CloneDefinitionDefaultsWithoutModules` 复制外壳，不能先复制随后被 JSON 模块重建丢弃的模块图，也不能临时解绑原型。`ItemModulePrototypeCache` 按默认数据引用复用当轮复制工厂；纯值内建状态直接创建，复杂与扩展类型保留多态深复制和原始空值，各定义独占可变数据。回归 `core_lifecycle/startup_definition_default_copies`。
-- 完整启动计时不扣除首帧或异步等待；`ResourceLoadPipeline` 另记推进、帧间等待及最长调度间隔，区分加载器工作与尚未恢复执行的等待，不能把这些值当作纯 CPU/磁盘耗时。顺序/并行与取消回归 `core_lifecycle/startup_execution_timing`。
+- **构建期优先**：能提前计算且不会变化的内容，尽量在 Unity 编辑器/构建阶段完成；运行时只处理真正动态的内容。内置配置、模块/行为树/配方及 Sprite 图集与索引优先预处理，Player 只负责按需加载、绑定和校验。MOD、热更新等动态内容仍走运行时流程；图集打包≠全部纹理预加载。
+- **按需图集**：位置清单仅含地址，首次 Sprite 请求再接入用途目录；按源身份绑定，不因同名拆页。菜单依赖优先留在 Menu 桶，世界专用 Shared 分开；Baker 真打包核对身份、数量、尺寸并清理旧产物，已有单源纹理不再套空洞小图集。
+- **内置烘焙**：`[BuiltInContentBake]` 静态无参入口由 Baker 在 Addressables/Player 构建前收集，生成 `Resources/CompiledContent/BuiltInConfigurations.bytes`（不入 Git）；`BuiltInContentBinaryCatalog` 仅管理键、版本和纯载荷。模块基于真实 Prefab/原型（含生命与战利品），行为树展开后运行时重绑工厂，配方在启动时复查物品引用。正式包缺失/契约不匹配直接失败，不静默回退 JSON；Editor、F5 与菜单重载通过覆盖整个异步事务的源配置租约读取原始内容。规则 `core_lifecycle/baked_configuration_catalog`；Player 对照参数 `-flatworld-source-configurations`。
+- **阶段与预算**：`GameRes.LoadPlan` 显式声明依赖；`ResourceLoadPipeline` 统一驱动嵌套 `IEnumerator`、失败/超时/取消与释放。菜单重载和原位更新顺序执行；首次32ms、菜单1ms、入世4ms、原位1ms、Lua缓存8ms，不改变固定模拟频率。菜单只加载必要内容，`RequestWorldResources()` 才启动完整计划；退出清世界 Scope、保留菜单 Root。`LastStartupLoadMilliseconds` 记录菜单 Ready，`LastResourceLoadMilliseconds` 记录世界资源请求到完整 Ready。
+- **并发与预取**：`ResourceLoadPipeline.Concurrent` 按依赖推进，共享帧预算并允许独立请求提前发出；Item/Actor/Recipes/Buff 和小配置预取只产出私有输入，正式依赖阶段才绑定 Unity 对象、校验并发布。失败不发布半成品，取消倒序释放。`BeginPureDataAsync` 立即启动私有任务、主线程推进回调；本地读取/分包/继承/缓存尽量合并一次后台事务，Android/WebGL 保留包内读取路径，后台禁止使用 Unity 对象。回归 `startup_concurrent_stages、startup_production_dependencies、startup_eager_data_request、startup_configuration_publication`。
+- **资产与预热**：`audio-request` 与 UI/目录并行，最终 `audio` 阶段收齐；常用资产、物品 Sprite、液体外观共用四槽队列并按类型/地址去重。材质/控制器就绪后分帧编译 Sprite 定义，全部成功才注册；完整会话 Ready 前预热 BRG Mesh、战斗/机器池，原位候选跳过共享预热。Editor Fast Mode 只针对默认 AssetDatabase Provider 优化，不能接管自定义 Provider/Bundle；具名子图必须严格校验。
+- **配置缓存与编译**：`Shared/ContentCache` 使用 Manifest、MemoryPack 和源 SHA-256 校验复用 Item/Actor/Tile/Recipes/Buff；较大的强类型 JSON（≥16K字符）可自动缓存，小配置直接解析为独立 DTO。缓存坏/写盘失败回退原解析；DTO 不包含 Unity 引用或运行态，保留字典比较器。模块/端口复用严格编译结果，但每轮仍核对当前引用、配置及原型，MOD 合并后再 `validate-final`。冷复制用 `ItemData.CloneDefinitionDefaultsWithoutModules`/`ItemModulePrototypeCache`，不复制随后会丢弃的模块图，每个定义的可变状态独立。
+- **所有权与回收**：菜单 prefab 与必要配置由 startup Root Scope/快照持有，完整世界使用独立 `ResourceAssetScope`；Addressables 初始化句柄归 `GameRes` 跨会话持有。失败/取消释放相应句柄，退出按 MOD/池 → 表现/共享 Mesh → 目录 → world Scope 清理，Root 留给菜单；原位候选只在完整验证后发布，失败不得破坏正式会话。
+- **测试与计时**：`GameplayTestResourceCache` 每轮新建 Scope/句柄/模板，仅 Ready 后写缓存；完整启动计时包含首帧与异步等待，并区分执行、帧间等待和最长调度间隔，不把并发阶段相加或误作纯 CPU 时间。重点回归 `startup_local_item_catalog、item_sprite_compilation_pipeline、startup_module_parameter_templates、startup_definition_default_copies、startup_execution_timing、core_lifecycle/binary_content_cache、core_lifecycle/editor_asset_loading`。
+- **Editor 手动验收**：菜单 `FlatWorld/测试/普通 Editor 启动十秒验收` 使用 GameStartScene，菜单通知立即排队完整资源，报告两阶段合计与目录数量，Lua 缓存须 disabled；输出 `Library/FlatWorldEditorStartupAcceptance/`。验收不构建 Player，不把菜单提前开放当作完整加载小于10秒。
 
 ## 原位更新
 

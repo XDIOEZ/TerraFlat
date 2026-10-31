@@ -364,6 +364,7 @@ public partial class GameManager
 
     private void FailWorldEntry(string message, Exception exception = null)
     {
+        bool worldWasActivated = IsInGameWorld;
         worldEntryGeneration++;
         notifyNewWorldReady = false;
         ClearPendingNewWorldSpawnSearch(cancel: true);
@@ -390,6 +391,17 @@ public partial class GameManager
                 {
                     Debug.LogException(cleanupException, this);
                 }
+            }
+        }
+
+        if (!worldWasActivated)
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            if (resources != null && resources.LoadState != ResourceLoadState.Failed &&
+                (resources.LoadState == ResourceLoadState.Ready || resources.IsStartupReady))
+            {
+                try { resources.ReleaseWorldResourcesAndRestoreStartup(); }
+                catch (Exception cleanupException) { Debug.LogException(cleanupException, this); }
             }
         }
 

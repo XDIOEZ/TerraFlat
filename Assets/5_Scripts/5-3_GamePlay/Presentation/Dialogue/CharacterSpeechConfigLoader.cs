@@ -46,22 +46,26 @@ namespace FlatWorld.Dialogue
 
         public static CharacterSpeechConfigLoadResult LoadFromResources(bool logIssues = true)
         {
-            TextAsset[] assets = Resources.LoadAll<TextAsset>(ResourcePath);
-            Array.Sort(assets, CompareTextAssets);
+            return LoadResourceDocuments(logIssues);
+        }
 
-            List<CharacterSpeechConfigSource> sources = new(assets.Length);
-            for (int i = 0; i < assets.Length; i++)
-            {
-                TextAsset asset = assets[i];
-                sources.Add(new CharacterSpeechConfigSource($"{asset.name}.json", asset.text));
-            }
-
-            return LoadSources(sources, logIssues);
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration()
+        {
+            _ = LoadResourceDocuments(false);
         }
 
         public static CharacterSpeechConfigLoadResult LoadSources(
             IEnumerable<CharacterSpeechConfigSource> sources,
             bool logIssues = true)
+        {
+            return LoadSourcesInternal(sources, logIssues, null);
+        }
+
+        private static CharacterSpeechConfigLoadResult LoadSourcesInternal(
+            IEnumerable<CharacterSpeechConfigSource> sources,
+            bool logIssues,
+            List<CharacterSpeechConfigEntry> acceptedEntries)
         {
             CharacterSpeechConfigLoadResult result = new();
             if (sources == null)
@@ -85,11 +89,104 @@ namespace FlatWorld.Dialogue
                     entriesById,
                     entriesByCompletionFlag,
                     result,
-                    logIssues);
+                    logIssues,
+                    acceptedEntries);
             }
 
             result.Entries.Sort(CompareEntries);
             return result;
+        }
+
+        private static CharacterSpeechConfigLoadResult LoadResourceDocuments(bool logIssues)
+        {
+            CharacterSpeechConfigLoadResult result = new();
+            Dictionary<string, CharacterSpeechConfigEntry> entriesById = new(StringComparer.Ordinal);
+            Dictionary<string, CharacterSpeechConfigEntry> entriesByCompletionFlag = new(StringComparer.Ordinal);
+            string[] paths = BuiltInContentBinaryCatalog.ReadResourceDirectoryPaths(ResourcePath);
+            Array.Sort(paths, CompareResourcePaths);
+
+            for (int pathIndex = 0; pathIndex < paths.Length; pathIndex++)
+            {
+                string path = paths[pathIndex];
+                CharacterSpeechConfigResourceDocument document = BuiltInContentBinaryCatalog.ReadResource(
+                    path,
+                    text => ParseResourceDocument(path, text));
+                if (document == null)
+                    continue;
+
+                CharacterSpeechConfigIssueData[] issues = document.Issues ?? Array.Empty<CharacterSpeechConfigIssueData>();
+                for (int issueIndex = 0; issueIndex < issues.Length; issueIndex++)
+                {
+                    CharacterSpeechConfigIssueData issue = issues[issueIndex];
+                    AddIssue(result, issue.SourceName, issue.EntryId, issue.FactName, issue.Message, logIssues);
+                }
+
+                CharacterSpeechConfigEntry[] entries = document.Entries ?? Array.Empty<CharacterSpeechConfigEntry>();
+                for (int entryIndex = 0; entryIndex < entries.Length; entryIndex++)
+                {
+                    CharacterSpeechConfigEntry entry = entries[entryIndex];
+                    if (entry == null)
+                        continue;
+                    entry.SourceName = document.SourceName;
+                    if (entriesById.TryGetValue(entry.Id, out CharacterSpeechConfigEntry duplicate))
+                    {
+                        AddIssue(
+                            result,
+                            document.SourceName,
+                            entry.Id,
+                            string.Empty,
+                            $"ID 与文件 '{duplicate.SourceName}' 中的条目重复。",
+                            logIssues);
+                        continue;
+                    }
+
+                    if (!ValidateCompletionFlagConflict(entry, entriesByCompletionFlag, result, logIssues))
+                        continue;
+
+                    entriesById.Add(entry.Id, entry);
+                    if (!string.IsNullOrWhiteSpace(entry.CompletionFlag) &&
+                        !entriesByCompletionFlag.ContainsKey(entry.CompletionFlag))
+                    {
+                        entriesByCompletionFlag.Add(entry.CompletionFlag, entry);
+                    }
+
+                    if (entry.Enabled)
+                        result.Entries.Add(entry);
+                }
+            }
+
+            result.Entries.Sort(CompareEntries);
+            return result;
+        }
+
+        private static CharacterSpeechConfigResourceDocument ParseResourceDocument(string path, string text)
+        {
+            string sourceName = $"{GetResourceAssetName(path)}.json";
+            List<CharacterSpeechConfigEntry> acceptedEntries = new();
+            CharacterSpeechConfigLoadResult parsed = LoadSourcesInternal(
+                new[] { new CharacterSpeechConfigSource(sourceName, text) },
+                false,
+                acceptedEntries);
+
+            CharacterSpeechConfigIssueData[] issues = new CharacterSpeechConfigIssueData[parsed.Issues.Count];
+            for (int i = 0; i < issues.Length; i++)
+            {
+                CharacterSpeechConfigIssue issue = parsed.Issues[i];
+                issues[i] = new CharacterSpeechConfigIssueData
+                {
+                    SourceName = issue.SourceName,
+                    EntryId = issue.EntryId,
+                    FactName = issue.FactName,
+                    Message = issue.Message
+                };
+            }
+
+            return new CharacterSpeechConfigResourceDocument
+            {
+                SourceName = sourceName,
+                Entries = acceptedEntries.ToArray(),
+                Issues = issues
+            };
         }
 
         #endregion
@@ -101,7 +198,8 @@ namespace FlatWorld.Dialogue
             Dictionary<string, CharacterSpeechConfigEntry> entriesById,
             Dictionary<string, CharacterSpeechConfigEntry> entriesByCompletionFlag,
             CharacterSpeechConfigLoadResult result,
-            bool logIssues)
+            bool logIssues,
+            List<CharacterSpeechConfigEntry> acceptedEntries = null)
         {
             JObject root;
             try
@@ -237,6 +335,7 @@ namespace FlatWorld.Dialogue
                     entriesByCompletionFlag.Add(entry.CompletionFlag, entry);
                 }
 
+                acceptedEntries?.Add(entry);
                 if (entry.Enabled)
                     result.Entries.Add(entry);
             }
@@ -567,12 +666,21 @@ namespace FlatWorld.Dialogue
                 Debug.LogError(issue.ToString());
         }
 
-        private static int CompareTextAssets(TextAsset left, TextAsset right)
+        private static int CompareResourcePaths(string left, string right)
         {
-            int nameComparison = string.CompareOrdinal(left.name, right.name);
+            int nameComparison = string.CompareOrdinal(GetResourceAssetName(left), GetResourceAssetName(right));
             return nameComparison != 0
                 ? nameComparison
-                : string.CompareOrdinal(left.text, right.text);
+                : string.CompareOrdinal(left, right);
+        }
+
+        private static string GetResourceAssetName(string path)
+        {
+            int start = path.LastIndexOf('/') + 1;
+            int end = path.LastIndexOf('.');
+            if (end < start)
+                end = path.Length;
+            return path.Substring(start, end - start);
         }
 
         private static int CompareSources(
@@ -596,5 +704,22 @@ namespace FlatWorld.Dialogue
         }
 
         #endregion
+    }
+
+    [MemoryPack.MemoryPackable]
+    internal sealed partial class CharacterSpeechConfigResourceDocument
+    {
+        public string SourceName;
+        public CharacterSpeechConfigEntry[] Entries = Array.Empty<CharacterSpeechConfigEntry>();
+        public CharacterSpeechConfigIssueData[] Issues = Array.Empty<CharacterSpeechConfigIssueData>();
+    }
+
+    [MemoryPack.MemoryPackable]
+    internal sealed partial class CharacterSpeechConfigIssueData
+    {
+        public string SourceName;
+        public string EntryId;
+        public string FactName;
+        public string Message;
     }
 }

@@ -127,8 +127,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     internal Rigidbody2D EnsureMovableItemBody(Item target)
     {
         ItemPhysicsDefinitionDto configured = GetConfiguredItemPhysics(target);
-        Rigidbody2D body = target.GetComponent<Rigidbody2D>();
-        if (body == null) body = target.gameObject.AddComponent<Rigidbody2D>();
+        Rigidbody2D body = RentItemRigidbody(target, target.transform);
         if (!ConfigureItemBodyForIndependentMotion(target, body, refreshRegistration: false))
         {
             RegisterItem(target);
@@ -151,9 +150,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             }
             if (!hasSolid && triggerShape != null)
             {
-                BoxCollider2D physical = target.gameObject.AddComponent<BoxCollider2D>();
-                physical.offset = triggerShape.offset; physical.size = triggerShape.size;
-                physical.isTrigger = false;
+                RentItemSolidFromTrigger(target, triggerShape);
             }
         }
         ItemPhysicsProjection2D.Ensure(target);
@@ -185,9 +182,28 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         float previousAngularVelocity = previousBody != null ? previousBody.angularVelocity : 0f;
         ReleaseItem(item, preserveNativeMotion: true);
         if (item == null || item.DestructionHandled || item.IsInPool || !ReferenceEquals(item.itemData, originalData) ||
-            wasRuntimeRegistered && !manager.IsRuntimeItemRegistered(item)) return;
+            wasRuntimeRegistered && !manager.IsRuntimeItemRegistered(item))
+        {
+            if (item != null && !itemOwners.ContainsKey(item)) ReturnItemPhysicsComponents(item);
+            return;
+        }
         // 归属交接只在登记或迁移执行，模拟帧不扫描场景或逐物品检测世界。
-        AssignPhysicsRootToPrimarySpace(item.gameObject);
+        try { AssignPhysicsRootToPrimarySpace(item.gameObject); }
+        catch { if (!itemOwners.ContainsKey(item)) ReturnItemPhysicsComponents(item); throw; }
+        var registered = ListPool<Collider2D>.Get();
+        itemColliders[item] = registered;
+        itemOwners[item] = this;
+        try
+        {
+        RentItemPhysicsComponents(item);
+        if (previousBody == null)
+        {
+            previousBody = item.GetComponent<Rigidbody2D>();
+            previousBodyType = previousBody != null ? previousBody.bodyType : RigidbodyType2D.Static;
+            previousSimulated = previousBody != null && previousBody.simulated;
+            previousVelocity = previousBody != null ? previousBody.velocity : Vector2.zero;
+            previousAngularVelocity = previousBody != null ? previousBody.angularVelocity : 0f;
+        }
         ItemPhysicsDefinitionDto definition = GetConfiguredItemPhysics(item);
         bool defaultIndependent = definition == null && (ResolveLegacyItemIndependentWorldMotion(item, previousBody) ||
             previousBody != null && previousBody.bodyType == RigidbodyType2D.Kinematic &&
@@ -199,7 +215,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             if (definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic)
                 ItemWorldPlacement.AttachToSceneItemCategory(item, item.gameObject);
             Rigidbody2D body = item.GetComponent<Rigidbody2D>();
-            if (body == null && definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic) body = item.gameObject.AddComponent<Rigidbody2D>();
+            if (body == null && definition.Mode == WorldPhysicsProxyMode2D.IndependentDynamic) body = RentItemRigidbody(item, item.transform);
             if (body != null) ConfigureProxyBody(body, item.itemData, definition, FlatWorld.Networking.GameNetwork.HasStateAuthority);
             if (body != null)
             {
@@ -236,25 +252,13 @@ public sealed partial class WorldPhysicsService2D : IDisposable
                 }
             }
         }
-        var registered = ListPool<Collider2D>.Get();
-        itemColliders[item] = registered;
-        itemOwners[item] = this;
-        try
-        {
             using var scratch = ListPool<Collider2D>.Get(out var shapes);
             item.GetComponentsInChildren(true, shapes);
             for (int i = 0; i < shapes.Count; i++)
             {
                 Collider2D collider = shapes[i];
                 if (collider.GetComponentInParent<Item>(true) != item) continue;
-                ItemPhysicsRegion2D region = collider.GetComponent<ItemPhysicsRegion2D>();
-                Module module = collider.GetComponentInParent<Module>(true);
-                WorldPhysicsPurpose2D purpose = region != null ? region.Purpose : collider.isTrigger
-                    ? WorldPhysicsPurpose2D.Trigger : WorldPhysicsPurpose2D.Blocking;
-                if (region == null && CombatPhysicsChannels.IsDamageReceiverCollider(collider))
-                    purpose |= WorldPhysicsPurpose2D.Damage;
-                RegisterCollider(collider, item, region != null ? region.Receiver : module,
-                    region != null ? region.RegionId : null, purpose);
+                RegisterItemColliderBinding(item, collider);
                 registered.Add(collider);
             }
             ItemPhysicsDefinitionDto effectiveDefinition = ResolveEntityPhysicsDefinition(definition, defaultIndependent);
@@ -262,7 +266,19 @@ public sealed partial class WorldPhysicsService2D : IDisposable
             ItemPhysicsProjection2D.Ensure(item);
             ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);
         }
-        catch { ReleaseItem(item, preserveNativeMotion: true); throw; }
+        catch { ReleaseItem(item); throw; }
+    }
+
+    private void RegisterItemColliderBinding(Item item, Collider2D collider)
+    {
+        ItemPhysicsRegion2D region = collider.GetComponent<ItemPhysicsRegion2D>();
+        Module module = collider.GetComponentInParent<Module>(true);
+        WorldPhysicsPurpose2D purpose = region != null ? region.Purpose : collider.isTrigger
+            ? WorldPhysicsPurpose2D.Trigger : WorldPhysicsPurpose2D.Blocking;
+        if (region == null && CombatPhysicsChannels.IsDamageReceiverCollider(collider))
+            purpose |= WorldPhysicsPurpose2D.Damage;
+        RegisterCollider(collider, item, region != null ? region.Receiver : module,
+            region != null ? region.RegionId : null, purpose);
     }
 
     internal static void ReleaseItem(Item item, bool preserveNativeMotion = false)
@@ -291,6 +307,7 @@ public sealed partial class WorldPhysicsService2D : IDisposable
                 for (int i = 0; i < shapes.Count; i++) owner.UnregisterCollider(shapes[i]);
                 ListPool<Collider2D>.Release(shapes);
             }
+            if (!preserveNativeMotion && item != null) ReturnItemPhysicsComponents(item);
         }
     }
     #endregion
@@ -360,10 +377,12 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         disposed = true;
         WorldTopologyRuntime.LocalPlayerWrapped -= ReprojectEntityPhysicsToLocalAnchor;
         DisposeGeometrySources();
+        DisposeCombatDamageQueries();
         DisposeTransientBodies();
         DisposeEntityProxies();
         foreach (var pair in itemColliders)
         {
+            if (pair.Key != null) ReturnItemPhysicsComponents(pair.Key);
             if (itemOwners.TryGetValue(pair.Key, out var owner) && owner == this) itemOwners.Remove(pair.Key);
             ListPool<Collider2D>.Release(pair.Value);
         }

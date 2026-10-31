@@ -4,12 +4,12 @@
 
 ## 编译和安装
 
-先让当前游戏代码编译成功。示例默认引用项目 `Assets/Plugins/Harmony/0Harmony.dll`；给独立 MOD 开发环境使用时，把 `HarmonyDllPath` 指向当前游戏发行包自带的同一程序集。
+先让当前游戏代码编译成功。示例默认引用项目 `Assets/StreamingAssets/ManagedModRuntime/0Harmony.dll`；运行库作为原始文件随包分发，只在启用托管 MOD 时加载，不参与 Unity 编译和 Burst 扫描。
 
 ```powershell
 dotnet build -c Release `
   -p:GameManagedDirectory="D:\_Unity\_UnityProject\FlatWorld\Library\ScriptAssemblies" `
-  -p:HarmonyDllPath="D:\Games\FlatWorld\FlatWorld_Data\Managed\0Harmony.dll"
+  -p:HarmonyDllPath="D:\Games\FlatWorld\FlatWorld_Data\StreamingAssets\ManagedModRuntime\0Harmony.dll"
 ```
 
 编译目标将本 MOD DLL 和 manifest 放到 `package/`。只把 `package` 的内容安装到 `Application.persistentDataPath/Mods/example.harmony.machines/`，不要把整个作者工程复制进去；玩家已有 Harmony，不要把 `0Harmony.dll` 放入 MOD 包。

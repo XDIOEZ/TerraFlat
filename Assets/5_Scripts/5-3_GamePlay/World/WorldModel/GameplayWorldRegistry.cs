@@ -301,6 +301,11 @@ public static partial class GameplayWorldRegistry
             }
             throw;
         }
+        finally
+        {
+            // 迁移回调可能提前结束，只有未被新世界登记的物理租约才需要回收。
+            WorldPhysicsService2D.ReturnUnownedItemPhysicsComponents(item);
+        }
     }
 
     // 旧入口仅在注册时根据明确上下文或唯一场景绑定确定一次归属。
