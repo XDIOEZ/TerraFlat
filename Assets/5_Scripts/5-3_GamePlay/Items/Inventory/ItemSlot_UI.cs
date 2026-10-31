@@ -160,6 +160,8 @@ public partial class ItemSlot_UI : MonoBehaviour,
 
 
     private bool isPointerOver = false;
+    private Coroutine mouseTooltipDelayCoroutine;
+    private Vector2 mouseTooltipPointerPosition;
 
     [Header("鼠标拖拽")]
     private bool mousePressStartedWithItem;
@@ -237,6 +239,7 @@ public partial class ItemSlot_UI : MonoBehaviour,
     public void OnDestroy()
     {
         BoundInventory = null;
+        CancelMouseTooltipDelay();
         InventoryItemTooltip.Hide(this);
         CompleteActiveDrag(true, false);
         OnLeftClick.Clear();
@@ -266,6 +269,7 @@ public partial class ItemSlot_UI : MonoBehaviour,
     /// <summary>槽位面板停用时收束未完成拖拽，避免事务悬挂。</summary>
     private void OnDisable()
     {
+        CancelMouseTooltipDelay();
         InventoryItemTooltip.Hide(this);
         CompleteActiveDrag(true, false);
         EndMouseDragVisual();
@@ -276,6 +280,7 @@ public partial class ItemSlot_UI : MonoBehaviour,
     {
         if (!focused)
         {
+            CancelMouseTooltipDelay();
             touchFlickGesture.Reset();
             mouseFlickGesture.Reset();
             CancelTouchTooltipHold();
@@ -287,6 +292,7 @@ public partial class ItemSlot_UI : MonoBehaviour,
     {
         if (paused)
         {
+            CancelMouseTooltipDelay();
             touchFlickGesture.Reset();
             mouseFlickGesture.Reset();
             CancelTouchTooltipHold();

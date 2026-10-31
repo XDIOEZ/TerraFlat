@@ -9,6 +9,8 @@ using UnityEngine.UI;
 public partial class ItemSlot_UI
 {
     #region 库存指针与触屏手势
+    private const float MouseTooltipHoverDelaySeconds = 0.2f;
+
     public void OnPointerDown(PointerEventData eventData)
     {
         bool isTouch = IsTouchPointer(eventData);
@@ -68,7 +70,11 @@ public partial class ItemSlot_UI
         isPointerOver = true;
 
         if (eventData != null && !IsTouchPointer(eventData) && !eventData.dragging && !_isShiftQuickTransferDragging)
-            InventoryItemTooltip.Show(this, ResolveItemTooltipPrefab(), eventData.position);
+        {
+            CancelMouseTooltipDelay();
+            mouseTooltipPointerPosition = eventData.position;
+            mouseTooltipDelayCoroutine = StartCoroutine(WaitForMouseTooltip());
+        }
 
         if (!_isShiftQuickTransferDragging)
             return;
@@ -85,6 +91,7 @@ public partial class ItemSlot_UI
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerOver = false;
+        CancelMouseTooltipDelay();
         if (!InventoryItemTooltip.IsTouchPinned(this)) InventoryItemTooltip.Hide(this);
         if (eventData == null || eventData.pointerId != touchPointerId)
             return;
@@ -148,7 +155,10 @@ public partial class ItemSlot_UI
     {
         ReportPointerToHandVisual(eventData);
         if (eventData != null && !IsTouchPointer(eventData) && !eventData.dragging)
+        {
+            mouseTooltipPointerPosition = eventData.position;
             InventoryItemTooltip.Move(this, eventData.position);
+        }
         if (eventData != null && !IsTouchPointer(eventData) && mousePressStartedWithItem)
             mouseFlickGesture.Record(eventData.position, Time.unscaledTimeAsDouble);
         if (eventData == null || eventData.pointerId != touchPointerId)
@@ -183,6 +193,7 @@ public partial class ItemSlot_UI
     /// <summary>根据输入类型创建整组或半组拖拽事务并显示跟随图标。</summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
+        CancelMouseTooltipDelay();
         if (IsTouchPointer(eventData) && eventData.pointerId == touchPointerId && touchTooltipTriggered) return;
         InventoryItemTooltip.Hide(this);
         if (IsTouchPointer(eventData))
@@ -442,6 +453,23 @@ public partial class ItemSlot_UI
         touchLongPressPutDownCommitted = false;
         CancelTouchHalfDragReady();
     }
+
+    // 鼠标在槽位停留 0.2 秒后才显示物品说明，离开或拖拽会取消等待。
+    private IEnumerator WaitForMouseTooltip()
+    {
+        yield return new WaitForSecondsRealtime(MouseTooltipHoverDelaySeconds);
+        mouseTooltipDelayCoroutine = null;
+        if (isPointerOver && isActiveAndEnabled && !mouseDragActive && !_isShiftQuickTransferDragging)
+            InventoryItemTooltip.Show(this, ResolveItemTooltipPrefab(), mouseTooltipPointerPosition);
+    }
+
+    private void CancelMouseTooltipDelay()
+    {
+        if (mouseTooltipDelayCoroutine != null)
+            StopCoroutine(mouseTooltipDelayCoroutine);
+        mouseTooltipDelayCoroutine = null;
+    }
+
     private IEnumerator WaitForTouchTooltip()
     {
         ItemSlot pressedSlot = GetSlotData();

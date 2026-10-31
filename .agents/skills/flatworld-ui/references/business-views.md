@@ -19,7 +19,7 @@
 - 工业三槽显隐由 `SetFluidLayout` 同时管理输入行父节点；会话先关闭加工区后，不能只开启单个槽位。回归 `ui_settings/fluid_panel_layout` 覆盖燃料、气体装填与无库存模式。
 - 铁/钢便携气罐共用 `UI_FluidTank`：标题在上、信息与容量在中、操作统一归 `FWUI_Footer`，放置/拆回共用左侧位置、充气在右侧；正式资产与 `RuntimeUIPrefabBuilder.Industrial.ConfigurePortableTankActions` 同步，放置与拆回复用 `BuildingPanelActions`。手动充气由 `FluidTankConfiguration.AllowManualAirFill` 声明，UI、权威事务和联机回执共用能力判断；目标取实际环境压力与1标准大气压的较小值。`MechanicalPanelSession` 可见时沿现有状态刷新更新按钮资格，不重绑按钮文字或重建布局。
 - 热栏选中框归当前槽，用Common/Controls/UI_SelectBox与Inventory_HotBar.SelectBoxPrefab；附属提示ignoreLayout/无射线，Inventory.InitUI按真实ItemSlot_UI计槽，手持名读装备热栏。ItemSlot_UI.SetProcessingProgress仅写正式灰白层，燃料进度读真实吸收，Prefab与GameUIPrefabRebuilder同步。
-- `InventoryItemTooltip` 鼠标移入立即显示，属性名称左对齐、数值右对齐，说明文字独立换行；显示期间验来源面板/槽/物品。触屏空手长按0.5秒后固定并松手保留，窗外按下仅收起不截点击。固定期间持续验身份/手空/父面板可见，关闭/重绑/禁用/失焦清理，CanvasGroup隐藏也清。正式Prefab自带无射线独立Canvas，统一UIManager.ItemTooltipSortingOrder覆盖场景/常驻窗口。
+- `InventoryItemTooltip` 鼠标停留0.2秒后显示，离开/拖拽取消等待；属性名称左对齐、数值右对齐，说明文字独立换行；显示期间验来源面板/槽/物品。触屏空手长按0.5秒后固定并松手保留，窗外按下仅收起不截点击。固定期间持续验身份/手空/父面板可见，关闭/重绑/禁用/失焦清理，CanvasGroup隐藏也清。正式Prefab自带无射线独立Canvas，统一UIManager.ItemTooltipSortingOrder覆盖场景/常驻窗口。
 - 手工/制作台用Gameplay/Crafting/UI_HandCraftTable/UI_MakerTable，1344×756、安全区后比例0.6/0.8，真实输入/输出/配方容量复用；Prefab、GameUIPrefabRebuilder、TodoCraftingLayoutPreview同步。工业流体/宇航服/气罐用MechanicalPanelView/PreservePrefabLayout，宇航服用SpacesuitPanelSession真实供氧槽。
 - 装备只有 `FWUI_ConfigureEquipment` 通用入口；EquipmentConfigurationButton收集配置能力，一件直开、多件公共下拉、无则禁用。Mod_Equipment通过IEquipmentConfiguration分发并验当前装备身份，具体装备持页面，通用UI不识别具体装备。
 - 装备页九槽共用 `EquipmentSlotCatalog`；眼部 `Eyes` 居中放在头像上方，头部与眼部分槽。正式 `UI_Equipment` 与 `BuildEquipmentWindow` 同步630×516内容、左右四排125间距，标签和槽均在内容范围内。
