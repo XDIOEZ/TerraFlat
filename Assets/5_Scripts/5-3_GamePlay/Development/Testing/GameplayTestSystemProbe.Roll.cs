@@ -15,6 +15,9 @@ public static partial class GameplayTestSystemProbe
         Register("player", "roll_direction", PlayerRollDirection);
         Register("player", "roll_input", PlayerRollInput);
         Register("player", "roll_action", PlayerRollAction);
+#if UNITY_EDITOR
+        Register("player", "collider_visual_alignment", PlayerColliderVisualAlignment);
+#endif
     }
 
     private static JObject PlayerRollDirection(JObject args)
@@ -147,5 +150,41 @@ public static partial class GameplayTestSystemProbe
             UnityEngine.Object.DestroyImmediate(root);
         }
     }
+#if UNITY_EDITOR
+    // 校验玩家预制体的受击范围跟随人物底锚点画布，脚下实体阻挡框仍保持独立。
+    private static JObject PlayerColliderVisualAlignment(JObject args)
+    {
+        GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/2_Prefabs/Gameplay/Player/Player.prefab");
+        Transform visual = prefab != null ? prefab.transform.Find("RollVisual/Module_Animator") : null;
+        Transform receiver = prefab != null ? prefab.transform.Find("Module_DamageReciver") : null;
+        Mod_CharacterAppearance appearance = prefab != null
+            ? prefab.GetComponentInChildren<Mod_CharacterAppearance>(true) : null;
+        BoxCollider2D body = prefab != null ? prefab.GetComponent<BoxCollider2D>() : null;
+        BoxCollider2D hitbox = receiver != null ? receiver.GetComponent<BoxCollider2D>() : null;
+        if (visual == null || receiver == null || body == null || hitbox == null ||
+            appearance?.profile == null || appearance.profile.PixelsPerUnit <= 0f)
+            throw new InvalidOperationException("玩家预制体缺少外观、实体碰撞或独立受击框。");
+
+        float spriteBottom = visual.position.y - prefab.transform.position.y;
+        float spriteHeight = appearance.profile.Height / appearance.profile.PixelsPerUnit * visual.lossyScale.y;
+        float spriteWidth = appearance.profile.Width / appearance.profile.PixelsPerUnit * visual.lossyScale.x;
+        float hitCenterY = receiver.TransformPoint(hitbox.offset).y - prefab.transform.position.y;
+        float hitHalfHeight = hitbox.size.y * receiver.lossyScale.y * 0.5f;
+        return new JObject
+        {
+            ["spriteBottom"] = spriteBottom,
+            ["spriteTop"] = spriteBottom + spriteHeight,
+            ["spriteWidth"] = spriteWidth,
+            ["hitBottom"] = hitCenterY - hitHalfHeight,
+            ["hitTop"] = hitCenterY + hitHalfHeight,
+            ["hitWidth"] = hitbox.size.x * receiver.lossyScale.x,
+            ["hitTrigger"] = hitbox.isTrigger,
+            ["bodyTrigger"] = body.isTrigger,
+            ["bodyTop"] = body.offset.y + body.size.y * 0.5f,
+            ["bodyCenter"] = body.offset.y
+        };
+    }
+#endif
     #endregion
 }
