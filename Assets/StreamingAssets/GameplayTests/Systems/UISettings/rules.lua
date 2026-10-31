@@ -1259,9 +1259,14 @@ end, "新世界基础高级分页保留实例")
 
 test.system("ui_settings", "text_fitting_assets", {}, function(data)
     assert(data.prefabs >= 80 and #data.texts >= 800, "正式 UI 文字扫描范围异常缩小")
-    local bounded, flowing, screenshot_buttons = 0, 0, 0
+    local bounded, flowing, screenshot_buttons, tooltip_bodies = 0, 0, 0, 0
     for _, text in ipairs(data.texts) do
         local label = text.prefab .. "/" .. text.name
+        if text.prefab:find("UI_ItemTooltip.prefab", 1, true) and text.name == "Body" then
+            tooltip_bodies = tooltip_bodies + 1
+            assert(math.abs(text.lineSpacing - text.designSize * 0.5) < 0.01,
+                "物品悬浮信息的行距不是 1.5 倍，说明和属性列会重新挤在一起：" .. label)
+        end
         if text.button then
             local samples = text.buttonResolutions or {text.button}
             if text.buttonResolutions then
@@ -1295,6 +1300,7 @@ test.system("ui_settings", "text_fitting_assets", {}, function(data)
     end
     assert(bounded >= 700 and flowing >= 10, "普通文字或动态正文的扫描范围缺失")
     assert(screenshot_buttons == 2, "未覆盖截图中的两个正式按钮")
+    assert(tooltip_bodies == 1, "没有读取正式物品悬浮窗的正文行距")
 end, "所有正式 UI 文字缩放范围与溢出设置")
 
 test.system("ui_settings", "vessel_contents_layers", {}, function(data)

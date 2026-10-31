@@ -67,6 +67,8 @@ public static partial class GameplayTestSystemProbe
                     ["overflow"] = (int)text.overflowMode,
                     ["designSize"] = new SerializedObject(text).FindProperty("m_fontSizeBase").floatValue
                 };
+                if (tooltipBody == text)
+                    row["lineSpacing"] = text.lineSpacing;
                 if (parent != null && parent.TryGetComponent(out Button button) &&
                     parent.GetComponent<LayoutGroup>() == null)
                 {
