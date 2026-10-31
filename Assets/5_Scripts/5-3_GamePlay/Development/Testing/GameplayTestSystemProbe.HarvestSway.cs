@@ -66,7 +66,7 @@ public static partial class GameplayTestSystemProbe
         Bounds firstFruitBounds = fruit.localBounds;
 
         // 连点复用同一组件和原始边界，结束时两份参数必须同时复位。
-        ManualHarvestShake first = fixture.Item.GetComponent<ManualHarvestShake>();
+        ManualHarvestShake first = EnableGameplayTestProbeLifecycleCallbacks(fixture.Item.GetComponent<ManualHarvestShake>());
         ManualHarvestShake.Play(fixture.Item);
         bool boundsStable = fixture.Sprite.localBounds.Equals(firstBodyBounds) &&
             fruit.localBounds.Equals(firstFruitBounds);

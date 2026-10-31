@@ -764,7 +764,7 @@ public static partial class GameplayTestSystemProbe
                 ["registeredSameInstance"] = registeredSameInstance,
                 ["resolvedSameInstance"] = ReferenceEquals(animation, assembly.ResolveEmbeddedModule(instance.transform)),
                 ["bodyAnimatorMatches"] = bodyAnimator != null && animation.animator == bodyAnimator,
-                ["bodyRendererMatches"] = renderer != null && renderer.GetComponent<Mod_AnimatorController>() == animation,
+                ["bodyRendererMatches"] = renderer != null && bodyAnimator != null && renderer.transform == bodyAnimator.transform,
                 ["controllerName"] = bodyAnimator != null && bodyAnimator.runtimeAnimatorController != null
                     ? bodyAnimator.runtimeAnimatorController.name : string.Empty,
                 ["animatorCount"] = animatorCount,

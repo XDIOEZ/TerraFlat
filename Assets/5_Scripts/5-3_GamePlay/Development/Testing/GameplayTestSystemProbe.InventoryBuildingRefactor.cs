@@ -62,6 +62,7 @@ public static partial class GameplayTestSystemProbe
         finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
+    [ExecuteAlways]
     private sealed class InventoryPointerQueryProbeRaycaster : BaseRaycaster
     {
         public readonly List<GameObject> Targets = new();
@@ -89,9 +90,10 @@ public static partial class GameplayTestSystemProbe
     {
         EventSystem previous = EventSystem.current;
         var root = new GameObject("[LuaInventoryPointerQuery]");
+        JObject result;
         try
         {
-            EventSystem system = previous != null ? previous : root.AddComponent<EventSystem>();
+            EventSystem system = previous != null ? previous : root.AddComponent<GameplayTestDropdownEventSystem>();
             var raycaster = root.AddComponent<InventoryPointerQueryProbeRaycaster>();
             var slotObject = new GameObject("Slot");
             slotObject.transform.SetParent(root.transform);
@@ -116,7 +118,7 @@ public static partial class GameplayTestSystemProbe
             int firstPasses = raycaster.Passes;
             raycaster.Targets.Clear();
             query.Capture(pointer);
-            return new JObject
+            result = new JObject
             {
                 ["slotMatched"] = slotMatched, ["dropMatched"] = dropMatched, ["blocked"] = blocked,
                 ["disabledRejected"] = disabledRejected, ["outsideRejected"] = outsideRejected,
@@ -128,8 +130,10 @@ public static partial class GameplayTestSystemProbe
         finally
         {
             UnityEngine.Object.DestroyImmediate(root);
-            EventSystem.current = previous;
+            if (previous != null && previous.isActiveAndEnabled) EventSystem.current = previous;
         }
+        result["eventSystemRestored"] = EventSystem.current == previous;
+        return result;
     }
 
     // 同一建筑换世界位置和运行身份后仍得到同一封包，损伤及材料必须保留。

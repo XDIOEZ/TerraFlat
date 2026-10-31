@@ -8,7 +8,7 @@ public sealed class ManualHarvestShake : MonoBehaviour
     private const float MaximumRotationDisplacement = .13f;
     private static readonly int HarvestShakeId = Shader.PropertyToID("_HarvestShake");
     private readonly List<SpriteRenderer> renderers = new();
-    private readonly MaterialPropertyBlock block = new();
+    private MaterialPropertyBlock block;
     private Item ownerItem;
     private bool active;
 
@@ -22,6 +22,7 @@ public sealed class ManualHarvestShake : MonoBehaviour
 
     private void Restart(Item target)
     {
+        block ??= new MaterialPropertyBlock();
         Clear();
         ownerItem = target;
         target.GetComponentsInChildren(true, renderers);

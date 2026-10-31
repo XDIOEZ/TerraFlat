@@ -1242,7 +1242,16 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (enabled && sourceHealth != null && sourceHealth.Hp <= 0f) enabled = false;
         if (damageCollider == null)
         {
-            Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
+            if (enabled) Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
+            else
+            {
+                if (lastColliderEnabled)
+                {
+                    lastColliderEnabled = false;
+                    item?.MarkModuleScheduleDirty();
+                }
+                EndDamageWindow();
+            }
             return;
         }
 

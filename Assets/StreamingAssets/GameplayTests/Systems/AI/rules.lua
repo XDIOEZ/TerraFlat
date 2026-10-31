@@ -142,6 +142,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")
     local ghost, fish, bird, bee = false, false, false, false
     local snowLeopard, zombie = false, false
+    local checkedVisualPaths = 0
     for _, actor in ipairs(data.actors) do
         assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
             "正式物种没有启用可装配的单图动画：" .. actor.id)
@@ -153,6 +154,10 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
         assert(compiled.missingRejected and compiled.nullRejected and compiled.absentAddressRejected
             and compiled.missingError ~= "" and compiled.inactive,
             "Actor 编译接纳了缺失、空引用或未配置的首帧，或规则意外加载了世界：" .. actor.id)
+        if actor.id == "Wolf" or actor.id == "Bear" or actor.id == "SnowLeopard" or actor.id == "Zombie" then
+            assert(actor.visualPathsBound, "生物外壳的贴图和动画路径未绑定同一视觉节点：" .. actor.id)
+            checkedVisualPaths = checkedVisualPaths + 1
+        end
         if actor.id == "SnowLeopard" then
             assert(actor.initialSpriteName == "MiniWolf_Idle_1", "雪豹没有绑定自己的静态首帧")
             snowLeopard = true
@@ -203,6 +208,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     end
     assert(ghost and fish and bird and bee, "单图动画目录缺少幽灵、小鱼、鸟或蜜蜂")
     assert(snowLeopard and zombie, "单图首帧回归缺少雪豹或共享狼外壳的僵尸")
+    assert(checkedVisualPaths == 4, "生物视觉路径回归缺少狼、熊、雪豹或僵尸")
 end, "正式全物种单图模式与幽灵小鱼纯控制器")
 
 -- ECS 与普通生物一样只选状态首图，动作由正式批量摇摆采样器合成。

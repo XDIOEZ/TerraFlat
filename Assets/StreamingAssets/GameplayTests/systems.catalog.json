@@ -78,6 +78,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Player/Controller/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Interaction/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/Testing/GameplayTestDialogueRules.cs",
+        "Assets/2_Prefabs/Gameplay/Player/Player.prefab",
         "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset",
         "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",

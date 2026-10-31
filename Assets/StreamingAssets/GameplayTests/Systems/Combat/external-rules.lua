@@ -1,7 +1,13 @@
--- 来源无关的战斗参数与死亡开关独立执行，保持正式数值和机制接口的原有断言。
+-- 来源无关的战斗参数、伤害窗口与死亡开关独立执行。
 local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .00001, label .. "错误")
 end
+
+test.system("combat", "damage_window_without_collider", {}, function(data)
+    assert(data.reservationsAccepted, "伤害窗口无法预约目标")
+    assert(data.clearedWithoutTemplate and data.clearedBeforeLease and data.repeatedCloseSafe,
+        "缺少物理碰撞体时伤害窗口没有正确关闭或清理")
+end, "伤害窗口：缺少碰撞体时重复关闭并清理")
 
 -- 直接采样正式等级公式，不以Lua重新实现概率规则。
 local hitCases = {
