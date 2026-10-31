@@ -360,6 +360,8 @@ test.system("industrial_fluids", "combined_tank_collision_lifecycle", {}, functi
     assert(data.mirrorInitialCount == 1 and data.mirrorSplitCount == 2 and data.mirrorSourcesValid
         and data.mirrorStableIdentity and data.mirrorEmptyCount == 0,
         "环绕镜像没有复用、拆分、追踪真实来源或清空旧合并碰撞")
+    assert(data.mirrorUsesFixedBody and data.mirrorWarningCount == 0,
+        "固定镜像首次领取、重复刷新或拆分时产生警告，或错误启用了动态自动质量")
     assert(data.independentRetained and data.emptyMergedCount == 0 and data.clearedCount == 0,
         "合并池清理误删普通机器/自然物，或保留旧罐体碰撞")
     assert(data.genericProxyRegistry and data.batchBoundaryKeepsWholeShape and data.crossingArea == 2,
