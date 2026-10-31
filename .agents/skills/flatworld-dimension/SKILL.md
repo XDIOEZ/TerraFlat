@@ -34,5 +34,5 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 
 - 洞穴走 WorldModel Profile；`CavePortalPairingSnapshot` 冻结地表 Profile、派生种子、拓扑和空间倍率，纯采样决定配对，指纹进入洞穴签名，不读取已加载地表。
 - 地下湖由同一快照复算地表高度带与最低降水门槛；群系交界用基础气候，洞室/隧道/河流/安全区跟随 `world.spatialDistanceScale`。
-- 地表入口是已安装 `MineEntrance`；`CaveExit` 在基线完成后创建并进入差量，复用 `BuildingBodyShell` 和入口模块，不保留独立旧 Prefab；导航阻挡由 `WorldNavigationObstacle` 参数显式登记。
+- 地表自然生成的山洞入口由维度目录 `PortalItemId=NaturalMineEntrance` 指定，按生态基线生成并走确定性配对；`MineEntrance` 只供玩家作为 Ground 层人工建筑安装后进入，不能写入自然生成目录；地下 `CaveExit` 由纯生成配对或手工入口锚点创建。洞口可通行、贴地显示，不注册实体导航阻挡；两类入口共用 `Mod_DimensionPortal`，人工入口须完成安装。
 - 入口安全区分别改 Ground/Blocking，并经 `WorldLiquidSystem.TrySet(...,0)` 清 Liquid；准备期间不推进旧地块效果。

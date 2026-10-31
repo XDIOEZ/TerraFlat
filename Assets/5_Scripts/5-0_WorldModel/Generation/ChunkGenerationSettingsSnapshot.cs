@@ -685,7 +685,9 @@ namespace FlatWorld.WorldModel
                 "cave.resource.looseMinDistance", 5), 0, 128);
             CaveLooseResourceMaxDistance = Clamp(GetInt(numbers,
                 "cave.resource.looseMaxDistance", 12), CaveLooseResourceMinDistance, 128);
-            CavePortalItemId = GetText(texts, "cave.portal.itemId", "CaveExit");
+            // 无显式入口定义时按生成角色区分天然山洞入口和配对地下出口。
+            CavePortalItemId = GetText(texts, "cave.portal.itemId",
+                GetBool(numbers, "cave.portal.pairedExit", false) ? "CaveExit" : "NaturalMineEntrance");
             CavePortalTargetDimensionId = GetText(
                 texts,
                 "cave.portal.targetDimensionId",

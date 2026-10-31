@@ -52,7 +52,7 @@ public sealed class DimensionDefinition
     public Vector3 DefaultSpawnPosition = new Vector3(0.5f, 0.5f, 0f);
     public string PortalTargetDimensionId;
     [Tooltip("天然入口使用的物品，与生成地形模式无关。")]
-    public string PortalItemId = "MineEntrance";
+    public string PortalItemId = "NaturalMineEntrance";
     [Tooltip("天然出口复算目标世界的入口候选格。")]
     public bool PairPortalsWithTargetWorld;
     [Tooltip("启用维度光照上限；实际亮度仍跟随引用世界的昼夜变化。")]

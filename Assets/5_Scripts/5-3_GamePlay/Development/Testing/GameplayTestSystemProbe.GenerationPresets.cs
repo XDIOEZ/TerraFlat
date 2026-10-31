@@ -44,6 +44,7 @@ public static partial class GameplayTestSystemProbe
             new Dictionary<string, string> { ["terrain.mode"] = "surface" });
         var cave = new ChunkGenerationProfileSnapshot("probe:shared-cave", 81, 4, 4, numbers,
             new Dictionary<string, string> { ["terrain.mode"] = "cave" });
+        DimensionCatalogSO portalCatalog = UnityEngine.Resources.Load<DimensionCatalogSO>("Config/DimensionCatalog_Default");
         var generator = new DeterministicChunkGenerator();
         try
         {
@@ -58,6 +59,9 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["defaultUndergroundPreset"] = defaultPreset,
+                ["defaultSurfacePortalItemId"] = DimensionDefinition.CreateSurface().PortalItemId,
+                ["configuredSurfacePortalItemId"] = portalCatalog?.Find("surface")?.PortalItemId,
+                ["configuredCavePortalItemId"] = portalCatalog?.Find("cave")?.PortalItemId,
                 ["worldKey"] = underground.Name, ["bodyId"] = underground.BodyId,
                 ["presetId"] = underground.GenerationPresetId,
                 ["atmosphereProfileId"] = underground.AtmosphereProfileId,
@@ -105,6 +109,7 @@ public static partial class GameplayTestSystemProbe
             ["terrainMode"] = chunk.Terrain.GenerationMode.ToString(),
             ["hash"] = chunk.Terrain.ComputeStableHash().ToString(),
             ["portalCount"] = chunk.Ecology.Count,
+            ["firstPortalItemId"] = chunk.Ecology.Count > 0 ? chunk.Ecology.Placements[0].ItemId : null,
             ["caveLayer"] = chunk.Terrain.TryGetEnvironmentValue("caveDirtGround", 0, 0, out _),
             ["heightLevel"] = height.Level, ["heightLevelOtherName"] = otherHeight.Level,
             ["width"] = chunk.Terrain.Width, ["height"] = chunk.Terrain.Height
@@ -120,7 +125,7 @@ public static partial class GameplayTestSystemProbe
         numbers["cave.portal.baseSeed"] = 17413d;
         var source = new ChunkGenerationProfileSnapshot("probe:portal-source", 81, 4, 4, numbers,
             new Dictionary<string, string> { ["terrain.mode"] = "surface",
-                ["cave.portal.itemId"] = "MineEntrance", ["cave.portal.targetDimensionId"] = "paired-lab" });
+                ["cave.portal.itemId"] = "NaturalMineEntrance", ["cave.portal.targetDimensionId"] = "paired-lab" });
         DeterministicChunkGenerator CreateSourceGenerator(bool blocked) => new(terrainDecorator: (request, terrain, token) =>
         {
             for (int y = 0; y < terrain.Height; y++)

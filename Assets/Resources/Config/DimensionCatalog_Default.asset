@@ -21,7 +21,7 @@ MonoBehaviour:
     SeedSalt: 0
     DefaultSpawnPosition: {x: 0.5, y: 0.5, z: 0}
     PortalTargetDimensionId: cave
-    PortalItemId: MineEntrance
+    PortalItemId: NaturalMineEntrance
     PairPortalsWithTargetWorld: 0
     UseFixedLighting: 0
     FixedLighting: 1
