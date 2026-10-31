@@ -1412,6 +1412,8 @@
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/BuildingDepthMeshBridge.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/MechanicalDepthVisual*.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestPresentationRuntimeProbe.Machines.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.UnifiedRendering.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.HeldFoodBites.cs",
         "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.cs",
         "Assets/5_Scripts/5-1_Data/Settings/WorldRenderingConfig.WindStreaks.cs",
         "Assets/Resources/GameConfig/Rendering/*",

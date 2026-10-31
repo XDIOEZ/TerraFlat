@@ -1,5 +1,70 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
 do
+    local function sameCircles(first, second)
+        assert(#first == #second, "重新手持改变了咬痕数量")
+        for index, circle in ipairs(first) do
+            for channel = 1, 3 do
+                assert(math.abs(circle[channel] - second[index][channel]) < 0.00001,
+                    "同一食物进度的圆形咬痕未确定性还原")
+            end
+        end
+    end
+
+    test.system("rendering", "held_food_bites", { maximum = 1, steps = {
+        { progress = 0 }, { progress = 1 }, { progress = 0 }
+    } }, function(data)
+        local full, final, reset = data.samples[1], data.samples[2], data.samples[3]
+        assert(full.effectCount == 0 and full.texture == 0 and full.maskCount == 0,
+            "完整的一口食物仍创建咬痕资源")
+        assert(full.sortingLayer == data.heldLayer and full.sortingOrder == data.heldOrder,
+            "完整食物未保留手持排序配置")
+        assert(final.count == -1 and final.texture == 0, "最后一口没有直接隐藏或仍构造纹理")
+        assert(reset.count == 0 and reset.texture == 0, "新一份食物继承了旧咬痕")
+    end, "食物咬痕：一口食物零初始化分配、最终隐藏与新份复位")
+
+    test.system("rendering", "held_food_bites", { maximum = 3, steps = {
+        { progress = 0 }, { progress = 1 }, {}, { flipX = true }, { flipY = true },
+        { missingSprite = true }, {}, { progress = 2 }, { held = false }, { held = true },
+        { progress = 3 }, { progress = 0 }
+    } }, function(data)
+        local samples = data.samples
+        assert(samples[1].effectCount == 0 and samples[1].texture == 0, "完整食物仍初始化咬痕")
+        assert(samples[2].count == 1 and samples[2].textureWidth == 1 and samples[2].textureHeight == 1,
+            "一口咬痕未用单个圆参数代替像素遮罩")
+        assert(samples[2].texture == samples[3].texture, "未变的进度仍重建参数纹理")
+        assert(samples[4].flipX == -1 and samples[4].flipY == 1, "水平翻转未同步 Shader")
+        assert(samples[5].flipX == 1 and samples[5].flipY == -1, "垂直翻转未同步 Shader")
+        assert(samples[6].count == 0 and samples[6].texture == 0, "空 Sprite 仍读取几何或保留纹理")
+        sameCircles(samples[2].circles, samples[7].circles)
+        assert(samples[8].count == 2, "第二口没有增加独立圆形咬痕")
+        sameCircles(samples[2].circles, { samples[8].circles[1] })
+        assert(samples[9].count == 0 and samples[9].texture == 0 and samples[9].sortingOrder == 17 and
+            samples[9].sortingLayer == data.originalLayer,
+            "收起食物后 MPB、纹理或原排序未恢复")
+        sameCircles(samples[8].circles, samples[10].circles)
+        assert(samples[11].count == -1 and samples[11].texture == 0, "最终一口未全部裁剪")
+        assert(samples[12].count == 0 and samples[12].texture == 0, "复位后保留旧纹理")
+        for index, sample in ipairs(samples) do
+            local expectedMaterial = index == 9 and data.originalMaterial or data.masterMaterial
+            assert(sample.maskCount == 0 and sample.material == expectedMaterial,
+                "仍创建 SpriteMask、手持未继承角色Shader或卸手未恢复原材质")
+            assert(math.abs(sample.water - 0.37) < 0.00001, "咬痕覆盖了角色水态 MPB")
+        end
+    end, "食物咬痕：进度、确定性、翻转、空 Sprite、材质合成与回收")
+
+    test.system("rendering", "held_food_bites", { maximum = 1025, steps = { { progress = 40 } } }, function(data)
+        assert(data.samples[1].count == 40 and data.samples[1].textureWidth == 40,
+            "Shader 咬痕被固定向量数组长度截断")
+    end, "食物咬痕：高口数配置不受固定 Shader 数组限制")
+
+    test.system("rendering", "held_food_bites", { maximum = 1.2, steps = {
+        { progress = 1 }, { progress = 1.2 }
+    } }, function(data)
+        assert(data.samples[1].count == 1, "非整数进度被提前当成最后一口")
+        assert(data.samples[2].count == -1, "非整数最终进度未隐藏食物")
+    end, "食物咬痕：非整数进度和最终一口边界")
+end
+do
     local function near(actual, expected, label)
         assert(math.abs(actual - expected) < 0.0001, label)
     end
