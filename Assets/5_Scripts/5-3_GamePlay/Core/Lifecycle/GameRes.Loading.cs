@@ -258,6 +258,11 @@ public partial class GameRes
                   $"<color=#FFD166><b>{totalResourceLoadMilliseconds / 1000d:F2} 秒（{totalResourceLoadMilliseconds:F0} ms）</b></color>。", this);
         if (initialLoadOverBudget)
             Debug.LogWarning($"[GameRes] 首次完整加载超出 10 秒目标：{totalResourceLoadMilliseconds:F0} ms；请按阶段计时继续定位。", this);
+        // 只拆分诊断口径，完整计时仍从会话准备前开始，不能扣除首帧或异步等待。
+        Debug.Log($"[GameRes] 加载耗时拆分：推进 {loadPipeline.ExecutionMilliseconds:F1} ms，" +
+                  $"帧间/异步等待 {loadPipeline.BetweenAdvancesMilliseconds:F1} ms，" +
+                  $"最长调度间隔 {loadPipeline.LongestBetweenAdvancesMilliseconds:F1} ms，" +
+                  $"推进 {loadPipeline.ExecutionSlices} 次；等待包含渲染与编辑器工作，不代表纯读盘耗时。", this);
         Debug.Log($"[GameRes] 资源目录就绪：{ItemDefinitions.Count} 个物品/Actor，{TileBlockDict.Count} 个 TileBlock，" +
                   $"{recipeById.Count} 个配方，持有 {resourceAssets.HandleCount} 个资源请求。");
         Debug.Log($"[启动二进制缓存] 其他 JSON 配置：命中 {JsonConfigurationCache.Hits}，" +

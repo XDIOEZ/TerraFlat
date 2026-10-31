@@ -22,6 +22,8 @@ public static partial class GameplayTestSystemProbe
         target.Add("core_lifecycle/startup_production_dependencies", StartupProductionDependencies);
         target.Add("core_lifecycle/startup_small_configuration", StartupSmallConfiguration);
         target.Add("core_lifecycle/startup_resident_sprites", StartupResidentSprites);
+        target.Add("core_lifecycle/startup_definition_default_copies", StartupDefinitionDefaultCopies);
+        target.Add("core_lifecycle/startup_execution_timing", StartupExecutionTiming);
     }
 
     private static JObject StartupLoadingPolicy(JObject args)
@@ -87,6 +89,106 @@ public static partial class GameplayTestSystemProbe
             ["failure"] = pipeline.Failure?.GetType().Name,
             ["stage"] = pipeline.CurrentStage
         };
+    }
+
+    #endregion
+
+    #region 定义默认数据独立复制
+
+    [Serializable]
+    private sealed class StartupExtendedItemData : Data_GeneralItem
+    {
+        public List<int> Extra = new() { 7, 8 };
+    }
+
+    [Serializable]
+    private sealed class StartupExtendedModuleData : Ex_ModData
+    {
+        public List<int> Extra = new() { 3, 4 };
+        // 扩展即便使用值相等，也不能把不同原型的默认状态合并。
+        public override bool Equals(object other) => other is StartupExtendedModuleData;
+        public override int GetHashCode() => 1;
+    }
+
+    private static JObject StartupDefinitionDefaultCopies(JObject args)
+    {
+        var originalModule = new Ex_ModData { StableName = "old", ModuleId = "old-capability", BitData = "original" };
+        var source = new StartupExtendedItemData
+        {
+            IDName = "startup-copy", GameName = "复制样本", code = "extension-code",
+            Tags = new List<string> { "Material" }, Stack = new ItemStack { Amount = 2, Weight = 3 },
+            ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal) { ["old"] = originalModule }
+        };
+        ModuleDataCollection originalModules = source.ModuleDataDic;
+        int structureEvents = 0, massEvents = 0;
+        source.ModuleStructureChanged += _ => structureEvents++;
+        source.MassChanged += _ => massEvents++;
+        var shell = (StartupExtendedItemData)source.CloneDefinitionDefaultsWithoutModules();
+        bool noSourceEvents = structureEvents == 0 && massEvents == 0;
+        var result = new JObject
+        {
+            ["shellModulesNotCopied"] = shell.ModuleDataDic == null && ReferenceEquals(source.ModuleDataDic, originalModules),
+            ["shellSubtypePreserved"] = shell.GetType() == source.GetType() && shell.code == "extension-code" && shell.Extra[0] == 7,
+            ["sourceUntouched"] = noSourceEvents && ReferenceEquals(originalModules["old"], originalModule)
+        };
+        shell.Extra[0] = 99;
+        shell.Tags[0] = "changed";
+        shell.Stack.Amount = 5;
+        shell.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
+        result["shellFieldsIndependent"] = source.Extra[0] == 7 && source.Tags[0] == "Material" && source.Stack.Amount == 2 &&
+            source.ModuleDataDic.Count == 1 && massEvents == 0 && structureEvents == 0;
+        originalModule.Enabled = false;
+        result["sourceOwnerStillBound"] = structureEvents == 1;
+
+        var cache = new ItemModulePrototypeCache();
+        var prototype = new Ex_ModData { BitData = "first", Type = ModuleType.Equipment, Enabled = false };
+        var first = (Ex_ModData)cache.CreateModuleDefinitionDefaults(prototype);
+        first.StableName = "definition-a";
+        first.ModuleId = "capability-a";
+        first.BitData = "mutated";
+        first.Enabled = true;
+        var second = (Ex_ModData)cache.CreateModuleDefinitionDefaults(prototype);
+        result["factoryReused"] = cache.ModuleDefaultFactoryCount == 1 && cache.ModuleDefaultReuseCount == 1;
+        result["unboundDefaultsPreserved"] = second.StableName == null && second.ModuleId == null &&
+            !second.Enabled && second.Type == ModuleType.Equipment;
+        result["moduleValuesIndependent"] = second.BitData == "first" && prototype.BitData == "first" &&
+            prototype.StableName == null && !ReferenceEquals(first, second) && !ReferenceEquals(second, prototype);
+        prototype.BitData = "new-source";
+        result["sessionSnapshotIsolated"] = ((Ex_ModData)cache.CreateModuleDefinitionDefaults(prototype)).BitData == "first" &&
+            ((Ex_ModData)new ItemModulePrototypeCache().CreateModuleDefinitionDefaults(prototype)).BitData == "new-source";
+
+        var stock = new CollectableModuleData { CurrentStock = 23, IsInitialized = true };
+        var stockCopy = (CollectableModuleData)cache.CreateModuleDefinitionDefaults(stock);
+        stockCopy.CurrentStock = 0;
+        var stockAgain = (CollectableModuleData)cache.CreateModuleDefinitionDefaults(stock);
+        result["stockIndependent"] = stock.CurrentStock == 23 && stockAgain.CurrentStock == 23 && stockAgain.IsInitialized;
+
+        var binary = new Ex_ModData_MemoryPackable { BitData = new byte[] { 1, 2, 3 } };
+        var binaryCopy = (Ex_ModData_MemoryPackable)cache.CreateModuleDefinitionDefaults(binary);
+        binaryCopy.BitData[0] = 9;
+        var binaryAgain = (Ex_ModData_MemoryPackable)cache.CreateModuleDefinitionDefaults(binary);
+        result["binaryPayloadIndependent"] = binary.BitData[0] == 1 && binaryAgain.BitData[0] == 1 &&
+            !ReferenceEquals(binaryCopy.BitData, binaryAgain.BitData);
+
+        var extension = new StartupExtendedModuleData { BitData = "custom", Extra = new List<int> { 11, 12 } };
+        var extensionCopy = (StartupExtendedModuleData)cache.CreateModuleDefinitionDefaults(extension);
+        extensionCopy.Extra[0] = 99;
+        var extensionAgain = (StartupExtendedModuleData)cache.CreateModuleDefinitionDefaults(extension);
+        result["extensionPreserved"] = extensionAgain.GetType() == extension.GetType() && extensionAgain.BitData == "custom" &&
+            extensionAgain.Extra[0] == 11 && extension.Extra[0] == 11;
+        var equalButDifferent = new StartupExtendedModuleData { BitData = "other", Extra = new List<int> { 33 } };
+        var equalCopy = (StartupExtendedModuleData)cache.CreateModuleDefinitionDefaults(equalButDifferent);
+        result["prototypeReferenceIdentity"] = equalButDifferent.Equals(extension) && equalCopy.BitData == "other" && equalCopy.Extra[0] == 33;
+
+        var inventory = new Inventory_ModuleData { Data = null, InventoryInitName = "raw", BasePanelIsOpen = false };
+        var inventoryCopy = (Inventory_ModuleData)cache.CreateModuleDefinitionDefaults(inventory);
+        var food = new ModData_FoodData { FoodData = null, MechanicStates = null };
+        var foodCopy = (ModData_FoodData)cache.CreateModuleDefinitionDefaults(food);
+        result["rawNullsNotNormalized"] = inventoryCopy.Data == null && inventoryCopy.InventoryInitName == "raw" &&
+            !inventoryCopy.BasePanelIsOpen && foodCopy.FoodData == null && foodCopy.MechanicStates == null;
+        try { cache.CreateModuleDefinitionDefaults(null); result["nullRejected"] = false; }
+        catch (ArgumentNullException) { result["nullRejected"] = true; }
+        return result;
     }
 
     #endregion
@@ -235,6 +337,44 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region 并行阶段依赖与回收
+
+    private static JObject StartupExecutionTiming(JObject args)
+    {
+        int frame = 0, completed = 0, released = 0;
+        bool cancel = args.Value<bool>("cancel");
+        using var plan = new ResourceLoadPipeline((_, _) => { }, () => false,
+            () => double.MaxValue, () => frame, concurrentStages: args.Value<bool>("concurrent"));
+        IEnumerator Stage()
+        {
+            try
+            {
+                System.Threading.Thread.Sleep(2);
+                yield return null;
+                completed++;
+            }
+            finally { released++; }
+        }
+        plan.Add("measured", "实际推进与调度间隔", 1, Stage);
+        IEnumerator runner = plan.Run();
+        try
+        {
+            while (runner.MoveNext())
+            {
+                if (cancel) break;
+                System.Threading.Thread.Sleep(5);
+                if (++frame > 10) throw new InvalidOperationException("计时夹具没有完成。");
+            }
+        }
+        finally { (runner as IDisposable)?.Dispose(); }
+        return new JObject
+        {
+            ["workMeasured"] = plan.ExecutionMilliseconds > 0,
+            ["waitMeasured"] = plan.BetweenAdvancesMilliseconds > 0,
+            ["longestBounded"] = plan.LongestBetweenAdvancesMilliseconds <= plan.BetweenAdvancesMilliseconds,
+            ["slices"] = plan.ExecutionSlices,
+            ["completed"] = completed, ["released"] = released, ["failure"] = plan.Failure?.GetType().Name
+        };
+    }
 
     private static JObject StartupConcurrentStages(JObject args)
     {

@@ -60,6 +60,9 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 编辑器 FullPlayModeReloadPolicy 保持 Domain/Scene Reload 开启；Prefab 标签空结果在 GameRes 入口失败。TimeSystem JSON 在允许新世界前完成，玩家覆盖配置无效时保留内建。
 - Lua 测试入口可通过 `GameplayTestResourceCache` 恢复 Editor 持久源资产和物品 DTO；每轮新建 Scope/句柄、运行时模板和当前 C# 绑定，仅 Ready 后写缓存，失败/取消撤销暂存。缓存清理及诊断见 [Lua 测试](../flatworld-lua-testing/SKILL.md)。
 
+- 定义冷编译通过 `ItemData.CloneDefinitionDefaultsWithoutModules` 复制外壳，不能先复制随后被 JSON 模块重建丢弃的模块图，也不能临时解绑原型。`ItemModulePrototypeCache` 按默认数据引用复用当轮复制工厂；纯值内建状态直接创建，复杂与扩展类型保留多态深复制和原始空值，各定义独占可变数据。回归 `core_lifecycle/startup_definition_default_copies`。
+- 完整启动计时不扣除首帧或异步等待；`ResourceLoadPipeline` 另记推进、帧间等待及最长调度间隔，区分加载器工作与尚未恢复执行的等待，不能把这些值当作纯 CPU/磁盘耗时。顺序/并行与取消回归 `core_lifecycle/startup_execution_timing`。
+
 ## 原位更新
 
 - RequestResourceReload 在主菜单完整替换会话，单机世界加载隔离候选、校验后同帧发布 ResourcesReloaded；不保存退出或重建活跃 Item/Chunk。联机不做单边更新；TryReloadResources 仅无世界/活跃 Item 时可用。

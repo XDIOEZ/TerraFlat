@@ -125,6 +125,18 @@ public abstract partial class ItemData
         return detached;
     }
 
+    /// <summary>定义重新装配模块前只复制外壳数据，不遍历随后必然丢弃的外壳模块图。</summary>
+    public ItemData CloneDefinitionDefaultsWithoutModules()
+    {
+        // 只在影子对象上移除字段，不能解绑来源的模块集合或触发其所有权事件。
+        ItemData shell = (ItemData)MemberwiseClone();
+        shell.moduleData = null;
+        ItemData clone = FastCloner.FastCloner.DeepClone<object>(shell) as ItemData;
+        if (clone == null || clone.GetType() != GetType() || ReferenceEquals(clone, shell) || ReferenceEquals(clone, this))
+            throw new InvalidOperationException($"物品定义外壳复制失败：{GetType().FullName}");
+        return clone;
+    }
+
     #endregion
 
     // Unity 配置外壳不再进入存档，持久化统一使用实例快照。

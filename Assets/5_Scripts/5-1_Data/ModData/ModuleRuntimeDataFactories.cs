@@ -100,6 +100,40 @@ public static class ModuleRuntimeDataFactories
 
     #endregion
 
+    #region 未绑定定义默认值复制
+
+    /// <summary>冷编译原型允许空身份，普通值状态直接创建，复杂和扩展状态保留原来的多态深复制。</summary>
+    public static Func<ModuleData> CompileDefinitionDefaults(ModuleData source)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        Type type = source.GetType();
+        string stableName = source.StableName, moduleId = source.ModuleId;
+        bool enabled = source.Enabled;
+        ModuleType moduleType = source.Type;
+        Func<ModuleData> create;
+        // 仅对纯值内建类型复用工厂，不把运行态工厂的归一化规则套到原始 Prefab 数据上。
+        if (type == typeof(Ex_ModData) || type == typeof(CollectableModuleData))
+            create = CompileBuiltin(source);
+        else
+        {
+            ModuleData frozen = ItemInstanceDataFactory.CloneModuleDefault(source);
+            create = () => ItemInstanceDataFactory.CloneModuleDefault(frozen);
+        }
+        return () =>
+        {
+            ModuleData copy = create();
+            if (copy == null || copy.GetType() != type || ReferenceEquals(copy, source))
+                throw new InvalidOperationException($"模块定义默认值未独立复制：{type.FullName}");
+            copy.StableName = stableName;
+            copy.ModuleId = moduleId;
+            copy.Enabled = enabled;
+            copy.Type = moduleType;
+            return copy;
+        };
+    }
+
+    #endregion
+
     #region 内建内存状态计划
 
     private static Func<ModuleData> CompileBuiltin(ModuleData source)

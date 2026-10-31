@@ -1214,7 +1214,7 @@ public static class ItemDefinitionCatalogLoader
         if (shellItem?.itemData == null)
             throw new InvalidDataException($"物品 {id} 的外壳不是有效 Item：{shellId}");
 
-        ItemData template = FastCloner.FastCloner.DeepClone(shellItem.itemData);
+        ItemData template = shellItem.itemData.CloneDefinitionDefaultsWithoutModules();
         template.MatterState = new ItemMatterState(); // 连续物质状态属于实例，不继承外壳或静态定义。
         PopulateTemplateData(dto.ItemData, template, id);
         template.IDName = id;
@@ -1286,8 +1286,10 @@ public static class ItemDefinitionCatalogLoader
             {
                 if (prototype?._Data == null)
                     throw new InvalidDataException($"物品 {id} 找不到模块 Prefab/外壳模块：{moduleId}");
-                // 以 object 作为泛型实参，避免深拷贝按 ModuleData 静态类型退化为错误的 Ex_ModData。
-                moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+                // 原型工厂只在本轮复用，JSON 仍逐定义写入独立的模块数据。
+                moduleData = prototypeCache != null
+                    ? prototypeCache.CreateModuleDefinitionDefaults(prototype._Data)
+                    : ModuleRuntimeDataFactories.CompileDefinitionDefaults(prototype._Data)();
                 if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
                     throw new InvalidDataException(
                         $"物品 {id} 的模块 {moduleName} 数据类型复制失败：期望 {prototype._Data.GetType().Name}，实际 {moduleData?.GetType().Name ?? "null"}");
@@ -1552,7 +1554,9 @@ public static class ItemDefinitionCatalogLoader
         if (prototype?._Data == null)
             throw new InvalidDataException($"物品 {itemId} 的 health 找不到模块 Prefab：{prefabId}");
 
-        ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+        ModuleData moduleData = prototypeCache != null
+            ? prototypeCache.CreateModuleDefinitionDefaults(prototype._Data)
+            : ModuleRuntimeDataFactories.CompileDefinitionDefaults(prototype._Data)();
         if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
             throw new InvalidDataException($"物品 {itemId} 的 health 模块数据复制失败");
         moduleData.StableName = moduleName;

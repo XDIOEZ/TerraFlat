@@ -1,3 +1,26 @@
+for _, concurrent in ipairs({ true, false }) do
+    for _, cancel in ipairs({ true, false }) do
+        test.system("core_lifecycle", "startup_execution_timing", { concurrent = concurrent, cancel = cancel }, function(data)
+            assert(data.workMeasured and data.longestBounded and data.slices > 0, "执行耗时或等待统计丢失")
+            assert(data.released == 1 and data.failure == nil and data.completed == (cancel and 0 or 1),
+                "计时包装改变了取消、完成或嵌套清理")
+            assert(data.waitMeasured == not cancel, "帧间等待错误计为实际推进，或未恢复的取消被记为调度")
+        end, "顺序/并行加载的真实推进、调度间隔与取消")
+    end
+end
+
+test.system("core_lifecycle", "startup_definition_default_copies", {}, function(data)
+    assert(data.shellModulesNotCopied and data.shellSubtypePreserved, "外壳仍复制废弃模块或丢失扩展类型字段")
+    assert(data.sourceUntouched and data.shellFieldsIndependent and data.sourceOwnerStillBound,
+        "复制外壳修改了原型、共享可变字段或解绑了原型模块所有权")
+    assert(data.factoryReused and data.unboundDefaultsPreserved and data.moduleValuesIndependent,
+        "默认数据工厂重复构建、拒绝空模板身份或共享了实例状态")
+    assert(data.sessionSnapshotIsolated and data.stockIndependent and data.binaryPayloadIndependent,
+        "跨会话复用了旧默认值或采集库存/二进制载荷相互污染")
+    assert(data.extensionPreserved and data.prototypeReferenceIdentity and data.rawNullsNotNormalized and data.nullRejected,
+        "扩展多态字段丢失、原始空配置被归一化或接受空原型")
+end, "定义外壳免废弃模块拷贝，原型工厂复用与实例状态隔离")
+
 test.system("core_lifecycle", "startup_resident_sprites", {}, function(data)
     if not data.available then assert(data.available == false, "运行包不使用 Editor 贴图入口"); return end
     assert(data.resident and data.noRepeatedRequest and data.atlasDeduplicated,

@@ -15,8 +15,30 @@ public sealed class ItemModulePrototypeCache
     private readonly Dictionary<GameObject, (Module[] Modules, bool ContainsItem)> prefabComponents = new();
     private readonly Dictionary<GameObject, Module[]> shellComponents = new();
     private readonly Dictionary<(Module Prototype, string Json), ModuleJsonConfigurator.PreparedParameters> parameterTemplates = new();
+    private readonly Dictionary<ModuleData, Func<ModuleData>> moduleDefaultFactories = new(new ModuleDefaultSourceComparer());
     internal int PreparedParameterTemplateCount => parameterTemplates.Count;
     internal int PreparedParameterReuseCount { get; private set; }
+    internal int ModuleDefaultFactoryCount => moduleDefaultFactories.Count;
+    internal int ModuleDefaultReuseCount { get; private set; }
+
+    private sealed class ModuleDefaultSourceComparer : IEqualityComparer<ModuleData>
+    {
+        public bool Equals(ModuleData left, ModuleData right) => ReferenceEquals(left, right);
+        public int GetHashCode(ModuleData value) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value);
+    }
+
+    /// <summary>本轮只为每份原型默认数据准备一次复制工厂，各定义仍接收自己的可变状态。</summary>
+    internal ModuleData CreateModuleDefinitionDefaults(ModuleData source)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (!moduleDefaultFactories.TryGetValue(source, out Func<ModuleData> create))
+        {
+            create = ModuleRuntimeDataFactories.CompileDefinitionDefaults(source);
+            moduleDefaultFactories.Add(source, create);
+        }
+        else ModuleDefaultReuseCount++;
+        return create();
+    }
 
     /// <summary>同一目录的同原型同参数只做一次字段编译，结构与模块自有约束仍逐定义复查。</summary>
     internal ModuleJsonConfigurator.PreparedParameters PrepareModuleParameters(Module prototype,

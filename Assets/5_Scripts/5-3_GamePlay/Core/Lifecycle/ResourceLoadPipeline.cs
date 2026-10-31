@@ -44,6 +44,13 @@ internal sealed partial class ResourceLoadPipeline : IDisposable
     private string lastStageId;
     public string CurrentStage => currentStep?.Id ?? lastStageId ?? "plan";
     public Exception Failure { get; private set; }
+    private long executionTicks, betweenAdvancesTicks, longestBetweenAdvancesTicks;
+    /// <summary>推进加载器的墙钟耗时，包含预取推进，不等同于 CPU 使用时间。</summary>
+    internal double ExecutionMilliseconds => executionTicks * 1000d / Stopwatch.Frequency;
+    /// <summary>协程让出后再次获调度的间隔，包含真实异步等待、渲染和编辑器工作。</summary>
+    internal double BetweenAdvancesMilliseconds => betweenAdvancesTicks * 1000d / Stopwatch.Frequency;
+    internal double LongestBetweenAdvancesMilliseconds => longestBetweenAdvancesTicks * 1000d / Stopwatch.Frequency;
+    internal int ExecutionSlices { get; private set; }
 
     public ResourceLoadPipeline(Action<string, float> report, Func<bool> isInteractive = null,
         Func<double?> workBudget = null, Func<int> frameNumber = null, bool concurrentStages = false)
@@ -223,7 +230,32 @@ internal sealed partial class ResourceLoadPipeline : IDisposable
     #region 执行与释放
 
     /// <summary>执行完整计划；失败保留原始异常和阶段 ID，交给资源所有者统一清理。</summary>
-    public IEnumerator Run() => concurrentStages ? RunConcurrent() : RunSequential();
+    public IEnumerator Run()
+    {
+        IEnumerator execution = concurrentStages ? RunConcurrent() : RunSequential();
+        long yieldedAt = 0;
+        try
+        {
+            while (true)
+            {
+                long started = Stopwatch.GetTimestamp();
+                if (yieldedAt != 0)
+                {
+                    long interval = started - yieldedAt;
+                    betweenAdvancesTicks += interval;
+                    longestBetweenAdvancesTicks = Math.Max(longestBetweenAdvancesTicks, interval);
+                    yieldedAt = 0;
+                }
+                bool moved;
+                try { moved = execution.MoveNext(); }
+                finally { executionTicks += Stopwatch.GetTimestamp() - started; ExecutionSlices++; }
+                if (!moved) yield break;
+                yieldedAt = Stopwatch.GetTimestamp();
+                yield return execution.Current;
+            }
+        }
+        finally { (execution as IDisposable)?.Dispose(); }
+    }
 
     private IEnumerator RunSequential()
     {
