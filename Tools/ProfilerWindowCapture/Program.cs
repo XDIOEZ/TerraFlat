@@ -12,6 +12,7 @@ using WinRT;
 
 try
 {
+    Console.OutputEncoding = Encoding.UTF8;
     var pid = int.Parse(args[0]);
     var outputPath = Path.GetFullPath(args[1]);
     var projectName = args[2];
@@ -61,11 +62,12 @@ catch (Exception e)
 
 #region 窗口定位与 Direct3D 设备
 
-// 按当前编辑器 PID 和项目标题定位主窗口，不读取或切换前台窗口。
+// 同时识别项目名和完整路径开头的 Unity 标题，不读取或切换前台窗口。
 static IntPtr FindUnityMainWindow(int processId, string projectName)
 {
     IntPtr found = IntPtr.Zero;
     bool ambiguous = false;
+    var visibleTitles = new List<string>();
     EnumWindows((window, _) =>
     {
         GetWindowThreadProcessId(window, out var owner);
@@ -73,13 +75,18 @@ static IntPtr FindUnityMainWindow(int processId, string projectName)
         var title = new StringBuilder(1024);
         GetWindowText(window, title, title.Capacity);
         string text = title.ToString();
-        if (!text.StartsWith(projectName + " - ", StringComparison.OrdinalIgnoreCase) ||
-            !text.Contains(" - Unity ", StringComparison.Ordinal)) return true;
+        if (text.Length > 0) visibleTitles.Add(text);
+        string projectPrefix = projectName + " - ";
+        bool matchesProject = text.StartsWith(projectPrefix, StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("\\" + projectPrefix, StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("/" + projectPrefix, StringComparison.OrdinalIgnoreCase);
+        if (!matchesProject || !text.Contains(" - Unity ", StringComparison.OrdinalIgnoreCase)) return true;
         if (found != IntPtr.Zero) ambiguous = true;
         found = window;
         return true;
     }, IntPtr.Zero);
-    if (found == IntPtr.Zero || ambiguous) throw new InvalidOperationException("无法唯一定位本项目 Unity 主窗口");
+    if (found == IntPtr.Zero || ambiguous)
+        throw new InvalidOperationException($"无法唯一定位本项目 Unity 主窗口（PID={processId}；匹配多个={ambiguous}；窗口标题：{string.Join("；", visibleTitles)}）");
     return found;
 }
 
