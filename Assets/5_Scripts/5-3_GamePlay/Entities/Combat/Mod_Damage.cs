@@ -8,7 +8,7 @@ public enum WeaponHitboxRegion
     UpperRightQuadrant = 1
 }
 
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemPhysicsComponentsReceiver2D
 {
     #region 伤害相关数据
 
@@ -318,22 +318,29 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     #endregion
 
     #region Unity 生命周期
+    // 模板碰撞体由物理管理器延迟租借，攻击模块在可用时统一绑定。
+    public void OnItemPhysicsComponentsAvailable() => BindDamageCollider();
+
+    private void BindDamageCollider()
+    {
+        if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
+        if (damageCollider == null) return;
+        if (!hasInitialDamageColliderState)
+        {
+            initialDamageColliderEnabled = damageCollider.enabled;
+            hasInitialDamageColliderState = true;
+        }
+        if (restoreDamageColliderAfterDeath)
+            damageCollider.enabled = initialDamageColliderEnabled;
+        restoreDamageColliderAfterDeath = false;
+        CombatPhysicsChannels.AssignDamageSender(damageCollider);
+        lastColliderEnabled = damageCollider.enabled;
+    }
+
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     protected override void OnLoad()
     {
-        if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
-        if (damageCollider != null)
-        {
-            if (!hasInitialDamageColliderState)
-            {
-                initialDamageColliderEnabled = damageCollider.enabled;
-                hasInitialDamageColliderState = true;
-            }
-            // 新一轮生命恢复配置初态，不恢复上一轮死亡时可能尚未结束的攻击窗。
-            if (restoreDamageColliderAfterDeath)
-                damageCollider.enabled = initialDamageColliderEnabled;
-            restoreDamageColliderAfterDeath = false;
-        }
+        BindDamageCollider();
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (sourceHealth != null) sourceHealth.DeathStarted += HandleSourceDeath;
@@ -354,13 +361,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         ModifyDamageContext(ref contract);
         NormalizeDamageValues();
 
-        if (damageCollider == null)
+        if (damageCollider == null && !TryGetComponent<ItemPhysicsTemplate2D>(out _))
         {
             Debug.LogError($"{name} 未领取伤害碰撞体。", this);
-        }
-        else
-        {
-            CombatPhysicsChannels.AssignDamageSender(damageCollider);
         }
 
         // 初始化定时伤害相关数据
