@@ -66,7 +66,12 @@ public readonly struct WorldAddress : IEquatable<WorldAddress>
 
     private static string NormalizeDimensionId(string value)
     {
-        return string.IsNullOrWhiteSpace(value) ? SurfaceDimensionId : value.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(value)) return SurfaceDimensionId;
+        string normalized = value.Trim();
+        // 常用维度直接复用标准常量，不在每次环境采样时分配小写字符串。
+        if (string.Equals(normalized, SurfaceDimensionId, StringComparison.OrdinalIgnoreCase)) return SurfaceDimensionId;
+        if (string.Equals(normalized, CaveDimensionId, StringComparison.OrdinalIgnoreCase)) return CaveDimensionId;
+        return normalized.ToLowerInvariant();
     }
     #endregion
 }

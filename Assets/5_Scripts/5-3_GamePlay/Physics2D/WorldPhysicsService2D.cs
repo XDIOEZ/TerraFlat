@@ -280,6 +280,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     {
         ItemPhysicsRegion2D region = collider.GetComponent<ItemPhysicsRegion2D>();
         Module module = collider.GetComponentInParent<Module>(true);
+        if (region == null && module is Mod_DamageReceiver receiver && collider.transform == receiver.transform)
+            CombatPhysicsChannels.AssignDamageReceiver(receiver);
         WorldPhysicsPurpose2D purpose = region != null ? region.Purpose : collider.isTrigger
             ? WorldPhysicsPurpose2D.Trigger : WorldPhysicsPurpose2D.Blocking;
         if (region == null && CombatPhysicsChannels.IsDamageReceiverCollider(collider))

@@ -97,3 +97,10 @@ test.system("world_streaming", "detached_item_projection", {}, function(data)
     assert(data.independentBodyDetached and data.nativeMovementWritesBack and data.reregisterPreservesRepresentation,
         "独立运动仍依赖物品根刚体、原生结果未回写，或重新登记重置了临时运动接管状态")
 end, "普通物品逻辑、纯视觉投影和独立物理代理生命周期")
+
+test.runtime("world_streaming", "prefab_creature_physics", {}, function(data)
+    assert(data.usesNativeBody and data.noProxy and data.bodyTypePreserved,
+        "移动生物被迁入物理代理，或重复登记修改了预制体原有刚体")
+    assert(data.hitboxRegistered and data.hitboxChannel and data.rootRegistered and data.collidersReused,
+        "生物受击盒未按原预制体配置登记到物理管理器，或重复登记创建了多余碰撞体")
+end, "移动生物保留预制体碰撞并由世界物理管理器统一登记")

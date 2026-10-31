@@ -46,32 +46,50 @@ public sealed partial class WorldRenderingManager
     {
         using var scratch = UnityEngine.Pool.ListPool<NaturalItemView>.Get(out var views);
         views.AddRange(naturalItemViews.Values);
-        foreach (NaturalItemView view in views)
+        // 同一个世界的物品共享一次渲染上下文，避免逐物品反复初始化机械世界。
+        GameplayWorldRegistry.WorldExecutionScope worldScope = default;
+        string scopedWorldKey = null;
+        GameplayWorldRuntime scopedWorld = null;
+        try
         {
-            Item item = view.Item;
-            if (item == null || item.IsInPool || item.DestructionHandled || item.InHand ||
-                item.RuntimeGeneration != view.Generation)
+            foreach (NaturalItemView view in views)
             {
-                ReleaseNaturalItemView(item);
-                continue;
+                Item item = view.Item;
+                if (item == null || item.IsInPool || item.DestructionHandled || item.InHand ||
+                    item.RuntimeGeneration != view.Generation || view.Projection == null || view.Projection.IsReleased ||
+                    view.Projection.gameObject.scene != item.gameObject.scene)
+                {
+                    worldScope.Dispose();
+                    worldScope = default;
+                    scopedWorldKey = null;
+                    scopedWorld = null;
+                    ReleaseNaturalItemView(item);
+                    if (item != null && !item.IsInPool && !item.DestructionHandled && !item.InHand &&
+                        item.RuntimeGeneration == view.Generation)
+                        RequestNaturalItemView(item);
+                    continue;
+                }
+                string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
+                if (worldKey != scopedWorldKey)
+                {
+                    worldScope.Dispose();
+                    worldScope = default;
+                    scopedWorldKey = null;
+                    scopedWorld = null;
+                    if (GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world))
+                    {
+                        worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+                        scopedWorldKey = worldKey;
+                        scopedWorld = world;
+                    }
+                }
+                bool visible = scopedWorld != null && item.gameObject.activeInHierarchy &&
+                    worldKey == GameplayWorldRegistry.LocalPresentationWorldKey && scopedWorld.Chunks != null &&
+                    scopedWorld.Chunks.TryGetRuntimeChunkView(item.transform.position, out _);
+                view.Projection.Synchronize(Matrix4x4.identity, visible);
             }
-            if (view.Projection == null || view.Projection.IsReleased || view.Projection.gameObject.scene != item.gameObject.scene)
-            {
-                ReleaseNaturalItemView(item);
-                RequestNaturalItemView(item);
-                continue;
-            }
-            string worldKey = GameplayWorldRegistry.GetItemWorldKey(item);
-            bool visible = false;
-            if (GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world))
-            {
-                using var scope = GameplayWorldRegistry.UseWorld(worldKey);
-                visible = item.gameObject.activeInHierarchy &&
-                    worldKey == GameplayWorldRegistry.LocalPresentationWorldKey && world.Chunks != null &&
-                    world.Chunks.TryGetRuntimeChunkView(item.transform.position, out _);
-            }
-            view.Projection.Synchronize(Matrix4x4.identity, visible);
         }
+        finally { worldScope.Dispose(); }
     }
 
     private void ReleaseNaturalItemView(Item item)

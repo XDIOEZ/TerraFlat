@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
@@ -20,9 +20,24 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
     private WorldAddress localAddress;
     private DimensionDefinition localDefinition;
+    private string cachedExecutionWorldKey;
+    private WorldAddress cachedExecutionWorldAddress;
+    private bool hasCachedExecutionWorldAddress;
     public WorldAddress ActiveAddress
     {
-        get => GameplayWorldRegistry.HasExecutionContext ? WorldAddress.FromWorldKey(GameplayWorldRegistry.ExecutionWorldKey) : localAddress;
+        get
+        {
+            if (!GameplayWorldRegistry.HasExecutionContext) return localAddress;
+            string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+            // 同一世界的维度地址只解析一次，切换执行世界时再更新缓存。
+            if (!hasCachedExecutionWorldAddress || !string.Equals(cachedExecutionWorldKey, worldKey, StringComparison.Ordinal))
+            {
+                cachedExecutionWorldKey = worldKey;
+                cachedExecutionWorldAddress = WorldAddress.FromWorldKey(worldKey);
+                hasCachedExecutionWorldAddress = true;
+            }
+            return cachedExecutionWorldAddress;
+        }
         private set => localAddress = value;
     }
     public DimensionDefinition ActiveDefinition

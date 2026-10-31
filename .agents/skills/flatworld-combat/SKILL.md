@@ -58,7 +58,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 窗口打开主动扫已重叠目标；动画武器用 Unity `AnimatePhysics`，动作来源以 `SetAnimationDamageSamplingActive` 唤醒固定步命中采样；`LateUpdate` 只同步表现姿态。窗口预约集跨逻辑步保留、关窗清空，DamageInterval 不限制姿态采样；持续伤害用 Pulse。默认 MaxAttackTargets=3，可被 Prefab/JSON 覆盖。真实武器现场覆盖 30 FPS 下普通/两倍速的固定步开窗与命中回执。
 - AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - 机械武器 Pulse 的候选/去重/命中列表通过 Unity CollectionPool 租约在调用结束归还，支持重入；命中先按扫掠时间再按到接触点的距离排序，预先计算距离并复用静态比较器，不在排序时捕获当前攻击中心。分段 Marker 为 `FlatWorld.Combat.MachineCandidates/MachinePhysicsQuery/MachineApplyHits`；规则 `mechanical/machine_pulse_order`。
-- DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 自带同节点专用 Trigger，身体/拾取阻挡分开。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
+- DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 使用同节点专用 Trigger，身体/拾取阻挡分开。GO 生物保留预制体刚体和碰撞模板，世界物理管理器在租借组件后登记原碰撞体，不为生物创建物理代理。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。
 - Mod_Weapon_AnimationAction 每段 StartAttack 调持有者 Stamina.TryConsumeStamina，不足不开始；配置 staminaCostPerAttack 受统一角色体力参数修正。Mod_ColdWeapon 仍按 ColdWeaponStaminaObserver.StaminaConsumeSpeed 每秒扣，基础与 StaminaConsumeSpeedRate 是不同参数。
 - CombatImpactEffectSet 是类型特效，AttackEffects 是每次反馈；DominantKind 统一选类型，空反馈不阻断命中。JSON 不覆盖 Prefab Unity 资源引用集合。

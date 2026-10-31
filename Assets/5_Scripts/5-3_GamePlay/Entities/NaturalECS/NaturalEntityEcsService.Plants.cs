@@ -337,10 +337,18 @@ namespace FlatWorld.NaturalEntities
             EntityPlantLifecycle plant;
             bool hasSoil;
             using (SoilCommitReadMarker.Auto())
-                hasSoil = simulation.TryGet(record.Handle.Id, out plant) &&
-                    soils.TryRead(PlantSoilCell(record, plant), out target, out sampled,
-                        allowNaturalSoil: plant.Cultivated == 0);
-            if (hasSoil && FarmlandSystem.IsFarmland(sampled.Cell))
+            {
+                // 先过滤非耕地，避免原生植物每轮无意义地构造土壤快照。
+                hasSoil = simulation.TryGet(record.Handle.Id, out plant);
+                if (hasSoil)
+                {
+                    Vector2Int cell = PlantSoilCell(record, plant);
+                    hasSoil = soils.TrySample(new Vector2(cell.x + 0.5f, cell.y + 0.5f), out sampled) &&
+                        FarmlandSystem.IsFarmland(sampled.Cell) &&
+                        soils.TryReadSampled(sampled, out target, allowNaturalSoil: plant.Cultivated == 0);
+                }
+            }
+            if (hasSoil)
             {
                 // 保持逐株读取、灌溉和提交顺序，仅拆开统计真实读写与差量持久化成本。
                 using (SoilCommitWriteMarker.Auto())

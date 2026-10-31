@@ -26,6 +26,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "resource_proxy_world_isolation", CaptureResourceProxyWorldIsolation);
         GameplayTestRuntimeProbe.Register("world_streaming", "resource_proxy_native_triggers", CaptureResourceProxyNativeTriggers);
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "natural_item_decoupling", CaptureNaturalItemDecoupling);
+        GameplayTestRuntimeProbe.Register("world_streaming", "prefab_creature_physics", CapturePrefabCreaturePhysics);
     }
 
     private sealed class Fixture : IDisposable
@@ -119,6 +120,51 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             ["guid"] = saved.Guid, ["id"] = saved.IDName,
             ["hasHealth"] = target.HasHealth, ["mode"] = proxy.Mode.ToString(),
             ["bodyType"] = proxy.Body.bodyType.ToString()
+        };
+    }
+    #endregion
+
+    #region 生物预制体物理登记回归
+    private static JObject CapturePrefabCreaturePhysics(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var fixture = new Fixture();
+        GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        string world = GameplayWorldRegistry.GetItemWorldKey(player);
+        using var worldScope = GameplayWorldRegistry.UseWorld(world);
+        Vector2 point = WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + new Vector2(7f, 3f);
+        Item creature = fixture.SpawnItem("Chicken", point);
+        Mod_DamageReceiver health = creature.GetComponentInChildren<Mod_DamageReceiver>(true);
+        Collider2D hitbox = health != null ? health.GetComponent<Collider2D>() : null;
+        Rigidbody2D body = creature.GetComponent<Rigidbody2D>();
+        Collider2D rootShape = creature.GetComponent<Collider2D>();
+        int colliderCount = creature.GetComponentsInChildren<Collider2D>(true).Length;
+        RigidbodyType2D bodyType = body != null ? body.bodyType : RigidbodyType2D.Static;
+        if (!GameplayWorldRegistry.TryGetPhysics(world, out var physics))
+            throw new InvalidOperationException("正式生物未进入所属世界的物理管理器。");
+        bool hitboxRegistered = hitbox != null && WorldPhysicsService2D.TryResolveCollider(hitbox, out var hitBinding) &&
+            hitBinding.World == physics && hitBinding.Item == creature && hitBinding.Receiver == health &&
+            (hitBinding.Purpose & WorldPhysicsPurpose2D.Damage) != 0;
+        bool rootRegistered = rootShape == null || WorldPhysicsService2D.TryResolveCollider(rootShape, out var rootBinding) &&
+            rootBinding.World == physics && rootBinding.Item == creature;
+        bool hasProxy = physics.TryGetItemProxy(creature, out _);
+
+        // 重复登记必须保留生物原生组件与受击区域的准确归属。
+        physics.RegisterItem(creature);
+        bool rebound = hitbox != null && WorldPhysicsService2D.TryResolveCollider(hitbox, out var reboundBinding) &&
+            reboundBinding.Item == creature && reboundBinding.Receiver == health &&
+            (reboundBinding.Purpose & WorldPhysicsPurpose2D.Damage) != 0;
+        return new JObject
+        {
+            ["usesNativeBody"] = body != null && WorldPhysicsService2D.GetItemRigidbody(creature) == body,
+            ["noProxy"] = !hasProxy && !physics.TryGetItemProxy(creature, out _),
+            ["bodyTypePreserved"] = body != null && body.bodyType == bodyType,
+            ["hitboxRegistered"] = hitboxRegistered && rebound,
+            ["hitboxChannel"] = hitbox != null && hitbox.isTrigger && CombatPhysicsChannels.IsDamageReceiverCollider(hitbox),
+            ["rootRegistered"] = rootRegistered,
+            ["collidersReused"] = creature.GetComponentsInChildren<Collider2D>(true).Length == colliderCount &&
+                                  (health == null || health.GetComponent<Collider2D>() == hitbox) &&
+                                  creature.GetComponent<Collider2D>() == rootShape
         };
     }
     #endregion

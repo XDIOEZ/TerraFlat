@@ -324,7 +324,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     protected override void OnLoad()
     {
         ClearTemporaryCombatEffects();
-        CombatPhysicsChannels.AssignDamageReceiver(this);
+        // 预制体原生受击盒立即配置，模板碰撞体等物理管理器租借后再配置。
+        if (TryGetComponent<Collider2D>(out _)) CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearBodyPartPenalties();
         ClearHitSlowdown();
         damageTakenMultiplier = 1f;
