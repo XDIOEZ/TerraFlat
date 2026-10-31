@@ -331,6 +331,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             CurrentState = BuildingState.NotInstalled;
 
         HandleGhostShadow();
+        HandleHeldPlacementRequest();
     }
 
     public void OnEnable()

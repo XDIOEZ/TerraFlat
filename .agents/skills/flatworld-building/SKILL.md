@@ -28,6 +28,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - 召唤器与本体的基础建筑模块必须 enabled=true，让 OnLoad 读取正式配对与快照；迁移不能沿用源 Prefab 的禁用旗标，目录检查拒绝禁用配置。
 - SharedModuleIds 以唯一能力 ID 深拷贝单件载体的连续状态；返还载体在 Load 前注入。耐久品质 CraftedDurabilityMultiplier 双向转移，实际最大生命按当前定义重算；两端状态贴图各自声明。
 - RequiresPlacementRequest 由正式入口 BeginPlacement 开启，TryHandlePlacementAction 仲裁；普通无显式入口召唤器直接 Install。世界根旋转初始化 identity，手持旋转不迁移；世界朝向/镜像是已放置状态，拆回清零。
+- 手持建筑在 ModUpdate 读取中央 IsRightClickHeld，合法空格持续走 Install；占格/越界静默跳过，输入锁、桌面 UI、库存事务和放置回执等待期间不提交，不使用额外重复定时器。
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。
 - `BuildingSnapshotRepacking` 统一普通建筑、机器与轻量掉落载体的快照规范化、封包和共享状态装配，后端各自提交删除；`BuildingGroundPlacementRules` 提供地表承重与通行校验。Mod_Building 分为 Placement/Dismantling/Preview/Configuration 与生命周期壳；规则 `building/snapshot_repacking`。
 - SnapshotBase64 统一由 ItemNetworkStateSerialization.TrySerializeItemData 写入带 FWI1 包头的实例封包；船部件回收也复用此入口，不能直接写裸 MemoryPack。放置与 ShipMassReader 使用同一恢复契约，Tools/Tests/ShipMass 覆盖回收载体库存。

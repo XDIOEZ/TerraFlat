@@ -9,6 +9,21 @@ using UnityEngine;
 public partial class Mod_Building
 {
     #region 建筑放置请求与候选数据
+    private void HandleHeldPlacementRequest()
+    {
+        if (_ownerController == null || !_ownerController.IsRightClickHeld ||
+            _ownerController.IsGameplayInputLocked ||
+            (!_ownerController.IsUsingMobile && _ownerController.IsPointerOverUI()) ||
+            ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction() ||
+            !TryGetSourceHotBarSlot(out _, out _))
+            return;
+
+        // 按住使用时仅提交合法空格，已占格和越界不反复弹出拒绝提示。
+        Vector3 placement = NormalizeRequestedPlacement(GetPointerWorldPosition());
+        if (ValidatePlacement(placement, GetAuthorityPosition(), out _))
+            Install();
+    }
+
     public virtual void Install()
     {
         if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory || !IsPlacementModeActive)
