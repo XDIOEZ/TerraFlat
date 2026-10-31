@@ -299,6 +299,9 @@ namespace FlatWorld.WorldModel
             // 矿物规则的先后顺序就是稀有度优先级，不能按名称排序。
             CaveResourceRules = new ReadOnlyCollection<CaveResourceRuleSnapshot>(caveResourceList);
             PortalPairing = portalPairing;
+            // 配对身份只在 Profile 冻结时判定一次，生成分支和缺省出口定义共用。
+            UsesPairedPortalExits = portalPairing != null ||
+                this.numericParameters.TryGetValue("cave.portal.pairedExit", out double pairedExit) && pairedExit > 0d;
             EcologyFingerprint = CalculateEcologyFingerprint(EcologyGlobalMultiplier,
                 EcologyRules, this.numericParameters);
             GenerationFingerprint = CalculateGenerationFingerprint(
@@ -307,7 +310,8 @@ namespace FlatWorld.WorldModel
                 EcologyGlobalMultiplier, EcologyRules, CaveResourceRules, PortalPairing,
                 out ulong climateFingerprint);
             ClimateFingerprint = climateFingerprint;
-            Settings = new ChunkGenerationSettingsSnapshot(this.numericParameters, this.textParameters);
+            Settings = new ChunkGenerationSettingsSnapshot(this.numericParameters, this.textParameters,
+                UsesPairedPortalExits);
         }
 
         /// <summary>这套生成设置的名字。</summary>
@@ -341,6 +345,7 @@ namespace FlatWorld.WorldModel
         public IReadOnlyList<CaveResourceRuleSnapshot> CaveResourceRules { get; }
         /// <summary>矿洞复算地表入口和高度时使用的冻结配对上下文；地表 Profile 为空。</summary>
         public CavePortalPairingSnapshot PortalPairing { get; }
+        public bool UsesPairedPortalExits { get; }
         /// <summary>游戏自带生成器使用的、已经整理和检查过的设置。</summary>
         public ChunkGenerationSettingsSnapshot Settings { get; }
 

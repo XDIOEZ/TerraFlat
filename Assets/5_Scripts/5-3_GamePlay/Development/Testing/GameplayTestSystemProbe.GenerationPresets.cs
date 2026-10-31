@@ -151,9 +151,20 @@ public static partial class GameplayTestSystemProbe
         {
             var blocked = PairWith(blockedSource);
             var open = PairWith(openSource);
+            var noExplicitItemText = new Dictionary<string, string>
+            {
+                ["terrain.mode"] = "surface", ["cave.portal.targetDimensionId"] = "source-garden"
+            };
+            var fallbackSource = source.WithGenerationConfiguration(null, noExplicitItemText, null);
+            var fallbackDestination = open.WithGenerationConfiguration(null, noExplicitItemText, null);
+            var numericPaired = fallbackSource.WithNumericParameter("cave.portal.pairedExit", .25d);
             return new JObject
             {
                 ["samePairingFingerprint"] = blocked.PortalPairing.Fingerprint == open.PortalPairing.Fingerprint,
+                ["fallbackSourcePortalItemId"] = fallbackSource.Settings.CavePortalItemId,
+                ["fallbackPairedPortalItemId"] = fallbackDestination.Settings.CavePortalItemId,
+                ["numericPairedPortalItemId"] = numericPaired.Settings.CavePortalItemId,
+                ["fallbackDestination"] = CaptureGenerationPresetTerrain(destinationGenerator, fallbackDestination, "paired-lab"),
                 ["blockedSource"] = CaptureGenerationPresetTerrain(blockedSource, source, "source-garden"),
                 ["openSource"] = CaptureGenerationPresetTerrain(openSource, source, "source-garden"),
                 ["blockedDestination"] = CaptureGenerationPresetTerrain(destinationGenerator, blocked, "paired-lab"),

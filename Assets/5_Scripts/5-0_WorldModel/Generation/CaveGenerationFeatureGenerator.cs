@@ -179,7 +179,7 @@ namespace FlatWorld.WorldModel
             AddWorldPortals(request, terrain, settings, portalPlacements, claimedGuids,
                 portalCells, cancellationToken);
             var shrubPlacements = new List<NaturalItemPlacement>();
-            if (!UsesPairedPortalExits(request))
+            if (!request.Profile.UsesPairedPortalExits)
                 AddSurfacePortalShrubs(request, terrain, settings, ecology, portalPlacements,
                     shrubPlacements, claimedGuids);
             if (portalPlacements.Count == 0 && shrubPlacements.Count == 0)
@@ -393,16 +393,12 @@ namespace FlatWorld.WorldModel
 
         #region 天然传送门
 
-        private static bool UsesPairedPortalExits(ChunkGenerationRequest request) =>
-            request.Profile.PortalPairing != null ||
-            request.Profile.NumericParameters.TryGetValue("cave.portal.pairedExit", out double enabled) && enabled > 0d;
-
         private static void AddWorldPortals(ChunkGenerationRequest request,
             ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
             List<NaturalItemPlacement> placements, HashSet<int> claimedGuids,
             HashSet<int> portalCells, CancellationToken cancellationToken)
         {
-            if (UsesPairedPortalExits(request))
+            if (request.Profile.UsesPairedPortalExits)
                 AddCavePortals(request, terrain, settings, placements, claimedGuids, portalCells, cancellationToken);
             else
                 AddSurfacePortals(request, terrain, settings, placements, claimedGuids, portalCells);

@@ -55,6 +55,12 @@ test.system("dimension", "generation_presets", {}, function(data)
     assert(portals.openSource.firstPortalItemId == "NaturalMineEntrance" and
         portals.openDestination.firstPortalItemId == "CaveExit",
         "天然山洞入口与地下出口混用了人工矿洞建筑的定义")
+    assert(portals.fallbackSourcePortalItemId == "NaturalMineEntrance" and
+        portals.fallbackPairedPortalItemId == "CaveExit" and
+        portals.numericPairedPortalItemId == "CaveExit" and
+        portals.fallbackDestination.portalCount == 1 and
+        portals.fallbackDestination.firstPortalItemId == "CaveExit",
+        "配对出口缺少显式物品 ID 时错误退回天然山洞入口")
     assert(data.surfaceNamedCave.terrainMode == "Surface" and data.surfaceNamedSurface.terrainMode == "Surface" and
         not data.surfaceNamedCave.caveLayer and not data.surfaceNamedSurface.caveLayer and
         data.surfaceNamedCave.hash == data.surfaceNamedSurface.hash,
