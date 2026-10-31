@@ -21,6 +21,8 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
         and data.otherWorldSurvived,
         "源碰撞销毁或世界释放后仍可命中旧目标，或服务释放错误关闭了借用场景")
     local query = data.combatQueries
+    assert(query.returnedCollectionReused and query.worldIdentityPreserved and query.disposedWorldRentRejected,
+        "受击碰撞集合没有从所属世界统一领取/复用，或关闭的世界仍能发放新租约")
     assert(query.defaultSceneChanged and query.fixedSpaceHit and query.separateCandidateHit and query.fixedSpaceSweep,
         "战斗临时投影未固定到租用时的物理空间，或切换默认世界后查询发生漂移")
     assert(query.oldCandidateCleared and query.newCandidateHit and query.disposedSpaceRejected
@@ -44,6 +46,11 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
 end, "世界物理原生隔离、真实接触和多区域归属生命周期")
 
 test.system("world_streaming", "world_physics_definition", {}, function(data)
+    assert(data.declaredWithoutNativeComponents and data.returnedComponentsInactive and
+        data.rentedComponentsReused and data.worldReleasedRentedComponents,
+        "物理声明提前生成了原生组件，或世界领取、回收复用、关闭清理契约失效")
+    assert(data.moduleDisabledOnlyOwnRegion and data.moduleReenabledBeforeLoad,
+        "关闭模块未禁用自身区域、误关其他区域，或重启时没有复用并恢复自身受击形状")
     assert(data.regionCount == 5 and data.stableRegions and data.shapeReset and data.baselineStable,
         "JSON区域重复配置新建节点、遗漏重置几何，或破坏物品对象池的层级基线")
     assert(data.oldShapesDisabled and data.interactionIsCircle,

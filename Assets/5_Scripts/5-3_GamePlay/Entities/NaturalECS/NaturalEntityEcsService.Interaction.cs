@@ -491,7 +491,7 @@ namespace FlatWorld.NaturalEntities
             {
                 var recordsByCollider = buffers.Records;
                 var colliderHits = buffers.Hits;
-                using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+                using (CombatColliderQuery2D physics = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
                 {
                     using ResourceQuery candidates = QueryBounds(shape.BoundsCenter, shape.BoundsExtents);
                     foreach (Record record in candidates)

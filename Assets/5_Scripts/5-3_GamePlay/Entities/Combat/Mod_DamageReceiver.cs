@@ -13,7 +13,6 @@ using Random = UnityEngine.Random;
 /// GameObject 实体生命值与死亡的唯一权威：血量限制在 0 到 MaxHp，旧攻击和纯数据攻击共用结算与死亡收尾。
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
-[RequireComponent(typeof(BoxCollider2D))]
 public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder, IItemPoolLifecycle, IPlayerStateAuthorityModule
 {
     #region 可组合生命规则

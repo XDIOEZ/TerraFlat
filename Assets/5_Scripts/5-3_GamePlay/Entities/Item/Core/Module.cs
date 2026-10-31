@@ -447,11 +447,13 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         {
             if (!enabled) UnloadRuntime();
             _Data.Enabled = enabled;
+            WorldPhysicsService2D.RefreshRegisteredItemModulePhysics(this);
             if (enabled && item?.IsInitialized == true) LoadRuntime();
         }
         catch
         {
             _Data.Enabled = previous;
+            WorldPhysicsService2D.RefreshRegisteredItemModulePhysics(this);
             throw;
         }
         finally { InvalidateTickSchedule(); }

@@ -14,6 +14,8 @@
 - `physics.mode` 是游戏代理模式 `WorldFixed/IndependentDynamic`：相对所属世界固定，或在所属世界内独立运动；合批是固定模式内部实现。普通 Item 与自然 Resource Entity 在正式生成/恢复时交所属 `WorldPhysicsService2D` 分配，不配置 Unity 刚体类型。`massSource: ItemStack` 唯一读取既有总重，形状默认复用 `visual.collider/health.collider/$collider2D`；`freezeRotation/linearDamping/angularDamping` 由模式内部应用。
 - Resource Entity 支持 `physics.regions`，保留数据后端和唯一受击模块，交互区域显式引用真实生长/作物/储量采集槽，不能用 GO 路径或重复健康能力冒充接收者。独立 `Trigger` 必须引用具有 `ResourceEntityCapability.PhysicsTrigger` 回调的具体扩展槽，原生 Enter/Stay/Exit 保留区域、模块、实体和另一 Collider，释放前清接收者。受击/交互形状仍是原生 Trigger Collider，用途与 Unity 的 isTrigger 分开。原生区域与玩法精筛共用准确形状，联合 Bounds 仅用于候选查询。数据机器保留固定格与管电网约束，明确拒绝 `IndependentDynamic` 和新多区域；组合能力建筑可用 `UseGameObjectBackend` 保留完整 Item。区域结构随新实例生效，F5 不重建活体层级。
 
+- 通用壳与模块的物理默认值保存在 `ItemPhysicsTemplate2D` 声明（`owningModule` 绑定模块专属形状），不预装原生 Collider/Rigidbody；装配只登记配置与区域锚点，所属世界在模块 Load 前统一领取组件并回绑。回池注销、停用并复用同节点组件，迁移保留实例和运动；冷编译与资源构建器读取声明，不重新给壳添加默认物理组件。
+
 ## 动画
 
 - Actor 单图初始化只读取 `RuntimeItemDefinition.Sprite`，必须配置可加载的 `visual.spriteAddress`；本体/F5 复用物品视觉队列预载，构建不可按 `isActor` 丢弃 Sprite，F5 按地址隔离失败且新候选只用本轮预载。不启用、Rebind 或采样旧 Animator，切回单图与重载同样按当前定义恢复首帧，姿态/翻面/颜色不变。Sprite 地址使用 Assets 路径及明确切片名，并同步 Addressables 主资源地址，兼顾编辑器预载与构建。

@@ -84,51 +84,45 @@ MonoBehaviour:
     Guid: 986886093
     FactionId: 
     code: 
---- !u!61 &5790643269967756921
-BoxCollider2D:
+--- !u!114 &5790643269967756921
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913413943585218338}
   m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.16352397, y: -0.005667731}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 0.78278816, y: 0.19971997}
-  m_EdgeRadius: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f796764398c4fcbb17854251930e950, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  owningModule: {fileID: 0}
+  colliderType: BoxCollider2D
+  colliderEnabled: 1
+  isTrigger: 1
+  offset: {x: 0.16352397, y: -0.005667731}
+  size: {x: 0.78278816, y: 0.19971997}
+  radius: 0.5
+  edgeRadius: 0
+  capsuleDirection: 0
+  points: []
+  density: 1
+  material: {fileID: 0}
+  usedByEffector: 0
+  usedByComposite: 0
+  hasBody: 0
+  bodyType: 0
+  bodySimulated: 1
+  bodyUseAutoMass: 0
+  bodyMass: 1
+  bodyLinearDrag: 0
+  bodyAngularDrag: 0.05
+  bodyGravityScale: 1
+  bodyConstraints: 0
+  bodyCollisionDetection: 0
+  bodyInterpolation: 0
+  bodySleepingMode: 1
+  bodyUseFullKinematicContacts: 0
 --- !u!95 &-9015843562991787672
 Animator:
   serializedVersion: 5
@@ -216,7 +210,7 @@ MonoBehaviour:
   attackAudioCueId: 
   impactAudioOverrides: []
   playImpactFeedbackOnNonDamageableHit: 0
-  damageCollider: {fileID: 3442304371629352470}
+  damageCollider: {fileID: 0}
   lastDamageTime: 0
   MemoryPackableData:
     Name: 
@@ -224,51 +218,45 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
---- !u!61 &3442304371629352470
-BoxCollider2D:
+--- !u!114 &3442304371629352470
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3823313850195725085}
-  m_Enabled: 0
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: -0.27999997, y: 0.27999973}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1}
-  m_EdgeRadius: 0
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f796764398c4fcbb17854251930e950, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  owningModule: {fileID: 8323593629016724096}
+  colliderType: BoxCollider2D
+  colliderEnabled: 0
+  isTrigger: 1
+  offset: {x: -0.27999997, y: 0.27999973}
+  size: {x: 1, y: 1}
+  radius: 0.5
+  edgeRadius: 0
+  capsuleDirection: 0
+  points: []
+  density: 1
+  material: {fileID: 0}
+  usedByEffector: 0
+  usedByComposite: 0
+  hasBody: 0
+  bodyType: 0
+  bodySimulated: 1
+  bodyUseAutoMass: 0
+  bodyMass: 1
+  bodyLinearDrag: 0
+  bodyAngularDrag: 0.05
+  bodyGravityScale: 1
+  bodyConstraints: 0
+  bodyCollisionDetection: 0
+  bodyInterpolation: 0
+  bodySleepingMode: 1
+  bodyUseFullKinematicContacts: 0
 --- !u!1 &6308792640219325701
 GameObject:
   m_ObjectHideFlags: 0

@@ -347,10 +347,13 @@ namespace FlatWorld.AIECS.Gameplay
             if (health != null && prototype != null)
             {
                 BoxCollider2D box = prototype.GetComponent<BoxCollider2D>();
+                ItemPhysicsTemplate2D template = prototype.GetComponent<ItemPhysicsTemplate2D>();
                 JObject collider = health["$collider2D"] as JObject;
-                if (box == null || (collider != null && (string)collider["type"] != "BoxCollider2D"))
+                if (box == null && (template == null || template.colliderType != nameof(BoxCollider2D)) ||
+                    collider != null && (string)collider["type"] is string colliderType && colliderType != nameof(BoxCollider2D))
                     throw new InvalidOperationException(source.Id + " 的受击形状不是已支持的 BoxCollider2D。");
-                float2 size = Pair(collider?["size"], box.size), offset = Pair(collider?["offset"], box.offset);
+                float2 size = Pair(collider?["size"], box != null ? box.size : template.size);
+                float2 offset = Pair(collider?["offset"], box != null ? box.offset : template.offset);
                 JToken transform = health["$transform"];
                 float2 scale = Pair(transform?["localScale"], prototype.transform.localScale);
                 float2 translation = Pair(transform?["localPosition"], prototype.transform.localPosition);

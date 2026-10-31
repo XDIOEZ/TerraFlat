@@ -35,30 +35,29 @@ public static class CarrierAssetBuilder
         try
         {
             shell.name = "CarrierBodyShell";
-            foreach (Collider2D collider in shell.GetComponentsInChildren<Collider2D>(true))
-                if (collider.gameObject != shell)
-                    UnityEngine.Object.DestroyImmediate(collider);
+            foreach (ItemPhysicsTemplate2D child in shell.GetComponentsInChildren<ItemPhysicsTemplate2D>(true))
+                if (child.gameObject != shell)
+                    UnityEngine.Object.DestroyImmediate(child);
 
-            BoxCollider2D physicalCollider = shell.GetComponent<BoxCollider2D>();
-            if (physicalCollider == null)
-                physicalCollider = shell.AddComponent<BoxCollider2D>();
-            physicalCollider.enabled = false;
-            physicalCollider.isTrigger = false;
-            physicalCollider.offset = Vector2.zero;
-            physicalCollider.size = new Vector2(1.5f, 1f);
-
-            Rigidbody2D body = shell.GetComponent<Rigidbody2D>();
-            if (body == null)
-                body = shell.AddComponent<Rigidbody2D>();
-            body.bodyType = RigidbodyType2D.Kinematic;
-            body.simulated = true;
-            body.mass = 60f;
-            body.drag = 0f;
-            body.angularDrag = 0.05f;
-            body.gravityScale = 0f;
-            body.interpolation = RigidbodyInterpolation2D.None;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            ItemPhysicsTemplate2D physics = shell.GetComponent<ItemPhysicsTemplate2D>();
+            if (physics == null) physics = shell.AddComponent<ItemPhysicsTemplate2D>();
+            physics.owningModule = null;
+            physics.colliderType = nameof(BoxCollider2D);
+            physics.colliderEnabled = false;
+            physics.isTrigger = false;
+            physics.offset = Vector2.zero;
+            physics.size = new Vector2(1.5f, 1f);
+            physics.hasBody = true;
+            physics.bodyType = RigidbodyType2D.Kinematic;
+            physics.bodySimulated = true;
+            physics.bodyUseAutoMass = false;
+            physics.bodyMass = 60f;
+            physics.bodyLinearDrag = 0f;
+            physics.bodyAngularDrag = 0.05f;
+            physics.bodyGravityScale = 0f;
+            physics.bodyInterpolation = RigidbodyInterpolation2D.None;
+            physics.bodyCollisionDetection = CollisionDetectionMode2D.Continuous;
+            physics.bodyConstraints = RigidbodyConstraints2D.FreezeRotation;
             Item item = shell.GetComponent<Item>();
             item.itemData.IDName = "CarrierBodyShell";
             SpriteRenderer renderer = shell.GetComponentInChildren<SpriteRenderer>(true);
@@ -82,12 +81,12 @@ public static class CarrierAssetBuilder
         GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>(ShellPath);
         if (module == null || module.GetComponent<Mod_Carrier>()?.CanonicalModuleId != Mod_Carrier.ModuleId)
             throw new InvalidOperationException("缺少正确的 Module_Carrier Prefab。");
-        BoxCollider2D physicalCollider = shell != null ? shell.GetComponent<BoxCollider2D>() : null;
-        Rigidbody2D body = shell != null ? shell.GetComponent<Rigidbody2D>() : null;
-        if (shell == null || shell.GetComponent<Item>() == null ||
-            physicalCollider == null || physicalCollider.enabled ||
-            body == null || !body.simulated || body.bodyType != RigidbodyType2D.Kinematic)
-            throw new InvalidOperationException("载具外壳必须包含 Item、禁用的根 Collider 与运动学 Rigidbody2D；推动不依赖物理冲量。");
+        ItemPhysicsTemplate2D physics = shell != null ? shell.GetComponent<ItemPhysicsTemplate2D>() : null;
+        if (shell == null || shell.GetComponent<Item>() == null || physics == null ||
+            physics.colliderType != nameof(BoxCollider2D) || physics.colliderEnabled ||
+            !physics.hasBody || !physics.bodySimulated || physics.bodyType != RigidbodyType2D.Kinematic ||
+            shell.GetComponent<Collider2D>() != null || shell.GetComponent<Rigidbody2D>() != null)
+            throw new InvalidOperationException("载具外壳必须声明禁用的根碰撞框与运动学刚体，实际组件由世界物理服务领取。");
         VerifyEntry(ModulePath, "Module_Carrier");
         VerifyEntry(ShellPath, "CarrierBodyShell");
         Debug.Log("载具静态资源检查通过；尚未验证运行时乘坐、输入或存档。");

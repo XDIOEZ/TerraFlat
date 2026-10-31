@@ -37,6 +37,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
+        operations.Add("ai/perception_template_shapes", EntityPerceptionTemplateShapes);
         operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
         operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
         operations.Add("ai/stale_perception_batch", EntityStalePerceptionBatch);
@@ -503,6 +504,68 @@ public static partial class GameplayTestSystemProbe
             ["withoutOutput"] = withoutOutput, ["rejectedEmpty"] = rejectedEmpty,
             ["added"] = world.Count - 1
         };
+    }
+
+    // 直接采样作者模板、JSON 覆盖及领取后的正式感知编译结果。
+    private static JObject EntityPerceptionTemplateShapes(JObject args)
+    {
+        using var space = WorldPhysicsScene2D.CreateIsolated("Actor perception template probe");
+        using var physics = new WorldPhysicsService2D("probe:actor-perception:" + Guid.NewGuid().ToString("N"), space);
+        var root = new GameObject("Actor perception template probe");
+        root.SetActive(false);
+        SceneManager.MoveGameObjectToScene(root, space.Scene);
+        var item = root.AddComponent<GameItem>();
+        try
+        {
+            ItemPhysicsTemplate2D body = root.AddComponent<ItemPhysicsTemplate2D>();
+            body.colliderType = nameof(BoxCollider2D);
+            body.size = new Vector2(2f, 4f);
+            body.offset = new Vector2(0.25f, -0.5f);
+            var receiver = root.AddComponent<Mod_DamageReceiver>();
+            receiver.modData = new Ex_ModData();
+            ItemPhysicsTemplate2D rootModule = root.AddComponent<ItemPhysicsTemplate2D>();
+            rootModule.owningModule = receiver;
+            rootModule.colliderType = nameof(CircleCollider2D);
+            rootModule.radius = 0.75f;
+            var child = new GameObject("Child attack shape");
+            child.transform.SetParent(root.transform, false);
+            ItemPhysicsTemplate2D childShape = child.AddComponent<ItemPhysicsTemplate2D>();
+            childShape.colliderType = nameof(BoxCollider2D);
+            childShape.size = Vector2.one * 99f;
+
+            PerceptionShape2D[] cold = ActorPerceptionShapeCompiler.Compile(root);
+            bool coldWithoutNative = root.GetComponents<Collider2D>().Length == 0 && root.GetComponent<Rigidbody2D>() == null;
+            var definition = new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D),
+                Offset = new Vector2(-2f, 5f), Size = new Vector2(6f, 8f), Enabled = true };
+            PerceptionShape2D[] overridden = ActorPerceptionShapeCompiler.Compile(root, definition);
+            definition.Enabled = false;
+            PerceptionShape2D[] disabled = ActorPerceptionShapeCompiler.Compile(root, definition);
+            bool unknownTypeRejected = false;
+            try { ActorPerceptionShapeCompiler.Compile(root, new ItemColliderDefinitionDto { Type = nameof(CapsuleCollider2D) }); }
+            catch (InvalidOperationException) { unknownTypeRejected = true; }
+
+            physics.RegisterItem(item);
+            root.GetComponent<BoxCollider2D>().size = new Vector2(10f, 12f);
+            PerceptionShape2D[] rented = ActorPerceptionShapeCompiler.Compile(root);
+            return new JObject
+            {
+                ["coldWithoutNative"] = coldWithoutNative, ["coldCount"] = cold.Length,
+                ["coldX"] = cold[0].Center.x, ["coldY"] = cold[0].Center.y,
+                ["coldHalfWidth"] = cold[0].Extents.x, ["coldHalfHeight"] = cold[0].Extents.y,
+                ["rootModuleRadius"] = cold[1].Radius,
+                ["overrideCount"] = overridden.Length, ["overrideX"] = overridden[0].Center.x,
+                ["overrideY"] = overridden[0].Center.y, ["overrideHalfWidth"] = overridden[0].Extents.x,
+                ["overrideHalfHeight"] = overridden[0].Extents.y,
+                ["disabledCount"] = disabled.Length, ["disabledRadius"] = disabled[0].Radius,
+                ["unknownTypeRejected"] = unknownTypeRejected, ["rentedCount"] = rented.Length,
+                ["rentedHalfWidth"] = rented[0].Extents.x, ["rentedHalfHeight"] = rented[0].Extents.y
+            };
+        }
+        finally
+        {
+            WorldPhysicsService2D.ReleaseItem(item);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     // 读取正式目录并调用正式概率与队列规则，测试不重新计算业务逻辑。

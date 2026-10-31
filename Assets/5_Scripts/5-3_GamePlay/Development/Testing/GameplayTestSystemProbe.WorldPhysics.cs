@@ -86,7 +86,7 @@ public static partial class GameplayTestSystemProbe
             bool ownWorldContact = movingCollider.IsTouching(ownWall);
 
             JObject ownership = CaptureWorldPhysicsRegionOwnership(first, second, firstSpace, secondSpace, roots);
-            JObject combatQueries = CaptureWorldPhysicsCombatQueries(firstSpace, secondSpace);
+            JObject combatQueries = CaptureWorldPhysicsCombatQueries(first, second);
             JArray obstaclePoolReuse = CaptureWorldPhysicsObstaclePoolReuse(first, firstSpace, roots);
             first.Dispose();
             bool borrowedSpacePreserved = firstSpace.IsValid && movingBody != null &&
@@ -179,16 +179,17 @@ public static partial class GameplayTestSystemProbe
         return samples;
     }
 
-    private static JObject CaptureWorldPhysicsCombatQueries(WorldPhysicsScene2D firstSpace, WorldPhysicsScene2D secondSpace)
+    private static JObject CaptureWorldPhysicsCombatQueries(WorldPhysicsService2D firstWorld, WorldPhysicsService2D secondWorld)
     {
+        WorldPhysicsScene2D firstSpace = firstWorld.PrimarySpace, secondSpace = secondWorld.PrimarySpace;
         Scene previousScene = SceneManager.GetActiveScene();
 #if UNITY_EDITOR
         Scene temporaryActiveScene = default;
 #endif
         var results = new List<CombatColliderHit2D>();
         var attack = new AttackShape2D { Center = new float2(30f, 30f), HalfExtents = new float2(0.2f) };
-        using CombatColliderQuery2D first = CombatColliderQuery2D.Rent(firstSpace);
-        using CombatColliderQuery2D second = CombatColliderQuery2D.Rent(secondSpace);
+        using CombatColliderQuery2D first = firstWorld.RentCombatDamageQuery();
+        using CombatColliderQuery2D second = secondWorld.RentCombatDamageQuery();
         first.Add(101, PerceptionShape2D.Aabb(attack.Center, new float2(0.25f)));
         second.Add(202, PerceptionShape2D.Circle(attack.Center, 0.25f));
         try
@@ -215,7 +216,8 @@ public static partial class GameplayTestSystemProbe
             bool fixedSpaceSweep = results.Count == 1 && results[0].CandidateId == 101 &&
                 results[0].Fraction >= 0f && results[0].Fraction < 1f;
             first.Dispose();
-            using CombatColliderQuery2D reused = CombatColliderQuery2D.Rent(firstSpace);
+            using CombatColliderQuery2D reused = firstWorld.RentCombatDamageQuery();
+            bool returnedCollectionReused = ReferenceEquals(first, reused);
             reused.Add(303, PerceptionShape2D.Circle(new float2(35f, 30f), 0.25f));
             reused.Query(attack, results);
             bool oldCandidateCleared = results.Count == 0;
@@ -224,22 +226,29 @@ public static partial class GameplayTestSystemProbe
             reused.Query(newAttack, results);
             bool newCandidateHit = results.Count == 1 && results[0].CandidateId == 303;
 
-            using var leasedSpace = WorldPhysicsScene2D.Borrow(firstSpace.Scene);
-            using CombatColliderQuery2D invalidated = CombatColliderQuery2D.Rent(leasedSpace);
+            using var leasedSpace = WorldPhysicsScene2D.CreateIsolated("Physics query lease " + Guid.NewGuid().ToString("N"));
+            using var leasedWorld = new WorldPhysicsService2D("probe:physics-query-lease", WorldPhysicsScene2D.Borrow(leasedSpace.Scene));
+            using CombatColliderQuery2D invalidated = leasedWorld.RentCombatDamageQuery();
             invalidated.Add(404, PerceptionShape2D.Aabb(new float2(45f, 30f), new float2(0.25f)));
-            leasedSpace.Dispose();
+            leasedWorld.Dispose();
             bool disposedSpaceRejected = false;
             try { invalidated.Query(attack, results); }
             catch (ObjectDisposedException) { disposedSpaceRejected = true; }
             catch (InvalidOperationException) { disposedSpaceRejected = true; }
             var hits = new Collider2D[4];
-            int disposedProjectionCount = firstSpace.PhysicsScene.OverlapPoint(new Vector2(45f, 30f),
+            int disposedProjectionCount = leasedSpace.PhysicsScene.OverlapPoint(new Vector2(45f, 30f),
                 new ContactFilter2D { useTriggers = true }, hits);
+            bool disposedWorldRentRejected = false;
+            try { using var rejected = leasedWorld.RentCombatDamageQuery(); }
+            catch (ObjectDisposedException) { disposedWorldRentRejected = true; }
             return new JObject
             {
                 ["defaultSceneChanged"] = defaultSceneChanged, ["fixedSpaceHit"] = fixedSpaceHit,
                 ["separateCandidateHit"] = separateCandidateHit, ["fixedSpaceSweep"] = fixedSpaceSweep,
                 ["oldCandidateCleared"] = oldCandidateCleared, ["newCandidateHit"] = newCandidateHit,
+                ["returnedCollectionReused"] = returnedCollectionReused,
+                ["worldIdentityPreserved"] = first.WorldKey == firstWorld.WorldKey && second.WorldKey == secondWorld.WorldKey,
+                ["disposedWorldRentRejected"] = disposedWorldRentRejected,
                 ["disposedSpaceRejected"] = disposedSpaceRejected, ["disposedProjectionCount"] = disposedProjectionCount
             };
         }
@@ -256,18 +265,21 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceWorldPhysicsDefinition(JObject args)
     {
         using var space = WorldPhysicsScene2D.CreateIsolated("Physics JSON probe " + Guid.NewGuid().ToString("N"));
-        using var world = new WorldPhysicsService2D("probe:physics-json:" + Guid.NewGuid().ToString("N"), space);
+        using var world = new WorldPhysicsService2D("probe:physics-json:" + Guid.NewGuid().ToString("N"), WorldPhysicsScene2D.Borrow(space.Scene));
         var root = new GameObject("JSON multi-region item");
         root.SetActive(false);
         SceneManager.MoveGameObjectToScene(root, space.Scene);
         GameItem item = root.AddComponent<GameItem>();
         try
         {
-            BoxCollider2D legacyInteraction = root.AddComponent<BoxCollider2D>();
-            legacyInteraction.isTrigger = true;
+            ItemPhysicsTemplate2D rootTemplate = root.AddComponent<ItemPhysicsTemplate2D>();
+            rootTemplate.colliderType = nameof(BoxCollider2D);
+            rootTemplate.isTrigger = true;
+            rootTemplate.hasBody = true;
+            rootTemplate.bodyType = RigidbodyType2D.Static;
             var solidRoot = new GameObject("Legacy solid");
             solidRoot.transform.SetParent(root.transform, false);
-            BoxCollider2D legacySolid = solidRoot.AddComponent<BoxCollider2D>();
+            solidRoot.AddComponent<ItemPhysicsTemplate2D>().colliderType = nameof(BoxCollider2D);
             Mod_DamageReceiver firstReceiver = CreateWorldPhysicsProbeReceiver(item, "health:first", new Vector2(-2f, 0));
             Mod_DamageReceiver secondReceiver = CreateWorldPhysicsProbeReceiver(item, "health:second", new Vector2(2f, 0));
             var interactionRoot = new GameObject("Interaction module");
@@ -295,9 +307,22 @@ public static partial class GameplayTestSystemProbe
             ItemPhysicsRegion2D secondDamage = Array.Find(regions, region => region.RegionId == "damage:second");
             var baseline = new PooledItemMarker(item);
             baseline.CaptureBaseline();
+            bool declaredWithoutNativeComponents = root.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+                root.GetComponentsInChildren<Rigidbody2D>(true).Length == 0;
+            world.RegisterItem(item);
+            BoxCollider2D firstDamageShape = firstDamage.GetComponent<BoxCollider2D>();
+            Rigidbody2D firstBody = root.GetComponent<Rigidbody2D>();
             firstDamage.GetComponent<BoxCollider2D>().size = Vector2.one * 9f;
             firstDamage.transform.localPosition = Vector3.one * 9f;
+            WorldPhysicsService2D.ReleaseItem(item);
+            bool returnedComponentsInactive = !firstDamageShape.enabled && !firstBody.simulated &&
+                !WorldPhysicsService2D.TryResolveCollider(firstDamageShape, out _);
             ItemPhysicsDefinitionRuntime.ConfigureItemPhysicsRegions(item, physics);
+            world.RegisterItem(item);
+            bool rentedComponentsReused = firstDamage.GetComponent<BoxCollider2D>() == firstDamageShape &&
+                root.GetComponent<Rigidbody2D>() == firstBody && firstBody.simulated;
+            BoxCollider2D legacyInteraction = root.GetComponent<BoxCollider2D>();
+            BoxCollider2D legacySolid = solidRoot.GetComponent<BoxCollider2D>();
             ItemPhysicsRegion2D[] reused = item.GetComponentsInChildren<ItemPhysicsRegion2D>(true);
             bool stableRegions = reused.Length == 5 && regions.Length == 5 &&
                 Array.Find(reused, region => region.RegionId == "body:left") == left &&
@@ -309,12 +334,18 @@ public static partial class GameplayTestSystemProbe
             firstDamage.transform.localPosition = Vector3.one;
             baseline.RestoreBaseline();
             bool baselineStable = baseline.HasOriginalHierarchy() && firstDamage.transform.localPosition == Vector3.zero;
+            firstReceiver.SetEnabled(false);
+            bool moduleDisabledOnlyOwnRegion = !firstDamageShape.enabled &&
+                secondDamage.GetComponent<Collider2D>().enabled && left.GetComponent<Collider2D>().enabled;
+            firstReceiver.SetEnabled(true);
+            bool moduleReenabledBeforeLoad = firstDamageShape.enabled &&
+                firstDamage.GetComponent<BoxCollider2D>() == firstDamageShape &&
+                firstDamageShape.size == new Vector2(0.5f, 0.75f);
             ItemPhysicsDefinitionRuntime.ApplyColliderParameters(firstReceiver.GetComponent<Collider2D>(),
                 new ItemColliderDefinitionDto { Enabled = true });
             bool oldShapesDisabled = !legacyInteraction.enabled && !legacySolid.enabled &&
                 !firstReceiver.GetComponent<Collider2D>().enabled && !secondReceiver.GetComponent<Collider2D>().enabled;
             root.SetActive(true);
-            world.RegisterItem(item);
             bool twoExactReceivers = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(firstDamage.GetComponent<Collider2D>()) == firstReceiver &&
                 GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(secondDamage.GetComponent<Collider2D>()) == secondReceiver;
             bool exactInteractionReceiver = ReferenceEquals(GameplayPhysics2D.ResolveComponent<IInteractable>(interaction.GetComponent<Collider2D>()), interactionReceiver);
@@ -328,8 +359,17 @@ public static partial class GameplayTestSystemProbe
             int gapSolids = space.PhysicsScene.OverlapPoint(Vector2.zero, solidsOnly, hits);
             int leftSolids = space.PhysicsScene.OverlapPoint(new Vector2(-0.75f, 0), solidsOnly, hits);
             bool leftGeometryPreserved = leftSolids == 1 && hits[0] == left.GetComponent<Collider2D>();
+            world.Dispose();
+            bool worldReleasedRentedComponents = !firstDamageShape.enabled && !firstBody.simulated &&
+                !WorldPhysicsService2D.TryResolveCollider(firstDamageShape, out _);
             return new JObject
             {
+                ["declaredWithoutNativeComponents"] = declaredWithoutNativeComponents,
+                ["returnedComponentsInactive"] = returnedComponentsInactive,
+                ["rentedComponentsReused"] = rentedComponentsReused,
+                ["worldReleasedRentedComponents"] = worldReleasedRentedComponents,
+                ["moduleDisabledOnlyOwnRegion"] = moduleDisabledOnlyOwnRegion,
+                ["moduleReenabledBeforeLoad"] = moduleReenabledBeforeLoad,
                 ["regionCount"] = regions.Length, ["stableRegions"] = stableRegions,
                 ["shapeReset"] = shapeReset, ["baselineStable"] = baselineStable,
                 ["oldShapesDisabled"] = oldShapesDisabled, ["twoExactReceivers"] = twoExactReceivers,
@@ -356,7 +396,10 @@ public static partial class GameplayTestSystemProbe
         Mod_DamageReceiver receiver = root.AddComponent<Mod_DamageReceiver>();
         receiver.modData = new Ex_ModData();
         receiver.BindRuntimeIdentity(stableName, "probe:health", "probe:health");
-        receiver.GetComponent<Collider2D>().isTrigger = true;
+        ItemPhysicsTemplate2D template = root.AddComponent<ItemPhysicsTemplate2D>();
+        template.owningModule = receiver;
+        template.colliderType = nameof(BoxCollider2D);
+        template.isTrigger = true;
         return receiver;
     }
 

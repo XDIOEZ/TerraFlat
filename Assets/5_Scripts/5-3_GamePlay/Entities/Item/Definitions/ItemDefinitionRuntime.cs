@@ -82,6 +82,7 @@ public static class ItemDefinitionRuntime
 
         using var configureDebug = ConfigureInstanceDebug.Measure(1, definition.Id);
         item.BindData(itemData);
+        ItemPhysicsDefinitionRuntime.BeginItemPhysicsConfiguration(item);
         item.gameObject.name = definition.Id;
         item.ClearPendingInitialAnimatorState();
         using (ConfigureVisualDebug.Measure(1, definition.Id))
@@ -277,19 +278,7 @@ public static class ItemDefinitionRuntime
         if (target == null)
             throw new MissingComponentException($"物品 {item.itemData?.IDName} 找不到碰撞体路径：{definition.Path}");
 
-        Collider2D collider = definition.Type switch
-        {
-            nameof(BoxCollider2D) => target.GetComponent<BoxCollider2D>(),
-            nameof(CircleCollider2D) => target.GetComponent<CircleCollider2D>(),
-            nameof(CapsuleCollider2D) => target.GetComponent<CapsuleCollider2D>(),
-            nameof(PolygonCollider2D) => target.GetComponent<PolygonCollider2D>(),
-            _ => target.GetComponent<Collider2D>()
-        };
-        if (collider == null)
-            throw new MissingComponentException(
-                $"物品 {item.itemData?.IDName} 的外壳缺少碰撞体 {definition.Type}（{definition.Path}）");
-
-        ItemPhysicsDefinitionRuntime.ApplyColliderParameters(collider, definition);
+        ItemPhysicsDefinitionRuntime.ConfigureDeclaredCollider(target, definition);
     }
 
     #region 模块装配

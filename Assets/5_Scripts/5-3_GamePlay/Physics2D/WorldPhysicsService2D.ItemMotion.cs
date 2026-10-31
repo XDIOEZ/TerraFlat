@@ -197,8 +197,7 @@ public sealed partial class WorldPhysicsService2D
         sensor.enabled = false;
         try
         {
-            Rigidbody2D body = sensor.GetComponent<Rigidbody2D>();
-            if (body == null) body = sensor.gameObject.AddComponent<Rigidbody2D>();
+            Rigidbody2D body = owner.RentItemRigidbody(item, sensor.transform);
             body.simulated = false;
             body.bodyType = RigidbodyType2D.Kinematic;
             body.gravityScale = 0f;

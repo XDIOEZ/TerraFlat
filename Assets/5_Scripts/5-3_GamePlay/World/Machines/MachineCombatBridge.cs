@@ -68,7 +68,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         using var hitLease = ListPool<CombatColliderHit2D>.Get(out var colliderHits);
         using var orderedLease = ListPool<OrderedMachineHit>.Get(out var orderedHits);
         GameRes resources = GameRes.ExistingInstance;
-        using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+        using (CombatColliderQuery2D physics = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
         {
             using (CandidateMarker.Auto())
             {

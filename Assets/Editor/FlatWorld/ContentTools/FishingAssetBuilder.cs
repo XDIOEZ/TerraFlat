@@ -52,7 +52,7 @@ public static class FishingAssetBuilder
             items = ids,
             actor = "SmallFish",
             modules = fish.GetComponentsInChildren<Module>(true).Select(value => value.GetType().Name).ToArray(),
-            enabledSolidColliders = fish.GetComponentsInChildren<Collider2D>(true).Count(value => value.enabled && !value.isTrigger),
+            enabledSolidColliders = fish.GetComponentsInChildren<ItemPhysicsTemplate2D>(true).Count(value => value.colliderEnabled && !value.isTrigger),
             panelSlots = panel.GetComponentsInChildren<ItemSlot_UI>(true).Length,
             fishingLine = rod.GetComponent<Mod_FishingRod>().fishingLine != null,
             fishSprite = AssetDatabase.GetAssetPath(ai.fishRenderer.sprite),
@@ -240,15 +240,17 @@ public static class FishingAssetBuilder
             actor.itemData.IDName = "SmallFish";
             actor.itemData.Guid = 0;
             actor.itemData.ModuleDataDic.Clear();
-            Rigidbody2D body = root.GetComponent<Rigidbody2D>();
+            ItemPhysicsTemplate2D body = root.GetComponent<ItemPhysicsTemplate2D>();
+            if (body == null || !body.hasBody)
+                throw new InvalidOperationException("小鱼来源外壳缺少物理刚体声明。");
             body.bodyType = RigidbodyType2D.Kinematic;
-            body.gravityScale = 0f;
-            foreach (Collider2D collider in root.GetComponentsInChildren<Collider2D>(true))
+            body.bodyGravityScale = 0f;
+            foreach (ItemPhysicsTemplate2D collider in root.GetComponentsInChildren<ItemPhysicsTemplate2D>(true))
             {
-                if (collider.transform == root.transform) { collider.enabled = false; continue; }
+                if (collider.transform == root.transform) { collider.colliderEnabled = false; continue; }
                 collider.isTrigger = true;
                 collider.offset = Vector2.zero;
-                if (collider is BoxCollider2D box) box.size = new Vector2(0.35f, 0.25f);
+                if (collider.colliderType == nameof(BoxCollider2D)) collider.size = new Vector2(0.35f, 0.25f);
             }
             PrefabUtility.SaveAsPrefabAsset(root, FishShellPath);
         }

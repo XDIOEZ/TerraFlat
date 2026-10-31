@@ -580,6 +580,19 @@ test.system("ai", "perception_shape_batch", {}, function(data)
     assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
 end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")
 
+test.system("ai", "perception_template_shapes", {}, function(data)
+    assert(data.coldWithoutNative and data.coldCount == 2 and data.coldX == 0.25 and data.coldY == -0.5 and
+        data.coldHalfWidth == 1 and data.coldHalfHeight == 2 and data.rootModuleRadius == 0.75,
+        "根节点模板默认形状或模块同节点形状丢失，或把子节点攻击框算入体型")
+    assert(data.overrideCount == 2 and data.overrideX == -2 and data.overrideY == 5 and
+        data.overrideHalfWidth == 3 and data.overrideHalfHeight == 4,
+        "JSON 覆盖未叠加到匹配的根模板")
+    assert(data.disabledCount == 1 and data.disabledRadius == 0.75 and data.unknownTypeRejected,
+        "根模板启用覆盖或不匹配形状的拒绝行为改变")
+    assert(data.rentedCount == 2 and data.rentedHalfWidth == 5 and data.rentedHalfHeight == 6,
+        "运行时已领取形状重复计入，或未读取实时碰撞尺寸")
+end, "Actor 感知冷编译支持根级物理模板和运行时领取")
+
 test.system("ai", "closest_target_batch", {}, function(data)
     assert(data.unwrappedNearest and data.wrappedTieFirst,
         "目标筛选的无限世界距离、环绕接缝或同距离优先级改变")

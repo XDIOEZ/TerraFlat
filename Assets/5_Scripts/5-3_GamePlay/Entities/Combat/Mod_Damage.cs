@@ -8,7 +8,6 @@ public enum WeaponHitboxRegion
     UpperRightQuadrant = 1
 }
 
-[RequireComponent(typeof(BoxCollider2D))]
 public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
 {
     #region 伤害相关数据
@@ -322,6 +321,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     protected override void OnLoad()
     {
+        if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
         if (damageCollider != null)
         {
             if (!hasInitialDamageColliderState)
@@ -356,7 +356,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         if (damageCollider == null)
         {
-            Debug.LogError($"{name} 未配置伤害碰撞体引用，必须在 Prefab 中显式绑定 BoxCollider2D。", this);
+            Debug.LogError($"{name} 未领取伤害碰撞体。", this);
         }
         else
         {

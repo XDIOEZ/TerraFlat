@@ -75,7 +75,7 @@ namespace FlatWorld.Spaceflight
             using var hitsLease = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out var hits);
             using var resolvedLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
                 RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
-            using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+            using (CombatColliderQuery2D physics = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
             {
                 foreach (ShipState ship in session.State.Ships)
                 {

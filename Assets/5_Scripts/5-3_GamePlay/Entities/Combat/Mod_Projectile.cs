@@ -1263,12 +1263,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     /// <summary>为投射物根节点创建或复用刚体。</summary>
     private void EnsureBody()
     {
-        if (_body != null)
-            return;
-
-        _body = item.GetComponent<Rigidbody2D>();
-        if (_body == null)
-            _body = item.gameObject.AddComponent<Rigidbody2D>();
+        _body = WorldPhysicsService2D.RentRegisteredItemRigidbody(item);
     }
 
     /// <summary>攻击 Trigger 只负责发现候选，另用实体碰撞盒交给 Physics2D 计算墙面反弹。</summary>
@@ -1277,14 +1272,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
         bool addedCollider = false;
         if (_solidCollider == null)
         {
-            BoxCollider2D[] colliders = item.GetComponents<BoxCollider2D>();
-            for (int i = 0; i < colliders.Length; i++)
-                if (!colliders[i].isTrigger) { _solidCollider = colliders[i]; break; }
-            if (_solidCollider == null)
-            {
-                _solidCollider = item.gameObject.AddComponent<BoxCollider2D>();
-                addedCollider = true;
-            }
+            _solidCollider = WorldPhysicsService2D.RentRegisteredItemSolidBox(item, out addedCollider);
         }
         if (_damage.DamageCollider is BoxCollider2D hitbox)
             _solidCollider.size = hitbox.size * Mathf.Clamp(SolidColliderSizeMultiplier, 0.1f, 1f);

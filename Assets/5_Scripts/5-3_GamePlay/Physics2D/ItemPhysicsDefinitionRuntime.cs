@@ -10,6 +10,54 @@ public static class ItemPhysicsDefinitionRuntime
 {
     #region 共享碰撞形状配置
     private static readonly ConditionalWeakTable<Item, List<ItemPhysicsRegion2D>> RegionsByItem = new();
+    private static readonly ConditionalWeakTable<Item, ItemPhysicsConfiguration> Configurations = new();
+
+    internal sealed class ItemPhysicsConfiguration
+    {
+        public ItemPhysicsConfiguration() { }
+        internal readonly Dictionary<Component, ItemColliderDefinitionDto> Colliders = new();
+        internal readonly Dictionary<ItemPhysicsRegion2D, ItemColliderDefinitionDto> Regions = new();
+    }
+
+    internal static void BeginItemPhysicsConfiguration(Item item)
+    {
+        ItemPhysicsConfiguration configuration = Configurations.GetOrCreateValue(item);
+        configuration.Colliders.Clear();
+        configuration.Regions.Clear();
+    }
+
+    internal static ItemPhysicsConfiguration GetItemPhysicsConfiguration(Item item)
+        => Configurations.GetOrCreateValue(item);
+
+    internal static Type ResolveDeclaredColliderType(Component target, string configuredType = null)
+    {
+        ItemPhysicsTemplate2D[] templates = target.GetComponents<ItemPhysicsTemplate2D>();
+        Module desiredModule = target as Module;
+        foreach (ItemPhysicsTemplate2D template in templates)
+            if ((desiredModule != null ? template.owningModule == desiredModule : ReferenceEquals(template.owningModule, null)) &&
+                !string.IsNullOrEmpty(template.colliderType))
+                return ResolveColliderType(template.colliderType);
+        if (templates.Length != 0 && !string.IsNullOrWhiteSpace(configuredType))
+            return ResolveColliderType(configuredType);
+        Collider2D collider = target.GetComponent<Collider2D>();
+        return collider != null ? collider.GetType() :
+            string.IsNullOrWhiteSpace(configuredType) ? typeof(BoxCollider2D) : ResolveColliderType(configuredType);
+    }
+
+    internal static void ConfigureDeclaredCollider(Component target, ItemColliderDefinitionDto definition)
+    {
+        if (target == null || definition == null) return;
+        Item owner = target.GetComponentInParent<Item>(true);
+        if (owner == null)
+        {
+            Collider2D existing = target.GetComponent<Collider2D>();
+            if (existing != null) ApplyColliderParameters(existing, definition);
+            return;
+        }
+        ItemPhysicsConfiguration configuration = GetItemPhysicsConfiguration(owner);
+        configuration.Colliders[target] = definition;
+        WorldPhysicsService2D.ApplyRegisteredItemColliderDefinition(owner, target, definition);
+    }
 
     public static bool HasConfiguredPhysicsRegions(Item item)
         => item != null && RegionsByItem.TryGetValue(item, out var regions) && regions.Count > 0;
@@ -108,7 +156,6 @@ public static class ItemPhysicsDefinitionRuntime
 
     public static void ConfigureItemPhysicsRegions(Item item, ItemPhysicsDefinitionDto physics)
     {
-        if (physics?.HasRegions != true) return;
         List<ItemPhysicsRegion2D> configured = RegionsByItem.GetOrCreateValue(item);
         configured.Clear();
         using var regionScope = ListPool<ItemPhysicsRegion2D>.Get(out var existing);
@@ -119,6 +166,7 @@ public static class ItemPhysicsDefinitionRuntime
         item.GetComponentsInChildren(true, colliders);
         foreach (ItemPhysicsRegion2D region in existing)
             if (region.GetComponentInParent<Item>(true) == item) region.gameObject.SetActive(false);
+        if (physics?.HasRegions != true) return;
         foreach (ItemPhysicsRegionDefinitionDto region in physics.Regions)
         {
             Module receiver = null;
@@ -160,14 +208,7 @@ public static class ItemPhysicsDefinitionRuntime
                     ? item.gameObject.layer : anchor.gameObject.layer;
             marker.BindRegion(region.Id, region.Purposes, target, region.Immutable);
             configured.Add(marker);
-            Type type = ResolveColliderType(region.Collider.Type);
-            Collider2D shape = marker.GetComponent<Collider2D>();
-            if (shape != null && shape.GetType() != type)
-                throw new InvalidOperationException($"物品 {item.name} 的区域 {region.Id} 改变了碰撞组件类型，请重新创建外壳。");
-            if (shape == null) shape = (Collider2D)marker.gameObject.AddComponent(type);
-            shape.enabled = region.Collider.Enabled != false;
-            shape.isTrigger = (region.Purposes & WorldPhysicsPurpose2D.Blocking) == 0;
-            ApplyColliderParameters(shape, region.Collider);
+            GetItemPhysicsConfiguration(item).Regions[marker] = region.Collider;
             foreach (Collider2D previous in colliders)
                 if (previous.GetComponentInParent<Item>(true) == item && marker.ReplacesCollider(previous)) previous.enabled = false;
             marker.gameObject.SetActive(true);

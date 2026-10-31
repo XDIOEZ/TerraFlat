@@ -122,8 +122,8 @@ public static class ModuleJsonConfigurator
             {
                 if (module == null || module.GetType() != moduleType)
                     throw new InvalidOperationException("模块类型与已编译配置不一致。");
-                if (collider != null && module.GetComponent<Collider2D>()?.GetType() != colliderType)
-                    throw new MissingComponentException("Collider2D 与已编译配置不一致。");
+                if (collider != null && ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, collider.Type) != colliderType)
+                    throw new MissingComponentException("碰撞声明与已编译配置不一致。");
                 if (module is IModuleJsonParameterValidator validator)
                     validator.ValidateJsonParameters((JObject)customValidationParameters.DeepClone());
             }
@@ -169,7 +169,8 @@ public static class ModuleJsonConfigurator
             JObject collider = parameters["$collider2D"] as JObject;
             JObject customValidationParameters = module is IModuleJsonParameterValidator
                 ? (JObject)parameters.DeepClone() : null;
-            Type colliderType = collider != null ? module.GetComponent<Collider2D>().GetType() : null;
+            Type colliderType = collider != null
+                ? ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, collider.Value<string>("type")) : null;
             parameters.Remove("$transform");
             parameters.Remove("$collider2D");
             return new PreparedParameters(module.GetType(), itemId, moduleName, moduleId,
@@ -277,9 +278,8 @@ public static class ModuleJsonConfigurator
         if (token is not JObject data)
             throw new JsonSerializationException("$collider2D 必须是对象");
 
-        Collider2D collider = module.GetComponent<Collider2D>();
-        if (collider == null)
-            throw new MissingComponentException($"模块 {module.GetType().Name} 缺少 JSON 所需的 Collider2D");
+        string configuredType = data.Value<string>("type");
+        Type colliderType = ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, configuredType);
 
         foreach (JProperty property in data.Properties())
         {
@@ -288,26 +288,25 @@ public static class ModuleJsonConfigurator
                 "type" => typeof(string),
                 "enabled" or "isTrigger" => typeof(bool),
                 "offset" => typeof(Vector2),
-                "size" when collider is BoxCollider2D or CapsuleCollider2D => typeof(Vector2),
-                "edgeRadius" when collider is BoxCollider2D => typeof(float),
-                "radius" when collider is CircleCollider2D => typeof(float),
-                "direction" when collider is CapsuleCollider2D => typeof(int),
-                "points" when collider is PolygonCollider2D => typeof(Vector2[]),
+                "size" when colliderType == typeof(BoxCollider2D) || colliderType == typeof(CapsuleCollider2D) => typeof(Vector2),
+                "edgeRadius" when colliderType == typeof(BoxCollider2D) => typeof(float),
+                "radius" when colliderType == typeof(CircleCollider2D) => typeof(float),
+                "direction" when colliderType == typeof(CapsuleCollider2D) => typeof(int),
+                "points" when colliderType == typeof(PolygonCollider2D) => typeof(Vector2[]),
                 _ => null
             };
             if (valueType == null)
                 throw new JsonSerializationException(
-                    $"{collider.GetType().Name} 不支持 $collider2D.{property.Name}");
+                    $"{colliderType.Name} 不支持 $collider2D.{property.Name}");
 
             property.Value.ToObject(valueType, serializer);
         }
 
-        string configuredType = data.Value<string>("type");
         if (!string.IsNullOrWhiteSpace(configuredType) &&
-            !string.Equals(configuredType, collider.GetType().Name, StringComparison.Ordinal))
+            !string.Equals(configuredType, colliderType.Name, StringComparison.Ordinal))
         {
             throw new JsonSerializationException(
-                $"$collider2D.type={configuredType} 与目标组件 {collider.GetType().Name} 不一致");
+                $"$collider2D.type={configuredType} 与目标声明 {colliderType.Name} 不一致");
         }
     }
 
@@ -325,7 +324,7 @@ public static class ModuleJsonConfigurator
         }
 
         if (colliderObject != null)
-            ItemPhysicsDefinitionRuntime.ApplyColliderParameters(module.GetComponent<Collider2D>(), colliderObject);
+            ItemPhysicsDefinitionRuntime.ConfigureDeclaredCollider(module, colliderObject);
     }
 
     /// <summary>把 JSON 整数或字符串安全转换为 Unity LayerMask。</summary>

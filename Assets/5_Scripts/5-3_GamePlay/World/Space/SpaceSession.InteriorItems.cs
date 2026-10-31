@@ -219,6 +219,17 @@ namespace FlatWorld.Spaceflight
             if (piece.MaxDisableHealth > 0d) piece.DisableHealth -= damage.DamageValue;
         }
 
+        // 数据建筑复用普通受击后端，生命变化按身份同步结构，不为每块地板保留触发器。
+        private void SynchronizeShipInteriorDataBuildingHealth(MachineEntity node)
+        {
+            if (node?.State == null || node.State.Hp < 0f || !float.IsFinite(node.State.Hp) ||
+                !FindPiece(node.Id.ToString(CultureInfo.InvariantCulture), out ShipState ship, out ShipPieceState piece) ||
+                node.ScopeKey != MachineWorld.GetShipScopeKey(ship.ShipId)) return;
+            double health = Math.Min(piece.MaxHealth, node.State.Hp);
+            if (piece.MaxDisableHealth > 0d) piece.DisableHealth -= Math.Max(0d, piece.Health - health);
+            piece.Health = health;
+        }
+
         private double? TryApplyShipInteriorItemDamage(ShipState ship, ShipPieceState piece, double damage, string reason)
         {
             if (!TryGetShipInteriorItem(piece.PieceId, out Item item)) return null;

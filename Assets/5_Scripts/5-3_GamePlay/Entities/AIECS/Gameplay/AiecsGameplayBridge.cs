@@ -551,7 +551,7 @@ namespace FlatWorld.AIECS.Gameplay
             WeaponPulses++; weapons[context.Attack.Source] = weapon;
             weaponCandidates.Clear();
             weaponVisited.Clear();
-            using (CombatColliderQuery2D query = CombatColliderQuery2D.Rent())
+            using (CombatColliderQuery2D query = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
             {
                 view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
                 for (int y = 0; y < size.y; y++)

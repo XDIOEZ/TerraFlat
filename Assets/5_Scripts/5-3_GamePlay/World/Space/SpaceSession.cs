@@ -59,6 +59,7 @@ namespace FlatWorld.Spaceflight
             RegisterShipDamageFeedback();
             ItemEnvironmentSources.Register(this);
             MachineWorld.CellChanged += InvalidateGroundAtmosphere;
+            MachineWorld.NodeStateChanged += SynchronizeShipInteriorDataBuildingHealth;
             GameplayCombatBridge.Register(ShipCombatBridge.Instance);
             PressureExplosionQueue.WorldHandler = HandleShipExplosion;
             PressureExplosionQueue.WorldReady = IsShipExplosionGroundReady;
@@ -102,6 +103,7 @@ namespace FlatWorld.Spaceflight
             DroppedItemService.WorldItemsChanged -= QueueRetainedWorldRetirementForDrops;
             ItemEnvironmentSources.Unregister(this);
             MachineWorld.CellChanged -= InvalidateGroundAtmosphere;
+            MachineWorld.NodeStateChanged -= SynchronizeShipInteriorDataBuildingHealth;
             GameplayCombatBridge.Unregister(ShipCombatBridge.Instance);
             if (PressureExplosionQueue.WorldHandler == HandleShipExplosion) PressureExplosionQueue.WorldHandler = null;
             if (PressureExplosionQueue.WorldReady == IsShipExplosionGroundReady) PressureExplosionQueue.WorldReady = null;
