@@ -169,6 +169,11 @@
         {
           "match": "exact_item",
           "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "match": "tag",
+          "tag": "Rope",
           "amount": 1
         },
         {
