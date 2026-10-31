@@ -172,6 +172,36 @@ internal static class Program
 
         #region 最慢帧选择与导出后自动继续回归
 
+        Test("Editor 浮窗先于暂停出现，导出结束后先关闭浮窗再恢复播放", () =>
+        {
+            var states = new List<PauseState>();
+            void OnPauseStateChanged(PauseState state)
+            {
+                Check(state == PauseState.Paused ? EditorUtility.ProgressVisible : !EditorUtility.ProgressVisible);
+                states.Add(state);
+            }
+            EditorApplication.pauseStateChanged += OnPauseStateChanged;
+            try
+            {
+                ProfilerSnapshotToolbar.OnExport = () =>
+                    Check(EditorUtility.ProgressVisible && EditorUtility.LastMessage.Contains("正在生成性能 JSON"));
+                Start(); Frame(0, 100, 1);
+                Check(EditorUtility.ProgressVisible && EditorUtility.ShowCount == 1 && EditorApplication.isPaused);
+                EditorApplication.FlushDelay();
+                Check(ProfilerSnapshotToolbar.Exports == 1 && !EditorUtility.ProgressVisible && EditorUtility.ClearCount == 1);
+                Check(states.SequenceEqual(new[] { PauseState.Paused, PauseState.Unpaused }));
+            }
+            finally { EditorApplication.pauseStateChanged -= OnPauseStateChanged; }
+        });
+        Test("用户取消等待中的自动导出时关闭进度浮窗但不擅自继续游戏", () =>
+        {
+            Start(); Frame(0, 100, 1);
+            Check(EditorUtility.ProgressVisible);
+            ProfilerAutoExporter.Enabled = false;
+            EditorApplication.FlushDelay();
+            Check(!EditorUtility.ProgressVisible && EditorUtility.ClearCount == 1);
+            Check(ProfilerSnapshotToolbar.Exports == 0 && EditorApplication.isPaused);
+        });
         Test("先暂停，延迟回调导出最慢帧，全部写完才自动继续", () =>
         {
             bool filesWrittenWhilePaused = false;
@@ -243,10 +273,14 @@ internal static class Program
         });
         Test("完整报告写出后用户关闭自动模式，保留其当前暂停", () =>
         {
-            ProfilerSnapshotToolbar.OnExport = () => ProfilerAutoExporter.Enabled = false;
+            ProfilerSnapshotToolbar.OnExport = () =>
+            {
+                ProfilerAutoExporter.Enabled = false;
+                Check(EditorUtility.ProgressVisible);
+            };
             Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
             Check(ProfilerSnapshotToolbar.Exports == 1 && !ProfilerAutoExporter.Enabled && EditorApplication.isPaused);
-            Check(!ProfilerDriver.enabled);
+            Check(!ProfilerDriver.enabled && !EditorUtility.ProgressVisible && EditorUtility.ClearCount == 1);
         });
         Test("导出过程中用户手动继续再暂停，不覆盖其暂停", () =>
         {
@@ -269,6 +303,7 @@ internal static class Program
             ProfilerSnapshotToolbar.OnExport = () => throw new IOException("Simulated additional file failure");
             Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
             Check(!ProfilerAutoExporter.Enabled && EditorApplication.isPaused && !ProfilerAutoExporter.IsExportPending);
+            Check(!EditorUtility.ProgressVisible && EditorUtility.ClearCount == 1);
         });
 
         #endregion
@@ -433,6 +468,7 @@ internal static class Program
         ProfilerSnapshotToolbar.ThrowOnExport = ProfilerSnapshotToolbar.IsExporting = false;
         ProfilerSnapshotToolbar.OnExport = null; ProfilerSnapshotToolbar.Metadata = null;
         UnityEngine.Debug.Messages.Clear();
+        EditorUtility.Reset();
     }
 
     private static void Start(float warmup = 0)

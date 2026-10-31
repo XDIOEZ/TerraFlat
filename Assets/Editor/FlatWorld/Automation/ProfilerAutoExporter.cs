@@ -24,6 +24,7 @@ namespace FlatWorld.Automation
         private static int lastObservedFrame = -1, targetId;
         private static double readyAt;
         private static Trigger pending;
+        private static bool exportProgressVisible, exportingPending;
 
         internal static event Action SettingsChanged;
         internal static string Status { get; private set; } = "自动模式已关闭";
@@ -129,12 +130,27 @@ namespace FlatWorld.Automation
         {
             EditorApplication.delayCall -= ExportPending;
             pending = null;
+            if (!exportingPending) ClearExportProgress();
             if (monitoring && ProfilerDriver.enabled == expectedRecording)
                 ProfilerDriver.enabled = recordingBefore;
             monitoring = false;
             lastObservedFrame = -1;
             CurrentFps = 0d;
             ResetWindow();
+        }
+
+        // 自动导出使用 Editor 原生进度浮窗，取消和异常时也必须关闭。
+        private static void ShowExportProgress(string message, float progress)
+        {
+            exportProgressVisible = true;
+            EditorUtility.DisplayProgressBar("性能 JSON 自动导出", message, progress);
+        }
+
+        private static void ClearExportProgress()
+        {
+            if (!exportProgressVisible) return;
+            exportProgressVisible = false;
+            EditorUtility.ClearProgressBar();
         }
 
         #endregion
@@ -327,6 +343,7 @@ namespace FlatWorld.Automation
                         windowStartProfilerTimeMs = startMilliseconds + milliseconds - durationSeconds * 1000d,
                         targetId = targetId
                     };
+                    ShowExportProgress("检测到持续低帧率，正在暂停游戏并准备导出性能报告…", 0.1f);
                     EditorApplication.isPaused = true;
                     expectedRecording = false;
                     ProfilerDriver.enabled = false;
@@ -343,6 +360,7 @@ namespace FlatWorld.Automation
             Trigger trigger = pending;
             if (trigger == null) return;
             bool exportCompleted = false, playbackResumed = false;
+            exportingPending = true;
             try
             {
                 // 必须在下一次编辑器回调确认暂停，不能把导出本身的卡顿误认为触发帧。
@@ -362,6 +380,7 @@ namespace FlatWorld.Automation
                         throw new InvalidOperationException("选中的最慢帧已失效或被替换，未导出其他帧。");
                 }
                 trigger.editorPausedBeforeExport = true;
+                ShowExportProgress("游戏已暂停，正在生成性能 JSON 和现场附件，编辑器暂时无法响应…", 0.5f);
                 string directory = ProfilerSnapshotToolbar.ExportFrame(frame,
                     exportAdditionalFiles: (pendingDirectory, snapshotId, displayFrame) =>
                     {
@@ -382,6 +401,7 @@ namespace FlatWorld.Automation
                 bool canResumePlayback = exportCompleted && pending == trigger && enabled &&
                     EditorApplication.isPlaying && EditorApplication.isPaused && !EditorBusy;
                 // 全部文件发布后先清掉旧采样，再恢复本次自动暂停，下一轮从新帧重新缓冲。
+                exportingPending = false;
                 StopMonitoring();
                 if (canResumePlayback)
                 {
