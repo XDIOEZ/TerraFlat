@@ -389,12 +389,12 @@ test.system("ui_settings", "item_info_numeric", {}, function(data)
         "伤害信息迁移后丢失、查看信息修改状态，或 UI 隐藏默认耐久时错误删除原始数据")
 end, "基础参数与攻击力共享结构化数据，显示接口只负责格式化")
 
-test.system("ui_settings", "hover_and_mod_selection", {}, function(data)
-    assert(data.earlyHidden and data.delayCompletedVisible and data.reenteredHidden,
-        "物品介绍没有等满0.3秒，或离开后重新悬停沿用了上次等待")
+test.system("ui_settings", "tooltip_columns_and_mod_selection", {}, function(data)
+    assert(data.numericRow and data.englishRow and data.freeText,
+        "物品属性的名称与数值没有正确分列，或无数值文案丢失")
     assert(data.equivalentSelection and data.reorderedChanged and data.disabledChanged and data.autoEnableChanged,
         "MOD 关闭比较没有识别排序、禁用或默认启用变化，或把无意义的集合排列当作变化")
-end, "0.3秒连续悬停边界与 MOD 启停排序差异")
+end, "鼠标物品提示立即显示、属性左右分列与 MOD 启停排序差异")
 
 test.system("ui_settings", "gamepad_input_reenable", {}, function(data)
     local function check_binding(sample)

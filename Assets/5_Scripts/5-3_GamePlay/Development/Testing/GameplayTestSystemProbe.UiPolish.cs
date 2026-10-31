@@ -21,7 +21,7 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "log_filters", CaptureLogFilters);
         Register("ui_settings", "world_settings_pages", CaptureWorldSettingsPages);
         Register("ui_settings", "bag_hotbar_layout", CaptureBagHotbarLayout);
-        Register("ui_settings", "hover_and_mod_selection", CaptureHoverAndModSelection);
+        Register("ui_settings", "tooltip_columns_and_mod_selection", CaptureTooltipColumnsAndModSelection);
         Register("ui_settings", "pressure_hud_display_cache", CapturePressureHudDisplayCache);
         Register("ui_settings", "window_drag_bounds", CaptureWindowDragBounds);
         Register("ui_settings", "window_resize_pointer", CaptureWindowResizePointer);
@@ -278,7 +278,7 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
-    private static JObject CaptureHoverAndModSelection(JObject args)
+    private static JObject CaptureTooltipColumnsAndModSelection(JObject args)
     {
         var original = new ModProfile
         {
@@ -298,11 +298,17 @@ public static partial class GameplayTestSystemProbe
         bool disabledChanged = !original.HasSameSelection(equivalent);
         equivalent.DisabledMods.Clear();
         equivalent.AutoEnableNewMods = true;
+        bool numericRow = InventoryItemTooltip.SplitParameterLine("数量：2", out string numericLabel, out string numericValue) &&
+            numericLabel == "数量：" && numericValue == "2";
+        bool englishRow = InventoryItemTooltip.SplitParameterLine("Weight: 1.3 kg", out string englishLabel, out string englishValue) &&
+            englishLabel == "Weight:" && englishValue == "1.3 kg";
+        bool freeText = !InventoryItemTooltip.SplitParameterLine("无数值说明", out string plainLabel, out string plainValue) &&
+            plainLabel == "无数值说明" && plainValue == string.Empty;
         return new JObject
         {
-            ["earlyHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10d, 10.299d),
-            ["delayCompletedVisible"] = InventoryItemTooltip.HasCompletedMouseHover(10d, 10.3d),
-            ["reenteredHidden"] = !InventoryItemTooltip.HasCompletedMouseHover(10.4d, 10.6d),
+            ["numericRow"] = numericRow,
+            ["englishRow"] = englishRow,
+            ["freeText"] = freeText,
             ["equivalentSelection"] = equivalentSelection,
             ["reorderedChanged"] = reorderedChanged,
             ["disabledChanged"] = disabledChanged,
