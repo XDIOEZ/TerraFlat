@@ -6,6 +6,13 @@ test.system("fishing", "rig", {}, function(data)
     assert(data.invalidSlots == "InvalidOperationException", "非法钓具槽数没有拒绝")
 end, "钓具鱼钩/鱼饵资格与单份槽位")
 
+test.system("fishing", "hanging_hook", {}, function(data)
+    assert(data.stationaryWhenPaused, "暂停时鱼钩仍在积累物理位移")
+    assert(data.swingLag > 0.15 and data.lineLengthError < 0.001,
+        "竿梢移动后鱼钩没有惯性滞后，或绳长被拉伸")
+    assert(data.settledOffset < 0.05, "停止移动后鱼钩未逐渐自然垂落")
+end, "手持鱼钩绳摆惯性、绳长约束与静止恢复")
+
 for _, uses in ipairs({10, 100, 1000}) do
     test.system("fishing", "cast_supplies", {maximum = uses, attempts = uses + 1}, function(data)
         assert(data.accepted == uses and data.broken == 1, "鱼钩使用次数不符或重复损坏")

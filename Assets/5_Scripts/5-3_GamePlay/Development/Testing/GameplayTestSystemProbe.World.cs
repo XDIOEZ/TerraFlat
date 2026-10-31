@@ -63,6 +63,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("agriculture/farmland_scope", WorldFarmlandScope);
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("fishing/cast_supplies", WorldFishingCastSupplies);
+        operations.Add("fishing/hanging_hook", WorldFishingHangingHook);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
         operations.Add("mechanical/ship_scope_identity", WorldMechanicalShipScopeIdentity);
@@ -1757,6 +1758,28 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { rig.UnbindRuntimeDataEvents(); invalid.UnbindRuntimeDataEvents(); }
+    }
+
+    private static JObject WorldFishingHangingHook(JObject args)
+    {
+        const float lineLength = 0.6f;
+        Vector2 anchor = Vector2.zero;
+        Vector2 hook = Vector2.down * lineLength, previous = hook;
+        Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 0f, ref hook, ref previous);
+        bool stationaryWhenPaused = hook == Vector2.down * lineLength;
+        anchor = Vector2.right * 0.3f;
+        Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 1f / 60f, ref hook, ref previous);
+        float swingLag = anchor.x - hook.x;
+        float lineLengthError = Mathf.Abs(Vector2.Distance(anchor, hook) - lineLength);
+        for (int frame = 0; frame < 240; frame++)
+            Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 1f / 60f, ref hook, ref previous);
+        return new JObject
+        {
+            ["stationaryWhenPaused"] = stationaryWhenPaused,
+            ["swingLag"] = swingLag,
+            ["lineLengthError"] = lineLengthError,
+            ["settledOffset"] = Mathf.Abs(hook.x - anchor.x)
+        };
     }
     #endregion
 
