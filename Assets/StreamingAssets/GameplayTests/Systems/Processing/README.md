@@ -1,5 +1,7 @@
 # 机器加工与材料热转化回归
 
+2026-10-31：原木改为500℃点燃、消耗真实燃料、每件50点耗尽才产等量草木灰。`material_fuel_burnout` 覆盖炉内/世界规则、499/500℃、跨燃点时段、49/50/100秒、长步/分段、水/缺氧、快照、满输出保留零燃料原物和恢复后原子产出；`furnace_heat_only` 同步全炉型断言。`world_fuel_burnout_backends` 检查完整Item正式替换的身份/数量/注册归属、轻量掉落物态队列的燃尽与重复产物，夹具固定干燥有氧输入，仅清理明确持有的实例；不代表完整Item调度、运动/水接触或失败回滚已覆盖。旧三木成炭规则改以木板保留验证。用户保持PlayMode，本轮未执行Lua或真实场景验收。
+
 2026-10-28：取火工具新增 `fire_tool_lifecycle` 规则与 `mechanical_processing.lua` 的 `fire_tool_panel` 现场采样，覆盖继承字段配置、两种库存/保存/订阅重载，以及正式 Prefab 字段、面板、手部转移目标、按钮和燧石满输出回滚。新增断言仅静态编写，未编译或执行；放置拆除、网络和玩家实际操作仍需验证。
 
 2026-10-27：电子热反应规则独立为 `electronic-materials.lua` / `processing_electronic_materials_rules`；冷料长步/分段供热、满输出恢复与云母切割独立为 `electronic-materials-gameplay.lua` / `processing_electronic_materials_gameplay`，登记在既有 `mechanical-suite.json` 和总现场入口。该现场只需隔离玩家与正式资源，无机械工厂前置；旧脚本已移除对应断言，定向执行不会重复运行整场工厂。

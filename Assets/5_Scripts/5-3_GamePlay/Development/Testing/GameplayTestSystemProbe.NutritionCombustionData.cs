@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
     {
         Register("survival", "nutrition_drain_batch", NutritionDrainBatch);
         Register("item_runtime", "combustion_fuel_batch", CombustionFuelBatch);
+        Register("item_runtime", "material_fuel_state", MaterialFuelReferenceState);
     }
 
     private sealed class NutritionDrainProbeContext : IFoodRuntimeContext
@@ -199,6 +200,67 @@ public static partial class GameplayTestSystemProbe
                 ["fuelConsumed"] = consumed, ["remainingFuel"] = fuel.Data.Fuel.x,
                 ["fuelCapacity"] = fuel.Data.Fuel.y, ["hasFuel"] = fuel.HasFuel(),
                 ["fuelRuleMultiplier"] = GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier
+            };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    // 不加载世界资源，检查燃尽条件与冷热实例对同一燃料载荷的读写。
+    private static JObject MaterialFuelReferenceState(JObject args)
+    {
+        var matter = ItemMatterReactionCompiler.CompileMatter(new ItemMatterDefinitionDto
+        {
+            IgnitionTemperature = 450f,
+            Transitions = new() { new() { Id = "probe.burnout", OutputItemId = "WoodAsh", RequiresFuelExhaustion = true } }
+        }, new[] { "Wood" }, "probe:reusable-fuel");
+        var material = new ItemMatterState { Initialized = true, TemperatureCelsius = 500f };
+        var storage = new Ex_ModData_MemoryPackable { StableName = "fuel", ModuleId = ModText.Fuel };
+        storage.WriteRuntimeState(new FuelData { Fuel = new Vector2(50f, 50f), MaxTemperature = 500f });
+        ItemData source = new Data_GeneralItem { IDName = "probe:reusable-fuel", Stack = new ItemStack { Amount = 3f } };
+        source.ModuleDataDic[storage.StableName] = storage;
+        Mod_Fuel.TryResolveItemData(source, out FuelData first);
+        Mod_Fuel.TryResolveItemData(source, out FuelData second);
+        Mod_Fuel.ConsumeItemDataFuel(source, 10f);
+        var clone = FastCloner.FastCloner.DeepClone(storage);
+        FuelData cloneFuel = clone.ReadRuntimeState<FuelData>();
+        cloneFuel.Fuel.x -= 5f;
+        clone.WriteRuntimeState(cloneFuel);
+        ModuleInstanceSnapshot snapshot = ModuleInstanceSnapshot.Capture(storage);
+        var restored = new Ex_ModData_MemoryPackable { StableName = "fuel", ModuleId = ModText.Fuel };
+        snapshot.RestoreTo(restored);
+        var root = new GameObject("GameplayTest Material Fuel State") { hideFlags = HideFlags.HideAndDontSave };
+        root.SetActive(false);
+        try
+        {
+            var module = root.AddComponent<GameplayTestFuelWithInitializedData>();
+            module.Data.Fuel = new Vector2(100.23f, 100.23f);
+            module.ApplyResourceConfiguration("probe:reusable-fuel", "fuel",
+                "{\"Data\":{\"Fuel\":{\"x\":50,\"y\":50},\"MaxTemperature\":500}}");
+            float freshFuel = module.Data.Fuel.x;
+            module.ApplyResourceConfiguration("probe:reused-fuel", "fuel",
+                "{\"Data\":{\"Fuel\":{\"x\":20,\"y\":20},\"MaxTemperature\":300}}");
+            float reusedFuel = module.Data.Fuel.x;
+            module._Data = storage;
+            module.ApplyResourceConfiguration("probe:reusable-fuel", "fuel",
+                "{\"Data\":{\"Fuel\":{\"x\":50,\"y\":50},\"MaxTemperature\":500}}");
+            float configuredSavedFuel = module.Data.Fuel.x;
+            bool hotColdShare = ReferenceEquals(module.Data, first);
+            var replacement = new Ex_ModData_MemoryPackable();
+            replacement.WriteData(new FuelData { Fuel = new Vector2(7f, 50f) });
+            storage.BitData = replacement.BitData;
+            module._Data = storage;
+            Mod_Fuel.TryResolveItemData(source, out FuelData replaced);
+            return new JObject
+            {
+                ["configured"] = matter.HasFuelExhaustionTransition && matter.Transitions.Count == 1,
+                ["freshFuel"] = freshFuel, ["reusedFuel"] = reusedFuel,
+                ["configuredSavedFuel"] = configuredSavedFuel,
+                ["blockedUntilExhausted"] = ItemMatterRuntime.SelectMatchedTransition(matter, material, false) == null,
+                ["exhaustedOutput"] = ItemMatterRuntime.SelectMatchedTransition(matter, material, false, true)?.OutputItemId,
+                ["sharedReference"] = ReferenceEquals(first, second) && hotColdShare,
+                ["remaining"] = first.Fuel.x, ["amount"] = source.Stack.Amount,
+                ["cloneRemaining"] = cloneFuel.Fuel.x, ["snapshotRemaining"] = restored.ReadRuntimeState<FuelData>().Fuel.x,
+                ["replacementRemaining"] = replaced.Fuel.x, ["reboundReference"] = ReferenceEquals(module.Data, replaced)
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }

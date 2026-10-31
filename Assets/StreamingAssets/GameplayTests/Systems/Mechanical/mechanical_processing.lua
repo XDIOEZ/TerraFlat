@@ -1,4 +1,4 @@
--- 材料自身决定热转化，机械加工继续使用对应的正式加工能力。
+-- 材料自身决定燃料消耗与热转化，机械加工继续使用对应的正式加工能力。
 local function total(slots, id)
     local amount = 0
     for _, item in ipairs(slots) do
@@ -49,8 +49,8 @@ end, "同炉不同槽位不跨堆凑三根木头")
 for _, input in ipairs({
     { id = "Log", amount = 3, temperature = 499.99, expected = "Log", expectedAmount = 3 },
     { id = "Plank", amount = 3, temperature = 500, expected = "Charcoal", expectedAmount = 1 },
-    { id = "Log", amount = 3, temperature = 999.99, expected = "Charcoal", expectedAmount = 1 },
-    { id = "Log", amount = 3, temperature = 1000, expected = "WoodAsh", expectedAmount = 1 },
+    { id = "Log", amount = 3, temperature = 999.99, expected = "Log", expectedAmount = 3 },
+    { id = "Log", amount = 3, temperature = 1000, expected = "Log", expectedAmount = 3 },
     { id = "Charcoal", amount = 2, temperature = 999.99, expected = "Charcoal", expectedAmount = 2 },
     { id = "Charcoal", amount = 2, temperature = 1000, expected = "WoodAsh", expectedAmount = 2 },
 }) do
@@ -69,7 +69,7 @@ end
 test.runtime("processing", "material_transition_atomic", {}, function(data)
     assert(not data.blockedSuccess and data.sameSource and #data.blockedOutput == 0,
         "单空槽放不下炭灰两种产物时部分提交或更换了来源")
-    assert(total(data.blockedInput, "Log") == 4, "多产物输出空间不足仍扣除了木头")
+    assert(total(data.blockedInput, "Plank") == 4, "多产物输出空间不足仍扣除了木板")
     assert(data.resumedSuccess and #data.input == 0 and total(data.output, "Charcoal") == 1
         and total(data.output, "WoodAsh") == 1, "空出第二槽后未原子恢复一炭一灰")
     assert(not data.duplicateSuccess, "已经消费的木头再次提交产生重复产物")
@@ -77,6 +77,61 @@ test.runtime("processing", "material_transition_atomic", {}, function(data)
         assert(item.temperature == 500 and item.initialized, "库存事务丢失产物温度")
     end
 end, "木头多产物空间不足整笔拒绝、恢复及重复提交拒绝")
+
+for _, path in ipairs({ "furnace", "world" }) do
+    for _, sample in ipairs({
+        { temperature = 499, seconds = 50, fuel = 50 },
+        { temperature = 500, seconds = 49, fuel = 1 },
+        { temperature = 500, seconds = 50, fuel = 0 },
+        { temperature = 500, seconds = 100, fuel = 0 },
+        { temperature = 500, seconds = 50, segments = 50, fuel = 0 },
+        { temperature = 500, seconds = 50, oxygen = false, fuel = 50 },
+    }) do
+        test.runtime("processing", "material_fuel_burnout", {
+            path = path, temperature = sample.temperature, seconds = sample.seconds,
+            segments = sample.segments, oxygen = sample.oxygen,
+        }, function(data)
+            assert(math.abs(data.fuel - sample.fuel) < .0001 and data.savedFuel == data.fuel,
+                "真实燃料余量、燃点、缺氧或快照恢复错误：" .. path)
+            local output = path == "world" and data.worldOutputs or data.output
+            if sample.fuel > 0 then
+                assert(total(data.input, "Log") == 3 and #output == 0,
+                    "燃料耗尽前提前扣除了原木或产灰：" .. path)
+            else
+                assert(total(output, "WoodAsh") == 3 and not data.burning,
+                    "燃尽没有生成整堆等量草木灰，或残留燃烧态：" .. path)
+            end
+        end, string.format("%s 原木%g℃、%g秒燃烧与保存", path, sample.temperature, sample.seconds))
+    end
+end
+
+for _, sample in ipairs({
+    { path = "world", temperature = 499, target = 20, seconds = 1, fire = 1, fuel = 49.01 },
+    { path = "world", temperature = 500, target = 20, seconds = 1, fuel = 49 },
+    { path = "world", temperature = 500, seconds = 50, water = true, fuel = 50 },
+    { path = "furnace", temperature = 499, target = 500, seconds = 2, fuel = 50 },
+    { path = "furnace", temperature = 499, target = 500, seconds = 3, fuel = 49 },
+}) do
+    test.runtime("processing", "material_fuel_burnout", sample, function(data)
+        assert(math.abs(data.fuel - sample.fuel) < .0001 and #data.output == 0 and #data.worldOutputs == 0,
+            "跨燃点时提前扣料、错误计入升温耗时，或水接触仍在燃烧")
+    end, "跨燃点只扣达温后时段，水接触保留真实余料")
+end
+
+test.runtime("processing", "material_fuel_burnout", { full = true }, function(data)
+    assert(data.fuel == 0 and data.savedFuel == 0 and total(data.input, "Log") == 3,
+        "输出受阻时删除了原木或恢复快照后补回燃料")
+    assert(total(data.output, "StoneSlab") == 1 and total(data.resumedOutput, "WoodAsh") == 3
+        and #data.resumedInput == 0 and not data.duplicateSuccess,
+        "输出恢复后没有原子提交草木灰，或重复产出了灰烬")
+end, "燃尽输出受阻、零燃料存档恢复与原子重试")
+
+test.runtime("processing", "world_fuel_burnout_backends", {}, function(data)
+    assert(data.fullId == "WoodAsh" and data.fullAmount == 3 and data.fullSameGuid and data.fullRegistered and not data.fullDuplicate,
+        "完整场景物品燃尽替换丢失数量/身份，或重复产灰")
+    assert(data.lightweightLog == 0 and data.lightweightAsh == 3 and data.lightweightAshAfterRetry == 3,
+        "轻量掉落物燃尽没有提交替换，或下次物态推进重复产灰")
+end, "完整Item正式替换与轻量掉落物真实燃尽事务")
 
 test.runtime("processing", "meat_heat_and_dry", {}, function(data)
     assert(data.heatedOutput == "Meat_Cooked" and data.heatedAmount == 2
@@ -156,7 +211,10 @@ test.runtime("processing", "furnace_heat_only", {}, function(data)
     for _, furnace in ipairs(data.furnaces) do
         seen[furnace.id] = true
         assert(furnace.processorAbsent, "炉体仍创建配方加工器：" .. furnace.id)
-        assert(furnace.woodLeft == 0 and furnace.charcoal == 1, "炉体500℃未调用材料自身转化：" .. furnace.id)
+        assert(furnace.woodLeft == 3 and furnace.charcoal == 0 and furnace.woodFuel == 49,
+            "炉体达到燃点后没有先消耗原木真实燃料：" .. furnace.id)
+        assert(furnace.burnoutWoodLeft == 0 and furnace.burnoutAsh == 3,
+            "炉体内原木燃尽没有转成等量草木灰：" .. furnace.id)
         local expectedCold = 1000 - 900 * .99 ^ (furnace.heatingRatePercent / 100)
         assert(furnace.coldWoodLeft == 3 and math.abs(furnace.coldWoodTemperature - expectedCold) < .0001,
             "炉温1000℃时错误跳过木头自身升温：" .. furnace.id)

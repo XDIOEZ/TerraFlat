@@ -59,7 +59,7 @@ public sealed class InductionStoveLogic : MachineLogic
             : ThermalRuntime.AdvanceAmbient(State.Temperature,
                 powerFraction > 0f ? Mathf.Max(ambient, TargetTemperature) : ambient, seconds);
         FurnaceMaterialHeating.Process(Input, Output, State.Temperature, seconds, HeatingRatePercent / 100f,
-            initialMaterialTemperature: ambient);
+            initialMaterialTemperature: ambient, combustionSupported: MachineWorld.CanSustainCombustion(Entity));
         NotifyChanged();
     }
 

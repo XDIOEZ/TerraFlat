@@ -34,7 +34,8 @@
 
 - 原料 `Material.Tinder` 可被打火石接受，与成品 `Combustion.Tinder` 分开；棉花另有 100℃→FireSeed 的材料转化，钻木器和世界受热共用。`Item.TimedDespawn`/`Mod_TimedDespawn` 是非食物的自然消失能力，FireSeed 配 `LifetimeGameSeconds=1440`；以解析后的游戏时钟差推进整堆寿命，暂停不走、跳时补算，跨世界保留已用寿命但重绑时钟原点。二进制模块载荷保存进度，库存规则/完整物品/轻量掉落共用，只有权威端清除，不走燃烧灰烬或死亡掉落。取火器输出库存也必须调用正式库存更新；机器由 MachineLogic.Advance 统一驱动，不能重复推进。
 
-- ItemData.MatterState 存物态，定义 matter/reactions 管静态相变/反应；ItemMatterRuntime/MaterialThermalProcessor 按自身温度结算，热源仅供热。matter.transitions 的 inputAmount/remainderOutputItemId 支持整组/尾数多产物，扣料/全部产物同原子事务并传真温，不跨槽拼组。木 Wood 500℃起3→1炭、尾数每份1灰；炭1000℃起1→1灰。
+- ItemData.MatterState 存物态，定义 matter/reactions 管静态相变/反应；ItemMatterRuntime/MaterialThermalProcessor 按自身温度结算，热源仅供热。matter.transitions 的 inputAmount/remainderOutputItemId 支持整组/尾数多产物，扣料/全部产物同原子事务并传真温，不跨槽拼组。普通 Wood 500℃起3→1炭、尾数每份1灰；炭1000℃起1→1灰。
+- `requiresFuelExhaustion` 转化由通用材料规则按 `matter.ignitionTemperature` 点燃，每秒扣真实 `FuelData` 1点；达温前的升温时间不扣料，水接触/缺氧熄灭并保留余量。显式燃尽转化替代自动 Wood 炭化；Log 配500℃燃点、每件50燃值、耗尽等量 WoodAsh。炉内与两种场景掉落复用该入口，燃尽产物沿各自原子事务提交，输出满保留原物及零燃料待重试；有 Mod_Combustion 的完整物品由原模块扣料。冷热燃料引用归 Ex_ModData_MemoryPackable，外部载荷/模块重绑须更新引用，首次装配用配置、F5保余量。回归 `item_runtime/material_fuel_state`、`processing/material_fuel_burnout`。
 - 寿命状态由 `Ex_ModData_MemoryPackable.ReadRuntimeState/WriteRuntimeState` 持有强类型值；只在读取正式载荷作快照/保存时编码，替换载荷即失效。营养、燃烧和生存数值核接收纯值/Span，模块负责环境采样、权威与即时回调，跨对象不延后原有结果提交。
 - 高频转化扫描用索引遍历 IReadOnlyList<RuntimeItemMatterTransition>、首个匹配，避接口装箱。
 - Fuel 数据/Combustion 状态/FuelInteraction 交互/ICombustionStateReceiver 表现组合；flameScale/flameHeightRatio/flameEmissionMultiplier 控视觉，attachFlameToAnchor 跟燃点，followSourceRenderer/sourceRendererAnchorOffset 跟贴图。火把底图熄灭，熄火清粒子；氧气模块只管储量/缺氧，供给方判断真实环境并扣量。

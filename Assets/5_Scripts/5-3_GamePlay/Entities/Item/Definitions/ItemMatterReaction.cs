@@ -68,6 +68,9 @@ public sealed partial class ItemMatterTransitionDto
 
     [JsonProperty("liquidOutput", NullValueHandling = NullValueHandling.Ignore)]
     public ItemReactionLiquidOutputDto LiquidOutput;
+
+    [JsonProperty("requiresFuelExhaustion")]
+    public bool RequiresFuelExhaustion;
 }
 
 [Serializable]
@@ -148,6 +151,7 @@ public sealed class RuntimeItemMatterDefinition
     public float TemperatureDryingMultiplierPer10C { get; }
     public float WaterAbsorptionRatePerSecond { get; }
     public IReadOnlyList<RuntimeItemMatterTransition> Transitions { get; }
+    public bool HasFuelExhaustionTransition { get; }
 
     public RuntimeItemMatterDefinition(
         float? ignitionTemperature,
@@ -165,6 +169,8 @@ public sealed class RuntimeItemMatterDefinition
         TemperatureDryingMultiplierPer10C = temperatureDryingMultiplierPer10C;
         WaterAbsorptionRatePerSecond = waterAbsorptionRatePerSecond;
         Transitions = transitions ?? Array.Empty<RuntimeItemMatterTransition>();
+        foreach (RuntimeItemMatterTransition transition in Transitions)
+            if (transition.RequiresFuelExhaustion) HasFuelExhaustionTransition = true;
     }
 }
 
@@ -179,6 +185,7 @@ public sealed class RuntimeItemMatterTransition
     public float OutputAmountMultiplier { get; }
     public int InputAmount { get; }
     public string RemainderOutputItemId { get; }
+    public bool RequiresFuelExhaustion { get; }
     public RuntimeLiquidOutput LiquidOutput { get; }
 
     public RuntimeItemMatterTransition(
@@ -191,7 +198,8 @@ public sealed class RuntimeItemMatterTransition
         float outputAmountMultiplier,
         RuntimeLiquidOutput liquidOutput,
         int inputAmount = 1,
-        string remainderOutputItemId = null)
+        string remainderOutputItemId = null,
+        bool requiresFuelExhaustion = false)
     {
         Id = id;
         MinTemperature = minTemperature;
@@ -202,6 +210,7 @@ public sealed class RuntimeItemMatterTransition
         OutputAmountMultiplier = outputAmountMultiplier;
         InputAmount = inputAmount;
         RemainderOutputItemId = remainderOutputItemId;
+        RequiresFuelExhaustion = requiresFuelExhaustion;
         LiquidOutput = liquidOutput;
     }
 
@@ -298,12 +307,13 @@ public static class ItemMatterReactionCompiler
                 string.IsNullOrWhiteSpace(transition.Id) ? $"matter.{itemId}.{transitions.Count}" : transition.Id.Trim(),
                 transition.MinTemperature, transition.MaxTemperature,
                 transition.MinMoisture, transition.MaxMoisture,
-                outputId, transition.OutputAmountMultiplier, liquid, transition.InputAmount, transition.RemainderOutputItemId?.Trim()));
+                outputId, transition.OutputAmountMultiplier, liquid, transition.InputAmount,
+                transition.RemainderOutputItemId?.Trim(), transition.RequiresFuelExhaustion));
         }
 
         // 同一堆木材按整组产炭，剩余不足一组的材料独立变灰。
         if (tags?.Contains("Wood", StringComparer.OrdinalIgnoreCase) == true &&
-            !transitions.Any(transition => transition.Id == "wood.charcoal"))
+            !transitions.Any(transition => transition.Id == "wood.charcoal" || transition.RequiresFuelExhaustion))
             transitions.Add(new RuntimeItemMatterTransition("wood.charcoal", 500f, null, null, null,
                 "Charcoal", 1f, null, inputAmount: 3, remainderOutputItemId: "WoodAsh"));
 
@@ -571,7 +581,39 @@ public static class ItemMatterRuntime
                !Mathf.Approximately(beforeMoisture, state.Moisture);
     }
 
-    /// <summary>温度达到燃点后持续燃烧；真实水接触会熄灭，燃尽后由世界掉落系统移除。</summary>
+    #region 材料燃料消耗与燃尽转化
+
+    public static bool IsFuelExhaustionTransitionConfigured(ItemData item)
+        => ResolveMatter(item)?.HasFuelExhaustionTransition == true;
+
+    // 材料声明燃尽产物后共用真实燃料；只有本步越过燃点之后的时间参与消耗。
+    public static bool AdvanceFuelCombustionAfterHeating(ItemData item, float initialTemperature,
+        float targetTemperature, float seconds, bool waterContact, bool combustionSupported,
+        float? transferPerSecondOverride = null, float exposure = 1f, float heatingRateMultiplier = 1f)
+    {
+        RuntimeItemMatterDefinition matter = ResolveMatter(item);
+        if (matter?.HasFuelExhaustionTransition != true ||
+            matter.IgnitionTemperature is not float ignitionTemperature || item?.MatterState?.Initialized != true ||
+            !Mod_Fuel.TryResolveItemData(item, out FuelData fuel)) return false;
+        ItemMatterState state = item.MatterState;
+        bool wasBurning = state.IsBurning;
+        state.IsBurning = !waterContact && combustionSupported && fuel.Fuel.x > 0f &&
+            (wasBurning || initialTemperature >= ignitionTemperature || state.TemperatureCelsius >= ignitionTemperature);
+        if (!state.IsBurning) return wasBurning;
+
+        float warmupSeconds = 0f;
+        if (!wasBurning && initialTemperature < ignitionTemperature)
+            warmupSeconds = transferPerSecondOverride.HasValue
+                ? (ignitionTemperature - initialTemperature) /
+                    (transferPerSecondOverride.Value * Mathf.Max(.01f, exposure) * heatingRateMultiplier)
+                : (float)ThermalRuntime.GetAmbientTransferSeconds(initialTemperature, targetTemperature,
+                    ignitionTemperature, heatingRateMultiplier);
+        bool changed = Mod_Fuel.ConsumeItemDataFuel(item, Mathf.Max(0f, seconds - warmupSeconds));
+        if (fuel.Fuel.x <= 0f) state.IsBurning = false;
+        return changed || wasBurning != state.IsBurning;
+    }
+
+    /// <summary>未声明燃尽转化的普通可燃物仍沿既有数量消耗规则推进。</summary>
     public static bool AdvanceCombustion(ItemData item, float seconds, bool waterContact, bool combustionSupported, out bool consumedAll)
     {
         consumedAll = false;
@@ -580,6 +622,7 @@ public static class ItemMatterRuntime
 
         RuntimeItemMatterDefinition matter = ResolveMatter(item);
         ItemMatterState state = item.MatterState;
+        if (matter?.HasFuelExhaustionTransition == true) return false;
         if (matter?.IgnitionTemperature is not float ignitionTemperature || state?.Initialized != true)
             return false;
 
@@ -632,6 +675,8 @@ public static class ItemMatterRuntime
         return 12f;
     }
 
+    #endregion
+
     public static RuntimeItemMatterTransition GetHeatingTransition(ItemData item)
     {
         RuntimeItemMatterDefinition matter = ResolveMatter(item);
@@ -650,19 +695,23 @@ public static class ItemMatterRuntime
 
     public static RuntimeItemMatterTransition GetMatchedTransition(ItemData item, bool liquid)
     {
-        return SelectMatchedTransition(ResolveMatter(item), item?.MatterState, liquid);
+        RuntimeItemMatterDefinition matter = ResolveMatter(item);
+        bool fuelExhausted = matter?.HasFuelExhaustionTransition == true &&
+            Mod_Fuel.TryResolveItemData(item, out FuelData fuel) && fuel.Fuel.x <= 0f;
+        return SelectMatchedTransition(matter, item?.MatterState, liquid, fuelExhausted);
     }
 
     /// <summary>按配置顺序筛选材料条件，索引遍历避免接口枚举器装箱。</summary>
     internal static RuntimeItemMatterTransition SelectMatchedTransition(
-        RuntimeItemMatterDefinition matter, ItemMatterState state, bool liquid)
+        RuntimeItemMatterDefinition matter, ItemMatterState state, bool liquid, bool fuelExhausted = false)
     {
         if (matter == null || state == null) return null;
         IReadOnlyList<RuntimeItemMatterTransition> transitions = matter.Transitions;
         for (int i = 0; i < transitions.Count; i++)
         {
             RuntimeItemMatterTransition transition = transitions[i];
-            if ((transition.LiquidOutput != null) == liquid && transition.Matches(state))
+            if ((transition.LiquidOutput != null) == liquid && transition.Matches(state) &&
+                (!transition.RequiresFuelExhaustion || fuelExhausted))
                 return transition;
         }
         return null;

@@ -432,7 +432,8 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     {
         State.HeatingRatePercent = Entity.Airflow.GetHeatingRatePercent(baseHeatingRatePercent, AcceptsAirflow);
         FurnaceMaterialHeating.Process(Input, Output, Data.Temperature, seconds, HeatingRatePercent / 100f,
-            productionActor, FurnaceMaterialHeating.SampleInitialMaterialTemperature(Entity));
+            productionActor, FurnaceMaterialHeating.SampleInitialMaterialTemperature(Entity),
+            MachineWorld.CanSustainCombustion(Entity));
     }
 
     private static bool HasMaterials(Inventory inventory)
@@ -477,7 +478,7 @@ public static class FurnaceMaterialHeating
 
     public static bool Process(Inventory input, Inventory output, float sourceTemperature, float seconds,
         float heatingRateMultiplier = 1f, Player actor = null,
-        float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature)
+        float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature, bool combustionSupported = true)
     {
         if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null ||
             !float.IsFinite(sourceTemperature) || !float.IsFinite(seconds) || seconds <= 0f ||
@@ -519,10 +520,20 @@ public static class FurnaceMaterialHeating
                     ItemData material = slot?.itemData;
                     if (material?.MatterState?.Initialized != true || rejected.Contains(slot.Index) ||
                         !resources.TryGetItemDefinition(material.IDName, out RuntimeItemDefinition definition)) continue;
+                    bool fuelCombustion = definition.Matter?.HasFuelExhaustionTransition == true;
                     if (definition.Reactions.Count == 0 && (definition.Matter == null || definition.Matter.Transitions.Count == 0)) continue;
                     float current = material.MatterState.TemperatureCelsius;
+                    if (fuelCombustion && combustionSupported)
+                    {
+                        if ((material.MatterState.IsBurning ||
+                             definition.Matter.IgnitionTemperature is float ignition && current >= ignition) &&
+                            Mod_Fuel.TryResolveItemData(material, out FuelData fuel) &&
+                            fuel.Fuel.x > 0f && fuel.Fuel.x < boundarySeconds)
+                        { boundarySeconds = fuel.Fuel.x; boundaryItem = null; }
+                    }
                     float next = ThermalRuntime.AdvanceAmbient(current, sourceTemperature,
                         ThermalRuntime.ResolveHeatingSeconds(current, sourceTemperature, (float)boundarySeconds, heatingRateMultiplier));
+                    if (fuelCombustion && combustionSupported) Consider(definition.Matter.IgnitionTemperature);
                     foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
                     {
                         if (reaction.LiquidOutput != null) continue;
@@ -607,6 +618,7 @@ public static class FurnaceMaterialHeating
             {
                 ItemData material = slot?.itemData;
                 if (material == null || !originalGuids.Contains(material.Guid)) continue;
+                float initialTemperature = material.MatterState.TemperatureCelsius;
                 bool advanced = ItemMatterRuntime.Advance(material,
                     rejected.Contains(slot.Index) ? material.MatterState.TemperatureCelsius : sourceTemperature,
                     1f, step, heatingRateMultiplier: heatingRateMultiplier);
@@ -615,6 +627,8 @@ public static class FurnaceMaterialHeating
                     material.MatterState.TemperatureCelsius = boundaryTemperature;
                     advanced = true;
                 }
+                advanced |= ItemMatterRuntime.AdvanceFuelCombustionAfterHeating(material, initialTemperature,
+                    sourceTemperature, step, false, combustionSupported, heatingRateMultiplier: heatingRateMultiplier);
                 if (!advanced) continue;
                 materials.Data.NotifyItemStateChanged(material);
                 inventoryChanged = true;

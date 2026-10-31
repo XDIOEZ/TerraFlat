@@ -46,3 +46,18 @@ test.system("item_runtime", "combustion_fuel_batch", {}, function(data)
     nearFuel(data.remainingFuel, remaining, "燃烧速度与游戏规则倍率")
     nearFuel(data.fuelCapacity, 10, "超过显示容量的燃料储备被截断")
 end, "燃烧连续数组：暂停、倒退、跳时、倍率与真实燃料扣减")
+
+test.system("item_runtime", "material_fuel_state", {}, function(data)
+    assert(data.configured and data.blockedUntilExhausted and data.exhaustedOutput == "WoodAsh",
+        "通用燃尽配置未阻止瞬时转化，或仍被自动木炭规则覆盖")
+    assert(data.freshFuel == 50 and data.reusedFuel == 20,
+        "首次装配或池化壳配置被Prefab默认燃值/旧物品余量覆盖")
+    assert(data.configuredSavedFuel == 40,
+        "未加载物品的配置 Populate 覆盖了同引用上的存档余量")
+    assert(data.sharedReference and data.remaining == 40 and data.amount == 3,
+        "库存解析与燃料模块未引用同一余量，或扣燃料误扣数量")
+    assert(data.cloneRemaining == 35 and data.snapshotRemaining == 40,
+        "燃料引用深拷贝共享原对象，或快照没有捕获最新余量")
+    assert(data.replacementRemaining == 7 and data.reboundReference,
+        "替换载荷或模块重绑定后仍使用旧燃料引用")
+end, "通用材料燃尽条件、冷热引用、深拷贝与快照重绑定")
