@@ -63,7 +63,7 @@
       "id": "Ingot_Copper",
       "parent": "BasicItemVisual_Base",
       "gameName": "铜锭",
-      "description": "铜（Copper）是一种过渡金属元素，化学符号为Cu，原子序数为29。铜是人类最早使用的金属之一，早在史前时代，人们就开始采掘露天铜矿，并用获取的铜制造武器、工具和其他器皿",
+      "description": "由含铜矿石冶炼得到的金属锭，可用于制作铜制工具、武器和机械零件。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

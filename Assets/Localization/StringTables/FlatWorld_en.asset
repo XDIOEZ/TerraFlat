@@ -193,7 +193,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938113
-    m_Localized: Bone.
+    m_Localized: "A bone left by an animal, used to make simple tools and weapons."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938114
@@ -201,7 +201,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938115
-    m_Localized: Charred Matter.
+    m_Localized: "Scorched residue left by failed heating, with limited uses."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938116
@@ -217,7 +217,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938119
-    m_Localized: Leaf.
+    m_Localized: "A flexible leaf used as tinder or a basic crafting material."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938120
@@ -234,7 +234,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938123
-    m_Localized: Plank.
+    m_Localized: "Processed timber for crafting and construction."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938124
@@ -250,7 +250,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938127
-    m_Localized: Rope.
+    m_Localized: "A sturdy rope used for tools, buildings and equipment."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938128
@@ -274,7 +274,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938133
-    m_Localized: A refined metal bar used for crafting.
+    m_Localized: "A metal ingot smelted from copper-bearing ore, used for copper tools, weapons and machine parts."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938134
@@ -354,7 +354,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938155
-    m_Localized: A fresh apple. An apple a day keeps the doctor away.
+    m_Localized: "A sweet apple picked from a tree. Eat it for moisture and nutrition."
     m_Metadata:
       m_Items: []
   - m_Id: 4878938156
@@ -402,7 +402,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326730
-    m_Localized: Edible coconut flesh.
+    m_Localized: "White coconut flesh that can be eaten for nutrition."
     m_Metadata:
       m_Items: []
   - m_Id: 4887326731
@@ -426,7 +426,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326736
-    m_Localized: Fat.
+    m_Localized: "Fat harvested from animal tissue, useful as fuel or a cooking ingredient."
     m_Metadata:
       m_Items: []
   - m_Id: 4887326737
@@ -467,7 +467,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326746
-    m_Localized: A warm drink made from tea leaves.
+    m_Localized: "A drink brewed from tea leaves that restores moisture."
     m_Metadata:
       m_Items: []
   - m_Id: 4891521024
@@ -475,7 +475,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4891521025
-    m_Localized: A seed that can grow into an apple tree.
+    m_Localized: "Plant this apple seed in suitable soil to grow a fruit-bearing apple tree."
     m_Metadata:
       m_Items: []
   - m_Id: 4904103936
@@ -515,7 +515,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4908298241
-    m_Localized: Wooden Stick.
+    m_Localized: "An ordinary wooden stick used in tools, weapons and fire-making equipment."
     m_Metadata:
       m_Items: []
   - m_Id: 4908298242
@@ -523,7 +523,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4908298243
-    m_Localized: Log.
+    m_Localized: "A small log from a felled tree. It floats, burns as fuel and can be processed into planks."
     m_Metadata:
       m_Items: []
   - m_Id: 357277925027840
@@ -531,9 +531,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582272
-    m_Localized: A furnace with forced airflow for high temperature metalworking.
-      3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input
-      capacity.
+    m_Localized: "Place a high-temperature furnace with three input slots, a 100% heating rate and 150 kg / 150 L input capacity."
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582273
@@ -614,7 +612,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245569
-    m_Localized: Humus.
+    m_Localized: "Organic-rich soil used to improve growing conditions."
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245570
@@ -863,7 +861,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331904
-    m_Localized: Radish.
+    m_Localized: "A crisp root vegetable that can be eaten raw or grown on farmland."
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331905
@@ -903,9 +901,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
-    m_Localized: A furnace with forced airflow for high temperature metalworking.
-      3 input slots, a 100% material heating coefficient, and 150 kg / 150 L input
-      capacity.
+    m_Localized: "A high-temperature furnace with forced airflow, three input slots, a 100% heating rate and 150 kg / 150 L input capacity."
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915970
@@ -1042,7 +1038,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607745
-    m_Localized: AppleTree.
+    m_Localized: "A fruit tree that bears harvestable apples and can be grown from seeds."
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607746
@@ -1246,19 +1242,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662582497280
-    m_Localized: Mushroom.
+    m_Localized: "An edible cave mushroom that can be eaten or grown from spores."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662586691584
-    m_Localized: Tinder.
+    m_Localized: "An ember for starting fires, lasting one in-game day without leaving ash."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662586691585
-    m_Localized: Mushroom Spores.
+    m_Localized: "Spores used to grow mushrooms, which can produce more spores when harvested."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662586691586
-    m_Localized: Berry Seeds.
+    m_Localized: "Grow a berry bush that regrows fruit after harvesting."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662590885888
@@ -1270,39 +1266,39 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662595080192
-    m_Localized: Wooden Water Platform.
+    m_Localized: "A wooden platform placed on water to create a walkable surface for building."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662599274496
-    m_Localized: Wooden Hoe.
+    m_Localized: "Turn nearby grassy soil into farmland with six strokes."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662603468800
-    m_Localized: Stone Hoe.
+    m_Localized: "Turn nearby grassy soil into farmland with four strokes."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662603468801
-    m_Localized: Copper Hoe.
+    m_Localized: "Turn nearby grassy soil into farmland with three strokes."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662603468802
-    m_Localized: Iron Hoe.
+    m_Localized: "Turn nearby grassy soil into farmland with two strokes."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662603468803
-    m_Localized: Herb.
+    m_Localized: "Medicinal herbs used to make herbal poultices. Mature plants also provide seeds."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663104
-    m_Localized: Straw.
+    m_Localized: "Dried grass for basic crafting. Three portions can be twisted into a rope."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663105
-    m_Localized: Willow Branch.
+    m_Localized: "A flexible willow branch suitable for weaving rope."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663106
-    m_Localized: Willow Bark.
+    m_Localized: "Bark stripped from a willow tree, used for rope and medicinal materials."
     m_Metadata:
       m_Items: []
   - m_Id: 13292200447172610
@@ -1310,7 +1306,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663108
-    m_Localized: Clay.
+    m_Localized: "Pottery clay gathered from riverbank deposits with a shovel. Four portions make a clay jar blank."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663109
@@ -1330,7 +1326,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857409
-    m_Localized: Herb Seeds.
+    m_Localized: "Plant this seed to grow medicinal herbs."
     m_Metadata:
       m_Items: []
   - m_Id: 13292200447172608
@@ -1338,7 +1334,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857411
-    m_Localized: Willow Seeds.
+    m_Localized: "Plant this seed to grow a willow tree."
     m_Metadata:
       m_Items: []
   - m_Id: 13292200384258048
@@ -1351,43 +1347,43 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857415
-    m_Localized: Niter Deposit.
+    m_Localized: "A nitrate mineral deposit that yields niter without a required pickaxe tier."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857417
-    m_Localized: Willow Tree.
+    m_Localized: "A riverside willow that yields branches, bark and wood. It can be grown from seeds."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857418
-    m_Localized: Stone Shovel.
+    m_Localized: "Dig grass, sand or peat soil in four strokes, or gather clay on riverbanks."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857419
-    m_Localized: Stone Platform.
+    m_Localized: "Place a stone platform on water to create a walkable building surface."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857420
-    m_Localized: Copper Platform.
+    m_Localized: "Place a copper platform on water to create a walkable building surface."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051712
-    m_Localized: Copper Wall.
+    m_Localized: "A placeable copper wall that blocks movement and withstands attacks."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051713
-    m_Localized: Iron Platform.
+    m_Localized: "Place an iron platform on water to create a walkable building surface."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051714
-    m_Localized: Iron Wall.
+    m_Localized: "A placeable iron wall that blocks movement and withstands attacks."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051715
-    m_Localized: Bronze Platform.
+    m_Localized: "Place a bronze platform on water to create a walkable building surface."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051716
-    m_Localized: Bronze Wall.
+    m_Localized: "A placeable bronze wall that blocks movement and withstands attacks."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051718
@@ -1412,12 +1408,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051722
-    m_Localized: Fertilizer.
+    m_Localized: "Apply to farmland to restore moisture and soil fertility."
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051723
-    m_Localized: Copper tools can mine iron. Make simple iron tools with raw iron,
-      wooden handles and rope; alloy copper and tin at nine to one for bronze.
+    m_Localized: "A stone pickaxe can mine copper ore, while copper tools mine more efficiently. Make a crude iron pickaxe from pig iron, sticks and rope. Smelt copper and tin at a nine-to-one ratio for bronze. Bring food and drinking water into caves."
     m_Metadata:
       m_Items: []
   - m_Id: 12258435927105536
@@ -1546,99 +1541,99 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919488
-    m_Localized: Wooden Bow.
+    m_Localized: "A wooden bow made of wood and rope. Hold attack to draw and release to shoot an arrow."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919489
-    m_Localized: Recurve Bow.
+    m_Localized: "A recurve bow that deals more arrow damage than a wooden bow at the same draw."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919490
-    m_Localized: Wooden Arrow.
+    m_Localized: "A sharpened wooden arrow that may survive a shot or leave materials when broken."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919491
-    m_Localized: Stone Arrow.
+    m_Localized: "A stone-tipped arrow that may survive a shot or leave materials when broken."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919492
-    m_Localized: Copper Arrow.
+    m_Localized: "A copper-tipped arrow that may survive a shot or leave materials when broken."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919493
-    m_Localized: Iron Arrow.
+    m_Localized: "An iron-tipped arrow that may survive a shot or leave materials when broken."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919494
-    m_Localized: Peach.
+    m_Localized: "A juicy peach with carbohydrates and vitamins. Finishing one restores 5 health."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919495
-    m_Localized: Orange.
+    m_Localized: "A sweet citrus fruit that provides moisture and vitamins."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919496
-    m_Localized: Rice Grain.
+    m_Localized: "Unhulled rice grain. Process it into edible rice or plant it as seed."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919497
-    m_Localized: Rice.
+    m_Localized: "Hulled raw rice, supplying carbohydrates and some protein when eaten."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919498
-    m_Localized: Cooked Rice.
+    m_Localized: "Cooked rice that provides carbohydrates, protein and a little vitamin intake."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919499
-    m_Localized: Resin.
+    m_Localized: "Sticky pine resin, used with charcoal to make resin glue."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919500
-    m_Localized: Charcoal.
+    m_Localized: "Charcoal made from logs. Burns as fuel and combines with resin to make glue."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919501
-    m_Localized: Resin Glue.
+    m_Localized: "A black resin and charcoal adhesive used to bind materials."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919502
-    m_Localized: Drilled Log.
+    m_Localized: "A log with a charred hole, prepared as the head for a wooden hammer."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919503
-    m_Localized: Peach Tree.
+    m_Localized: "A peach tree whose ripe fruit can be picked or collected when the tree is felled."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919504
-    m_Localized: Orange Tree.
+    m_Localized: "A fruit tree suited to warm, humid areas, with harvestable oranges."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919505
-    m_Localized: Pine Tree.
+    m_Localized: "A pine tree that yields logs and resin. Warmer sites produce more resin."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919506
-    m_Localized: Wooden Hammer.
+    m_Localized: "A wooden hammer made with a drilled log head, a stick handle and vine or resin binding."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919507
-    m_Localized: Rice-Crop.
+    m_Localized: "Rice grown on farmland. Harvested grains can also be planted."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919508
-    m_Localized: Chili Pepper.
+    m_Localized: "A spicy pepper that can also be planted. Eating it briefly warms the body and causes minor damage."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919509
-    m_Localized: Chili Tree.
+    m_Localized: "A farmland pepper plant that yields two to four ripe peppers, which can also be planted."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919510
-    m_Localized: Foxtail Seed Head.
+    m_Localized: "A foxtail seed head that can be eaten for a little nutrition."
     m_Metadata:
       m_Items: []
   - m_Id: 12651324825919511
-    m_Localized: Jam.
+    m_Localized: "Berry jam made with a mortar, providing more nutrition than raw berries."
     m_Metadata:
       m_Items: []
   - m_Id: 12735264685285376
@@ -2193,9 +2188,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27615045322402012
-    m_Localized: A removable steam power module. Right-click while held to configure
-      the switch and output level. Install in an engine slot; it draws water from
-      vessels and fuel in train cargo to power the entire train.
+    m_Localized: "Place a steam power unit that consumes water and solid fuel after ignition, transmitting power through a mechanical shaft."
     m_Metadata:
       m_Items: []
   - m_Id: 27915473976856576
@@ -2923,79 +2916,55 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474564059136
-    m_Localized: Carries power normally. Hold it or wear engineering goggles to see
-      and handle it.
+    m_Localized: "Carries power normally. Hold it or wear engineering goggles to see and handle it."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474564059137
-    m_Localized: Copper wire with a concealing sheath. It carries power normally;
-      hold it or wear engineering goggles to see and handle it.
+    m_Localized: "Copper wire with a concealing sheath. It carries power normally; hold it or wear engineering goggles to see and handle it."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474564059138
-    m_Localized: When held or worn over the eyes, reveals hidden wires and lets you
-      interact with them. Can be worn with a helmet.
+    m_Localized: "When held or worn over the eyes, reveals hidden wires and lets you interact with them. Can be worn with a helmet."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474564059139
-    m_Localized: Large debris left when a hull breaks apart. It records the original
-      components and inventory; attack it to salvage and release its contents.
+    m_Localized: "Large debris left when a hull breaks apart. It records the original components and inventory; attack it to salvage and release its contents."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474564059140
-    m_Localized: A packed snowball dug up with a shovel. Right-click to place it;
-      each snowball adds one snow layer. Stack layers, then shovel them back up.
+    m_Localized: "A packed snowball dug up with a shovel. Right-click to place it; each snowball adds one snow layer. Stack layers, then shovel them back up."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447744
-    m_Localized: Crafted from four planks and two logs. Walk into the placed raft
-      to push it. On land or in water, point at it and press F to board. Use the
-      directional keys or stick to row without spending stamina; hold Shift to row
-      faster at the running stamina cost. Point at the raft and press F to dismount,
-      landing on nearby ground when possible or in the water otherwise.
+    m_Localized: "Crafted from four planks and two logs. Walk into the placed raft to push it. On land or in water, point at it and press F to board. Use the directional keys or stick to row without spending stamina; hold Shift to row faster at the running stamina cost. Point at the raft and press F to dismount, landing on nearby ground when possible or in the water otherwise."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447745
-    m_Localized: A white outline appears when the cursor points at the raft. On land
-      or in water, point at the raft and press F to board or dismount. Normal rowing
-      uses no stamina; hold Shift while moving to spend stamina and row faster. Pointing
-      at reachable seawater still lets F interact with the water and drink. The raft
-      drifts with currents. Dismounting far offshore puts you in the water if no
-      land is nearby. A loaded save restores it as an empty raft.
+    m_Localized: "A white outline appears when the cursor points at the raft. On land or in water, point at the raft and press F to board or dismount. Normal rowing uses no stamina; hold Shift while moving to spend stamina and row faster. Pointing at reachable seawater still lets F interact with the water and drink. The raft drifts with currents. Dismounting far offshore puts you in the water if no land is nearby. A loaded save restores it as an empty raft."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447746
-    m_Localized: Place it in a crucible and heat it to the right temperature to melt
-      it into molten glass.
+    m_Localized: "Place it in a crucible and heat it to the right temperature to melt it into molten glass."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447747
-    m_Localized: Transparent glass formed by cooling and solidifying molten glass.
-      Used to make glass products.
+    m_Localized: "Transparent glass formed by cooling and solidifying molten glass. Used to make glass products."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447748
-    m_Localized: Holds solid materials such as sand and ore, and can also store hot
-      liquids. A heat source heats only the crucible; its contents melt or transform
-      according to their own temperature and reaction properties.
+    m_Localized: "Holds solid materials such as sand and ore, and can also store hot liquids. A heat source heats only the crucible; its contents melt or transform according to their own temperature and reaction properties."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447749
-    m_Localized: Hold the attack button to charge, then blow into the microphone.
-      Releasing fires one arrow from the same inventory. Louder blows make arrows
-      fly faster and add up to 100% damage.
+    m_Localized: "Hold the attack button to charge, then blow into the microphone. Releasing fires one arrow from the same inventory. Louder blows make arrows fly faster and add up to 100% damage."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447750
-    m_Localized: A throwing tool made from rope and leather. Stones in the hotbar
-      and suitable hard ores can be used as sling ammunition. Hold the attack button
-      to charge and show the trajectory, then release to throw. Projectiles can be
-      picked up after landing.
+    m_Localized: "A throwing tool made from rope and leather. Stones in the hotbar and suitable hard ores can be used as sling ammunition. Hold the attack button to charge and show the trajectory, then release to throw. Projectiles can be picked up after landing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447751
-    m_Localized: Coarse fiber stripped from plant skins. A basic material for rope
-      and other survival items.
+    m_Localized: "Coarse fiber stripped from plant skins. A basic material for rope and other survival items."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474572447752
@@ -3003,23 +2972,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642048
-    m_Localized: Flammable organic soil dug from wetlands. Can be used as a low-temperature
-      fuel.
+    m_Localized: "Flammable organic soil dug from wetlands. Can be used as a low-temperature fuel."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642049
-    m_Localized: A wooden mechanical part made by drilling a through-hole in a plank.
-      Used for the structure and connections of mechanical torque devices.
+    m_Localized: "A wooden mechanical part made by drilling a through-hole in a plank. Used for the structure and connections of mechanical torque devices."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642050
-    m_Localized: A stone mechanical part made by drilling a through-hole in a slab.
-      Used for the structure and connections of mechanical torque devices.
+    m_Localized: "A stone mechanical part made by drilling a through-hole in a slab. Used for the structure and connections of mechanical torque devices."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642051
-    m_Localized: A stone mechanical part made by drilling a through-hole in a stone.
-      Used in mechanical torque devices.
+    m_Localized: "A stone mechanical part made by drilling a through-hole in a stone. Used in mechanical torque devices."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642052
@@ -3032,8 +2997,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642054
-    m_Localized: A metal nail forged from wrought iron ingots. Used to fasten wood
-      and mechanical structures.
+    m_Localized: "A metal nail forged from wrought iron ingots. Used to fasten wood and mechanical structures."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642055
@@ -3061,55 +3025,43 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642061
-    m_Localized: Fine coal powder made by grinding coal ore in a stone mortar. Used
-      for further material processing.
+    m_Localized: "Fine coal powder made by grinding coal ore in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642062
-    m_Localized: Copper ore powder made by grinding malachite in a stone mortar.
-      Used for further material processing.
+    m_Localized: "Copper ore powder made by grinding malachite in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642063
-    m_Localized: Iron ore powder made by grinding iron ore in a stone mortar. Used
-      for further material processing.
+    m_Localized: "Iron ore powder made by grinding iron ore in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642064
-    m_Localized: Tin ore powder made by grinding tin ore in a stone mortar. Used
-      for further material processing.
+    m_Localized: "Tin ore powder made by grinding tin ore in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474576642065
-    m_Localized: Stone powder made by grinding stone in a stone mortar. Used for
-      further material processing.
+    m_Localized: "Stone powder made by grinding stone in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836352
-    m_Localized: Fine niter powder made by grinding niter in a stone mortar. Used
-      to make fertilizer.
+    m_Localized: "Fine niter powder made by grinding niter in a stone mortar. Used to make fertilizer."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836353
-    m_Localized: Golden natural beeswax produced by beehives. It can be eaten directly
-      and is rich in carbohydrates and vitamins, but reduces water by 5.
+    m_Localized: "Golden natural beeswax produced by beehives. It can be eaten directly and is rich in carbohydrates and vitamins, but reduces water by 5."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836354
-    m_Localized: A metal nail forged from steel ingots. When used with steel plates
-      to craft a mechanical hammer or sawmill, it increases the finished machine's
-      efficiency by 20%.
+    m_Localized: "A metal nail forged from steel ingots. When used with steel plates to craft a mechanical hammer or sawmill, it increases the finished machine's efficiency by 20%."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836355
-    m_Localized: An egg laid by small birds and seagulls. It can be picked up, eaten,
-      or cooked. Each bird can lay one at most every two days.
+    m_Localized: "An egg laid by small birds and seagulls. It can be picked up, eaten, or cooked. Each bird can lay one at most every two days."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836356
-    m_Localized: "A filament made by heating thin thread to 500\xB0C until it carbonizes.
-      Combine it with glass, copper plate, and wrought iron ingot at a workbench
-      to make a light bulb."
+    m_Localized: "A filament made by heating thin thread to 500\u00B0C until it carbonizes. Combine it with glass, copper plate, and wrought iron ingot at a workbench to make a light bulb."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836357
@@ -3121,8 +3073,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836359
-    m_Localized: A soft, lightweight fabric woven from silk fiber. Used as a crafting
-      material.
+    m_Localized: "A soft, lightweight fabric woven from silk fiber. Used as a crafting material."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836360
@@ -3142,13 +3093,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836364
-    m_Localized: Gold ore powder made by grinding gold ore in a stone mortar. Used
-      for further material processing.
+    m_Localized: "Gold ore powder made by grinding gold ore in a stone mortar. Used for further material processing."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836365
-    m_Localized: A gold-bearing vein that must be mined with a pickaxe. Mining drops
-      gold ore.
+    m_Localized: "A gold-bearing vein that must be mined with a pickaxe. Mining drops gold ore."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836366
@@ -3163,14 +3112,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836368
-    m_Localized: Sharp black stone scattered along the shore of mountaintop lava
-      lakes. Can be used as a handheld knife or crafted into an obsidian dagger or
-      spear.
+    m_Localized: "Sharp black stone scattered along the shore of mountaintop lava lakes. Can be used as a handheld knife or crafted into an obsidian dagger or spear."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836369
-    m_Localized: An obsidian deposit beside a mountaintop lava lake. Mine it with
-      a pickaxe to obtain obsidian; there is no minimum tool tier.
+    m_Localized: "An obsidian deposit beside a mountaintop lava lake. Mine it with a pickaxe to obtain obsidian; there is no minimum tool tier."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836370
@@ -3182,89 +3128,71 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836372
-    m_Localized: An iron bucket that can hold water or hot magma. Place it on the
-      ground to catch rain; dismantling it preserves the liquid and rain collection
-      progress.
+    m_Localized: "An iron bucket that can hold water or hot magma. Place it on the ground to catch rain; dismantling it preserves the liquid and rain collection progress."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836373
-    m_Localized: An open iron bucket placed on the ground. It catches rain and can
-      be dismantled without losing its liquid, temperature, or rain collection progress.
+    m_Localized: "An open iron bucket placed on the ground. It catches rain and can be dismantled without losing its liquid, temperature, or rain collection progress."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836374
-    m_Localized: Mineral deposits scattered around mountains and mountain lava vents.
-      Can also be obtained by mining sulfur deposits.
+    m_Localized: "Mineral deposits scattered around mountains and mountain lava vents. Can also be obtained by mining sulfur deposits."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836375
-    m_Localized: Sulfur ore found in mountains and around mountain lava vents. Mining
-      drops sulfur; pickaxes improve yield, with no minimum tool tier.
+    m_Localized: "Sulfur ore found in mountains and around mountain lava vents. Mining drops sulfur; pickaxes improve yield, with no minimum tool tier."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474580836376
-    m_Localized: A wild beehive beside a forest tree, with a golden wax layer and
-      a dark entrance.
+    m_Localized: "A wild beehive beside a forest tree, with a golden wax layer and a dark entrance."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224960
-    m_Localized: A few wildflowers gathered from a grass flower layer with scissors.
-      Can be picked up and stacked.
+    m_Localized: "A few wildflowers gathered from a grass flower layer with scissors. Can be picked up and stacked."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224961
-    m_Localized: A huge natural stone deposit with the same mining behavior and drops
-      as a regular stone deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural stone deposit with the same mining behavior and drops as a regular stone deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224962
-    m_Localized: A huge natural coal deposit with the same mining behavior and drops
-      as a regular coal deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural coal deposit with the same mining behavior and drops as a regular coal deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224963
-    m_Localized: A huge natural copper deposit with the same mining behavior and
-      drops as a regular copper deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural copper deposit with the same mining behavior and drops as a regular copper deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224964
-    m_Localized: A huge natural iron deposit with the same mining behavior and drops
-      as a regular iron deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural iron deposit with the same mining behavior and drops as a regular iron deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224965
-    m_Localized: A huge natural tin deposit with the same mining behavior and drops
-      as a regular tin deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural tin deposit with the same mining behavior and drops as a regular tin deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224966
-    m_Localized: A huge natural niter deposit with the same mining behavior and drops
-      as a regular niter deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural niter deposit with the same mining behavior and drops as a regular niter deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224967
-    m_Localized: A huge natural diamond deposit with the same mining behavior and
-      drops as a regular diamond deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural diamond deposit with the same mining behavior and drops as a regular diamond deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224968
-    m_Localized: A huge natural gold deposit with the same mining behavior and drops
-      as a regular gold deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural gold deposit with the same mining behavior and drops as a regular gold deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224969
-    m_Localized: A huge natural obsidian deposit with the same mining behavior and
-      drops as a regular obsidian deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural obsidian deposit with the same mining behavior and drops as a regular obsidian deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224970
-    m_Localized: A huge natural sulfur deposit with the same mining behavior and
-      drops as a regular sulfur deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural sulfur deposit with the same mining behavior and drops as a regular sulfur deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224971
-    m_Localized: A huge natural tungsten deposit with the same mining behavior and
-      drops as a regular tungsten deposit. Mine continuously from its edge.
+    m_Localized: "A huge natural tungsten deposit with the same mining behavior and drops as a regular tungsten deposit. Mine continuously from its edge."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224972
@@ -3272,151 +3200,127 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224973
-    m_Localized: Aim at a nearby grass layer. When a white square appears, right-click
-      or tap to cut one tile of grass and collect 2 plant fibers. Scissors can also
-      harvest wildflowers.
+    m_Localized: "Aim at a nearby grass layer. When a white square appears, right-click or tap to cut one tile of grass and collect 2 plant fibers. Scissors can also harvest wildflowers."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224974
-    m_Localized: A wooden mechanical part made by drilling a through-hole in a stick.
-      Used as a shaft core and connector in mechanical torque devices.
+    m_Localized: "A wooden mechanical part made by drilling a through-hole in a stick. Used as a shaft core and connector in mechanical torque devices."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224975
-    m_Localized: A heavy hammer with a stone head and wooden handle. More powerful
-      than a wooden hammer, but each swing costs more stamina.
+    m_Localized: "A heavy hammer with a stone head and wooden handle. More powerful than a wooden hammer, but each swing costs more stamina."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474589224976
-    m_Localized: Hand Crank.
+    m_Localized: "Turn the crank manually to supply mechanical power to connected shafts and machines."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419264
-    m_Localized: Hand Crank.
+    m_Localized: "Place and operate a hand crank to drive a mechanical network."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419265
-    m_Localized: Water Wheel.
+    m_Localized: "Uses moving water to drive a mechanical shaft; stronger flow increases speed."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419266
-    m_Localized: Water Wheel.
+    m_Localized: "Place in flowing water to drive connected machines."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419267
-    m_Localized: Windmill.
+    m_Localized: "Produces mechanical power from local wind; output changes with the wind."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419268
-    m_Localized: Windmill.
+    m_Localized: "Place a windmill to power machines with wind."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419269
-    m_Localized: Wooden Shaft.
+    m_Localized: "A wooden shaft that transmits rotation and torque between machines."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419270
-    m_Localized: Wooden Shaft.
+    m_Localized: "Connect mechanical power sources and machines using this wooden shaft."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419271
-    m_Localized: Only the short shaft on its left connects to a drive shaft. Its
-      teeth mesh with adjacent gears.
+    m_Localized: "Only the short shaft on its left connects to a drive shaft. Its teeth mesh with adjacent gears."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419272
-    m_Localized: When placed, only the short shaft on its left connects to a drive
-      shaft. Its teeth mesh with adjacent gears.
+    m_Localized: "When placed, only the short shaft on its left connects to a drive shaft. Its teeth mesh with adjacent gears."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419273
-    m_Localized: "Gearbox building. Input through the large gear outputs 2\xD7 speed
-      and 0.5\xD7 torque; input through the small gear outputs 0.5\xD7 speed and
-      2\xD7 torque."
+    m_Localized: "Gearbox building. Input through the large gear outputs 2\u00D7 speed and 0.5\u00D7 torque; input through the small gear outputs 0.5\u00D7 speed and 2\u00D7 torque."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419274
-    m_Localized: "When placed, input through the large gear outputs 2\xD7 speed and
-      0.5\xD7 torque; input through the small gear outputs 0.5\xD7 speed and 2\xD7
-      torque."
+    m_Localized: "When placed, input through the large gear outputs 2\u00D7 speed and 0.5\u00D7 torque; input through the small gear outputs 0.5\u00D7 speed and 2\u00D7 torque."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419275
-    m_Localized: Clutch.
+    m_Localized: "Connects or disconnects mechanical power between two shafts."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474593419276
-    m_Localized: Clutch.
+    m_Localized: "Place between shafts to control power transmission."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613568
-    m_Localized: Shaft Bridge.
+    m_Localized: "Lets two mechanical transmission paths cross without merging."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613569
-    m_Localized: Shaft Bridge.
+    m_Localized: "Cross two independent mechanical paths without linking them."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613570
-    m_Localized: Millstone.
+    m_Localized: "Grinds suitable materials using mechanical power or manual effort."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613571
-    m_Localized: Millstone.
+    m_Localized: "Place to grind ingredients by machine or by hand."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613572
-    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise
-      its maximum temperature based on speed. At 20 RPM it adds up to 300\xB0C; only
-      the higher bonus from the bellows or oxygen-assisted combustion applies."
+    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise its maximum temperature based on speed. At 20 RPM it adds up to 300\u00B0C; only the higher bonus from the bellows or oxygen-assisted combustion applies."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613573
-    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise
-      its maximum temperature based on speed. At 20 RPM it adds up to 300\xB0C; only
-      the higher bonus from the bellows or oxygen-assisted combustion applies."
+    m_Localized: "Point the outlet at an adjacent furnace or blast furnace to raise its maximum temperature based on speed. At 20 RPM it adds up to 300\u00B0C; only the higher bonus from the bellows or oxygen-assisted combustion applies."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613574
-    m_Localized: Sawmill.
+    m_Localized: "Cuts compatible wood into planks and other materials when mechanically powered."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613575
-    m_Localized: Sawmill.
+    m_Localized: "Place and power a sawmill to cut logs and other wood stock."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613576
-    m_Localized: Connect it to mechanical power to weave materials. Cotton can be
-      woven into cloth and silk into silk; higher speed makes processing faster.
+    m_Localized: "Connect it to mechanical power to weave materials. Cotton can be woven into cloth and silk into silk; higher speed makes processing faster."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613577
-    m_Localized: Connect it to mechanical power after placing it to weave automatically.
-      The loom provides the weaving operation; the input materials determine the
-      output and work required.
+    m_Localized: "Connect it to mechanical power after placing it to weave automatically. The loom provides the weaving operation; the input materials determine the output and work required."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613578
-    m_Localized: Driven by mechanical power, it forges pig iron into wrought iron
-      and hammers wrought iron, copper, bronze, tin, and steel ingots into matching
-      plates.
+    m_Localized: "Driven by mechanical power, it forges pig iron into wrought iron and hammers wrought iron, copper, bronze, tin, and steel ingots into matching plates."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613579
-    m_Localized: A mechanical hammer that connects to a drive shaft and automatically
-      processes pig iron, wrought iron, copper, bronze, tin, and steel ingots.
+    m_Localized: "A mechanical hammer that connects to a drive shaft and automatically processes pig iron, wrought iron, copper, bronze, tin, and steel ingots."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613580
-    m_Localized: A one-slot tool cabinet. Workbenches within eight adjacent cells
-      can use its slot as a sixth material slot. A workbench cannot receive this
-      bonus from more than one cabinet.
+    m_Localized: "A one-slot tool cabinet. Workbenches within eight adjacent cells can use its slot as a sixth material slot. A workbench cannot receive this bonus from more than one cabinet."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613581
-    m_Localized: A one-slot tool cabinet. Workbenches within eight adjacent cells
-      can use its slot as a sixth material slot. A workbench cannot receive this
-      bonus from more than one cabinet.
+    m_Localized: "A one-slot tool cabinet. Workbenches within eight adjacent cells can use its slot as a sixth material slot. A workbench cannot receive this bonus from more than one cabinet."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613582
@@ -3424,13 +3328,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613583
-    m_Localized: Connect a wire to the left and a drive shaft to the right. When
-      powered it outputs mechanical power; when mechanically driven it outputs electricity.
+    m_Localized: "Connect a wire to the left and a drive shaft to the right. When powered it outputs mechanical power; when mechanically driven it outputs electricity."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613584
-    m_Localized: Connect a wire to the left and a drive shaft to the right. When
-      powered it outputs mechanical power; when mechanically driven it outputs electricity.
+    m_Localized: "Connect a wire to the left and a drive shaft to the right. When powered it outputs mechanical power; when mechanically driven it outputs electricity."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613585
@@ -3438,43 +3340,35 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613586
-    m_Localized: A copper wire for connecting electrical equipment, made from copper
-      and rubber.
+    m_Localized: "A copper wire for connecting electrical equipment, made from copper and rubber."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613587
-    m_Localized: Stores surplus power from the grid and discharges automatically
-      when generation is insufficient.
+    m_Localized: "Stores surplus power from the grid and discharges automatically when generation is insufficient."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613588
-    m_Localized: Stores surplus power from the grid and discharges automatically
-      when generation is insufficient.
+    m_Localized: "Stores surplus power from the grid and discharges automatically when generation is insufficient."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613589
-    m_Localized: Lights automatically when connected to a copper wire in the same
-      cell and turns off without power. Its radius is 16 tiles, twice that of a torch.
+    m_Localized: "Lights automatically when connected to a copper wire in the same cell and turns off without power. Its radius is 16 tiles, twice that of a torch."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613590
-    m_Localized: Lights automatically when connected to a copper wire in the same
-      cell and turns off without power. Its radius is 16 tiles, twice that of a torch.
+    m_Localized: "Lights automatically when connected to a copper wire in the same cell and turns off without power. Its radius is 16 tiles, twice that of a torch."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613591
-    m_Localized: An oak tree that grows in forests and can yield rubber in the same
-      way that resin is collected.
+    m_Localized: "A forest oak that yields rubber used in electrical wires and other items."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613592
-    m_Localized: A hand-operated drilling tool that can be placed to open its drilling
-      work panel.
+    m_Localized: "A hand-operated drilling tool that can be placed to open its drilling work panel."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613593
-    m_Localized: A portable hand drill. When placed, it shares the hand drill's work
-      state.
+    m_Localized: "A portable hand drill. When placed, it shares the hand drill's work state."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613594
@@ -3486,106 +3380,83 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613596
-    m_Localized: A juicy cactus chunk with its spines removed. Eat it to restore
-      40 water and a small amount of nutrition.
+    m_Localized: "A juicy cactus chunk with its spines removed. Eat it to restore 40 water and a small amount of nutrition."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474597613597
-    m_Localized: A drought-tolerant plant that grows in arid deserts, not on wet
-      beaches or riverbanks. Touching it causes puncture damage. Mature plants yield
-      edible, hydrating cactus chunks and can also be cleared with a weapon.
+    m_Localized: "A drought-tolerant plant that grows in arid deserts, not on wet beaches or riverbanks. Touching it causes puncture damage. Mature plants yield edible, hydrating cactus chunks and can also be cleared with a weapon."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002176
-    m_Localized: A simple bed tied from dry grass and rope. Place it on the ground
-      to sleep.
+    m_Localized: "A simple bed tied from dry grass and rope. Place it on the ground to sleep."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002177
-    m_Localized: A grass bed that occupies two adjacent cells. Sleep in it like a
-      tent.
+    m_Localized: "A grass bed that occupies two adjacent cells. Sleep in it like a tent."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002178
-    m_Localized: A naturally formed surface cave entrance. Destroying it blocks the
-      corresponding underground exit.
+    m_Localized: "A naturally formed surface cave entrance. Destroying it blocks the corresponding underground exit."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002179
-    m_Localized: Foxtail seeds made by grinding foxtail grass in a stone mortar.
-      Plant them on valid farmland; they can also be eaten directly.
+    m_Localized: "Foxtail seeds made by grinding foxtail grass in a stone mortar. Plant them on valid farmland; they can also be eaten directly."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002180
-    m_Localized: Grind five foxtail seeds in a stone mortar to make one portion of
-      flour. It can be eaten directly for carbohydrates and protein, but consumes
-      water.
+    m_Localized: "Grind five foxtail seeds in a stone mortar to make one portion of flour. It can be eaten directly for carbohydrates and protein, but consumes water."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002181
-    m_Localized: Right-click six times to dig grass, sand, or peat tiles. Can also
-      dig clay deposits on riverbanks.
+    m_Localized: "Right-click six times to dig grass, sand, or peat tiles. Can also dig clay deposits on riverbanks."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002182
-    m_Localized: Right-click three times to dig grass, sand, or peat tiles. Can also
-      dig clay deposits on riverbanks.
+    m_Localized: "Right-click three times to dig grass, sand, or peat tiles. Can also dig clay deposits on riverbanks."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002183
-    m_Localized: A transitional shovel made from raw iron. Digs faster than a copper
-      shovel, but the metal has not been fully refined.
+    m_Localized: "A transitional shovel made from raw iron. Digs faster than a copper shovel, but the metal has not been fully refined."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002184
-    m_Localized: A durable bronze shovel that digs grass, sand, peat, and riverbank
-      clay faster.
+    m_Localized: "A durable bronze shovel that digs grass, sand, peat, and riverbank clay faster."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002185
-    m_Localized: A durable wrought-iron shovel forged from iron. Suitable for extended
-      digging and harvesting clay.
+    m_Localized: "A durable wrought-iron shovel forged from iron. Suitable for extended digging and harvesting clay."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002186
-    m_Localized: A chat command manual obtained with /help. It contains one piece
-      of charcoal. Hold it and use it to read and edit the manual.
+    m_Localized: "A chat command manual obtained with /help. It contains one piece of charcoal. Hold it and use it to read and edit the manual."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002187
-    m_Localized: A wooden floor laid over ordinary land. It changes only the surface
-      appearance; dismantling it restores the original tile.
+    m_Localized: "A wooden floor laid over ordinary land. It changes only the surface appearance; dismantling it restores the original tile."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002188
-    m_Localized: A stone floor laid over ordinary land. It changes only the surface
-      appearance; dismantling it restores the original tile.
+    m_Localized: "A stone floor laid over ordinary land. It changes only the surface appearance; dismantling it restores the original tile."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196480
-    m_Localized: A copper floor laid over ordinary land. It changes only the surface
-      appearance; dismantling it restores the original tile.
+    m_Localized: "A copper floor laid over ordinary land. It changes only the surface appearance; dismantling it restores the original tile."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196481
-    m_Localized: An iron floor laid over ordinary land. It changes only the surface
-      appearance; dismantling it restores the original tile.
+    m_Localized: "An iron floor laid over ordinary land. It changes only the surface appearance; dismantling it restores the original tile."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196482
-    m_Localized: A bronze floor laid over ordinary land. It changes only the surface
-      appearance; dismantling it restores the original tile.
+    m_Localized: "A bronze floor laid over ordinary land. It changes only the surface appearance; dismantling it restores the original tile."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196483
-    m_Localized: Right-click to choose a body part. After 3 seconds of setting, it
-      immediately restores 10 durability, then restores another 10 after 144 seconds.
-      Splints do not stack on the same body part and do not restore health.
+    m_Localized: "Right-click to choose a body part. After 3 seconds of setting, it immediately restores 10 durability, then restores another 10 after 144 seconds. Splints do not stack on the same body part and do not restore health."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196484
-    m_Localized: Use while held to bandage the head or torso, restoring 10 points
-      of part durability. Does not restore health.
+    m_Localized: "Use while held to bandage the head or torso, restoring 10 points of part durability. Does not restore health."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196485
@@ -3593,88 +3464,67 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196486
-    m_Localized: A water barrel sealed with planks, rope, and resin. Holds water
-      and six item stacks. Add ten portions of salt to a full barrel of fresh water
-      to make brine. Using resin glue to craft it increases maximum durability by
-      50%.
+    m_Localized: "A water barrel sealed with planks, rope, and resin. Holds water and six item stacks. Add ten portions of salt to a full barrel of fresh water to make brine. Using resin glue to craft it increases maximum durability by 50%."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196487
-    m_Localized: A water barrel placed on the ground. Dismantle it without losing
-      its liquid, stored items, or durability quality.
+    m_Localized: "A water barrel placed on the ground. Dismantle it without losing its liquid, stored items, or durability quality."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196488
-    m_Localized: Right-click to set a hook and one piece of bait. Left-click to cast;
-      after a small fish takes the bait, left-click again to reel it in.
+    m_Localized: "Right-click to set a hook and one piece of bait. Left-click to cast; after a small fish takes the bait, left-click again to reel it in."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196489
-    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
-      bait. It can be cast 10 times. Each successful cast consumes 1 durability;
-      it breaks when durability runs out.
+    m_Localized: "Attach it to a fishing rod's hook slot and add one food item as bait. It can be cast 10 times. Each successful cast consumes 1 durability; it breaks when durability runs out."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196490
-    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
-      bait. It can be cast 100 times. Each successful cast consumes 1 durability;
-      it breaks when durability runs out.
+    m_Localized: "Attach it to a fishing rod's hook slot and add one food item as bait. It can be cast 100 times. Each successful cast consumes 1 durability; it breaks when durability runs out."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196491
-    m_Localized: Attach it to a fishing rod's hook slot and add one food item as
-      bait. It can be cast 1,000 times. Each successful cast consumes 1 durability;
-      it breaks when durability runs out.
+    m_Localized: "Attach it to a fishing rod's hook slot and add one food item as bait. It can be cast 1,000 times. Each successful cast consumes 1 durability; it breaks when durability runs out."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196492
-    m_Localized: Moves dropped items on the ground when connected to mechanical power.
-      Rotate the building to change direction; reversing power reverses transport.
-      Rated for 20 RPM and 0.8 tiles per second.
+    m_Localized: "Moves dropped items on the ground when connected to mechanical power. Rotate the building to change direction; reversing power reverses transport. Rated for 20 RPM and 0.8 tiles per second."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196493
-    m_Localized: Moves dropped items on the ground when connected to mechanical power.
-      Rotate the building to change direction; reversing power reverses transport.
-      Rated for 20 RPM and 0.8 tiles per second.
+    m_Localized: "Moves dropped items on the ground when connected to mechanical power. Rotate the building to change direction; reversing power reverses transport. Rated for 20 RPM and 0.8 tiles per second."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196494
-    m_Localized: A cloth belt connects the rollers and carries items; a wooden frame
-      supports it. When powered, it moves dropped items on the ground. Rotate the
-      building to change direction; reversing power reverses transport. Rated for
-      20 RPM and 0.8 tiles per second.
+    m_Localized: "A cloth belt connects the rollers and carries items; a wooden frame supports it. When powered, it moves dropped items on the ground. Rotate the building to change direction; reversing power reverses transport. Rated for 20 RPM and 0.8 tiles per second."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196495
-    m_Localized: A cloth belt connects the rollers and carries items; a wooden frame
-      supports it. When powered, it moves dropped items on the ground. Rotate the
-      building to change direction; reversing power reverses transport. Rated for
-      20 RPM and 0.8 tiles per second.
+    m_Localized: "A cloth belt connects the rollers and carries items; a wooden frame supports it. When powered, it moves dropped items on the ground. Rotate the building to change direction; reversing power reverses transport. Rated for 20 RPM and 0.8 tiles per second."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196496
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "A gas pipe that transports gas through a connected gas network without storing it."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196497
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place a gas pipe to connect gas devices. The pipe itself does not store gas."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196498
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Opens or closes a gas pipeline. Gas cannot pass while the valve is closed."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196499
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place a valve in a gas line to control whether gas can flow."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196500
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Releases gas from a gas network into the atmosphere. Set an output rate, or 0 to stop."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196501
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place a gas outlet to vent gas into the atmosphere at a configurable rate."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474610196502
@@ -3718,15 +3568,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585092
-    m_Localized: An electric liquid pump. Use its configuration panel to inspect
-      actual gas and liquid contents, direction, and power. Empty equipment starts
-      under vacuum.
+    m_Localized: "An electric pump that draws water from the ground and sends it through liquid pipes in 10 L batches."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585093
-    m_Localized: An electric liquid pump. Use its configuration panel to inspect
-      actual gas and liquid contents, direction, and power. Empty equipment starts
-      under vacuum.
+    m_Localized: "Place and power an electric pump to draw surface water into connected liquid tanks."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585094
@@ -3778,13 +3624,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585102
-    m_Localized: Heats the surrounding area while powered and stops when power is
-      lost. Can warm nearby gas tanks.
+    m_Localized: "Heats the surrounding area while powered and stops when power is lost. Can warm nearby gas tanks."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585103
-    m_Localized: Heats the surrounding area while powered and stops when power is
-      lost. Can warm nearby gas tanks.
+    m_Localized: "Heats the surrounding area while powered and stops when power is lost. Can warm nearby gas tanks."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585104
@@ -3814,17 +3658,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585108
-    m_Localized: A hydrogen engine with separate input pipes for hydrogen and oxygen.
-      It consumes them at a 2:1 molar ratio to produce mechanical power and returns
-      water through a liquid output pipe. It stops if hydrogen or oxygen is missing,
-      there is no valid load, or the recovered water tank is full.
+    m_Localized: "A hydrogen engine with separate input pipes for hydrogen and oxygen. It consumes them at a 2:1 molar ratio to produce mechanical power and returns water through a liquid output pipe. It stops if hydrogen or oxygen is missing, there is no valid load, or the recovered water tank is full."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585109
-    m_Localized: A hydrogen engine with separate input pipes for hydrogen and oxygen.
-      It consumes them at a 2:1 molar ratio to produce mechanical power and returns
-      water through a liquid output pipe. It stops if hydrogen or oxygen is missing,
-      there is no valid load, or the recovered water tank is full.
+    m_Localized: "A hydrogen engine with separate input pipes for hydrogen and oxygen. It consumes them at a 2:1 molar ratio to produce mechanical power and returns water through a liquid output pipe. It stops if hydrogen or oxygen is missing, there is no valid load, or the recovered water tank is full."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585110
@@ -3848,12 +3686,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585114
-    m_Localized: Outer spacesuit armor; choose any clothing to wear underneath. Expands
-      the safe body-temperature range and improves cold and heat resistance. Wearing
-      the full suit with the helmet on also expands the safe pressure range. The
-      configuration panel lets you replace oxygen and propulsion tanks. Landing impacts
-      consume the suit's durability; impacts beyond its protection can still injure
-      the player.
+    m_Localized: "Outer spacesuit armor; choose any clothing to wear underneath. Expands the safe body-temperature range and improves cold and heat resistance. Wearing the full suit with the helmet on also expands the safe pressure range. The configuration panel lets you replace oxygen and propulsion tanks. Landing impacts consume the suit's durability; impacts beyond its protection can still injure the player."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585115
@@ -3881,154 +3714,115 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585118
-    m_Localized: A placeable wooden trough that holds 64 units of mixed liquid and
-      can be dismantled. It holds no solid items. Each draw removes one liquid in
-      its actual proportion; even less than one unit can be poured or pumped out.
+    m_Localized: "A wooden trough that holds up to 400 L of mixed liquid. Surface pouring uses 10 L batches; smaller amounts remain stored."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585119
-    m_Localized: A placed trough that holds 64 units of mixed liquid and can connect
-      to a liquid pump or outlet. Dismantling it preserves the liquid mix, temperature,
-      pending output batches, and durability.
+    m_Localized: "A placed trough storing 400 L of mixed liquid. It exchanges liquid with a pipe network and preserves contents, temperature, queued output and durability when moved."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585120
-    m_Localized: Four-way connections form an independent hull. A complete floor
-      supports crew and protects them from hazardous tiles below.
+    m_Localized: "Four-way connections form an independent hull. A complete floor supports crew and protects them from hazardous tiles below."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585121
-    m_Localized: Four-way connections form an independent hull. A complete floor
-      supports crew and protects them from hazardous tiles below.
+    m_Localized: "Four-way connections form an independent hull. A complete floor supports crew and protects them from hazardous tiles below."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585122
-    m_Localized: Four-way connections form an independent hull. A complete floor
-      supports crew and protects them from hazardous tiles below.
+    m_Localized: "Four-way connections form an independent hull. A complete floor supports crew and protects them from hazardous tiles below."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585123
-    m_Localized: Four-way connections form an independent hull. A complete floor
-      supports crew and protects them from hazardous tiles below.
+    m_Localized: "Four-way connections form an independent hull. A complete floor supports crew and protects them from hazardous tiles below."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585124
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "An iron hull wall that seals a cabin, blocks movement and travels with the ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585125
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A placeable iron hull wall for enclosing a pressurized ship cabin."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585126
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A heat-resistant hull wall that seals a cabin, blocks movement and travels with the ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585127
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A heat-resistant wall for enclosing a pressurized ship cabin."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585128
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A ship hatch that opens for passage and seals the cabin when closed."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474618585129
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Place a ship hatch that opens for passage and closes to seal the cabin."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779392
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A port used to dock one ship with another ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779393
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Place a docking port on a ship to connect to another ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779394
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A ship control console used to inspect the ship and operate ignition and navigation."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779395
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Place a control console to manage and pilot a ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779396
-    m_Localized: A one-cell airtight block engine that must be installed on the outer
-      edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle
-      points down and the air inlet points up by default; press R while placing to
-      rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect
-      a wire.
+    m_Localized: "A one-cell airtight block engine that must be installed on the outer edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle points down and the air inlet points up by default; press R while placing to rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect a wire."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779397
-    m_Localized: A one-cell airtight block engine that must be installed on the outer
-      edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle
-      points down and the air inlet points up by default; press R while placing to
-      rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect
-      a wire.
+    m_Localized: "A one-cell airtight block engine that must be installed on the outer edge of a hull. Its nozzle must face outside with a clear path ahead. The nozzle points down and the air inlet points up by default; press R while placing to rotate it. Connect the inlet to hydrogen and oxygen tanks with pipes, and connect a wire."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779398
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A powered shipboard device that provides artificial gravity inside the ship."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779399
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Install and power a gravity generator to provide artificial gravity."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779400
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A powered ship device that participates in target navigation and flight control."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779401
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Install and power a navigation module to assist a ship in reaching its target."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779402
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A powered gas supply device that draws from a gas pipeline to replenish cabin air."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779403
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Supply enclosed ship cabins with gas by connecting this powered device to a gas line."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779404
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "A shipboard fiber-optic link that carries control signals and moves with its hull."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779405
-    m_Localized: Installed on a local cell of a ship floor. Moves, rotates, and saves
-      with its hull.
+    m_Localized: "Place fiber-optic links between ship control devices."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474622779406
-    m_Localized: Four separate growing slots can grow different non-tree crops at
-      once. Crops grow when connected to power and real irrigation water; buckets
-      and pipes share the same water tank. Fertilizer is optional, and growth pauses
-      without power or water. Interact to harvest, change seeds, or add water.
+    m_Localized: "Four separate growing slots can grow different non-tree crops at once. Crops grow when connected to power and real irrigation water; buckets and pipes share the same water tank. Fertilizer is optional, and growth pauses without power or water. Interact to harvest, change seeds, or add water."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474631168000
-    m_Localized: A four-slot planter that can be placed on the ground or a ship floor.
-      It needs power and water. Dismantling it preserves all seeds, crop growth,
-      water, and harvests.
+    m_Localized: "A four-slot planter that can be placed on the ground or a ship floor. It needs power and water. Dismantling it preserves all seeds, crop growth, water, and harvests."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474996072448
@@ -4328,27 +4122,27 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100010
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "A liquid pipe that transports liquid through a connected network without storing it."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100011
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place a pipe to connect liquid storage and equipment without storing liquid in the pipe."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100012
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Opens or closes a liquid pipeline. Liquid cannot pass while the valve is closed."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100013
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place a valve in a liquid line to control whether liquid can flow."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100014
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Discharges network liquid onto the ground in 10 L batches. Adjust its rate or set 0 to stop."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100015
-    m_Localized: "Connects only the matching gas or liquid network. Pipes store no matter. Valves control flow; outlet rates can be set per second, with 0 stopping output."
+    m_Localized: "Place an outlet to discharge liquid to the ground in 10 L batches at an adjustable rate."
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000100016
@@ -4380,7 +4174,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010001
-    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
+    m_Localized: "Adjacent matching iron liquid tanks combine into one shared store with 800 L per block. Different liquids do not mix; dismantling preserves each block's share."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010002
@@ -4388,7 +4182,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010003
-    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
+    m_Localized: "Place an iron liquid tank block. Matching neighbors share one store of 800 L per block; dismantling preserves each share."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010004
@@ -4396,7 +4190,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010005
-    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
+    m_Localized: "Adjacent matching steel liquid tanks combine into one shared store with 800 L per block. Different liquids do not mix; dismantling preserves each block's share."
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010006
@@ -4404,7 +4198,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102500000010007
-    m_Localized: "Adjacent matching blocks combine into one shared liquid tank, adding 100 L per block. Different liquids cannot combine. All four sides connect to liquid pipes. Dismantling takes the removed block capacity share of the contents."
+    m_Localized: "Place a steel liquid tank block. Matching neighbors share one store of 800 L per block; dismantling preserves each share."
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900100

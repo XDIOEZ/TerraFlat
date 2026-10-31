@@ -11,6 +11,7 @@ description: "FlatWorld 多语言服务、文本绑定、内容/UI 字符串表�
 - 同步工具：`Assets/Editor/FlatWorld/ProjectTools/Localization/FlatWorldLocalizationSetup.cs`。
 - 定向同步菜单：`Sync Registered Runtime UI Texts Safely` 只保存 `FlatWorldUI`；`Sync Starter Mining Quest Text Safely` 只保存 starter 主线表。
 - 物品菜单：`Sync Item Names And Descriptions` 仅补当前启用物品缺失的名称、说明与 Tag 行，不删除其它 `item.*` 条目。
+- 物品描述静态审计：`node Tools/Tests/ItemDescriptions/audit.cjs` 核对配置和双语表，`--sync` 只对齐已有表项；缺少共享键须由编辑器物品菜单补齐。
 - UI 自动绑定：`Assets/5_Scripts/5-5_UI/Core/BasePanel.cs`、`Common/Presentation/FlatWorldUIAutoLocalizer.cs`。
 - 翻译源：`Assets/Localization/ItemNames.en.json`、`Assets/Resources/Localization/ItemTagCatalog.json`；补充路径见 `references/file-map.md`。
 

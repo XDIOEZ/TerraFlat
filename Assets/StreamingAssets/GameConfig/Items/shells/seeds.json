@@ -38,7 +38,7 @@
       "parent": "Seed_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab",
       "gameName": "苹果种子",
-      "description": "一天一苹果,医生远离我",
+      "description": "从苹果中获得的种子，可种在合适的土地上，培育成能结果的苹果树。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

@@ -815,7 +815,7 @@
       "id": "Tree_Oak",
       "parent": "Tree_Pine",
       "gameName": "橡树",
-      "description": "森林中生长的橡树，可按树脂相同的产出逻辑获得橡胶。",
+      "description": "生长在森林中的橡树，可采集用于制作电线等物品的橡胶。",
       "lootTableId": "Tree_Oak",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Environment/OakTree/OakTree_Idle.png",
