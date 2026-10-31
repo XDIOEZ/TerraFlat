@@ -69,6 +69,12 @@ public static class WorldCombustibilitySystem
         sample = default;
         return field != null && field.TryGetSample(cell, out sample);
     }
+
+    internal static void RefreshPreparedCacheRevision(WorldRuntime world)
+    {
+        if (!fields.TryGetValue(world, out var field)) field = GetField(world.WorldId);
+        field?.RefreshDefinitionCacheRevision();
+    }
     #endregion
 
     #region 已加载地形与基础可燃性缓存
@@ -138,13 +144,7 @@ public static class WorldCombustibilitySystem
         internal bool TryGetSample(Vector2Int cell, out WorldCombustibilityCellSample sample)
         {
             sample = default;
-            GameRes resources = GameRes.ExistingInstance;
-            ulong revision = resources?.ItemDefinitionRevision ?? 0;
-            if (!ReferenceEquals(definitionOwner, resources) || definitionRevision != revision)
-            {
-                definitionOwner = resources; definitionRevision = revision;
-                foreach (var loaded in chunks.Values) loaded.Terrain.InvalidateAllCombustibilityBaseCaches();
-            }
+            RefreshDefinitionCacheRevision();
             if (width == 0) return false;
             cell = new(Topology.NormalizeX(cell.x), Topology.NormalizeY(cell.y));
             Vector2Int origin = new(Mathf.FloorToInt((float)cell.x / width) * width, Mathf.FloorToInt((float)cell.y / height) * height);
@@ -177,6 +177,17 @@ public static class WorldCombustibilitySystem
             terrain.CacheCombustibilityBase(index, new(probability, fuel), identity);
             terrain.SetCombustibilitySourceContribution(index, Sources.Get(new Int2(cell.x, cell.y)), preservingFuelConsumption);
             return true;
+        }
+
+        internal void RefreshDefinitionCacheRevision()
+        {
+            GameRes resources = GameRes.ExistingInstance;
+            ulong revision = resources?.ItemDefinitionRevision ?? 0;
+            if (!ReferenceEquals(definitionOwner, resources) || definitionRevision != revision)
+            {
+                definitionOwner = resources; definitionRevision = revision;
+                foreach (var loaded in chunks.Values) loaded.Terrain.InvalidateAllCombustibilityBaseCaches();
+            }
         }
     }
     #endregion

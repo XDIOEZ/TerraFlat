@@ -28,12 +28,14 @@ public static class WorldFireSystem
         private readonly Dictionary<Vector2Int, FireChunkWatch> watches = new();
         internal readonly List<ChunkRuntime> ActiveChunks = new();
         internal int ActiveFireCount { get; private set; }
+        internal ulong TopologyRevision { get; private set; }
         private int width, height;
         private sealed class FireChunkWatch
         {
             internal ChunkRuntime Chunk;
             internal ChunkTerrainData Terrain;
             internal int Count;
+            internal ulong TopologyRevision;
             internal Action<ChunkTerrainChanged> Handler;
         }
         internal FireWorldReader(WorldRuntime world)
@@ -56,16 +58,28 @@ public static class WorldFireSystem
             if (watches.TryGetValue(origin, out var existing) && ReferenceEquals(existing.Terrain, chunk.Terrain)) return;
             Remove(origin);
             chunks[origin] = chunk;
-            var watch = new FireChunkWatch { Chunk = chunk, Terrain = chunk.Terrain, Count = chunk.Terrain.ActiveFireCellIndices.Count };
+            var watch = new FireChunkWatch
+            {
+                Chunk = chunk, Terrain = chunk.Terrain,
+                Count = chunk.Terrain.ActiveFireCellIndices.Count,
+                TopologyRevision = chunk.Terrain.ActiveFireTopologyRevision
+            };
+            bool affectsFireFrontier = watch.Count > 0 || MayHeatChunk(origin, chunk.Terrain.Width, chunk.Terrain.Height);
             watch.Handler = change =>
             {
                 if (change.Kind != TerrainChangeKind.Fire) return;
+                if (watch.TopologyRevision != watch.Terrain.ActiveFireTopologyRevision)
+                {
+                    watch.TopologyRevision = watch.Terrain.ActiveFireTopologyRevision;
+                    TopologyRevision++;
+                }
                 int count = watch.Terrain.ActiveFireCellIndices.Count;
                 if (watch.Count == 0 && count > 0) ActiveChunks.Add(watch.Chunk);
                 else if (watch.Count > 0 && count == 0) ActiveChunks.Remove(watch.Chunk);
                 ActiveFireCount += count - watch.Count; watch.Count = count;
             };
             watches.Add(origin, watch); ActiveFireCount += watch.Count;
+            if (affectsFireFrontier) TopologyRevision++;
             if (watch.Count > 0) ActiveChunks.Add(chunk);
             watch.Terrain.Changed += watch.Handler;
         }
@@ -73,9 +87,11 @@ public static class WorldFireSystem
         {
             chunks.Remove(origin);
             if (!watches.TryGetValue(origin, out var watch)) return;
+            bool affectsFireFrontier = watch.Count > 0 || MayHeatChunk(origin, watch.Terrain.Width, watch.Terrain.Height);
             watch.Terrain.Changed -= watch.Handler;
             if (watch.Count > 0) ActiveChunks.Remove(watch.Chunk);
             ActiveFireCount -= watch.Count; watches.Remove(origin);
+            if (affectsFireFrontier) TopologyRevision++;
         }
         internal bool MayHeatChunk(Vector2Int origin, int chunkWidth, int chunkHeight)
         {
@@ -124,6 +140,9 @@ public static class WorldFireSystem
 
     internal static IReadOnlyList<ChunkRuntime> GetActiveWorldFireChunks(string worldKey)
         => GetWorldReader(worldKey)?.ActiveChunks;
+
+    internal static ulong GetActiveWorldFireTopologyRevision(string worldKey)
+        => GetWorldReader(worldKey)?.TopologyRevision ?? 0;
 
     public static bool TryIgniteWorldFireCell(string worldKey, Vector2 logicalPosition, float intensity = 1f)
     {
@@ -238,6 +257,8 @@ internal sealed class WorldFireSimulationContext
     internal readonly WorldRuntime World;
     private readonly uint worldSeed;
     private readonly List<WorldCombustibilityCellSample> samples = new();
+    private readonly List<int> neighbourTargets = new();
+    private readonly List<(int Source, int Start, int End)> neighbourRanges = new();
     private sealed class ChunkPreparation
     {
         internal readonly ChunkTerrainData Terrain;
@@ -251,6 +272,7 @@ internal sealed class WorldFireSimulationContext
     private readonly List<ChunkPreparation> preparedChunks = new();
     private readonly List<ChunkTerrainData> retiredChunks = new();
     private ulong preparationVersion;
+    private ulong preparedFireTopologyRevision = ulong.MaxValue;
     private WorldFireSimulationKernel.Input[] inputs = Array.Empty<WorldFireSimulationKernel.Input>();
     private WorldFireSimulationKernel.Output[] outputs = Array.Empty<WorldFireSimulationKernel.Output>();
     private WorldFireCellState[] submit = Array.Empty<WorldFireCellState>();
@@ -277,7 +299,9 @@ internal sealed class WorldFireSimulationContext
     internal void ClearPreparedInputs()
     {
         foreach (var batch in preparedChunks) batch.Samples.Clear();
-        preparedChunks.Clear(); samples.Clear(); retiredChunks.Clear(); preparationVersion++;
+        preparedChunks.Clear(); samples.Clear(); neighbourTargets.Clear(); neighbourRanges.Clear();
+        retiredChunks.Clear(); preparationVersion++;
+        preparedFireTopologyRevision = ulong.MaxValue;
         foreach (var terrain in chunkPreparations.Keys) if (terrain.IsDisposed) retiredChunks.Add(terrain);
         foreach (var terrain in retiredChunks) chunkPreparations.Remove(terrain);
     }
@@ -292,15 +316,16 @@ internal sealed class WorldFireSimulationContext
     internal void AddIgnitionSample(in RuntimeTerrainTileSample sample)
         => AddIgnitionSample(new WorldCombustibilityCellSample(sample.Terrain, sample.WorldCell, sample.LocalCell));
 
-    private void AddIgnitionSample(in WorldCombustibilityCellSample sample)
+    private int AddIgnitionSample(in WorldCombustibilityCellSample sample)
     {
         var batch = GetChunkPreparation(sample.Terrain);
         int cell = sample.LocalCell.y * sample.Terrain.Width + sample.LocalCell.x;
-        if (batch.SlotVersions[cell] == preparationVersion) return;
+        if (batch.SlotVersions[cell] == preparationVersion) return batch.SampleSlots[cell];
         if (batch.Samples.Count == 0) preparedChunks.Add(batch);
         batch.SlotVersions[cell] = preparationVersion;
         batch.SampleSlots[cell] = samples.Count;
         batch.Samples.Add(samples.Count); samples.Add(sample);
+        return samples.Count - 1;
     }
 
     private void EnsureCapacity(int capacity)
@@ -310,26 +335,16 @@ internal sealed class WorldFireSimulationContext
         Array.Resize(ref inputs, length); Array.Resize(ref outputs, length); Array.Resize(ref submit, length);
     }
 
-    private void AddChunkCell(ChunkRuntime chunk, ChunkPreparation batch, int x, int y)
+    private int AddChunkCell(ChunkRuntime chunk, ChunkPreparation batch, int x, int y)
     {
-        Vector2Int cell = new(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
-        if ((uint)x < (uint)batch.Terrain.Width && (uint)y < (uint)batch.Terrain.Height &&
-            batch.SlotVersions[y * batch.Terrain.Width + x] == preparationVersion) return;
-        if (WorldCombustibilitySystem.TryGetPreparedSample(World, cell, out var sample)) AddIgnitionSample(sample);
-    }
-
-    private int GetNeighbourSample(ChunkPreparation batch, in WorldCombustibilityCellSample sample, Vector2Int offset)
-    {
-        int x = sample.LocalCell.x + offset.x, y = sample.LocalCell.y + offset.y;
         if ((uint)x < (uint)batch.Terrain.Width && (uint)y < (uint)batch.Terrain.Height)
         {
             int index = y * batch.Terrain.Width + x;
-            return batch.SlotVersions[index] == preparationVersion ? batch.SampleSlots[index] : -1;
+            if (batch.SlotVersions[index] == preparationVersion) return batch.SampleSlots[index];
         }
-        if (!WorldCombustibilitySystem.TryGetPreparedSample(World, sample.WorldCell + offset, out var neighbour)) return -1;
-        var adjacent = GetChunkPreparation(neighbour.Terrain);
-        int cell = neighbour.LocalCell.y * neighbour.Terrain.Width + neighbour.LocalCell.x;
-        return adjacent.SlotVersions[cell] == preparationVersion ? adjacent.SampleSlots[cell] : -1;
+        Vector2Int cell = new(chunk.Address.ChunkOrigin.X + x, chunk.Address.ChunkOrigin.Y + y);
+        return WorldCombustibilitySystem.TryGetPreparedSample(World, cell, out var sample)
+            ? AddIgnitionSample(sample) : -1;
     }
 
     internal int CommitPreparedIgnitions(float intensity)
@@ -365,31 +380,60 @@ internal sealed class WorldFireSimulationContext
             ? clock.GetTotalGameTimeSeconds() : double.NaN;
         Seconds = double.IsNaN(now) || double.IsNaN(previousGameTime) ? fixedSeconds : (float)Math.Max(0d, now - previousGameTime);
         previousGameTime = now;
-        ClearPreparedInputs(); ActiveFireCount = 0; StepIndex++;
+        StepIndex++;
         using (PrepareMarker.Auto())
         {
-            var activeChunks = WorldFireSystem.GetActiveWorldFireChunks(World.WorldId);
-            for (int chunkIndex = 0; chunkIndex < (activeChunks?.Count ?? 0); chunkIndex++)
+            ulong topologyRevision = WorldFireSystem.GetActiveWorldFireTopologyRevision(World.WorldId);
+            if (topologyRevision != preparedFireTopologyRevision)
             {
-                ChunkRuntime chunk = activeChunks[chunkIndex];
-                ChunkTerrainData terrain = chunk.Terrain;
-                if (chunk.DataStatus != ChunkDataStatus.Ready || terrain == null || terrain.IsDisposed) continue;
-                var active = terrain.ActiveFireCellIndices;
-                var batch = GetChunkPreparation(terrain);
-                ActiveFireCount += active.Count;
-                for (int i = 0; i < active.Count; i++)
+                // 只在火格集合或区块拓扑变化时重建模拟前沿。
+                ClearPreparedInputs(); ActiveFireCount = 0;
+                var activeChunks = WorldFireSystem.GetActiveWorldFireChunks(World.WorldId);
+                for (int chunkIndex = 0; chunkIndex < (activeChunks?.Count ?? 0); chunkIndex++)
                 {
-                    int index = active[i];
-                    int x = index % terrain.Width, y = index / terrain.Width;
-                    AddChunkCell(chunk, batch, x, y);
-                    foreach (Vector2Int offset in WorldFireSystem.Neighbours) AddChunkCell(chunk, batch, x + offset.x, y + offset.y);
+                    ChunkRuntime chunk = activeChunks[chunkIndex];
+                    ChunkTerrainData terrain = chunk.Terrain;
+                    if (chunk.DataStatus != ChunkDataStatus.Ready || terrain == null || terrain.IsDisposed) continue;
+                    var active = terrain.ActiveFireCellIndices;
+                    var batch = GetChunkPreparation(terrain);
+                    ActiveFireCount += active.Count;
+                    for (int i = 0; i < active.Count; i++)
+                    {
+                        int index = active[i];
+                        int x = index % terrain.Width, y = index / terrain.Width;
+                        int source = AddChunkCell(chunk, batch, x, y);
+                        int start = neighbourTargets.Count;
+                        foreach (Vector2Int offset in WorldFireSystem.Neighbours)
+                        {
+                            int target = AddChunkCell(chunk, batch, x + offset.x, y + offset.y);
+                            if (target >= 0) neighbourTargets.Add(target);
+                        }
+                        if (source >= 0) neighbourRanges.Add((source, start, neighbourTargets.Count));
+                    }
                 }
+                preparedFireTopologyRevision = topologyRevision;
             }
             if (samples.Count == 0 || Seconds <= 0f) return;
+            WorldCombustibilitySystem.RefreshPreparedCacheRevision(World);
             EnsureCapacity(samples.Count);
             for (int i = 0; i < samples.Count; i++)
             {
                 var sample = samples[i];
+                if (sample.Terrain.IsDisposed)
+                {
+                    preparedFireTopologyRevision = ulong.MaxValue;
+                    inputs[i] = default;
+                    continue;
+                }
+                // 可燃性变化只重算失效格，未变格直接复用地形缓存。
+                int index = sample.LocalCell.y * sample.Terrain.Width + sample.LocalCell.x;
+                if (!sample.Terrain.HasCachedCombustibilityBase(index) &&
+                    !WorldCombustibilitySystem.TryGetPreparedSample(World, sample.WorldCell, out _))
+                {
+                    preparedFireTopologyRevision = ulong.MaxValue;
+                    inputs[i] = default;
+                    continue;
+                }
                 inputs[i] = new WorldFireSimulationKernel.Input
                 {
                     State = sample.Terrain.GetFireState(sample.LocalCell.x, sample.LocalCell.y),
@@ -398,16 +442,14 @@ internal sealed class WorldFireSimulationContext
                         worldSeed ^ (uint)StepIndex * 83492791u)
                 };
             }
-            foreach (var batch in preparedChunks)
-                foreach (int i in batch.Samples)
-                {
-                    if (inputs[i].State.Intensity <= 0f || inputs[i].Combustibility.FuelSeconds <= 0f) continue;
-                    foreach (Vector2Int offset in WorldFireSystem.Neighbours)
-                    {
-                        int target = GetNeighbourSample(batch, samples[i], offset);
-                        if (target >= 0) inputs[target].HasBurningNeighbour = 1;
-                    }
-                }
+            // 邻居地址复用缓存，是否仍有燃料则每步读取当前权威状态。
+            foreach (var range in neighbourRanges)
+            {
+                if (inputs[range.Source].State.Intensity <= 0f ||
+                    inputs[range.Source].Combustibility.FuelSeconds <= 0f) continue;
+                for (int i = range.Start; i < range.End; i++)
+                    inputs[neighbourTargets[i]].HasBurningNeighbour = 1;
+            }
         }
         using (KernelMarker.Auto())
             WorldFireSimulationKernel.Advance(inputs.AsSpan(0, samples.Count), outputs.AsSpan(0, samples.Count), Seconds);
@@ -420,17 +462,23 @@ internal sealed class WorldFireSimulationContext
                 int count = 0;
                 foreach (int i in batch.Samples)
                 {
+                    var output = outputs[i];
+                    if (output.ConsumedFuelSeconds <= 0f &&
+                        output.State.Intensity == inputs[i].State.Intensity &&
+                        output.State.SurfaceFuelBurnSeconds == inputs[i].State.SurfaceFuelBurnSeconds) continue;
                     var sample = samples[i];
                     var live = terrain.GetFireState(sample.LocalCell.x, sample.LocalCell.y);
                     if (live.Intensity != inputs[i].State.Intensity ||
                         live.SurfaceFuelBurnSeconds != inputs[i].State.SurfaceFuelBurnSeconds) continue;
-                    float remaining = terrain.GetCombustibility(sample.LocalCell.x, sample.LocalCell.y).FuelSeconds;
-                    var output = outputs[i];
-                    terrain.ConsumeCombustibilityFuel(output.State.CellIndex, Mathf.Min(output.ConsumedFuelSeconds, remaining));
-                    if (remaining <= output.ConsumedFuelSeconds) output.State.Intensity = 0f;
+                    if (output.ConsumedFuelSeconds > 0f)
+                    {
+                        float remaining = terrain.GetCombustibility(sample.LocalCell.x, sample.LocalCell.y).FuelSeconds;
+                        terrain.ConsumeCombustibilityFuel(output.State.CellIndex, Mathf.Min(output.ConsumedFuelSeconds, remaining));
+                        if (remaining <= output.ConsumedFuelSeconds) output.State.Intensity = 0f;
+                    }
                     submit[count++] = output.State;
                 }
-                terrain.SetFireStatesBatch(submit.AsSpan(0, count));
+                if (count > 0) terrain.SetFireStatesBatch(submit.AsSpan(0, count));
             }
         }
     }

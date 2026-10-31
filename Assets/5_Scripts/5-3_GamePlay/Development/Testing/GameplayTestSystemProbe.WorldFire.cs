@@ -87,6 +87,7 @@ public static partial class GameplayTestSystemProbe
         data["kernelCells"] = stressOutput.Length;
         CaptureCombustibilityLayerRules(data);
         CaptureWorldFireSimulationPipelineRules(data);
+        CaptureWorldFireDirtyFrontierRules(data);
         CaptureWorldFireCrossChunkHeatRules(data);
         return data;
     }
@@ -183,6 +184,55 @@ public static partial class GameplayTestSystemProbe
             data["pipelineMeanMilliseconds"] = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency / 10d;
             data["pipelineCells"] = simulation.ActiveFireCount;
             data["pipelineRemainingFuel"] = chunk.Terrain.GetCombustibility(50, 50).FuelSeconds;
+        }
+        finally { GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world); }
+    }
+
+    private static void CaptureWorldFireDirtyFrontierRules(JObject data)
+    {
+        string key = "__lua_fire_frontier_" + Guid.NewGuid().ToString("N");
+        WorldRuntime world = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 1);
+        try
+        {
+            var left = CreateWorldFireHeatRuleChunk(world, Vector2Int.zero);
+            var right = CreateWorldFireHeatRuleChunk(world, new Vector2Int(16, 0));
+            left.Terrain.SetCombustibility(15, 5, new WorldCombustibilityValue(1f, 10f));
+            right.Terrain.SetCombustibility(0, 5, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetFire(15, 5, 255);
+            var simulation = new WorldFireSimulationContext(world, 1);
+            ulong startingTopology = left.Terrain.ActiveFireTopologyRevision;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierCrossChunkIgnited"] = right.Terrain.GetFireState(0, 5).Intensity;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierCrossChunkFuel"] = right.Terrain.GetCombustibility(0, 5).FuelSeconds;
+            data["frontierStableBurningTopology"] = left.Terrain.ActiveFireTopologyRevision == startingTopology;
+
+            // 外部把燃料清零后，缓存邻居不能继续点燃新火。
+            left.Terrain.SetCombustibility(15, 5, new WorldCombustibilityValue(1f, 0f));
+            right.Terrain.SetFire(0, 5, 0);
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierExhaustedSource"] = left.Terrain.GetFireState(15, 5).Intensity;
+            data["frontierNoIgnitionWithoutFuel"] = right.Terrain.GetFireState(0, 5).Intensity;
+
+            left.Terrain.SetCombustibility(2, 2, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetCombustibility(10, 9, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetFire(2, 2, 255);
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            ulong beforeSwap = left.Terrain.ActiveFireTopologyRevision;
+            left.Terrain.SetFireStatesBatch(new[]
+            {
+                new WorldFireCellState { CellIndex = 2 + 2 * 16 },
+                new WorldFireCellState { CellIndex = 10 + 9 * 16, Intensity = 1f }
+            });
+            data["frontierSwapSameCount"] = left.Terrain.ActiveFireCellIndices.Count;
+            data["frontierSwapTopologyChanged"] = left.Terrain.ActiveFireTopologyRevision > beforeSwap;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierSwapNewFuel"] = left.Terrain.GetCombustibility(10, 9).FuelSeconds;
+            data["frontierSwapOldFuel"] = left.Terrain.GetCombustibility(2, 2).FuelSeconds;
+            ulong afterSimulation = left.Terrain.ActiveFireTopologyRevision;
+            int noChanges = left.Terrain.SetFireStatesBatch(new[] { left.Terrain.GetFireState(10, 9) });
+            data["frontierNoopTopologyStable"] = noChanges == 0 &&
+                left.Terrain.ActiveFireTopologyRevision == afterSimulation;
         }
         finally { GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world); }
     }

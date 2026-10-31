@@ -22,6 +22,7 @@ namespace FlatWorld.WorldModel
         private int[] fireCellSlots;
         private readonly List<int> activeFireCells = new();
         public IReadOnlyList<int> ActiveFireCellIndices => activeFireCells;
+        public ulong ActiveFireTopologyRevision { get; private set; }
 
         public WorldFireCellState GetFireState(int x, int y)
         {
@@ -52,6 +53,7 @@ namespace FlatWorld.WorldModel
             int[] dirty = ArrayPool<int>.Shared.Rent(updates.Length);
             int count = 0;
             bool presentationChanged = false;
+            bool topologyChanged = false;
             try
             {
                 foreach (WorldFireCellState value in updates)
@@ -76,6 +78,7 @@ namespace FlatWorld.WorldModel
                     {
                         activeFireCells.Add(index);
                         fireCellSlots[index] = activeFireCells.Count;
+                        topologyChanged = true;
                     }
                     else if (state.Intensity <= 0f && fireCellSlots[index] > 0)
                     {
@@ -85,11 +88,16 @@ namespace FlatWorld.WorldModel
                         fireCellSlots[tail] = slot + 1;
                         activeFireCells.RemoveAt(activeFireCells.Count - 1);
                         fireCellSlots[index] = 0;
+                        topologyChanged = true;
                     }
                     dirty[count++] = index;
                 }
-                if (count > 0) Changed?.Invoke(new ChunkTerrainChanged(dirty.AsMemory(0, count), ++_revision,
-                    TerrainChangeKind.Fire, presentationChanged));
+                if (count > 0)
+                {
+                    if (topologyChanged) ActiveFireTopologyRevision++;
+                    Changed?.Invoke(new ChunkTerrainChanged(dirty.AsMemory(0, count), ++_revision,
+                        TerrainChangeKind.Fire, presentationChanged));
+                }
                 return count;
             }
             finally { ArrayPool<int>.Shared.Return(dirty); }
