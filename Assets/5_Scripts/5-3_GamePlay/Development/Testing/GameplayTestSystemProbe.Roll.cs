@@ -159,12 +159,15 @@ public static partial class GameplayTestSystemProbe
         Transform visual = prefab != null ? prefab.transform.Find("RollVisual/Module_Animator") : null;
         Transform receiver = prefab != null ? prefab.transform.Find("Module_DamageReciver") : null;
         Transform heldAnchor = prefab != null ? prefab.transform.Find("Module_Hotbar") : null;
+        PlayerOxygenWorldBar oxygenBar = prefab != null ? prefab.GetComponentInChildren<PlayerOxygenWorldBar>(true) : null;
+        RectTransform oxygenBarRect = oxygenBar != null ? oxygenBar.GetComponent<RectTransform>() : null;
         Mod_CharacterAppearance appearance = prefab != null
             ? prefab.GetComponentInChildren<Mod_CharacterAppearance>(true) : null;
         Mod_TurnBack turning = prefab != null ? prefab.GetComponentInChildren<Mod_TurnBack>(true) : null;
         BoxCollider2D body = prefab != null ? prefab.GetComponent<BoxCollider2D>() : null;
         BoxCollider2D hitbox = receiver != null ? receiver.GetComponent<BoxCollider2D>() : null;
         if (visual == null || receiver == null || heldAnchor == null || turning == null ||
+            oxygenBarRect == null || oxygenBarRect.parent != prefab.transform ||
             body == null || hitbox == null ||
             appearance?.profile == null || appearance.profile.PixelsPerUnit <= 0f)
             throw new InvalidOperationException("玩家预制体缺少外观、实体碰撞或独立受击框。");
@@ -183,6 +186,8 @@ public static partial class GameplayTestSystemProbe
             ["rollPivotY"] = rollPivotY,
             ["heldAnchorY"] = heldAnchor.position.y - prefab.transform.position.y,
             ["turnMirrorY"] = turning.DefaultPosition.y,
+            ["oxygenBarY"] = oxygenBarRect.anchoredPosition.y,
+            ["oxygenBarOffsetFromSpriteTop"] = oxygenBarRect.anchoredPosition.y - (spriteBottom + spriteHeight),
             ["hitBottom"] = hitCenterY - hitHalfHeight,
             ["hitTop"] = hitCenterY + hitHalfHeight,
             ["hitWidth"] = hitbox.size.x * receiver.lossyScale.x,
