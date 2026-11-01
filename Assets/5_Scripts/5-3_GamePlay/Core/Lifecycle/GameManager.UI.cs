@@ -1086,7 +1086,11 @@ public partial class GameManager
 
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, NewGamePanelKey);
         panel.SetButtonOnClick(NewGameStartButtonKey, CreateNewWorld);
-        panel.SetButtonOnClick(NewGameBackButtonKey, panel.Close);
+        panel.SetButtonOnClick(NewGameBackButtonKey, () =>
+        {
+            if (!TryReturnFromNewGameDetailPage(panel))
+                panel.Close();
+        });
         panel.GetInputField(NewGamePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
         panel.GetInputField(NewGameSaveInputKey)?.onValueChanged.AddListener(OnSaveNameChanged);
 
@@ -1131,7 +1135,6 @@ public partial class GameManager
             if (HasNewGameWorldContent(panel))
                 ShowNewGamePage(panel, true, true);
         });
-        panel.SetButtonOnClick(NewGameIdentityButtonKey, () => ShowNewGamePage(panel, false, true));
         panel.Opened += () => ShowNewGamePage(panel, false, false);
         panel.CancelOverride = eventData =>
         {
@@ -1148,7 +1151,10 @@ public partial class GameManager
         SetChildVisible(panel, NewGameIdentityPageKey, !worldSettings);
         SetChildVisible(panel, NewGameWorldPageKey, worldSettings);
         panel.SetButtonVisible(NewGameWorldSettingsButtonKey, !worldSettings);
-        panel.SetButtonVisible(NewGameIdentityButtonKey, worldSettings);
+        panel.SetButtonVisible(NewGameIdentityButtonKey, false);
+        LocalizedTextRuntime.SetText(
+            panel.GetText(NewGameBackButtonKey + "_文字"),
+            worldSettings ? "关闭" : "返回主界面");
         panel.RefreshGamepadNavigationState();
 
         if (!EventSystemGuard.IsGamepadMode || !focusFirstControl || !panel.IsOpen() || EventSystem.current == null)

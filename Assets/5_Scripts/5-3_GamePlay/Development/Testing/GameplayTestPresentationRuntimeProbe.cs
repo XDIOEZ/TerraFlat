@@ -24,6 +24,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         GameplayTestRuntimeProbe.RegisterAsync("ui_settings", "settings_locale_open", CaptureSettings);
         GameplayTestRuntimeProbe.Register("ui_settings", "settings_locale_close", CloseSettings);
+        GameplayTestRuntimeProbe.Register("ui_settings", "new_game_window_close", CaptureNewGameWindowClose);
         GameplayTestRuntimeProbe.Register("ui_settings", "local_float_preference_persistence", CaptureLocalFloatPreferencePersistence);
         GameplayTestRuntimeProbe.Register("ui_settings", "status_hud_readability", CaptureStatusHudReadability);
         GameplayTestRuntimeProbe.RegisterAsync("audio", "voice_lifecycle", CaptureAudio);
@@ -457,5 +458,115 @@ public static partial class GameplayTestPresentationRuntimeProbe
             ["fixtureReleased"] = activeSettings == null
         };
     }
+    #endregion
+
+    #region 新世界窗口关闭流程回归
+
+    /// <summary>通过正式新世界窗口验证世界页右上关闭只回到名称页，名称页右上仍关闭窗口。</summary>
+    private static JObject CaptureNewGameWindowClose(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        UIManager ui = UIManager.ExistingInstance ?? throw new InvalidOperationException("正式 UIManager 尚未就绪。");
+        if (ui.TryGetPanel(GameManager.NewGamePanelKey, out _))
+            throw new InvalidOperationException("当前已有新世界窗口，拒绝借用或关闭其他来源的面板。");
+
+        GameManager manager = UnityEngine.Object.FindObjectOfType<GameManager>() ??
+            throw new InvalidOperationException("正式 GameManager 尚未就绪。");
+        PlanetData originalReadyPlanetData = manager.ReadyPlanetData;
+        manager.ReadyPlanetData = originalReadyPlanetData == null
+            ? new PlanetData()
+            : FastCloner.FastCloner.DeepClone(originalReadyPlanetData);
+        BasePanel panel = null;
+        JObject result = null;
+        try
+        {
+            manager.OpenNewGame();
+            if (!ui.TryGetPanel(GameManager.NewGamePanelKey, out panel) || panel == null)
+                throw new InvalidOperationException("正式新世界入口没有创建窗口。");
+
+            Button closeButton = panel.GetButton(GameManager.NewGameBackButtonKey);
+            Button worldSettingsButton = panel.GetButton(GameManager.NewGameWorldSettingsButtonKey);
+            Button difficultyButton = panel.GetButton(GameManager.NewGameDifficultyButtonKey);
+            Button bottomIdentityButton = panel.GetButton(GameManager.NewGameIdentityButtonKey);
+            TMP_Text closeLabel = panel.GetText(GameManager.NewGameBackButtonKey + "_文字");
+            TMP_InputField playerNameInput = panel.GetInputField(GameManager.NewGamePlayerInputKey);
+            Transform[] nodes = panel.GetComponentsInChildren<Transform>(true);
+            Transform identityPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameIdentityPageKey);
+            Transform worldPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameWorldPageKey);
+            Transform difficultyPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameDifficultyPanelKey);
+            if (closeButton == null || worldSettingsButton == null || difficultyButton == null || closeLabel == null ||
+                playerNameInput == null || identityPage == null || worldPage == null)
+                throw new InvalidOperationException("正式新世界面板缺少关闭按钮、名称输入或分页。");
+
+            const string playerNameValue = "ui_close_probe_player";
+            const string worldSeedValue = "ui_close_probe_seed";
+            playerNameInput.SetTextWithoutNotify(playerNameValue);
+            difficultyButton.onClick.Invoke();
+            Button difficultyCloseButton = panel.GetButton(GameManager.NewGameDifficultyCloseButtonKey);
+            if (difficultyCloseButton == null || difficultyPage == null)
+                throw new InvalidOperationException("正式难度设置页没有创建关闭按钮或遮罩。");
+            difficultyCloseButton.onClick.Invoke();
+            bool difficultyCloseStayedInNewGame = panel.IsOpen() &&
+                identityPage.gameObject.activeSelf && !worldPage.gameObject.activeSelf &&
+                !difficultyPage.gameObject.activeSelf;
+
+            worldSettingsButton.onClick.Invoke();
+            TMP_InputField worldSeedInput = panel.GetInputField(GameManager.NewGameSeedInputKey);
+            if (worldSeedInput == null)
+                throw new InvalidOperationException("正式世界设置页缺少种子输入框。");
+            worldSeedInput.SetTextWithoutNotify(worldSeedValue);
+
+            bool worldPageOpened = worldPage.gameObject.activeSelf && !identityPage.gameObject.activeSelf;
+            bool bottomBackHiddenInWorld = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
+            string worldCloseText = closeLabel.text;
+            closeButton.onClick.Invoke();
+
+            bool worldCloseReturnedToIdentity = panel.IsOpen() &&
+                identityPage.gameObject.activeSelf && !worldPage.gameObject.activeSelf;
+            bool playerNameRetained = playerNameInput.text == playerNameValue;
+            bool worldSeedRetained = worldSeedInput.text == worldSeedValue;
+            bool bottomBackHiddenInIdentity = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
+            string identityBackText = closeLabel.text;
+            closeButton.onClick.Invoke();
+
+            result = new JObject
+            {
+                ["scope"] = "live-isolated-world",
+                ["difficultyCloseStayedInNewGame"] = difficultyCloseStayedInNewGame,
+                ["worldPageOpened"] = worldPageOpened,
+                ["worldCloseText"] = worldCloseText,
+                ["expectedWorldCloseText"] = FlatWorldLocalizationService.GetUiText("关闭"),
+                ["worldCloseReturnedToIdentity"] = worldCloseReturnedToIdentity,
+                ["playerNameRetained"] = playerNameRetained,
+                ["worldSeedRetained"] = worldSeedRetained,
+                ["bottomBackHiddenInWorld"] = bottomBackHiddenInWorld,
+                ["bottomBackHiddenInIdentity"] = bottomBackHiddenInIdentity,
+                ["identityBackText"] = identityBackText,
+                ["expectedIdentityBackText"] = FlatWorldLocalizationService.GetUiText("返回主界面"),
+                ["identityTopCloseClosesPanel"] = !panel.IsOpen()
+            };
+        }
+        finally
+        {
+            try
+            {
+                if (panel == null)
+                    ui.TryGetPanel(GameManager.NewGamePanelKey, out panel);
+                if (panel != null)
+                {
+                    panel.Close();
+                    ui.DestroyPanel(panel);
+                }
+            }
+            finally
+            {
+                manager.ReadyPlanetData = originalReadyPlanetData;
+            }
+        }
+
+        result["panelUnregistered"] = !ui.TryGetPanel(GameManager.NewGamePanelKey, out _);
+        return result;
+    }
+
     #endregion
 }

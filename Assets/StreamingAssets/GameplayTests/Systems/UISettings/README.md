@@ -1,5 +1,7 @@
 # UI与设置
 
+- 2026-11-01：`new_game_window_close` 通过正式 GameManager/UIManager 面板按钮，先检查关闭难度浮层仍留在名称页，再检查世界设置页右上“关闭”回到名称页并保留名称/种子输入、底部返回按钮隐藏，以及名称页右上仍关闭窗口；保留用户 PlayMode，本轮未运行。测试通过 `Button.onClick` 验证回调，不覆盖物理射线、手柄输入或最终画面。
+
 - 食物合并 HUD：`layout-rules.lua` 的 `food_segmented_bar` 覆盖正式五行布局、三段总容量比例、耗尽/全空/零容量、平滑消耗与途中补充、主题色和输入透明；`gameplay.lua` 的 `status_hud_readability` 对照本地玩家真实营养检查合计、图例数值及三色文字对比度。用户 PlayMode 保持运行，本次新增断言尚未在 Unity 执行。
 
 2026-10-28 窗口边界修复新增 `window_drag_bounds/window_resize_pointer/inventory_category_popup_layout/inventory_bag_window_layout`，覆盖父级缩放、全屏透明根下的可见窗口四角、重复及反向拖边、八方向/非中心轴心/伸展锚点、分类弹层的3.25倍率和非对称安全区、滚动及重开，以及背包默认/最小/最大尺寸的十列预算和滚动条绑定。布局主题移至 `layout-rules.lua`（231步），综合规则保留239步，正式XLua沙箱编排预检通过；原综合规则437步超过单份256步限制。独立夹具不绑定玩家背包或存档；外部编译与静态资产检查不能替代Unity画面、真实输入和Lua采样验收。
