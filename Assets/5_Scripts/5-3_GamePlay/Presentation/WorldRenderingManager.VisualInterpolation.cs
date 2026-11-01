@@ -95,7 +95,7 @@ public sealed partial class WorldRenderingManager
         }
 
         // 不可见、被回池或转移渲染所有权的旧视图不保留跨场景插值历史。
-        using var scratch = ListPool<Item>.Get(out var expired);
+        using var scratch = UnityEngine.Pool.ListPool<Item>.Get(out var expired);
         foreach (var pair in itemVisualMotion)
             if (Time.frameCount - pair.Value.LastVisibleFrame > 1) expired.Add(pair.Key);
         foreach (Item item in expired) itemVisualMotion.Remove(item);
