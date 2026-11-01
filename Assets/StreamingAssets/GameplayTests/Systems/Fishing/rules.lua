@@ -11,6 +11,15 @@ test.system("fishing", "hanging_hook", {}, function(data)
     assert(data.swingLag > 0.15 and data.lineLengthError < 0.001,
         "竿梢移动后鱼钩没有惯性滞后，或绳长被拉伸")
     assert(data.settledOffset < 0.05, "停止移动后鱼钩未逐渐自然垂落")
+    assert(math.abs(data.lineEyeX - 0.144) < 0.001 and math.abs(data.lineEyeY - 0.27) < 0.001
+        and data.eyeMirrorsOnFlip and data.baitTipBelowEye,
+        "鱼线圆环挂点或鱼饵钩尖挂点没有正确适配贴图/翻面")
+    assert(data.reelStartPreserved and data.reelEndReached
+        and math.abs(data.reelMidDistance - math.sqrt(40) * 0.25) < 0.001,
+        "鱼钩回收没有从原位置平滑移动到竿梢")
+    assert(math.abs(data.reelDuration - 0.5) < 0.001
+        and math.abs(data.shortReelDuration - 0.25) < 0.001,
+        "收线速度或近距离最短动画时间异常")
 end, "手持鱼钩绳摆惯性、绳长约束与静止恢复")
 
 for _, uses in ipairs({10, 100, 1000}) do

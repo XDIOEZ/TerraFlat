@@ -1923,12 +1923,30 @@ public static partial class GameplayTestSystemProbe
         float lineLengthError = Mathf.Abs(Vector2.Distance(anchor, hook) - lineLength);
         for (int frame = 0; frame < 240; frame++)
             Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 1f / 60f, ref hook, ref previous);
+        Bounds spriteBounds = new(Vector3.zero, Vector3.one);
+        Vector2 lineEye = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookLineEyeAnchor, false, false);
+        Vector2 flippedEye = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookLineEyeAnchor, true, true);
+        Vector2 baitTip = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookBaitTipAnchor, false, false);
+        Vector2 start = new(4f, 1f), end = new(-2f, 3f);
+        Vector2 reelStart = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 0f);
+        Vector2 reelMid = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 0.5f);
+        Vector2 reelEnd = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 1f);
         return new JObject
         {
             ["stationaryWhenPaused"] = stationaryWhenPaused,
             ["swingLag"] = swingLag,
             ["lineLengthError"] = lineLengthError,
-            ["settledOffset"] = Mathf.Abs(hook.x - anchor.x)
+            ["settledOffset"] = Mathf.Abs(hook.x - anchor.x),
+            ["lineEyeX"] = lineEye.x, ["lineEyeY"] = lineEye.y,
+            ["eyeMirrorsOnFlip"] = (lineEye + flippedEye).sqrMagnitude < 0.000001f,
+            ["baitTipBelowEye"] = baitTip.y < lineEye.y && baitTip.x < lineEye.x,
+            ["reelStartPreserved"] = reelStart == start, ["reelEndReached"] = reelEnd == end,
+            ["reelMidDistance"] = Vector2.Distance(reelMid, end),
+            ["reelDuration"] = Mod_FishingRod.ResolveFishingReelDuration(4f, 8f),
+            ["shortReelDuration"] = Mod_FishingRod.ResolveFishingReelDuration(0.5f, 8f)
         };
     }
     #endregion
