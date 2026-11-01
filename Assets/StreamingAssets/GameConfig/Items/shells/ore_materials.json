@@ -690,6 +690,7 @@
       "volume": 0.7,
       "tags": [
         "Stone",
+        "StoneCraftingMaterial",
         "Mineral",
         "Throwable",
         "InventoryCategory.Material"

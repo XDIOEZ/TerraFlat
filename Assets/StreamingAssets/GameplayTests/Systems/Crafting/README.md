@@ -1,5 +1,7 @@
 # 制作加工测试
 
+2026-11-01：`stone_material_substitution` 用正式石料标签、打制石器和石斧配方调用制作匹配与库存事务，覆盖两块打制石器自合成、普通石头混搭、纯打制石器合成石斧，以及石板/石矛/缺料拒绝。由于游戏可能正在 PlayMode，本轮仅静态检查，尚未执行 Unity Lua。
+
 2026-10-27：电子材料已独立为 `electronic-materials.lua`，案例 `crafting_electronic_materials_rules`；原 `rules.lua` 不重复执行这些断言。可在总规则清单用 `--cases crafting_electronic_materials_rules` 单独选择，避免被旧强化/UI 失败提前中断；拆分保持原断言，执行结果以实际报告为准。
 
 2026-10-26：`electronic_material_catalog` 覆盖新材料的正式目录、独立贴图文件、钛与铁等体积质量、堆叠、实例快照和网络身份；电子材料配方通过 `handmade_catalog` 验证碳纤维与树脂制板、磷与腐殖质制磷肥、五料制磷酸铁锂电池的精确扣量、逐种缺料和满输出拒绝。材料切割与冷料热反应现场见机械加工用例，磷肥真实持有使用见农业现场。保留用户运行中的 PlayMode，本轮未运行新增 Unity Lua。

@@ -37,8 +37,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Ore_Stone",
+          "match": "tag",
+          "tag": "StoneCraftingMaterial",
           "amount": 6
         }
       ],
@@ -199,8 +199,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Ore_Stone",
+          "match": "tag",
+          "tag": "StoneCraftingMaterial",
           "amount": 8
         }
       ],
@@ -221,8 +221,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Ore_Stone",
+          "match": "tag",
+          "tag": "StoneCraftingMaterial",
           "amount": 8
         },
         {
@@ -248,8 +248,8 @@
       "maxTemperature": 2000.0,
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Ore_Stone",
+          "match": "tag",
+          "tag": "StoneCraftingMaterial",
           "amount": 4
         }
       ],
