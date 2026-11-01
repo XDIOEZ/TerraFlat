@@ -38,7 +38,7 @@ public static partial class GameplayTestSystemProbe
         result["two"] = first.Snapshot(infection);
         infection.SetStackCount(3);
         result["three"] = first.Snapshot(infection);
-        first.Weapon.SetDamageValues(new CombatDamage(2f, 0f, 0f, 0f, CombatDamageKind.Cutting));
+        first.Weapon.SetDamageValues(new CombatDamage(0f, 0f, 0f, 0f, CombatDamageKind.Cutting));
         result["minimum"] = first.Snapshot(infection);
         first.Weapon.SetDamageValues(new CombatDamage(10f, 0f, 0f, 0f, CombatDamageKind.Cutting));
         infection.SetStackCount(2);

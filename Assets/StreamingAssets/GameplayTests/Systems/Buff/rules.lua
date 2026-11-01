@@ -56,38 +56,40 @@ local function attributes(sample, attack, ratio, label, baseAttack)
 end
 test.system("buff", "infection_attributes", {}, function(data)
     assert(data.unregisteredHost, "规则夹具意外加载或注册了世界实体")
-    assert(data.duration == 300 and data.interval == 10 and data.maximum == 3 and data.mode == "AddStacks" and not data.decay,
-        "正式感染目录的时长、周期、三层上限或到期策略错误")
+    assert(data.duration == 300 and data.interval == 10 and data.maximum == 1 and data.mode == "RefreshDuration" and not data.decay,
+        "正式感染目录必须单层且重复触发仅刷新5分钟时长")
     local effects = {}
     for _, effect in ipairs(data.effects) do effects[effect.type .. "/" .. effect.phase] = effect end
     local damage = effects["core:true_damage/Tick"]
     local attack = effects["core:attack_flat_modifier/Start"]
     local move = effects["core:move_speed_reduction/Start"]
-    assert(damage and damage.scaled and damage.value == 1 and attack and attack.scaled and attack.value == -1 and
-        move and move.scaled and move.value == .25, "感染掉血、固定减攻或线性减速没有按层配置")
+    assert(damage and not damage.scaled and damage.value == 1 and attack and not attack.scaled and attack.value == -1 and
+        move and not move.scaled and move.value == .25, "感染必须使用固定的单层掉血、减攻与减速")
     assert(effects["core:attack_flat_modifier/Stop"] and effects["core:move_speed_reduction/Stop"], "感染缺少属性撤销阶段")
     attributes(data.baseline, 10, 1, "基线")
     attributes(data.one, 9, .75, "一层")
-    attributes(data.two, 8, .5, "二层")
-    attributes(data.three, 7, .25, "三层")
-    near(data.three.damage[1], 7, "物理伤害倍率")
+    attributes(data.two, 9, .75, "尝试升二层")
+    attributes(data.three, 9, .75, "尝试升三层")
+    assert(data.two.stacks == 1 and data.three.stacks == 1, "直接修改层数绕过了单层上限")
+    near(data.three.damage[1], 9, "物理伤害倍率")
     for index = 2, 4 do near(data.three.damage[index], 0, "无来源的分类伤害没有凭空增加") end
-    attributes(data.minimum, 0, .25, "低攻击钳制", 2)
+    attributes(data.minimum, 0, .75, "零攻击钳制", 0)
     for index = 1, 4 do near(data.minimum.damage[index], 0, "低攻击没有归零") end
-    attributes(data.downTwo, 8, .5, "三降二")
-    attributes(data.downOne, 9, .75, "二降一")
-    attributes(data.twoSources, 8, .75 * .75, "同角色双来源")
-    attributes(data.otherReceiver, 7, .25, "另一角色")
+    attributes(data.downTwo, 9, .75, "恢复层数仍为一层")
+    attributes(data.downOne, 9, .75, "单层状态不变")
+    attributes(data.twoSources, 8, .75 * .75, "独立来源隔离")
+    attributes(data.otherReceiver, 9, .75, "另一角色")
     attributes(data.oneSourceLeft, 9, .75, "删除一个来源")
     attributes(data.otherRestored, 10, 1, "另一角色恢复")
     attributes(data.firstUnchanged, 9, .75, "跨角色隔离")
     attributes(data.restored, 10, 1, "全部清除")
-    attributes(data.beforeStart, 10, 1, "开始前设三层")
-    attributes(data.startThree, 7, .25, "直接三层开始")
-    attributes(data.startThreeRestored, 10, 1, "直接三层结束")
-    for stacks = 1, 3 do near(data.periodicLosses[stacks], stacks, "正式周期真实掉血") end
+    attributes(data.beforeStart, 10, 1, "开始前传入三层")
+    attributes(data.startThree, 9, .75, "直接传入三层也只能生效一层")
+    assert(data.beforeStart.stacks == 1 and data.startThree.stacks == 1, "初始化绕过了感染单层上限")
+    attributes(data.startThreeRestored, 10, 1, "单层结束")
+    for stacks = 1, 3 do near(data.periodicLosses[stacks], 1, "单层周期真实掉血") end
     attributes(data.periodicRestored, 10, 1, "周期状态结束")
-end, "正式感染三层属性、武器上下文、周期扣血与来源隔离")
+end, "正式感染单层属性、上限钳制、周期扣血与来源隔离")
 
 for _, case in ipairs({
     {name = "正常三层减速", args = {}, accepted = true},
