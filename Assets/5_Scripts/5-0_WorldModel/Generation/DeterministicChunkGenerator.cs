@@ -15,7 +15,7 @@ namespace FlatWorld.WorldModel
         #region 生成配置与缓存身份
 
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 81;
+        public const int CurrentGenerationSignature = 82;
 
         private static long nextGenerationCacheInstanceId;
         // 缓存用实例编号区分冻结扩展，不把生成器强引用留在共享缓存里。

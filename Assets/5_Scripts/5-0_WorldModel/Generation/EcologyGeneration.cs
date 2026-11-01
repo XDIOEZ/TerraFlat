@@ -447,7 +447,6 @@ namespace FlatWorld.WorldModel
 
                     TerrainCell cell = terrain.GetCell(x, y);
                     hosts.Clear();
-                    bool treeCellClaimed = false;
                     if (!IsValidNaturalCell(cell, terrain, x, y))
                         continue;
 
@@ -481,10 +480,6 @@ namespace FlatWorld.WorldModel
                         }
 
                         bool isTreeRule = RuleProvidesTag(rule, TreeTag);
-                        // 同一世界格只允许一棵树占位，避免不同树种独立判定后叠在一起生成。
-                        if (isTreeRule && treeCellClaimed)
-                            continue;
-
                         int itemCount = ResolveItemCount(request, rule, worldX, worldY, 0);
                         for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
                         {
@@ -504,11 +499,10 @@ namespace FlatWorld.WorldModel
                             }
 
                             if (isTreeRule)
-                            {
-                                treeCellClaimed = true;
                                 break;
-                            }
                         }
+                        // 独立自然物每格只选一种，伴生物仍通过宿主 GUID 额外生成。
+                        break;
                     }
 
                     for (int ruleIndex = 0; ruleIndex < companionRules.Count; ruleIndex++)
@@ -679,14 +673,17 @@ namespace FlatWorld.WorldModel
             if (globalMultiplier <= 0d || rules == null)
                 return false;
 
-            var taggedRules = new List<EcologySpawnRuleSnapshot>();
+            var hostRules = new List<EcologySpawnRuleSnapshot>();
+            bool hasTaggedHostRule = false;
             for (int i = 0; i < rules.Count; i++)
             {
                 EcologySpawnRuleSnapshot rule = rules[i];
-                if (rule != null && rule.SharedRadius == 0 && !rule.CompanionOnly && RuleProvidesTag(rule, tag))
-                    taggedRules.Add(rule);
+                if (rule == null || rule.SharedRadius > 0 || rule.CompanionOnly)
+                    continue;
+                hostRules.Add(rule);
+                hasTaggedHostRule |= RuleProvidesTag(rule, tag);
             }
-            if (taggedRules.Count == 0) return false;
+            if (!hasTaggedHostRule) return false;
 
             int startX = request.Address.ChunkOrigin.X;
             int startY = request.Address.ChunkOrigin.Y;
@@ -703,9 +700,9 @@ namespace FlatWorld.WorldModel
                 double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain", x, y);
                 int worldX = request.Topology.NormalizeX(startX + x);
                 int worldY = request.Topology.NormalizeY(startY + y);
-                for (int ruleIndex = 0; ruleIndex < taggedRules.Count; ruleIndex++)
+                for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
                 {
-                    EcologySpawnRuleSnapshot rule = taggedRules[ruleIndex];
+                    EcologySpawnRuleSnapshot rule = hostRules[ruleIndex];
                     if (!rule.MatchesGround(cell.GroundTileId, request.Profile.Settings) ||
                         !MatchesEnvironmentLayer(rule, terrain, x, y) ||
                         !rule.Matches(cell.BiomeId, temperature, precipitation, height,
@@ -715,8 +712,10 @@ namespace FlatWorld.WorldModel
                     if (distributionWeight <= 0d) continue;
                     double chance = Clamp01(globalMultiplier * rule.SpawnChance *
                         rule.SpawnChanceMultiplier * distributionWeight);
-                    if (PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
-                        return true;
+                    if (!PassesChance(request, worldX, worldY, rule, chance, PlacementSalt))
+                        continue;
+                    if (RuleProvidesTag(rule, tag)) return true;
+                    break;
                 }
             }
             return false;

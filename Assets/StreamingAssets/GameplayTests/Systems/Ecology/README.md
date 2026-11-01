@@ -1,5 +1,7 @@
 # 自然生态纯规则回归
 
+`host_cell_occupancy` 检查树木、浆果丛等独立自然物同格互斥，优先规则不命中时由后续规则补位；蜂巢伴生、重复种子与邻区宿主标签保持一致。用户 PlayMode 期间仅做静态修改，不启动现场 Lua。
+
 `natural_snapshot_copy` 核对正式运行态工厂的身份、共享配置、独立可变状态、回池隔离和运动保存往返。离线 `python Tools/Tests/NaturalSnapshots/verify.py` 另比较旧深拷贝与工厂分配；不代表真实模块保存/卸载、画面或帧率验收。
 
 2026-10-26 `spatial_geometry` 补充阻挡体中心排序：检查偏移、缩放、旋转、镜像与冷编译冻结/重编译；触发器、禁用或缺失碰撞体仍回退根点。巨矿正式配置另由 `item_runtime/giant_mines` 覆盖；用户正在 PlayMode，本轮未执行新增 Lua 或真实遮挡验收。

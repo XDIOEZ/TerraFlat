@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/grass_temperature_density", WorldGrassTemperatureDensity);
         operations.Add("terrain/environment_pointer", WorldEnvironmentPointer);
         operations.Add("ecology/generation", WorldEcology);
+        operations.Add("ecology/host_cell_occupancy", WorldEcologyHostCellOccupancy);
         operations.Add("ecology/shared_resources", WorldSharedNaturalResources);
         operations.Add("ecology/companion_bind_candidates", WorldEcologyCompanionBindCandidates);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
@@ -870,6 +871,67 @@ public static partial class GameplayTestSystemProbe
             ["lowerBoundary"] = rule.Matches(1, .25d, 0d, 0d),
             ["upperBoundary"] = rule.Matches(1, .75d, 1d, 1d),
             ["wrongBiome"] = rule.Matches(2, .5d, .5d, .5d)
+        };
+    }
+
+    /// <summary>复用正式生成与宿主标签查询，验证独立自然物互斥且合法伴生物保留。</summary>
+    private static JObject WorldEcologyHostCellOccupancy(JObject args)
+    {
+        var tree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, 1d, 1d, 1 << 1,
+            0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+        var berry = new EcologySpawnRuleSnapshot("probe:berry", "probe-berry", 1, 1d, 1d, 1 << 1,
+            0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Berry" });
+        var companion = new EcologySpawnRuleSnapshot("probe:hive", "probe-hive", 1, 0d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, companionOnly: true, companionHostTag: "Tree",
+            companionSpawnChance: 1d, companionMinRadius: .5d, companionMaxRadius: .5d);
+        var halfTree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, .5d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+        var zeroTree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, 0d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+
+        JObject Sample(params EcologySpawnRuleSnapshot[] rules)
+        {
+            var profile = new ChunkGenerationProfileSnapshot("probe:cell-occupancy", 1, 4, 4,
+                ecologyRules: rules);
+            var request = new ChunkGenerationRequest(1,
+                new FlatWorld.WorldModel.WorldAddress("probe-world", new Int2(0, 0)), 17413, 1, profile);
+            using var terrain = new ChunkTerrainBuffer(4, 4);
+            for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+            {
+                terrain.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+                terrain.SetEnvironmentValue("temperature", x, y, .5f);
+                terrain.SetEnvironmentValue("precipitation", x, y, .5f);
+                terrain.SetEnvironmentValue("height", x, y, .5f);
+            }
+
+            var placements = new JArray();
+            foreach (NaturalItemPlacement placement in ChunkEcologyGenerator.Generate(request,
+                         terrain, 1d, rules, CancellationToken.None).Placements)
+                placements.Add(new JObject
+                {
+                    ["guid"] = placement.Guid, ["hostGuid"] = placement.HostGuid,
+                    ["x"] = placement.LocalX, ["y"] = placement.LocalY,
+                    ["itemId"] = placement.ItemId,
+                    ["offsetX"] = placement.OffsetX, ["offsetY"] = placement.OffsetY
+                });
+            return new JObject
+            {
+                ["placements"] = placements,
+                ["treeTag"] = ChunkEcologyGenerator.HasHostTagInChunk(request, terrain, 1d,
+                    rules, "Tree", CancellationToken.None),
+                ["berryTag"] = ChunkEcologyGenerator.HasHostTagInChunk(request, terrain, 1d,
+                    rules, "Berry", CancellationToken.None)
+            };
+        }
+
+        return new JObject
+        {
+            ["treeFirst"] = Sample(tree, berry, companion),
+            ["treeRepeated"] = Sample(tree, berry, companion),
+            ["berryFirst"] = Sample(berry, tree, companion),
+            ["treeMissing"] = Sample(zeroTree, berry, companion),
+            ["mixed"] = Sample(halfTree, berry, companion)
         };
     }
     #endregion
