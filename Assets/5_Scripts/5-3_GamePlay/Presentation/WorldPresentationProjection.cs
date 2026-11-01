@@ -143,6 +143,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private WorldPresentationSortingDomain sortingDomain;
     private Matrix4x4 synchronizedProjection = Matrix4x4.identity;
     private Matrix4x4 synchronizedDisplayToSource = Matrix4x4.identity;
+    private Vector3 visualMotionOffset;
     private bool synchronizedVisible;
     private bool released;
     private Item sourceItem;
@@ -313,6 +314,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
 
     private void SynchronizeProjectionRootPose(Matrix4x4 worldToDisplay, bool visible)
     {
+        visualMotionOffset = Vector3.zero;
         if (synchronizedProjection != worldToDisplay)
         {
             synchronizedProjection = worldToDisplay;
@@ -331,6 +333,20 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (transform.localPosition != position) transform.localPosition = position;
         if (transform.localRotation != rotation) transform.localRotation = rotation;
         if (transform.localScale != scale) transform.localScale = scale;
+    }
+
+    /// <summary>渲染后处理只平移绘制副本与排序节点，不触碰源 Transform。</summary>
+    internal void ApplyVisualMotionTranslation(Vector3 sourceWorldOffset)
+    {
+        if (released || !synchronizedVisible || sourceWorldOffset == Vector3.zero) return;
+        Vector3 displayOffset = synchronizedProjection.MultiplyVector(sourceWorldOffset);
+        transform.position += displayOffset;
+        if (sortingDomain != null && sortingDomain.Root != null)
+            foreach (NodeCopy node in nodes.Values)
+                if (node.Target != null && node.Target != transform && node.Target.parent == sortingDomain.Root)
+                    node.Target.position += displayOffset;
+        visualMotionOffset = displayOffset;
+        if (sortingDomain != null) SynchronizeLocalSortingUnits();
     }
 
     // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
@@ -676,7 +692,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             int queue = node.QueueSource != null && copies.TryGetValue(node.QueueSource, out RenderCopy queueCopy)
                 ? queueCopy.RenderQueue : 3000;
             // 从规范脚点只投影一次，避免不同显示层级的浮点误差拆开同格线路。
-            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y;
+            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y + visualMotionOffset.y;
             sortingDomain.ApplyLocalSortingGroupKey(target, source.sortingLayerID, source.sortingOrder,
                 queue, footY, sameFootOrder: node.QueueSource.sortingOrder);
             node.SortingRegistered = true;
@@ -696,7 +712,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             }
             Vector3 sourceFoot = copy.Source is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
                 ? copy.Source.transform.position : copy.Source.bounds.center;
-            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y;
+            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y + visualMotionOffset.y;
             sortingDomain.ApplyLocalRendererSortingKey(copy.Target, copy.Source.sortingLayerID, copy.Source.sortingOrder,
                 copy.RenderQueue, footY);
             copy.SortingRegistered = true;

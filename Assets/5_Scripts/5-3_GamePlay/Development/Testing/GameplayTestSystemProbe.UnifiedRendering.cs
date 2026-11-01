@@ -35,6 +35,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
         operations.Add("rendering/presentation_sorting_domain", CapturePresentationSortingDomain);
         operations.Add("rendering/cold_projection_initialization", CaptureColdProjectionResourceInitialization);
+        operations.Add("rendering/visual_motion_interpolation", CaptureVisualMotionInterpolation);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
     }
 

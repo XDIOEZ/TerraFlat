@@ -40,7 +40,7 @@ namespace FlatWorld.AIECS
     /// <summary>
     /// 正式模拟的只读批量表现；主体按真实排序键和共同脚点合并网格。
     /// </summary>
-    public sealed class AiecsWorldRenderer : IDisposable
+    public sealed partial class AiecsWorldRenderer : IDisposable
     {
         #region ECS生物摇摆批量表现
         private sealed class SwayEntry
@@ -51,6 +51,7 @@ namespace FlatWorld.AIECS
         private struct DrawItem
         {
             public int Index, Visual, Layer, LayerValue, Order; public float Y;
+            public float2 PresentationPosition;
         }
         private sealed class DrawComparer : IComparer<DrawItem>
         {
@@ -165,6 +166,7 @@ namespace FlatWorld.AIECS
             presentationVisible = visible;
             if (presentationRoot.parent != parent)
             {
+                ClearVisualMotionHistories();
                 presentationRoot.SetParent(parent, true);
                 if (parent == null && scene.IsValid() && scene.isLoaded && presentationRoot.gameObject.scene != scene)
                     UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(presentationRoot.gameObject, scene);
@@ -195,6 +197,7 @@ namespace FlatWorld.AIECS
             foreach (AiecsRenderBatch old in batches) { old.Hide(); old.RemoveSortingKey(removeSortingKey); }
             foreach (AiecsRenderBatch old in waterReflectionBatches) { old.Hide(); old.RemoveSortingKey(removeSortingKey); }
             animationStates.Clear();
+            ClearVisualMotionHistories();
         }
 
         /// <summary>资源发布时一次更新各物种排序，不在绘制循环读取定义目录。</summary>
@@ -251,7 +254,12 @@ namespace FlatWorld.AIECS
             for (int i = 0; i < records.Length; i++)
             {
                 var record = records[i]; if (record.External != 0) continue;
-                float2 delta = domain.ShortestDelta(center, record.Position);
+                // 远距离实体不建立表现历史，附近候选仍留出瞬移阈值的显示余量。
+                float2 initialDelta = domain.ShortestDelta(center, record.Position);
+                if (math.abs(initialDelta.x) > xRadius + WorldVisualMotionHistory.TeleportDistance ||
+                    math.abs(initialDelta.y) > yRadius + WorldVisualMotionHistory.TeleportDistance) continue;
+                float2 presentationPosition = ResolveActorPresentationPosition(record.Key, record.Position, domain);
+                float2 delta = domain.ShortestDelta(center, presentationPosition);
                 // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
                 if (math.abs(delta.x) > xRadius || math.abs(delta.y) > yRadius) continue;
                 // ECS 居民可以继续在纯逻辑层存活，但 ChunkView 一旦离开本机表现窗口就停止提交主体和阴影。
@@ -263,6 +271,7 @@ namespace FlatWorld.AIECS
                 Vector3 ground = new Vector3(center.x + delta.x, center.y + delta.y, 0f);
                 float sortingY = projected ? worldToDisplay.MultiplyPoint3x4(ground).y : ground.y;
                 visible.Add(new DrawItem { Index = i, Visual = visual, Y = sortingY,
+                    PresentationPosition = center + delta,
                     Layer = key.Layer, LayerValue = actorSortingLayerValues[record.Definition], Order = key.Order });
             }
             visible.Sort(DrawComparer.Instance);
@@ -292,7 +301,7 @@ namespace FlatWorld.AIECS
                 entry.LastDraw = drawSequence;
                 AiecsSwayPose pose = animations[record.Definition].Sample(ref entry.State, record, animationDelta);
                 var frame = pose.Frame;
-                float2 ground = center + domain.ShortestDelta(center, record.Position);
+                float2 ground = item.PresentationPosition;
                 var actor = new AiecsPrototypeActor
                 {
                     Position = ground,
@@ -353,7 +362,12 @@ namespace FlatWorld.AIECS
             expiredStates.Clear();
             foreach (var pair in animationStates)
                 if (pair.Value.LastDraw != drawSequence) expiredStates.Add(pair.Key);
-            foreach (CombatIdentity key in expiredStates) animationStates.Remove(key);
+            foreach (CombatIdentity key in expiredStates)
+            {
+                animationStates.Remove(key);
+                ForgetActorVisualMotion(key);
+            }
+            PruneUnusedActorVisualMotions();
             if (batch != null) uploadedBytes += SubmitBatch(batch, batchKey);
             if (reflectionBatch != null) uploadedBytes += SubmitReflectionBatch(reflectionBatch);
             for (int i = reflectionBatchCount; i < waterReflectionBatches.Count; i++)
@@ -398,7 +412,7 @@ namespace FlatWorld.AIECS
             for (int i = 0; i < math.min(64, visible.Count); i++)
             {
                 var actor = simulation.Display[visible[i].Index]; if (actor.Dead != 0) continue;
-                float2 position = center + domain.ShortestDelta(center, actor.Position) +
+                float2 position = visible[i].PresentationPosition +
                     new float2(0, 0.8f + actor.FlightHeight);
                 Vector3 point = camera.WorldToScreenPoint(worldToDisplay.MultiplyPoint3x4(new Vector3(position.x, position.y, 0f)));
                 Rect rect = new Rect(point.x - 20f, Screen.height - point.y, 40f, 5f);
@@ -414,6 +428,7 @@ namespace FlatWorld.AIECS
         {
             if (disposed) return;
             disposed = true;
+            ClearVisualMotionHistories();
             SetSortingKeyCallbacks(null, null);
             // 阴影节点清理失败也必须释放主体网格与排序订阅。
             try { shadows.Dispose(); }

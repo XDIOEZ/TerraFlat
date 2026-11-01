@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using Unity.Collections;
@@ -60,6 +60,8 @@ namespace FlatWorld.AIECS.Gameplay
                 for (int i = 0; i < ids.Length; i++)
                 { ids[i] = owner._catalog.Actors[i].Id; owner.replicaDefinitions[ids[i]] = i; }
                 owner.replicaRenderer = AiecsWorldSortingResolver.CreateRenderer(owner._catalog, ids, GameplayWorldRegistry.CurrentScene);
+                // 客户端网络快照已有自己的0.2秒位置过渡，不再叠一层TPS插值。
+                owner.replicaRenderer.InterpolatePresentationMotion = false;
             }
             owner.replicaPositions.Clear();
             if (owner.replicaRecords.IsCreated)

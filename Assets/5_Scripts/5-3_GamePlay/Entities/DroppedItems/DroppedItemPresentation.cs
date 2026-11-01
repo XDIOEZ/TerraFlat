@@ -91,6 +91,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public Vector2 LastNearestPosition;
         public Matrix4x4 LastProjection;
         public WorldItemWaterRules.DriftInterpolation WaterDrift;
+        public readonly WorldVisualMotionHistory VisualMotion = new();
         public ShaderFlameEffect CombustionFlame;
         public int FlameRenderQueue;
         public bool LastBurning;
@@ -160,7 +161,13 @@ internal sealed class DroppedItemPresentation : IDisposable
         sortingDomain = domain;
         if (sortingDomain != null) sortingDomain.Disposing += OnSortingDomainDisposing;
         if (poolRoot != null) poolRoot.transform.SetParent(sortingDomain?.Root ?? defaultPoolParent, true);
-        foreach (PooledView view in active.Values) view.HasState = false;
+        foreach (PooledView view in active.Values)
+        {
+            if (view.HasState)
+                view.VisualMotion.Reset(new Vector3(view.LastBody.Position.x, view.LastBody.Position.y, 0f),
+                    GameplayFixedStepSimulation.CurrentTime);
+            view.HasState = false;
+        }
     }
 
     private void OnSortingDomainDisposing()
@@ -227,6 +234,17 @@ internal sealed class DroppedItemPresentation : IDisposable
             float2 displayPosition = body.Position;
             if (view != null)
             {
+                if (!ReferenceEquals(view.Visual, visual))
+                    view.VisualMotion.Reset(new Vector3(body.Position.x, body.Position.y, 0f),
+                        GameplayFixedStepSimulation.CurrentTime);
+                view.VisualMotion.CaptureWrapped(new Vector2(body.Position.x, body.Position.y), domain,
+                    GameplayFixedStepSimulation.CurrentTime);
+                Vector3 offsetFromCurrent = WorldVisualMotionHistory.PixelAlignTranslation(
+                    view.VisualMotion.Evaluate(Time.timeAsDouble) - view.VisualMotion.Current,
+                    visual.Sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, visual.Sprite.pixelsPerUnit)
+                        : WorldVisualMotionHistory.PixelGrid);
+                Vector3 interpolated = view.VisualMotion.Current + offsetFromCurrent;
+                displayPosition = new float2(interpolated.x, interpolated.y);
                 if (body.WaterKind == 0 || simulation.TryGetFlight(id, out _))
                     view.WaterDrift = default;
                 Vector2 offset = view.WaterDrift.GetOffset(Time.timeAsDouble);
@@ -241,6 +259,8 @@ internal sealed class DroppedItemPresentation : IDisposable
             if (view == null)
             {
                 view = Acquire();
+                view.VisualMotion.Reset(new Vector3(body.Position.x, body.Position.y, 0f),
+                    GameplayFixedStepSimulation.CurrentTime);
                 active.Add(id, view);
             }
             Apply(view, id, visual, body, nearest, worldToDisplay);

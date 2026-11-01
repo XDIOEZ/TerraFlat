@@ -148,7 +148,8 @@ public sealed partial class WorldRenderingManager
             float waterY = immersion != null && immersion.HasWorldWaterReference
                 ? immersion.CurrentWaterY : bounds.min.y + bounds.size.y * 0.3f;
             float blend = immersion != null ? immersion.CurrentBlend : 1f;
-            Vector3 sourcePosition = source.transform.position;
+            Vector3 sourcePosition = source.transform.position +
+                GetVisualMotionOffsetForReflection(item, source.sprite);
             Transform reflection = view.Root.transform;
             reflection.SetPositionAndRotation(
                 new Vector3(sourcePosition.x, waterY * 2f - sourcePosition.y, sourcePosition.z),

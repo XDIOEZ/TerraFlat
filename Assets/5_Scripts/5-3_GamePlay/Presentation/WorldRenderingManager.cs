@@ -58,6 +58,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         Item.RuntimeStructureChanged += RefreshItemRendering;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentNaturalItemViews;
+        RegisterVisualInterpolationRendering();
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentActorWaterReflections;
         RegisterRuntimeItems();
@@ -88,6 +89,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemUnregistered -= UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
+        UnregisterVisualInterpolationRendering();
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
         try { ClearItemRenderingRegistrations(); }
         finally
@@ -159,6 +161,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ClearHeldFoodPresentation(item);
         ReleaseNaturalItemView(item);
         ReleaseItemPresentation(item);
+        ForgetItemVisualInterpolation(item);
         itemRenderingRegistrations.Remove(item);
         item.OnItemDestroy -= UnregisterItemRendering;
         try { UnregisterItemShadows(item); }
@@ -197,6 +200,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ClearNaturalItemViews();
         ClearItemViews();
         ClearActorViews();
+        ClearVisualInterpolationHistory();
         using var scope = UnityEngine.Pool.ListPool<Item>.Get(out var items);
         using var errorScope = UnityEngine.Pool.ListPool<Exception>.Get(out var errors);
         items.AddRange(itemRenderingRegistrations.Keys);

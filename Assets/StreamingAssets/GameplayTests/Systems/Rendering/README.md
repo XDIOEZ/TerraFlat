@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+`rendering_visual_interpolation` 使用正式表现层位置历史与纯视觉投影夹具，断言20TPS配60/120/240FPS的绘制中间点、暂停冻结、瞬移、环绕接缝、对象池复用、像素量化和权威 Transform 不被改写。玩家/GO角色/普通物品由 `WorldRenderingManager.VisualInterpolation.cs` 统一平移视觉根，ECS生物批绘及阴影倒影共用表现脚点，轻量掉落物使用池内视觉历史；已有 Rigidbody2D 原生插值及客户端网络补间不重复执行。静态规则不等于真实GPU帧率验收，PlayMode运行期间不自动进入场景测试。
+
 `rendering/frozen_ice_visual` 用编辑态隔离相机读回裸底床、半透明冰和原冰对照，检查像素混合、冰纹开关、地面材质隔离、投影平移及16区块合批；耗时仅为编辑器相机的 CPU 提交采样，不代表游戏帧率或 GPU 耗时。截图保存在本轮测试包中。
 
 `rules.lua` 的 `rendering/held_food_bites` 通过正式手持模块与本地/角色 MPB 控制器检查零进度不建资源、圆参数数量、确定性还原、横纵翻转、空 Sprite 恢复、最终隐藏、收起后原排序和纹理清理，以及超过32口不截断。Shader 三Pass使用相同本地坐标裁剪；真实 GPU 画面仍需场景验收。离线几何与 HLSL 回归入口为 `Tools/Tests/HeldFoodBites/verify.py`。

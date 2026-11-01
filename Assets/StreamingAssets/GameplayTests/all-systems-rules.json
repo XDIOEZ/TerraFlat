@@ -437,6 +437,12 @@
       "enabled": true
     },
     {
+      "id": "rendering_visual_interpolation",
+      "name": "20TPS视觉插值：60/120/240FPS及边界",
+      "luaPath": "GameplayTests/Systems/Rendering/visual-interpolation.lua",
+      "enabled": true
+    },
+    {
       "id": "rendering_rules",
       "name": "渲染光影与特效规则与边界",
       "luaPath": "GameplayTests/Systems/Rendering/rules.lua",

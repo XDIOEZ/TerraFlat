@@ -1465,6 +1465,7 @@
       "ruleCaseIds": [
         "rendering_item_sorting_configuration",
         "rendering_unified_manager",
+        "rendering_visual_interpolation",
         "rendering_rules",
         "rendering_terrain_shadow_masks",
         "rendering_building_liquid_surface",
