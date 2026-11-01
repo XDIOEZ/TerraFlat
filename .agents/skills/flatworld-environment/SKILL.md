@@ -27,7 +27,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 - 天气生成/推进、湿度、雨雪雷雾、地表积分或保存：[weather-and-surface.md](references/weather-and-surface.md)。
 - 地理/局部温度、传热、体温、氧气/压力或大气：[thermal-and-survival.md](references/thermal-and-survival.md)。
 - 地块接触、积雪操作、污染、光照或风推动：[contact-light-wind.md](references/contact-light-wind.md)。
-- 地火由 `WorldFireSystem` 按世界固定步推进，`ChunkTerrainData.Combustibility` 持有点燃概率与燃料秒数；邻火每步只抽签一次，燃料每游戏秒扣一秒，归零灭火。传播不搜索实体、不叠风雨湿度或供氧规则；生命、Buff 和普通物品材料转换由原拥有者结算。统一入口为 `TryIgniteWorldFireCell`、`ExtinguishWorldFireCell` 和区域批量接口；不为每团火创建对象/热源，卸载冻结且不补烧。
+- 地火由 `WorldFireSystem` 按 10 Hz 环境固定步推进，`ChunkTerrainData.Combustibility` 持有点燃概率与燃料秒数；每步只抽签一次，概率按原 60 Hz 的经过时间等效换算，燃料每游戏秒扣一秒，归零灭火。传播不搜索实体、不叠风雨湿度或供氧规则；生命、Buff 和普通物品材料转换由原拥有者结算。统一入口为 `TryIgniteWorldFireCell`、`ExtinguishWorldFireCell` 和区域批量接口；不为每团火创建对象/热源，卸载冻结且不补烧。
 - 火场缓存活火与邻格模拟前沿，火格集合或区块拓扑变化才重建；每固定步仍采样可燃性和燃料，只提交真正变化的格子，单纯燃烧进度不使前沿失效。
 
 ## 多世界所有权

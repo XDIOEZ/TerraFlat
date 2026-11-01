@@ -36,12 +36,13 @@ public static partial class GameplayTestSystemProbe
         data["hundredSecondsFire"] = output[0].State.Intensity;
         data["hundredSecondsConsumed"] = output[0].ConsumedFuelSeconds;
         var one = new[] { new WorldFireSimulationKernel.Input
-        { Combustibility = new WorldCombustibilityValue(.5f, 100f), HasBurningNeighbour = 1, RandomSeed = 42 } };
+        { Combustibility = new WorldCombustibilityValue(.5f, 100f), HasBurningNeighbour = 1, RandomSeed = 1 } };
         var oneOutput = new WorldFireSimulationKernel.Output[1];
-        WorldFireSimulationKernel.Advance(one, oneOutput, .01f);
-        float shortCycle = oneOutput[0].State.Intensity;
-        WorldFireSimulationKernel.Advance(one, oneOutput, 10f);
-        data["probabilityPerCycle"] = shortCycle == oneOutput[0].State.Intensity;
+        WorldFireSimulationKernel.Advance(one, oneOutput, 1f / 60f);
+        float originalCycle = oneOutput[0].State.Intensity;
+        WorldFireSimulationKernel.Advance(one, oneOutput, .1f);
+        float environmentCycle = oneOutput[0].State.Intensity;
+        data["probabilityTimeScaled"] = originalCycle == 0f && environmentCycle == 1f;
 
         using var world = new WorldRuntime("fire_rules", 1);
         var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));

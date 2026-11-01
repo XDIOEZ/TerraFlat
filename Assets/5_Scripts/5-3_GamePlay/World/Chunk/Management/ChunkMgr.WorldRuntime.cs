@@ -290,16 +290,33 @@ public partial class ChunkMgr
         liquidBodies?.AdvanceStreamingFrame();
     }
 
-    /// <summary>只在固定步推进世界和液体权威模拟。</summary>
+    /// <summary>所有世界步共享同一所属世界与卸载门禁。</summary>
+    private bool CanSimulateOwnedWorldFixedStep()
+    {
+        return !IsWorldRuntimeShuttingDown && !SharedSpriteMeshCache.IsSessionEnding &&
+            (GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) || IsSurfaceStreamingScene);
+    }
+
+    /// <summary>水体接触和其它物理关联模拟保持 60 Hz。</summary>
     internal void SimulateWorldFixedStep(float deltaSeconds)
     {
-        if (IsWorldRuntimeShuttingDown || SharedSpriteMeshCache.IsSessionEnding ||
-            !GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.ExecutionWorldKey) && !IsSurfaceStreamingScene)
-            return;
+        if (!CanSimulateOwnedWorldFixedStep()) return;
+        liquidBodies?.SimulateFixedStep();
+    }
+
+    /// <summary>纯世界后台状态按累计时间推进 20 Hz。</summary>
+    internal void SimulateWorldBackgroundStep(float deltaSeconds)
+    {
+        if (!CanSimulateOwnedWorldFixedStep()) return;
         if (authoritativeSimulation) runtimeChunkManager?.World.Tick(deltaSeconds);
+    }
+
+    /// <summary>地火和实验液流按累计时间推进 10 Hz。</summary>
+    internal void SimulateWorldEnvironmentStep(float deltaSeconds)
+    {
+        if (!CanSimulateOwnedWorldFixedStep()) return;
         if (authoritativeSimulation) SimulateWorldFireFixedStep(deltaSeconds);
         SimulateLiquidFlowFixedStep(deltaSeconds);
-        liquidBodies?.SimulateFixedStep();
     }
 
     /// <summary>玩家修改性能模式后，立即调整后台线程数量。</summary>

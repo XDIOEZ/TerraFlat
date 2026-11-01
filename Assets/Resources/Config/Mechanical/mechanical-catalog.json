@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "Settings": {
-    "TickSeconds": 0.1,
+    "TickSeconds": 0.05,
     "ActivationChunks": 1,
     "DeactivationChunks": 2,
     "UnloadDelaySeconds": 5,

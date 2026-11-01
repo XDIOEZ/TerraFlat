@@ -5,7 +5,7 @@ using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>邻火每步判定一次点燃概率，已燃格按游戏秒扣除燃料。</summary>
+    /// <summary>邻火按经过时间判定点燃概率，已燃格按游戏秒扣除燃料。</summary>
     [BurstCompile]
     public static unsafe class WorldFireSimulationKernel
     {
@@ -65,7 +65,11 @@ namespace FlatWorld.WorldModel
                     random ^= random >> 16; random *= 0x7feb352du;
                     random ^= random >> 15; random *= 0x846ca68bu; random ^= random >> 16;
                     float sample = (random & 0x00ffffffu) * (1f / 16777216f);
-                    if (sample < input.Combustibility.IgnitionProbability) output.State.Intensity = 1f;
+                    // 保留原 60 Hz 点燃概率在 10 Hz 环境步中的等效时间概率。
+                    float probability = math.saturate(input.Combustibility.IgnitionProbability);
+                    if (math.abs(seconds - 1f / 60f) > .000001f)
+                        probability = 1f - math.pow(1f - probability, seconds * 60f);
+                    if (sample < probability) output.State.Intensity = 1f;
                 }
                 outputs[i] = output;
             }

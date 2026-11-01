@@ -41,6 +41,41 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
     near(two.elapsed, 1, "双步分组的模拟时长")
     assert(one.startFrame == one.endFrame and two.startFrame == two.endFrame,
         "独立规则采样意外依赖真实渲染帧")
+
+    local rates = {60, 30, 20, 10, 5}
+    local function check_tiered(sample, multiplier, label)
+        assert(sample.ticks == 60 * multiplier and sample.uniqueRegistrations == 5,
+            label .. "重复注册、物理步次数或时间倍率错误")
+        assert(#sample.tiers == #rates, label .. "缺少分类 TPS 档位")
+        for i, rate in ipairs(rates) do
+            local tier = sample.tiers[i]
+            assert(tier.rate == rate and tier.calls == rate * multiplier,
+                label .. "的 " .. rate .. " TPS 执行次数错误")
+            near(tier.seconds, multiplier, label .. "的 " .. rate .. " TPS 累计时间")
+            near(tier.largestStep, 1 / rate, label .. "的 " .. rate .. " TPS 步长")
+        end
+    end
+    check_tiered(data.tiered60Fps, 1, "60FPS")
+    check_tiered(data.tiered30Fps, 1, "30FPS 每帧双步")
+    check_tiered(data.tiered15Fps, 1, "15FPS 每帧四步")
+    check_tiered(data.tieredDoubleSpeed, 2, "2 倍速")
+    check_tiered(data.tieredPaused, 1, "暂停恢复")
+    local before = data.tieredPaused.beforeResume
+    assert(before.ticks == 30, "暂停前固定步计数错误")
+    for i, count in ipairs({30, 15, 10, 5, 2}) do
+        assert(before.tiers[i].calls == count, "暂停前分级执行次数错误")
+        near(before.tiers[i].seconds, count / rates[i], "暂停前各档时间")
+    end
+    assert(data.tieredHitch.callsAfterHitch == 1 and data.tieredHitch.callsAfterNextStep == 1 and
+        data.tieredHitch.registered == 1 and data.tieredHitch.physicsRejectsLowRate,
+        "卡顿后出现同帧重复补算、重复登记或物理误降频")
+    near(data.tieredHitch.deliveredSeconds, .35, "卡顿累计时间")
+    assert(data.tieredDisabled.beforeDue == 0 and data.tieredDisabled.calls == 1,
+        "禁用期间累计了欠债，或恢复后提前执行")
+    near(data.tieredDisabled.seconds, .05, "重新启用后低频时间")
+    assert(data.tieredReadiness.prematureCalls == 0 and data.tieredReadiness.calls == 1,
+        "世界未就绪期间的旧会话时间混入了新会话")
+    near(data.tieredReadiness.seconds, .05, "世界重新就绪后的累计时间")
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)

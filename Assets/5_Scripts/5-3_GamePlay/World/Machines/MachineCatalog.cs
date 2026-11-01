@@ -199,13 +199,13 @@ public static class MachineCatalog
     #endregion
 }
 
-/// <summary>机械首版加载参数：默认 0.1 秒模拟步长、1/2 区块激活滞回、5 秒远离冷却。</summary>
+/// <summary>机械首版加载参数：默认 0.05 秒模拟步长、1/2 区块激活滞回、5 秒远离冷却。</summary>
 [MemoryPack.MemoryPackable]
 [Serializable]
 public sealed partial class MechanicalSettings
 {
     #region 参数
-    public float TickSeconds = 0.1f;
+    public float TickSeconds = 0.05f;
     public int ActivationChunks = 1;
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;

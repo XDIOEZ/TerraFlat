@@ -24,6 +24,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - `Persistent Runtime` 与 `Runtime Objects` 分类根保持默认 HideFlags，不能用 `DontSave`；常驻只靠 `DontDestroyOnLoad`，退出运行或卸载所属场景后必须正常销毁整棵对象树。
 
 - 全游戏逻辑由 `GameplayFixedStepSimulationDriver.FixedUpdate` 唯一推进，默认 `Time.fixedDeltaTime = 1/60`，倍速只改 `Time.timeScale`，补步与上限复用 Unity。系统实现 `IGameplayFixedStepSimulationSystem` 并按 `GameplayFixedStepSimulationPhase` 登记，停用/卸载注销；阶段为世界时间→世界模拟→导航回执→玩法→物理准备→太空→原生物理→物理结果。模拟去重用 `TickIndex`，不再用画面 `frameCount`；输入、UI、表现与流送预算留画面帧。规则/现场回归 `core_lifecycle/fixed_step_scheduler、fixed_step_clock`，后者包含 30 FPS、倍速、暂停和实际 TPS 显示。
+- `Register` 可选 `GameplayFixedStepTickRate`（60/30/20/10/5 Hz），低频单次消费累计游戏秒，不循环补算；世界时间与物理阶段强制 60 Hz。物品近身玩法 60、世界实体 30、机器和世界后台 20、地火/实验液流 10 Hz。规则 `core_lifecycle/fixed_step_scheduler` 验证分级、倍速、暂停及低帧分组。
 
 - 常驻对象统一走共享 `PersistentRuntimeObjectHierarchy.MoveToPersistentCategory`，在 `DontDestroyOnLoad/Persistent Runtime` 下按职责收纳；自动创建单例可用 `PersistentRuntimeObjectCategoryAttribute` 声明类别。保留显式业务父子关系、激活状态和世界姿态，不能把场景对象或物理代理为整理而提升为常驻。需要原业务根时用 `GetBusinessOwnerRoot`，不要再把 `transform.root` 当业务所有者。第三方已常驻裸根仅在场景加载、资源就绪及入世完成时归入 `Infrastructure`，无逐帧扫描；退出后不补建根。回归 `core_lifecycle/persistent_object_hierarchy`（规则与现场）。
 

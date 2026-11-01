@@ -8,7 +8,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>由 ItemMgr 调度的机械世界。权威模拟独立于地图表现；只有拓扑变化重构图，整网先恢复再 Tick，休眠时保存库存并释放加工器。</summary>
+/// <summary>由分级固定步调度的机械世界；整网恢复后单次推进累计时间，不自行循环追赶。</summary>
 public static partial class MachineWorld
 {
     /// <summary>区块显示格与规范化机械节点的配对，循环接缝处两套坐标不能混用。</summary>
@@ -34,7 +34,6 @@ public static partial class MachineWorld
     private static bool suppressRemoval { get => scope.SuppressRemoval; set => scope.SuppressRemoval = value; }
     private static float elapsed { get => scope.Elapsed; set => scope.Elapsed = value; }
     private static Vector2 combatSearchPadding { get => scope.CombatPadding; set => scope.CombatPadding = value; } // 当前节点受击范围的最大外延，只在拓扑或资源变化时重算。
-    private const int MaxCatchUpStepsPerFrame = 8;
     public static uint TransportStep { get => scope.Step; private set => scope.Step = value; } // 同一轮机械模拟中的跨带搬运只提交一次。
     public static IReadOnlyList<MechanicalNetwork> Networks => graph?.Networks;
     public static string WorldKey => worldKey;
@@ -659,25 +658,22 @@ public static partial class MachineWorld
         }
         EnsureScope();
         elapsed += Mathf.Max(0, deltaTime);
-        float step = MachineCatalog.Settings.TickSeconds;
-        if (elapsed < step) return;
+        if (elapsed + 0.0000001f < MachineCatalog.Settings.TickSeconds) return;
+        // 20 Hz 调度只调用一次，船舱及后台作用域也只按真实累计秒数结算一次。
+        float step = elapsed;
+        elapsed = 0f;
         using var tickSample = MachineTickMarker.Measure();
         RebuildGraphsIfDirty();
         MachineTickMarker.SetGauge(nodes.Count);
         CollectPlayerChunks();
-        // 帧内补算有上限，余量留到后续帧；暂停和时间缩放仍服从传入的世界时间。
-        int catchUpSteps = Mathf.Min(MaxCatchUpStepsPerFrame, Mathf.FloorToInt(elapsed / step));
-        MachineTickMarker.AddWork(catchUpSteps);
-        for (int tick = 0; tick < catchUpSteps; tick++)
+        MachineTickMarker.AddWork(1);
         {
             // 一个计算步固定三张拓扑和流量预算，设备回调只标脏，下一步再重建。
-            RebuildGraphsIfDirty();
             ScopeState advancingScope = scope;
             advancingScope.SimulationStepDepth++;
             try
             {
                 TransportStep++;
-                elapsed -= step;
                 using (MachineFluidBeginMarker.Measure(fluidGraph?.Components.Count ?? 0)) BeginFluidStep(step);
                 foreach (var network in graph.Networks)
                 {
