@@ -80,19 +80,35 @@ namespace FlatWorld.AIECS
         internal void Append(AiecsPrototypeActor actor, AiecsActorVisual definition,
             AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint, bool mirror = false,
             Color? color = null, Matrix4x4? worldToDisplay = null)
+            => AppendCore(actor, definition, frame, sprite, surface, tint,
+                mirror, color, worldToDisplay, false);
+
+        /// <summary>在同一个图集批次内镜像当前动画帧，数据只给水面倒影 Shader 使用。</summary>
+        internal void AppendWaterReflection(AiecsPrototypeActor actor, AiecsActorVisual definition,
+            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, bool mirror,
+            Color color, Matrix4x4? worldToDisplay = null)
+            => AppendCore(actor, definition, frame, sprite, surface, 0f, mirror, color,
+                worldToDisplay, true);
+
+        private void AppendCore(AiecsPrototypeActor actor, AiecsActorVisual definition,
+            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint, bool mirror,
+            Color? color, Matrix4x4? worldToDisplay, bool waterReflection)
         {
             int offset = positions.Count;
             Rect rect = sprite.LocalRect;
             Rect uv = sprite.AtlasRect;
             float height = Mathf.Max(0.0001f, definition.BodyYRange.y - definition.BodyYRange.x);
             float waterY = actor.Position.y + definition.BodyYRange.x + height * surface;
-            var parameters = new Vector4(actor.WaterBlend, waterY, height, tint);
+            var parameters = waterReflection
+                ? new Vector4(waterY, Mathf.Max(0.05f, height * (1f - surface)), actor.WaterBlend, 0f)
+                : new Vector4(actor.WaterBlend, waterY, height, tint);
             for (int corner = 0; corner < 4; corner++)
             {
                 bool right = corner == 1 || corner == 2;
                 bool top = corner >= 2;
                 Vector3 local = new Vector3(right ? rect.xMax : rect.xMin, top ? rect.yMax : rect.yMin, 0f);
                 Vector3 point = TransformPoint(local, actor, definition, frame, mirror);
+                if (waterReflection) point.y = 2f * waterY - point.y;
                 positions.Add(worldToDisplay.HasValue ? worldToDisplay.Value.MultiplyPoint3x4(point) : point);
                 uvs.Add(new Vector2(right ? uv.xMax : uv.xMin, top ? uv.yMax : uv.yMin));
                 colors.Add(color ?? definition.Color);

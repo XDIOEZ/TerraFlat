@@ -293,6 +293,7 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
+        Stencil { Ref 64 ReadMask 64 WriteMask 64 Comp Always Pass Replace }
 
         Pass
         {

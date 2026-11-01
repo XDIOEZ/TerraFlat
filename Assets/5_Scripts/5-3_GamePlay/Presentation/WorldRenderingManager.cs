@@ -58,6 +58,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         Item.RuntimeStructureChanged += RefreshItemRendering;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentNaturalItemViews;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentActorWaterReflections;
         RegisterRuntimeItems();
     }
 
@@ -86,6 +88,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemUnregistered -= UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
         UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
         try { ClearItemRenderingRegistrations(); }
         finally
         {
@@ -145,12 +148,14 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ApplyItemShadowRegistration(item, itemRenderingRegistrations[item], true);
         RefreshItemRenderingFeatures(item);
         RefreshHeldFoodPresentation(item);
+        RefreshActorWaterReflection(item);
     }
 
     /// <summary>死亡、回池和世界退出共用回收入口，不查找或创建新的管理器。</summary>
     public void UnregisterItemRendering(Item item)
     {
         if (ReferenceEquals(item, null)) return;
+        ReleaseActorWaterReflection(item);
         ClearHeldFoodPresentation(item);
         ReleaseNaturalItemView(item);
         ReleaseItemPresentation(item);
@@ -203,6 +208,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         try { contactShadowRenderingBackend?.ClearWorldRendering(); }
         catch (Exception error) { errors.Add(error); }
         try { sunShadowRenderingBackend?.ClearWorldRendering(); }
+        catch (Exception error) { errors.Add(error); }
+        try { ClearActorWaterReflections(); }
         catch (Exception error) { errors.Add(error); }
         if (errors.Count > 0)
             throw new AggregateException("世界渲染清理出现错误，其余物品仍已完成回收。", errors);

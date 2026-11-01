@@ -112,6 +112,8 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     public float CurrentDepth => currentDepth;
     public float CurrentBlend => currentBlend;
+    public bool HasWorldWaterReference => hasWorldWaterReference;
+    public float CurrentWaterY => currentWaterY;
 
     #endregion
 

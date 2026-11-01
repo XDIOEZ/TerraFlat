@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Combat;
 using Unity.Collections;
 using System.Collections.Generic;
@@ -21,12 +21,19 @@ namespace FlatWorld.AIECS
         public readonly AiecsActorSortingKey[] Actors;
         public readonly int ShadowLayer;
         public readonly int ShadowOrder;
+        public readonly int ReflectionLayer;
+        public readonly int ReflectionOrder;
+        public readonly int ReflectionQueue;
 
-        public AiecsWorldSortingKeys(AiecsActorSortingKey[] actors, int shadowLayer, int shadowOrder)
+        public AiecsWorldSortingKeys(AiecsActorSortingKey[] actors, int shadowLayer, int shadowOrder,
+            int reflectionLayer = 0, int reflectionOrder = 1, int reflectionQueue = 2991)
         {
             Actors = actors;
             ShadowLayer = shadowLayer;
             ShadowOrder = shadowOrder;
+            ReflectionLayer = reflectionLayer;
+            ReflectionOrder = reflectionOrder;
+            ReflectionQueue = reflectionQueue;
         }
     }
 
@@ -65,6 +72,10 @@ namespace FlatWorld.AIECS
         private int drawSequence;
         private int lastAnimationFrame = -1;
         private readonly List<AiecsRenderBatch> batches = new();
+        private readonly List<AiecsRenderBatch> waterReflectionBatches = new();
+        private readonly Material waterReflectionMaterial;
+        private readonly int waterReflectionLayer;
+        private readonly int waterReflectionOrder;
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
         private readonly Transform presentationRoot;
@@ -99,6 +110,18 @@ namespace FlatWorld.AIECS
         {
             this.catalog = catalog; this.scene = scene;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
+            Shader reflectionShader = Resources.Load<Shader>("Shaders/ActorWaterReflection");
+            if (reflectionShader == null) throw new InvalidOperationException("缺少生物水面倒影 Shader。");
+            waterReflectionMaterial = new Material(reflectionShader)
+            {
+                name = "AIECS Water Reflection",
+                hideFlags = HideFlags.HideAndDontSave,
+                renderQueue = sortingKeys.ReflectionQueue
+            };
+            waterReflectionMaterial.mainTexture = catalog.Material.mainTexture;
+            waterReflectionMaterial.SetFloat("_UseVertexReflection", 1f);
+            waterReflectionLayer = sortingKeys.ReflectionLayer;
+            waterReflectionOrder = sortingKeys.ReflectionOrder;
             visuals = new int[actorIds.Length];
             actorSortingKeys = new AiecsActorSortingKey[actorIds.Length];
             actorSortingLayerValues = new int[actorIds.Length];
@@ -159,6 +182,7 @@ namespace FlatWorld.AIECS
         {
             if (ReferenceEquals(applySortingKey, apply) && ReferenceEquals(removeSortingKey, remove)) return;
             foreach (AiecsRenderBatch batch in batches) batch.RemoveSortingKey(removeSortingKey);
+            foreach (AiecsRenderBatch batch in waterReflectionBatches) batch.RemoveSortingKey(removeSortingKey);
             applySortingKey = apply;
             removeSortingKey = remove;
             shadows.SetSortingKeyCallbacks(apply, remove);
@@ -169,6 +193,7 @@ namespace FlatWorld.AIECS
         {
             visible.Clear(); BatchCount = UploadedBytes = 0; shadows.Hide(); sunShadows.Hide();
             foreach (AiecsRenderBatch old in batches) { old.Hide(); old.RemoveSortingKey(removeSortingKey); }
+            foreach (AiecsRenderBatch old in waterReflectionBatches) { old.Hide(); old.RemoveSortingKey(removeSortingKey); }
             animationStates.Clear();
         }
 
@@ -206,6 +231,8 @@ namespace FlatWorld.AIECS
                 HideDrawnBatches();
                 return;
             }
+            if (waterReflectionMaterial.mainTexture != catalog.Material.mainTexture)
+                waterReflectionMaterial.mainTexture = catalog.Material.mainTexture;
             shadows.Begin();
             sunShadows.Begin();
             visible.Clear();
@@ -242,6 +269,8 @@ namespace FlatWorld.AIECS
             AiecsRenderBatch batch = null;
             DrawItem batchKey = default;
             int batchItems = 0, batchCount = 0;
+            AiecsRenderBatch reflectionBatch = null;
+            int reflectionBatchItems = 0, reflectionBatchCount = 0;
             int uploadedBytes = 0;
             drawSequence++;
             float animationDelta = lastAnimationFrame == Time.frameCount ? 0f : Time.deltaTime;
@@ -300,6 +329,24 @@ namespace FlatWorld.AIECS
                 }
                 batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
                     pose.Mirror, color, projected ? (Matrix4x4?)worldToDisplay : null);
+                // 直接复用本轮动画帧和水态，用一条共享网格绘制所有可见水中生物倒影。
+                if (actor.WaterBlend > 0.001f && liquidDepth > 0f && record.FlightHeight <= 0.01f)
+                {
+                    if (reflectionBatch == null || reflectionBatchItems == AiecsRenderBatch.MaxSprites)
+                    {
+                        if (reflectionBatch != null)
+                            uploadedBytes += SubmitReflectionBatch(reflectionBatch);
+                        if (reflectionBatchCount == waterReflectionBatches.Count)
+                            waterReflectionBatches.Add(new AiecsRenderBatch(scene, waterReflectionMaterial, presentationRoot));
+                        reflectionBatch = waterReflectionBatches[reflectionBatchCount++];
+                        reflectionBatch.SetWaterProjection(projected, displayToWorld);
+                        reflectionBatch.Begin();
+                        reflectionBatchItems = 0;
+                    }
+                    reflectionBatch.AppendWaterReflection(actor, definition, frame, catalog.Sprites[frame.Sprite],
+                        liquidDepth, pose.Mirror, color, projected ? (Matrix4x4?)worldToDisplay : null);
+                    reflectionBatchItems++;
+                }
                 batchItems++;
             }
             // 离开可见列表就释放实体动作，身份换槽不会继承别的生物的姿态。
@@ -308,6 +355,12 @@ namespace FlatWorld.AIECS
                 if (pair.Value.LastDraw != drawSequence) expiredStates.Add(pair.Key);
             foreach (CombatIdentity key in expiredStates) animationStates.Remove(key);
             if (batch != null) uploadedBytes += SubmitBatch(batch, batchKey);
+            if (reflectionBatch != null) uploadedBytes += SubmitReflectionBatch(reflectionBatch);
+            for (int i = reflectionBatchCount; i < waterReflectionBatches.Count; i++)
+            {
+                waterReflectionBatches[i].Hide();
+                waterReflectionBatches[i].RemoveSortingKey(removeSortingKey);
+            }
             for (int i = batchCount; i < batches.Count; i++)
             {
                 batches[i].Hide();
@@ -323,6 +376,13 @@ namespace FlatWorld.AIECS
         {
             int bytes = batch.Submit(key.Layer, key.Order, key.Y);
             batch.SubmitSortingKey(applySortingKey, key.Layer, key.Order, key.Y);
+            return bytes;
+        }
+
+        private int SubmitReflectionBatch(AiecsRenderBatch batch)
+        {
+            int bytes = batch.Submit(waterReflectionLayer, waterReflectionOrder);
+            batch.SubmitSortingKey(applySortingKey, waterReflectionLayer, waterReflectionOrder, 0f);
             return bytes;
         }
 
@@ -362,10 +422,19 @@ namespace FlatWorld.AIECS
                 try { sunShadows.Dispose(); }
                 finally
                 {
-                    try { foreach (AiecsRenderBatch batch in batches) batch.Dispose(); }
+                    try
+                    {
+                        foreach (AiecsRenderBatch batch in batches) batch.Dispose();
+                        foreach (AiecsRenderBatch batch in waterReflectionBatches) batch.Dispose();
+                    }
                     finally
                     {
-                        batches.Clear();
+                        batches.Clear(); waterReflectionBatches.Clear();
+                        if (waterReflectionMaterial != null)
+                        {
+                            if (Application.isPlaying) UnityEngine.Object.Destroy(waterReflectionMaterial);
+                            else UnityEngine.Object.DestroyImmediate(waterReflectionMaterial);
+                        }
                         if (presentationRoot != null)
                         {
                             if (Application.isPlaying) UnityEngine.Object.Destroy(presentationRoot.gameObject);

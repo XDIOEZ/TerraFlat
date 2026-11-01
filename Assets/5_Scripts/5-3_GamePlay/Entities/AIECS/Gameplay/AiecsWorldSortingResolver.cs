@@ -16,8 +16,17 @@ namespace FlatWorld.AIECS.Gameplay
                 throw new InvalidOperationException("AIECS 表现缺少世界排序管理器。");
             manager.GetSortingKey(WorldSortingManager.GroundShadowCategory,
                 out int shadowLayer, out int shadowOrder);
+            manager.GetSortingKey(AquaticActorPresentation.SortingCategory,
+                out int waterLayer, out int waterOrder);
+            int reflectionQueue = -1;
+            var rendering = WorldRenderingConfigCatalog.Default.sorting;
+            foreach (var profile in rendering.batchProfiles)
+                if (profile.visualLayer == "Water")
+                    reflectionQueue = rendering.batchRenderQueueBase + profile.renderQueueOffset + 1;
+            if (reflectionQueue < 0) throw new InvalidOperationException("AIECS 倒影缺少 Water 渲染队列。");
             var renderer = new AiecsWorldRenderer(catalog, actorIds, scene,
-                new AiecsWorldSortingKeys(ResolveActorSortingKeys(resources, actorIds), shadowLayer, shadowOrder));
+                new AiecsWorldSortingKeys(ResolveActorSortingKeys(resources, actorIds), shadowLayer, shadowOrder,
+                    waterLayer, waterOrder + 1, reflectionQueue));
             void Refresh() => renderer.SetActorSortingKeys(ResolveActorSortingKeys(resources, actorIds));
             resources.ResourcesReloaded += Refresh;
             renderer.Disposed += () => resources.ResourcesReloaded -= Refresh;
