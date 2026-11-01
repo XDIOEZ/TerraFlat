@@ -52,6 +52,7 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - requiredGroundSupport 为当前定义配置，各格比较有效表面 loadCapacity，等值可放；支撑覆盖优先，其次液面 worldWater，再次干地 Tile。
 - 平台/地板通过 Tile_Block.groundPlacement 写 TerrainSupportLayer，不换底层地形；平台要求有液体，地板要求 Walkable 且无液体，判断原始 LiquidDepth。有效覆盖统一供预览、导航和角色水域读取。
 - 静态墙走 Blocking Tile，TileBlockId 将召唤器接入 TileBuildingSystem，图/transform 取目标 Tile，格心为占地锚点。落地生命取 Tile_Block.damageProfile；数字 TileId、Profile/Palette、Tile/Tile_Block/Addressables 构成完整内容链。
+- 可放置的格墙每格严格 1×1 Unity 单位：源 Sprite 像素边长与 PPU 一致，Tile.transform 的 XY 缩放为 1；预览和区块网格复用同一 Tile 变换。
 
 ## 表现与持久化
 
