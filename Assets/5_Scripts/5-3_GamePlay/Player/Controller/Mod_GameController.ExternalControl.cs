@@ -123,7 +123,7 @@ public partial class Mod_GameController
     public bool TrySetExternalAttackHeld(object owner, bool held)
     {
         using var worldScope = item?.UseOwnedWorldForItemCallbacks();
-        if (!IsExternalGameplayControlOwner(owner))
+        if (!IsExternalGameplayControlOwner(owner) || (held && IsHeldItemDrawLocked))
             return false;
 
         if (_externalAttackHeld == held)

@@ -452,6 +452,9 @@ for _, mode in ipairs({"left_shift", "right_shift", "empty", "blocked", "normal"
     test.runtime("inventory", "held_equipment_shortcut", {mode = mode}, function(data)
         local equipped = mode == "left_shift" or mode == "right_shift" or mode == "empty"
         local ordinary = mode == "normal" or mode == "plain_item"
+        assert(data.drawStarted and data.blockedWhileDrawing and data.drawFinished and data.visualScaleRestored
+            and data.sameSlotDoesNotReplay,
+            "掏出物品期间未锁定使用，或0.25秒动画结束后没有恢复视觉尺寸和输入")
         if equipped then
             assert(data.sourceIsPrevious and data.eyesIsIncoming,
                 "Shift加右键没有穿戴到眼部，或旧装备没有返回当前手持槽")

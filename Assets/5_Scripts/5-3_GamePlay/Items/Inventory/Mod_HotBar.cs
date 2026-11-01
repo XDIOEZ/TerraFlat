@@ -291,6 +291,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     protected override void OnLoad()
     {
+        StopHeldItemDrawAnimation();
         ResetSavedInventoryCache();
         runtimeUnloading = false;
         heldItemSyncPending = true;
@@ -838,7 +839,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         // 本机库存尚未确认时先保留当前物品，避免使用消耗被旧快照覆盖。
         if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
-        if (IsGameplayInputLocked())
+        if (IsGameplayInputLocked() || IsDrawingHeldItem)
         {
             return;
         }
@@ -848,6 +849,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
 
         SyncCurrentHeldItemWithSlot();
+
+        if (IsDrawingHeldItem) return;
 
         Item heldItem = CurentSelectItem;
         // 使用只发给当前槽位中真正由本玩家持有的实例。
@@ -907,7 +910,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         if (continuousUseModule == null)
             return;
 
-        if (continuousUseItem == null || _inputController == null ||
+        if (IsDrawingHeldItem || continuousUseItem == null || _inputController == null ||
             !_inputController.IsRightClickHeld || _inputController.IsGameplayInputLocked ||
             (!_inputController.IsUsingMobile && IsPointerOverUI()) ||
             !ReferenceEquals(CurentSelectItem, continuousUseItem) ||
@@ -1042,6 +1045,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition)
     {
+        if (IsDrawingHeldItem) return false;
         Mod_DiscardItem discardModule = item?.GetComponentInChildren<Mod_DiscardItem>(true);
         return discardModule?.TryDropHeldItemAtScreenPosition(screenPosition) == true;
     }
@@ -1106,6 +1110,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         catch
         {
             // 配置失败只回收外壳，不能保存半初始化模块覆盖真实库存。
+            StopHeldItemDrawAnimation();
             itemInstance.OnUIRefresh -= RefreshUI;
             itemInstance.OnItemDestroy -= OnDestroyCurrentObject;
             actorRenderEffects?.UnregisterExternalRenderers(itemInstance.transform);
@@ -1125,6 +1130,9 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private void UnloadCurrentItem()
     {
         Item previous = CurentSelectItem;
+        StopHeldItemDrawAnimation();
+        if (previous != null)
+            _inputController?.CancelHeldItemActions();
         // 先撤销绑定再触发模块事件，旧物品的回调不能卸下刚切换的新物品。
         CurentSelectItem = null;
         currentObject = null;
@@ -1198,6 +1206,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         faceMouse?.AddRotationTarget(tf, updateAfterPresentation: true);
         UpdateHeldItemPosition();
+        BeginHeldItemDrawAnimation(itemInstance);
 
         HeldItemChanged?.Invoke(data);
 

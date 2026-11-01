@@ -6,7 +6,7 @@ public partial class Mod_GameController
     private void HandleParryInput(InputAction.CallbackContext context)
     {
         UpdateCurrentInputDevice(context);
-        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked ||
+        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked || IsHeldItemDrawLocked ||
             EventSystemGuard.IsTextInputFocused || EventSystemGuard.IsGamepadUISelectionActive) return;
         ParryRequested?.Invoke();
     }
