@@ -155,6 +155,7 @@
     "batchProfiles": [
       { "visualLayer": "Back", "batchOrder": -1, "renderQueueOffset": -1 },
       { "visualLayer": "Ground", "batchOrder": 0, "renderQueueOffset": 0 },
+      { "visualLayer": "Ice", "batchOrder": 1, "renderQueueOffset": 1 },
       { "visualLayer": "Water", "batchOrder": 1, "renderQueueOffset": 2 },
       { "visualLayer": "TerrainHeightShadow", "batchOrder": 4, "renderQueueOffset": 5 },
       { "visualLayer": "Support", "batchOrder": 2, "renderQueueOffset": 3 },

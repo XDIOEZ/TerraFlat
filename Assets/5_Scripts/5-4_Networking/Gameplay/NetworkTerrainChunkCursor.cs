@@ -9,14 +9,16 @@ namespace FlatWorld.Networking.Gameplay
         #region 区块复制代际
         public ChunkTerrainData Terrain { get; }
         public uint RequestToken { get; private set; }
-        public bool HasFullState => hasTerrainFullState && hasFireFullState;
+        public bool HasFullState => hasTerrainFullState && hasFireFullState && hasLiquidFullState;
         public float NextRequestTime;
         private readonly long[] revisions;
         private readonly bool[] received;
         private readonly long[] fireRevisions;
         private readonly bool[] fireRevisionKnown, fireReceived;
-        private int receivedCount, fireReceivedCount;
-        private bool hasTerrainFullState, hasFireFullState;
+        private readonly long[] liquidRevisions;
+        private readonly bool[] liquidReceived;
+        private int receivedCount, fireReceivedCount, liquidReceivedCount;
+        private bool hasTerrainFullState, hasFireFullState, hasLiquidFullState;
 
         public NetworkTerrainChunkCursor(ChunkTerrainData terrain)
         {
@@ -26,24 +28,27 @@ namespace FlatWorld.Networking.Gameplay
             fireRevisions = new long[revisions.Length];
             fireRevisionKnown = new bool[revisions.Length];
             fireReceived = new bool[revisions.Length];
+            liquidRevisions = new long[revisions.Length];
+            liquidReceived = new bool[revisions.Length];
         }
 
         public void BeginSnapshot(uint token)
         {
             if (token == 0) throw new ArgumentOutOfRangeException(nameof(token));
             RequestToken = token;
-            hasTerrainFullState = hasFireFullState = false;
-            receivedCount = fireReceivedCount = 0;
+            hasTerrainFullState = hasFireFullState = hasLiquidFullState = false;
+            receivedCount = fireReceivedCount = liquidReceivedCount = 0;
             Array.Clear(received, 0, received.Length);
             Array.Clear(fireReceived, 0, fireReceived.Length);
+            Array.Clear(liquidReceived, 0, liquidReceived.Length);
         }
 
         // 基线已随持久区块恢复，只接收捕获之后的格子增量。
         public void SetPersistenceBaseline(long revision)
         {
             if (revision <= 0) throw new ArgumentOutOfRangeException(nameof(revision));
-            for (int i = 0; i < revisions.Length; i++) revisions[i] = revision;
-            hasTerrainFullState = true;
+            for (int i = 0; i < revisions.Length; i++) revisions[i] = liquidRevisions[i] = revision;
+            hasTerrainFullState = hasLiquidFullState = true;
             hasFireFullState = false;
             Array.Clear(fireRevisionKnown, 0, fireRevisionKnown.Length);
             Array.Clear(fireReceived, 0, fireReceived.Length);
@@ -53,19 +58,22 @@ namespace FlatWorld.Networking.Gameplay
 
         public void RequireSnapshot()
         {
-            hasTerrainFullState = hasFireFullState = false;
+            hasTerrainFullState = hasFireFullState = hasLiquidFullState = false;
             RequestToken = 0;
             NextRequestTime = 0f;
         }
 
         public bool Apply(long revision, uint token, int totalCells, TerrainBuildingCellState[] cells,
-            long fireRevision = 0, NetworkTerrainFireCellState[] fireCells = null)
+            long fireRevision = 0, NetworkTerrainFireCellState[] fireCells = null,
+            NetworkTerrainLiquidCellState[] liquidCells = null)
         {
             cells ??= Array.Empty<TerrainBuildingCellState>();
             fireCells ??= Array.Empty<NetworkTerrainFireCellState>();
+            liquidCells ??= Array.Empty<NetworkTerrainLiquidCellState>();
             if (Terrain.IsDisposed || revision <= 0 || totalCells != revisions.Length ||
-                cells.Length == 0 && fireCells.Length == 0 || cells.Length > 64 || fireCells.Length > 64 ||
-                token != 0 && (cells.Length == 0 || fireCells.Length == 0) ||
+                cells.Length == 0 && fireCells.Length == 0 && liquidCells.Length == 0 ||
+                cells.Length > 64 || fireCells.Length > 64 || liquidCells.Length > 64 ||
+                token != 0 && (cells.Length == 0 || fireCells.Length == 0 || liquidCells.Length == 0) ||
                 fireCells.Length > 0 && (fireRevision < 0 || token == 0 && fireRevision == 0) ||
                 token != 0 && token != RequestToken)
                 return false;
@@ -77,6 +85,12 @@ namespace FlatWorld.Networking.Gameplay
                 if (!fireCells[i].IsValid(revisions.Length)) return false;
                 for (int j = 0; j < i; j++)
                     if (fireCells[j].Index == fireCells[i].Index) return false;
+            }
+            for (int i = 0; i < liquidCells.Length; i++)
+            {
+                if (!liquidCells[i].IsValid(Terrain)) return false;
+                for (int j = 0; j < i; j++)
+                    if (liquidCells[j].Index == liquidCells[i].Index) return false;
             }
 
             foreach (TerrainBuildingCellState cell in cells)
@@ -117,10 +131,33 @@ namespace FlatWorld.Networking.Gameplay
                 }
             }
 
+            if (liquidCells.Length > 0)
+            {
+                Span<LiquidCellUpdate> updates = stackalloc LiquidCellUpdate[64];
+                int updateCount = 0;
+                foreach (NetworkTerrainLiquidCellState cell in liquidCells)
+                {
+                    if (revision <= liquidRevisions[cell.Index]) continue;
+                    var update = new LiquidCellUpdate(cell.Index, Terrain.LiquidTypes.GetIndex(cell.LiquidId), cell.Level);
+                    int slot = updateCount++;
+                    while (slot > 0 && updates[slot - 1].CellIndex > update.CellIndex)
+                    { updates[slot] = updates[slot - 1]; slot--; }
+                    updates[slot] = update;
+                }
+                if (updateCount > 0) Terrain.SetLiquidBatch(updates.Slice(0, updateCount));
+                foreach (NetworkTerrainLiquidCellState cell in liquidCells)
+                {
+                    if (revision > liquidRevisions[cell.Index]) liquidRevisions[cell.Index] = revision;
+                    if (token != 0 && !liquidReceived[cell.Index])
+                    { liquidReceived[cell.Index] = true; liquidReceivedCount++; }
+                }
+            }
+
             if (token != 0)
             {
                 hasTerrainFullState = receivedCount == received.Length;
                 hasFireFullState = fireReceivedCount == fireReceived.Length;
+                hasLiquidFullState = liquidReceivedCount == liquidReceived.Length;
             }
             return true;
         }

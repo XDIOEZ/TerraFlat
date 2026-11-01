@@ -63,6 +63,21 @@ public partial class SaveDataMgr
     #endregion
 
     #region 液体差量
+    public delegate void AuthoritativeLiquidCellsChangedHandler(string worldKey, ChunkRuntime chunk, ReadOnlySpan<int> indices);
+    public static event AuthoritativeLiquidCellsChangedHandler AuthoritativeLiquidCellsChanged;
+
+    // 只发布所属世界的已提交液体格，接收者在同步回调中复制索引。
+    private static void NotifyAuthoritativeLiquidCellsChanged(FlatWorld.WorldModel.WorldAddress address,
+        ChunkTerrainData terrain, ReadOnlySpan<int> indices)
+    {
+        var handler = AuthoritativeLiquidCellsChanged;
+        if (handler == null || indices.IsEmpty) return;
+        ChunkMgr manager = GameplayWorldRegistry.ExecutionChunks ?? ChunkMgr.ExistingInstance;
+        if (manager?.WorldRuntime == null || !manager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
+            !ReferenceEquals(chunk.Terrain, terrain)) return;
+        handler(manager.WorldRuntime.WorldId, chunk, indices);
+    }
+
     public void RecordLiquidChange(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
@@ -73,6 +88,8 @@ public partial class SaveDataMgr
         if (sample.Terrain.IsLiquidChanged(x, y))
             record.LiquidCells.Add(LiquidCellSaveData.Capture(sample.Terrain, x, y));
         record.LiquidCells.Sort(CompareLiquidCell);
+        Span<int> changed = stackalloc int[1] { y * sample.Terrain.Width + x };
+        NotifyAuthoritativeLiquidCellsChanged(sample.Address, sample.Terrain, changed);
     }
 
     private static int CompareLiquidCell(LiquidCellSaveData left, LiquidCellSaveData right)
@@ -125,6 +142,7 @@ public partial class SaveDataMgr
             }
         }
         record.LiquidCells.Sort(LiquidBatchComparison);
+        NotifyAuthoritativeLiquidCellsChanged(address, terrain, indices);
     }
     #endregion
 

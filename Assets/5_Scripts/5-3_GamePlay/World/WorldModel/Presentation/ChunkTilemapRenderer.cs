@@ -26,6 +26,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
     private const int FireShaderMode = 5;
     private const int FireDepthOrder = 1;
+    private const float FrozenIceOpacity = 0.5f;
     private const int LavaGlowBucketSize = 8;
     private const float LavaGlowMinIntensity = 0.55f;
     private const float LavaGlowMaxIntensity = 1.05f;
@@ -40,12 +41,14 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private GameRes boundResources; // 只订阅正式目录发布，不重建 ChunkRuntime。
     private ChunkRuntime boundChunk;
     private ChunkGroundMeshRenderer groundMesh;
+    private ChunkGroundMeshRenderer iceMesh;
     private ChunkGroundMeshRenderer waterMesh;
     private ChunkGroundMeshRenderer backMesh;
     private ChunkGroundMeshRenderer blockingMesh;
     private readonly List<IDisposable> neighbourChunkEventSubscriptions = new(16);
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
+    private bool baseMeshBulkUpdating;
     private const int BaseCellsPerStep = 64;
     private int batchBindingVersion;
     private bool bindingCellWrite;
@@ -82,7 +85,8 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         batchPresentationComplete && IsBatchPresentationRegistered;
 
     internal int BaseTerrainVisualCount =>
-        (groundMesh?.ActiveCellCount ?? 0) + (waterMesh?.ActiveCellCount ?? 0) +
+        (groundMesh?.ActiveCellCount ?? 0) + (iceMesh?.ActiveCellCount ?? 0) +
+        (waterMesh?.ActiveCellCount ?? 0) +
         (backMesh?.ActiveCellCount ?? 0) + (blockingMesh?.ActiveCellCount ?? 0);
     /// <summary>当前初绑实际写过的基础格数，供流送诊断核对单步预算。</summary>
     internal int BaseTerrainBindingCellWrites { get; private set; }
@@ -101,6 +105,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private static readonly ProfilerMarker BindScanMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.ScanBatch");
     private static readonly ProfilerMarker BindDirtyMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.DirtyBatch");
     private static readonly ProfilerMarker BindGroundUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadGround");
+    private static readonly ProfilerMarker BindIceUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadIce");
     private static readonly ProfilerMarker BindWaterUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadWater");
     private static readonly ProfilerMarker BindBackUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadBack");
     private static readonly ProfilerMarker BindBlockingUploadMarker = new("FlatWorld.ChunkStreaming.Bind.Tilemap.UploadBlocking");
@@ -193,6 +198,13 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                         groundMesh?.EndBulkUpdate();
                     yield return null;
                     if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
+                    if (iceMesh != null)
+                    {
+                        using (BindIceUploadMarker.Auto())
+                            iceMesh.EndBulkUpdate();
+                        yield return null;
+                        if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
+                    }
                     using (BindWaterUploadMarker.Auto())
                         waterMesh?.EndBulkUpdate();
                     yield return null;
@@ -203,6 +215,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                     if (version != batchBindingVersion || !ReferenceEquals(boundChunk, chunk)) yield break;
                     using (BindBlockingUploadMarker.Auto())
                         blockingMesh?.EndBulkUpdate();
+                    baseMeshBulkUpdating = false;
                     if (!bindingVisualsInvalidated && liquidVisualDirty.Count == 0 &&
                         ChunkBatchRendererGroupService.IsOwnerRegistered(this)) break;
                     BeginBaseMeshUpdate();
@@ -272,7 +285,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
     private void RecreateBaseMeshes(ChunkTerrainData terrain)
     {
-        groundMesh?.Dispose(); waterMesh?.Dispose(); backMesh?.Dispose(); blockingMesh?.Dispose();
+        groundMesh?.Dispose(); iceMesh?.Dispose(); waterMesh?.Dispose(); backMesh?.Dispose(); blockingMesh?.Dispose();
+        iceMesh = null;
+        baseMeshBulkUpdating = false;
         groundMesh = new ChunkGroundMeshRenderer(transform, terrain.Width, terrain.Height,
             groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ground);
         waterMesh = new ChunkGroundMeshRenderer(transform, terrain.Width, terrain.Height,
@@ -285,8 +300,16 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
     private void BeginBaseMeshUpdate()
     {
-        groundMesh?.BeginBulkUpdate(); waterMesh?.BeginBulkUpdate();
+        baseMeshBulkUpdating = true;
+        groundMesh?.BeginBulkUpdate(); iceMesh?.BeginBulkUpdate(); waterMesh?.BeginBulkUpdate();
         backMesh?.BeginBulkUpdate(); blockingMesh?.BeginBulkUpdate();
+    }
+
+    private void EndBaseMeshUpdate()
+    {
+        groundMesh?.EndBulkUpdate(); iceMesh?.EndBulkUpdate(); waterMesh?.EndBulkUpdate();
+        backMesh?.EndBulkUpdate(); blockingMesh?.EndBulkUpdate();
+        baseMeshBulkUpdating = false;
     }
 
     /// <summary>初绑期间的资源变化延后到下一有界步骤重建，避免同步恢复绕开帧预算。</summary>
@@ -326,8 +349,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         ClearNeighbourChunkEventSubscriptions();
         batchBindingInProgress = false;
         batchPresentationComplete = false;
+        baseMeshBulkUpdating = false;
         groundMesh?.Dispose();
         groundMesh = null;
+        iceMesh?.Dispose();
+        iceMesh = null;
         waterMesh?.Dispose();
         waterMesh = null;
         backMesh?.Dispose();
@@ -349,18 +375,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (!batchPresentationComplete) return;
         ClearDepthPresentation();
         ResetMechanicalVisualCache();
-        groundMesh?.Dispose();
-        waterMesh?.Dispose();
-        backMesh?.Dispose();
-        blockingMesh?.Dispose();
-        groundMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
-            boundChunk.Terrain.Height, groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ground);
-        waterMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
-            boundChunk.Terrain.Height, null, ChunkBatchRendererGroupService.VisualLayer.Water);
-        backMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
-            boundChunk.Terrain.Height, backMaterial, ChunkBatchRendererGroupService.VisualLayer.Back);
-        blockingMesh = new ChunkGroundMeshRenderer(transform, boundChunk.Terrain.Width,
-            boundChunk.Terrain.Height, blockingMaterial, ChunkBatchRendererGroupService.VisualLayer.Blocking);
+        RecreateBaseMeshes(boundChunk.Terrain);
         RefreshAllBatchVisuals(boundChunk.Terrain);
         RefreshLiquidGlowLights(boundChunk.Terrain);
         RefreshAllFireVisuals(boundChunk.Terrain);
@@ -395,11 +410,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (RenderDebugEnabled)
         {
             int expectedSubmittable = CountSubmittableVisuals(terrain);
-            int submitted = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(this) +
-                            (groundMesh?.ActiveCellCount ?? 0) +
-                            (waterMesh?.ActiveCellCount ?? 0) +
-                            (backMesh?.ActiveCellCount ?? 0) +
-                            (blockingMesh?.ActiveCellCount ?? 0);
+            int submitted = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(this) + BaseTerrainVisualCount;
             Debug.LogWarning($"[ChunkRenderDebug] RepairPresentation reason={reason} chunk={GetDebugChunkLabel()} " +
                              $"registered={ChunkBatchRendererGroupService.IsOwnerRegistered(this)} " +
                              $"complete={batchPresentationComplete} submitted={submitted} " +
@@ -408,18 +419,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         }
 
         batchPresentationComplete = false;
-        groundMesh?.Dispose();
-        waterMesh?.Dispose();
-        backMesh?.Dispose();
-        blockingMesh?.Dispose();
-        groundMesh = new ChunkGroundMeshRenderer(transform, terrain.Width,
-            terrain.Height, groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ground);
-        waterMesh = new ChunkGroundMeshRenderer(transform, terrain.Width,
-            terrain.Height, null, ChunkBatchRendererGroupService.VisualLayer.Water);
-        backMesh = new ChunkGroundMeshRenderer(transform, terrain.Width,
-            terrain.Height, backMaterial, ChunkBatchRendererGroupService.VisualLayer.Back);
-        blockingMesh = new ChunkGroundMeshRenderer(transform, terrain.Width,
-            terrain.Height, blockingMaterial, ChunkBatchRendererGroupService.VisualLayer.Blocking);
+        RecreateBaseMeshes(terrain);
         ChunkBatchRendererGroupService.UnregisterOwner(this);
         ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(terrain));
         RefreshAllBatchVisuals(terrain);
@@ -460,6 +460,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (changed.Kind == TerrainChangeKind.Environment && IsSoilMoistureVisualLayer(changed.EnvironmentLayerId))
         {
             RefreshSoilMoistureVisuals(changed);
+            return;
+        }
+        if (changed.Kind == TerrainChangeKind.Environment &&
+            string.Equals(changed.EnvironmentLayerId, FrozenSurfaceWaterLayer.MeltProgressLayer, StringComparison.Ordinal))
+        {
+            RefreshFrozenIceMeltProgress(changed);
             return;
         }
         if (!AffectsBaseTerrainEnvironment(changed))
@@ -925,10 +931,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
     {
         ChunkBatchRendererGroupService.BeginBulkSubmit();
-        groundMesh?.BeginBulkUpdate();
-        waterMesh?.BeginBulkUpdate();
-        backMesh?.BeginBulkUpdate();
-        blockingMesh?.BeginBulkUpdate();
+        BeginBaseMeshUpdate();
         try
         {
             for (int y = 0; y < terrain.Height; y++)
@@ -937,10 +940,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         }
         finally
         {
-            groundMesh?.EndBulkUpdate();
-            waterMesh?.EndBulkUpdate();
-            backMesh?.EndBulkUpdate();
-            blockingMesh?.EndBulkUpdate();
+            EndBaseMeshUpdate();
             ChunkBatchRendererGroupService.EndBulkSubmit();
         }
     }
@@ -1023,17 +1023,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         if (batchBindingInProgress) BaseTerrainBindingCellWrites++;
         else IncrementalFullTerrainCellWrites++;
         TerrainCell cell = terrain.GetCell(x, y);
-
-        if (cell.GroundTileId != 0)
-        {
-            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
-                cell.GroundTileId, groundMaterial,
-                BuildGroundSurfaceData(terrain, x, y, cell.GroundTileId), Vector4.zero);
-        }
-        else
-        {
-            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground);
-        }
+        RefreshGroundVisual(terrain, x, y, cell);
 
         RefreshLiquidVisual(terrain, x, y);
 
@@ -1055,6 +1045,35 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         else
         {
             ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Blocking);
+        }
+    }
+
+    private void RefreshGroundVisual(ChunkTerrainData terrain, int x, int y, TerrainCell cell)
+    {
+        if (TryGetFrozenIceSurfaceSource(terrain, x, y, cell, out FrozenSurfaceWaterSource frozen) &&
+            groundMaterial != null && palette != null &&
+            palette.TryGetVisual(frozen.Bed.GroundTileId, out Sprite bedSprite, out Color bedColor, out Matrix4x4 bedTransform) &&
+            bedSprite != null &&
+            palette.TryGetVisual(frozen.IceTileId, out Sprite iceSprite, out Color iceColor, out Matrix4x4 iceTransform) &&
+            iceSprite != null)
+        {
+            SubmitBatchMeshVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
+                bedSprite, bedColor, bedTransform, BuildGroundSurfaceData(terrain, x, y, frozen.Bed.GroundTileId));
+            iceColor.a *= FrozenIceOpacity;
+            SubmitBatchMeshVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ice,
+                iceSprite, iceColor, iceTransform, Vector4.zero);
+        }
+        else if (cell.GroundTileId != 0)
+        {
+            iceMesh?.ClearCell(x, y);
+            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
+                cell.GroundTileId, groundMaterial,
+                BuildGroundSurfaceData(terrain, x, y, cell.GroundTileId), Vector4.zero);
+        }
+        else
+        {
+            iceMesh?.ClearCell(x, y);
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground);
         }
     }
 
@@ -1109,9 +1128,17 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
         }
 
+        SubmitBatchMeshVisual(terrain, x, y, layer, sprite, tileColor, tileTransform, data0);
+    }
+
+    private void SubmitBatchMeshVisual(ChunkTerrainData terrain, int x, int y,
+        ChunkBatchRendererGroupService.VisualLayer layer, Sprite sprite, Color tileColor,
+        Matrix4x4 tileTransform, Vector4 data0)
+    {
         ChunkGroundMeshRenderer mesh = layer switch
         {
             ChunkBatchRendererGroupService.VisualLayer.Ground => groundMesh,
+            ChunkBatchRendererGroupService.VisualLayer.Ice => GetOrCreateFrozenIceMesh(terrain),
             ChunkBatchRendererGroupService.VisualLayer.Back => backMesh,
             ChunkBatchRendererGroupService.VisualLayer.Blocking => blockingMesh,
             _ => null
@@ -1122,6 +1149,62 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 data0, -1f, Vector4.zero))
             throw new InvalidOperationException($"基础地形 {layer} 不能提交非四角 Sprite：{sprite.name}");
     }
+
+    #region 冻水冰面表现
+
+    internal static bool TryGetFrozenIceSurfaceSource(ChunkTerrainData terrain, int x, int y,
+        TerrainCell cell, out FrozenSurfaceWaterSource source)
+    {
+        if (!FrozenSurfaceWaterLayer.TryReadSource(terrain, x, y, out source) ||
+            cell.GroundTileId != source.IceTileId)
+            return false;
+        return !terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y, out float progress) ||
+               progress < 1f;
+    }
+
+    private ChunkGroundMeshRenderer GetOrCreateFrozenIceMesh(ChunkTerrainData terrain)
+    {
+        if (iceMesh != null) return iceMesh;
+        iceMesh = new ChunkGroundMeshRenderer(transform, terrain.Width, terrain.Height,
+            groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ice);
+        if (baseMeshBulkUpdating) iceMesh.BeginBulkUpdate();
+        return iceMesh;
+    }
+
+    // 融化后等待地块切换，只有进度回滚且冰层缺失时重提该格。
+    private void RefreshFrozenIceMeltProgress(ChunkTerrainChanged changed)
+    {
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        bool ready = false, bulk = false;
+        try
+        {
+            foreach (int index in changed.GetCellIndices(terrain.Width))
+            {
+                int x = index % terrain.Width, y = index / terrain.Width;
+                bool visible = iceMesh?.HasVisibleCell(x, y) == true;
+                bool melted = terrain.TryGetEnvironmentValue(FrozenSurfaceWaterLayer.MeltProgressLayer, x, y,
+                    out float progress) && progress >= 1f;
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (visible || melted || !TryGetFrozenIceSurfaceSource(terrain, x, y, cell, out _))
+                    continue;
+                if (!ready)
+                {
+                    if (!EnsureBatchPresentationForIncrementalRefresh("FrozenIceMeltProgress")) return;
+                    ready = true;
+                    if (changed.CellIndices.Length > 1 && !batchBindingInProgress)
+                    {
+                        BeginBaseMeshUpdate();
+                        bulk = true;
+                    }
+                }
+                if (batchBindingInProgress) RefreshBatchCell(terrain, x, y);
+                else RefreshGroundVisual(terrain, x, y, cell);
+            }
+        }
+        finally { if (bulk) EndBaseMeshUpdate(); }
+    }
+
+    #endregion
 
     /// <summary>向地形 Owner 提交无地块高度语义的扩展表现，供草花等区块图层共享裁剪与批次。</summary>
     internal bool SetLayerVisual(ChunkBatchRendererGroupService.VisualLayer layer, int x, int y,
@@ -1311,7 +1394,12 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         for (int x = 0; x < terrain.Width; x++)
         {
             TerrainCell cell = terrain.GetCell(x, y);
-            if (cell.GroundTileId != 0 && groundMaterial != null && HasPaletteVisual(cell.GroundTileId)) count++;
+            if (cell.GroundTileId != 0 && groundMaterial != null && HasPaletteVisual(cell.GroundTileId))
+            {
+                count++;
+                if (TryGetFrozenIceSurfaceSource(terrain, x, y, cell, out FrozenSurfaceWaterSource frozen) &&
+                    HasPaletteVisual(frozen.Bed.GroundTileId)) count++;
+            }
             if (terrain.GetLiquidDepth(x, y) > 0f && ResolveLiquidVisual(terrain, x, y)?.Sprite != null) count++;
 
             if (backMaterial != null && cell.BackTileId != 0 &&
@@ -1346,8 +1434,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
 
         int dataVisuals = CountDataVisuals(terrain);
         int submittable = CountSubmittableVisuals(terrain);
-        int submitted = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(this) +
-                        (groundMesh?.ActiveCellCount ?? 0);
+        int submitted = ChunkBatchRendererGroupService.GetOwnerTerrainVisualCount(this) + BaseTerrainVisualCount;
         string message = $"[ChunkRenderDebug] {reason} chunk={GetDebugChunkLabel()} " +
                          $"dataVisuals={dataVisuals} submittable={submittable} submitted={submitted}. " +
                          ChunkBatchRendererGroupService.BuildDebugSummary(this);
@@ -1366,6 +1453,10 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         {
             TerrainCell cell = terrain.GetCell(x, y);
             if (cell.GroundTileId != 0)
+                count++;
+            if (TryGetFrozenIceSurfaceSource(terrain, x, y, cell, out _))
+                count++;
+            if (terrain.GetLiquidDepth(x, y) > 0f)
                 count++;
             if (cell.BackTileId != 0)
                 count++;

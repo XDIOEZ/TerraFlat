@@ -44,7 +44,8 @@ internal static class ChunkBatchRendererGroupService
         MechanicalUpperFront,
         NaturalStatic,
         NaturalShadow,
-        GroundFacility
+        GroundFacility,
+        Ice
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -859,7 +860,7 @@ internal static class ChunkBatchRendererGroupService
         {
             Material template = layer switch
             {
-                VisualLayer.Ground or VisualLayer.Support => contactTemplate,
+                VisualLayer.Ground or VisualLayer.Ice or VisualLayer.Support => contactTemplate,
                 VisualLayer.TerrainHeightShadow => terrainHeightShadowTemplate,
                 VisualLayer.Water => waterTemplate,
                 _ => spriteTemplate

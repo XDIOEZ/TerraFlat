@@ -140,7 +140,7 @@ test.system("networking", "terrain_replication", {}, function(data)
 end, "格子建筑：平台/墙体、底液保留、乱序、坏包、区块重载")
 
 test.system("networking", "terrain_wire", {}, function(data)
-    assert(data.protocol >= 35 and data.remainingBytes == 0 and data.cellCount == 2,
+    assert(data.protocol >= 36 and data.remainingBytes == 0 and data.cellCount == 2,
         "格子建筑 Mirror 协议未完整往返")
     assert(data.world == "probe-world" and data.dimension == "surface" and data.realm == 7 and data.token == 3,
         "地形消息丢失世界身份或补拉令牌")
@@ -150,7 +150,28 @@ test.system("networking", "terrain_wire", {}, function(data)
     assert(data.fireRevision == 1234567890124 and data.fireCellCount == 2
         and math.abs(data.fireIntensity - .75) < .0001 and data.explicitZeroFire,
         "地形火势 revision、强度或显式灭火值未完成 Mirror 往返")
+    assert(data.liquidCellCount == 2 and data.liquidId == "core:dirty_water"
+        and data.liquidLevel == 8 and data.explicitZeroLiquid, "地形协议丢失液体身份、水量或清空状态")
 end, "格子建筑：正式 Mirror 序列化和世界身份")
+
+test.system("networking", "terrain_liquid_replication", {}, function(data)
+    assert(data.thawAccepted and data.thawed and data.thawBatches == 1,
+        "客户端没有收到融冰后的真实底床和海水")
+    assert(data.snapshotAccepted and data.snapshotComplete and data.snapshotKeptNewer,
+        "旧完整快照覆盖了较新的水量或没有完成补拉")
+    assert(data.batchAccepted and data.clearedAndFresh and data.oneBatch,
+        "液体乱序批次没有正确清空、恢复淡水或合并通知")
+    assert(data.independent, "较新的地形版本错误阻断了独立水量版本")
+    assert(data.unknownRejected and data.duplicateRejected and data.badLevelRejected and data.atomic,
+        "非法液体批次未被整体拒绝")
+    assert(data.baselineKept and data.reloadedUpdate, "区块重绑的持久基线或后续水量不同步")
+end, "联机融冰：权威水量、乱序、清空、坏包与重绑")
+
+test.system("networking", "terrain_packet_splitting", {}, function(data)
+    assert(data.parts > 1 and data.fits and data.aligned, "长液体 ID 的地形快照没有按传输上限分片")
+    assert(data.terrainCount == 8 and data.fireCount == 8 and data.liquidCount == 8,
+        "地形分片丢失了地块、火势或液体格")
+end, "联机地形：长液体 ID 的真实 Mirror 包长")
 
 test.system("networking", "world_request_gate", {}, function(data)
     assert(data.valid and data.unversioned, "合法世界请求被门禁拒绝")
@@ -247,3 +268,12 @@ test.system("networking", "roll_stamina_handoff", {}, function(data)
     assert(data.reducedCapacityAcknowledged and not data.reducedCapacityPending,
         "接收端体力上限降低后的合法钳制回执卡死了翻滚")
 end, "联机翻滚：扣费快照保护与合法回执")
+
+test.system("networking", "weather_surface_ice_merge", {}, function(data)
+    assert(math.abs(data.mergedProgress - .9) < .0001 and math.abs(data.mergedDepth - .4) < .0001,
+        "同格天气合并或旧消息覆盖了最新融冰进度")
+    assert(data.soilPreserved, "合并融冰进度时丢失同格土壤状态")
+    assert(data.fullState and data.revision == 5 and math.abs(data.rollbackProgress - .35) < .0001
+        and math.abs(data.rollbackDepth - .2) < .0001, "完整快照后的融冰回滚没有被保留")
+    assert(data.queuedCells == 2 and data.snapshotCells == 1, "完整快照没有清除旧格")
+end, "联机天气：融冰进度、旧消息与回滚合并")

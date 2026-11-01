@@ -30,7 +30,7 @@
     },
     {
       "id": "rendering_building_liquid_surface",
-      "name": "建筑水面覆盖：平台与液体增量规则",
+      "name": "地表水面与冰面：覆盖、透明和区块重绑",
       "luaPath": "GameplayTests/Systems/Rendering/building-liquid-surface.lua",
       "enabled": true
     },

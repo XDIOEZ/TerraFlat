@@ -15,6 +15,9 @@ public static partial class GameplayTestSystemProbe
         operations.Add("world_streaming/physics_geometry_queue", ServicePhysicsGeometryQueue);
         operations.Add("world_streaming/terrain_physics_source", ServiceTerrainPhysicsSource);
         operations.Add("rendering/building_liquid_surface", ServiceBuildingLiquidSurface);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        operations.Add("rendering/frozen_ice_surface", ServiceFrozenIceSurface);
+#endif
     }
 
     // 使用正式液体与支撑写入采样变化，Lua负责判断水下、水上及批量排水的结果。
