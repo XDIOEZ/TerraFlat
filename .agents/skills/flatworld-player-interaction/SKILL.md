@@ -44,6 +44,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
 - 接口持有 Unity 组件时先按 UnityEngine.Object 原生存活状态检查；目标销毁后清除交互与描边缓存，不再向销毁对象发送回调，纯 C# 世界目标保持普通引用生命周期。
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。
+- 工具长按由 `Mod_HotBar` 在首次 `Act` 后登记同一手持物的 `IContinuousHeldItemUse`，松开、换物、输入锁或 UI 遮挡即撤销，普通物品只单次使用。斧头复用武器动作，镐/铲/锄/打制石器各自结算。
 - 鼠标右键按下时由控制器冻结左右 Shift 汇总态；手持装备经 `Mod_HotBar → Mod_Equipment.TryEquipFromSlot` 穿戴或替换，旧件回当前快捷栏槽。该组合键独占按下、持续和松开，拒绝也不再执行普通 `Act`；非装备、普通右键和其他设备沿用现有使用链。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。

@@ -8,9 +8,10 @@ using UnityEngine;
 /// 剪刀等地表植被采集工具的通用模块。复用 Item.OnAct 和陶罐的地格白框，
 /// 键鼠右键、手机使用按钮走同一目标解析；默认距离为 2 格，不为花朵添加 Collider 或常驻 Item。
 /// </summary>
-public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
+public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder, IContinuousHeldItemUse
 {
     #region 数据与配置
+    public bool SupportsHeldUseContinuation => true;
 
     public const string ModuleId = "Mod_GroundCoverHarvest";
     public Ex_ModData ModData = new(); // 工具模块身份；本模块没有独立存档状态。
@@ -169,6 +170,12 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
                 "已采集{0}。", FlatWorldLocalizationService.GetUiText(target.Definition.DisplayName)));
             item.DecreaseDurability(1);
         }
+    }
+
+    public bool ContinueHeldUse()
+    {
+        Act();
+        return true;
     }
 
     private void SelectWorkTarget(GroundCoverTarget target, RuntimeTerrainTileSample grass, bool cuttingGrass)

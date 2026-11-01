@@ -64,5 +64,26 @@ public sealed class Mod_ResourceTool : Mod_GroundHarvestToolBase
     public override string CanonicalModuleId => ModuleId;
     public override ResourceToolKind HarvestKind => toolKind;
     protected override bool SupportsGroundHarvest => HarvestKind == ResourceToolKind.Pickaxe;
+    protected override bool SupportsRightClickToolUse =>
+        HarvestKind == ResourceToolKind.Pickaxe || HarvestKind == ResourceToolKind.Axe;
+
+    /// <summary>斧头右键沿用正式武器攻击动作，镐仍走地表挖掘。</summary>
+    public override void Act()
+    {
+        if (HarvestKind == ResourceToolKind.Axe)
+        {
+            TryRequestWeaponSwing();
+            return;
+        }
+        base.Act();
+    }
+
+    public override bool ContinueHeldUse()
+    {
+        if (HarvestKind != ResourceToolKind.Axe)
+            return base.ContinueHeldUse();
+        TryRequestWeaponSwing();
+        return true;
+    }
     #endregion
 }

@@ -259,6 +259,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private InputAction _directHotbarAction;
     private InputAction _previousHotbarAction;
     private InputAction _nextHotbarAction;
+    private Item continuousUseItem;
+    private IContinuousHeldItemUse continuousUseModule;
 
     public Inventory_Data Data => RuntimeInventory?.Data;
     public List<ItemSlot_UI> itemSlot_UI => RuntimeInventory?.itemSlot_UI;
@@ -504,6 +506,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     public override void ModUpdate(float deltaTime)
     {
         RuntimeInventory?.ModUpdate(deltaTime);
+        ContinueHeldItemUse();
     }
 
 #endregion
@@ -797,6 +800,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void UnbindHotbarInput()
     {
+        ClearContinuousUse();
         if (_inputController != null)
         {
             _inputController.RightClick -= OnRightClickPerformed;
@@ -830,6 +834,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnRightClickPerformed()
     {
+        ClearContinuousUse();
         // 本机库存尚未确认时先保留当前物品，避免使用消耗被旧快照覆盖。
         if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
@@ -878,6 +883,54 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
         heldItem.Act();
+        if (_inputController?.IsRightClickHeld != true || heldItem == null ||
+            !ReferenceEquals(heldItem, CurentSelectItem) || !heldItem.InHand)
+            return;
+
+        // 仅允许显式声明持续使用的工具续做，界面、消耗品及建筑仍只响应一次按下。
+        foreach (Module module in heldItem.itemMods.Mods.Values)
+        {
+            if (module is not IContinuousHeldItemUse { SupportsHeldUseContinuation: true } continuous ||
+                !module.IsRuntimeLoaded ||
+                !module.isActiveAndEnabled)
+                continue;
+            if (continuousUseModule != null)
+                throw new InvalidOperationException($"手持物品 {heldItem.name} 存在多个长按使用模块。");
+            continuousUseItem = heldItem;
+            continuousUseModule = continuous;
+        }
+    }
+
+    /// <summary>只在同一次右键、同一手持物且仍有玩法资格时延续工作。</summary>
+    private void ContinueHeldItemUse()
+    {
+        if (continuousUseModule == null)
+            return;
+
+        if (continuousUseItem == null || _inputController == null ||
+            !_inputController.IsRightClickHeld || _inputController.IsGameplayInputLocked ||
+            (!_inputController.IsUsingMobile && IsPointerOverUI()) ||
+            !ReferenceEquals(CurentSelectItem, continuousUseItem) ||
+            !ReferenceEquals(continuousUseItem.itemData, CurrentSelectItemSlot?.itemData) ||
+            !continuousUseItem.InHand || continuousUseItem.Owner != item ||
+            continuousUseItem.DestructionHandled ||
+            continuousUseModule is not Module module || module == null || !module.IsRuntimeLoaded ||
+            !module.isActiveAndEnabled || module.item != continuousUseItem ||
+            (item is Player { IsLocalProfile: true } &&
+             ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()))
+        {
+            ClearContinuousUse();
+            return;
+        }
+
+        if (!continuousUseModule.ContinueHeldUse())
+            ClearContinuousUse();
+    }
+
+    private void ClearContinuousUse()
+    {
+        continuousUseItem = null;
+        continuousUseModule = null;
     }
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
@@ -1012,6 +1065,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         targetIndex = NormalizeIndex(targetIndex);
         bool selectionChanged = targetIndex != CurrentIndex;
+        if (selectionChanged)
+            ClearContinuousUse();
         CurrentIndex = targetIndex;
         if (animateSelection)
             MoveSelectBox(targetIndex);
