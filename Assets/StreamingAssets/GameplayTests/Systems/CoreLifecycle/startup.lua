@@ -152,11 +152,12 @@ for _, initial in ipairs({ true, false }) do
                     local row = { initial = initial, menuReady = menuReady,
                         enteringWorld = enteringWorld, reload = reload, testCache = testCache }
                     test.system("core_lifecycle", "startup_loading_policy", row, function(data)
-                        assert(data.background == (menuReady and not enteringWorld and not initial),
-                            "首次资源加载被主菜单降速，或后续菜单重载丢失交互保护")
-                        local explicit = testCache or (initial and not reload)
+                        local background = menuReady and not enteringWorld and not reload
+                        assert(data.background == background,
+                            "菜单背景加载未降速，或入世及原位更新错误使用菜单限速")
+                        local explicit = testCache or background or (initial and not reload)
                         assert(data.explicitBudget == explicit, "首次启动、原位重载和测试预算串用")
-                        local expectedBudget = testCache and 8 or (initial and not reload and 32 or -1)
+                        local expectedBudget = testCache and 8 or (background and 1 or (initial and not reload and 32 or -1))
                         assert(data.budgetMs == expectedBudget, "每帧工作预算错误")
                         assert(data.targetMs == 10000, "完整资源加载的十秒验收目标被改变")
                     end, "首次启动、菜单、入世及原位更新的独立调度策略")
@@ -164,6 +165,39 @@ for _, initial in ipairs({ true, false }) do
             end
         end
     end
+end
+
+for _, idle in ipairs({ true, false }) do
+    for _, inWorld in ipairs({ true, false }) do
+        for _, enteringWorld in ipairs({ true, false }) do
+            for _, reloading in ipairs({ true, false }) do
+                local row = { idle = idle, inWorld = inWorld, enteringWorld = enteringWorld, reloading = reloading }
+                test.system("core_lifecycle", "startup_menu_preload", row, function(data)
+                    assert(data.request == (idle and not inWorld and not enteringWorld and not reloading),
+                        "菜单预加载未启动，或世界运行、入世及重载期间重复启动")
+                end, "主菜单预热只在空闲时启动：" .. tostring(idle) .. "/" .. tostring(inWorld)
+                    .. "/" .. tostring(enteringWorld) .. "/" .. tostring(reloading))
+            end
+        end
+    end
+end
+
+for _, mode in ipairs({ "startup", "world", "reload", "missing" }) do
+    test.system("core_lifecycle", "startup_menu_snapshot_reuse", { mode = mode }, function(data)
+        if mode == "world" then
+            assert(data.loads == 0 and data.publishes == 1 and data.captures == 0
+                and data.published == "menu" and data.failure == nil, "完整世界重复读取了已就绪的菜单配置")
+        elseif mode == "startup" then
+            assert(data.loads == 1 and data.publishes == 1 and data.captures == 1
+                and data.published == "fresh" and data.failure == nil, "初次菜单没有加载并保存必要配置")
+        elseif mode == "reload" then
+            assert(data.loads == 1 and data.publishes == 1 and data.captures == 0
+                and data.published == "fresh" and data.failure == nil, "原位更新没有读取独立的新配置")
+        else
+            assert(data.loads == 0 and data.publishes == 0 and data.captures == 0
+                and data.failure ~= nil, "缺失的菜单快照错误地发布了空配置")
+        end
+    end, "菜单配置快照复用与原位更新：" .. mode)
 end
 
 test.system("core_lifecycle", "startup_local_item_catalog", {}, function(data)

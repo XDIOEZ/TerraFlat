@@ -121,6 +121,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public void Update()
     {
         AdvanceStartupAudioReadiness();
+        TryPreloadWorldResourcesFromMenu();
         RefreshResourceLoadingPriorityForCurrentInteraction();
         RefreshResourceLoadingPresentation();
 

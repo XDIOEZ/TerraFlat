@@ -15,6 +15,8 @@ public static partial class GameplayTestSystemProbe
         RegisterBuiltInBinaryCatalogOperations(target);
         RegisterBakedDefinitionCompilationOperations(target);
         target.Add("core_lifecycle/startup_loading_policy", StartupLoadingPolicy);
+        target.Add("core_lifecycle/startup_menu_preload", StartupMenuPreload);
+        target.Add("core_lifecycle/startup_menu_snapshot_reuse", StartupMenuSnapshotReuse);
         target.Add("core_lifecycle/startup_request_batch", StartupRequestBatch);
         target.Add("core_lifecycle/startup_editor_sprite_request_route", StartupEditorSpriteRequestRoute);
         target.Add("core_lifecycle/startup_catalog_input_transaction", StartupCatalogInputTransaction);
@@ -36,14 +38,57 @@ public static partial class GameplayTestSystemProbe
     private static JObject StartupLoadingPolicy(JObject args)
     {
         bool initial = args.Value<bool>("initial"), reload = args.Value<bool>("reload");
-        double? budget = GameRes.ResolveResourceWorkBudget(initial, reload, args.Value<bool>("testCache"));
+        bool background = GameRes.ShouldKeepStartupResourceLoadingInBackground(
+            args.Value<bool>("menuReady"), args.Value<bool>("enteringWorld"), reload);
+        double? budget = GameRes.ResolveResourceWorkBudget(initial, reload, args.Value<bool>("testCache"), background);
         return new JObject
         {
-            ["background"] = GameRes.ShouldKeepStartupResourceLoadingInBackground(
-                args.Value<bool>("menuReady"), args.Value<bool>("enteringWorld"), initial),
+            ["background"] = background,
             ["explicitBudget"] = budget.HasValue,
             ["budgetMs"] = budget ?? -1d,
             ["targetMs"] = GameRes.InitialResourceLoadTargetMilliseconds
+        };
+    }
+
+    private static JObject StartupMenuPreload(JObject args) => new()
+    {
+        ["request"] = GameRes.ShouldPreloadWorldResourcesFromMenu(
+            args.Value<bool>("idle"), args.Value<bool>("inWorld"),
+            args.Value<bool>("enteringWorld"), args.Value<bool>("reloading"))
+    };
+
+    private static JObject StartupMenuSnapshotReuse(JObject args)
+    {
+        string mode = Text(args, "mode", "world");
+        bool startupOnly = mode == "startup", inPlaceReload = mode == "reload";
+        int loads = 0, publishes = 0, captures = 0, frame = 0;
+        string published = null;
+        using var pipeline = new ResourceLoadPipeline((_, _) => { }, () => false,
+            () => double.MaxValue, () => frame);
+        IEnumerator Read(Action<string> done, Action<Exception> _)
+        {
+            loads++;
+            done("fresh");
+            yield break;
+        }
+        Func<IEnumerator> stage = GameRes.PrepareMenuSharedConfiguration(pipeline, startupOnly, inPlaceReload,
+            mode == "missing" ? null : "menu", Read,
+            value => { publishes++; published = value; },
+            _ => captures++);
+        pipeline.Add("configuration", "菜单配置复用", 1, stage);
+        IEnumerator runner = pipeline.Run();
+        try
+        {
+            while (runner.MoveNext())
+            {
+                if (++frame > 32) throw new InvalidOperationException("菜单配置复用规则未收敛。");
+            }
+        }
+        finally { (runner as IDisposable)?.Dispose(); }
+        return new JObject
+        {
+            ["loads"] = loads, ["publishes"] = publishes, ["captures"] = captures,
+            ["published"] = published, ["failure"] = pipeline.Failure?.GetType().Name
         };
     }
 

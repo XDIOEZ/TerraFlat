@@ -29,7 +29,8 @@ public partial class GameRes
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
         }, () => preparingInPlaceReload || ShouldKeepCurrentResourceLoadingInBackground,
             () => ResolveResourceWorkBudget(completingInitialResourceLoad, preparingInPlaceReload,
-                GameplayTestResourceCache.Active), concurrentStages: completingInitialResourceLoad && !preparingInPlaceReload);
+                GameplayTestResourceCache.Active, ShouldKeepCurrentResourceLoadingInBackground),
+            concurrentStages: !preparingInPlaceReload && (completingInitialResourceLoad || !startupOnly));
         List<ItemDefinitionDto> itemSources = null;
         ResourceLoadPipeline.PrefetchedResourceData<List<ItemDefinitionDto>> itemInputs = null;
 #if !UNITY_WEBGL || UNITY_EDITOR
@@ -46,32 +47,25 @@ public partial class GameRes
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
         plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
         plan.Add("players", "加载玩家创建配置", 1,
-            PrepareConfigurationCatalog<PlayerCreationTemplateCatalogConfig>(plan, PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
-                value =>
-                {
-                    PlayerCreationTemplateCatalogService.ReplaceBuiltIn(value);
-                    if (startupOnly) startupPlayerCreationConfig = value;
-                }));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupPlayerCreationConfig,
+                PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
+                PlayerCreationTemplateCatalogService.ReplaceBuiltIn,
+                value => startupPlayerCreationConfig = value));
         plan.Add("time", "加载时间系统配置", 1,
-            PrepareConfigurationCatalog<TimeSystemConfigCatalog>(plan, TimeSystemConfigLoader.LoadBuiltInAsync, value =>
-            {
-                TimeSystemConfigService.ReplaceCatalog(value);
-                if (startupOnly) startupTimeSystemConfig = value;
-            }));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupTimeSystemConfig,
+                TimeSystemConfigLoader.LoadBuiltInAsync,
+                TimeSystemConfigService.ReplaceCatalog,
+                value => startupTimeSystemConfig = value));
         plan.Add("greenhouse", "加载大气温室效应配置", 1,
-            PrepareConfigurationCatalog<AtmosphericGreenhouseConfiguration>(plan, AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
-                value =>
-                {
-                    AtmosphericGreenhouseConfigurationService.ReplaceConfiguration(value);
-                    if (startupOnly) startupGreenhouseConfiguration = value;
-                }));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupGreenhouseConfiguration,
+                AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
+                AtmosphericGreenhouseConfigurationService.ReplaceConfiguration,
+                value => startupGreenhouseConfiguration = value));
         plan.Add("water-current", "加载水流推动配置", 1,
-            PrepareConfigurationCatalog<WaterCurrentPushCatalog>(plan, WaterCurrentPushConfigLoader.LoadBuiltInAsync,
-                value =>
-                {
-                    WaterCurrentPushConfigService.ReplaceCatalog(value);
-                    if (startupOnly) startupWaterCurrentCatalog = value;
-                }));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupWaterCurrentCatalog,
+                WaterCurrentPushConfigLoader.LoadBuiltInAsync,
+                WaterCurrentPushConfigService.ReplaceCatalog,
+                value => startupWaterCurrentCatalog = value));
         plan.Add("audio", "等待启动音库就绪", 2, CompleteStartupAudioResourcePreload, "audio-request");
         plan.Add("startup-ready", "准备主菜单", 0.5f,
             PublishStartupReadyStage, "startup-ui", "players", "time", "greenhouse", "water-current", "audio");
@@ -153,6 +147,26 @@ public partial class GameRes
         plan.Add("machine-prewarm", "预备机器快照与炉体缓存", 2,
             PrewarmMachineResources, "combat-prewarm");
         return plan;
+    }
+
+    /// <summary>完整入世直接复用菜单纯配置，只有启动或原位更新才重新读取来源。</summary>
+    internal static Func<IEnumerator> PrepareMenuSharedConfiguration<T>(ResourceLoadPipeline plan, bool startupOnly,
+        bool inPlaceReload, T startupSnapshot, Func<Action<T>, Action<Exception>, IEnumerator> load,
+        Action<T> publish, Action<T> preserveStartup) where T : class
+    {
+        if (!startupOnly && !inPlaceReload)
+            return () => RunAction(() =>
+            {
+                if (startupSnapshot == null)
+                    throw new InvalidDataException($"菜单必要配置快照缺失：{typeof(T).Name}");
+                publish(startupSnapshot);
+            });
+
+        return PrepareConfigurationCatalog<T>(plan, load, value =>
+        {
+            publish(value);
+            if (startupOnly) preserveStartup(value);
+        });
     }
 
     /// <summary>诊断读取正式阶段依赖副本，不启动资源请求或修改当前目录。</summary>

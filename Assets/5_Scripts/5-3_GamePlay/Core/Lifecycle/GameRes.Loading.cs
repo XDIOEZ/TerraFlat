@@ -37,6 +37,7 @@ public partial class GameRes
     private bool completingInitialResourceLoad;
     private bool worldResourceSessionActive;
     private bool worldResourceRequestQueued;
+    private bool startupResourceSessionRunning;
     /// <summary>最近一次成功提交的配置来源，跨世界资源会话保持。</summary>
     private ConfigurationSourcePolicy configurationSourcePolicy = ConfigurationSourcePolicy.BuiltInBinary;
     private long startupResourceSessionStartedTimestamp;
@@ -45,7 +46,7 @@ public partial class GameRes
     public const double InitialResourceLoadTargetMilliseconds = 10000d;
     /// <summary>菜单必需资源从本轮启动请求到菜单可交互的完整耗时。</summary>
     public double LastStartupLoadMilliseconds { get; private set; }
-    /// <summary>本次世界资源请求从启动到完整 Ready 的完整耗时。</summary>
+    /// <summary>本轮世界资源预加载从启动到完整 Ready 的完整耗时。</summary>
     public double LastResourceLoadMilliseconds { get; private set; }
     private string cachedHintSource, cachedHintLocale, cachedHintStatus;
     private const string FirstCacheBuildHint = "首次加载可能较慢，请稍候";
@@ -94,16 +95,36 @@ public partial class GameRes
     private int previousUploadTimeSlice;
 
     internal static bool ShouldKeepStartupResourceLoadingInBackground(bool startupReady, bool enteringWorld,
-        bool initialLoad = false)
-        => startupReady && !enteringWorld && !initialLoad;
+        bool inPlaceReload = false)
+        => startupReady && !enteringWorld && !inPlaceReload;
 
-    // 首次启动用同一有界预算收齐全部内容，游戏内原位更新仍交回交互预算。
-    internal static double? ResolveResourceWorkBudget(bool initialLoad, bool inPlaceReload, bool testCache)
-        => testCache ? 8d : initialLoad && !inPlaceReload ? 32d : null;
+    // 主菜单后台预热每帧最多推进 1ms，真正入世时恢复原有加载预算。
+    internal static double? ResolveResourceWorkBudget(bool initialLoad, bool inPlaceReload, bool testCache,
+        bool menuBackground = false)
+        => testCache ? 8d : menuBackground ? 1d : initialLoad && !inPlaceReload ? 32d : null;
 
-    private bool ShouldKeepCurrentResourceLoadingInBackground =>
-        ShouldKeepStartupResourceLoadingInBackground(IsStartupReady,
-            GameManager.ExistingInstance?.IsWorldEntryInProgress == true, completingInitialResourceLoad);
+    private bool ShouldKeepCurrentResourceLoadingInBackground
+    {
+        get
+        {
+            GameManager manager = GameManager.ExistingInstance;
+            return manager != null && ShouldKeepStartupResourceLoadingInBackground(IsStartupReady,
+                manager.IsWorldEntryInProgress || manager.IsInGameWorld, preparingInPlaceReload);
+        }
+    }
+
+    internal static bool ShouldPreloadWorldResourcesFromMenu(bool idleMenuResources, bool inWorld,
+        bool enteringWorld, bool reloading)
+        => idleMenuResources && !inWorld && !enteringWorld && !reloading;
+
+    /// <summary>菜单空闲时只请求一次世界资源，共用入世时原有的完整加载会话。</summary>
+    private void TryPreloadWorldResourcesFromMenu()
+    {
+        GameManager manager = GameManager.ExistingInstance;
+        if (manager != null && ShouldPreloadWorldResourcesFromMenu(IsIdleStartupMenu,
+                manager.IsInGameWorld, manager.IsWorldEntryInProgress, resourceReloadInProgress))
+            RequestWorldResources();
+    }
 
     /// <summary>定义构建和请求发出使用统一帧预算，不能让同帧的多个阶段各自重新计时。</summary>
     internal bool ShouldYieldResourceWork() => loadPipeline?.ShouldYield() == true;
@@ -162,7 +183,7 @@ public partial class GameRes
 
     private bool RequestResourceReload(bool useSourceConfigurations)
     {
-        if ((LoadState == ResourceLoadState.Loading && !IsIdleStartupMenu) ||
+        if ((LoadState == ResourceLoadState.Loading && !IsIdleStartupMenu && !CanInterruptMenuWorldResourcePreload) ||
             LoadState == ResourceLoadState.Disposed ||
             resourceReloadInProgress)
         {
@@ -200,7 +221,7 @@ public partial class GameRes
 
     private bool TryReloadResources(bool useSourceConfigurations)
     {
-        if ((LoadState == ResourceLoadState.Loading && !IsIdleStartupMenu) ||
+        if ((LoadState == ResourceLoadState.Loading && !IsIdleStartupMenu && !CanInterruptMenuWorldResourcePreload) ||
             LoadState == ResourceLoadState.Disposed || resourceReloadInProgress) return false;
         if (!Application.isPlaying)
         {
@@ -216,12 +237,21 @@ public partial class GameRes
             return false;
         }
 
+        if (LoadState == ResourceLoadState.Loading && CanInterruptMenuWorldResourcePreload)
+        {
+            CancelWorldResourceLoadForMenuReturn();
+            ReleaseWorldResourcesAndRestoreStartup();
+            if (LoadState != ResourceLoadState.Loading || !IsIdleStartupMenu)
+                return false;
+        }
+
         LoadState = ResourceLoadState.Loading;
         LastResourceLoadMilliseconds = 0;
         LastStartupLoadMilliseconds = 0;
         IsStartupReady = false;
         worldResourceSessionActive = false;
         worldResourceRequestQueued = false;
+        startupResourceSessionRunning = true;
         LastLoadError = null;
         resourceLoadFailed = false;
         completingInitialResourceLoad = !resourceSessionStarted;
@@ -244,7 +274,7 @@ public partial class GameRes
             return false;
         if (worldResourceSessionActive || worldResourceRequestQueued) return true;
         worldResourceSessionStartedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (loadCoroutine != null)
+        if (loadCoroutine != null || startupResourceSessionRunning)
         {
             worldResourceRequestQueued = true;
             return true;
@@ -341,7 +371,18 @@ public partial class GameRes
     }
 
     private bool IsIdleStartupMenu => LoadState == ResourceLoadState.Loading && IsStartupReady &&
-                                      loadCoroutine == null && !worldResourceSessionActive;
+                                      loadCoroutine == null && !startupResourceSessionRunning &&
+                                      !worldResourceSessionActive;
+
+    private bool CanInterruptMenuWorldResourcePreload
+    {
+        get
+        {
+            GameManager manager = GameManager.ExistingInstance;
+            return worldResourceSessionActive && loadCoroutine != null && manager != null && !manager.IsInGameWorld &&
+                   !manager.IsWorldEntryInProgress;
+        }
+    }
 
     private void DisposeResourceSessionSourceConfigurationLease()
     {
@@ -372,6 +413,7 @@ public partial class GameRes
         loadingText = "准备世界资源";
         if (worldResourceSessionStartedTimestamp == 0)
             worldResourceSessionStartedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+        RefreshResourceLoadingPriorityForCurrentInteraction();
         ConfigurationSourcePolicy sourcePolicy = configurationSourcePolicy;
         Coroutine started = StartCoroutine(RunResourceSession(startupOnly: false,
             requestedSourcePolicy: sourcePolicy));
@@ -400,6 +442,7 @@ public partial class GameRes
         {
             DisposeResourceSessionSourceConfigurationLease();
             GameplayTestResourceCache.Complete(false);
+            if (startupOnly) startupResourceSessionRunning = false;
         }
 
         if (startWorldAfterStartup)
@@ -466,7 +509,7 @@ public partial class GameRes
             showLoadingGUI = false;
             ResourceLoadPipeline completedStartupPlan = loadPipeline;
             loadPipeline = null;
-            Debug.Log($"[GameRes] 菜单必要资源就绪：{LastStartupLoadMilliseconds:F0} ms；世界资源等待入世请求。", this);
+            Debug.Log($"[GameRes] 菜单必要资源就绪：{LastStartupLoadMilliseconds:F0} ms；世界资源将在菜单后台预加载。", this);
             if (completedStartupPlan != null)
                 Debug.Log($"[GameRes] 菜单阶段推进 {completedStartupPlan.ExecutionMilliseconds:F1} ms，" +
                           $"帧间/异步等待 {completedStartupPlan.BetweenAdvancesMilliseconds:F1} ms，" +
@@ -521,6 +564,7 @@ public partial class GameRes
         completingInitialResourceLoad = false;
         worldResourceSessionActive = false;
         worldResourceRequestQueued = false;
+        startupResourceSessionRunning = false;
         IsStartupReady = retainStartupMenu && startupRootResourceAssets != null;
         resourceLoadFailed = true;
         loadCoroutine = null;
@@ -846,7 +890,7 @@ public partial class GameRes
         loadPipeline?.Report(1f);
     }
 
-    /// <summary>发布主菜单可交互状态；世界资源由进入世界时的显式请求加载。</summary>
+    /// <summary>发布主菜单可交互状态；完整世界资源在菜单空闲时自动后台预加载。</summary>
     private void PublishStartupReady()
     {
         IsStartupReady = true;
@@ -856,7 +900,7 @@ public partial class GameRes
                                           1000d / System.Diagnostics.Stopwatch.Frequency;
         RefreshResourceLoadingPriorityForCurrentInteraction();
         showLoadingGUI = false;
-        Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；世界资源等待入世请求。");
+        Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；即将后台预加载世界资源。");
         StartupResourcesReady?.Invoke(this);
         if (startupRootResourceAssets != null &&
             (startupRootResourceAssets.LoadedSpritePurposeCatalogCount != 0 ||
