@@ -25,6 +25,17 @@ def assets():
         missing = set(references) - known
         assert not missing, (relative, missing)
     print('PASS: prefab local references and unique object IDs')
+    assert 'm_Name: FWUI_InventoryCategoryTabs' in text
+    assert 'guid: 3e32f389c0c274b4288fdff15830c523' in text
+    assert text.count('m_Name: FWUI_InventoryCategoryTabs') == 1
+    assert 'guid: cc2da5b9a43a4cc88c3419ff189391d3' not in text
+    assert '  m_SizeDelta: {x: 1148, y: 560}\n' in text
+    assert '  m_AnchoredPosition: {x: 192, y: -112}\n' in text
+    assert '  m_SizeDelta: {x: -240, y: -192}\n' in text
+    assert text.count('propertyPath: m_Navigation.m_Mode\n      value: 3') == 9
+    for category in ['all', 'building', 'nature', 'functional', 'tool', 'equipment', 'food', 'material', 'transport']:
+        assert f'value: FWUI_Category_{category}\n' in text, category
+    print('PASS: left-side single-select category tabs replace the old dropdown')
     blocks = {int(re.search(r'^--- !u!\d+ &(\d+)', part).group(1)): part
               for part in re.split(r'(?=^--- !u!)', text, flags=re.M) if part.startswith('--- !u!')}
     search = next(part for part in blocks.values() if 'guid: 137c03bfb760497f99b7eb56d1f38973' in part)
@@ -36,7 +47,7 @@ def assets():
     print('PASS: empty-result label is reachable by the runtime binding')
     source = (ROOT / 'Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs').read_text(encoding='utf-8')
     labels = re.findall(r'new\("[a-z]+", "([^"]+)"', source)
-    labels += ['全部分类', '分类（{0}）', '匹配任一所选分类', '清除分类', '没有匹配物品']
+    labels += ['全部分类', '没有匹配物品']
     shared = (ROOT / 'Assets/Localization/StringTables/FlatWorldUI Shared Data.asset').read_text(encoding='utf-8')
     keys = {key: identity for identity, key in re.findall(r'^  - m_Id: (\d+)\n    m_Key: ([^\n]+)', shared, re.M)}
     for label in labels:
@@ -97,9 +108,12 @@ def build_targets():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--build', action='store_true')
+    parser.add_argument('--assets-only', action='store_true')
     options = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     assets()
+    if options.assets_only:
+        return
     project = ET.Element('Project', Sdk='Microsoft.NET.Sdk')
     props = ET.SubElement(project, 'PropertyGroup')
     for name, value in {'OutputType':'Exe', 'TargetFramework':'net8.0', 'EnableDefaultCompileItems':'false', 'Nullable':'disable'}.items():

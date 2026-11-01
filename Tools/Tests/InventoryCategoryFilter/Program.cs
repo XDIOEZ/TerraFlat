@@ -6,7 +6,7 @@ using System.Text.Json;
 
 internal static class Program
 {
-    #region 固定分类、并集与配置回归
+    #region 固定分类、单选与配置回归
 
     private static int checks;
     private static readonly string[] categoryIds = { "building", "nature", "functional", "tool", "equipment", "food", "material", "transport" };
@@ -22,11 +22,11 @@ internal static class Program
         var categories = InventoryCategoryFilter.Categories;
         Check(categories.Select(category => category.Id).SequenceEqual(categoryIds), "Exactly eight categories in stable display/sort order");
         Check(categories.Select(category => category.Tag).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 8, "Unique explicit category tags");
-        Check(InventoryCategoryFilter.MatchesAny(null, null), "No selection is unrestricted");
-        Check(InventoryCategoryFilter.MatchesAny(null, new[] { "material" }), "Untagged items have a visible material fallback");
-        Check(!InventoryCategoryFilter.MatchesAny(new[] { "Toolsmith" }, new[] { "tool" }), "Tags are exact");
-        Check(!InventoryCategoryFilter.MatchesAny(new[] { "Tool" }, new[] { "unknown" }), "Unknown categories cannot match");
-        Check(InventoryCategoryFilter.MatchesAny(new[] { "inventorycategory.tool" }, new[] { "TOOL" }), "Case-insensitive category IDs and tags");
+        Check(InventoryCategoryFilter.MatchesCategory(null, null), "All category button removes the filter");
+        Check(InventoryCategoryFilter.MatchesCategory(null, "material"), "Untagged items have a visible material fallback");
+        Check(!InventoryCategoryFilter.MatchesCategory(new[] { "Toolsmith" }, "tool"), "Tags are exact");
+        Check(!InventoryCategoryFilter.MatchesCategory(new[] { "Tool" }, "unknown"), "Unknown categories cannot match");
+        Check(InventoryCategoryFilter.MatchesCategory(new[] { "inventorycategory.tool" }, "TOOL"), "Case-insensitive category IDs and tags");
 
         foreach (var row in new[]
         {
@@ -47,21 +47,23 @@ internal static class Program
             Check(InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(row.Item1.Reverse().ToArray()).Id == row.Item2, "Tag order cannot change category");
         }
 
-        // 每种单一主分类都独立覆盖全部多选组合，避免分类重叠掩盖错误。
+        // 每个物品只属于一个分类；切换按钮必须替换旧分类而不是叠加选择。
         for (int itemIndex = 0; itemIndex < categories.Count; itemIndex++)
-        for (int selectionMask = 0; selectionMask < (1 << categories.Count); selectionMask++)
+        for (int selectedIndex = -1; selectedIndex < categories.Count; selectedIndex++)
         {
-            string[] selected = categoryIds.Where((_, index) => (selectionMask & (1 << index)) != 0).ToArray();
-            bool expected = selectionMask == 0 || (selectionMask & (1 << itemIndex)) != 0;
-            Check(InventoryCategoryFilter.MatchesAny(new[] { categories[itemIndex].Tag }, selected) == expected,
-                $"OR truth table item={itemIndex} selected={selectionMask}");
+            string selected = selectedIndex < 0 ? null : categoryIds[selectedIndex];
+            bool expected = selectedIndex < 0 || selectedIndex == itemIndex;
+            Check(InventoryCategoryFilter.MatchesCategory(new[] { categories[itemIndex].Tag }, selected) == expected,
+                $"Single-category truth table item={itemIndex} selected={selectedIndex}");
         }
         for (int left = 0; left < categories.Count; left++)
         for (int right = 0; right < categories.Count; right++)
             Check(Math.Sign(InventoryItemCategoryCatalog.ComparePrimaryCategoryForItemTags(new[] { categories[left].Tag }, new[] { categories[right].Tag })) == Math.Sign(left - right),
-                "Category sorting follows dropdown order");
+                "Category sorting follows side-tab order");
 
-        VerifyAllEnabledItemDefinitions(args[0]);
+        // 允许单独验证按钮单选规则，不受并行开发中的新物品清单影响。
+        if (args.Length == 0 || args[0] != "--rules-only")
+            VerifyAllEnabledItemDefinitions(args[0]);
         Console.WriteLine($"PASS: {checks} category/filter/config assertions against production code.");
     }
 

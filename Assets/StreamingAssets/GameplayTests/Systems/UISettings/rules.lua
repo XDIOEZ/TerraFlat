@@ -1170,7 +1170,7 @@ test.system("ui_settings", "virtualized_inventory", {}, function(data)
 end, "创造背包滚动：保留重叠槽位、复用交互回调与末尾回滚")
 
 
--- 八种用途分类共用唯一归属，多选仍按并集筛选。
+-- 八种用途分类共用唯一归属，左侧按钮单选、顶部按钮显示全部。
 test.system("ui_settings", "inventory_category_catalog", {}, function(data)
     local ids = {"building", "nature", "functional", "tool", "equipment", "food", "material", "transport"}
     local labels = {"建筑装饰", "自然植物", "功能设施", "工具用品", "武器装备", "食物饮品", "材料零件", "交通运输"}
@@ -1182,32 +1182,34 @@ test.system("ui_settings", "inventory_category_catalog", {}, function(data)
 end, "背包固定八类：用途目录与显示顺序")
 
 for _, row in ipairs({
-    {tags = {}, selected = {}, expected = true, category = "material"},
-    {tags = {}, selected = {"material"}, expected = true, category = "material"},
-    {tags = {"35", "Wood"}, selected = {"building"}, expected = true, category = "building"},
-    {tags = {"Seed", "Food"}, selected = {"food"}, expected = false, category = "nature"},
-    {tags = {"Seed", "Food"}, selected = {"nature"}, expected = true, category = "nature"},
-    {tags = {"Tool"}, selected = {"tool", "functional"}, expected = true, category = "tool"},
-    {tags = {"InventoryGroup.MechanicalPower"}, selected = {"tool", "functional"}, expected = true, category = "functional"},
-    {tags = {"Tool", "InventoryGroup.MechanicalPower"}, selected = {"functional"}, expected = false, category = "tool"},
-    {tags = {"inventorycategory.tool"}, selected = {"TOOL"}, expected = true, category = "tool"},
-    {tags = {"Toolsmith"}, selected = {"tool"}, expected = false, category = "material"},
-    {tags = {"InventoryGroup.Electrical"}, selected = {"functional"}, expected = true, category = "functional"},
-    {tags = {"35", "InventoryGroup.Chemistry"}, selected = {"functional"}, expected = true, category = "functional"},
-    {tags = {"Equipment", "Tool", "Wood"}, selected = {"tool", "material"}, expected = false, category = "equipment"},
-    {tags = {"Equipment", "Tool", "Wood"}, selected = {"equipment"}, expected = true, category = "equipment"},
-    {tags = {"InventoryCategory.Material", "InventoryGroup.Chemistry"}, selected = {"functional"}, expected = false, category = "material"},
-    {tags = {"InventoryCategory.Tool", "47"}, selected = {"tool"}, expected = true, category = "tool"},
-    {tags = {"InventoryCategory.Transport", "35", "InventoryGroup.Chemistry"}, selected = {"transport"}, expected = true, category = "transport"},
-    {tags = {"InventoryGroup.NewMachineKind", "InventoryCategory.Unknown"}, selected = {"material"}, expected = true, category = "material"},
-    {tags = {"InventoryCategory.Tool", "InventoryCategory.Building"}, selected = {"building"}, expected = true, category = "building"},
-    {tags = {"Tool"}, selected = {"missing"}, expected = false, category = "tool"},
-    {tags = {"Food"}, selected = {"tool", "food"}, expected = true, category = "food"}
+    {tags = {}, selected = "", expected = true, category = "material"},
+    {tags = {}, selected = "material", expected = true, category = "material"},
+    {tags = {"35", "Wood"}, selected = "building", expected = true, category = "building"},
+    {tags = {"Seed", "Food"}, selected = "food", expected = false, category = "nature"},
+    {tags = {"Seed", "Food"}, selected = "nature", expected = true, category = "nature"},
+    {tags = {"Tool"}, selected = "tool", expected = true, category = "tool"},
+    {tags = {"InventoryGroup.MechanicalPower"}, selected = "tool", expected = false, category = "functional"},
+    {tags = {"InventoryGroup.MechanicalPower"}, selected = "functional", expected = true, category = "functional"},
+    {tags = {"Tool", "InventoryGroup.MechanicalPower"}, selected = "functional", expected = false, category = "tool"},
+    {tags = {"inventorycategory.tool"}, selected = "TOOL", expected = true, category = "tool"},
+    {tags = {"Toolsmith"}, selected = "tool", expected = false, category = "material"},
+    {tags = {"InventoryGroup.Electrical"}, selected = "functional", expected = true, category = "functional"},
+    {tags = {"35", "InventoryGroup.Chemistry"}, selected = "functional", expected = true, category = "functional"},
+    {tags = {"Equipment", "Tool", "Wood"}, selected = "tool", expected = false, category = "equipment"},
+    {tags = {"Equipment", "Tool", "Wood"}, selected = "equipment", expected = true, category = "equipment"},
+    {tags = {"InventoryCategory.Material", "InventoryGroup.Chemistry"}, selected = "functional", expected = false, category = "material"},
+    {tags = {"InventoryCategory.Tool", "47"}, selected = "tool", expected = true, category = "tool"},
+    {tags = {"InventoryCategory.Transport", "35", "InventoryGroup.Chemistry"}, selected = "transport", expected = true, category = "transport"},
+    {tags = {"InventoryGroup.NewMachineKind", "InventoryCategory.Unknown"}, selected = "material", expected = true, category = "material"},
+    {tags = {"InventoryCategory.Tool", "InventoryCategory.Building"}, selected = "building", expected = true, category = "building"},
+    {tags = {"Tool"}, selected = "missing", expected = false, category = "tool"},
+    {tags = {"Food"}, selected = "tool", expected = false, category = "food"},
+    {tags = {"Food"}, selected = "food", expected = true, category = "food"}
 }) do
     test.system("ui_settings", "inventory_category_filter", row, function(data)
-        assert(data.matches == row.expected, "任一分类命中即可，且使用完整稳定标签匹配")
+        assert(data.matches == row.expected, "分类只匹配当前唯一选择或全部，必须精确按主分类")
         assert(data.category == row.category, "主分类优先级、显式指定或材料兜底错误")
-    end, "库存分类并集：" .. table.concat(row.selected, "+") .. " / " .. table.concat(row.tags, ","))
+    end, "库存分类单选：" .. row.selected .. " / " .. table.concat(row.tags, ","))
 end
 
 test.system("ui_settings", "inventory_category_sort", {items = {
@@ -1224,22 +1226,22 @@ test.system("ui_settings", "inventory_category_sort", {items = {
 }}, function(data)
     local expected = {"building", "nature", "functional", "a_tool", "z_tool", "equipment", "food", "0_new_material", "z_material", "transport"}
     assert(#data.ids == #expected, "分类排序丢失了真实库存物品")
-    for index, id in ipairs(expected) do assert(data.ids[index] == id, "排序与分类下拉顺序不一致，或同类 ID 次序错误") end
+    for index, id in ipairs(expected) do assert(data.ids[index] == id, "排序与左侧分类按钮顺序不一致，或同类 ID 次序错误") end
 end, "背包分类排序：固定用途顺序、同类ID与新增分组兜底")
 
 test.system("ui_settings", "inventory_filter_projection", {}, function(data)
-    local expected = {{2,8,26},{2,8,15,26},{2,8,15,26,39},{2,15,26,39},{},{0,1,2,3,4,5,6,7,8,9,10,11}}
+    local expected = {{2,8,26},{15},{2,8,26},{2,8,26,39},{2,26,39},{},{0,1,2,3,4,5,6,7,8,9,10,11}}
     assert(data.filterPreservedData, "分类过滤移动或替换了真实库存数据")
     assert(#data.samples == #expected)
     for index, sample in ipairs(data.samples) do
         local want = expected[index]
         assert(#sample.indices == #want, "过滤、库存更新或清空分类后的可见条目数量错误")
         for offset, value in ipairs(want) do assert(sample.indices[offset] == value, "投影丢失真实槽位索引") end
-        assert(sample.count == (index == 6 and 41 or #want))
+        assert(sample.count == (index == 7 and 41 or #want))
         assert(sample.routed and sample.dense and sample.mapping, "过滤后的布局、点击或槽位映射错误")
         assert(sample.poolCount == 12 and sample.scrollY == 0, "过滤扩大对象池或没有回到结果顶部")
     end
-end, "库存分类过滤：并集、不可见格更新、删除、空结果与恢复真实索引")
+end, "库存分类过滤：切换单选、不可见格更新、删除、空结果与恢复真实索引")
 
 -- 日志查看和复制共用类型过滤，异常和断言属于报错。
 for mask = 0, 7 do
