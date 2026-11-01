@@ -212,16 +212,20 @@ end, "材质耐久、命中磨损与小刀作物弱点")
 test.system("combat", "bite_attack", {}, function(data)
     assert(data.equalHalfUsesA and data.lighterUsesB and data.heavierUsesA, "撕咬身体质量分界错误")
     assert(data.bodyWeight == 40 and data.rangeUsesAttackRange, "撕咬没有使用身体重量或普通攻击范围")
-    assert(data.duration == 9 and data.interval == 3 and data.cooldown == 180,
+    assert(data.duration == 3 and data.interval == .5 and data.cooldown == 180,
         "撕咬时长、周期或冷却不符合配置")
-    assert(data.holdDamage == 5 and data.carryDamage == 6 and data.targetSlow == .25 and data.casterSlow == .5,
+    assert(data.holdDamage == 2 and data.carryDamage == 2 and data.targetSlow == .25 and data.casterSlow == .5,
         "撕咬伤害或减速配置错误")
+    assert(data.duration / data.interval == 6 and data.holdDamage * 6 == 12,
+        "撕咬预期应在3秒内结算6次、每次2点基础伤害")
     assert(math.abs(data.oneSlow - 3) < .001 and math.abs(data.twoSlows - 2.25) < .001 and
         math.abs(data.oneRemaining - 3) < .001 and math.abs(data.restored - 4) < .001,
         "多来源减速叠加、单来源释放或全部释放错误")
     assert(data.blockedStart and data.retainedBlock and data.releasedBlock, "普通攻击限制没有阻止前摇或独立释放")
     assert(data.persistedCooldown == 123, "剩余冷却快照没有保留")
     assert(data.invalidTimingRejected and data.invalidSlowRejected, "无效周期或100%减速配置未被拒绝")
+    assert(data.leftFacingCorrect and data.rightFacingCorrect and data.mouthHeightUnchanged,
+        "撕咬朝向未同步身体、自动注视点或嘴前命中框（可能出现背对目标攻击）")
 end, "撕咬身体质量、配置与多来源动作租约")
 
 test.system("combat", "faction_relation_lookup", {}, function(data)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using MemoryPack;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -46,14 +45,44 @@ public static partial class GameplayTestSystemProbe
             float persistedCooldown = MemoryPackSerializer.Deserialize<BiteCooldownState>(
                 MemoryPackSerializer.Serialize(new BiteCooldownState { CooldownRemaining = 123f })).CooldownRemaining;
             bool invalidTimingRejected = false, invalidSlowRejected = false;
-            var invalid = JsonConvert.DeserializeObject<AnimalSkillCatalog>(JsonConvert.SerializeObject(catalog));
-            invalid.Skills.Find(value => value.Id == definition.Id).TickIntervalSeconds = 0f;
-            try { AnimalSkillCatalogLoader.Deserialize(JsonConvert.SerializeObject(invalid)); }
+            var invalid = new JObject
+            {
+                ["schemaVersion"] = catalog.SchemaVersion,
+                ["skills"] = new JArray(new JObject
+                {
+                    ["id"] = definition.Id, ["type"] = definition.Type, ["tickIntervalSeconds"] = 0f
+                })
+            };
+            try { AnimalSkillCatalogLoader.Deserialize(invalid.ToString()); }
             catch (InvalidDataException) { invalidTimingRejected = true; }
-            invalid.Skills.Find(value => value.Id == definition.Id).TickIntervalSeconds = 3f;
-            invalid.Skills.Find(value => value.Id == definition.Id).TargetSlowFraction = 1f;
-            try { AnimalSkillCatalogLoader.Deserialize(JsonConvert.SerializeObject(invalid)); }
+            invalid["skills"][0]["tickIntervalSeconds"] = definition.TickIntervalSeconds;
+            invalid["skills"][0]["targetSlowFraction"] = 1f;
+            try { AnimalSkillCatalogLoader.Deserialize(invalid.ToString()); }
             catch (InvalidDataException) { invalidSlowRejected = true; }
+
+            // 模拟狼从右侧转向左侧的被咬者，再转回右侧，验证身体、注视点和嘴前命中盒同步。
+            Mod_TurnBack facing = root.AddComponent<Mod_TurnBack>();
+            facing.item = actor;
+            Mod_FocusPoint focus = root.AddComponent<Mod_FocusPoint>();
+            facing.faceMouse = focus;
+            Transform visual = new GameObject("[BiteFacingVisual]").transform;
+            visual.SetParent(root.transform, false);
+            facing.controlledTransforms_Direction.Add(visual);
+            Transform mouth = new GameObject("[BiteMouthHitbox]").transform;
+            mouth.SetParent(root.transform, false);
+            mouth.localPosition = new Vector3(.5f, .29f, 0f);
+            Mod_Damage_AI mouthDamage = mouth.gameObject.AddComponent<Mod_Damage_AI>();
+            facing.OnTrun += mouthDamage.SnapToDirection;
+            focus.Data.See_Point = Vector2.right * 6f;
+            bool facedLeft = facing.FaceWorldPosition(Vector3.left * 2f, true);
+            facing.ModUpdate(.016f);
+            bool leftFacingCorrect = facedLeft && facing.currentDirection.x < 0f && mouth.localPosition.x < 0f &&
+                Mathf.Abs(Mathf.DeltaAngle(visual.localEulerAngles.y, 180f)) < .5f && focus.Data.See_Point.x < 0f;
+            bool facedRight = facing.FaceWorldPosition(Vector3.right * 2f, true);
+            facing.ModUpdate(.016f);
+            bool rightFacingCorrect = facedRight && facing.currentDirection.x > 0f && mouth.localPosition.x > 0f &&
+                Mathf.Abs(Mathf.DeltaAngle(visual.localEulerAngles.y, 0f)) < .5f && focus.Data.See_Point.x > 0f;
+            bool mouthHeightUnchanged = Mathf.Approximately(mouth.localPosition.y, .29f);
             return new JObject
             {
                 ["equalHalfUsesA"] = !Mod_BiteAttack.ShouldCarry(40f, 20f),
@@ -68,6 +97,8 @@ public static partial class GameplayTestSystemProbe
                 ["restored"] = restored, ["blockedStart"] = blockedStart, ["retainedBlock"] = retainedBlock,
                 ["releasedBlock"] = releasedBlock, ["persistedCooldown"] = persistedCooldown,
                 ["invalidTimingRejected"] = invalidTimingRejected, ["invalidSlowRejected"] = invalidSlowRejected
+                , ["leftFacingCorrect"] = leftFacingCorrect, ["rightFacingCorrect"] = rightFacingCorrect,
+                ["mouthHeightUnchanged"] = mouthHeightUnchanged
             };
         }
         finally

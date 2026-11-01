@@ -124,10 +124,10 @@ public sealed partial class AnimalSkillDefinition
     public const string ChargeAttackType = "chargeAttack";
     public const string BiteAttackType = "biteAttack";
 
-    [JsonProperty("durationSeconds")] public float DurationSeconds = 9f;
-    [JsonProperty("tickIntervalSeconds")] public float TickIntervalSeconds = 3f;
-    [JsonProperty("holdDamage")] public float HoldDamage = 5f;
-    [JsonProperty("carryDamage")] public float CarryDamage = 6f;
+    [JsonProperty("durationSeconds")] public float DurationSeconds = 3f;
+    [JsonProperty("tickIntervalSeconds")] public float TickIntervalSeconds = .5f;
+    [JsonProperty("holdDamage")] public float HoldDamage = 2f;
+    [JsonProperty("carryDamage")] public float CarryDamage = 2f;
     [JsonProperty("targetSlowFraction")] public float TargetSlowFraction = .25f;
     [JsonProperty("casterSlowFraction")] public float CasterSlowFraction = .5f;
 

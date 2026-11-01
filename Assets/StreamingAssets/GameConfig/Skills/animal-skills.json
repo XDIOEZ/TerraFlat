@@ -3,8 +3,8 @@
   "skills": [
     {
       "id": "animal.bite_attack", "type": "biteAttack", "triggerDistance": 0,
-      "durationSeconds": 9, "tickIntervalSeconds": 3, "cooldownSeconds": 180,
-      "holdDamage": 5, "carryDamage": 6, "targetSlowFraction": 0.25, "casterSlowFraction": 0.5
+      "durationSeconds": 3, "tickIntervalSeconds": 0.5, "cooldownSeconds": 180,
+      "holdDamage": 2, "carryDamage": 2, "targetSlowFraction": 0.25, "casterSlowFraction": 0.5
     },
     {
       "id": "animal.charge_attack",

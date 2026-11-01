@@ -45,8 +45,8 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 ## 武器、命中与组合
 
 - GO 生物几何接触后的逻辑命中由 `CreatureHitChanceRules` 计算：攻击者生命模块 `AccuracyLevel` (0–10) ×10%，目标 `SizeLevel` (0–10) ×10%，再乘武器与体力/血量修正；`DodgeChance` 和每个已加载 `ICreatureDodgeChanceSource` 按 `(1-闪避率)` 逐项乘算（单项最多95%），绝不加算或保底覆盖0级。默认玩家命中7/体型5，蜜蜂体型2（无额外技能闪避时7级命中14%）；不改变飞行贴图受击盒或资源攻击。Lua `combat/logical_hit_levels` 在 `external-rules.lua`。
-- `Mod_BiteAttack` 是可组合的 `IAnimalCombatSkill`，通过 `IAnimalAttackRangeSource` 读取默认范围，不识别具体物种。仅比较 `Stack.Weight` 身体质量，目标至少为发动者一半时挂咬，否则拖行；3/6/9秒结算物理伤害，冷却180秒随模块快照保存。`ActorActionConstraints` 来源租约管理普攻禁止、乘法减速叠加与唯一跟随，双方死亡/卸载/代际变化/运动重置会释放；`core:bite_*` 为非持久来源标识。`IPeriodicDamageSource` 独立结算周期命中，不占普通受击冷却，防御、阵营和死亡仍走正式入口。
-- 联机玩家强制跟随及减速由 `NetworkWorldPlayer.ActionConstraints` 同步，服务器用同一跟随位置覆盖客户端移动提交，B目标不能翻滚挣脱。`combat/bite_attack` 覆盖质量边界、配置、减速/攻击租约和冷却快照；真实9秒时序、碰撞、多人叠加与断线/切世界仍需现场回归。
+- `Mod_BiteAttack` 是可组合的 `IAnimalCombatSkill`，通过 `IAnimalAttackRangeSource` 读取默认范围，不识别具体物种。仅比较 `Stack.Weight` 身体质量，目标至少为发动者一半时挂咬，否则拖行；持续3秒、每0.5秒结算2点物理伤害（含第3秒最后一次），冷却180秒随模块快照保存。`ActorActionConstraints` 来源租约管理普攻禁止、乘法减速叠加与唯一跟随，双方死亡/卸载/代际变化/运动重置会释放；`core:bite_*` 为非持久来源标识。`IPeriodicDamageSource` 独立结算周期命中，不占普通受击冷却，防御、阵营和死亡仍走正式入口。
+- 联机玩家强制跟随及减速由 `NetworkWorldPlayer.ActionConstraints` 同步，服务器用同一跟随位置覆盖客户端移动提交，B目标不能翻滚挣脱。`combat/bite_attack` 覆盖质量边界、配置、减速/攻击租约和冷却快照；真实3秒周期命中、碰撞、多人叠加与断线/切世界仍需现场回归。
 
 - 技能模块通过所属 `Item.OnAct` 接收使用并在 Unload 解绑，不直接订阅玩家右键；快捷栏独占手持物使用入口。
 - Mod_Damage 管统一发送/窗口，工具由 Mod_ResourceTool/Mod_Shovel 等通过 ICombatDamageContextModifier 附上下文；动作表现经 IWeaponActionAnimation，概率状态由独立 DamageOnHitBuffApplier 组合。
