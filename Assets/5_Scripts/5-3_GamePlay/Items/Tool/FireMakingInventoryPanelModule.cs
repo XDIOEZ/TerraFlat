@@ -78,6 +78,8 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
         if (ObserveOutputInventoryForPreview && OutputInventory?.Data != null)
             OutputInventory.Data.Event_OnDataChanged -= OnFireMakingInventoryChanged;
         DestroyFireMakingPanel();
+        InputInventory?.UnbindRuntimeDataEvents();
+        OutputInventory?.UnbindRuntimeDataEvents();
     }
 
     protected void OnDestroy() => Unload();

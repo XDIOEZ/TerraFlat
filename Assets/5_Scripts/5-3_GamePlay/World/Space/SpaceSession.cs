@@ -153,6 +153,7 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrWhiteSpace(save.SpaceStateJson) && template != null && !string.IsNullOrWhiteSpace(template.Name))
                 earth.PlanetId = template.Name;
             foreach (UniverseState sector in State.Sectors) RegisterSectorPlanets(sector, template);
+            RefreshElevatorGroundWarehouseWorldInfluenceHosts();
             foreach (ShipState ship in State.Ships)
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);

@@ -61,7 +61,7 @@ public sealed class Mod_Spacesuit : Module, IInteractable, IModuleJsonParameterV
     protected override void OnLoad()
     {
         Configuration.Validate();
-        SpacesuitSystem.GetBinding(item.itemData, item.Owner != null ? item.Owner : item);
+        SpacesuitSystem.BindRuntimeInventories(item.itemData, item.Owner != null ? item.Owner : item);
         item.OnAct += OpenHeld;
     }
     protected override void OnSave() => SpacesuitSystem.Flush(item.itemData);
@@ -82,6 +82,9 @@ public sealed class Mod_Spacesuit : Module, IInteractable, IModuleJsonParameterV
     {
         if (item != null) item.OnAct -= OpenHeld;
         SpacesuitPanelSession.CloseFor(item?.itemData);
+        Item runtimeOwner = item?.Owner != null ? item.Owner : item;
+        if (!SpacesuitSystem.IsActuallyEquipped(runtimeOwner, item?.itemData))
+            SpacesuitSystem.UnbindRuntimeInventories(item?.itemData, runtimeOwner);
     }
     private void OpenHeld() { if (item.Owner != null) OnInteractStart(item.Owner); }
     public bool CanInteract(Item actor) => item != null && actor != null;
@@ -208,6 +211,23 @@ public static class SpacesuitSystem
     }
     private static readonly ConditionalWeakTable<Ex_ModData_MemoryPackable, Cache> states = new();
     private static readonly ConditionalWeakTable<Item, Protection> protections = new();
+    public static SpacesuitBinding BindRuntimeInventories(ItemData suit, Item owner)
+    {
+        SpacesuitBinding binding = GetBinding(suit, owner);
+        binding?.TankInventory.InitData();
+        binding?.PropulsionTankInventory.InitData();
+        return binding;
+    }
+
+    public static void UnbindRuntimeInventories(ItemData suit, Item owner = null)
+    {
+        Ex_ModData_MemoryPackable binary = FluidTankStorage.FindBinary(suit, Mod_Spacesuit.ModuleId);
+        if (binary == null || !states.TryGetValue(binary, out Cache cache) || cache.Binding == null ||
+            owner != null && !ReferenceEquals(cache.Binding.Owner, owner)) return;
+        cache.Binding.TankInventory.UnbindRuntimeDataEvents();
+        cache.Binding.PropulsionTankInventory.UnbindRuntimeDataEvents();
+    }
+
     public static SpacesuitBinding GetBinding(ItemData suit, Item owner)
     {
         Ex_ModData_MemoryPackable binary = FluidTankStorage.FindBinary(suit, Mod_Spacesuit.ModuleId);

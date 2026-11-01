@@ -116,7 +116,12 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         LogDebug("Equip-Before", item);
 
         RestoreInventoryState();
+        string hostId = GetBagInventoryWorldInfluenceHostId(EquippedItem);
+        if (!string.IsNullOrWhiteSpace(hostId))
+            ItemSlotWorldInfluenceSystem.RemoveHost(hostId);
         BagInventory.item = item;
+        BagInventory.MachineOwner = null;
+        BagInventory.SetItemSlotWorldInfluenceHostId(hostId);
 
         var controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         BagInventory.InitData();
@@ -146,12 +151,14 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
             return;
 
         BagInventory.UnbindController();
-        BagInventory.UnbindRuntimeDataEvents();
+        BagInventory.DefaultTarget_Inventory = null;
         if (BagInventory.basePanel != null)
         {
             BagInventory.basePanel.Destroy();
             BagInventory.basePanel = null;
         }
+        if (!TryAnchorBagInventoryToWorldCarrier(item))
+            BagInventory.UnbindRuntimeDataEvents();
 
         LogDebug("UnEquip-After", item);
 
@@ -210,6 +217,40 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         }
 
         return null;
+    }
+
+    private static string GetBagInventoryWorldInfluenceHostId(ItemData bagItem)
+        => bagItem?.Guid > 0
+            ? "equipment-bag:" + bagItem.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : null;
+
+    /// <summary>卸下后将背包内容锚定到实际背包物品或当前真实所属库存。</summary>
+    private bool TryAnchorBagInventoryToWorldCarrier(Item owner)
+    {
+        ItemData bagItemData = EquippedItem;
+        Item bagItem = bagItemData?.Guid > 0
+            ? ItemMgr.GetExistingInstance()?.GetItemByGuid(bagItemData.Guid)
+            : null;
+        if (bagItem != null)
+        {
+            BagInventory.item = bagItem;
+            BagInventory.MachineOwner = null;
+        }
+        else if (owner != null && InventoryContextResolver.TryResolveContainingInventory(
+                     owner, bagItemData, out Inventory containingInventory))
+        {
+            BagInventory.item = containingInventory.item;
+            BagInventory.MachineOwner = containingInventory.MachineOwner;
+        }
+        else
+        {
+            BagInventory.item = null;
+            BagInventory.MachineOwner = null;
+            return false;
+        }
+
+        BagInventory.InitData();
+        return true;
     }
 
     #endregion

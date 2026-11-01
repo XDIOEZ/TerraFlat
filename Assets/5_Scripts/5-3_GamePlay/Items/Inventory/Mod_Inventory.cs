@@ -63,6 +63,9 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
     {
         Data ??= new Inventory_ModuleData();
         Data.Data ??= new Dictionary<string, Inventory_Data>();
+        string inventoryModuleStableName = string.IsNullOrWhiteSpace(Data.StableName)
+            ? ResolvedModuleId
+            : Data.StableName;
 
         // 先根据序列化列表构建运行时字典
         inventoryRefDic.Clear();
@@ -112,6 +115,8 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
             // 设置所有者
             currentInventory.item = item;
+            currentInventory.SetItemSlotWorldInfluenceHostId(
+                $"item:{item?.itemData?.Guid ?? 0}/module:{inventoryModuleStableName}/inventory:{inventoryId}");
 
             // 设置默认目标库存
             var handInventory = item.GetComponentInChildren<Mod_Hand>()?.HandInventory;
@@ -136,6 +141,7 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
                 NewMethod(currentInventory);
             }
         }
+        Data.NotifyInventoryMapStructureChanged();
         // 所有容器初始化完成后统一绑定，避免每个容器重复重绑整组输入。
         BindController();
 
@@ -418,6 +424,7 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
                     Data.Data[GetInventoryKey(currentInventory, i)] = currentInventory.Data;
                 }
             }
+            Data.NotifyInventoryMapStructureChanged();
 
             Item_Data.ModuleDataDic[_Data.Name] = Data;
         }
@@ -592,6 +599,7 @@ public static class InventoryModuleDataPersistence
             data => data.SharedConfiguration == null
                 ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
         source.Data[key] = target.Data;
+        source.NotifyInventoryMapStructureChanged();
         return true;
     }
 
@@ -605,5 +613,6 @@ public static class InventoryModuleDataPersistence
             return;
 
         target.Data[key] = source.Data;
+        target.NotifyInventoryMapStructureChanged();
     }
 }

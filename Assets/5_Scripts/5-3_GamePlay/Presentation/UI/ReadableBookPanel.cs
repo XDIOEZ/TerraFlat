@@ -159,9 +159,9 @@ public sealed class ReadableBookPanel : MonoBehaviour
         if (book?.InputInventoryData == null)
             return;
 
-        bookInventory ??= new Inventory();
-        bookInventory.item = actor;
-        bookInventory.Data = book.InputInventoryData;
+        bookInventory = book.InputInventoryHost;
+        if (bookInventory == null)
+            return;
         bookInventory.DefaultTarget_Inventory = actor.GetComponentInChildren<Mod_Hand>()?.HandInventory ??
                                                 Inventory_Hand.PlayerHand;
         bookInventory.itemSlot_UI.Clear();
@@ -340,6 +340,14 @@ public sealed class ReadableBookPanel : MonoBehaviour
     {
         if (book?.InputInventoryData != null)
             book.InputInventoryData.Event_OnDataChanged -= OnInputInventoryChanged;
+
+        if (bookInventory != null)
+        {
+            bookInventory.DefaultTarget_Inventory = null;
+            bookInventory.UnbindSlotDataEvents();
+            bookInventory.itemSlot_UI.Clear();
+            bookInventory = null;
+        }
 
         book = null;
         actor = null;

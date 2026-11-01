@@ -420,7 +420,7 @@
       "parent": "Equipment_Base",
       "worldDropBehavior": "interactive",
       "gameName": "宇航服衣服",
-      "description": "宇航服外层护甲，内搭衣物可自由选择。穿戴时扩展安全体温范围，增强耐寒与耐热能力；穿齐整套并戴好头盔后扩展安全气压范围。配置页分别更换供氧和推进气罐，落地缓冲消耗衣服自身耐久，超过保护能力的冲击仍会伤害玩家。",
+      "description": "宇航服外层护甲，内搭衣物可自由选择。穿戴时扩展安全体温与辐射范围，增强耐寒与耐热能力；穿齐整套并戴好头盔后扩展安全气压范围。配置页分别更换供氧和推进气罐，落地缓冲消耗衣服自身耐久，超过保护能力的冲击仍会伤害玩家。",
       "durability": 200,
       "maxDurability": 200,
       "amount": 1,
@@ -486,6 +486,12 @@
               {
                 "Name": "宇航服生命支持",
                 "$concreteType": "EquipmentInstance_SpacesuitSupport"
+              },
+              {
+                "LowRadiationToleranceIncrease": 0,
+                "HighRadiationToleranceIncrease": 0.2,
+                "Name": "宇航服辐射防护",
+                "$concreteType": "EquipmentInstance_RadiationProtection"
               }
             ]
           },

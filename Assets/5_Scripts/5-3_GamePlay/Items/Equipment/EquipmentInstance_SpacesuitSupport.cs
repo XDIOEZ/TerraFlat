@@ -16,6 +16,7 @@ public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAm
     {
         owner = item;
         oxygen = item != null ? item.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId) : null;
+        SpacesuitSystem.BindRuntimeInventories(EquippedItem, owner);
         SpacesuitSystem.RefreshProtection(owner);
     }
     public override void Update() => Update(Time.deltaTime);
@@ -36,6 +37,7 @@ public partial class EquipmentInstance_SpacesuitSupport : EquipmentInstance, IAm
     {
         SpacesuitSystem.ClearProtection(owner);
         SpacesuitPanelSession.CloseFor(EquippedItem);
+        SpacesuitSystem.UnbindRuntimeInventories(EquippedItem, owner);
         owner = null;
         oxygen = null;
         supplyClock = 0f;

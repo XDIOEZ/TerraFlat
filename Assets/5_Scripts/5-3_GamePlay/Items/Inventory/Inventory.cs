@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 
 [System.Serializable]
 // 库存持有权威数据与转移入口，面板和设备交互分文件维护。
-public partial class Inventory
+public partial class Inventory : IItemSlotHost
 {
     #region 库存数据、生命周期与转移
     [NonSerialized] public MachineEntity MachineOwner; // 数据机器的归属信息不参与库存序列化。
@@ -17,6 +17,13 @@ public partial class Inventory
 
     [FoldoutGroup("基础引用"), ReadOnly, LabelText("所属物品")]
     public Item item;
+
+    [NonSerialized] private string itemSlotWorldInfluenceHostId;
+    [NonSerialized] private string itemSlotWorldInfluenceRuntimeHostId;
+    [NonSerialized] private Inventory_Data itemSlotWorldInfluenceObservedData;
+    [NonSerialized] private Item itemSlotWorldInfluenceAnchorItem;
+    [NonSerialized] private Mod_Mover itemSlotWorldInfluenceObservedMover;
+    private static int nextItemSlotWorldInfluenceRuntimeHostId;
 
     [FoldoutGroup("基础引用"), LabelText("UI面板预制体"), Tooltip("在Inspector中设置对应Inventory的面板预制体")]
     public GameObject InventoryPanel_Prefab;
@@ -187,6 +194,7 @@ public partial class Inventory
     /// <summary>库存真正退出运行时生命周期时，解除数据层到 UI 的刷新监听。</summary>
     public void UnbindRuntimeDataEvents()
     {
+        UnbindItemSlotWorldInfluenceEvents();
         _moduleDataScheduler?.Dispose();
         _moduleDataScheduler = null;
         if (Data != null)
@@ -267,7 +275,141 @@ public partial class Inventory
         BindPlayerCarryWeightEvents();
         _moduleDataScheduler ??= new InventoryModuleDataScheduler(this);
         _moduleDataScheduler.Bind(Data);
+        BindItemSlotWorldInfluenceEvents();
     }
+
+    #region 槽位世界层影响宿主
+
+    public string ItemSlotHostId
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(itemSlotWorldInfluenceHostId)) return itemSlotWorldInfluenceHostId;
+            if (MachineOwner != null)
+                return $"machine:{MachineOwner.ScopeKey}/{MachineOwner.Id}/{MachineOwner.Definition?.LogicId}/{Data?.Name}";
+            ItemData ownerData = item?.itemData;
+            if (ownerData == null || ownerData.Guid == 0) return null;
+            return itemSlotWorldInfluenceRuntimeHostId ??= $"item:{ownerData.Guid}/inventory-runtime:{++nextItemSlotWorldInfluenceRuntimeHostId}";
+        }
+    }
+
+    public virtual int ItemSlotWorldInfluencePriority => 0;
+    public MachineEntity ItemSlotMachineOwner => MachineOwner;
+
+    public void CollectItemSlotAnchorMovementItems(List<Item> result)
+    {
+        if (result == null) return;
+        result.Clear();
+        if (MachineOwner != null) return;
+        for (Item current = item; current != null; current = current.Owner)
+            result.Add(current);
+    }
+
+    public void SetItemSlotWorldInfluenceHostId(string hostId)
+    {
+        if (string.Equals(itemSlotWorldInfluenceHostId, hostId, StringComparison.Ordinal)) return;
+        ItemSlotWorldInfluenceSystem.RemoveHost(this);
+        itemSlotWorldInfluenceHostId = hostId;
+        ItemSlotWorldInfluenceSystem.RefreshHost(this);
+    }
+
+    public bool TryGetItemSlotWorldAnchor(out string worldKey, out Vector2 position)
+    {
+        if (MachineOwner != null)
+        {
+            worldKey = MachineOwner.ScopeKey;
+            position = MachineOwner.Position;
+            return !string.IsNullOrWhiteSpace(worldKey);
+        }
+
+        Item root = item;
+        while (root?.Owner != null) root = root.Owner;
+        if (root == null)
+        {
+            worldKey = null;
+            position = default;
+            return false;
+        }
+
+        worldKey = GameplayWorldRegistry.GetItemWorldKey(root);
+        if (string.IsNullOrWhiteSpace(worldKey)) worldKey = root.gameObject.scene.name;
+        Vector2 rootPosition = root.transform.position;
+        if (string.Equals(worldKey, GameplayWorldRegistry.ExecutionWorldKey, StringComparison.Ordinal))
+            rootPosition = WorldTopologyRuntime.NormalizePosition(rootPosition);
+        else if (GameplayWorldRegistry.TryGet(worldKey, out _))
+        {
+            using (GameplayWorldRegistry.UseWorld(worldKey))
+                rootPosition = WorldTopologyRuntime.NormalizePosition(rootPosition);
+        }
+        position = new Vector2(Mathf.Floor(rootPosition.x) + 0.5f, Mathf.Floor(rootPosition.y) + 0.5f);
+        return !string.IsNullOrWhiteSpace(worldKey);
+    }
+
+    public void CollectItemSlotBindings(List<ItemSlotWorldBinding> result)
+    {
+        if (result == null || Data?.itemSlots == null) return;
+        for (int index = 0; index < Data.itemSlots.Count; index++)
+            result.Add(new ItemSlotWorldBinding(index.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Data.itemSlots[index]?.itemData));
+    }
+
+    private void BindItemSlotWorldInfluenceEvents()
+    {
+        if (ReferenceEquals(itemSlotWorldInfluenceObservedData, Data))
+        {
+            _ = Data?.ContentStructureRevision;
+            BindItemSlotWorldInfluenceAnchorMovementEvents();
+            ItemSlotWorldInfluenceSystem.RefreshHostAnchor(this);
+            return;
+        }
+
+        UnbindItemSlotWorldInfluenceEvents();
+        itemSlotWorldInfluenceObservedData = Data;
+        if (itemSlotWorldInfluenceObservedData == null) return;
+        _ = itemSlotWorldInfluenceObservedData.ContentStructureRevision;
+        itemSlotWorldInfluenceObservedData.RuntimeStructureChanged += OnItemSlotWorldInfluenceStructureChanged;
+        BindItemSlotWorldInfluenceAnchorMovementEvents();
+        ItemSlotWorldInfluenceSystem.RefreshHost(this);
+    }
+
+    private void UnbindItemSlotWorldInfluenceEvents()
+    {
+        if (itemSlotWorldInfluenceObservedData != null)
+        {
+            itemSlotWorldInfluenceObservedData.RuntimeStructureChanged -= OnItemSlotWorldInfluenceStructureChanged;
+            itemSlotWorldInfluenceObservedData = null;
+        }
+        if (itemSlotWorldInfluenceObservedMover != null)
+            itemSlotWorldInfluenceObservedMover.WorldUnitChanged -= OnItemSlotWorldInfluenceAnchorWorldUnitChanged;
+        itemSlotWorldInfluenceObservedMover = null;
+        itemSlotWorldInfluenceAnchorItem = null;
+        ItemSlotWorldInfluenceSystem.RemoveHost(this);
+    }
+
+    private void BindItemSlotWorldInfluenceAnchorMovementEvents()
+    {
+        Item root = item;
+        while (root?.Owner != null) root = root.Owner;
+        Mod_Mover mover = root != null ? root.GetComponentInChildren<Mod_Mover>(true) : null;
+        if (ReferenceEquals(root, itemSlotWorldInfluenceAnchorItem) &&
+            ReferenceEquals(mover, itemSlotWorldInfluenceObservedMover))
+            return;
+
+        if (itemSlotWorldInfluenceObservedMover != null)
+            itemSlotWorldInfluenceObservedMover.WorldUnitChanged -= OnItemSlotWorldInfluenceAnchorWorldUnitChanged;
+        itemSlotWorldInfluenceAnchorItem = root;
+        itemSlotWorldInfluenceObservedMover = mover;
+        if (itemSlotWorldInfluenceObservedMover != null)
+            itemSlotWorldInfluenceObservedMover.WorldUnitChanged += OnItemSlotWorldInfluenceAnchorWorldUnitChanged;
+    }
+
+    private void OnItemSlotWorldInfluenceStructureChanged(Inventory_Data _)
+        => ItemSlotWorldInfluenceSystem.RefreshHost(this);
+
+    private void OnItemSlotWorldInfluenceAnchorWorldUnitChanged(Vector2Int _)
+        => ItemSlotWorldInfluenceSystem.RefreshHostAnchor(this);
+
+    #endregion
 
     /// <summary>
     /// 自动初始化容器内的物品
@@ -672,6 +814,7 @@ public partial class Inventory
             if (ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>() != null)
                 Data.itemSlots.Add(new ItemSlot());
         }
+        Data.NotifySlotsChanged();
     }
     public virtual void Save()
     {

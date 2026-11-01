@@ -55,6 +55,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "parameters": {
             "visualMode": 1,
@@ -228,6 +233,11 @@
       "gameName": "海鸥",
       "description": "仅在沙滩群系生态生成的鸟类变体。",
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "health": {
           "parameters": {
             "Data": {
@@ -353,6 +363,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "parameters": {
             "visualMode": 1,

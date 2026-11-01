@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using UnityEngine;
 
 /// <summary>注册整类机器玩法，不把炉温、燃料或端口拆成微型模块；代码 MOD 可替换工厂。</summary>
-public static class MachineLogicRegistry
+public static partial class MachineLogicRegistry
 {
     #region 领域工厂
     private sealed class Registration
@@ -12,6 +12,7 @@ public static class MachineLogicRegistry
         public string Id;
         public Type AuthoringType;
         public Func<MachineEntity, MachineLogic> Factory;
+        public Action<MachineEntity, List<ItemSlotWorldBinding>> ColdItemSlotBindingCollector;
         public FluidDeviceBehavior FluidBehavior;
         public Registration Previous;
         public bool Released;
@@ -53,21 +54,21 @@ public static class MachineLogicRegistry
     {
         if (initialized) return;
         initialized = true;
-        Add("workbench", typeof(Mod_MakeTable), entity => new WorkbenchLogic(entity));
-        Add("furnace", typeof(Mod_Furnace), entity => new FurnaceLogic(entity));
-        Add("compost", typeof(Mod_CompostBin), entity => new CompostLogic(entity));
-        Add("drying", typeof(Mod_Meatrack), entity => new DryingRackLogic(entity));
-        Add("storage", typeof(Mod_Inventory), entity => new StorageLogic(entity));
-        Add("manual-processing", typeof(Mod_ManualProcessor), entity => new ManualProcessingLogic(entity));
-        Add("hand-drill", typeof(Mod_HandDrill), entity => new HandDrillLogic(entity));
-        Add("fire-drill", typeof(Mod_FireDrill), entity => new FireDrillLogic(entity));
-        Add("mortar", typeof(Mod_Mortar), entity => new MortarLogic(entity));
-        Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity));
-        Add("fluid", null, entity => new FluidMachineLogic(entity));
+        Add("workbench", typeof(Mod_MakeTable), entity => new WorkbenchLogic(entity), CollectWorkbenchItemSlotBindings);
+        Add("furnace", typeof(Mod_Furnace), entity => new FurnaceLogic(entity), CollectFurnaceItemSlotBindings);
+        Add("compost", typeof(Mod_CompostBin), entity => new CompostLogic(entity), CollectCompostItemSlotBindings);
+        Add("drying", typeof(Mod_Meatrack), entity => new DryingRackLogic(entity), CollectDryingRackItemSlotBindings);
+        Add("storage", typeof(Mod_Inventory), entity => new StorageLogic(entity), CollectStorageItemSlotBindings);
+        Add("manual-processing", typeof(Mod_ManualProcessor), entity => new ManualProcessingLogic(entity), CollectManualProcessingItemSlotBindings);
+        Add("hand-drill", typeof(Mod_HandDrill), entity => new HandDrillLogic(entity), CollectHandDrillItemSlotBindings);
+        Add("fire-drill", typeof(Mod_FireDrill), entity => new FireDrillLogic(entity), CollectFireDrillItemSlotBindings);
+        Add("mortar", typeof(Mod_Mortar), entity => new MortarLogic(entity), CollectMortarItemSlotBindings);
+        Add("vessel", typeof(Mod_WaterVessel), entity => new VesselLogic(entity), CollectVesselItemSlotBindings);
+        Add("fluid", null, entity => new FluidMachineLogic(entity), CollectFluidMachineItemSlotBindings);
         Add("electric-heater", null, entity => new ElectricHeaterLogic(entity));
-        Add("induction-stove", null, entity => new InductionStoveLogic(entity));
+        Add("induction-stove", null, entity => new InductionStoveLogic(entity), CollectInductionStoveItemSlotBindings);
         Add("electric-light", null, entity => new ElectricLightLogic(entity));
-        Add("cultivator", typeof(Mod_Cultivator), entity => new CultivatorLogic(entity));
+        Add("cultivator", typeof(Mod_Cultivator), entity => new CultivatorLogic(entity), CollectCultivatorItemSlotBindings);
         Add("ship-device", null, entity => new ShipDeviceLogic(entity));
         AddFluidDevice("pipe", new FluidTransitBehavior());
         AddFluidDevice("outlet", new FluidOutletBehavior());
@@ -84,18 +85,22 @@ public static class MachineLogicRegistry
         AddFluidDevice("combustion-engine", new FluidAmbientCombustionEngineBehavior());
     }
 
-    private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory)
-        => registrations.Add(id, new Registration { Id = id, AuthoringType = authoring, Factory = factory });
+    private static void Add(string id, Type authoring, Func<MachineEntity, MachineLogic> factory,
+        Action<MachineEntity, List<ItemSlotWorldBinding>> coldItemSlotBindingCollector = null)
+        => registrations.Add(id, new Registration
+        { Id = id, AuthoringType = authoring, Factory = factory, ColdItemSlotBindingCollector = coldItemSlotBindingCollector });
 
     private static void AddFluidDevice(string kind, FluidDeviceBehavior behavior)
         => registrations.Add("fluid-device:" + kind, new Registration
-        { Id = "fluid-device:" + kind, Factory = entity => new FluidMachineLogic(entity), FluidBehavior = behavior });
+        { Id = "fluid-device:" + kind, Factory = entity => new FluidMachineLogic(entity),
+            ColdItemSlotBindingCollector = CollectFluidMachineItemSlotBindings, FluidBehavior = behavior });
 
     /// <summary>流体策略复用领域工厂的覆盖租约，目录检查只查询登记，不创建设备。</summary>
     public static IDisposable RegisterFluidDevice(string kind, FluidDeviceBehavior behavior, bool replace = false)
     {
         if (string.IsNullOrWhiteSpace(kind) || behavior == null) throw new ArgumentException("流体设备策略登记无效。");
-        return RegisterCore("fluid-device:" + kind, entity => new FluidMachineLogic(entity), null, replace, behavior);
+        return RegisterCore("fluid-device:" + kind, entity => new FluidMachineLogic(entity), null, replace,
+            behavior, CollectFluidMachineItemSlotBindings);
     }
 
     public static bool IsFluidDeviceRegistered(string kind)
@@ -111,11 +116,13 @@ public static class MachineLogicRegistry
     /// <summary>MOD 可以注册带自定义配置模块的机器，或仅通过 MachineDefinition.LogicId 选择领域工厂。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static IDisposable Register(string id, Func<MachineEntity, MachineLogic> factory,
-        Type authoringType = null, bool replace = false)
-        => RegisterCore(id, factory, authoringType, replace, null);
+        Type authoringType = null, bool replace = false,
+        Action<MachineEntity, List<ItemSlotWorldBinding>> coldItemSlotBindingCollector = null)
+        => RegisterCore(id, factory, authoringType, replace, null, coldItemSlotBindingCollector);
 
     private static IDisposable RegisterCore(string id, Func<MachineEntity, MachineLogic> factory,
-        Type authoringType, bool replace, FluidDeviceBehavior fluidBehavior)
+        Type authoringType, bool replace, FluidDeviceBehavior fluidBehavior,
+        Action<MachineEntity, List<ItemSlotWorldBinding>> coldItemSlotBindingCollector)
     {
         EnsureBuiltIns();
         if (string.IsNullOrWhiteSpace(id) || factory == null ||
@@ -126,6 +133,7 @@ public static class MachineLogicRegistry
         var entry = new Registration
         {
             Id = id, Factory = factory, AuthoringType = authoringType ?? previous?.AuthoringType,
+            ColdItemSlotBindingCollector = coldItemSlotBindingCollector ?? previous?.ColdItemSlotBindingCollector,
             FluidBehavior = fluidBehavior,
             Previous = previous
         };
@@ -156,6 +164,20 @@ public static class MachineLogicRegistry
             throw new InvalidOperationException("机器领域工厂缺失：" + entity.Definition.LogicId);
         MachineContent.GetOrCreateDefinitionContent(entity.Definition);
         return entry.Factory(entity) ?? throw new InvalidOperationException("机器领域工厂返回空对象：" + entry.Id);
+    }
+
+    public static void CollectColdItemSlotBindings(MachineEntity entity, List<ItemSlotWorldBinding> result)
+    {
+        if (entity == null || result == null) return;
+        EnsureBuiltIns();
+        string logicId = entity.Definition?.LogicId;
+        if (string.IsNullOrWhiteSpace(logicId))
+        {
+            CollectCoreProcessorItemSlotBindings(entity, result);
+            return;
+        }
+        if (registrations.TryGetValue(logicId, out Registration entry))
+            entry.ColdItemSlotBindingCollector?.Invoke(entity, result);
     }
 
     /// <summary>只读复用已注册模块与建筑后端声明，供尚未支持的数据能力提前拒绝配置。</summary>

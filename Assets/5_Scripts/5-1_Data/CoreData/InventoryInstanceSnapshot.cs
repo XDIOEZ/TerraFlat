@@ -21,6 +21,9 @@ public sealed partial class InventoryInstanceSnapshot
 
     [MemoryPackIgnore] public int SlotCount => slots?.Length ?? 0;
 
+    public ItemInstanceSnapshot GetItemSlotSnapshot(int slotIndex)
+        => slots != null && (uint)slotIndex < (uint)slots.Length ? slots[slotIndex] : null;
+
     public static InventoryInstanceSnapshot Capture(Inventory_Data data)
     {
         if (data == null) return null;
@@ -59,6 +62,7 @@ public sealed partial class InventoryInstanceSnapshot
         data.PanelPosition = new Vector3(panelPositionX, panelPositionY, panelPositionZ);
         data.PanelIsOpen = panelIsOpen;
         data.IsDepositBlocked = depositBlocked;
+        bool layoutChanged = data.itemSlots == null;
         data.itemSlots ??= new();
         int count = slots?.Length ?? 0;
         var available = new Dictionary<(string DefinitionId, int Guid, ItemInstanceKind Kind), ItemData>();
@@ -76,10 +80,18 @@ public sealed partial class InventoryInstanceSnapshot
         foreach (ItemInstanceSnapshot saved in slots ?? Array.Empty<ItemInstanceSnapshot>())
             if (saved != null && saved.Guid != 0 && !savedGuids.Add(saved.Guid)) ambiguousGuids.Add(saved.Guid);
         // 保留当前布局的槽位容量与标签，扩展槽位仍保留物品以免缩容丢失。
-        while (data.itemSlots.Count < count) data.itemSlots.Add(new ItemSlot(data.itemSlots.Count));
+        while (data.itemSlots.Count < count)
+        {
+            data.itemSlots.Add(new ItemSlot(data.itemSlots.Count));
+            layoutChanged = true;
+        }
         for (int i = 0; i < data.itemSlots.Count; i++)
         {
-            data.itemSlots[i] ??= new ItemSlot(i);
+            if (data.itemSlots[i] == null)
+            {
+                data.itemSlots[i] = new ItemSlot(i);
+                layoutChanged = true;
+            }
             ItemInstanceSnapshot saved = i < count ? slots[i] : null;
             ItemData current = data.itemSlots[i].itemData;
             if (saved == null) { data.itemSlots[i].itemData = null; continue; }
@@ -104,6 +116,7 @@ public sealed partial class InventoryInstanceSnapshot
                 data.itemSlots[i].itemData = restoreItem == null ? restored : restoreItem(restored);
             }
         }
+        if (layoutChanged) data.NotifySlotsChanged();
     }
 
     public static Dictionary<string, InventoryInstanceSnapshot> CaptureDictionary(IDictionary<string, Inventory_Data> data)

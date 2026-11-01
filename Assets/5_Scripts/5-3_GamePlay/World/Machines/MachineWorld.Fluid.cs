@@ -303,7 +303,13 @@ public static partial class MachineWorld
                 }
                 else if (node.Definition.HasMechanicalPorts != true)
                 {
-                    if (node.State != null) { CaptureNode(node); DisposeProcessor(node); node.State = null; }
+                    if (node.State != null)
+                    {
+                        CaptureNode(node);
+                        DisposeProcessor(node);
+                        node.State = null;
+                        ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
+                    }
                     node.Active = false;
                 }
             }

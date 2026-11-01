@@ -129,6 +129,7 @@ public static partial class MachineWorld
         node.ScopeKey = worldKey;
         nodes.Add(snapshot.Guid, node);
         PublishMachineCombustibility(node);
+        ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
     }
 
     /// <summary>仅正式安装提交和世界存档恢复调用；手持召唤器不会登记到网络。</summary>
@@ -187,8 +188,8 @@ public static partial class MachineWorld
         };
         InitializeElectricalState(node, state);
         CopyTopology(node);
-        EnsureProcessor(node);
         node.ScopeKey = worldKey;
+        EnsureProcessor(node);
         nodes.Add(node.Id, node);
         PublishMachineCombustibility(node);
         dirty = true;
@@ -292,7 +293,11 @@ public static partial class MachineWorld
         foreach (MachineEntity node in nodes.Values) changedCells.Add(node.Cell);
         foreach (MachineInteractionTarget interaction in interactions.Values) interaction.Dispose();
         interactions.Clear();
-        foreach (MachineEntity node in nodes.Values) DisposeProcessor(node);
+        foreach (MachineEntity node in nodes.Values)
+        {
+            ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
+            DisposeProcessor(node);
+        }
         nodes.Clear();
         ResetFluidRuntime();
         dirty = true;
@@ -345,6 +350,7 @@ public static partial class MachineWorld
         CopyTopology(node);
         node.Rpm = rpm;
         node.EntryDirection = entryDirection;
+        ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
         dirty = true;
         UpdateVisualSpeed(node);
         if (moved)
@@ -363,6 +369,7 @@ public static partial class MachineWorld
         if (!nodes.TryGetValue(id, out MachineEntity node)) return;
         if (interactions.Remove(id, out MachineInteractionTarget interaction)) interaction.Dispose();
         DisposeProcessor(node);
+        ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
         RemoveMachineCombustibility(node);
         nodes.Remove(id);
         if (node.Definition.Fluid != null) ForgetDetachedFluidNode(node);
@@ -751,13 +758,18 @@ public static partial class MachineWorld
     {
         if (!string.IsNullOrWhiteSpace(node.Definition.LogicId))
         {
-            node.Logic ??= MachineLogicRegistry.Create(node);
+            if (node.Logic == null)
+            {
+                ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
+                node.Logic = MachineLogicRegistry.Create(node);
+            }
             return;
         }
         if (node.Processor == null &&
             (!string.IsNullOrWhiteSpace(node.Definition.Station) ||
              !string.IsNullOrWhiteSpace(node.Definition.ProcessCapability)))
         {
+            ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
             node.Processor = new RecipeProcessor(
                 node.Definition.Station,
                 node.State.Processing ??= new RecipeProcessingState(),
@@ -765,6 +777,10 @@ public static partial class MachineWorld
                 node.Definition.ProcessCapabilityLevel > 0 ? node.Definition.ProcessCapabilityLevel : null);
             node.Processor.Input.MachineOwner = node;
             node.Processor.Output.MachineOwner = node;
+            node.Processor.Input.SetItemSlotWorldInfluenceHostId(
+                ItemSlotWorldInfluenceSystem.CreateMachineHostId(node.ScopeKey, node.Id, "core-input"));
+            node.Processor.Output.SetItemSlotWorldInfluenceHostId(
+                ItemSlotWorldInfluenceSystem.CreateMachineHostId(node.ScopeKey, node.Id, "core-output"));
             node.Processor.StateChanged += OnProcessorChanged;
             processorOwners[node.Processor] = node;
         }
@@ -797,6 +813,7 @@ public static partial class MachineWorld
             RemoveView(node);
             DisposeProcessor(node); node.State = null; node.Rpm = 0; node.IncomingPower = false;
             node.Active = false; node.LogicElapsed = 0f;
+            ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
             UpdateVisualSpeed(node);
         }
         network.Active = false; network.Status = "休眠";
@@ -1090,6 +1107,7 @@ public static partial class MachineWorld
         WriteElectricalState(node, state);
         MachinePersistence.Write(node.Snapshot, "core", state);
         if (TryGetModuleData(node.Snapshot, out var module)) module.WriteData(state);
+        ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
     }
     private static void CaptureCurrentWorld()
     {
@@ -1136,7 +1154,11 @@ public static partial class MachineWorld
         foreach (MachineInteractionTarget interaction in interactions.Values) interaction.Dispose();
         interactions.Clear();
         foreach (var node in nodes.Values)
-        { RemoveMachineCombustibility(node, preserveFuelConsumption: true); DisposeProcessor(node); }
+        {
+            ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
+            RemoveMachineCombustibility(node, preserveFuelConsumption: true);
+            DisposeProcessor(node);
+        }
         processorOwners.Clear();
         nodes.Clear(); elapsed = 0;
         PhysicsSourcesReset?.Invoke(worldKey);

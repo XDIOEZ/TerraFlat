@@ -359,11 +359,17 @@ test.system("survival", "radiation_equipment_serialization", {}, function(data)
     assert(data.memoryPackType, "辐射装备 MemoryPack union 往返类型错误")
     near(data.memoryPackLow, .15, "辐射装备 MemoryPack 下限字段")
     near(data.memoryPackHigh, .3, "辐射装备 MemoryPack 上限字段")
+    assert(data.legacyProtectionAdded and data.legacyThermalPreserved,
+        "旧装备实例没有补入新辐射防护或覆盖原隔热实例")
+    near(data.legacyProtectionHigh, .3, "旧装备实例补入当前辐射防护配置")
+    assert(data.adjustedProtectionCount == 1, "已存在的辐射防护被重复补入")
+    near(data.adjustedProtectionHigh, .45, "补齐辐射防护覆盖了存档调整值")
 end, "辐射装备 JSON 与 MemoryPack 注册")
 
 test.system("survival", "radiation_damage", {}, function(data)
+    near(data.damageScale, 1, "辐射伤害探针倍率没有固定为1")
     near(data.armored, 0, "辐射伤害被辐射防御减免")
-    assert(data.bypassed > 0 or data.damageScale <= 0, "无视辐射防御的伤害没有进入生命结算")
+    near(data.bypassed, 1, "辐射伤害没有完整绕过辐射防御")
 end, "辐射伤害绕过防御")
 
 test.system("survival", "oxygen_callback_order", {}, function(data)

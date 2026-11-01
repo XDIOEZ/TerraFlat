@@ -84,6 +84,7 @@ public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
 
     /// <summary>当前物品实例独有的书页、扩页数和输入库存。</summary>
     private ReadableBookInstanceData instanceData = new();
+    [System.NonSerialized] private Inventory inputInventoryHost;
 
     /// <summary>本地玩家请求打开一本书；UI 层监听此事件并实例化正式 Prefab。</summary>
     public static event Action<Mod_ReadableBook, Item> OpenRequested;
@@ -93,6 +94,7 @@ public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
     public int BasePageCount => pages?.Count ?? 0;
     public int PageCount => BasePageCount + Mathf.Max(0, instanceData?.AddedPageCount ?? 0);
     public Inventory_Data InputInventoryData => instanceData?.InputInventory;
+    public Inventory InputInventoryHost => inputInventoryHost;
     public bool CanEditContent => allowHandwriting && IsWritingMaterial(InputInventoryData?.GetItemSlot(WritingMaterialSlotIndex)?.itemData);
     public bool CanAddPage => allowPageExpansion && IsPaper(InputInventoryData?.GetItemSlot(PaperSlotIndex)?.itemData);
 
@@ -127,6 +129,11 @@ public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
                 ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
         ValidatePages();
 
+        inputInventoryHost ??= new Inventory();
+        inputInventoryHost.item = item;
+        inputInventoryHost.Data = InputInventoryData;
+        inputInventoryHost.InitData();
+
         InputInventoryData.Event_OnDataChanged -= OnInputInventoryChanged;
         InputInventoryData.Event_OnDataChanged += OnInputInventoryChanged;
         item.OnAct -= Act;
@@ -159,6 +166,7 @@ public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
 
         if (instanceData?.InputInventory != null)
             instanceData.InputInventory.Event_OnDataChanged -= OnInputInventoryChanged;
+        inputInventoryHost?.UnbindRuntimeDataEvents();
     }
 
     /// <summary>编辑器构建 Prefab 时保持稳定模块身份。</summary>

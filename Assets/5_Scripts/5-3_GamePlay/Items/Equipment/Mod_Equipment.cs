@@ -133,6 +133,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
 
         UnbindOpenPanelTrigger();
+        EquipmentInventory?.UnbindRuntimeDataEvents();
     }
 
     protected override void OnSave()
@@ -592,6 +593,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
             if (equipment_Instances[i].Count == 0 && equipment_ModuleData[i] != null)
                 equipment_Instances[i] = ReadEquipmentInstances(slotItemData, equipment_ModuleData[i]);
+            EnsureRadiationProtectionDefinitionInstance(
+                slotItemData, equipment_ModuleData[i], equipment_Instances[i]);
 
             foreach (var equipment in equipment_Instances[i])
             {
@@ -672,6 +675,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         if (equipment_ModuleData[index] != null && equipment_Instances[index].Count == 0)
         {
             List<EquipmentInstance> loadedList = ReadEquipmentInstances(LocalSlot.itemData, equipment_ModuleData[index]);
+            EnsureRadiationProtectionDefinitionInstance(
+                LocalSlot.itemData, equipment_ModuleData[index], loadedList);
 
             foreach (var equipment in loadedList)
             {
@@ -717,6 +722,17 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             return loaded ?? new List<EquipmentInstance>();
         }
 
+        return ReadEquipmentInstanceDefinitions(itemData, equipmentData);
+    }
+
+    private static List<EquipmentInstance> ReadEquipmentInstanceDefinitions(
+        ItemData itemData,
+        Ex_ModData_MemoryPackable equipmentData)
+    {
+        var loaded = new List<EquipmentInstance>();
+        if (equipmentData == null)
+            return loaded;
+
         GameRes gameRes = GameRes.Instance;
         if (gameRes == null || itemData == null ||
             !gameRes.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
@@ -743,6 +759,37 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             stableName,
             equipmentData.ModuleId,
             json);
+    }
+
+    private void EnsureRadiationProtectionDefinitionInstance(
+        ItemData itemData,
+        Ex_ModData_MemoryPackable equipmentData,
+        List<EquipmentInstance> instances)
+    {
+        if (itemData == null || equipmentData == null || instances == null ||
+            instances.Exists(instance => instance is EquipmentInstance_RadiationProtection))
+            return;
+
+        EnsureRadiationProtectionDefinitionInstance(
+            instances, ReadEquipmentInstanceDefinitions(itemData, equipmentData));
+    }
+
+    /// <summary>只补入当前定义中新添的辐射防护实例，保留存档中的其他实例和可调数值。</summary>
+    internal static void EnsureRadiationProtectionDefinitionInstance(
+        List<EquipmentInstance> instances,
+        IReadOnlyList<EquipmentInstance> currentDefinitions)
+    {
+        if (instances == null || currentDefinitions == null ||
+            instances.Exists(instance => instance is EquipmentInstance_RadiationProtection))
+            return;
+
+        for (int index = 0; index < currentDefinitions.Count; index++)
+        {
+            if (currentDefinitions[index] is not EquipmentInstance_RadiationProtection protection)
+                continue;
+            instances.Add(protection);
+            return;
+        }
     }
 
     private bool HasTickingEquipment()

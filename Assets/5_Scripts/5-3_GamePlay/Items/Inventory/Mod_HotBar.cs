@@ -112,6 +112,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         [System.NonSerialized]
         public Mod_HotBar Owner;
 
+        public override int ItemSlotWorldInfluencePriority => 100;
+
         public override void OnValidate()
         {
             base.OnValidate();
@@ -657,9 +659,11 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             throw new System.InvalidOperationException("[Mod_HotBar] Data 为空，无法初始化快捷栏槽位");
         }
 
+        bool layoutChanged = false;
         if (Data.itemSlots == null)
         {
             Data.itemSlots = new List<ItemSlot>();
+            layoutChanged = true;
         }
 
         int targetCount = Mathf.Max(HotBarMaxVolume, 1);
@@ -669,14 +673,17 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             if (i >= Data.itemSlots.Count)
             {
                 Data.itemSlots.Add(new ItemSlot(i));
+                layoutChanged = true;
             }
             else if (Data.itemSlots[i] == null)
             {
                 Data.itemSlots[i] = new ItemSlot(i);
+                layoutChanged = true;
             }
 
             Data.itemSlots[i].Index = i;
         }
+        if (layoutChanged) Data.NotifySlotsChanged();
     }
 
     private void EnsureHotBarUIOnLoad()

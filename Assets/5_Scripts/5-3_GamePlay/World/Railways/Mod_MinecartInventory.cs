@@ -25,6 +25,7 @@ public sealed class Mod_MinecartInventory : Module, IInventory
         Data.Data ??= new Dictionary<string, Inventory_Data>();
         EngineInventory = Create("Engines", 2);
         CargoInventory = Create("Cargo", CargoSlots);
+        Data.NotifyInventoryMapStructureChanged();
         CargoInventory.StorageMaxWeightKg = MaxCargoWeightKg;
         CargoInventory.StorageMaxVolumeCubicMeters = MaxCargoVolumeCubicMeters;
         EngineInventory.InitData(); CargoInventory.InitData();

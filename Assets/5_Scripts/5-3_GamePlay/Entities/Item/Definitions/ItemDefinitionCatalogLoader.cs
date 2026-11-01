@@ -1338,7 +1338,8 @@ public static class ItemDefinitionCatalogLoader
             gameRes,
             prototypeCache,
             dto.Physics,
-            dto.Combustibility);
+            dto.Combustibility,
+            ResolveWorldLayerInfluences(dto.WorldLayerInfluences, id));
     }
 
     /// <summary>运行时和构建期共用模块默认数据、战利品注入与自动生命模块的唯一装配规则。</summary>
@@ -1535,6 +1536,32 @@ public static class ItemDefinitionCatalogLoader
             _ => throw new InvalidDataException(
                 $"物品 {itemId} 的 worldDropBehavior 只能是 passive 或 interactive：{value}")
         };
+    }
+
+    private static IReadOnlyList<ItemWorldLayerInfluence> ResolveWorldLayerInfluences(
+        List<ItemWorldLayerInfluenceDefinitionDto> source,
+        string itemId)
+    {
+        if (source == null || source.Count == 0)
+            return Array.Empty<ItemWorldLayerInfluence>();
+
+        var result = new List<ItemWorldLayerInfluence>(source.Count);
+        foreach (ItemWorldLayerInfluenceDefinitionDto influence in source)
+        {
+            string layerId = influence?.LayerId?.Trim();
+            if (influence == null || string.IsNullOrWhiteSpace(layerId) ||
+                !float.IsFinite(influence.Value) || !float.IsFinite(influence.Radius) ||
+                influence.Radius <= 0f || influence.Radius > 64f ||
+                !float.IsFinite(influence.Strength) || influence.Strength < 0f || influence.Strength > 1f)
+            {
+                throw new InvalidDataException($"物品 {itemId} 包含无效世界层影响来源");
+            }
+
+            result.Add(new ItemWorldLayerInfluence(
+                layerId, influence.Value, influence.Radius, influence.Strength, influence.Cooling));
+        }
+
+        return result.AsReadOnly();
     }
 
     /// <summary>校验并转换配置中的整数占格，禁止空格、重复格或无效条目进入运行时定义。</summary>

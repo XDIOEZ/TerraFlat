@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -66,6 +67,17 @@ public static partial class GameplayTestSystemProbe
         var restored = protection == null ? null :
             MemoryPack.MemoryPackSerializer.Deserialize<EquipmentInstance>(
                 MemoryPack.MemoryPackSerializer.Serialize<EquipmentInstance>(protection)) as EquipmentInstance_RadiationProtection;
+        var oldThermalInstance = new EquipmentInstance_ThermalInsulation
+            { Name = "旧存档隔热", ColdToleranceIncrease = .4f };
+        var legacyInstances = new List<EquipmentInstance> { oldThermalInstance };
+        Mod_Equipment.EnsureRadiationProtectionDefinitionInstance(legacyInstances, instances);
+        var legacyProtection = legacyInstances.Count > 1
+            ? legacyInstances[1] as EquipmentInstance_RadiationProtection
+            : null;
+        var adjustedProtection = new EquipmentInstance_RadiationProtection
+            { Name = "已调整防护", HighRadiationToleranceIncrease = .45f };
+        var adjustedInstances = new List<EquipmentInstance> { adjustedProtection };
+        Mod_Equipment.EnsureRadiationProtectionDefinitionInstance(adjustedInstances, instances);
         return new JObject
         {
             ["jsonType"] = protection != null,
@@ -73,20 +85,38 @@ public static partial class GameplayTestSystemProbe
             ["jsonHigh"] = protection?.HighRadiationToleranceIncrease ?? -1f,
             ["memoryPackType"] = restored != null,
             ["memoryPackLow"] = restored?.LowRadiationToleranceIncrease ?? -1f,
-            ["memoryPackHigh"] = restored?.HighRadiationToleranceIncrease ?? -1f
+            ["memoryPackHigh"] = restored?.HighRadiationToleranceIncrease ?? -1f,
+            ["legacyProtectionAdded"] = legacyProtection != null,
+            ["legacyThermalPreserved"] = ReferenceEquals(legacyInstances[0], oldThermalInstance),
+            ["legacyProtectionHigh"] = legacyProtection?.HighRadiationToleranceIncrease ?? -1f,
+            ["adjustedProtectionCount"] = adjustedInstances.Count,
+            ["adjustedProtectionHigh"] = adjustedProtection.HighRadiationToleranceIncrease
         };
     }
 
     private static JObject CaptureRadiationDamage(JObject args)
     {
-        using var fixture = new GameplayTestInvulnerabilityFixture();
-        fixture.Health.Data.DefenseValues.Radiation = 100f;
-        var damage = new CombatDamage { Radiation = 1f };
-        float armored = fixture.Health.HurtEnvironmentalDamage(1, Vector2.zero, damage, "radiation");
-        float bypassed = fixture.Health.HurtEnvironmentalDamage(2, Vector2.zero, damage, "radiation", isTrueDamage: true);
-        float damageScale = GameplayCombatBridge.Tuning().Resolve(false, false) *
-            GameRuleConfiguration.Current.CreatureCombat.ResolveReceivedDamageMultiplier(false, false, true);
-        return new JObject { ["armored"] = armored, ["bypassed"] = bypassed, ["damageScale"] = damageScale };
+        object ruleSource = new();
+        GameRuleConfiguration.SetModifier(ruleSource, values =>
+        {
+            values.CreatureAttackMultiplier = 1f;
+            values.CreatureHealthMultiplier = 1f;
+        });
+        try
+        {
+            using var fixture = new GameplayTestInvulnerabilityFixture();
+            fixture.Health.Data.DefenseValues.Radiation = 100f;
+            var damage = new CombatDamage { Radiation = 1f };
+            float armored = fixture.Health.HurtEnvironmentalDamage(1, Vector2.zero, damage, "radiation");
+            float bypassed = fixture.Health.HurtEnvironmentalDamage(2, Vector2.zero, damage, "radiation", isTrueDamage: true);
+            float damageScale = GameplayCombatBridge.Tuning().Resolve(false, false) *
+                GameRuleConfiguration.Current.CreatureCombat.ResolveReceivedDamageMultiplier(false, false, true);
+            return new JObject { ["armored"] = armored, ["bypassed"] = bypassed, ["damageScale"] = damageScale };
+        }
+        finally
+        {
+            GameRuleConfiguration.RemoveModifier(ruleSource);
+        }
     }
 
     // 夹具只调用正式批计算入口，数值、顺序和边界由 Lua 断言。

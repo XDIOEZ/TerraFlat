@@ -24,6 +24,9 @@ public sealed partial class GameplayWorldRuntime
 public static partial class GameplayWorldRegistry
 {
     #region 世界注册与同步上下文
+    // 世界运行服务就绪后通知依赖该世界的运行时系统。
+    internal static event Action<string> RuntimeWorldReady;
+
     private static readonly Dictionary<string, GameplayWorldRuntime> worlds = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, WorldRuntime> ownedWorldModels = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, ChunkMgr> ownedWorldModelManagers = new(StringComparer.Ordinal);
@@ -412,7 +415,6 @@ public static partial class GameplayWorldRegistry
         _ = MonsterSpawnerManager.GetForWorld(worldKey);
         _ = WeatherMgr.GetForWorld(worldKey);
             RefreshLocalWorldAfterSceneBindingChange(scene);
-            return world;
         }
         catch
         {
@@ -424,6 +426,8 @@ public static partial class GameplayWorldRegistry
             RefreshLocalWorldAfterSceneBindingChange(scene);
             throw;
         }
+        RuntimeWorldReady?.Invoke(worldKey);
+        return world;
     }
 
     // 同步事务只切查询上下文，不切活动场景，不向其它玩家广播世界退出。

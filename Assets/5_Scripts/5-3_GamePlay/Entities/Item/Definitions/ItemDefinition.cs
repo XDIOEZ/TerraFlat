@@ -160,6 +160,10 @@ public sealed partial class ItemDefinitionDto
     [JsonProperty("reactions", NullValueHandling = NullValueHandling.Ignore)]
     public List<ItemReactionDefinitionDto> Reactions = new();
 
+    /// <summary>物品装入任何有世界锚点的槽位后可贡献的环境层来源。</summary>
+    [JsonProperty("worldLayerInfluences", NullValueHandling = NullValueHandling.Ignore)]
+    public List<ItemWorldLayerInfluenceDefinitionDto> WorldLayerInfluences = new();
+
     /// <summary>ItemData 中除公共快捷字段外的其余静态模板数据。</summary>
     [JsonProperty("itemData")]
     [BinaryJsonObject]
@@ -548,6 +552,27 @@ public sealed partial class ItemProcessingOutputDto
     public float? DurabilityMultiplier;
 }
 
+/// <summary>物品定义声明的世界环境来源；温度使用目标值，其余层按污染增量处理。</summary>
+[Serializable]
+[MemoryPackable]
+public sealed partial class ItemWorldLayerInfluenceDefinitionDto
+{
+    [JsonProperty("layerId", Required = Required.Always)]
+    public string LayerId;
+
+    [JsonProperty("value", Required = Required.Always)]
+    public float Value;
+
+    [JsonProperty("radius")]
+    public float Radius = 1f;
+
+    [JsonProperty("strength")]
+    public float Strength = 1f;
+
+    [JsonProperty("cooling")]
+    public bool Cooling;
+}
+
 public enum WorldDropBehavior
 {
     Passive = 0,
@@ -555,7 +580,7 @@ public enum WorldDropBehavior
 }
 
 /// <summary>校验并解析后的不可变运行时物品定义。</summary>
-public sealed class RuntimeItemDefinition
+public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
 {
     public IReadOnlyList<string> FormerIds { get; }
     private readonly ItemData templateData;
@@ -597,6 +622,7 @@ public sealed class RuntimeItemDefinition
     public RuntimeItemMatterDefinition Matter { get; }
     public WorldFireFuelProfile FireFuel { get; }
     public IReadOnlyList<RuntimeItemReactionDefinition> Reactions { get; }
+    public IReadOnlyList<ItemWorldLayerInfluence> WorldLayerInfluences { get; }
 
     /// <summary>世界侧可直接判断拾取语义，避免为了筛选 ECS 实体克隆 ItemData。</summary>
     public bool CanBePickedUp => templateData?.Stack?.CanBePickedUp == true;
@@ -675,7 +701,8 @@ public sealed class RuntimeItemDefinition
         GameRes moduleResources = null,
         ItemModulePrototypeCache modulePrototypeCache = null,
         ItemPhysicsDefinitionDto physics = null,
-        WorldCombustibilityDefinitionDto combustibility = null)
+        WorldCombustibilityDefinitionDto combustibility = null,
+        IReadOnlyList<ItemWorldLayerInfluence> worldLayerInfluences = null)
     {
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -732,6 +759,9 @@ public sealed class RuntimeItemDefinition
             : new Dictionary<string, int>(processingCapabilities, StringComparer.OrdinalIgnoreCase);
         Matter = matter;
         Reactions = reactions ?? Array.Empty<RuntimeItemReactionDefinition>();
+        WorldLayerInfluences = worldLayerInfluences == null || worldLayerInfluences.Count == 0
+            ? Array.Empty<ItemWorldLayerInfluence>()
+            : Array.AsReadOnly(new List<ItemWorldLayerInfluence>(worldLayerInfluences).ToArray());
 
         var modules = new List<RuntimeItemModuleDefinition>(moduleParameters.Count);
         foreach (KeyValuePair<string, string> pair in moduleParameters)
@@ -759,6 +789,18 @@ public sealed class RuntimeItemDefinition
             moduleAssembliesByName.Add(assembly.StableName, assembly);
         ItemPhysicsDefinitionRuntime.ValidatePhysicsDefinition(this);
         CompileModuleDataRules();
+    }
+
+    public void CollectWorldLayerInfluences(ItemData itemData, List<ItemWorldLayerInfluence> result)
+    {
+        if (itemData != null) CollectWorldLayerInfluences(result);
+    }
+
+    public void CollectWorldLayerInfluences(List<ItemWorldLayerInfluence> result)
+    {
+        if (result == null || WorldLayerInfluences.Count == 0) return;
+        for (int index = 0; index < WorldLayerInfluences.Count; index++)
+            result.Add(WorldLayerInfluences[index]);
     }
 
     /// <summary>查询物品是否响应指定加工能力。</summary>

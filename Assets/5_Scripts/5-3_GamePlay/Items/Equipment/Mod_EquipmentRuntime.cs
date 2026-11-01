@@ -222,11 +222,12 @@ public class Mod_EquipmentRuntime : Module
         if (Equipment_inventory?.Data != null)
             Equipment_inventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
 
-        if (!_runtimeEffectsActive)
-            return;
-
-        UnEquipAll();
-        _runtimeEffectsActive = false;
+        if (_runtimeEffectsActive)
+        {
+            UnEquipAll();
+            _runtimeEffectsActive = false;
+        }
+        Equipment_inventory?.UnbindRuntimeDataEvents();
     }
     public override void Act()
     {

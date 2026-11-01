@@ -14,6 +14,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 | `5-3_GamePlay/World/Time/` | DayTimeSystem、TimeData、DayNightTimeManager |
 | `5-0_WorldModel/Weather/ChunkWeather*`、`Weather/RegionalWeather*` | 冻结区块档案与纯区域引擎 |
 | `5-3_GamePlay/World/Environment/` | WeatherMgr、LightLayerMgr、TemperatureMgr.Field、LocalTemperatureField/Source |
+| `5-3_GamePlay/World/Environment/ItemSlotWorldInfluence.cs` | 槽宿主与物品定义向温度/污染等环境层发布、撤销动态来源 |
 | `5-0_WorldModel/Weather/{AirHumidityKernel,WorldAirHumidityField}.cs` | 固定/动态供湿 |
 | `5-3_GamePlay/World/Chunk/Management/ChunkMgr.AirHumidity.cs` | 湿度桥 |
 | `5-3_GamePlay/World/Environment/Contamination/` | 污染定义与权威修改 |
@@ -47,6 +48,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 - `core:radiation` 是 0–1 的地块污染值；生物模块只用逻辑坐标读取现有地块，不生成或扩散辐射。缺失采样清空暴露计时；安全范围与装备耐受由生存/装备模块拥有。
 - TryGetClimateBaseline 供历史生态/雪，排除季节/天气/局部源；TryGetAmbientTemperature 供体温/产量/调试，叠已加载地理层、PlanetData 基准差及允许的季节/天气/局部源，未加载返回 false。出生格温度不回写全局。
 - 环境生产者发布通用供给/影响，生存模块只管自身状态；装备/设备走公开接口供氧或注册耐受，不向 Mod_Oxygen/Mod_Pressure 堆具体装备判断。
+- `ItemSlotWorldInfluenceSystem` 读取 `IItemSlotHost` 提供的物品/冷快照并按物品定义发布来源；槽宿主不判断来源物品，离槽或卸载时撤销。
 - 海洋 `ocean.currentX/Y` 保存带强度的近岸回推/外海离岸向量；`WaterEnvironmentRules.ResolveOceanCurrentVector` 统一混河口，运行时/冷区/海面共用。海洋 `RuntimeWaterCurrentSample.Flow` 为 0～1 强度，物品与角色推速均须乘它；共享格角包含零流样本且禁止归一化吞掉弱流带。
 - 回归主题入口 `environment/*`、`survival/*`；按 [flatworld-lua-testing](../flatworld-lua-testing/SKILL.md) 和 `Assets/StreamingAssets/GameplayTests/systems.catalog.json` 选择，专项映射见参考。规则样本与最终场景/画面验收分开报告。
 - 地火回归 `environment/world_fire`，并联选 `rendering/combustion-visual`、保存及地形网络规则；火场前景合批见 effects-tools。可燃性由 `WorldCombustibilitySystem.TryGetCombustibility/SetCombustibility` 读写最终格值，手工写入覆盖来源；物品/建筑用 `ReplaceCombustibilitySource/RemoveCombustibilitySource` 主动发布占地，同格概率取最大、来源燃料求和，重复登记不补料，重建索引的撤源保留消耗。JSON `combustibility` 仅含 `ignitionProbability/fuelSeconds`。草10秒、木质默认60秒；地面材料接触700℃，3格范围取最强180℃热影响；火种成功后扣料，普通炉火不自动引燃环境。

@@ -55,8 +55,17 @@ public abstract class MachineLogic : IDisposable
     {
         inventory.MachineOwner = Entity;
         inventories.Add(inventory);
+        RefreshItemSlotWorldInfluenceHostIds();
         inventory.Data.Event_OnDataChanged += OnInventoryChanged;
         return inventory;
+    }
+
+    public void RefreshItemSlotWorldInfluenceHostIds()
+    {
+        for (int index = 0; index < inventories.Count; index++)
+            inventories[index].SetItemSlotWorldInfluenceHostId(ItemSlotWorldInfluenceSystem.CreateMachineHostId(
+                Entity.ScopeKey, Entity.Id,
+                Entity.Definition.LogicId + ":" + index.ToString(System.Globalization.CultureInfo.InvariantCulture)));
     }
 
     protected virtual void OnInventoryChanged(ItemSlot slot) => NotifyChanged();
@@ -119,14 +128,22 @@ public static class MachineInventory
         // 先完整校验候选数据，失败不能清空正在使用的库存与 UI 绑定。
         Rebase(incoming);
         List<ItemSlot> current = inventory.Data.itemSlots;
-        bool resized = current.Count != incoming.itemSlots.Count;
-        if (resized) inventory.UnbindSlotDataEvents();
+        bool layoutChanged = current.Count != incoming.itemSlots.Count;
+        if (layoutChanged) inventory.UnbindSlotDataEvents();
         // 拖拽事务持有 ItemSlot 身份，同格同步只更新内容，不能每次换掉整个槽对象。
         for (int i = 0; i < incoming.itemSlots.Count; i++)
         {
             ItemSlot source = incoming.itemSlots[i];
-            if (i >= current.Count) current.Add(source);
-            else if (current[i] == null) current[i] = source;
+            if (i >= current.Count)
+            {
+                current.Add(source);
+                layoutChanged = true;
+            }
+            else if (current[i] == null)
+            {
+                current[i] = source;
+                layoutChanged = true;
+            }
             else
             {
                 current[i].itemData = source.itemData;
@@ -136,11 +153,15 @@ public static class MachineInventory
             }
         }
         if (current.Count > incoming.itemSlots.Count)
+        {
             current.RemoveRange(incoming.itemSlots.Count, current.Count - incoming.itemSlots.Count);
+            layoutChanged = true;
+        }
         inventory.Data.IsDepositBlocked = incoming.IsDepositBlocked;
         inventory.Data.IsInjected = incoming.IsInjected;
+        if (layoutChanged) inventory.Data.NotifySlotsChanged();
         inventory.RefreshUI();
-        if (resized && inventory.itemSlot_UI.Count > 0) inventory.SyncData();
+        if (layoutChanged && inventory.itemSlot_UI.Count > 0) inventory.SyncData();
         if (inventory.item is Player player) PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 

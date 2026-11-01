@@ -45,7 +45,6 @@ public static partial class GameplayWorldRegistry
             _ = world.Physics;
             world.Chunks = ChunkMgr.CreateNetworkWorldManager(worldKey);
             using (UseWorld(worldKey)) world.Chunks.AttachLocalWorld(model, generator, chunkSize);
-            return world;
         }
         catch
         {
@@ -61,6 +60,8 @@ public static partial class GameplayWorldRegistry
             UnloadLocalWorldScene(scene);
             throw;
         }
+        RuntimeWorldReady?.Invoke(worldKey);
+        return world;
     }
 
     internal static void ReleaseLocalWorld(string worldKey)

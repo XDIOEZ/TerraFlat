@@ -213,6 +213,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
     protected override void OnUnload()
     {
         loaded = false;
+        ReleaseCarriedSeedInventory();
         if (threatDetector != null) threatDetector.RemoveMinimumDetectionRadiusForSource(this);
         fishingRod = null;
         animationFlightDisplacement = Vector2.zero;

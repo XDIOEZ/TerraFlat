@@ -550,6 +550,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_AtmosphereAnalyzer.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereMeasurementRules.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereAnalyzerRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestItemSlotWorldInfluenceRuntimeProbe.cs",
         "Assets/StreamingAssets/GameConfig/Items/shells/atmosphere_analyzer.json",
         "Assets/StreamingAssets/GameConfig/Recipes/crafting/atmosphere_analyzer.json",
         "Assets/StreamingAssets/GameConfig/Fluids/greenhouse-effect.json",
@@ -602,6 +603,7 @@
       "coverageDocument": "GameplayTests/Systems/Environment/README.md",
       "integrationCaseIds": [
         "atmosphere_analyzer_gameplay",
+        "item_slot_world_influence_gameplay",
         "fluid_inventory",
         "fluid_thermodynamics",
         "fluid_state_save",
