@@ -657,6 +657,7 @@ public abstract class Item : MonoBehaviour
 
     public void PrepareForPoolReuse()
     {
+        WorldRenderingManager.ExistingInstance?.ReleaseItemPresentation(this);
         ClearPendingInitialAnimatorState();
         VisualDefinition = null;
         PersistenceOwner = null;
@@ -950,6 +951,7 @@ public abstract class Item : MonoBehaviour
             moduleLayoutPrepared = true;
             yield break;
         }
+        WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         uint generation = RuntimeGeneration;
         foreach (Module module in toInitialize)
         {
@@ -983,6 +985,7 @@ public abstract class Item : MonoBehaviour
     {
         moduleLayoutPrepared = false;
         modulesLoaded = true;
+        WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         using var scope = ListPool<Module>.Get(out var snapshot);
         CopyModulesTo(snapshot);
         uint generation = RuntimeGeneration;

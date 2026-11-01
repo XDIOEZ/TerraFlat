@@ -729,7 +729,11 @@ public static partial class GameplayWorldRegistry
     }
 
     internal static void RegisterItemPresentation(Item item)
-    { if (item != null) RegisterPresentation(item.gameObject); }
+    {
+        if (item == null) return;
+        RegisterPresentation(item.gameObject);
+        WorldRenderingManager.ExistingInstance?.SynchronizeActorViewForPose(item);
+    }
 
     public static bool GetPresentationOriginalForceRenderingOff(Renderer renderer)
         => renderer != null && PresentationOwners.TryGetValue(renderer, out var owner) && owner != null

@@ -344,7 +344,12 @@ namespace FlatWorld.Spaceflight
             WorldPresentationSortingDomain domain = SynchronizeShipInteriorSortingDomain(
                 world, ResolveShipInteriorPresentationMatrix(ship), visible);
             if (!looseShipProjections.TryGetValue(item, out WorldPresentationProjection display) || display == null || display.IsReleased)
-                looseShipProjections[item] = display = WorldPresentationProjection.Create(item.transform, transform);
+            {
+                Transform renderSource = WorldRenderingManager.ExistingInstance?.GetActorProjectionSource(item)
+                    ?? item.transform;
+                looseShipProjections[item] = display = WorldPresentationProjection.Create(renderSource, transform,
+                    allowInactiveSourceRoot: renderSource != item.transform);
+            }
             display.SetSortingDomain(domain);
             display.Synchronize(Matrix4x4.identity, visible);
         }

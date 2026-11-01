@@ -42,8 +42,8 @@
       ],
       "visual": {
         "spriteAddress": "Assets/8_Animations/Character/Birds/Bird/Ground_0.png",
-        "rendererPath": "BirdLift/Module_Animator_AI",
-        "animatorPath": "BirdLift/Module_Animator_AI",
+        "rendererPath": "BirdLift/Module_Animator_AI/ActorVisual",
+        "animatorPath": "BirdLift/Module_Animator_AI/ActorVisual",
         "animationState": "Ground",
         "animatorControllerAddress": "flatworld.actor.animator.bird",
         "flipX": false,

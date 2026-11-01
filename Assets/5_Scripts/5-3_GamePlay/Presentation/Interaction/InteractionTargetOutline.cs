@@ -189,6 +189,9 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
         sourceRenderers.Clear();
         GetComponentsInChildren(includeInactive: true, sourceRenderers);
+        Item item = GetComponent<Item>();
+        if (item != null && item.Sprite != null && !sourceRenderers.Contains(item.Sprite))
+            sourceRenderers.Add(item.Sprite);
         activeSourceRenderers.Clear();
 
         for (int i = 0; i < sourceRenderers.Count; i++)

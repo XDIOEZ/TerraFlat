@@ -147,6 +147,7 @@ public sealed partial class ChunkNaturalItemRuntime : IDisposable
         }
         UnregisterTransientItem(item);
         item.NaturalRuntimeOwner = null;
+        WorldRenderingManager.ExistingInstance?.RequestItemPresentation(item);
     }
 
     /// <summary>自然物统一登记稳定身份与销毁监听，重复登记同一实例保持幂等。</summary>

@@ -245,7 +245,10 @@ namespace FlatWorld.Spaceflight
                     if (display != null && !display.IsReleased) continue;
                     ReleaseShipInteriorItemProjection(members, item);
                 }
-                display = WorldPresentationProjection.Create(item.transform, transform);
+                Transform renderSource = WorldRenderingManager.ExistingInstance?.GetActorProjectionSource(item)
+                    ?? item.transform;
+                display = WorldPresentationProjection.Create(renderSource, transform,
+                    allowInactiveSourceRoot: renderSource != item.transform);
                 display.SetSortingDomain(members.Domain);
                 interiorItemProjections[item] = display;
                 members.ItemProjections.Add(display);

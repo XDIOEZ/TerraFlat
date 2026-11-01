@@ -167,9 +167,10 @@ public sealed class ActorBuffLightController : MonoBehaviour
 
     private void EnsureRuntimeLight()
     {
+        Transform parent = ResolveLightParent();
         if (runtimeLight == null)
         {
-            Transform existing = transform.Find(RuntimeLightName);
+            Transform existing = parent.Find(RuntimeLightName);
             if (existing != null)
                 runtimeLight = existing.GetComponent<Light2D>();
         }
@@ -177,9 +178,11 @@ public sealed class ActorBuffLightController : MonoBehaviour
         if (runtimeLight == null)
         {
             GameObject lightObject = new GameObject(RuntimeLightName, typeof(Light2D));
-            lightObject.transform.SetParent(transform, false);
+            lightObject.transform.SetParent(parent, false);
             runtimeLight = lightObject.GetComponent<Light2D>();
         }
+        if (runtimeLight.transform.parent != parent)
+            runtimeLight.transform.SetParent(parent, false);
 
         runtimeLight.lightType = Light2D.LightType.Point;
         runtimeLight.color = lightColor;
@@ -189,6 +192,19 @@ public sealed class ActorBuffLightController : MonoBehaviour
         runtimeLight.falloffIntensity = 0.65f;
         runtimeLight.transform.localPosition = Vector3.zero;
         runtimeLight.transform.localRotation = Quaternion.identity;
+    }
+
+    private Transform ResolveLightParent()
+    {
+        Item item = GetComponentInParent<Item>();
+        return WorldRenderingManager.ExistingInstance?.GetActorVisualParent(item, transform) ?? transform;
+    }
+
+    internal void RebindVisualParent()
+    {
+        Transform parent = ResolveLightParent();
+        if (runtimeLight != null && runtimeLight.transform.parent != parent)
+            runtimeLight.transform.SetParent(parent, false);
     }
 
     private void SetLightActive(bool active)

@@ -27,6 +27,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         GameplayTestRuntimeProbe.Register("world_streaming", "resource_proxy_native_triggers", CaptureResourceProxyNativeTriggers);
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "natural_item_decoupling", CaptureNaturalItemDecoupling);
         GameplayTestRuntimeProbe.Register("world_streaming", "prefab_creature_physics", CapturePrefabCreaturePhysics);
+        GameplayTestRuntimeProbe.Register("world_streaming", "item_visual_ownership", CaptureItemVisualOwnership);
     }
 
     private sealed class Fixture : IDisposable
@@ -165,6 +166,82 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             ["collidersReused"] = creature.GetComponentsInChildren<Collider2D>(true).Length == colliderCount &&
                                   (health == null || health.GetComponent<Collider2D>() == hitbox) &&
                                   creature.GetComponent<Collider2D>() == rootShape
+        };
+    }
+    #endregion
+
+    #region 玩家、生物与普通物品独立绘制回归
+    private static JObject CaptureItemVisualOwnership(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var fixture = new Fixture();
+        GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        string world = GameplayWorldRegistry.GetItemWorldKey(player);
+        using var worldScope = GameplayWorldRegistry.UseWorld(world);
+        Vector2 center = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+        Item creature = fixture.SpawnItem("Chicken", center + new Vector2(6f, 2f));
+        Item ordinary = fixture.SpawnItem("StoneMortar", center + new Vector2(7f, 2f));
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (rendering == null) throw new InvalidOperationException("当前世界缺少统一渲染管理器。");
+
+        rendering.RegisterItemRendering(player);
+        rendering.RegisterItemRendering(creature);
+        rendering.RegisterItemRendering(ordinary);
+        rendering.RequestItemPresentation(player);
+        rendering.RequestItemPresentation(creature);
+        rendering.RequestItemPresentation(ordinary);
+
+        SpriteRenderer actorSprite = creature.Sprite;
+        bool actorSeparated = actorSprite != null &&
+            rendering.OwnsActorVisual(creature, actorSprite.transform) &&
+            !actorSprite.transform.IsChildOf(creature.transform) &&
+            actorSprite.gameObject.scene == creature.gameObject.scene &&
+            creature.GetComponent<Rigidbody2D>() != null &&
+            creature.GetComponentInChildren<Mod_DamageReceiver>(true) != null;
+        bool playerProjected = rendering.TryGetItemPresentation(player, out var playerView);
+        bool ordinaryProjected = rendering.TryGetItemPresentation(ordinary, out var ordinaryView);
+        bool hiddenSource = player.Sprite != null && player.Sprite.forceRenderingOff &&
+            ordinary.Sprite != null && ordinary.Sprite.forceRenderingOff;
+        bool originalHidden = ordinary.Sprite != null &&
+            WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(ordinary.Sprite, out bool wasHidden) &&
+            wasHidden;
+        bool visualOnly = playerProjected && ordinaryProjected &&
+            playerView.GetComponentInChildren<Item>(true) == null &&
+            ordinaryView.GetComponentInChildren<Item>(true) == null &&
+            playerView.GetComponentInChildren<Collider2D>(true) == null &&
+            ordinaryView.GetComponentInChildren<Rigidbody2D>(true) == null;
+        bool inRendering = playerProjected && ordinaryProjected &&
+            playerView.transform.parent?.name == "Rendering" &&
+            ordinaryView.transform.parent?.name == "Rendering" &&
+            playerView.gameObject.scene == player.gameObject.scene &&
+            ordinaryView.gameObject.scene == ordinary.gameObject.scene;
+
+        rendering.RefreshItemRendering(player);
+        rendering.RefreshItemRendering(creature);
+        rendering.RefreshItemRendering(ordinary);
+        bool reused = rendering.TryGetItemPresentation(player, out var reboundPlayer) &&
+            ReferenceEquals(playerView, reboundPlayer) &&
+            rendering.TryGetItemPresentation(ordinary, out var reboundOrdinary) &&
+            ReferenceEquals(ordinaryView, reboundOrdinary) &&
+            rendering.OwnsActorVisual(creature, actorSprite.transform);
+
+        rendering.UnregisterItemRendering(ordinary);
+        bool released = !rendering.TryGetItemPresentation(ordinary, out _) &&
+            ordinary.Sprite != null && ordinary.Sprite.forceRenderingOff == originalHidden;
+        rendering.RegisterItemRendering(ordinary);
+        rendering.RequestItemPresentation(ordinary);
+        bool restored = rendering.TryGetItemPresentation(ordinary, out var restoredView) &&
+            !ReferenceEquals(restoredView, ordinaryView);
+        return new JObject
+        {
+            ["actorSeparated"] = actorSeparated,
+            ["playerProjected"] = playerProjected,
+            ["ordinaryProjected"] = ordinaryProjected,
+            ["sourcesHiddenWhileProjected"] = hiddenSource,
+            ["viewHasNoLogicOrPhysics"] = visualOnly,
+            ["viewsUnderRendering"] = inRendering,
+            ["repeatReusesView"] = reused,
+            ["releaseAndRebind"] = released && restored
         };
     }
     #endregion

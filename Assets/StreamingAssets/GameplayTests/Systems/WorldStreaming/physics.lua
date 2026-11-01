@@ -104,3 +104,12 @@ test.runtime("world_streaming", "prefab_creature_physics", {}, function(data)
     assert(data.hitboxRegistered and data.hitboxChannel and data.rootRegistered and data.collidersReused,
         "生物受击盒未按原预制体配置登记到物理管理器，或重复登记创建了多余碰撞体")
 end, "移动生物保留预制体碰撞并由世界物理管理器统一登记")
+
+test.runtime("world_streaming", "item_visual_ownership", {}, function(data)
+    assert(data.actorSeparated, "GO 单图生物的 SpriteRenderer 未迁至独立 Rendering 节点")
+    assert(data.playerProjected and data.ordinaryProjected and data.sourcesHiddenWhileProjected
+        and data.viewHasNoLogicOrPhysics
+        and data.viewsUnderRendering, "玩家或普通物品的绘制副本未独立，或混入 Item、刚体、碰撞组件")
+    assert(data.repeatReusesView and data.releaseAndRebind,
+        "渲染重复登记创建副本，或取消登记后无法正常重绑")
+end, "GO 生物、玩家、普通物品统一渲染所有权及复用")

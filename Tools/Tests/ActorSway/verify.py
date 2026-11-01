@@ -73,6 +73,10 @@ def main() -> int:
             assert sub_sprite == "MiniWolf_Idle_1", "SnowLeopard must use its own initial frame"
         if actor_id == "Zombie":
             assert sub_sprite == "Character_Zombie_Idle_Right", "Zombie must not inherit Wolf's sprite"
+        for key in ("rendererPath", "animatorPath"):
+            path = actor["visual"].get(key, "")
+            if "Module_Animator_AI" in path:
+                assert path.endswith("Module_Animator_AI/ActorVisual"), actor_id + ": " + key + " still points to logic"
         print(f"PASS {actor_id}: SingleSprite -> {sub_sprite or Path(path).stem}")
         count += 1
     assert count >= 12, "Existing built-in species are missing"
@@ -85,6 +89,21 @@ def main() -> int:
     for old_dependency in (".Play(", ".Update(", ".Rebind(", "TryResolveState(", "Visual.AnimationState"):
         assert old_dependency not in initialization, "Sway initialization depends on Animator: " + old_dependency
     assert "SampleInitialSingleSpriteFrame" not in source
+    # 单图玩家的视觉根可含自身动画模块，但不能带入其他玩法模块。
+    root_guard = source[source.index("private bool IsVisualOnlyRoot"):source.index("private void ReleasePresentation")]
+    assert "module != this || module.transform != root" in root_guard, "Player animation module was rejected"
+    assert "GetComponentInChildren<Collider2D>" in root_guard, "Visual root can contain physics"
+
+    prefab = (ROOT / "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab").read_text(
+        encoding="utf-8-sig")
+    visual_id = re.search(
+        r"--- !u!1 &([0-9]+)\nGameObject:(?:(?!\n--- !u!).)*?\n  m_Name: ActorVisual\n",
+        prefab, re.S)
+    assert visual_id, "Missing independent ActorVisual child"
+    for component in ("SpriteRenderer", "Animator"):
+        match = re.search(r"^" + component + r":\s*.*?^  m_GameObject: \{fileID: (\d+)\}",
+                          prefab, re.M | re.S)
+        assert match and match.group(1) == visual_id.group(1), component + " still belongs to logic"
     print(f"PASS {count} actor configurations, Sprite imports, Player addresses, and Animator-free initialization")
     return 0
 

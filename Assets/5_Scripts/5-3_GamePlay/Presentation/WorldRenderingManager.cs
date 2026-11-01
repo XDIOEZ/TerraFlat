@@ -140,6 +140,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
     public void RefreshItemRendering(Item item)
     {
         if (!IsItemRenderingRegistered(item)) return;
+        RequestItemPresentation(item);
         RegisterItemSorting(item);
         ApplyItemShadowRegistration(item, itemRenderingRegistrations[item], true);
         RefreshItemRenderingFeatures(item);
@@ -152,6 +153,7 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         if (ReferenceEquals(item, null)) return;
         ClearHeldFoodPresentation(item);
         ReleaseNaturalItemView(item);
+        ReleaseItemPresentation(item);
         itemRenderingRegistrations.Remove(item);
         item.OnItemDestroy -= UnregisterItemRendering;
         try { UnregisterItemShadows(item); }
@@ -162,7 +164,11 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         }
     }
 
-    private void HandleRuntimeItemRegistered(Item item) => RegisterItemRendering(item);
+    private void HandleRuntimeItemRegistered(Item item)
+    {
+        RegisterItemRendering(item);
+        RequestItemPresentation(item);
+    }
 
     private void RegisterRuntimeItems()
     {
@@ -172,7 +178,11 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         foreach (Item item in itemManager.WorldRunTimeItems.Values)
         {
             if (IsItemRenderingRegistered(item)) RefreshItemRendering(item);
-            else RegisterItemRendering(item);
+            else
+            {
+                RegisterItemRendering(item);
+                RequestItemPresentation(item);
+            }
         }
     }
 
@@ -180,6 +190,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
     {
         ClearHeldFoodPresentations();
         ClearNaturalItemViews();
+        ClearItemViews();
+        ClearActorViews();
         using var scope = UnityEngine.Pool.ListPool<Item>.Get(out var items);
         using var errorScope = UnityEngine.Pool.ListPool<Exception>.Get(out var errors);
         items.AddRange(itemRenderingRegistrations.Keys);

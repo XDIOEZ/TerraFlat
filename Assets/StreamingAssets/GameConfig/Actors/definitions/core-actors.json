@@ -51,7 +51,7 @@
         "sortingLayerName": "Player",
         "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Hana Caraka - Livestock & Fish Sample/Chicken/Chicken.png[Chicken_0]",
-        "rendererPath": "Module_Animator_AI",
+        "rendererPath": "Module_Animator_AI/ActorVisual",
         "animationState": "Stand",
         "rendererLocalPosition": {
           "x": 0.0,
@@ -76,7 +76,7 @@
         },
         "flipX": true,
         "flipY": false,
-        "animatorPath": "Module_Animator_AI",
+        "animatorPath": "Module_Animator_AI/ActorVisual",
         "animatorControllerAddress": "flatworld.actor.animator.chicken",
         "collider": {
           "type": "BoxCollider2D",
@@ -799,7 +799,7 @@
         "sortingLayerName": "Player",
         "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Creature/MinifolksForestAnimals/Outline/MiniBoar.png[MiniBoar_Idle_4]",
-        "rendererPath": "Module_Animator_AI",
+        "rendererPath": "Module_Animator_AI/ActorVisual",
         "animationState": "Stand",
         "rendererLocalPosition": {
           "x": 0.0,
@@ -824,7 +824,7 @@
         },
         "flipX": false,
         "flipY": false,
-        "animatorPath": "Module_Animator_AI",
+        "animatorPath": "Module_Animator_AI/ActorVisual",
         "animatorControllerAddress": "flatworld.actor.animator.wildboar",
         "collider": {
           "type": "BoxCollider2D",
@@ -1577,7 +1577,7 @@
         "sortingLayerName": "Player",
         "sortingOrder": 100,
         "spriteAddress": "Assets/6_Art/Characters/Retro RPG Series - Animal Wildlife/Wolf.png[Wolf_0]",
-        "rendererPath": "AI动画模块",
+        "rendererPath": "AI动画模块/ActorVisual",
         "animationState": "Idle",
         "rendererLocalPosition": {
           "x": 0.0,
@@ -1602,7 +1602,7 @@
         },
         "flipX": false,
         "flipY": false,
-        "animatorPath": "AI动画模块",
+        "animatorPath": "AI动画模块/ActorVisual",
         "animatorControllerAddress": "flatworld.actor.animator.wolf",
         "collider": {
           "type": "BoxCollider2D",

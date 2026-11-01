@@ -24,6 +24,7 @@ public sealed partial class WorldRenderingManager
     internal void RequestNaturalItemView(Item item)
     {
         if (item == null || item.InHand || !RegisterItemRendering(item)) return;
+        ReleaseItemPresentation(item);
         if (naturalItemViews.TryGetValue(item, out NaturalItemView existing))
         {
             if (existing.Generation == item.RuntimeGeneration && existing.Projection != null && !existing.Projection.IsReleased) return;
@@ -44,6 +45,8 @@ public sealed partial class WorldRenderingManager
 
     private void PresentNaturalItemViews(ScriptableRenderContext context, List<Camera> cameras)
     {
+        PresentActorViews();
+        PresentItemViews();
         using var scratch = UnityEngine.Pool.ListPool<NaturalItemView>.Get(out var views);
         views.AddRange(naturalItemViews.Values);
         // 同一个世界的物品共享一次渲染上下文，避免逐物品反复初始化机械世界。
