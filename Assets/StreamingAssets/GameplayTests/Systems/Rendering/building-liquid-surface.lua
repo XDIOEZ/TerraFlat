@@ -69,3 +69,17 @@ test.system("rendering", "frozen_ice_surface", {}, function(data)
             "冰面网格清空、重用、纹理切换或批量更新错误")
     end
 end, "天然海冰、河湖冰：底床、半透明、合批、融化回滚与重绑")
+
+test.system("rendering", "frozen_ice_visual", {}, function(data)
+    assert(data.metricScope == "editor-camera-render-submission", "冰面现场没有使用隔离预览相机")
+    assert(data.chunkCount == 16 and data.cellCount == 4096 and data.iceGroupCount == 16,
+        "冰面没有按区块合批")
+    assert(data.preview and data.preview.bytes > 0 and type(data.preview.path) == "string"
+        and #data.preview.path > 0 and #data.preview.rows == 3, "隔离相机没有读回完整冰面画面")
+    for _, row in ipairs(data.preview.rows) do
+        assert(row.eligible > 100 and row.blended > row.eligible * .6, "真实画面没有把冰与底床混合")
+    end
+    assert(data.renderSamples == 16 and data.bindMilliseconds >= 0
+        and data.baselineRenderMilliseconds >= 0 and data.iceRenderMilliseconds >= 0,
+        "冰面 CPU 提交采样不完整")
+end, "冰面隔离相机：实际混合画面与区块合批采样")
