@@ -96,8 +96,8 @@ public static partial class GameplayTestSystemProbe
                 ["oneSlow"] = oneSlow, ["twoSlows"] = twoSlows, ["oneRemaining"] = oneRemaining,
                 ["restored"] = restored, ["blockedStart"] = blockedStart, ["retainedBlock"] = retainedBlock,
                 ["releasedBlock"] = releasedBlock, ["persistedCooldown"] = persistedCooldown,
-                ["invalidTimingRejected"] = invalidTimingRejected, ["invalidSlowRejected"] = invalidSlowRejected
-                , ["leftFacingCorrect"] = leftFacingCorrect, ["rightFacingCorrect"] = rightFacingCorrect,
+                ["invalidTimingRejected"] = invalidTimingRejected, ["invalidSlowRejected"] = invalidSlowRejected,
+                ["leftFacingCorrect"] = leftFacingCorrect, ["rightFacingCorrect"] = rightFacingCorrect,
                 ["mouthHeightUnchanged"] = mouthHeightUnchanged
             };
         }

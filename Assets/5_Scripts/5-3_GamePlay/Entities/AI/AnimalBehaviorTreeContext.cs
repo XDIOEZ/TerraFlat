@@ -151,22 +151,7 @@ public sealed partial class AnimalBehaviorTreeContext
     /// <summary>立即面向目标；攻击节点不修改移动目标。</summary>
     public void FaceTarget(Vector3 targetPosition, bool immediate)
     {
-        if (_turnBody == null)
-            return;
-
-        Vector2 direction = WorldTopologyRuntime.ShortestDelta(Position, targetPosition);
-        if (direction.sqrMagnitude < 0.0001f)
-            return;
-        direction.Normalize();
-
-        if (immediate)
-            _turnBody.ResetTurnState();
-        _turnBody.TurnBodyToDirection(direction);
-        if (immediate)
-        {
-            _turnBody.UpdateTurn(float.MaxValue);
-            _turnBody.UpdateAllTransformDirections();
-        }
+        _turnBody?.FaceWorldPosition(targetPosition, immediate);
     }
 
     public bool IsLivingAttackTarget(Item target)

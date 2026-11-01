@@ -160,6 +160,26 @@ public class Mod_TurnBack : Module
         isPositionTransforming = true;  // 开始位置转换
     }
 
+    /// <summary>攻击与追逐统一面向世界目标，同时同步自动转身的注视点。</summary>
+    public bool FaceWorldPosition(Vector3 targetPosition, bool immediate)
+    {
+        if (item == null || IsDirectionLocked || !IsMirroringEnabled) return false;
+        Vector2 direction = WorldTopologyRuntime.ShortestDelta(item.transform.position, targetPosition);
+        if (direction.sqrMagnitude < 0.0001f) return false;
+
+        // 不让自动转身在下一帧又读到旧注视点、把头转回目标反方向。
+        if (faceMouse != null) faceMouse.Data.See_Point = targetPosition;
+        if (immediate && isTurning) ResetTurnState();
+        TurnBodyToDirection(direction);
+        if (immediate)
+        {
+            UpdateTurn(float.MaxValue);
+            UpdateTransform_Positions();
+            UpdateAllTransformDirections();
+        }
+        return true;
+    }
+
     public void UpdateTurn(float deltaTime)
     {
         if (!IsMirroringEnabled || !isTurning) return;

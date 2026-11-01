@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 using FlatWorld.Networking;
 using MemoryPack;
-using Unity.Mathematics;
 
 /// <summary>通用撕咬技能按身体质量选择挂咬或拖行，伤害、减速和动作限制均由本来源独立释放。</summary>
 public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
