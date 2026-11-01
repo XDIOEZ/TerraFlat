@@ -60,6 +60,9 @@ namespace FlatWorld.AIECS.Gameplay
                 : EcsLife(ecs["health"]);
             var body = Body(source, health, healthModule);
             AiecsBehaviorParameterSnapshot behavior = CompileBehaviorParameters(ai, ecs, detector, mover, flight, aquatic, colony, light, senseOverride);
+            CombatDamage configuredDamage = attack != null
+                ? attack["DamageValues"]?.ToObject<CombatDamage>()
+                : ecs?["combat"]?["damage"]?.ToObject<CombatDamage>();
             definition = new AiecsDefinition { Id = actorId, Faction = faction, LootTable = source.LootTableId ?? string.Empty,
                 Capabilities = capabilities,
                 SenseRange = behavior.SenseRange, ChaseRange = behavior.ChaseRange,
@@ -71,8 +74,8 @@ namespace FlatWorld.AIECS.Gameplay
                 HitRange = behavior.AttackRange * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
                 Windup = behavior.Windup, Active = behavior.Active, Recovery = behavior.Recovery, Cooldown = behavior.Cooldown,
                 // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
-                Damage = attack != null ? GameplayCombatBridge.Values(attack["DamageValues"]?.ToObject<CombatDamage>()) :
-                    GameplayCombatBridge.Values(ecs?["combat"]?["damage"]?.ToObject<CombatDamage>()),
+                Damage = GameplayCombatBridge.Values(configuredDamage),
+                ImpactKind = (byte)(configuredDamage?.DominantKind ?? CombatDamageKind.None),
                 SlowMultiplier = Number(attack, "HitSlowMultiplier", 0.5f),
                 SlowDuration = attack == null || (bool?)attack["EnableHitSlowdown"] == false
                     ? 0f
@@ -306,18 +309,10 @@ namespace FlatWorld.AIECS.Gameplay
             prototype = null; return null;
         }
 
-        /// <summary>合并模块参数时保留攻击数值的显式赋值顺序。</summary>
+        /// <summary>按配置覆盖模型字段，不再处理已删除的四槽物理数值覆写顺序。</summary>
         public static JObject MergeConfiguredModuleParameters(JObject parameters, JObject overrides)
         {
             parameters.Merge(overrides, new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Replace });
-            if (parameters["DamageValues"] is not JObject damage || overrides["DamageValues"] is not JObject authored) return parameters;
-            // 物理总量和四槽会互相覆写，必须先保留原型，再按配置顺序应用作者字段。
-            foreach (JProperty property in authored.Properties())
-            {
-                JToken value = damage[property.Name]?.DeepClone();
-                damage.Remove(property.Name);
-                damage.Add(property.Name, value);
-            }
             return parameters;
         }
 
@@ -447,6 +442,16 @@ namespace FlatWorld.AIECS.Gameplay
                     {
                         if (effect.ScaleWithStacks) definition.TrueDamagePerStack += effect.Value;
                         else definition.TrueDamage += effect.Value;
+                    }
+                    else if (effect.TypeId == BuffEffectTypeIds.FireDamage)
+                    {
+                        if (effect.ScaleWithStacks) definition.FireDamagePerStack += effect.Value;
+                        else definition.FireDamage += effect.Value;
+                    }
+                    else if (effect.TypeId == BuffEffectTypeIds.RadiationDamage)
+                    {
+                        if (effect.ScaleWithStacks) definition.RadiationDamagePerStack += effect.Value;
+                        else definition.RadiationDamage += effect.Value;
                     }
                     else if (effect.TypeId == "core:nutrition_change" && effect.TargetId == "water") definition.WaterDelta += effect.Value;
                     else { supported = false; break; }

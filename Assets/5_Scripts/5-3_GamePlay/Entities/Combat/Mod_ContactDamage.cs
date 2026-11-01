@@ -12,7 +12,7 @@ using UnityEngine;
 [Serializable]
 public sealed class ContactDamageSettings
 {
-    public CombatDamage DamageValues = new(0f, 2f, 0f, 0f);
+    public CombatDamage DamageValues = new(2f, 0f, 0f, 0f, CombatDamageKind.Piercing);
     public float DamageInterval = 1f;
     public Vector2 Offset;
     public Vector2 Size = Vector2.one;
@@ -152,6 +152,7 @@ internal sealed class ContactDamageRuntime
                 CreditItemId = causeItemId,
                 Faction = faction ?? string.Empty,
                 Damage = GameplayCombatBridge.Values(settings.DamageValues),
+                ImpactKind = (byte)settings.DamageValues.DominantKind,
                 Origin = center,
                 HitPoint = collider.ClosestPoint(center),
                 Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = now, DeltaTime = Time.deltaTime },

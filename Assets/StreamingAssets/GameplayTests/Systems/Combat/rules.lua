@@ -243,6 +243,30 @@ end, "阵营无字符串键查询与MOD关系覆盖语义")
 local function near(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .00001, label .. "错误")
 end
+
+-- 分类伤害直接消费生产计算函数，护甲固定减法，真伤不被减免。
+test.system("combat", "damage_types", {}, function(d)
+    near(d.physical, 15, "物理减防")
+    near(d.fire, 6, "火焰减防")
+    near(d.radiation, 5, "辐射减防")
+    near(d.true, 5, "真伤无防御")
+    near(d.total, 31, "分类合计")
+end, "分类伤害：独立减防与真伤")
+
+test.system("combat", "damage_types", {
+    physical = 4, fire = 2, radiation = 0, true = 0,
+    physicalDefense = 10, fireDefense = 3, radiationDefense = 0
+}, function(d)
+    near(d.total, 0, "破防下限")
+end, "分类伤害：完全防御不产生负值")
+
+test.system("combat", "damage_types", {attackMultiplier = 2, receivedMultiplier = .5}, function(d)
+    near(d.physical, 17.5, "先加攻击后扣防御")
+    near(d.fire, 8, "火焰倍率顺序")
+    near(d.radiation, 6.5, "辐射倍率顺序")
+    near(d.true, 5, "真伤倍率顺序")
+    near(d.total, 37, "倍率总和")
+end, "分类伤害：攻击倍率、减防、受击倍率顺序")
 local bleedCases = {
     {name = "过量伤害裁剪", args = {}, total = 10, tier = 2},
     {name = "无血目标", args = {blood = false}, total = 10, tier = 0},

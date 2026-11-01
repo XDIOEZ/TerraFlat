@@ -25,7 +25,8 @@ def validate_assets():
     assert json.loads(src)==json.loads(embedded), 'generated input JSON differs'
     win=next(m for m in json.loads(src)['maps'] if m['name']=='Win10')
     assert [b['action'] for b in win['bindings'] if b['path'].lower()=='<keyboard>/q']==['Parry']
-    entries=(ROOT/'Assets/AddressableAssetsData/AssetGroups/Default.asset').read_text('utf-8')
+    entries='\n'.join(path.read_text('utf-8-sig') for path in
+        (ROOT/'Assets/AddressableAssetsData/AssetGroups').glob('*.asset'))
     for path in [item['visual']['spriteAddress'],'Assets/2_Prefabs/Gameplay/Modules/Combat/Module_Shield.prefab']:
         assert (ROOT/path).exists()
         guid=re.search(r'^guid: (\w+)',(ROOT/(path+'.meta')).read_text('utf-8'),re.M).group(1)

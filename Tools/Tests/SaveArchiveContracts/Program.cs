@@ -18,7 +18,6 @@ internal static class Program
         {
             IDName = "test:player", Guid = 17, Name_User = "玩家", CurrentSceneName = "星球",
             hp = new Hp(42) { maxValue = 55, Weaknesses = new List<string> { "fire" } },
-            defense = new Defense(1, 2, 3, 4),
             Speed = new GameValue_float { BaseValue = 2, BaseAdditive = 3, AdditiveModifier = .2f,
                 MultiplicativeModifier = 1.5f, FinalAdditive = 4 },
             transform = new ItemTransform { position = new Vector3(4, -5, 6),
@@ -49,8 +48,8 @@ internal static class Program
         var restored = (Data_Player)MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(frozen).CreateColdData();
         Check(restored.Name_User == "玩家" && restored.CurrentSceneName == "星球" && restored.hp.Value == 42 &&
             restored.hp.maxValue == 55 && restored.hp.Weaknesses[0] == "fire", "player health and identity roundtrip");
-        Check(restored.defense.Cutting == 1 && restored.defense.Blunt == 4 && restored.Speed.BaseAdditive == 3 &&
-            restored.Speed.MultiplicativeModifier == 1.5f, "player defense and speed roundtrip");
+        Check(restored.Speed.BaseAdditive == 3 &&
+            restored.Speed.MultiplicativeModifier == 1.5f, "player speed roundtrip without obsolete defense");
         Check(restored.transform.position == new Vector3(4, -5, 6) && restored.transform.scale == new Vector3(2, 3, 4) &&
             restored.PhysicsState.Velocity == new Vector2(7, -8), "primitive transform roundtrip");
         Check(restored.MatterState.TemperatureCelsius == 33 && restored.MatterState.IsBurning &&

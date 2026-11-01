@@ -58,6 +58,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
+        operations.Add("combat/damage_types", EntityDamageTypes);
         operations.Add("combat/death_rule_override", EntityDeathRuleOverride);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
@@ -1351,8 +1352,8 @@ public static partial class GameplayTestSystemProbe
     {
         float attack = (float)Number(args, "attack", 10d), defense = (float)Number(args, "defense", 3d);
         float attackMultiplier = (float)Number(args, "attackMultiplier", 1d), received = (float)Number(args, "received", 1d);
-        var damage = new float4(attack * .5f, attack * .25f, attack * .25f, 0f);
-        float4 resolved = CombatRules.Resolve(damage, new float4(defense), attackMultiplier, received);
+        var damage = new float4(attack, 0f, 0f, 0f);
+        float4 resolved = CombatRules.Resolve(damage, new float4(defense, 0f, 0f, 0f), attackMultiplier, received);
         var tuning = new CombatTuning
         {
             PlayerAttack = (float)Number(args, "playerAttack", 2d),
@@ -1362,22 +1363,35 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["physical"] = CombatRules.ResolvePhysical(attack, defense, attackMultiplier, received),
-            ["resolvedTotal"] = math.csum(resolved), ["cut"] = resolved.x, ["pierce"] = resolved.y,
+            ["resolvedTotal"] = math.csum(resolved), ["physicalResolved"] = resolved.x,
             ["attackMultiplier"] = tuning.Resolve(Flag(args, "sourcePlayer", true), Flag(args, "targetPlayer", false))
         };
     }
 
+    private static JObject EntityDamageTypes(JObject args)
+    {
+        var raw = new float4((float)Number(args, "physical", 20), (float)Number(args, "fire", 10),
+            (float)Number(args, "radiation", 8), (float)Number(args, "true", 5));
+        var defense = new float4((float)Number(args, "physicalDefense", 5), (float)Number(args, "fireDefense", 4),
+            (float)Number(args, "radiationDefense", 3), 0f);
+        float4 resolved = CombatRules.Resolve(raw, defense,
+            (float)Number(args, "attackMultiplier", 1), (float)Number(args, "receivedMultiplier", 1));
+        return new JObject { ["physical"] = resolved.x, ["fire"] = resolved.y,
+            ["radiation"] = resolved.z, ["true"] = resolved.w, ["total"] = math.csum(resolved) };
+    }
+
     private static JObject EntityLossBleeding(JObject args)
     {
-        var resolved = new float4((float)Number(args, "cut", 8d), (float)Number(args, "pierce", 4d),
-            (float)Number(args, "chop", 4d), (float)Number(args, "blunt", 4d));
+        float sharp = (float)Number(args, "cut", 8d) + (float)Number(args, "pierce", 4d) +
+                      (float)Number(args, "chop", 4d);
+        float blunt = (float)Number(args, "blunt", 4d);
+        var resolved = new float4(sharp + blunt, 0f, 0f, 0f);
         float4 actual = CombatRules.ActualLoss(resolved, (float)Number(args, "loss", 10d));
         int bleeding = CombatRules.BleedingTier(actual, Flag(args, "blood", true), Flag(args, "alive", true),
-            (float)Number(args, "random", 0d));
+            (float)Number(args, "random", 0d), sharp > 0f);
         return new JObject
         {
-            ["actualTotal"] = math.csum(actual), ["cut"] = actual.x, ["pierce"] = actual.y,
-            ["blunt"] = actual.w, ["bleeding"] = bleeding
+            ["actualTotal"] = math.csum(actual), ["physical"] = actual.x, ["bleeding"] = bleeding
         };
     }
 

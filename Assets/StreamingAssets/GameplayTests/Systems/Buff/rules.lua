@@ -70,7 +70,8 @@ test.system("buff", "infection_attributes", {}, function(data)
     attributes(data.one, 9, .75, "一层")
     attributes(data.two, 8, .5, "二层")
     attributes(data.three, 7, .25, "三层")
-    for index = 1, 4 do near(data.three.damage[index], index * .7, "四类伤害比例") end
+    near(data.three.damage[1], 7, "物理伤害倍率")
+    for index = 2, 4 do near(data.three.damage[index], 0, "无来源的分类伤害没有凭空增加") end
     attributes(data.minimum, 0, .25, "低攻击钳制", 2)
     for index = 1, 4 do near(data.minimum.damage[index], 0, "低攻击没有归零") end
     attributes(data.downTwo, 8, .5, "三降二")

@@ -71,7 +71,7 @@ test.system("networking", "building_request_ledger", {}, function(data)
 end, "建造拆除回执：统一令牌、精准到期、等待零分配、重入与断线清理")
 
 test.system("networking", "player_capture_cache", {}, function(data)
-    assert(#data.fields == 24, "玩家缓存没有逐项覆盖全部专属状态")
+    assert(#data.fields == 19, "玩家缓存没有逐项覆盖全部有效专属状态")
     for _, row in ipairs(data.fields) do
         assert(row.reused and row.invalidated and row.sameFrameChanged and row.oldPayloadUnchanged,
             "玩家快照缓存命中、字段失效、同帧更新或旧缓冲隔离失败：" .. row.field)

@@ -472,22 +472,10 @@ public sealed partial class ItemHealthDefinitionDto
 [MemoryPackable]
 public sealed partial class ItemDefenseDefinitionDto
 {
-    #region 物理防御与旧内容兼容
-    [JsonProperty("physical")]
-    [MemoryPackIgnore] // 派生快捷属性不写缓存，保留四种防御原值。
-    public float Physical
-    {
-        get => Mathf.Max(0f, Mathf.Max(Mathf.Max(Cutting, Piercing), Mathf.Max(Chopping, Blunt)));
-        set { Cutting = Piercing = Chopping = 0f; Blunt = value; }
-    }
-    [JsonProperty("cutting")] public float Cutting;
-    [JsonProperty("piercing")] public float Piercing;
-    [JsonProperty("chopping")] public float Chopping;
-    [JsonProperty("blunt")] public float Blunt;
-    public bool ShouldSerializeCutting() => false;
-    public bool ShouldSerializePiercing() => false;
-    public bool ShouldSerializeChopping() => false;
-    public bool ShouldSerializeBlunt() => false;
+    #region 三类固定防御
+    [JsonProperty("physical")] public float Physical;
+    [JsonProperty("fire")] public float Fire;
+    [JsonProperty("radiation")] public float Radiation;
     #endregion
 }
 

@@ -120,9 +120,9 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         CombatDamage values = damageInfo.ResolvedDamageValues;
         if (values != null)
         {
-            float relevant = Mathf.Max(0f, values.Cutting) +
-                             Mathf.Max(0f, values.Piercing) +
-                             Mathf.Max(0f, values.Chopping);
+            if (!IsEdged((CombatDamageKind)damageInfo.Context.ImpactKind) || damageInfo.Context.IsTrueDamage != 0)
+                return 0f;
+            float relevant = Mathf.Max(0f, values.Physical);
             float total = Mathf.Max(0f, values.TotalCombatPower);
             if (relevant <= 0f || total <= 0f)
                 return 0f;
@@ -131,17 +131,18 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
             return relevant * actualRatio;
         }
 
-        // 兼容外部系统手工构造 DamageInfo 的情况：按发送端类型占比把实际掉血拆回刃伤分量。
+        // 外部构造的命中仍只把真实物理刃伤计算为出血。
         CombatDamage senderValues = damageInfo.SenderDamageValues;
-        if (senderValues == null)
+        if (senderValues == null || !IsEdged(senderValues.DominantKind))
             return 0f;
 
-        float senderRelevant = Mathf.Max(0f, senderValues.Cutting) +
-                               Mathf.Max(0f, senderValues.Piercing) +
-                               Mathf.Max(0f, senderValues.Chopping);
+        float senderRelevant = Mathf.Max(0f, senderValues.Physical);
         float senderTotal = Mathf.Max(0f, senderValues.TotalCombatPower);
         return senderTotal > 0f
             ? damageInfo.DamageValue * Mathf.Clamp01(senderRelevant / senderTotal)
             : 0f;
     }
+
+    private static bool IsEdged(CombatDamageKind kind) =>
+        kind is CombatDamageKind.Cutting or CombatDamageKind.Piercing or CombatDamageKind.Chopping;
 }

@@ -121,10 +121,9 @@ MonoBehaviour:
     BodyPartDataVersion: 0
     BodyParts: []
     DefenseValues:
-      Cutting: 8
-      Piercing: 8
-      Chopping: 8
-      Blunt: 8
+      Physical: 8
+      Fire: 0
+      Radiation: 0
     AttackersUIDs: 
     ShowCanvas: 1
     DamageInterval: 0.12

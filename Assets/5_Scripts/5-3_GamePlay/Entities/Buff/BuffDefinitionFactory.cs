@@ -185,9 +185,10 @@ public static class BuffDefinitionFactory
     {
         string context = $"Buff {buffId} effects[{index}]";
         bool attributeModifier = effect.TypeId is BuffEffectTypeIds.AttackFlatModifier or BuffEffectTypeIds.MoveSpeedReduction;
+        bool periodicDamage = effect.TypeId is BuffEffectTypeIds.TrueDamage or BuffEffectTypeIds.FireDamage or BuffEffectTypeIds.RadiationDamage;
         if (effect.ScaleWithStacks && !(attributeModifier && effect.Phase != BuffEffectPhase.Tick) &&
-            (effect.Phase != BuffEffectPhase.Tick || effect.TypeId != BuffEffectTypeIds.TrueDamage))
-            throw new InvalidDataException($"{context} scaleWithStacks 只支持周期真实伤害或登记型属性修饰");
+            !(periodicDamage && effect.Phase == BuffEffectPhase.Tick))
+            throw new InvalidDataException($"{context} scaleWithStacks 只支持周期伤害或登记型属性修饰");
         switch (effect.TypeId)
         {
             case BuffEffectTypeIds.AttackFlatModifier:

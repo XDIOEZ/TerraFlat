@@ -20,7 +20,7 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `ActorBuffLightController` 只在实际存在光耀时创建点光源，移除后关闭并复用；仅真实开关变化时刷新光照，普通动物出生和其它 Buff 变化不新建闲置光源。
 - `ActorSpeedBuffMovementTrail` 按 Buff 增删、续期事件缓存加速表现资格；存档替换 Buff 字典或数量变化时补同步，模块延后装配及挂点变化仍重新绑定。空闲粒子只清一次，同帧发射复用脚底位置，不调整速度或发射率。
 - ID 用于注册、内容和保存。`schemaVersion:1` 严格拒绝重复 ID、未知 typeId/字段、非法枚举/非有限值；新效果由稳定 typeId、Dispatcher、参数校验组成。Handler 构建时缓存。
-- 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照，真伤沿用统一扣血入口。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因，避免归给此前武器。
+- 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照。`core:true_damage` 直接扣血，`core:fire_damage` 和 `core:radiation_damage` 走统一分类减防（燃烧现为火焰伤害）；叠层周期伤害在 GO/原生 ECS 均支持。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因。
 - `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。
 - `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
 - `core:attack_flat_modifier` 按来源修正攻击总值（最低 0，武器/投射物沿 Owner 读取），`core:move_speed_reduction` 用 `1-value×层数` 登记独立移速倍率；二者用 start/stop 成对配置，支持 `scaleWithStacks`，层变只更新这些登记效果，不重放其它 Start。

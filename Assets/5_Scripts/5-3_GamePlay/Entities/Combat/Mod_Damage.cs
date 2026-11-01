@@ -33,8 +33,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     [Range(0f, 0.25f), Tooltip("视觉抖动最大世界距离，默认0.035米；不影响目标真实位置。")]
     public float HitShakeDistance = CombatHitFeedback.DefaultShakeDistance;
 
-    [Header("物理攻击")]
-    [Tooltip("物理攻击力只减一次目标防御，再应用匹配工具的两倍弱点。")]
+    [Header("分类伤害")]
+    [Tooltip("物理、火焰、辐射分别减对应防御；命中表现不影响破防。")]
     public CombatDamage DamageValues = new CombatDamage();
 
     [Header("定时伤害设置")]
@@ -898,21 +898,21 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         return new DamageTextEffectData(damage, style);
     }
 
-    /// <summary>获取已校正的四类伤害。</summary>
+    /// <summary>获取已校正的分类伤害。</summary>
     public CombatDamage ResolveDamageValues()
     {
         NormalizeDamageValues();
         return DamageValues;
     }
 
-    /// <summary>由数值工具显式写入四类伤害，并阻止零伤害配置回退到旧单值。</summary>
+    /// <summary>由数值工具显式写入分类伤害。</summary>
     public void SetDamageValues(CombatDamage values)
     {
         DamageValues = values ?? new CombatDamage();
         DamageValues.ClampNonNegative();
     }
 
-    /// <summary>确保四类伤害对象存在，并限制运行时数据不会出现负数。</summary>
+    /// <summary>确保分类伤害对象存在，并限制运行时数据不会出现负数。</summary>
     private void NormalizeDamageValues()
     {
         DamageValues ??= new CombatDamage();

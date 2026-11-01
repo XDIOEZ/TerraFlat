@@ -88,10 +88,11 @@ MonoBehaviour:
   impactEffectSet: {fileID: 11400000, guid: 08da4cb31d294597a82d3c28c19d7516, type: 2}
   AttackEffects: []
   DamageValues:
-    Cutting: 0
-    Piercing: 0
-    Chopping: 0
-    Blunt: 10
+    Physical: 10
+    Fire: 0
+    Radiation: 0
+    True: 0
+    ImpactKind: 4
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0

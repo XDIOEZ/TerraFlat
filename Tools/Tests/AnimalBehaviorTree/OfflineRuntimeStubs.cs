@@ -28,6 +28,7 @@ namespace UnityEngine
     public sealed class HeaderAttribute : Attribute { public HeaderAttribute(string text) { } }
     public sealed class TooltipAttribute : Attribute { public TooltipAttribute(string text) { } }
     public sealed class HideInInspector : Attribute { }
+    public sealed class MinAttribute : Attribute { public MinAttribute(float value) { } }
     public static class Mathf
     {
         public static float Max(float left, float right) => Math.Max(left, right);

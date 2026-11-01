@@ -83,8 +83,8 @@ test.system("core_lifecycle", "binary_content_cache", {}, function(data)
     assert(data.coldMiss and data.stored and data.warmHit and data.count == 2, "首次解析没有生成可跨会话恢复的二进制对象")
     near(data.inheritedWeight, 3, "跨文件继承结果")
     assert(data.parametersEqual and data.actorSourcesEqual and data.actorDefinitions == 2, "扩展参数树或 Actor 继承来源丢失")
-    for index, value in ipairs(data.defense) do near(value, index, "四种独立防御值") end
-    assert(#data.defense == 4 and data.gridX == -2 and data.nullGridCell, "防御或占地空值往返丢失")
+    for index, value in ipairs(data.defense) do near(value, ({4, 2, 1})[index], "分类防御值") end
+    assert(#data.defense == 3 and data.gridX == -2 and data.nullGridCell, "防御或占地空值往返丢失")
     near(data.scaleZ, 4, "Unity 向量值")
     near(data.surfaceWidth, .3, "液面矩形")
     near(data.transitionTemperature, 100, "物质变化配置")

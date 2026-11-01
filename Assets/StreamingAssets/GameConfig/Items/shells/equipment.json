@@ -96,9 +96,10 @@
                 "$concreteType": "EquipmentInstance_Speed"
               },
               {
-                "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Physical": 8
+                  "Physical": 8,
+                  "Fire": 4,
+                  "Radiation": 3
                 },
                 "Name": "[Chestplate_Iron]重型胸甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
@@ -226,9 +227,10 @@
           "parameters": {
             "equipmentInstances": [
               {
-                "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Physical": 2
+                  "Physical": 2,
+                  "Fire": 0,
+                  "Radiation": 0
                 },
                 "Name": "[Chestplate_Twine]轻型藤甲防护",
                 "$concreteType": "EquipmentInstance_Defense",
@@ -356,9 +358,10 @@
           "parameters": {
             "equipmentInstances": [
               {
-                "DefenseBonusIncrease": 0.0,
                 "DefenseBonus": {
-                  "Physical": 4
+                  "Physical": 4,
+                  "Fire": 0,
+                  "Radiation": 0
                 },
                 "Name": "[Chestplate_Wood]木甲防护",
                 "$concreteType": "EquipmentInstance_Defense",

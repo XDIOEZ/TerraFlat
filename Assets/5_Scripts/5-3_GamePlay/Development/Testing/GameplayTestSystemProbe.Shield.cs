@@ -103,13 +103,13 @@ public static partial class GameplayTestSystemProbe
                     case "environment": damage = health.HurtEnvironmentalDamage(1, Vector2.zero, (float)Number(step, "damage", 0)); break;
                     case "force": damage = health.ForceHurt((float)Number(step, "damage", 1), "test:guard"); break;
                     case "legacy_hit":
-                        fixture.Sender.DamageValues = new CombatDamage(0f, 0f, 0f, (float)Number(step, "damage", 1));
+                        fixture.Sender.DamageValues = new CombatDamage((float)Number(step, "damage", 1), 0f, 0f, 0f);
                         damage = health.Hurt(fixture.Sender);
                         break;
                     case "hit":
                         double time = Number(step, "time", nextHitTime);
                         var context = fixture.Context(time);
-                        context.Damage = new float4(0f, 0f, 0f, (float)Number(step, "damage", 1));
+                        context.Damage = new float4((float)Number(step, "damage", 1), 0f, 0f, 0f);
                         damage = health.Hurt(context);
                         nextHitTime = time + 61d;
                         break;

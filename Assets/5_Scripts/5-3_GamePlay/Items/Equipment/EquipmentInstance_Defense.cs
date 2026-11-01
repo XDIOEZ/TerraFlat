@@ -7,17 +7,12 @@ using System.Collections.Generic;
 [MemoryPackable(GenerateType.VersionTolerant)]
 public partial class EquipmentInstance_Defense : EquipmentInstance
 {
-    [HideInInspector]
-    [MemoryPackOrder(1)] public float DefenseBonusIncrease = 0f;
-
     [MemoryPackIgnore]
     private bool _isApplied = false;
 
-    // MemoryPack 兼容：新字段只追加在旧 DefenseBonusIncrease 后面。
-    [MemoryPackOrder(2)] public CombatDefense DefenseBonus = new CombatDefense();
+    [MemoryPackOrder(1)] public CombatDefense DefenseBonus = new CombatDefense();
 
-    // 追加字段保持旧数据布局；空数组保留旧装备的全身覆盖语义。
-    [MemoryPackOrder(3)] public BodyPartType[] CoveredParts = new BodyPartType[0];
+    [MemoryPackOrder(2)] public BodyPartType[] CoveredParts = new BodyPartType[0];
 
     [MemoryPackIgnore] private Mod_DamageReceiver appliedReceiver;
     [MemoryPackIgnore] private CombatDefense appliedDefense;
@@ -32,8 +27,9 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         if (damageReceiver == null)
             return;
 
-        CombatDefense bonus = ResolveDefenseBonus();
-        appliedDefense = new CombatDefense(bonus.Cutting, bonus.Piercing, bonus.Chopping, bonus.Blunt);
+        CombatDefense bonus = DefenseBonus ?? new CombatDefense();
+        bonus.ClampNonNegative();
+        appliedDefense = bonus.Copy();
         appliedReceiver = damageReceiver;
         appliedToBodyParts = damageReceiver.UsesBodyPartHealth;
         if (appliedToBodyParts)
@@ -81,16 +77,4 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         return false;
     }
 
-    /// <summary>兼容旧装备单值防御；新装备直接填写四类防御。</summary>
-    private CombatDefense ResolveDefenseBonus()
-    {
-        DefenseBonus ??= new CombatDefense();
-        DefenseBonus.ClampNonNegative();
-        if (DefenseBonus.TotalDefense > 0f || DefenseBonusIncrease <= 0f)
-            return DefenseBonus;
-
-        float value = Mathf.Max(0f, DefenseBonusIncrease);
-        DefenseBonus = new CombatDefense(value, value, value, value);
-        return DefenseBonus;
-    }
 }

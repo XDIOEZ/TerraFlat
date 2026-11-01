@@ -264,12 +264,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Physical": 0.0,
-              "ImpactKind": 0,
-              "Cutting": 10.0,
-              "Piercing": 10.0,
-              "Chopping": 1.0,
-              "Blunt": 1.0
+              "Physical": 22.0,
+              "ImpactKind": 1
             }
           }
         },

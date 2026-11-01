@@ -1,5 +1,5 @@
 // 仅替代 Unity 外壳，测试链接正式动作时钟和临时防御代码，不重新实现被测规则。
-public class CombatDefense { public float Physical; }
+public class CombatDefense { public float Physical, Fire, Radiation; }
 public partial class Mod_DamageReceiver
 {
     private bool _deathHandled;

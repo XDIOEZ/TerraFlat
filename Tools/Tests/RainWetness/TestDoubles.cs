@@ -1,6 +1,7 @@
 // 仅替换引擎、资源及天气输入；Buff 定义、校验、实例、管理器和两个暴露时钟使用生产源码。
 namespace UnityEngine
 {
+    public class Sprite { }
     public class MonoBehaviour
     {
         public bool isActiveAndEnabled = true;
@@ -34,7 +35,9 @@ namespace Sirenix.OdinInspector
 }
 namespace MemoryPack
 {
-    public sealed class MemoryPackableAttribute : Attribute { }
+    public enum GenerateType { VersionTolerant }
+    public sealed class MemoryPackableAttribute : Attribute { public MemoryPackableAttribute(GenerateType type = default) { } }
+    public sealed class MemoryPackOrderAttribute : Attribute { public MemoryPackOrderAttribute(int order) { } }
     public sealed class MemoryPackIgnoreAttribute : Attribute { }
 }
 namespace FlatWorld.Networking
@@ -69,6 +72,12 @@ public static class ModText
 {
     public const string Mod_BuffManager = "Mod_BuffManager", Food = "Food", Hp = "Hp";
 }
+public static class GameplayFixedStepSimulation { public static ulong TickIndex; }
+public static class JsonConfigurationCache
+{
+    public static T Deserialize<T>(string json, Newtonsoft.Json.JsonSerializerSettings settings)
+        => Newtonsoft.Json.JsonConvert.DeserializeObject<T>(json, settings);
+}
 public sealed class ItemData { public string IDName = "Animal"; }
 public class Item : UnityEngine.MonoBehaviour
 {
@@ -77,6 +86,7 @@ public class Item : UnityEngine.MonoBehaviour
     public ItemMods itemMods = new();
 }
 public sealed class Player : Item { }
+public interface IPlayerStateAuthorityModule { }
 public sealed class ItemMods
 {
     public readonly Dictionary<string, Module> Modules = new();
@@ -129,7 +139,9 @@ public static class BodyTraumaBuffEffects
 }
 public static class BuffEffectTypeIds
 {
-    public const string TrueDamage = "core:true_damage", TemperatureWarming = "core:temperature_warming",
+    public const string TrueDamage = "core:true_damage", FireDamage = "core:fire_damage",
+        RadiationDamage = "core:radiation_damage", TemperatureWarming = "core:temperature_warming",
+        AttackFlatModifier = "core:attack_flat_modifier", MoveSpeedReduction = "core:move_speed_reduction",
         NightVision = "core:night_vision", MoveSpeedMultiplier = "core:move_speed_multiplier",
         FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier", WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier",
         DamageTakenMultiplier = "core:damage_taken_multiplier",
@@ -146,8 +158,9 @@ public static class BuffEffectDispatcher
     });
     public static bool IsSupportedNutritionTarget(string id) =>
         new[] { "carbohydrates", "fat", "protein", "water", "vitamins" }.Contains(id?.ToLowerInvariant());
-    public static void Execute(IReadOnlyList<BuffEffectDefinition> effects, BuffInstance runtime)
+    public static void Execute(IReadOnlyList<BuffEffectDefinition> effects, BuffInstance runtime, bool onlyStackScaled = false)
     {
-        foreach (var effect in effects) effect.Execute(runtime);
+        foreach (var effect in effects)
+            if (!onlyStackScaled || effect.ScaleWithStacks) effect.Execute(runtime);
     }
 }

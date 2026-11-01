@@ -46,7 +46,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             {
                 Attack = new CombatAttackKey { Source = new CombatIdentity { Backend = CombatBackend.External, Value = 1UL } },
                 IsTrueDamage = 1,
-                Damage = new Unity.Mathematics.float4(1f),
+                Damage = new Unity.Mathematics.float4(1f, 0f, 0f, 0f),
                 Clock = new CombatClock { Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime }
             };
             SourceDamageRejected = NaturalEntityEcsService.ApplyDamage(SourceHandle, damage) < 0f;

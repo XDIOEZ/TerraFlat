@@ -7,7 +7,7 @@ public interface IDamageDeliverySource
 
 public interface IDamageSender
 {
-    /// <summary>本次攻击的四类基础伤害。</summary>
+    /// <summary>本次攻击的物理、火焰、辐射及真实伤害。</summary>
     public CombatDamage DamageValues { get; }
 
     public Item attacker { get; set; }

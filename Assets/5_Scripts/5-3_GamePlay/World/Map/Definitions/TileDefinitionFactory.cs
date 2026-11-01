@@ -110,8 +110,8 @@ public static class TileDefinitionFactory
     private static void ValidateDamage(string id, TileBuildingDamageProfile damage)
     {
         TileDefinitionJson.ValidateFields(damage, id + ".damageProfile");
-        if (damage.DefenseValues == null || damage.DefenseValues.Cutting < 0 || damage.DefenseValues.Piercing < 0 ||
-            damage.DefenseValues.Chopping < 0 || damage.DefenseValues.Blunt < 0 ||
+        if (damage.DefenseValues == null || damage.DefenseValues.Physical < 0 || damage.DefenseValues.Fire < 0 ||
+            damage.DefenseValues.Radiation < 0 ||
             damage.DropAmount > 0 && string.IsNullOrWhiteSpace(damage.DropItemId))
             throw new InvalidDataException($"地块 {id} 的防御或掉落配置无效。");
     }

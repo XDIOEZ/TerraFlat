@@ -7,7 +7,7 @@ using Unity.Mathematics;
 
 namespace FlatWorld.AIECS
 {
-    /// <summary>共享 Buff 定义的周期执行器；本轮编译真实伤害和失水，伤害仍进入统一生命结算。</summary>
+    /// <summary>共享 Buff 定义的周期执行器，周期伤害走统一类型防御。</summary>
     [BurstCompile]
     public partial struct AiecsBuffSystem : IJobEntity
     {
@@ -31,14 +31,18 @@ namespace FlatWorld.AIECS
                 {
                     int ticks = 1 + (int)math.floor((limit - buff.NextTick) / definition.Interval);
                     status.Water = math.max(0f, status.Water + definition.WaterDelta * ticks);
-                    float damage = definition.TrueDamage + definition.TrueDamagePerStack * math.max(1, buff.Stacks);
-                    if (damage > 0f)
+                    int stacks = math.max(1, buff.Stacks);
+                    float damage = definition.TrueDamage + definition.TrueDamagePerStack * stacks;
+                    float fire = definition.FireDamage + definition.FireDamagePerStack * stacks;
+                    float radiation = definition.RadiationDamage + definition.RadiationDamagePerStack * stacks;
+                    if (damage > 0f || fire > 0f || radiation > 0f)
                     {
                         var source = identity.Key; source.Backend = CombatBackend.Environment;
                         output.Add(new AiecsPeriodicHit { Hit = new AiecsHitEvent { Target = entity, TargetKey = identity.Key,
                             Context = new CombatDamageContext { Attack = new CombatAttackKey { Source = source,
                                 Sequence = (uint)Clock.Tick, Window = (uint)(Clock.Tick >> 32), Pulse = (uint)buff.Definition + 1 },
-                                Credit = buff.Credit, Clock = Clock, Damage = new float4(0, 0, 0, damage * ticks), IsTrueDamage = 1,
+                                Credit = buff.Credit, Clock = Clock,
+                                Damage = new float4(0, fire * ticks, radiation * ticks, damage * ticks),
                                 Origin = actor.Position, HitPoint = actor.Position, BuildingMultiplier = 1f } } });
                     }
                     buff.NextTick += ticks * definition.Interval;

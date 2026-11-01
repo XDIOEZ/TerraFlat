@@ -194,10 +194,11 @@ MonoBehaviour:
   AttackEffects:
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   DamageValues:
-    Cutting: 0
-    Piercing: 0
-    Chopping: 0
-    Blunt: 5
+    Physical: 5
+    Fire: 0
+    Radiation: 0
+    True: 0
+    ImpactKind: 4
   DamageInterval: 0.2
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0

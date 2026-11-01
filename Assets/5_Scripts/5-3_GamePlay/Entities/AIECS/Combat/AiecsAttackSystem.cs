@@ -52,7 +52,8 @@ namespace FlatWorld.AIECS
                         Context = new CombatDamageContext { Attack = new CombatAttackKey { Source = identity.Key,
                             Sequence = attack.Sequence, Window = 1, Pulse = attack.Pulse }, Credit = identity.Key,
                             SourceItemId = definition.Id, CreditItemId = definition.Id,
-                            Faction = Factions[identity.Faction], Damage = definition.Damage, Origin = actor.Position,
+                            Faction = Factions[identity.Faction], Damage = definition.Damage,
+                            ImpactKind = definition.ImpactKind, Origin = actor.Position,
                             HitPoint = target.Position, Clock = Clock, SourceIsPlayer = identity.Player,
                             SlowEnabled = (byte)(definition.SlowDuration > 0f ? 1 : 0), SlowMultiplier = definition.SlowMultiplier,
                             SlowDuration = definition.SlowDuration, BuildingMultiplier = 1f, OnHitBuffs = definition.OnHitBuffs } };

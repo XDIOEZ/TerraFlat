@@ -731,7 +731,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
     /// <summary>新旧攻击共享间隔、物理伤害、战斗参数、归因和原有生命提交/反馈链。</summary>
-    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false)
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false, DeathCauseRecord deathCause = null)
     {
         if (IsTemporarilyInvulnerable) return -1f;
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
@@ -765,7 +765,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             }
         }
         return ResolveDamage(damage, legacySender,
-            GameplayCombatBridge.LegacyValues(values), context, preparedHits);
+            GameplayCombatBridge.LegacyValues(values, context.ImpactKind), context, preparedHits, deathCause);
     }
 
     #region 统一伤害结算
@@ -778,7 +778,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float ratio = saved.MaxHp > 0f ? Mathf.Clamp01(saved.Hp / saved.MaxHp) : 0f;
         saved.MaxHp = configured.MaxHp;
         saved.Hp = configured.MaxHp * ratio;
-        saved.DefenseValues = new CombatDefense { Physical = configured.DefenseValues?.Physical ?? 0f };
+        saved.DefenseValues = configured.DefenseValues?.Copy() ?? new CombatDefense();
         saved.CombatBalanceVersion = configured.CombatBalanceVersion;
     }
 

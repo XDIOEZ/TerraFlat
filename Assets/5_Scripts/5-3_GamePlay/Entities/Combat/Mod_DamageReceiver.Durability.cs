@@ -33,12 +33,11 @@ public partial class Mod_DamageReceiver
     public void SetBodyPartArmor(object source, BodyPartType[] parts, CombatDefense defense)
     {
         if (source == null || parts == null || defense == null) throw new ArgumentNullException();
-        ValidateBodyValue(defense.Cutting, nameof(defense.Cutting));
-        ValidateBodyValue(defense.Piercing, nameof(defense.Piercing));
-        ValidateBodyValue(defense.Chopping, nameof(defense.Chopping));
-        ValidateBodyValue(defense.Blunt, nameof(defense.Blunt));
+        ValidateBodyValue(defense.Physical, nameof(defense.Physical));
+        ValidateBodyValue(defense.Fire, nameof(defense.Fire));
+        ValidateBodyValue(defense.Radiation, nameof(defense.Radiation));
         bodyArmorSources[source] = new BodyArmor { Parts = (BodyPartType[])parts.Clone(),
-            Defense = new CombatDefense(defense.Cutting, defense.Piercing, defense.Chopping, defense.Blunt) };
+            Defense = defense.Copy() };
     }
 
     public void RemoveBodyPartArmor(object source) => bodyArmorSources.Remove(source);

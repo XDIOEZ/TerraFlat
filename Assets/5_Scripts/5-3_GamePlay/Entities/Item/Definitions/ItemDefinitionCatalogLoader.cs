@@ -1634,7 +1634,9 @@ public static class ItemDefinitionCatalogLoader
                 ["CombatBalanceVersion"] = health.CombatBalanceVersion,
                 ["DefenseValues"] = new JObject
                 {
-                    ["Physical"] = defense.Physical
+                    ["Physical"] = defense.Physical,
+                    ["Fire"] = defense.Fire,
+                    ["Radiation"] = defense.Radiation
                 }
             },
             ["weakTool"] = (int)health.WeakTool

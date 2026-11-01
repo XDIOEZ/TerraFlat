@@ -127,7 +127,7 @@ public static class ItemInstanceDataFactory
         var defaults = new Data_Player
         {
             CurrentSceneName = player.CurrentSceneName,
-            hp = CloneHp(player.hp), defense = CloneDefense(player.defense),
+            hp = CloneHp(player.hp),
             Speed = CloneGameValue(player.Speed) ?? new GameValue_float(), stamina = player.stamina,
             staminaMax = player.staminaMax, staminaRecoverySpeed = player.staminaRecoverySpeed,
             Name_User = player.Name_User, PlayerPov = player.PlayerPov,
@@ -138,7 +138,7 @@ public static class ItemInstanceDataFactory
         return () => new Data_Player
         {
             CurrentSceneName = defaults.CurrentSceneName,
-            hp = CloneHp(defaults.hp), defense = CloneDefense(defaults.defense),
+            hp = CloneHp(defaults.hp),
             Speed = CloneGameValue(defaults.Speed), stamina = defaults.stamina,
             staminaMax = defaults.staminaMax, staminaRecoverySpeed = defaults.staminaRecoverySpeed,
             Name_User = defaults.Name_User, PlayerPov = defaults.PlayerPov,
@@ -160,9 +160,6 @@ public static class ItemInstanceDataFactory
         maxValue = value.maxValue,
         Weaknesses = value.Weaknesses == null ? new List<string>() : new List<string>(value.Weaknesses)
     };
-
-    private static Defense CloneDefense(Defense value) => value == null ? new Defense(5f, 5f, 5f, 5f) :
-        new Defense(value.Cutting, value.Piercing, value.Chopping, value.Blunt);
 
     /// <summary>原位恢复当前定义，库存槽位与手持实例继续共享同一数据引用。</summary>
     public static void ApplyCurrentDefinition(ItemData target, ItemData definitionDefaults)

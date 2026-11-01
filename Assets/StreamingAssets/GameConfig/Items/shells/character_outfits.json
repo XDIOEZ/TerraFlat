@@ -48,7 +48,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "皮制帽子防护",
                 "DefenseBonus": {
-                  "Physical": 1
+                  "Physical": 1,
+                  "Fire": 1,
+                  "Radiation": 0
                 },
                 "CoveredParts": [
                   "Head"
@@ -105,7 +107,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "皮制上衣防护",
                 "DefenseBonus": {
-                  "Physical": 3
+                  "Physical": 3,
+                  "Fire": 2,
+                  "Radiation": 0
                 },
                 "CoveredParts": [
                   "Chest",
@@ -163,7 +167,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "皮制手套防护",
                 "DefenseBonus": {
-                  "Physical": 1
+                  "Physical": 1,
+                  "Fire": 1,
+                  "Radiation": 0
                 },
                 "CoveredParts": [
                   "LeftHand",
@@ -221,7 +227,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "皮制裤子防护",
                 "DefenseBonus": {
-                  "Physical": 1
+                  "Physical": 1,
+                  "Fire": 1,
+                  "Radiation": 0
                 },
                 "CoveredParts": [
                   "Pelvis",
@@ -280,7 +288,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "皮制鞋子防护",
                 "DefenseBonus": {
-                  "Physical": 1
+                  "Physical": 1,
+                  "Fire": 1,
+                  "Radiation": 0
                 },
                 "CoveredParts": [
                   "LeftLeg",
@@ -340,7 +350,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "铁头盔防护",
                 "DefenseBonus": {
-                  "Physical": 4
+                  "Physical": 4,
+                  "Fire": 2,
+                  "Radiation": 1
                 },
                 "CoveredParts": [
                   "Head"
@@ -398,7 +410,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "铁胸甲防护",
                 "DefenseBonus": {
-                  "Physical": 6
+                  "Physical": 6,
+                  "Fire": 3,
+                  "Radiation": 2
                 },
                 "CoveredParts": [
                   "Chest",
@@ -457,7 +471,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "铁护手防护",
                 "DefenseBonus": {
-                  "Physical": 3
+                  "Physical": 3,
+                  "Fire": 2,
+                  "Radiation": 1
                 },
                 "CoveredParts": [
                   "LeftHand",
@@ -516,7 +532,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "铁腿甲防护",
                 "DefenseBonus": {
-                  "Physical": 4
+                  "Physical": 4,
+                  "Fire": 2,
+                  "Radiation": 1
                 },
                 "CoveredParts": [
                   "Pelvis",
@@ -576,7 +594,9 @@
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "铁战靴防护",
                 "DefenseBonus": {
-                  "Physical": 2
+                  "Physical": 2,
+                  "Fire": 2,
+                  "Radiation": 1
                 },
                 "CoveredParts": [
                   "LeftLeg",

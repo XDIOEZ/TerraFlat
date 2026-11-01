@@ -127,7 +127,8 @@ namespace FlatWorld.AIECS
                         }
                         if (loss > 0f && vital.Hp > 0f && context.SlowEnabled != 0)
                         { status.MoveMultiplier = math.clamp(context.SlowMultiplier, 0.01f, 1f); status.SlowUntil = context.Clock.Time + context.SlowDuration; }
-                        int tier = CombatRules.BleedingTier(typed, identity.HasBlood != 0, vital.Hp > 0f, random.NextFloat());
+                        bool edged = context.IsTrueDamage == 0 && context.ImpactKind is 1 or 2 or 3;
+                        int tier = CombatRules.BleedingTier(typed, identity.HasBlood != 0, vital.Hp > 0f, random.NextFloat(), edged);
                         if (tier > 0) AiecsBuffOperations.ApplyBleeding(ref buffs, BuffDefinitions, tier, context.Clock.Time, context.Credit);
                         if (vital.Hp > 0f)
                             foreach (CombatOnHitBuff effect in context.OnHitBuffs)

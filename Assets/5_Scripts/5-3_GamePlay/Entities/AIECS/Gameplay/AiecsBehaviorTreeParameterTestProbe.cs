@@ -30,17 +30,17 @@ namespace FlatWorld.AIECS.Gameplay
                 {
                     var prototype = new JObject { ["DamageValues"] = new JObject
                     {
-                        ["Cutting"] = 0, ["Piercing"] = 0, ["Chopping"] = 0, ["Blunt"] = 22
+                        ["Physical"] = 22, ["ImpactKind"] = (int)CombatDamageKind.Cutting
                     } };
                     JObject merged = AiecsDefinitionCompiler.MergeConfiguredModuleParameters(prototype, actor["damage"] as JObject);
                     CombatDamage damage = merged["DamageValues"].ToObject<CombatDamage>();
                     var parts = GameplayCombatBridge.Values(damage);
                     results[id]["damage"] = new JObject
                     {
-                        ["cutting"] = parts.x, ["piercing"] = parts.y, ["chopping"] = parts.z, ["blunt"] = parts.w,
-                        ["physical"] = damage.TotalCombatPower,
-                        ["bleedingAt83"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .83f),
-                        ["bleedingAt85"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .85f)
+                        ["physical"] = parts.x, ["fire"] = parts.y, ["radiation"] = parts.z,
+                        ["impactKind"] = (int)damage.DominantKind,
+                        ["bleedingAt87"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .87f, true),
+                        ["bleedingAt89"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .89f, true)
                     };
                 }
                 if (id != "Chicken") continue;

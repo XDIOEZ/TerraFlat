@@ -40,7 +40,7 @@ public static partial class GameplayTestSystemProbe
             List<ItemDefinitionDto> expected = Parse(cold);
             ItemDefinitionDto definition = expected.Single(value => value.Id == "child");
             definition.Health = new ItemHealthDefinitionDto
-            { Defense = new ItemDefenseDefinitionDto { Cutting = 1, Piercing = 2, Chopping = 3, Blunt = 4 } };
+            { Defense = new ItemDefenseDefinitionDto { Physical = 4, Fire = 2, Radiation = 1 } };
             definition.Visual = new ItemVisualDefinitionDto
             { RendererLocalScale = new Vector3(2, 3, 4), LiquidSurface = new LiquidSurfaceDefinition { Bounds = new Rect(.1f, .2f, .3f, .4f) } };
             definition.WorldGridOccupancy = new WorldGridOccupancyData
@@ -60,8 +60,8 @@ public static partial class GameplayTestSystemProbe
             ItemDefinitionDto actual = restored?.Single(value => value.Id == "child");
             result["count"] = restored?.Count;
             result["inheritedWeight"] = actual?.Weight;
-            result["defense"] = actual == null ? null : new JArray(actual.Health.Defense.Cutting,
-                actual.Health.Defense.Piercing, actual.Health.Defense.Chopping, actual.Health.Defense.Blunt);
+            result["defense"] = actual == null ? null : new JArray(actual.Health.Defense.Physical,
+                actual.Health.Defense.Fire, actual.Health.Defense.Radiation);
             result["parametersEqual"] = actual != null && JToken.DeepEquals(definition.Modules["sample"].Data, actual.Modules["sample"].Data) &&
                 JToken.DeepEquals(definition.Modules["sample"].Parameters, actual.Modules["sample"].Parameters) &&
                 JToken.DeepEquals(definition.Ecs, actual.Ecs);

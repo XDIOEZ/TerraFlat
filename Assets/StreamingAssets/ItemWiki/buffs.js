@@ -26,6 +26,8 @@
     ];
     const effectNames = {
         "core:true_damage": "真实伤害",
+        "core:fire_damage": "火焰伤害",
+        "core:radiation_damage": "辐射伤害",
         "core:heal": "治疗",
         "core:max_health_percent_heal": "最大生命比例治疗",
         "core:max_health_percent_true_damage": "最大生命比例伤害",

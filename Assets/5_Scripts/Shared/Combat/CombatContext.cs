@@ -70,7 +70,7 @@ namespace FlatWorld.Combat
     /// <summary>飞行身份是可组合目标能力，不按鸟类物品 ID 或伤害材质写特判。</summary>
     public interface ICombatAirborneTarget { bool IsAirborne { get; } }
 
-    /// <summary>物理伤害上下文；旧四槽只保留命中表现与出血资格，不再分别抵扣防御。</summary>
+    /// <summary>四通道伤害依次为物理、火焰、辐射、真实伤害。</summary>
     public struct CombatDamageContext
     {
         public int ResourceToolKind, ResourceToolTier;
@@ -81,10 +81,11 @@ namespace FlatWorld.Combat
         public FixedString64Bytes DeathCauseId; // 环境和特殊来源显式声明死因，空值由投送能力解释。
         public FixedString128Bytes SourceItemId, CreditItemId, WeaponItemId; // 冻结来源定义，避免死亡后读取已换掉的武器。
         public FixedString128Bytes Faction; // 来源阵营的稳定 ID。
-        public float4 Damage; // 合计为物理攻击力，分槽仅保留旧表现标签。
+        public float4 Damage; // x物理、y火焰、z辐射、w真实伤害。
+        public byte ImpactKind; // 物理命中表现；切割、穿刺、劈砍可出血。
         public float2 Origin, HitPoint; // 来源与最终命中位置。
         public CombatClock Clock; // 生效 Tick/时间。
-        public byte SourceIsPlayer, IsTrueDamage; // 来源角色身份与是否跳过类型防御。
+        public byte SourceIsPlayer, IsTrueDamage; // IsTrueDamage 是特殊直接伤害来源的显式绕防入口。
         public byte SlowEnabled; // 可选受击减速。
         public float SlowMultiplier, SlowDuration; // 受击减速参数。
         public float BuildingMultiplier; // 防御后的建筑倍率。
@@ -112,13 +113,13 @@ namespace FlatWorld.Combat
     /// <summary>无托管伤害对象的共同数值核心；生命提交、事件与掉落由各后端的结算层负责。</summary>
     public static class CombatRules
     {
-        /// <summary>物理攻击只扣一次防御，再应用弱点等受击倍率；旧分槽仅分配反馈。</summary>
+        /// <summary>各类型分别执行 max(0, 攻击×攻击倍率－对应防御)，真实伤害不减防御。</summary>
         public static float4 Resolve(float4 damage, float4 defense, float attackMultiplier, float receivedMultiplier)
         {
-            float4 positive = math.max(0f, damage);
-            float attack = math.csum(positive);
-            float loss = ResolvePhysical(attack, math.cmax(math.max(0f, defense)), attackMultiplier, receivedMultiplier);
-            return attack > 0f ? positive * (loss / attack) : float4.zero;
+            float4 attack = math.max(0f, damage) * math.max(0f, attackMultiplier);
+            float4 protection = math.max(0f, defense);
+            protection.w = 0f;
+            return math.max(float4.zero, attack - protection) * math.max(0f, receivedMultiplier);
         }
 
         /// <summary>全部后端共用一个物理结算公式；未破防时弱点不能制造伤害。</summary>
@@ -132,9 +133,9 @@ namespace FlatWorld.Combat
             return total > 0f ? resolved * math.saturate(loss / total) : float4.zero;
         }
 
-        /// <summary>带 Blood 资格的刃伤按既有规则计算概率和等级；纯钝击、零损失和死亡不出血。</summary>
-        public static int BleedingTier(float4 actualLoss, bool hasBlood, bool alive, float random)
-            => BleedingTier(actualLoss.x + actualLoss.y + actualLoss.z, hasBlood, alive, random);
+        /// <summary>只将真实结算的物理损失用于锐器出血，火焰与辐射不触发。</summary>
+        public static int BleedingTier(float4 actualLoss, bool hasBlood, bool alive, float random, bool edged)
+            => BleedingTier(edged ? actualLoss.x : 0f, hasBlood, alive, random);
 
         /// <summary>旧后端已有实际刃伤汇总时复用相同概率与等级阈值。</summary>
         public static int BleedingTier(float edged, bool hasBlood, bool alive, float random)
