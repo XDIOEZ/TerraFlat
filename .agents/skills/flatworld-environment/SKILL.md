@@ -44,6 +44,7 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 - GM 时间滑条按实际 DayLength 预览，松开由权威 JumpToTime 一次；场景名可按 handle 缓存，时间/天气/维度实时读。菜单用无报错 GetInstance 探测。
 - 太空跨区不重建玩家/WorldEnter；SpaceMgr 必须登记新星区时间与采光并引用 SpaceScene 统一时钟，避免未登记场景的零光照。
 - 固定地理 temperature/airHumidity/precipitation、动态空气湿度、地表 moisture 和天气事件分层；环境查询不生成缺失地形，不把镜头区天气当全世界状态。
+- `core:radiation` 是 0–1 的地块污染值；生物模块只用逻辑坐标读取现有地块，不生成或扩散辐射。缺失采样清空暴露计时；安全范围与装备耐受由生存/装备模块拥有。
 - TryGetClimateBaseline 供历史生态/雪，排除季节/天气/局部源；TryGetAmbientTemperature 供体温/产量/调试，叠已加载地理层、PlanetData 基准差及允许的季节/天气/局部源，未加载返回 false。出生格温度不回写全局。
 - 环境生产者发布通用供给/影响，生存模块只管自身状态；装备/设备走公开接口供氧或注册耐受，不向 Mod_Oxygen/Mod_Pressure 堆具体装备判断。
 - 海洋 `ocean.currentX/Y` 保存带强度的近岸回推/外海离岸向量；`WaterEnvironmentRules.ResolveOceanCurrentVector` 统一混河口，运行时/冷区/海面共用。海洋 `RuntimeWaterCurrentSample.Flow` 为 0～1 强度，物品与角色推速均须乘它；共享格角包含零流样本且禁止归一化吞掉弱流带。

@@ -246,4 +246,5 @@ public static class ContaminationIds
     public const string PlantBlight = "core:plant_blight";
     public const string AnimalPlague = "core:animal_plague";
     public const string MosquitoPressure = "core:mosquito_pressure";
+    public const string Radiation = "core:radiation";
 }

@@ -20,9 +20,9 @@ public partial class Mod_DamageReceiver
     public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, float physicalDamage, string deathCauseId = "unknown")
         => HurtEnvironmentalDamage(eventId, logicalOrigin, new CombatDamage { Physical = physicalDamage }, deathCauseId);
 
-    /// <summary>环境和状态伤害共用分类减防与部位生命，不把火焰和辐射伪装成物理伤害。</summary>
+    /// <summary>环境伤害保留原通道；特殊直接伤害可绕过防御和部位生命。</summary>
     public float HurtEnvironmentalDamage(ulong eventId, Vector2 logicalOrigin, CombatDamage damage, string deathCauseId = "unknown",
-        DeathCauseRecord origin = null)
+        DeathCauseRecord origin = null, bool isTrueDamage = false)
     {
         if (IsTemporarilyInvulnerable) return -1f;
         if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null) return 0f;
@@ -39,7 +39,7 @@ public partial class Mod_DamageReceiver
             DeathCauseId = GameplayCombatBridge.NarrativeCauseId(deathCauseId),
             Origin = logicalOrigin, HitPoint = (Vector2)WorldLocalPresentation.ToLogical(item.transform.position),
             Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime },
-            BuildingMultiplier = 1f, ResourceToolEfficiency = 1f
+            BuildingMultiplier = 1f, ResourceToolEfficiency = 1f, IsTrueDamage = (byte)(isTrueDamage ? 1 : 0)
         };
         return HurtContext(context, 1f, ignoreInterval: true, deathCause: origin);
     }

@@ -54,6 +54,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "prefab": "Module_SingleSpriteController",
           "id": "动画接收模块",

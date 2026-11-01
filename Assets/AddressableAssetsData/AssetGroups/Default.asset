@@ -131,6 +131,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0b74f49ce34746b7a313f741e6fe72d8
+    m_Address: Module_Radiation
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0bb01bb5c1f2b5d48a23fe9b370f0b7b
     m_Address: Assets/6_Art/Generated/Items/Fishing/FishingHook.png
     m_ReadOnly: 0

@@ -36,6 +36,15 @@
       "minimumValue": 0.0,
       "maximumValue": 1.0,
       "defaultValue": 0.0
+    },
+    {
+      "id": "core:radiation",
+      "displayName": "辐射强度",
+      "description": "表示地块环境辐射强度，供生物辐射耐受与伤害系统读取。",
+      "category": "radiation",
+      "minimumValue": 0.0,
+      "maximumValue": 1.0,
+      "defaultValue": 0.0
     }
   ]
 }

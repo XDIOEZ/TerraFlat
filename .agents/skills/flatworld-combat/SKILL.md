@@ -36,7 +36,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 17 件现有护甲的三类数值在 `GameConfig/Items/shells/{character_outfits,equipment,steel_equipment}.json`；`core:fire_damage`/`core:radiation_damage` 周期伤害也走正式减防。旧数据层 `Damage/Defense` 已移除，SQLite v1 玩家快照旧字段编号保留为空槽但不再用于战斗。
 - 战斗只读 `GameRuleConfiguration.Current.CreatureCombat`，纯值后端通过 `CombatTuning` 冻结参数；攻击修正在防御前，`CreatureCombatRuleSet.ResolveReceivedDamageMultiplier` 的玩家受击修正在防御后（含 ECS 转交命中），环境伤害、玩家攻击和非玩家目标不应用该受击修正。
 - 玩家死亡模块通过 `DropAllCarriedItems/SetDropAllCarriedItems/ClearDropAllCarriedItemsOverride` 接收来源无关的机制开关；角色覆盖随本模块保存，世界默认刷新不抹掉覆盖，卸载清运行缓存，新 Load 从自身载荷重建。回归 `combat/death_rule_override`。
-- 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。
+- 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；仅显式 `isTrueDamage: true` 绕过防御和部位生命，难度及目标受击倍率仍生效；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。
 - 返回 0 是有效但全防御命中，可显示数字/附加状态；负值 -1 是死亡/冷却等拒绝，不触发表现或状态。ResolvedDamageValues 已应用难度、防御/倍率，按 DamageValue 裁过量。
 - 出血经 DamageReceivedStatusEffectRegistry 消费同一笔 DamageReceiverDamageInfo，要求 Blood 标签和实际切割/穿刺/劈砍损失；部位提示读同笔 BodyPartHits，不重新抽样。玩家受击表现由接收侧订阅保证。
 - 濒死 HP 不再被被动恢复改成小正数；控制/UI 在本地 Event_PlayerEnterWorld（模块已加载）按权威血量恢复，不重发 OnDead。

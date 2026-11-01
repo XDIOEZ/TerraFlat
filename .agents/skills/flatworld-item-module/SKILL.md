@@ -37,6 +37,7 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 - 默认能力通过 CanonicalModuleId 由统一绑定入口写入，不在 Awake 改空模板 ID。JSON 显式 ID 仍符合依赖契约；来源模板与当前定义身份的编译约束见定义参考。
 - 编译/绑定/额外组件清退只归最近 Item，不穿子物品；独立模块 Prefab 不含 Item。独立模块拥有 Prefab 根，内嵌模块只拥有组件。
 - IItemModuleDependencyBinder 在配置完成后解析唯一 ID/接口。ItemMods 只读视图经 AddMod/RemoveMod/BeginMutation 更新结构版本/能力缓存，可变 ModuleData 不跨宿主共享。
+- 新增 `EquipmentInstance` 多态类型时追加稳定 MemoryPack union tag，并登记 `ModuleJsonConfigurator.EquipmentInstanceJsonConverter` 白名单；Equip/UnEquip 按装备实例来源注册和撤销能力。
 - RuntimeGeneration 每 Load 更新且不存档；战斗身份含 UID、world/dimension、该代际，感知另有代际。同实例注册幂等，不同实例 GUID 冲突报错，注销用登记时身份。
 
 ## 装配、加载与回收

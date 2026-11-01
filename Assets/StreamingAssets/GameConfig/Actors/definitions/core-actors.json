@@ -95,6 +95,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
@@ -843,6 +848,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animalAudio": {
           "prefab": "Mod_AnimalAmbientAudio",
           "id": "Mod_AnimalAmbientAudio",
@@ -1621,6 +1631,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "biteAttackSkill": {
           "prefab": "Module_BiteAttack",
           "id": "AnimalSkill_BiteAttack",
@@ -2354,6 +2369,11 @@
         "animatorControllerAddress": "flatworld.actor.animator.ghost"
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "prefab": "Module_SingleSpriteController",
           "id": "动画接收模块",
