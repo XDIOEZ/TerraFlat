@@ -71,6 +71,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 表现与资源会话
 
+- 受击碰撞集合统一由 `WorldPhysicsService2D.RentCombatDamageQuery` 发放；地板、机器、自然物和可选 AIECS 共用世界池，释放租约清候选，关闭世界撤销全部投影。通用 Item/Actor 壳只留 `ItemPhysicsTemplate2D` 默认配置，由所属世界在模块加载前领取原生组件；回收禁用，重租复用，迁移不重置运动。
+
 - Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，视觉层不保留物理 Tilemap；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
 - `ChunkGroundMeshRenderer` 的 Vertex/GPU Cell 托管数组按纹理批次从 ArrayPool 借用并在 Dispose 归还；每次租借清空本次有效范围。**索引格式、GPU 上传和包围盒扫描必须使用真实 `vertexCount/cellCount`，不得使用池数组的 `Length`**。构造或字典登记失败要释放已创建 Mesh/Buffer/材质和数组，单组释放异常不得阻断其它组回收；复测对比 `FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.{CellArray,VertexArray}` 的耗时与 GC。
 - 玩家/GO AI 用 SpriteRenderer 与行网格同 Player Layer/Order；行中心排序有半格近似，真实脚点仍用于几何/遮挡。草/花/阴影 BRG 只能在自身排序域排序。
