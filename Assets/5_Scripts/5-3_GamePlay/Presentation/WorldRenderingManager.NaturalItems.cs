@@ -23,8 +23,21 @@ public sealed partial class WorldRenderingManager
     // 原外壳只提供外观输入，实际绘制副本不复制模块、Item 或任何物理组件。
     internal void RequestNaturalItemView(Item item)
     {
-        if (item == null || item.InHand || !RegisterItemRendering(item)) return;
-        ReleaseItemPresentation(item);
+        if (item == null) return;
+        if (item.InHand)
+        {
+            ReleaseNaturalItemView(item);
+            ReleaseItemPresentation(item);
+            return;
+        }
+        if (!RegisterItemRendering(item)) return;
+        ReleaseItemView(item);
+        if (CanBorrowItemVisual(item))
+        {
+            ReleaseNaturalItemView(item);
+            if (RequestBorrowedItemVisual(item)) return;
+        }
+        ReleaseActorView(item);
         if (naturalItemViews.TryGetValue(item, out NaturalItemView existing))
         {
             if (existing.Generation == item.RuntimeGeneration && existing.Projection != null && !existing.Projection.IsReleased) return;

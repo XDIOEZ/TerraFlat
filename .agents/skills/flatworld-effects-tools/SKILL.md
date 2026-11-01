@@ -17,7 +17,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 ## 共用契约
 
 - 完整自然物的可见副本由 WorldRenderingManager.NaturalItems 持有，复用 WorldPresentationProjection 的 visualHierarchyOnly 模式，只复制绘制必需的节点；逻辑外壳暂保留隐藏的外观输入，不复制 Item、Module 或原生物理。撤销 ChunkView 只解绑投影，不销毁生态。Mod_HeldFood 只提交进食进度，WorldRenderingManager.HeldFood 持有排序和咬痕资源；MPB 清空咬痕用计数关闭及共享空纹理，不传 null。规则 world_streaming/detached_item_projection、rendering/held_food_bites，正式 Leaf 重绑见 natural_item_decoupling_gameplay。
-- SingleSprite GO Actor 的 ActorVisual（SpriteRenderer/Animator）由 WorldRenderingManager.Actors 借到所属场景 Rendering；Item、AI、物理模块留逻辑树，回池先恢复动画 PoseRoot 再挂回 Prefab。玩家、普通世界物品和非单图 Actor 由 WorldRenderingManager.ItemViews 复用 visualHierarchyOnly 绘制投影，源保留隐藏的视觉输入，不复制逻辑或物理；自然物继续由 NaturalItems 独占，物品转出区块时切换租约。跨场景、手持和注销均需清理旧视图；单图模块仍通过 Item.Sprite 更新姿态、水线与描边。
+- SingleSprite GO Actor 和已初始化、纯视觉子树的普通/自然物由 WorldRenderingManager 直接借出 Render 到所属场景 Rendering；Item、模块及物理留逻辑树，回池还原原层级和动画 PoseRoot。玩家及混有逻辑/物理的复杂视觉继续以 visualHierarchyOnly 投影，源隐藏、显示副本不复制逻辑；自然物区块租约仍由 NaturalItems 负责。注册世界 Renderer 时不要把投影临时 forceRenderingOff 当作原始隐藏值；跨场景、手持和注销均清理旧视图。
 
 - 排序类别由 WorldSorting JSON 经 GamePlay 桥接 AIECS。动态实体共用 Player，地面印记/水花/预览走 Shadow，离体特效走 world-effect；SortingGroup 只设最外层键，内部保持相对序，代理继承外层有效键。贴地设施为 ground-building，Carrier 判定先于 Building。
 - 投影世界各持有 `WorldPresentationSortingDomain`，同世界区块与实体共用域。域内显式提交原层序与脚点，渲染前计算临时 Order 恢复 Y 混排；不能把整个 SortingGroup 内的相机距离当排序依据。静态键、模拟根和存档不改，退出恢复并注销。

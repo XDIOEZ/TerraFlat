@@ -727,7 +727,11 @@ public static partial class GameplayWorldRegistry
             if (PresentationOwners.TryGetValue(renderer, out GameplayWorldPresentationOwner previous) && previous != owner &&
                 previous != null && previous.transform.IsChildOf(root.transform)) continue;
             PresentationOwners[renderer] = owner;
-            if (!world.Renderers.ContainsKey(renderer)) world.Renderers.Add(renderer, renderer.forceRenderingOff);
+            // 投影暂时隐藏的源 Renderer 不能被误记成世界物品自身的隐藏配置。
+            if (!world.Renderers.ContainsKey(renderer))
+                world.Renderers.Add(renderer,
+                    WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(renderer,
+                        out bool originalForceOff) ? originalForceOff : renderer.forceRenderingOff);
             if (!visible) renderer.forceRenderingOff = true;
         }
     }

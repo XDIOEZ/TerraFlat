@@ -501,6 +501,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
                 {
                     WorldPhysicsService2D.SetItemBodySimulationEnabled(_body, false); _solidCollider.enabled = false;
                     foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
+                    WorldRenderingManager.ExistingInstance?.SetBorrowedItemVisualRenderersEnabled(item, false);
                 }
                 NetworkSurfaceProjectiles.Add(this);
             }
@@ -593,6 +594,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out var point) &&
             FlatWorld.Spaceflight.SpaceSectorCoordinates.Difference(point, observer.Position).Magnitude <= 8192d;
         foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = visible;
+        WorldRenderingManager.ExistingInstance?.SetBorrowedItemVisualRenderersEnabled(item, visible);
         if (!visible || !FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out var canonical)) return;
         Vector2 shift = session.ProjectPosition(canonical) - (Vector2)item.transform.position;
         spaceFrame.PresentationOrigin += shift;

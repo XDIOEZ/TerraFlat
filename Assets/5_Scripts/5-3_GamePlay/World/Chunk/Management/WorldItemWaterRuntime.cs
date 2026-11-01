@@ -22,6 +22,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private bool isOnBottom;
     private string observedSpecialData;
     private readonly List<SpriteRenderer> bottomHiddenRenderers = new();
+    private Transform waterExternalVisualRoot;
     private bool floatSettled;
     private float sinkElapsed;
     private float resolvedSinkDuration;
@@ -231,7 +232,8 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         if (submergedVisual != null) submergedVisual.localScale = originalVisualScale;
         waterImmersionEffect.SetWaterState(1f, true);
         // 只关闭渲染，物品根节点、碰撞、世界登记与真实尺寸都保留。
-        foreach (SpriteRenderer renderer in waterItem.GetComponentsInChildren<SpriteRenderer>(true))
+        Transform visualRoot = waterExternalVisualRoot != null ? waterExternalVisualRoot : waterItem.transform;
+        foreach (SpriteRenderer renderer in visualRoot.GetComponentsInChildren<SpriteRenderer>(true))
         {
             if (renderer.forceRenderingOff) continue;
             renderer.forceRenderingOff = true;
@@ -333,7 +335,10 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         waterImmersionEffect.enabled = true;
         waterRenderEffects.SetEffectSpriteMaterial(waterEffectMaterial);
         waterRenderEffects.RefreshBindings();
-        waterRenderEffects.RegisterExternalRenderers(targetItem.transform);
+        // 渲染管理器借走视觉树后，水体效果绑定真正的显示节点。
+        waterExternalVisualRoot = WorldRenderingManager.ExistingInstance?.GetActorProjectionSource(targetItem)
+            ?? targetItem.transform;
+        waterRenderEffects.RegisterExternalRenderers(waterExternalVisualRoot);
 
         SpriteRenderer referenceRenderer = targetItem.Sprite != null && targetItem.Sprite.sprite != null
             ? targetItem.Sprite
@@ -372,8 +377,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             submergedVisual.localScale = originalVisualScale;
         submergedVisual = null;
         submergedElapsed = 0f;
-        if (waterRenderEffects != null && waterItem != null)
-            waterRenderEffects.UnregisterExternalRenderers(waterItem.transform);
+        if (waterRenderEffects != null && waterExternalVisualRoot != null)
+            waterRenderEffects.UnregisterExternalRenderers(waterExternalVisualRoot);
+        waterExternalVisualRoot = null;
 
         if (resetVisual && waterImmersionEffect != null)
             waterImmersionEffect.SetWaterState(0f, false);

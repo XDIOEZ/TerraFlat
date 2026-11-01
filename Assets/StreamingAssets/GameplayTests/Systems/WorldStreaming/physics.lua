@@ -107,9 +107,10 @@ end, "移动生物保留预制体碰撞并由世界物理管理器统一登记")
 
 test.runtime("world_streaming", "item_visual_ownership", {}, function(data)
     assert(data.actorSeparated, "GO 单图生物的 SpriteRenderer 未迁至独立 Rendering 节点")
-    assert(data.playerProjected and data.ordinaryProjected and data.sourcesHiddenWhileProjected
+    assert(data.playerProjected and data.ordinaryBorrowed and data.displayStateCorrect
+        and data.noSourceRender
         and data.viewHasNoLogicOrPhysics
-        and data.viewsUnderRendering, "玩家或普通物品的绘制副本未独立，或混入 Item、刚体、碰撞组件")
+        and data.viewsUnderRendering, "普通物品未移除逻辑树中的 Render，或显示管理混入逻辑与物理组件")
     assert(data.repeatReusesView and data.releaseAndRebind,
         "渲染重复登记创建副本，或取消登记后无法正常重绑")
 end, "GO 生物、玩家、普通物品统一渲染所有权及复用")

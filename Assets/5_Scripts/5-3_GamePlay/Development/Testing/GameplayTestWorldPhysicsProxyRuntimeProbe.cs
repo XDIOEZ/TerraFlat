@@ -199,45 +199,47 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             creature.GetComponent<Rigidbody2D>() != null &&
             creature.GetComponentInChildren<Mod_DamageReceiver>(true) != null;
         bool playerProjected = rendering.TryGetItemPresentation(player, out var playerView);
-        bool ordinaryProjected = rendering.TryGetItemPresentation(ordinary, out var ordinaryView);
-        bool hiddenSource = player.Sprite != null && player.Sprite.forceRenderingOff &&
-            ordinary.Sprite != null && ordinary.Sprite.forceRenderingOff;
-        bool originalHidden = ordinary.Sprite != null &&
-            WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(ordinary.Sprite, out bool wasHidden) &&
-            wasHidden;
-        bool visualOnly = playerProjected && ordinaryProjected &&
+        bool ordinaryBorrowed = ordinary.Sprite != null &&
+            rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform);
+        Transform ordinaryRoot = ordinaryBorrowed ? rendering.GetActorProjectionSource(ordinary) : null;
+        bool displayStateCorrect = player.Sprite != null && player.Sprite.forceRenderingOff &&
+            ordinaryBorrowed && ordinary.Sprite.enabled && !ordinary.Sprite.forceRenderingOff;
+        bool visualOnly = playerProjected && ordinaryRoot != null &&
             playerView.GetComponentInChildren<Item>(true) == null &&
-            ordinaryView.GetComponentInChildren<Item>(true) == null &&
+            ordinaryRoot.GetComponentInChildren<Item>(true) == null &&
+            ordinaryRoot.GetComponentInChildren<Module>(true) == null &&
             playerView.GetComponentInChildren<Collider2D>(true) == null &&
-            ordinaryView.GetComponentInChildren<Rigidbody2D>(true) == null;
-        bool inRendering = playerProjected && ordinaryProjected &&
+            ordinaryRoot.GetComponentInChildren<Rigidbody2D>(true) == null;
+        bool inRendering = playerProjected && ordinaryBorrowed &&
             playerView.transform.parent?.name == "Rendering" &&
-            ordinaryView.transform.parent?.name == "Rendering" &&
+            ordinaryRoot.parent?.name == "Rendering" &&
             playerView.gameObject.scene == player.gameObject.scene &&
-            ordinaryView.gameObject.scene == ordinary.gameObject.scene;
+            ordinaryRoot.gameObject.scene == ordinary.gameObject.scene;
+        bool noSourceRender = ordinaryBorrowed && ordinary.GetComponentsInChildren<Renderer>(true).Length == 0;
 
         rendering.RefreshItemRendering(player);
         rendering.RefreshItemRendering(creature);
         rendering.RefreshItemRendering(ordinary);
         bool reused = rendering.TryGetItemPresentation(player, out var reboundPlayer) &&
             ReferenceEquals(playerView, reboundPlayer) &&
-            rendering.TryGetItemPresentation(ordinary, out var reboundOrdinary) &&
-            ReferenceEquals(ordinaryView, reboundOrdinary) &&
+            ReferenceEquals(ordinaryRoot, rendering.GetActorProjectionSource(ordinary)) &&
+            rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
             rendering.OwnsActorVisual(creature, actorSprite.transform);
 
         rendering.UnregisterItemRendering(ordinary);
-        bool released = !rendering.TryGetItemPresentation(ordinary, out _) &&
-            ordinary.Sprite != null && ordinary.Sprite.forceRenderingOff == originalHidden;
+        bool released = !rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
+            ordinary.Sprite.transform.IsChildOf(ordinary.transform);
         rendering.RegisterItemRendering(ordinary);
         rendering.RequestItemPresentation(ordinary);
-        bool restored = rendering.TryGetItemPresentation(ordinary, out var restoredView) &&
-            !ReferenceEquals(restoredView, ordinaryView);
+        bool restored = rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
+            rendering.GetActorProjectionSource(ordinary) != ordinaryRoot;
         return new JObject
         {
             ["actorSeparated"] = actorSeparated,
             ["playerProjected"] = playerProjected,
-            ["ordinaryProjected"] = ordinaryProjected,
-            ["sourcesHiddenWhileProjected"] = hiddenSource,
+            ["ordinaryBorrowed"] = ordinaryBorrowed,
+            ["displayStateCorrect"] = displayStateCorrect,
+            ["noSourceRender"] = noSourceRender,
             ["viewHasNoLogicOrPhysics"] = visualOnly,
             ["viewsUnderRendering"] = inRendering,
             ["repeatReusesView"] = reused,

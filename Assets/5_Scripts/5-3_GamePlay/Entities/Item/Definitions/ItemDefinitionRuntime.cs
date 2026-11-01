@@ -188,6 +188,8 @@ public static class ItemDefinitionRuntime
         }
         if (needsRenderer)
         {
+            // 世界渲染管理器持有的 Sprite 已不在逻辑实体的子层级中。
+            renderer ??= item.Sprite;
             if (renderer == null)
             {
                 SpriteRenderer[] candidates = item.GetComponentsInChildren<SpriteRenderer>(true);

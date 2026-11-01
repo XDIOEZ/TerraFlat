@@ -23,6 +23,7 @@ public sealed partial class WorldRenderingManager
         internal SpriteRenderer Sprite;
         internal SortingGroup SourceSorting;
         internal SortingGroup ViewSorting;
+        internal bool OriginalForceRenderingOff;
     }
 
     private readonly Dictionary<Item, ActorView> actorViews = new(ItemReferenceComparer.Instance);
@@ -45,18 +46,71 @@ public sealed partial class WorldRenderingManager
             ReleaseActorView(item);
             return;
         }
+        TryBorrowItemVisual(item, animation);
+    }
+
+    // 普通世界物品也借用纯视觉子树，避免保留一套隐藏的 Render 再复制一套。
+    internal bool CanBorrowItemVisual(Item item)
+    {
+        if (item == null || item is Player || !item.IsInitialized || item.Sprite == null) return false;
+        if (actorViews.TryGetValue(item, out ActorView owned) && owned.Visual != null &&
+            owned.Sprite == item.Sprite && owned.Generation == item.RuntimeGeneration)
+            return true;
+        // 水体已绑定源视觉时暂不搬家，避免丢失水线材质和河底隐藏租约。
+        if (item.TryGetComponent<WorldItemWaterRuntime>(out var water) && water.IsActive)
+            return false;
+        return FindBorrowableVisualRoot(item) != null;
+    }
+
+    internal bool RequestBorrowedItemVisual(Item item)
+        => CanBorrowItemVisual(item) && TryBorrowItemVisual(item, null);
+
+    private static Transform FindBorrowableVisualRoot(Item item)
+    {
+        if (item == null || item.Sprite == null) return null;
+        Transform candidate = null;
+        Renderer[] renderers = item.GetComponentsInChildren<Renderer>(true);
+        for (Transform current = item.Sprite.transform;
+             current != null && current != item.transform && current.IsChildOf(item.transform);
+             current = current.parent)
+        {
+            // 视觉节点若挂在模块或物理节点下面，不可拆走模块自己的子节点。
+            if (current.parent != null && current.parent != item.transform &&
+                (current.parent.TryGetComponent<Module>(out _) ||
+                 current.parent.TryGetComponent<Item>(out _) ||
+                 current.parent.TryGetComponent<Collider2D>(out _) ||
+                 current.parent.TryGetComponent<Rigidbody2D>(out _)))
+                return null;
+            if (current.GetComponentInChildren<Item>(true) != null ||
+                current.GetComponentInChildren<Module>(true) != null ||
+                current.GetComponentInChildren<Collider2D>(true) != null ||
+                current.GetComponentInChildren<Rigidbody2D>(true) != null)
+                break;
+            bool containsAllRenderers = true;
+            foreach (Renderer renderer in renderers)
+                if (renderer.transform != current && !renderer.transform.IsChildOf(current))
+                { containsAllRenderers = false; break; }
+            if (containsAllRenderers) candidate = current;
+        }
+        return candidate;
+    }
+
+    private bool TryBorrowItemVisual(Item item, Mod_AnimatorController animation)
+    {
         if (actorViews.TryGetValue(item, out ActorView existing))
         {
-            if (existing.Generation == item.RuntimeGeneration && existing.Visual != null && existing.Sprite == item.Sprite)
-                return;
+            if (existing.Generation == item.RuntimeGeneration && existing.Visual != null &&
+                existing.Sprite == item.Sprite && existing.Animation == animation)
+                return true;
             ReleaseActorView(item);
         }
 
         SpriteRenderer sprite = item.Sprite;
-        if (sprite == null) return;
-        Transform visual = sprite.transform;
+        if (sprite == null) return false;
+        Transform visual = animation != null ? sprite.transform : FindBorrowableVisualRoot(item);
+        if (visual == null) return false;
         // 允许晚于 Module.Load 接管，但先归还旧 PoseRoot，绝不记住临时动画节点作为池基线。
-        if (animation.IsRuntimeLoaded && visual.IsChildOf(item.transform))
+        if (animation != null && animation.IsRuntimeLoaded && visual.IsChildOf(item.transform))
             animation.ReleaseSeparatedPresentation();
         Transform originalParent = visual.parent;
         if (originalParent == null || !visual.IsChildOf(item.transform) ||
@@ -64,11 +118,12 @@ public sealed partial class WorldRenderingManager
             visual.GetComponentInChildren<Item>(true) != null ||
             visual.GetComponentInChildren<Collider2D>(true) != null ||
             visual.GetComponentInChildren<Rigidbody2D>(true) != null)
-            return;
+            return false;
 
         Transform parent = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(item.gameObject.scene,
             RuntimeSceneObjectCategory.Rendering);
-        var holder = new GameObject(item.name + " ActorView") { hideFlags = HideFlags.DontSave };
+        var holder = new GameObject(item.name + (animation != null ? " ActorView" : " View"))
+            { hideFlags = HideFlags.DontSave };
         holder.transform.SetParent(parent, false);
         SortingGroup sourceSorting = null;
         for (Transform current = originalParent; current != null; current = current.parent)
@@ -81,6 +136,7 @@ public sealed partial class WorldRenderingManager
             OriginalSibling = visual.GetSiblingIndex(), OriginalPosition = visual.localPosition,
             OriginalRotation = visual.localRotation, OriginalScale = visual.localScale,
             Sprite = sprite, ViewRoot = holder, SourceSorting = sourceSorting,
+            OriginalForceRenderingOff = GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sprite),
             Effects = originalParent.GetComponent<ActorRenderEffectController>()
         };
         actorViews.Add(item, entry);
@@ -92,7 +148,13 @@ public sealed partial class WorldRenderingManager
                 entry.ViewSorting = holder.AddComponent<SortingGroup>();
             entry.Effects?.RegisterOwnedRenderer(sprite);
             originalParent.GetComponent<ActorBuffLightController>()?.RebindVisualParent();
+            // 原始视觉的世界归属交还给管理器，逻辑节点不再持有 Renderer。
+            GameplayWorldRegistry.RegisterItemPresentation(item);
+            if (!WorldPresentationProjection.IsSourceProjected(sprite) &&
+                !BuildingDepthMeshBridge.IsProjected(sprite))
+                sprite.forceRenderingOff = entry.OriginalForceRenderingOff;
             SynchronizeActorView(entry);
+            return true;
         }
         catch
         {
@@ -104,6 +166,13 @@ public sealed partial class WorldRenderingManager
     internal bool OwnsActorVisual(Item item, Transform visual)
         => item != null && visual != null && actorViews.TryGetValue(item, out ActorView entry) &&
            entry.Visual != null && (entry.Visual == visual || visual.IsChildOf(entry.Visual));
+
+    internal void SetBorrowedItemVisualRenderersEnabled(Item item, bool visible)
+    {
+        if (item == null || !actorViews.TryGetValue(item, out ActorView entry) || entry.Visual == null) return;
+        foreach (Renderer renderer in entry.Visual.GetComponentsInChildren<Renderer>(true))
+            renderer.enabled = visible;
+    }
 
     internal void SynchronizeActorViewForPose(Item item)
     {
@@ -152,6 +221,13 @@ public sealed partial class WorldRenderingManager
         bool visible = entry.Item.isActiveAndEnabled &&
             entry.Anchor.gameObject.activeInHierarchy && entry.Item.gameObject.scene.isLoaded &&
             GameplayWorldRegistry.GetItemWorldKey(entry.Item) == GameplayWorldRegistry.LocalPresentationWorldKey;
+        if (visible && entry.Item.NaturalRuntimeOwner != null)
+        {
+            string worldKey = GameplayWorldRegistry.GetItemWorldKey(entry.Item);
+            visible = GameplayWorldRegistry.TryGet(worldKey, out GameplayWorldRuntime world) &&
+                world.Chunks != null &&
+                world.Chunks.TryGetRuntimeChunkView(entry.Item.transform.position, out _);
+        }
         if (entry.ViewRoot.activeSelf != visible) entry.ViewRoot.SetActive(visible);
     }
 
@@ -162,7 +238,10 @@ public sealed partial class WorldRenderingManager
         foreach (ActorView view in views)
         {
             if (view.Item == null || view.Item.DestructionHandled || view.Item.IsInPool ||
-                view.Item.RuntimeGeneration != view.Generation || view.Visual == null || view.Anchor == null)
+                view.Item.RuntimeGeneration != view.Generation || view.Visual == null || view.Anchor == null ||
+                view.Animation == null && (view.Item.InHand ||
+                    view.Item.transform.parent != null &&
+                    view.Item.transform.parent.GetComponentInParent<Item>(true) != null))
             {
                 ReleaseActorView(view.Item);
                 continue;
@@ -184,6 +263,11 @@ public sealed partial class WorldRenderingManager
             entry.Visual.SetLocalPositionAndRotation(entry.OriginalPosition, entry.OriginalRotation);
             entry.Visual.localScale = entry.OriginalScale;
         }
+        if (entry.Sprite != null && !WorldPresentationProjection.IsSourceProjected(entry.Sprite) &&
+            !BuildingDepthMeshBridge.IsProjected(entry.Sprite))
+            entry.Sprite.forceRenderingOff = entry.OriginalForceRenderingOff;
+        if (entry.Item != null && !entry.Item.DestructionHandled && !entry.Item.IsInPool)
+            GameplayWorldRegistry.RegisterItemPresentation(entry.Item);
         if (entry.ViewRoot != null)
         {
             if (Application.isPlaying) Destroy(entry.ViewRoot);

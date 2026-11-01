@@ -42,8 +42,13 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             Module held = leaf.GetMod<Mod_HeldFood>();
             WorldPhysicsService2D.TryGetRegisteredItemProxy(leaf, out WorldPhysicsEntityProxy2D proxy);
             WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
-            bool hasView = rendering != null && rendering.TryGetNaturalItemView(leaf, out _);
-            rendering.TryGetNaturalItemView(leaf, out WorldPresentationProjection projection);
+            WorldPresentationProjection projection = null;
+            bool hasProjection = rendering != null &&
+                rendering.TryGetNaturalItemView(leaf, out projection);
+            bool borrowedVisual = rendering != null && leaf.Sprite != null &&
+                rendering.OwnsActorVisual(leaf, leaf.Sprite.transform);
+            Transform presentation = borrowedVisual ? rendering.GetActorProjectionSource(leaf) :
+                hasProjection ? projection.transform : null;
             result = new JObject
             {
                 ["realFoodModules"] = food != null && held != null,
@@ -52,9 +57,11 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
                 ["physicsOutsideLogic"] = proxy != null && proxy.Shell.OwnsRoot &&
                     leaf.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
                     leaf.GetComponentsInChildren<Rigidbody2D>(true).Length == 0,
-                ["pureVisibleView"] = hasView && projection.GetComponentsInChildren<Module>(true).Length == 0 &&
-                    projection.GetComponentsInChildren<Item>(true).Length == 0 &&
-                    projection.GetComponentsInChildren<Collider2D>(true).Length == 0
+                ["pureVisibleView"] = presentation != null &&
+                    presentation.GetComponentsInChildren<Module>(true).Length == 0 &&
+                    presentation.GetComponentsInChildren<Item>(true).Length == 0 &&
+                    presentation.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+                    (!borrowedVisual || leaf.GetComponentsInChildren<Renderer>(true).Length == 0)
             };
             int count = runtime.SpawnedItemCount;
             try

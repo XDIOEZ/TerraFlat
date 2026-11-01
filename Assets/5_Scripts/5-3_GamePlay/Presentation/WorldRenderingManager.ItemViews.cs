@@ -22,7 +22,8 @@ public sealed partial class WorldRenderingManager
             return;
         if (item.NaturalRuntimeOwner != null)
         {
-            ReleaseItemPresentation(item);
+            ReleaseItemView(item);
+            RequestNaturalItemView(item);
             return;
         }
         ReleaseNaturalItemView(item);
@@ -39,7 +40,6 @@ public sealed partial class WorldRenderingManager
                 return;
             }
         }
-        else ReleaseActorView(item);
 
         if (!IsItemRenderingRegistered(item)) return;
 
@@ -48,8 +48,17 @@ public sealed partial class WorldRenderingManager
                 item.transform.parent.GetComponentInParent<Item>(true) != null))
         {
             ReleaseItemView(item);
+            ReleaseActorView(item);
             return;
         }
+
+        // 视觉纯净的世界物品直接把 Render 交给 Rendering，避免隐藏源与复制体重复占用。
+        if (!actor && CanBorrowItemVisual(item))
+        {
+            ReleaseItemView(item);
+            if (RequestBorrowedItemVisual(item)) return;
+        }
+        else if (!actor) ReleaseActorView(item);
 
         if (itemViews.TryGetValue(item, out ItemView current))
         {
