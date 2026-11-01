@@ -167,6 +167,9 @@ test.system("world_streaming", "base_presentation_steps", {}, function(data)
         "旧枚举器清理破坏了新绑定，或重绑未正常完成")
     assert(data.liquidOnlyRefresh and data.queuedLiquidCells > 0 and data.terrainRefreshPreserved,
         "液体批量更新重新提交了地面/背景/阻挡层，或普通地形变化被错误跳过")
+    assert(data.batchLiquidVisualsDeduplicated and data.singleLiquidVisualsDeduplicated and
+        data.neighbourLiquidVisualsDeduplicated,
+        "批量、连续单格或相邻区块的液面通知未在同帧合并去重")
     assert(data.waterSkippedLavaScan and data.lavaRemovalPreserved,
         "无岩浆的水流错误触发全区块发光扫描，或新增/排空岩浆没有请求更新")
 end, "基础地形分步预算、脏格重扫和取消所有权")

@@ -171,11 +171,22 @@ public static partial class GameplayTestSystemProbe
             bool waterSkippedLavaScan = !renderer.PendingLiquidGlowRefresh;
             int queuedLiquidCells = renderer.PendingLiquidVisualCellCount;
             renderer.FlushPendingLiquidVisuals();
+            bool batchLiquidVisualsDeduplicated = queuedLiquidCells == 6 &&
+                renderer.LastFlushedLiquidVisualCellCount == 6;
             bool liquidOnlyRefresh = queuedLiquidCells > 0 &&
                 renderer.PendingLiquidVisualCellCount == 0 &&
                 renderer.IncrementalFullTerrainCellWrites == fullWritesBeforeLiquid &&
                 renderer.BaseTerrainVisualCount == visualCountBeforeLiquid &&
                 chunk.Terrain.GetLiquidLevel(5, 0) == 0;
+
+            // 连续单格液体通知只留下最终一次水面刷新。
+            chunk.Terrain.SetLiquid(5, 3, waterIndex, 5);
+            chunk.Terrain.SetLiquid(5, 3, 0, 0);
+            int queuedSingleLiquidCells = renderer.PendingLiquidVisualCellCount;
+            renderer.FlushPendingLiquidVisuals();
+            bool singleLiquidVisualsDeduplicated = queuedSingleLiquidCells == 9 &&
+                renderer.LastFlushedLiquidVisualCellCount == 9 &&
+                renderer.IncrementalFullTerrainCellWrites == fullWritesBeforeLiquid;
 
             int lavaIndex = chunk.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId);
             chunk.Terrain.SetLiquidBatch(new[] { new LiquidCellUpdate(5, lavaIndex, 4) });
@@ -188,6 +199,17 @@ public static partial class GameplayTestSystemProbe
             // 非液体的正式 Cell 修改仍必须走四层完整重提路径。
             chunk.Terrain.SetCell(5, 4, new TerrainCell(0, 0, 0, 1, 7, TerrainCellFlags.Walkable));
             bool terrainRefreshPreserved = renderer.IncrementalFullTerrainCellWrites > fullWritesBeforeLiquid;
+
+            // 重新提交东侧区块后，跨区液体通知也只排边缘脏格，不重提地面图层。
+            ChunkRuntime eastNeighbour = Commit(new Int2(neighbourOrigin.x, neighbourOrigin.y));
+            long neighbourBaseWrites = renderer.IncrementalFullTerrainCellWrites;
+            eastNeighbour.Terrain.SetLiquid(0, 3, waterIndex, 5);
+            eastNeighbour.Terrain.SetLiquid(0, 3, 0, 0);
+            int queuedNeighbourLiquidCells = renderer.PendingLiquidVisualCellCount;
+            renderer.FlushPendingLiquidVisuals();
+            bool neighbourLiquidVisualsDeduplicated = queuedNeighbourLiquidCells == 6 &&
+                renderer.LastFlushedLiquidVisualCellCount == 6 &&
+                renderer.IncrementalFullTerrainCellWrites == neighbourBaseWrites;
             return new JObject
             {
                 ["firstYield"] = firstYield, ["secondYield"] = secondYield,
@@ -203,6 +225,9 @@ public static partial class GameplayTestSystemProbe
                 ["replacementSurvived"] = replacementSurvived,
                 ["replacementCompleted"] = renderer.IsBatchPresentationComplete, ["finalEvents"] = events,
                 ["liquidOnlyRefresh"] = liquidOnlyRefresh, ["queuedLiquidCells"] = queuedLiquidCells,
+                ["batchLiquidVisualsDeduplicated"] = batchLiquidVisualsDeduplicated,
+                ["singleLiquidVisualsDeduplicated"] = singleLiquidVisualsDeduplicated,
+                ["neighbourLiquidVisualsDeduplicated"] = neighbourLiquidVisualsDeduplicated,
                 ["terrainRefreshPreserved"] = terrainRefreshPreserved,
                 ["waterSkippedLavaScan"] = waterSkippedLavaScan,
                 ["lavaRemovalPreserved"] = lavaRemovalPreserved

@@ -60,6 +60,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     // 独立规则测试核对水体更新没有进入其它地形网格的写入路径。
     internal long IncrementalFullTerrainCellWrites { get; private set; }
     internal int PendingLiquidVisualCellCount => liquidVisualDirty.Count;
+    internal int LastFlushedLiquidVisualCellCount { get; private set; }
     internal bool PendingLiquidGlowRefresh => liquidGlowDirty;
 
     /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
@@ -324,6 +325,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     {
         batchBindingVersion++;
         IncrementalFullTerrainCellWrites = 0;
+        LastFlushedLiquidVisualCellCount = 0;
         bindingCellWrite = false;
         bindingVisualsInvalidated = false;
         bindingDirtyScratch.Clear();
@@ -475,11 +477,10 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
             return;
         // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         int width = boundChunk.Terrain.Width;
-        if (changed.Kind == TerrainChangeKind.Liquid && !batchBindingInProgress)
+        if (changed.Kind == TerrainChangeKind.Liquid)
         {
-            using var refreshScope = LiquidOnlyRefreshMarker.Auto();
             foreach (int index in changed.GetCellIndices(width))
-                RefreshLiquidArea(boundChunk.Terrain, index % width, index / width, 1);
+                QueueLiquidVisualArea(index % width, index / width);
         }
         else
         {
@@ -830,10 +831,11 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
                 continue;
             if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourTerrainChanged"))
                 return;
-            if (changed.Kind == TerrainChangeKind.Liquid && !batchBindingInProgress)
+            if (changed.Kind == TerrainChangeKind.Liquid)
             {
-                using var refreshScope = LiquidOnlyRefreshMarker.Auto();
-                RefreshLiquidEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
+                ChunkTerrainData terrain = boundChunk.Terrain;
+                QueueLiquidVisualArea(offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : x,
+                    offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : y);
             }
             else
                 RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY, x, y);
@@ -884,15 +886,18 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private void QueueLiquidVisuals(ChunkLiquidBatchChanged changed, int offsetX, int offsetY)
     {
         if (boundChunk?.Terrain == null) return;
-        ChunkTerrainData terrain = boundChunk.Terrain;
         foreach (int index in changed.VisualCellIndices.Span)
-        {
-            int centerX = index % changed.Terrain.Width + offsetX;
-            int centerY = index / changed.Terrain.Width + offsetY;
-            for (int y = Math.Max(0, centerY - 1); y <= Math.Min(terrain.Height - 1, centerY + 1); y++)
-            for (int x = Math.Max(0, centerX - 1); x <= Math.Min(terrain.Width - 1, centerX + 1); x++)
-                liquidVisualDirty.Add(y * terrain.Width + x);
-        }
+            QueueLiquidVisualArea(index % changed.Terrain.Width + offsetX,
+                index / changed.Terrain.Width + offsetY);
+    }
+
+    // 单格、批量和邻块液体变化统一入帧末去重集合，不在固定步内重复上传水面。
+    private void QueueLiquidVisualArea(int centerX, int centerY)
+    {
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        for (int y = Math.Max(0, centerY - 1); y <= Math.Min(terrain.Height - 1, centerY + 1); y++)
+        for (int x = Math.Max(0, centerX - 1); x <= Math.Min(terrain.Width - 1, centerX + 1); x++)
+            liquidVisualDirty.Add(y * terrain.Width + x);
     }
 
     /// <summary>一帧最多刷新一次合并区域；空闲时没有遍历与 BRG 上传。</summary>
@@ -914,18 +919,26 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     /// <summary>纯液体流动只提交 Water Mesh，保留区块绑定期间由协程负责的完整脏格恢复。</summary>
     internal void FlushPendingLiquidVisuals()
     {
-        if (boundChunk?.Terrain == null || batchBindingInProgress)
+        if (boundChunk?.Terrain == null || batchBindingInProgress || liquidVisualDirty.Count == 0)
             return;
-        if (liquidVisualDirty.Count > 0 && EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
+        if (!EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
+            return;
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        using var refreshScope = LiquidOnlyRefreshMarker.Auto();
+        waterMesh?.BeginBulkUpdate();
+        try
         {
-            ChunkTerrainData terrain = boundChunk.Terrain;
-            using var refreshScope = LiquidOnlyRefreshMarker.Auto();
-            // 分帧初绑期间的地形变化已经由绑定协程完整补写；
-            // 到达这里的脏格只来自液体批次或流向变化，不需重写 Ground/Back/Blocking。
+            // 一次性处理最新水面状态，只在批次末尾提交 Water Mesh。
+            int refreshedCellCount = liquidVisualDirty.Count;
             foreach (int index in liquidVisualDirty)
                 RefreshLiquidVisual(terrain, index % terrain.Width, index / terrain.Width);
+            LastFlushedLiquidVisualCellCount = refreshedCellCount;
+            liquidVisualDirty.Clear();
         }
-        liquidVisualDirty.Clear();
+        finally
+        {
+            waterMesh?.EndBulkUpdate();
+        }
     }
 
     private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
@@ -949,18 +962,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         => RefreshBatchRectangle(terrain, centerX - radius, centerX + radius,
             centerY - radius, centerY + radius);
 
-    /// <summary>只为液体深度、岸线、流向和水面材质更新共享邻格。</summary>
-    private void RefreshLiquidArea(ChunkTerrainData terrain, int centerX, int centerY, int radius)
-    {
-        int minX = Mathf.Max(0, centerX - radius);
-        int maxX = Mathf.Min(terrain.Width - 1, centerX + radius);
-        int minY = Mathf.Max(0, centerY - radius);
-        int maxY = Mathf.Min(terrain.Height - 1, centerY + radius);
-        for (int y = minY; y <= maxY; y++)
-        for (int x = minX; x <= maxX; x++)
-            RefreshLiquidVisual(terrain, x, y);
-    }
-
     private void RefreshBatchRectangle(ChunkTerrainData terrain, int left, int right, int bottom, int top)
     {
         int minX = Mathf.Max(0, left);
@@ -979,14 +980,6 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         int x = offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : Mathf.Clamp(neighbourX, 0, terrain.Width - 1);
         int y = offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : Mathf.Clamp(neighbourY, 0, terrain.Height - 1);
         RefreshBatchArea(terrain, x, y, 1);
-    }
-
-    private void RefreshLiquidEdge(ChunkTerrainData terrain, int offsetX, int offsetY,
-        int neighbourX, int neighbourY)
-    {
-        int x = offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : Mathf.Clamp(neighbourX, 0, terrain.Width - 1);
-        int y = offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : Mathf.Clamp(neighbourY, 0, terrain.Height - 1);
-        RefreshLiquidArea(terrain, x, y, 1);
     }
 
     /// <summary>邻区首次提交会改变整条共享边界，而不是单一格。</summary>
