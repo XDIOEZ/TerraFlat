@@ -7,6 +7,14 @@ using UnityEngine.Pool;
 public sealed partial class WorldPhysicsService2D
 {
     #region 物品物理组件租借
+    internal static void PreparePrefabCreaturePhysicsBeforeModuleLoad(Item item)
+    {
+        if (!UsesPrefabCreaturePhysics(item) || itemOwners.ContainsKey(item)) return;
+        WorldPhysicsService2D physics = GameplayWorldRegistry.CurrentPhysics;
+        // 出生候选只预租组件，正式物理登记仍由世界交付阶段完成。
+        physics?.RentItemPhysicsComponents(item);
+    }
+
     private sealed class ItemPhysicsComponentCache
     {
         public ItemPhysicsComponentCache() { }

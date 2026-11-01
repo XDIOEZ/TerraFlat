@@ -466,6 +466,7 @@ public abstract class Item : MonoBehaviour
             modulesLoaded = true;
             foreach (Module module in snapshot)
                 if (module != null && itemMods.HasMod(module)) BindModuleDependencies(module);
+            WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
             foreach (Module module in snapshot)
             {
                 if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
@@ -951,6 +952,7 @@ public abstract class Item : MonoBehaviour
             moduleLayoutPrepared = true;
             yield break;
         }
+        WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
         WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         uint generation = RuntimeGeneration;
         foreach (Module module in toInitialize)
@@ -985,6 +987,7 @@ public abstract class Item : MonoBehaviour
     {
         moduleLayoutPrepared = false;
         modulesLoaded = true;
+        WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
         WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         using var scope = ListPool<Module>.Get(out var snapshot);
         CopyModulesTo(snapshot);
@@ -1083,6 +1086,7 @@ public abstract class Item : MonoBehaviour
             modulesUnloading = false;
             ClearModuleSchedule();
             MarkModuleScheduleDirty();
+            WorldPhysicsService2D.ReturnUnownedItemPhysicsComponents(this);
         }
         if (errors.Count > 0)
             throw new AggregateException($"物品 {name} 的模块卸载发生错误。", errors);

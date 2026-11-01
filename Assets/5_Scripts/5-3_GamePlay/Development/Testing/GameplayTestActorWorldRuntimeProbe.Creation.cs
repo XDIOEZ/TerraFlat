@@ -223,6 +223,35 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             finally { ItemMgr.RuntimeItemInstantiated -= observe; }
             result["invalidCommitRejected"] = !invalidDelivered;
             result["invalidCommitNotPublished"] = published == 0;
+            GameObject fishPrefab = GameRes.ExistingInstance?.GetPrefab("SmallFish", logError: false);
+            result["fishColdShellWithoutBody"] = fishPrefab != null && fishPrefab.GetComponent<Rigidbody2D>() == null;
+            int fishGuid = 0;
+            Item fish = null;
+            try
+            {
+                double fishDeadline = Time.realtimeSinceStartupAsDouble + 30d;
+                using (var fishCreation = manager.SpawnCreatureInSteps("SmallFish", position, candidate =>
+                       {
+                           fish = candidate;
+                           fishGuid = candidate.itemData.Guid;
+                       }))
+                    while (fishCreation.MoveNext())
+                    {
+                        if (Time.realtimeSinceStartupAsDouble >= fishDeadline)
+                            throw new TimeoutException("小鱼分帧出生超时。");
+                        yield return null;
+                    }
+                Rigidbody2D fishBody = WorldPhysicsService2D.GetItemRigidbody(fish);
+                result["fishBornWithMotionBody"] = fish != null && fish.IsInitialized &&
+                    ItemMgr.Instance.GetItemByGuid(fishGuid) == fish && fishBody != null && fishBody.simulated &&
+                    fishBody.bodyType != RigidbodyType2D.Static &&
+                    fish.itemMods.GetMod_ByID<Mod_AquaticMovement>(Mod_AquaticMovement.ModuleId)?.IsRuntimeLoaded == true;
+            }
+            finally
+            {
+                if (fishGuid != 0) AiRuntimeBackendService.TryDespawnActor(fishGuid);
+                result["fishCleaned"] = fishGuid != 0 && ItemMgr.Instance.GetItemByGuid(fishGuid) == null;
+            }
         }
         finally
         {
