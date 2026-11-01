@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
@@ -7,8 +8,70 @@ public static class AI_WanderUtility
     private const int MinimumWaterExitSearchRadius = 2;
     private const int MaximumWaterExitSearchRadius = 16;
     private static readonly float[] EscapeCandidateAngles = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
+    private static readonly Vector2Int[] WaterExitNeighbours =
+    {
+        new(1, 0), new(-1, 0), new(0, 1), new(0, -1),
+        new(1, 1), new(-1, 1), new(1, -1), new(-1, -1)
+    };
+    private static readonly Queue<Vector2Int> WaterExitQueue = new();
+    private static readonly HashSet<Vector2Int> WaterExitVisited = new();
 
 #region API
+    /// <summary>检查脚下是否为已加载的可走水格，避免把未知区域当作落水。</summary>
+    public static bool IsInNavigableWater(WorldNavigationGrid grid, Vector2 position)
+        => grid != null &&
+           grid.TryGetCell(WorldNavigationGrid.WorldToCell(position), out WorldNavigationCell cell) &&
+           cell.Walkable && cell.Water && cell.LiquidDepth > 0f;
+
+    /// <summary>沿可走导航连通格寻找最近的干燥落脚点，不受追击路径成本上限影响。</summary>
+    public static bool TryFindNearestNavigableWaterExit(
+        WorldNavigationGrid grid,
+        Vector2 origin,
+        int maximumRadius,
+        out Vector2 destination)
+    {
+        destination = default;
+        if (!IsInNavigableWater(grid, origin))
+            return false;
+
+        Vector2Int start = WorldNavigationGrid.WorldToCell(origin);
+        int radius = Mathf.Max(1, maximumRadius);
+        WaterExitQueue.Clear();
+        WaterExitVisited.Clear();
+        WaterExitQueue.Enqueue(start);
+        WaterExitVisited.Add(start);
+        try
+        {
+            while (WaterExitQueue.Count > 0)
+            {
+                Vector2Int cell = WaterExitQueue.Dequeue();
+                for (int i = 0; i < WaterExitNeighbours.Length; i++)
+                {
+                    Vector2Int next = WorldNavigationGrid.NormalizeCell(cell + WaterExitNeighbours[i]);
+                    Vector2Int displacement = WorldTopologyRuntime.ShortestDelta(start, next);
+                    if (Mathf.Max(Mathf.Abs(displacement.x), Mathf.Abs(displacement.y)) > radius ||
+                        WaterExitVisited.Contains(next) || !grid.CanTraverse(cell, next, out _))
+                        continue;
+                    WaterExitVisited.Add(next);
+
+                    if (grid.TryGetCell(next, out WorldNavigationCell candidate) &&
+                        candidate.Walkable && !candidate.Water)
+                    {
+                        destination = WorldNavigationGrid.CellCenter(next);
+                        return true;
+                    }
+                    WaterExitQueue.Enqueue(next);
+                }
+            }
+            return false;
+        }
+        finally
+        {
+            WaterExitQueue.Clear();
+            WaterExitVisited.Clear();
+        }
+    }
+
     /// <summary>
     /// 根据逃跑方向选择水体安全的偏移。
     /// 已经落水时优先寻找最近可走陆地脱水；仍在陆地时避免主动进入河流。
@@ -69,10 +132,10 @@ public static class AI_WanderUtility
         float distance = Mathf.Max(0.5f, maximumDistance);
 
         // 落水时先走到可达的陆地，避免局部逃离目标继续把动物留在水中。
-        if (TryPickWaterExitOffset(chunkManager, origin, distance, out Vector2 waterExitOffset) &&
-            IsDirectlyNavigable(grid, startCell, origin + waterExitOffset))
+        if (TryFindNearestNavigableWaterExit(grid, origin, MaximumWaterExitSearchRadius,
+                out Vector2 landDestination))
         {
-            offset = waterExitOffset;
+            offset = WorldTopologyRuntime.ShortestDelta(origin, landDestination);
             return true;
         }
 

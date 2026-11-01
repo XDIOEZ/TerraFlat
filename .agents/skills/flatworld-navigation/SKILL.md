@@ -42,6 +42,7 @@ description: "FlatWorld 稀疏导航网格、带权路径、16×16 分层流场�
 - `WorldNavigationManager.GoalField.TryBuildPath` 在同一目标场内复用原始格和路点平滑临时列表，成功路径始终另建独立 `Vector2[]` 返回，不能把可重用缓冲直接暴露给 AI；规则 `navigation/goal_path_buffers` 校验代价、终点、请求隔离和重复寻路 GC。
 - Wrapped 网格/路点用规范格和最短位移，Job 用冻结 WorldTopologyDomain。当前通行配置只支持半径小于半格的圆形单位，能力/大体型差异尚未拆缓存，环绕跨度为 16 的正整数倍。
 - Mod_Mover_AI 的 `ITemperatureSafetyMovement` 避险目标优先；普通目标/停止不抢占，死亡/卸载仍强停。体温模块拥有危险记忆与方向偏置，普通目标按整段缓存偏置，同一个避险目标重复提交不强制重寻路；鸟的地面到达/失败沿用 mover 结果。
+- 地面生物丢失目标且位于水中时，`land.wander` 优先调用 `AI_WanderUtility.TryFindNearestNavigableWaterExit` 寻找 16 格内最近可达的干地；搜索等待不在水中强制停留，脱困使用不受追击代价上限限制的普通导航，失败延迟重试。
 
 ## 共享 Flow 与并发
 
