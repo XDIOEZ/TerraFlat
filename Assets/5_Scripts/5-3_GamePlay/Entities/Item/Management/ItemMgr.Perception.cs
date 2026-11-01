@@ -635,8 +635,9 @@ public partial class ItemMgr
                     ? GameplayWorldRegistry.UseWorld(worldKey) : default;
                 using (PerceptionFilterCandidatesMarker.Measure(candidateCount))
                 {
-                    using GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
+                    GridLineOfSightQuery lineOfSight = candidateCount > 0 && detector != null
                         ? detector.BeginLineOfSightQuery() : null;
+                    int eligibleLosCount = 0;
                     for (int candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++)
                     {
                         int snapshotIndex = reader.Read<int>();
@@ -674,6 +675,9 @@ public partial class ItemMgr
                             missingDetector++;
                             continue;
                         }
+                        if (++eligibleLosCount == 24)
+                            lineOfSight?.PrepareCandidateBatch(eligibleLosCount,
+                                Mathf.Min(detector.DetectionRadius, detector.MaximumDetectionRadius));
                         losChecks++;
                         if (!detector.HasLineOfSight(candidate, lineOfSight))
                         {

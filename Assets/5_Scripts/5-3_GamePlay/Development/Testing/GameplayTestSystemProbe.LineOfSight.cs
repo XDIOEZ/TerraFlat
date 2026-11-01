@@ -199,6 +199,7 @@ public static partial class GameplayTestSystemProbe
         for (int i = 0; i < 256; i++)
             query.HasClearLineTo(new Vector2(7.5f, 0.5f));
         data["allocatedBytes"] = GC.GetAllocatedBytesForCurrentThread() - before;
+        data["cachedExactRays"] = query.CachedRayCount >= 256;
 
         first.Terrain.SetDynamicSightBlockingCell(2, 0, true);
         data["dynamicBlocked"] = query.HasClearLineTo(new Vector2(7.5f, 0.5f));
@@ -290,6 +291,47 @@ public static partial class GameplayTestSystemProbe
         SightProbeChunk(customWorld, new Vector2Int(0, -5), "sight_custom", 3, 5);
         query.Begin(customWorld, default, "sight_custom", 3, 5, new Vector2(-2.5f, -4.5f));
         data["customNegativeChunksClear"] = query.HasClearLineTo(new Vector2(1.5f, -4.5f));
+
+        // 大批候选走阴影投射，无阻挡象限直接命中；建筑变化和跨批复用均不能使用旧结果。
+        using var denseWorld = new WorldRuntime("sight_dense", 1);
+        ChunkRuntime denseChunk = SightProbeChunk(denseWorld, Vector2Int.zero, "sight_dense", 8, 8);
+        using var denseQuery = new GridLineOfSightQuery();
+        Vector2 denseObserver = new(2.5f, 2.5f);
+        Vector2 denseTarget = new(6.5f, 2.5f);
+        denseQuery.Begin(denseWorld, default, "sight_dense", 8, 8, denseObserver);
+        denseQuery.PrepareCandidateBatch(64, 5f);
+        bool initiallyClear = denseQuery.HasClearLineTo(denseTarget);
+        data["shadowcastFastVisible"] = initiallyClear && denseQuery.ShadowcastFastPathCount > 0 &&
+                                        denseQuery.ShadowcastBuildCount == 1;
+        denseQuery.Begin(denseWorld, default, "sight_dense", 8, 8, denseObserver);
+        data["sameObserverCacheReused"] = denseQuery.HasClearLineTo(denseTarget) && denseQuery.CachedRayCount == 1;
+        long dynamicBefore = denseChunk.Terrain.BlockingRevision;
+        denseChunk.Terrain.SetDynamicSightBlockingCell(3, 2, true);
+        data["shadowcastDynamicBlocked"] = !denseQuery.HasClearLineTo(denseTarget);
+        denseChunk.Terrain.SetDynamicSightBlockingCell(3, 2, false);
+        data["shadowcastDynamicRestored"] = denseQuery.HasClearLineTo(denseTarget);
+        data["dynamicBlockingRevisionAdvanced"] = denseChunk.Terrain.BlockingRevision >= dynamicBefore + 2;
+
+        // 用原始逐格 LOS 作为判定基准，比较多个障碍布局下的全部目标格。
+        using var referenceQuery = new GridLineOfSightQuery();
+        int mismatches = 0;
+        for (int layout = 0; layout < 5; layout++)
+        {
+            for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+                denseChunk.Terrain.SetDynamicSightBlockingCell(x, y, (x * 13 + y * 7 + layout * 5) % 11 == 0);
+            denseQuery.Begin(denseWorld, default, "sight_dense", 8, 8, denseObserver);
+            denseQuery.PrepareCandidateBatch(64, 5f);
+            referenceQuery.Begin(denseWorld, default, "sight_dense", 8, 8, denseObserver);
+            for (int y = 0; y < 8; y++)
+            for (int x = 0; x < 8; x++)
+            {
+                Vector2 destination = new(x + .5f, y + .5f);
+                if (denseQuery.HasClearLineTo(destination) != referenceQuery.HasClearLineTo(destination))
+                    mismatches++;
+            }
+        }
+        data["shadowcastExactMismatchCount"] = mismatches;
         return data;
     }
 

@@ -349,6 +349,7 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
     assert(data.firstLookupCount == 2 and data.reusedLookupCount == 2 and data.cachedChunkCount == 2,
         "同轮不同射线没有复用两个已解析区块")
     assert(data.allocatedBytes == 0, "预热后的同轮 LOS 仍分配托管内存")
+    assert(data.cachedExactRays, "重复目标的精确 LOS 没有命中缓存")
     assert(not data.dynamicBlocked and data.dynamicRestored,
         "同轮建筑占地变化仍读取旧的遮挡结果")
     assert(not data.terrainBlocked and data.terrainRestored and data.terrainRevisionAdvanced,
@@ -375,6 +376,13 @@ test.system("ai", "line_of_sight_batch", {}, function(data)
     assert(data.clearedChunkCount == 0 and not data.disposedQueryBlocked and not data.disposedWorldBlocked,
         "本轮结束或世界释放后仍保留旧视线资格")
     assert(data.customNegativeChunksClear, "自定义矩形区块或负坐标寻址错误")
+    assert(data.shadowcastFastVisible and data.sameObserverCacheReused,
+        "密集候选没有走 Shadowcasting 快速路径，或同观察者跨批次缓存没有复用")
+    assert(data.shadowcastDynamicBlocked and data.shadowcastDynamicRestored and
+        data.dynamicBlockingRevisionAdvanced,
+        "动态建筑遮挡改变后仍沿用旧的 Shadowcasting 或 LOS 缓存")
+    assert(data.shadowcastExactMismatchCount == 0,
+        "阴影投射优化改变了墙体、拐角或终点原有的精确 LOS 判断")
 end, "同轮 LOS 寻址复用、实时遮挡、边界、环绕、代际与清理")
 
 test.system("ai", "hive_resident_schedule", {}, function(data)

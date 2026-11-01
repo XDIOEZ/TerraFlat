@@ -138,8 +138,7 @@ public class Mod_ItemDetector : Module
         if (!wallsBlockPerception)
             return IsWithinPerceptionRadiusLimit(target);
 
-        using GridLineOfSightQuery query = BeginLineOfSightQuery();
-        return HasLineOfSight(target, query);
+        return HasLineOfSight(target, BeginLineOfSightQuery());
     }
 
     /// <summary>
@@ -676,6 +675,7 @@ public class Mod_ItemDetector : Module
     /// </summary>
     protected override void OnLoad()
     {
+        _lineOfSightQuery.Dispose();
         _lastObservedDetectionRadius = DetectionRadius;
         if (item != null)
         {

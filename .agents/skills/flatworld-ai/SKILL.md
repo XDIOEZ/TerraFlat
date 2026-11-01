@@ -80,7 +80,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
 - `ItemMgr.QueueDetectorQuery` 用本批 `Dictionary<Mod_ItemDetector,int>` 定位已有请求槽位，重复申请只更新最新版本且保持首次顺序；批次消费后清空索引，不跨批缓存检测器。
 - `ItemMgr.Perception.Apply` 对请求版本已过期的检测器跳过候选精筛与 LOS，但仍逐项消费其 NativeStream 索引并结束当前流；有效请求和缺失检测器按原规则处理，回归 `ai/stale_perception_batch`。
-- 同 detector 的同步候选批次用 `GridLineOfSightQuery` 冻结观察者与世界上下文；每条射线首次进入区块时验证加载态，射线内复用地形引用、逐格实时读取遮挡，下一条射线重新验证，防止沿用卸载/重建区块。规则 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk`。
+- 同 detector 的 `GridLineOfSightQuery` 按世界/维度/拓扑/观察者格缓存精确 LOS；逐次验证已访问区块身份、加载态和 `BlockingRevision`（包括动态建筑），未加载结果不缓存。≥24 个有效候选触发最多 16 格的 Shadowcasting，只有无阻挡八分区的安全方向跳过 Bresenham，阴影边缘仍精确判定。回归 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk/Shadowcast`。
 - 视线遇阻即返回不可见，仅在整条射线无遮挡时检查终点是否加载；起点、拐角侧格和中途区块照常验证。
 - 水平和垂直的整数格 LOS 用直线逐格扫描代替通用 Bresenham 分支；中途仍实时检查遮挡，起终点豁免和环绕/区块加载语义保持，`ai/line_of_sight_batch` 覆盖两轴正负方向与接缝。
 
