@@ -551,6 +551,9 @@ local harvestCases = {
     {name = "负连续使用间隔拒绝", args = {interval = -1}, tool = true, rule = false, uses = -1},
     {name = "过长连续使用间隔拒绝", args = {interval = 11}, tool = true, rule = false, uses = -1},
     {name = "多层天然状态独立恢复", args = {layers = 4, depth = 3}, tool = true, rule = true, uses = 6},
+    {name = "铲子水下每次只完成四分之一工作", args = {toolKind = "Shovel"}, tool = true, rule = true, uses = 6},
+    {name = "高品质铲子水下仍需四倍次数", args = {toolKind = "Shovel", tier = 100, efficiency = 100}, tool = true, rule = true, uses = 2},
+    {name = "非整除次数下水底效率一致", args = {toolKind = "Shovel", baseUses = 7, efficiency = 2}, tool = true, rule = true, uses = 4},
     {name = "零天然层数拒绝", args = {layers = 0}, tool = true, rule = false, uses = -1}
 }
 for _, case in ipairs(harvestCases) do
@@ -558,10 +561,26 @@ for _, case in ipairs(harvestCases) do
         assert(data.tier == (case.args.tier or 1) and data.efficiency == (case.args.efficiency or 1), "JSON 参数没有写入真实工具等级或效率字段")
         assert(data.readOnlyParameterRejected, "只读计算属性被接受为可写 JSON 参数")
         assert(data.toolValid == case.tool and data.ruleValid == case.rule and data.requiredUses == case.uses, "正式采挖工具、规则校验或品质次数错误")
+        assert(data.dryOnlyRejectsWater and data.shovelAllowsWater and data.dryRemainsOpen and data.lavaStillRejected,
+            "有水地表仅铲子可挖，或普通农耕/覆盖层错误放行了液体")
+        assert(data.shallowWaterAllowed and data.seaWaterAllowed and not data.dryRejected and
+            not data.pickaxeRejected and not data.oilRejected,
+            "水深、工具类别、液体种类的水底采挖许可错误")
         assert(data.restoredDepth == (case.args.depth or 2) and data.restoredGrass == 4 and data.invalidDepthRejected, "地层深度快照恢复或非法层数保护错误")
         assert(math.abs(data.progress - .4) < .00001 and data.highProgress == 1 and data.lowProgress == 0, "权威采挖进度读取未钳制")
         if case.rule then
             assert(math.abs(data.interval - .2) < .00001 and data.layers == (case.args.layers or 1), "采挖间隔或天然层数配置丢失")
+            local wetMultiplier = case.args.toolKind == "Shovel" and 4 or 1
+            assert(math.abs(data.drySwingWork * case.uses - 1) < .00001 and
+                math.abs(data.wetSwingWork * case.uses * wetMultiplier - 1) < .00001,
+                "水下铲子每次采挖进度不是陆地的25%，或影响了其他工具")
+            if wetMultiplier == 4 then
+                assert(data.wetSwingWork * (case.uses * 4 - 1) < .9999 and
+                    data.wetSwingWork * (case.uses * 4) >= .9999,
+                    "水底没有严格增加至陆地四倍挥动次数")
+                assert(math.abs(data.wetSwingWork * 4 + data.drySwingWork - 2 / case.uses) < .00001,
+                    "同一格水位变化后不能沿用已积累的采挖进度")
+            end
         else
             assert(type(data.ruleError) == "string" and #data.ruleError > 0, "无效采挖配置没有拒绝原因")
         end

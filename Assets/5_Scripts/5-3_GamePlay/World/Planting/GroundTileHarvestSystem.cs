@@ -85,7 +85,8 @@ public static class GroundTileHarvestSystem
             reason = "距离地块太远。";
             return false;
         }
-        if (!FarmlandSystem.IsOpen(sample) || FarmlandSystem.HasWorldPlant(sample.WorldCell))
+        if (!FarmlandSystem.IsOpen(sample, allowSurfaceWater: CanShovelWaterCoveredGround(tool, sample)) ||
+            FarmlandSystem.HasWorldPlant(sample.WorldCell))
         {
             reason = "地块被占用，无法挖掘。";
             return false;
@@ -96,6 +97,16 @@ public static class GroundTileHarvestSystem
     /// <summary>白框与正式采挖共用资格判断，只提示当前工具能作用的地块。</summary>
     public static bool TryResolvePreview(Mod_ResourceToolBase tool, out RuntimeTerrainTileSample sample)
         => TryResolveTarget(tool, out sample, out _, out _);
+
+    /// <summary>只有铲子可以采挖表面有水的地块，不放行岩浆或石油。</summary>
+    private static bool CanShovelWaterCoveredGround(Mod_ResourceToolBase tool, RuntimeTerrainTileSample sample) =>
+        tool.HarvestKind == ResourceToolKind.Shovel && sample.LiquidDepth > 0f &&
+        WorldLiquidSystem.TryGetDefinition(sample, out LiquidDefinition liquid) &&
+        IsWaterDiggingAllowed(tool.HarvestKind, sample.LiquidDepth, liquid.Category);
+
+    internal static bool IsWaterDiggingAllowed(ResourceToolKind kind, float depth, string liquidCategory) =>
+        kind == ResourceToolKind.Shovel && depth > 0f &&
+        string.Equals(liquidCategory, "water", StringComparison.OrdinalIgnoreCase);
     #endregion
 
     #region 权威提交
@@ -115,6 +126,11 @@ public static class GroundTileHarvestSystem
         return Mathf.Max(rule.MinimumUsesPerTile,
             Mathf.CeilToInt(rule.BaseUsesPerTile / Mathf.Max(0.01f, quality)));
     }
+
+    /// <summary>铲子挖水底每次只计四分之一工作量，不改变挥动间隔。</summary>
+    internal static float ResolveWorkPerSwing(Mod_ResourceToolBase tool, GroundTileHarvestRule rule, float liquidDepth) =>
+        (tool.HarvestKind == ResourceToolKind.Shovel && liquidDepth > 0f ? 0.25f : 1f) /
+        ResolveRequiredUses(tool, rule);
 
     /// <summary>开采和进度表现共用下一层解析，玩家覆盖层优先露出原地块。</summary>
     public static bool TryResolveHarvestResult(RuntimeTerrainTileSample sample, RuntimeTileDefinition source,
@@ -168,8 +184,7 @@ public static class GroundTileHarvestSystem
         worldCell = sample.WorldCell;
         useInterval = rule.UseInterval;
         float previousProgress = ReadProgress(sample);
-        int requiredUses = ResolveRequiredUses(tool, rule);
-        float progress = Mathf.Min(1f, previousProgress + 1f / requiredUses);
+        float progress = Mathf.Min(1f, previousProgress + ResolveWorkPerSwing(tool, rule, sample.LiquidDepth));
         completed = progress >= 0.9999f;
         if (!completed)
         {
