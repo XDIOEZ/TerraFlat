@@ -46,6 +46,7 @@ public static partial class GameplayTestSystemProbe
         RegisterWeatherRecoveryOperations(operations);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
         operations.Add("surface_fluids/notification_dispatch", WorldLiquidNotificationDispatch);
+        operations.Add("surface_fluids/diffusion_batch", WorldLiquidDiffusionBatchProbe);
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
         operations.Add("dimension/world_instances", WorldIndependentDimensionInstances);
@@ -524,6 +525,93 @@ public static partial class GameplayTestSystemProbe
             WorldLiquidSystem.SurfaceLiquidPumped -= countA;
             WorldLiquidSystem.SurfaceLiquidPumped -= countB;
         }
+    }
+
+    // 使用正式批量补水写回器，在隔离地形中制造 64 对水格变化并检查只通知一次。
+    private static JObject WorldLiquidDiffusionBatchProbe(JObject args)
+    {
+        const int width = 128;
+        using var buffer = new ChunkTerrainBuffer(width, 1);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < width; x++)
+            buffer.SetLiquid(x, 0, water, 100);
+        using ChunkTerrainData terrain = buffer.Seal();
+        for (int x = 1; x < width; x += 2)
+            terrain.SetLiquid(x, 0, 0, 0);
+
+        int singleNotifications = 0, batchNotifications = 0, changedCells = 0, visualCells = 0;
+        terrain.Changed += changed =>
+        {
+            if (changed.Kind == TerrainChangeKind.Liquid) singleNotifications++;
+        };
+        terrain.LiquidBatchChanged += changed =>
+        {
+            batchNotifications++;
+            changedCells += changed.CellIndices.Length;
+            visualCells += changed.VisualCellIndices.Length;
+        };
+        var batch = new WorldLiquidDiffusionBatch();
+        bool allTransferred = true;
+        for (int x = 0; x < width; x += 2)
+        {
+            RuntimeTerrainTileSample Sample(int index) => new(default, terrain,
+                new Vector2Int(index, 0), new Vector2Int(index, 0), terrain.GetCell(index, 0), 0);
+            allTransferred &= batch.TryBalance(Sample(x), Sample(x + 1));
+        }
+        int pendingLeft = batch.GetCurrentLevel(new RuntimeTerrainTileSample(default, terrain,
+            Vector2Int.zero, Vector2Int.zero, terrain.GetCell(0, 0), 0));
+        bool unchangedBeforeCommit = terrain.GetLiquidLevel(0, 0) == 100 &&
+                                     terrain.GetLiquidLevel(1, 0) == 0;
+        batch.Commit(recordSave: false);
+        int total = 0;
+        bool allBalanced = true, typesIntact = true;
+        for (int x = 0; x < width; x++)
+        {
+            int level = terrain.GetLiquidLevel(x, 0);
+            total += level;
+            allBalanced &= level == 50;
+            typesIntact &= terrain.GetLiquidTypeIndex(x, 0) == water;
+        }
+        // 三格共用中间水格时，后续转移必须读取本轮暂存值而非旧的地形值。
+        using var chainBuffer = new ChunkTerrainBuffer(3, 1);
+        int chainWater = chainBuffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < 3; x++)
+            chainBuffer.SetLiquid(x, 0, chainWater, 100);
+        using ChunkTerrainData chainTerrain = chainBuffer.Seal();
+        chainTerrain.SetLiquid(1, 0, 0, 0);
+        chainTerrain.SetLiquid(2, 0, 0, 0);
+        RuntimeTerrainTileSample ChainSample(int x) => new(default, chainTerrain,
+            new Vector2Int(x, 0), new Vector2Int(x, 0), chainTerrain.GetCell(x, 0), 0);
+        bool chainTransferred = batch.TryBalance(ChainSample(0), ChainSample(1)) &&
+                                batch.TryBalance(ChainSample(1), ChainSample(2));
+        bool chainStaged = chainTerrain.GetLiquidLevel(0, 0) == 100 &&
+                           chainTerrain.GetLiquidLevel(1, 0) == 0;
+        batch.Commit(recordSave: false);
+        bool chainBalanced = chainTerrain.GetLiquidLevel(0, 0) == 50 &&
+                             chainTerrain.GetLiquidLevel(1, 0) == 25 &&
+                             chainTerrain.GetLiquidLevel(2, 0) == 25;
+        bool batchReused = batch.TryBalance(ChainSample(0), ChainSample(1));
+        batch.Commit(recordSave: false);
+        batchReused &= chainTerrain.GetLiquidLevel(0, 0) == 38 &&
+                       chainTerrain.GetLiquidLevel(1, 0) == 37 &&
+                       chainTerrain.GetLiquidLevel(2, 0) == 25;
+        return new JObject
+        {
+            ["transferred"] = allTransferred,
+            ["pendingLeft"] = pendingLeft,
+            ["unchangedBeforeCommit"] = unchangedBeforeCommit,
+            ["allBalanced"] = allBalanced,
+            ["typesIntact"] = typesIntact,
+            ["total"] = total,
+            ["singleNotifications"] = singleNotifications,
+            ["batchNotifications"] = batchNotifications,
+            ["changedCells"] = changedCells,
+            ["visualCells"] = visualCells,
+            ["chainTransferred"] = chainTransferred,
+            ["chainStaged"] = chainStaged,
+            ["chainBalanced"] = chainBalanced,
+            ["batchReused"] = batchReused
+        };
     }
 
     private static string WorldException(Action action)

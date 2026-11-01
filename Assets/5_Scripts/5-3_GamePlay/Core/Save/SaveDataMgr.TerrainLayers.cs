@@ -83,11 +83,8 @@ public partial class SaveDataMgr
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
         record.LiquidCells ??= new List<LiquidCellSaveData>();
-        record.LiquidCells.RemoveAll(value => value.LocalPosition == sample.LocalCell);
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
-        if (sample.Terrain.IsLiquidChanged(x, y))
-            record.LiquidCells.Add(LiquidCellSaveData.Capture(sample.Terrain, x, y));
-        record.LiquidCells.Sort(CompareLiquidCell);
+        UpsertLiquidCellDifference(record.LiquidCells, sample.Terrain, y * sample.Terrain.Width + x);
         Span<int> changed = stackalloc int[1] { y * sample.Terrain.Width + x };
         NotifyAuthoritativeLiquidCellsChanged(sample.Address, sample.Terrain, changed);
     }
@@ -96,6 +93,36 @@ public partial class SaveDataMgr
     {
         int y = left.LocalPosition.y.CompareTo(right.LocalPosition.y);
         return y != 0 ? y : left.LocalPosition.x.CompareTo(right.LocalPosition.x);
+    }
+
+    // 差量始终按格索引排序，二分定位可避免每次取水都全表扫描、删除再排序。
+    private static void UpsertLiquidCellDifference(List<LiquidCellSaveData> cells, ChunkTerrainData terrain, int index)
+    {
+        int left = 0, right = cells.Count;
+        while (left < right)
+        {
+            int middle = left + ((right - left) >> 1);
+            Vector2Int position = cells[middle].LocalPosition;
+            int existingIndex = position.y * terrain.Width + position.x;
+            if (existingIndex < index) left = middle + 1;
+            else right = middle;
+        }
+        bool exists = left < cells.Count &&
+                      cells[left].LocalPosition.y * terrain.Width + cells[left].LocalPosition.x == index;
+        int x = index % terrain.Width, y = index / terrain.Width;
+        if (!terrain.IsLiquidChanged(x, y))
+        {
+            if (exists) cells.RemoveAt(left);
+            return;
+        }
+        if (!exists)
+        {
+            cells.Insert(left, LiquidCellSaveData.Capture(terrain, x, y));
+            return;
+        }
+        LiquidCellSaveData current = cells[left];
+        current.LiquidId = terrain.GetLiquidId(x, y);
+        current.LiquidLevel = terrain.GetLiquidLevel(x, y);
     }
 
     /// <summary>先验证全部记录再覆盖；未知 MOD 液体或非法深度明确拒绝，不能静默丢失存档。</summary>
@@ -113,8 +140,6 @@ public partial class SaveDataMgr
     #endregion
 
     #region 液体批次内存差量
-    private static readonly Comparison<LiquidCellSaveData> LiquidBatchComparison = CompareLiquidCell;
-
     /// <summary>每 Chunk 每 Tick 更新一次内存差量；复用已有记录，不写磁盘、不增加任何存档字段。</summary>
     public void RecordLiquidBatch(FlatWorld.WorldModel.WorldAddress address, ChunkTerrainData terrain, ReadOnlySpan<int> indices)
     {
@@ -122,26 +147,7 @@ public partial class SaveDataMgr
         ChunkSaveRecord record = GetRuntimeChunkRecord(address, true);
         record.LiquidCells ??= new List<LiquidCellSaveData>();
         for (int i = 0; i < indices.Length; i++)
-        {
-            int x = indices[i] % terrain.Width, y = indices[i] / terrain.Width;
-            var position = new Vector2Int(x, y);
-            int existing = -1;
-            for (int j = 0; j < record.LiquidCells.Count; j++)
-                if (record.LiquidCells[j].LocalPosition == position) { existing = j; break; }
-            if (!terrain.IsLiquidChanged(x, y))
-            {
-                if (existing >= 0) record.LiquidCells.RemoveAt(existing);
-                continue;
-            }
-            if (existing < 0) record.LiquidCells.Add(LiquidCellSaveData.Capture(terrain, x, y));
-            else
-            {
-                LiquidCellSaveData cell = record.LiquidCells[existing];
-                cell.LiquidId = terrain.GetLiquidId(x, y);
-                cell.LiquidLevel = terrain.GetLiquidLevel(x, y);
-            }
-        }
-        record.LiquidCells.Sort(LiquidBatchComparison);
+            UpsertLiquidCellDifference(record.LiquidCells, terrain, indices[i]);
         NotifyAuthoritativeLiquidCellsChanged(address, terrain, indices);
     }
     #endregion

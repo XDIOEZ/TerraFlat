@@ -35,6 +35,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 ## 地块与液体
 
+- 天然水域取水唤醒后的固定步扩散由 `WorldLiquidBodySystem` 使用 `WorldLiquidDiffusionBatch` 累计本轮水量，再复用 `SetLiquidBatch/RecordLiquidBatch` 按区块一次写回和通知；存档差量有序二分更新，避免逐格渲染和排序。回归 `surface_fluids/diffusion_batch`。
+
 - JSON 构建 `RuntimeTileDefinition` 和共享 Behaviour；`TileBehaviourRegistry` 按显式 `type` 工厂解析，未知字段/非法数值失败。`TileData.ID/Name` 来自定义，位置/进度属于实例，`CreateTileData/Clone` 产生单格副本。`TileDefinitionEditorCatalog` 保存 JSON，`GameRes.GetTileBlock` 返回运行时定义。
 - Ground 是真实底材，Liquid 独立保存深度与身份。`WorldLiquidSystem.TryPump/TrySet` 改液体，地面替换不自动清水。`TerrainSupportLayer` 投影平台表面并遮断底部液体接触，底部液体仍存在。
 - 天然水域底床写入 `terrain.surface.naturalDepthLevels`：海洋为初始水面的十档等级加 1（2～11 层），河湖/洞穴水量 1～50 份降低 2 层、51～100 份降低 3 层；冻结前生成，抽水/倒水不改底床。天然水面统一低于同地势岸边 1 层，抽干后露出真实底床；原始 `height`、玩家采挖与填土独立叠加。
