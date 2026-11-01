@@ -60,7 +60,7 @@ internal static class BalanceTuningLivePreview
                 foreach (Mod_Damage damage in root.GetComponentsInChildren<Mod_Damage>(true))
                 {
                     CombatDamage old = damage.ResolveDamageValues();
-                    CombatDamage copy = new CombatDamage(old.Cutting, old.Piercing, old.Chopping, old.Blunt);
+                    CombatDamage copy = old.Scaled(1f);
                     if (!SetFloatField(copy, names[1], row.Value)) continue;
                     damage.SetDamageValues(copy);
                     if (!live) EditorUtility.SetDirty(damage);
@@ -72,7 +72,7 @@ internal static class BalanceTuningLivePreview
                 {
                     if (receiver.Data == null) continue;
                     CombatDefense old = receiver.Defense ?? new CombatDefense();
-                    CombatDefense copy = new CombatDefense(old.Cutting, old.Piercing, old.Chopping, old.Blunt);
+                    CombatDefense copy = old.Copy();
                     if (!SetFloatField(copy, names[1], row.Value)) continue;
                     receiver.SetDefense(copy);
                     if (!live) EditorUtility.SetDirty(receiver);

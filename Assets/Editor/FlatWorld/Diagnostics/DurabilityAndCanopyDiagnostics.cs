@@ -61,13 +61,13 @@ public static class DurabilityAndCanopyDiagnostics
                 DefenseValues = new CombatDefense(), DamageInterval = 0f
             };
             object helmet = new object();
-            receiver.SetBodyPartArmor(helmet, new[] { BodyPartType.Head }, new CombatDefense { Blunt = 5f });
+            receiver.SetBodyPartArmor(helmet, new[] { BodyPartType.Head }, new CombatDefense { Physical = 5f });
             var coconut = new FallingFruitDamage(10f);
             Near(receiver.Hurt(coconut), 7.5f, "10钝击先减5护甲，再乘1.5头部系数");
             Near(receiver.Hp, 92.5f, "整体100→92.5");
             receiver.TryGetBodyPart(BodyPartType.Head, out BodyPartHealth head);
             Near(head.Hp, 12.5f, "头部耐久20→12.5");
-            Near(receiver.Defense.Blunt, 0f, "头盔没有同时写入全身防御");
+            Near(receiver.Defense.Physical, 0f, "头盔没有同时写入全身防御");
             receiver.Hurt(coconut);
             receiver.Hurt(coconut);
             Near(head.Hp, 0f, "头部耐久归零");
@@ -101,7 +101,7 @@ public static class DurabilityAndCanopyDiagnostics
             receiver.Hp = 100f;
             Near(leg.Hp, leg.MaxHp, "显式复活恢复部位耐久");
             receiver.RemoveBodyPartArmor(helmet);
-            Near(receiver.Defense.Blunt, 0f, "卸下头盔不改变自然全身防御");
+            Near(receiver.Defense.Physical, 0f, "卸下头盔不改变自然全身防御");
             receiver.Unload();
         }
         finally { EditorSceneManager.ClosePreviewScene(preview); }
