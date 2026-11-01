@@ -318,8 +318,10 @@ public partial class SaveDataMgr
         if (machines.Metadata != null) MachineWorld.RestoreArchive(candidate, MemoryPackSerializer.Serialize(machines));
         DroppedItemService.RestoreArchive(candidate, MemoryPackSerializer.Serialize(drops));
         ModRuntimeManager mods = ModRuntimeManager.Instance;
-        if (mods == null || !mods.IsReady || !mods.ValidateSaveMetadata(modMetadata, out string error))
-            throw new InvalidDataException("存档 MOD 环境不兼容。");
+        if (mods == null || !mods.IsReady)
+            throw new InvalidDataException("MOD 运行环境尚未准备完成，无法校验存档。");
+        if (!mods.ValidateSaveMetadata(modMetadata, out string error))
+            throw new InvalidDataException($"存档 MOD 环境不兼容：{error}");
         return candidate;
     }
 

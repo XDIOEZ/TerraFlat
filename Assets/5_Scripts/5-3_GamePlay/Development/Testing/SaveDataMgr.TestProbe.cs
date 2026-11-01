@@ -146,8 +146,10 @@ public partial class SaveDataMgr
 
         SaveData = source;
         CurrentContrrolPlayerName = "probe:previous-player";
+        LastArchiveError = "上次加载失败";
         bool missingLoaded = LoadSaveByDisk(Path.Combine(Application.temporaryCachePath,
             "FlatWorldGameplayTests", "missing-" + Guid.NewGuid().ToString("N"), "save.sqlite"));
+        string missingError = LastArchiveError;
         return new JObject
         {
             ["currentVersion"] = ReadSaveEnvelope(valid).CoreSavePayload.Version,
@@ -155,6 +157,7 @@ public partial class SaveDataMgr
             ["oldFailure"] = oldFailure, ["oldPreserved"] = oldPreserved,
             ["corruptFailure"] = corruptFailure, ["corruptPreserved"] = corruptPreserved,
             ["missingLoaded"] = missingLoaded, ["saveCleared"] = SaveData == null,
+            ["missingError"] = missingError,
             ["playerCleared"] = string.IsNullOrEmpty(CurrentContrrolPlayerName),
             ["missingCleared"] = chunkDeltas.Count == 0
         };
