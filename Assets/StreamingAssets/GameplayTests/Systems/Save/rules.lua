@@ -47,6 +47,7 @@ test.system("save", "snapshot_memory", { amount = 3, stock = 7, maximumDurabilit
     assert(data.maximumDurability == 200 and data.durability == 50, "新定义耐久没有保持原损伤比例")
     assert(data.sourceStock == 7 and data.targetStock == 8, "恢复的模块载荷没有隔离")
     assert(data.specialData == '{"probe":true}', "特殊实例状态丢失")
+    assert(data.stickRoundTrip and data.logRoundTrip, "木棍或原木的运行时实体冷快照复制、序列化往返失败")
 end, "正式实例快照内存往返与当前定义恢复")
 
 test.system("save", "special_namespace", { counter = 3 }, function(data)

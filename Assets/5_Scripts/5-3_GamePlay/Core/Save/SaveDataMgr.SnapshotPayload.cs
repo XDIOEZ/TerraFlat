@@ -71,7 +71,7 @@ public partial class SaveDataMgr
         using (SaveChunkEncodePoint.Measure(records.Count))
         {
             foreach (ChunkSaveRecord record in records)
-                chunkRecords.Add(MemoryPackSerializer.Serialize(record));
+                chunkRecords.Add(ItemSnapshotSerialization.SerializePayload(record));
             SaveChunkEncodePoint.SetGauge(records.Count);
         }
 
@@ -101,7 +101,7 @@ public partial class SaveDataMgr
 
         try
         {
-            byte[] payload = MemoryPackSerializer.Serialize(saveData);
+            byte[] payload = ItemSnapshotSerialization.SerializePayload(saveData);
             SaveCoreEncodePoint.AddWork(payload.LongLength);
             SaveCoreEncodePoint.SetGauge(payload.LongLength);
             return payload;
@@ -250,8 +250,8 @@ public partial class SaveDataMgr
         if (itemData == null)
             return null;
 
-        byte[] bytes = MemoryPackSerializer.Serialize<ItemData>(itemData);
-        return MemoryPackSerializer.Deserialize<ItemData>(bytes);
+        // 直接复制实例快照，避免物品嵌套序列化重复借用 MemoryPack 的线程缓冲区。
+        return ItemSnapshotSerialization.Capture(itemData).CreateColdData();
     }
 
     /// <summary>恢复运行时实体前先复制存档状态，再用当前物品定义刷新静态配置和模块组合。</summary>
@@ -343,7 +343,7 @@ public partial class SaveDataMgr
             if (chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) && record != null)
             {
                 frozenChunks[(record.PlanetName, record.ChunkPosition)] = new SqliteChunkSnapshot
-                    { Terrain = record.HasChanges ? MemoryPackSerializer.Serialize(record) : null };
+                    { Terrain = record.HasChanges ? ItemSnapshotSerialization.SerializePayload(record) : null };
                 frozenTerrainAddresses[key] = (record.PlanetName, record.ChunkPosition);
                 frozenTerrainRevisions[key] = chunkDifferenceRevisions.TryGetValue(key, out long version) ? version : 0;
             }
@@ -382,7 +382,7 @@ public partial class SaveDataMgr
             {
                 var address = (current.PlanetName, current.ChunkPosition);
                 if (!frozenChunks.TryGetValue(address, out var chunk)) frozenChunks.Add(address, chunk = new SqliteChunkSnapshot());
-                chunk.Terrain = current.HasChanges ? MemoryPackSerializer.Serialize(current) : null;
+                chunk.Terrain = current.HasChanges ? ItemSnapshotSerialization.SerializePayload(current) : null;
             }
             else if (frozenTerrainAddresses.TryGetValue(changed.Key, out var address)) frozenChunks[address].Terrain = null;
         }

@@ -674,6 +674,19 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceSnapshotMemory(JObject args)
     {
         Data_GeneralItem source = ServiceItem(args);
+        // 覆盖保存退出时木棍、原木的冷快照复制与独立缓冲区往返。
+        bool CanCaptureRuntimeResident(string definitionId)
+        {
+            var resident = new Data_GeneralItem { IDName = definitionId, Guid = 143, Stack = new ItemStack { Amount = 3f } };
+            ItemData cold = ItemSnapshotSerialization.Capture(resident).CreateColdData();
+            byte[] residentBytes = ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(cold));
+            ItemData restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(residentBytes).CreateColdData();
+            cold.Stack.Amount = 99f;
+            return restored.IDName == definitionId && restored.Guid == 143 && restored.Stack.Amount == 3f &&
+                   !ReferenceEquals(restored, cold) && !ReferenceEquals(cold, resident);
+        }
+        bool stickRoundTrip = CanCaptureRuntimeResident("Stick_Wood");
+        bool logRoundTrip = CanCaptureRuntimeResident("Log");
         ItemInstanceSnapshot snapshot = ItemInstanceSnapshot.Capture(source);
         byte[] payload = ItemSnapshotSerialization.SerializePayload(snapshot);
         snapshot = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(payload);
@@ -690,7 +703,8 @@ public static partial class GameplayTestSystemProbe
             ["amount"] = capturedAmount, ["maximumDurability"] = target.MaxDurability, ["durability"] = target.Durability,
             ["sourceAmount"] = source.Stack.Amount, ["sourceStock"] = ((CollectableModuleData)source.ModuleDataDic["stock"]).CurrentStock,
             ["targetStock"] = ((CollectableModuleData)target.ModuleDataDic["stock"]).CurrentStock,
-            ["specialData"] = target.ItemSpecialData
+            ["specialData"] = target.ItemSpecialData,
+            ["stickRoundTrip"] = stickRoundTrip, ["logRoundTrip"] = logRoundTrip
         };
     }
 

@@ -663,7 +663,8 @@ public partial class SaveDataMgr
 
     private static ulong ComputeItemHash(ItemData itemData)
     {
-        return ComputeHash(MemoryPackSerializer.Serialize<ItemData>(itemData));
+        // 哈希只取稳定的实例快照，避免序列化运行态 ItemData 时重入共享缓冲区。
+        return ComputeHash(ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(itemData)));
     }
 
     private static ulong ComputeTileHash(List<TileData> tiles)

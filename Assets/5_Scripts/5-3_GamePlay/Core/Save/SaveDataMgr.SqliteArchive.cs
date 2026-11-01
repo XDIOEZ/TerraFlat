@@ -106,7 +106,7 @@ public partial class SaveDataMgr
         }
         foreach (var player in players)
             records.Add(ArchiveRecord("global", "", "player:" + player.Key,
-                MemoryPackSerializer.Serialize(ItemInstanceSnapshot.Capture(player.Value))));
+                ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(player.Value))));
         ModRuntimeManager mods = ModRuntimeManager.Instance;
         if (mods == null || !mods.IsReady) throw new InvalidOperationException("MOD 框架尚未就绪。");
         records.Add(ArchiveRecord("global", "", "mods", MemoryPackSerializer.Serialize(mods.CaptureSaveMetadata())));
@@ -146,7 +146,8 @@ public partial class SaveDataMgr
             frozen = new FrozenEcologyChunkSaveRecord { WorldKey = world, ChunkData = MemoryPackSerializer.Serialize(metadata) };
             foreach (var item in ecology.ChangedItems ?? new List<ItemData>()) frozen.ChangedItems.Add(ItemSnapshotSerialization.SerializePayload(item == null ? null : ItemSnapshotSerialization.Capture(item)));
         }
-        return new SqliteChunkSnapshot { Terrain = terrain?.HasChanges == true ? MemoryPackSerializer.Serialize(terrain) : null, Ecology = frozen };
+        // 地形差量包含 ItemData，独立缓冲区避免嵌套实例写入重入复用缓冲区。
+        return new SqliteChunkSnapshot { Terrain = terrain?.HasChanges == true ? ItemSnapshotSerialization.SerializePayload(terrain) : null, Ecology = frozen };
     }
 
     private SaveArchiveRecord FreezeSqliteChunk(string world, Vector2Int origin, GameSaveData source = null)

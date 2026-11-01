@@ -37,8 +37,8 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - `PlayerData_Dict` 用不可变角色 ID，`Name_User` 和存档名称仅显示；名称不参与磁盘路径。改名、复制、删除和时间读取统一用存档服务；UI 一次取得目录元数据，逐行不重扫整个目录。
 - 生态存档 ItemData 是生产者移交的独立快照，入世前复制；弱引用缓存按存档根/区块跨次复用记录。最终联合点仍重读成员、删除 GUID/恢复年份，仅补冻新增/替换快照和变化元数据；新增生态持久字段须同步 `EcologyFrozenChunkMetadata`。缓存不得用于活跃可变 ItemData；编解码器变更失效，公开角色策略单独捕获。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
-- 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。
-- 世界退出后写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。
+- 保存退出在停止联机、世界退出事件和场景解绑之前采集完整世界快照并成功写盘；失败保留当前游戏和重试入口。`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 的真实成功状态是退出门禁，回到菜单不能代替写盘成功。
+- 退出写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。运行时 AI 采集失败必须终止写盘。
 
 ## SQLite 事务与按需契约
 

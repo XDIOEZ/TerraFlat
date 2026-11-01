@@ -369,7 +369,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         // 旧 Chunk 写入结束后再合并新版建筑和 AI，避免旧差量记录覆盖新版实体快照。
         CaptureRuntimeBuildingStates();
-        CaptureRuntimeAiEntityStates();
+        if (!CaptureRuntimeAiEntityStates())
+            throw new InvalidOperationException("当前世界的运行时实体采集失败，已取消存档写入。");
     }
     #endregion
 }

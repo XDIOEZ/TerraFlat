@@ -1,4 +1,4 @@
-﻿// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
+// AI-Context: 游戏世界总生命周期与出生点服务；出生点必须按新版纯生成 Profile 计算，先传送玩家、再由 Mod_ChunkLoader 正常流送周围 Chunk。严禁搜索时注册运行时 Chunk 或默认投放到水面。
 // ===== AI 函数导航（按函数名搜索，不依赖行号） =====
 // 创建世界：CreateNewWorld() / CreateNewWorldCoroutine() / RunWorld()
 // 继续游戏：ContinueGame() / ContinueGameInternal() / LoadPlayer()
@@ -162,7 +162,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Item playerItem,
         System.Action onComplete = null,
         bool saveCurrentGame = true,
-        bool requireSuccessfulSave = false)
+        bool requireSuccessfulSave = false,
+        System.Action onSaveFailed = null)
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
         LastExitSaveSucceeded = null;
@@ -172,23 +173,27 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (ItemMgr.Instance == null || SaveDataMgr.Instance == null)
         {
             Debug.LogError("[ExitGame] 核心管理器未初始化，退出失败！");
-            if (!requireSuccessfulSave) onComplete?.Invoke();
+            if (saveCurrentGame || requireSuccessfulSave)
+                onSaveFailed?.Invoke();
+            else
+                onComplete?.Invoke();
             yield break;
         }
         if (saveCurrentGame)
         {
             ItemMgr.Instance.CleanupNullItems();
-            ItemMgr.Instance.SavePlayer();
         }
 
-        if (requireSuccessfulSave)
+        if (requireSuccessfulSave && !saveCurrentGame)
         {
-            if (!saveCurrentGame)
-            {
-                Debug.LogError("[ExitGame] 当前客户端没有世界存档权限，已取消保存重启。");
-                yield break;
-            }
-            // 重启先在同一帧完成快照与写盘，失败时尚未拆除世界或网络会话。
+            Debug.LogError("[ExitGame] 当前客户端没有世界存档权限，已取消保存重启。");
+            onSaveFailed?.Invoke();
+            yield break;
+        }
+
+        if (saveCurrentGame)
+        {
+            // 联机停止或世界解绑前完成写盘；失败保留游戏现场供玩家重试。
             try
             {
                 CaptureSaveGameState();
@@ -201,10 +206,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             }
             if (LastExitSaveSucceeded != true)
             {
-                Debug.LogError("[ExitGame] 保存失败，已取消重启并保留当前世界。");
+                Debug.LogError("[ExitGame] 保存失败，已取消退出并保留当前世界。");
+                onSaveFailed?.Invoke();
                 yield break;
             }
-            saveCurrentGame = false;
         }
 
         // 记录退出前的动态世界场景；LoadSceneMode.Single 理论上会卸载它，
@@ -233,24 +238,12 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 阶段 2：数据保存阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // 先执行基础清理；区块已由世界退出事件按归属释放。
+        // 先执行基础清理；保存已在解绑前成功完成，不再读取已释放的世界。
         ItemMgr.Instance.CleanupNullItems();
 
         if (saveCurrentGame)
         {
-            // 玩家位置和模块快照已经在世界退出通知之前采集，磁盘仍在退出事件结算后写入。
-            Debug.Log("[ExitGame] 写入存档文件...");
-            try
-            {
-                LastExitSaveSucceeded = SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
-            }
-            catch (Exception exception)
-            {
-                LastExitSaveSucceeded = false;
-                Debug.LogException(exception);
-            }
-            if (LastExitSaveSucceeded != true)
-                Debug.LogError("[ExitGame] 退出存档写盘失败，当前世界未成功保存。");
+            Debug.Log("[ExitGame] 退出存档已在关闭网络和世界前成功写入。");
         }
         else
         {
