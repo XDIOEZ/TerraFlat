@@ -1,4 +1,5 @@
 using System;
+using Unity.Profiling;
 using UnityEngine;
 using FlatWorld.WorldModel;
 using Building_Data = Mod_Building.Building_Data;
@@ -78,10 +79,13 @@ namespace FlatWorld.Gameplay.Building
     internal sealed class MachineBuildingPlacementBackend : IBuildingPlacementBackend
     {
         #region 纯数据机器
+        private static readonly ProfilerMarker MachinePlacementMarker = new("FlatWorld.Building.Place.Machine");
+
         public bool CanHandle(BuildingPlacementRequest request) => MachineCatalog.Get(request.BuildingId) != null;
 
         public BuildingPlacementResult Place(BuildingPlacementRequest request)
         {
+            using var machinePlacementSample = MachinePlacementMarker.Auto();
             ItemData data = BuildingPlacementCandidate.Create(request, out _);
             MachineDefinition definition = MachineCatalog.Get(data.IDName);
             if (request.RotationQuarterTurns.HasValue)

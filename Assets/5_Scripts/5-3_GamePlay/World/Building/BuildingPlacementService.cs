@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.Progress;
 using FlatWorld.Networking;
+using Unity.Profiling;
 using UnityEngine;
 using Building_Data = Mod_Building.Building_Data;
 
@@ -75,6 +76,9 @@ namespace FlatWorld.Gameplay.Building
     public static class BuildingPlacementService
     {
         #region 后端注册
+        private static readonly ProfilerMarker PlacementTransactionMarker =
+            new("FlatWorld.Building.Place.Transaction");
+
         private sealed class Registration : IDisposable
         {
             public string Id;
@@ -150,6 +154,7 @@ namespace FlatWorld.Gameplay.Building
         public static bool TryPlace(BuildingPlacementRequest request, out BuildingPlacementResult result,
             out string reason)
         {
+            using var transactionSample = PlacementTransactionMarker.Auto();
             result = null;
             reason = null;
             bool materialMutationStarted = false;
