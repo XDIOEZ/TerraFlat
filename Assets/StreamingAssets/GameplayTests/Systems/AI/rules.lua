@@ -76,6 +76,30 @@ test.system("ai", "wolf_combat_position", {}, function(data)
         "丢失视野后仍在攻击隐藏目标")
 end, "狼攻击优先于精确站位，到点保持、明显位移追击且冷却不中断")
 
+test.system("ai", "wolf_crowded_formation", {}, function(data)
+    assert(data.members == 12 and data.assigned == 5 and data.free == 7,
+        "同侧大量围攻者超过唯一站位容量后仍强制争抢编队位置")
+    assert(data.distinctPositions, "围攻槽位高度钳制后产生重叠位置")
+    assert(data.overflowWithoutSlot and data.overflowAttackState == "Attack",
+        "同侧超额的狼已经进入真实攻击范围，却仍被无站位状态挡住攻击")
+end, "十二狼同侧围攻只有唯一编队位，多余成员自由接敌")
+
+test.system("ai", "wolf_crowded_combat", {}, function(data)
+    assert(data.formationActive and data.attackState == "Attack" and data.attackStarted,
+        "拥挤场景没有建立真实的可出手攻击")
+    assert(data.occupiedState == "Attack" and data.occupiedStopped,
+        "队友占住目标站位时，已进入攻击范围的狼仍在持续抢位")
+    assert(data.freeState == "Attack" and data.freeResumed,
+        "拥挤解除后没有恢复原有的冷却期间重新站位")
+end, "围攻站位被占时守住有效攻击位置，腾空后再调整")
+
+test.system("ai", "ecs_crowded_attack_range", {}, function(data)
+    assert(data.slotCapacity == 8 and data.withinWithoutSlot and data.boundaryWithoutSlot,
+        "ECS 已进入实际攻击范围仍把第九名的槽位当作起手资格")
+    assert(not data.outsideWithoutSlot and data.invalidRangeRejected,
+        "移除接敌槽资格后，ECS 攻击错误越过真实距离限制")
+end, "ECS 第九名无槽仍可在实际范围起手，超出范围不可攻击")
+
 for _, case in ipairs({
     {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
     {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},

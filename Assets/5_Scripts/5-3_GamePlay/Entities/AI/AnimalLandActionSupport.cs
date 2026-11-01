@@ -103,13 +103,6 @@ public sealed class AnimalChasePositionCapability : AnimalBehaviorTreeCapability
         float x = delta.x / Mathf.Max(.01f, horizontal), y = delta.y / Mathf.Max(.01f, vertical);
         return x * x + y * y <= 1f;
     }
-    public bool HasReachedSide(Item target, float range)
-    {
-        if (!HasSidePosition) return true;
-        Vector3 position = SidePosition(target, range);
-        return IsInsideRange(target.transform.position, range) && WorldTopologyRuntime.Distance(context.Position, position) <=
-            Mathf.Max(.05f, AnimalLandTargetRules.Number(config, "sideTolerance", .4f));
-    }
     public Vector3 SidePosition(Item target, float range)
     {
         if (target != sideTarget)
@@ -143,6 +136,14 @@ public sealed class AnimalChasePositionCapability : AnimalBehaviorTreeCapability
             approach = Mathf.Max(.01f, range - WorldTopologyRuntime.Distance(formation, targetPosition));
             if (pack.ShouldHoldFormationPosition(approach, range))
             { context.Mod_Mover.StopMovement(); context.FaceTarget(targetPosition, false); pack.CallNearbyAllies(); return; }
+        }
+        else if (pack != null && IsInsideRange(targetPosition, range))
+        {
+            // 没有独占站位的群体成员已经能攻击时直接守位，不去争抢其他同伴的位置。
+            context.Mod_Mover.StopMovement();
+            context.FaceTarget(targetPosition, false);
+            pack.CallNearbyAllies();
+            return;
         }
         WorldNavigationDestinationResult result = context.Mod_Mover.SetInteractionDestination(destination, approach,
             AnimalLandTargetRules.Integer(config, "pathCostLimit", 440));

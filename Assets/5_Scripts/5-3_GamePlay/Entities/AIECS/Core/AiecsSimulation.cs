@@ -61,7 +61,7 @@ namespace FlatWorld.AIECS
     #endregion
 
     #region 接敌槽位
-    /// <summary>目标周围的近战接敌资格；未获槽位的单位仍可追击，但停留在外圈并交给 Crowd Steering 分流。</summary>
+    /// <summary>目标周围的优先接近位置；无槽位仍可靠近并在真实攻击范围内出手。</summary>
     public struct AiecsEngagementSlot
     {
         public Entity Actor, Target; // 当前查询实体与目标。
@@ -69,7 +69,7 @@ namespace FlatWorld.AIECS
         public byte Granted, Index, Count; // 是否获准、槽位序号与本目标槽位总数。
     }
 
-    /// <summary>一个接敌申请；排序后同一目标连续，锁定攻击和已就绪攻击者优先保留近战席位。</summary>
+    /// <summary>一个接敌申请；排序后同一目标连续，锁定攻击和已就绪攻击者优先保留接近位置。</summary>
     internal struct AiecsEngagementClaim : IComparable<AiecsEngagementClaim>
     {
         public Entity Actor, Target;
@@ -97,6 +97,9 @@ namespace FlatWorld.AIECS
     public static class AiecsEngagementSlots
     {
         public const int DefaultCount = 8;
+
+        public static bool IsWithinAttackStartRange(float distanceSquared, float attackRange) =>
+            attackRange >= 0f && distanceSquared <= attackRange * attackRange;
 
         public static bool Matches(in AiecsEngagementSlot slot, Entity actor, Entity target, CombatIdentity key) =>
             slot.Granted != 0 && slot.Actor == actor && slot.Target == target && slot.TargetKey == key;
@@ -162,7 +165,7 @@ namespace FlatWorld.AIECS
     }
 
     /// <summary>
-    /// 同一目标最多保留少量近战槽位。已有且仍可攻击的单位优先保持原位，剩余槽位按接近方向分配，
+    /// 同一目标最多保留少量优先接近位置。已有且仍可攻击的单位优先保持原位，剩余位置按接近方向分配，
     /// 让大军接触时形成连续战线而不是所有单位挤入同一点。
     /// </summary>
     [BurstCompile]
@@ -673,8 +676,7 @@ namespace FlatWorld.AIECS
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
             pending = engagement.Schedule(scheduler, activeQuery, frame.Spatial, time, pending);
             pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Navigation = view,
-                EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
+                Navigation = view, Time = time }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
@@ -694,7 +696,7 @@ namespace FlatWorld.AIECS
             frame.Spatial = combatSpatial.View;
             pending = ScheduleStages(AiecsStagePhase.BeforeAttack, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsAttackSystem { Definitions = definitions, Factions = factions,
-                Spatial = frame.Spatial, Los = los, EngagementSlots = engagement.Slots, Clock = Clock, Hits = attacks }, activeQuery, pending);
+                Spatial = frame.Spatial, Los = los, Clock = Clock, Hits = attacks }, activeQuery, pending);
             pending = scheduler.ScheduleParallel(new AiecsBuffSystem { Definitions = buffs, Clock = Clock,
                 HitCounts = periodicCounts }, activeQuery, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeSettlement, frame, pending);

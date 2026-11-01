@@ -13,11 +13,10 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<AiecsDefinition> Definitions;
         [ReadOnly] public AiecsSpatialView Spatial;
         [ReadOnly] public FlowNavigationSnapshot Navigation;
-        [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         public double Time; // 当前权威时间。
 
         /// <summary>错峰计算事实，并原子提交这一单位的行为意图。</summary>
-        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
+        private void Execute(in AiecsIdentity identity, in AiecsVital vital,
             in AiecsFlowAgent actor, in AiecsAttackState attack, ref AiecsBrain brain,
             ref AiecsAdvanceDirective advance,
             ref AiecsBehaviorIntent intent, ref AiecsBehaviorProposal proposal)
@@ -32,14 +31,14 @@ namespace FlatWorld.AIECS
                     advance.ArrivalDistance * advance.ArrivalDistance)
                     advance.Active = 0;
             }
-            bool targetValid = Spatial.TryTarget(brain.Target, brain.TargetKey, out var target);
+            bool targetValid = Spatial.TryTarget(brain.Target, brain.TargetKey, out var target) &&
+                identity.Key.World == target.Identity.Key.World && identity.Key.Dimension == target.Identity.Key.Dimension &&
+                Spatial.IsHostile(identity.Faction, target.Identity.Faction);
             bool locked = attack.Phase == AiecsAttackPhase.Windup || attack.Phase == AiecsAttackPhase.Active || attack.Phase == AiecsAttackPhase.Recovery;
             AiecsDefinition definition = Definitions[identity.Definition];
-            bool hasSlot = targetValid && (uint)index < (uint)EngagementSlots.Length &&
-                AiecsEngagementSlots.Matches(EngagementSlots[index], entity, brain.Target, brain.TargetKey);
-            bool inAttackRange = hasSlot && Time >= attack.NextAttack &&
-                math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)) <=
-                definition.AttackStartRange * definition.AttackStartRange;
+            bool inAttackRange = targetValid && Time >= attack.NextAttack &&
+                AiecsEngagementSlots.IsWithinAttackStartRange(
+                    math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)), definition.AttackStartRange);
             if (advance.Active == 0 && intent.Behavior != (int)AiecsBehavior.Advance &&
                 Time < brain.NextDecision && proposal.Priority <= 0 && targetValid == (intent.Target != Entity.Null) &&
                 (intent.Behavior == (int)AiecsBehavior.Attack) == (locked || inAttackRange)) return;

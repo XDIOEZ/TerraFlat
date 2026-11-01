@@ -154,9 +154,10 @@ public static class AnimalLandBehaviorNodes
         return () =>
         {
             AnimalLandTargetSnapshot current = target();
+            // 站位和侧翼只影响接近路线，不决定是否有资格在真实攻击范围内起手。
             return current.Item != null && current.Visible &&
                 (combat.IsAttackLocked || (!requireCooldown || combat.IsCooldownDone) &&
-                 chase.IsInsideRange(current.Position, combat.AttackRange) && chase.HasReachedSide(current.Item, combat.AttackRange));
+                 chase.IsInsideRange(current.Position, combat.AttackRange));
         };
     }
     #endregion
@@ -421,8 +422,7 @@ internal sealed class AnimalAttackAction : AnimalBehaviorTreeNode
         { combat.StopAttack(false); context.Mod_Mover.StopMovement(); return AnimalBehaviorTreeStatus.Running; }
         context.FaceTarget(current.Position, true);
         if (combat.IsAttackLocked) context.Mod_Mover.StopMovement();
-        else if (combat.IsCooldownDone && chase.IsInsideRange(current.Position, combat.AttackRange) &&
-                 chase.HasReachedSide(current.Item, combat.AttackRange))
+        else if (combat.IsCooldownDone && chase.IsInsideRange(current.Position, combat.AttackRange))
         {
             context.Mod_Mover.StopMovement();
             combat.StartAttack(current.Position);

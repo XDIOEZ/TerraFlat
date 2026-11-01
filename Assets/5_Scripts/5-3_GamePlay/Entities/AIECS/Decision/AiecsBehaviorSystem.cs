@@ -40,30 +40,29 @@ namespace FlatWorld.AIECS
             if (intent.Behavior == (int)AiecsBehavior.Chase && Spatial.TryTarget(intent.Target, intent.TargetKey, out var target))
             {
                 body.Facing = math.normalizesafe(Spatial.Domain.ShortestDelta(actor.Position, target.Position), body.Facing);
+                // 已在真实起手范围内就地等待冷却，不为抢一个队形位置反复跑出攻击圈。
+                if (AiecsEngagementSlots.IsWithinAttackStartRange(
+                        math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)), definition.AttackStartRange)) return;
                 bool hasSlot = (uint)index < (uint)EngagementSlots.Length &&
                     AiecsEngagementSlots.Matches(EngagementSlots[index], entity, intent.Target, intent.TargetKey);
                 float contactRadius = math.max(actor.Radius + target.Body.Radius + 0.05f, definition.AttackStartRange * 0.72f);
+                contactRadius = AIApproachRange.ResolveStopDistance(contactRadius, definition.AttackStartRange);
                 float2 destination;
                 if (hasSlot)
                 {
-                    // 已取得近战名额的站位与停止误差必须一同落在起手范围内。
-                    contactRadius = AIApproachRange.ResolveStopDistance(contactRadius, definition.AttackStartRange);
                     AiecsEngagementSlot slot = EngagementSlots[index];
                     float2 radial = AiecsEngagementSlots.Direction(target.Entity, slot.Index, slot.Count);
                     destination = Spatial.Domain.Normalize(target.Position + radial * contactRadius);
-                    actor.StopDistance = AIApproachRange.ResolveStopDistance(
-                        0.08f, definition.AttackStartRange - contactRadius);
                 }
                 else
                 {
                     uint hash = math.hash(new uint2((uint)entity.Index, (uint)entity.Version));
                     float2 fallback = (hash & 1u) == 0u ? new float2(1f, 0f) : new float2(-1f, 0f);
                     float2 radial = math.normalizesafe(Spatial.Domain.ShortestDelta(target.Position, actor.Position), fallback);
-                    float waitingRadius = math.max(definition.AttackStartRange * 1.35f,
-                        contactRadius + actor.Radius * 2.5f + 0.2f);
-                    destination = Spatial.Domain.Normalize(target.Position + radial * waitingRadius);
-                    actor.StopDistance = 0.12f;
+                    destination = Spatial.Domain.Normalize(target.Position + radial * contactRadius);
                 }
+                actor.StopDistance = AIApproachRange.ResolveStopDistance(
+                    0.08f, definition.AttackStartRange - contactRadius);
 
                 bool actorInWater = Navigation.TryGetWater(actor.Position, out _);
                 bool targetInWater = Navigation.TryGetWater(target.Position, out _);
