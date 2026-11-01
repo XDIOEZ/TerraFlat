@@ -128,6 +128,11 @@ internal static class SurvivalNumericBatch
         step.DamageClock -= step.DamageTicks * RadiationDamageIntervalSeconds;
     }
 
+    internal static void Advance(Span<RadiationExposure> steps)
+    {
+        for (int i = 0; i < steps.Length; i++) Advance(ref steps[i]);
+    }
+
     #endregion
 
     #region 体温传热与危险缓冲
