@@ -10,6 +10,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
 
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
+        [HideInInspector] _FrozenIcePatternOrigin("Frozen Ice Pattern Origin", Vector) = (0,0,0,0)
     }
 
     SubShader
@@ -56,6 +57,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             float _FarmlandDryBlend;
 
             float4 _ChunkSize;
+            float4 _FrozenIcePatternOrigin;
         CBUFFER_END
 
         #if defined(FLATWORLD_CHUNK_CELL_BUFFER)
@@ -118,6 +120,53 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
         }
         #endif
 
+        #if defined(FLATWORLD_FROZEN_ICE)
+        float FrozenIceCellHash(float2 cell)
+        {
+            float3 value = frac(cell.xyx * 0.1031);
+            value += dot(value, value.yzx + 33.33);
+            return frac((value.x + value.y) * value.z);
+        }
+
+        // 使用规范区块坐标生成静止的像素冰裂与少量霜色，不改变透明度。
+        half3 ShadeFrozenIceSurface(half3 color, float2 positionOS)
+        {
+            float2 pixel = (floor(positionOS * 16.0) + 0.5) / 16.0 + _FrozenIcePatternOrigin.xy;
+            float2 grid = pixel * 0.375;
+            float seed = FrozenIceCellHash(floor(grid));
+            float4 variation = frac(seed * float4(7.13, 17.43, 31.87, 13.73));
+            float2 local = frac(grid);
+            local = seed > 0.5 ? local.yx : local;
+
+            float start = 0.1 + 0.25 * variation.x;
+            float crackLength = 0.28 + 0.4 * variation.y;
+            float along = local.x - start;
+            float slope = (variation.w - 0.5) * 1.5;
+            float bend = crackLength * (0.35 + 0.3 * variation.x);
+            float center = 0.15 + 0.7 * variation.z;
+            float crackY = center + slope * min(along, bend) +
+                (slope + variation.y - 0.5) * max(along - bend, 0.0);
+            float crackExtent = step(0.0, along) * step(along, crackLength) * step(0.1, seed);
+            float crack = step(abs(local.y - crackY), 0.014) * crackExtent;
+            float crackRim = step(abs(local.y - crackY - 0.028), 0.012) * crackExtent;
+            float branchAlong = along - bend;
+            float branchSlope = slope + (variation.x > 0.5 ? 0.75 : -0.75);
+            float branch = step(abs(local.y - center - slope * bend - branchAlong * branchSlope), 0.012) *
+                step(0.0, branchAlong) * step(branchAlong, 0.12) * step(0.65, variation.z);
+            float glint = step(abs(local.y - 0.2 - 0.55 * variation.y - along * 0.25), 0.018) *
+                step(0.06, along) * step(along, 0.22) * step(0.5, variation.x);
+            float2 frostCenter = 0.3 + 0.4 * variation.xy;
+            float2 frostOffset = local - frostCenter;
+            float2 frostDistance = abs(float2(frostOffset.x + frostOffset.y * (variation.y - 0.5) * 0.5,
+                frostOffset.y));
+            float frost = step(frostDistance.x + frostDistance.y * 0.7, 0.14 + 0.08 * variation.z) *
+                step(0.45, variation.w);
+            color = lerp(color, half3(0.40, 0.60, 0.70), crackRim * 0.2);
+            half strength = saturate(0.025 + frost * 0.10 + crack * 0.5 + branch * 0.3 + glint * 0.28);
+            return lerp(color, half3(0.78, 0.93, 1.0), strength);
+        }
+        #endif
+
         half4 SampleGround(Varyings input, out float2 sampleUV)
         {
             half4 tint = input.tint;
@@ -139,7 +188,11 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
                 half3 wet = main.rgb * _FarmlandWetTint.rgb;
                 main.rgb = lerp(dry, wet, saturate(soilMoisture.x));
             }
-            return main * tint * _Color * _RendererColor;
+            half4 surface = main * tint * _Color * _RendererColor;
+            #if defined(FLATWORLD_FROZEN_ICE)
+                surface.rgb = ShadeFrozenIceSurface(surface.rgb, input.positionOS);
+            #endif
+            return surface;
         }
         ENDHLSL
 
@@ -153,6 +206,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma fragment Frag
             // 单 Quad 的逐格数据仅在运行时启用，打包必须保留两种网格路径。
             #pragma multi_compile_local _ FLATWORLD_CHUNK_CELL_BUFFER
+            #pragma multi_compile_local_fragment _ FLATWORLD_FROZEN_ICE
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
             #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
@@ -194,6 +248,7 @@ Shader "FlatWorld/2D/Chunk Mesh Contact Lit"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_local _ FLATWORLD_CHUNK_CELL_BUFFER
+            #pragma multi_compile_local_fragment _ FLATWORLD_FROZEN_ICE
             half4 Frag(Varyings input) : SV_Target
             {
                 float2 sampleUV;

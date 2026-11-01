@@ -1165,8 +1165,9 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     private ChunkGroundMeshRenderer GetOrCreateFrozenIceMesh(ChunkTerrainData terrain)
     {
         if (iceMesh != null) return iceMesh;
+        Int2 origin = boundChunk.Address.ChunkOrigin;
         iceMesh = new ChunkGroundMeshRenderer(transform, terrain.Width, terrain.Height,
-            groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ice);
+            groundMaterial, ChunkBatchRendererGroupService.VisualLayer.Ice, new Vector2Int(origin.X, origin.Y));
         if (baseMeshBulkUpdating) iceMesh.BeginBulkUpdate();
         return iceMesh;
     }

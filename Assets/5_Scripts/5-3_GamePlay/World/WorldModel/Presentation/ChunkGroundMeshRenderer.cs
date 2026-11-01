@@ -40,6 +40,9 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
     private const MeshUpdateFlags UploadFlags = MeshUpdateFlags.DontRecalculateBounds |
         MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers;
+    internal const string FrozenIceShaderKeyword = "FLATWORLD_FROZEN_ICE";
+    private const int FrozenIcePatternPeriod = 16384;
+    private static readonly int FrozenIcePatternOriginId = Shader.PropertyToID("_FrozenIcePatternOrigin");
     private readonly Transform parent;
     private readonly Material sourceMaterial;
     private readonly ChunkBatchRendererGroupService.VisualLayer layer;
@@ -49,20 +52,30 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     private readonly Dictionary<(Texture, Material, bool), Group> groups = new();
     private readonly Dictionary<Sprite, Quad> quads = new();
     private readonly Shader shader;
+    private readonly Vector2 frozenIcePatternOrigin;
     private bool bulkUpdating;
 
     public ChunkGroundMeshRenderer(Transform parent, int width, int height, Material sourceMaterial,
-        ChunkBatchRendererGroupService.VisualLayer layer)
+        ChunkBatchRendererGroupService.VisualLayer layer, Vector2Int frozenIceWorldOrigin = default)
     {
         this.parent = parent;
         this.width = width;
         this.height = height;
         this.sourceMaterial = sourceMaterial;
         this.layer = layer;
+        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ice)
+            frozenIcePatternOrigin = new Vector2(WrapFrozenIcePatternOrigin(frozenIceWorldOrigin.x),
+                WrapFrozenIcePatternOrigin(frozenIceWorldOrigin.y));
         shader = Shader.Find(layer == ChunkBatchRendererGroupService.VisualLayer.Water
             ? "FlatWorld/2D/Chunk Mesh Water Lit"
             : "FlatWorld/2D/Chunk Mesh Contact Lit");
         cellGroups = new Group[width * height];
+    }
+
+    private static int WrapFrozenIcePatternOrigin(int coordinate)
+    {
+        int value = coordinate % FrozenIcePatternPeriod;
+        return value < 0 ? value + FrozenIcePatternPeriod : value;
     }
 
     public bool IsAvailable => shader != null &&
@@ -155,7 +168,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     {
         var key = (texture, material, singleQuad);
         if (groups.TryGetValue(key, out Group existing)) return existing;
-        var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad);
+        var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad,
+            frozenIcePatternOrigin);
         try { groups.Add(key, group); }
         catch
         {
@@ -290,7 +304,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
         public Group(Transform parent, int width, int height, Shader shader,
             Material sourceMaterial, Texture texture,
-            ChunkBatchRendererGroupService.VisualLayer layer, bool singleQuad)
+            ChunkBatchRendererGroupService.VisualLayer layer, bool singleQuad, Vector2 frozenIcePatternOrigin)
         {
             using var createScope = GroupCreateMarker.Auto();
             this.width = width;
@@ -391,6 +405,13 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                     hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
                 Material.CopyMatchingPropertiesFromMaterial(sourceMaterial);
                 Material.shaderKeywords = sourceMaterial.shaderKeywords;
+                if (layer == ChunkBatchRendererGroupService.VisualLayer.Ice)
+                {
+                    Material.EnableKeyword(FrozenIceShaderKeyword);
+                    Material.SetVector(FrozenIcePatternOriginId, frozenIcePatternOrigin);
+                }
+                else if (layer != ChunkBatchRendererGroupService.VisualLayer.Water)
+                    Material.DisableKeyword(FrozenIceShaderKeyword);
                 Material.SetTexture("_MainTex", texture);
                 Material.SetVector("_ChunkSize", new Vector4(width, height,
                     width > 0 ? 1f / width : 0f, height > 0 ? 1f / height : 0f));

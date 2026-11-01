@@ -3,8 +3,8 @@
 ## 数据与刷新
 
 - Ground/Liquid 独立合批，主路径 `ChunkGroundMeshRenderer/Chunk-Mesh-Water-Lit`，BRG 复用同一效果。外观来自 `LiquidDefinition.WorldWater`，岸线来自 LiquidDepth>0，水量0～100份由 `LiquidCellValue.ToVisualDepth` 向上归入十档后做四角连续插值；边界变更更新八邻共享边/角，深度 UV 用世界坐标和水层原点/边框，不用合批局部 POSITION。
-- 天然冻水格读取 `FrozenSurfaceWaterLayer` 的冻结前底床：Ground 画底床，独立 Ice Mesh 以原冰图 50% 透明度合批，排序在 Ground 与 Water 之间；缺少来源或贴图时保留原地块。融完等地块切换再撤冰，回滚和重绑重新投影；单 Quad 的活跃行列计数增量维护边界，避免逐格融化时全块扫描。规则 `rendering/frozen_ice_surface`。
-- `rendering/frozen_ice_visual` 在编辑态隔离相机中比较真实底床与冰面像素，并采样 16 区块合批和 CPU 渲染提交；不代表实际 GPU 耗时或游戏帧率。
+- 天然冻水格读取 `FrozenSurfaceWaterLayer` 的冻结前底床：Ground 画底床，独立 Ice Mesh 以原冰图 50% 透明度合批，排序在 Ground 与 Water 之间；缺少来源或贴图时保留原地块。冰层专用 Shader 变体以规范区块坐标绘制像素裂纹与霜色，保留 2D 光照和透明度；坐标按 16384 格循环以稳定大坐标和镜像重投影。融完等地块切换再撤冰，回滚和重绑重新投影；单 Quad 的活跃行列计数增量维护边界。规则 `rendering/frozen_ice_surface`。
+- `rendering/frozen_ice_visual` 在编辑态隔离相机中比较真实底床、冰纹开关和投影平移的像素，并采样 16 区块合批和 CPU 渲染提交；不代表实际 GPU 耗时或游戏帧率。
 - `ChunkTilemapRenderer` 的液体/相邻液体/材质变化只重提 Water Mesh；同一水面档位内扣量不重提，单格看 `AffectsLiquidVisuals`、批量只看 `VisualCellIndices`，原数据通知与全部真实变化索引仍完整发布。真实地形、邻块加载、全量绑定仍刷新 Ground/Back/Blocking。无岩浆时只看变化格是否新生岩浆，不因普通水流扫描全块；真实岩浆/平台遮挡照常重建，分帧绑定不绕预算。
 - 天然水面低于同地势岸 1 层，不随 2～3 层底床起伏，抽干才露底；普通倒水仍高于底床 1 层，采挖/填土照常叠加、平台与地面基准齐平。高度层只读天然凹陷，不识别河流来源或改水量。
 - `ChunkEnvironmentRenderer` 排除有液格，抽干恢复覆盖。`ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer` 只读所属层、释放自己的表现，支撑面不画阴影；覆雪 `_SnowCoverage` 用 MPB，脚印按自身寿命消退。无雪且无旧表现只查雪层正值，有雪复用有效地表查询；高低阴影位于地面/支撑/雪上、墙下。

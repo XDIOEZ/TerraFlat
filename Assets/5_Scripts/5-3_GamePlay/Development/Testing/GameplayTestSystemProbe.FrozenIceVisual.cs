@@ -23,6 +23,7 @@ public static partial class GameplayTestSystemProbe
         fixture.Build();
         fixture.Render();
         JObject image = fixture.CapturePreview();
+        JObject shader = fixture.CaptureFrozenIceShaderPixels();
         fixture.ShowAllChunks();
         fixture.SetIceVisible(false);
         double baseline = fixture.MeasureRenderSubmissionMilliseconds();
@@ -30,7 +31,7 @@ public static partial class GameplayTestSystemProbe
         double ice = fixture.MeasureRenderSubmissionMilliseconds();
         return new JObject
         {
-            ["preview"] = image, ["chunkCount"] = fixture.ChunkCount,
+            ["preview"] = image, ["shader"] = shader, ["chunkCount"] = fixture.ChunkCount,
             ["cellCount"] = fixture.ChunkCount * 16 * 16, ["iceGroupCount"] = fixture.IceGroupCount,
             ["bindMilliseconds"] = fixture.BindMilliseconds,
             ["baselineRenderMilliseconds"] = baseline, ["iceRenderMilliseconds"] = ice,
@@ -178,7 +179,20 @@ public static partial class GameplayTestSystemProbe
             camera.targetTexture = target;
         }
 
-        internal void Render() => camera.Render();
+        internal void Render()
+        {
+            for (int attempt = 0; attempt < 4; attempt++)
+            {
+                camera.Render();
+                Color32[] pixels = ReadTargetPixels();
+                Color32 bed = pixels[100 * Width + 400];
+                Color32 ice = pixels[100 * Width + 600];
+                Color32 opaque = pixels[100 * Width + 800];
+                if (bed.r + bed.g + bed.b > 20 && opaque.r + opaque.g + opaque.b > 20 &&
+                    PixelDifference(bed, ice) > 10) return;
+            }
+            throw new InvalidOperationException("冰面隔离相机未得到可见的底床与冰层。");
+        }
 
         internal JObject CapturePreview()
         {
@@ -230,6 +244,127 @@ public static partial class GameplayTestSystemProbe
             float fraction = (ice - bed) / (float)difference;
             if (fraction > .15f && fraction < .85f) blended++;
         }
+
+        // 对比真实渲染像素，确认冰纹生效且区块投影移动不会让纹理滑动。
+        internal JObject CaptureFrozenIceShaderPixels()
+        {
+            Color32[] enhanced = ReadTargetPixels();
+            int iceMaterials = 0, groundMaterials = 0, matchedOrigins = 0;
+            for (int index = 0; index < chunkRoots.Count; index++)
+            {
+                foreach (MeshRenderer mesh in chunkRoots[index].GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    Material material = mesh.sharedMaterial;
+                    if (mesh.name.StartsWith("IceMesh_", StringComparison.Ordinal))
+                    {
+                        if (material.IsKeywordEnabled(ChunkGroundMeshRenderer.FrozenIceShaderKeyword)) iceMaterials++;
+                        Vector4 origin = material.GetVector("_FrozenIcePatternOrigin");
+                        if (origin.x == Origin + index % ChunksPerAxis * ChunkSize &&
+                            origin.y == Origin + index / ChunksPerAxis * ChunkSize) matchedOrigins++;
+                    }
+                    else if (mesh.name.StartsWith("GroundMesh_", StringComparison.Ordinal) &&
+                             material.IsKeywordEnabled(ChunkGroundMeshRenderer.FrozenIceShaderKeyword))
+                        groundMaterials++;
+                }
+            }
+
+            Vector3 originalRootPosition = root.transform.position;
+            Vector3 originalCameraPosition = camera.transform.position;
+            try
+            {
+                SetFrozenIceShaderKeyword(false);
+                camera.Render();
+                Color32[] plain = ReadTargetPixels();
+                int changed = 0, maxDifference = 0;
+                for (int y = 44; y < 636; y += 2)
+                for (int x = 524; x < 716; x += 2)
+                {
+                    int difference = PixelDifference(enhanced[y * Width + x], plain[y * Width + x]);
+                    if (difference >= 6) changed++;
+                    maxDifference = Math.Max(maxDifference, difference);
+                }
+
+                // 将投影视口放近本地原点，分别扣除无冰纹画面后比较冰纹贡献。
+                Vector3 localOffset = new Vector3(-Origin, -Origin, 0f);
+                root.transform.position = originalRootPosition + localOffset;
+                camera.transform.position = originalCameraPosition + localOffset;
+                SetFrozenIceShaderKeyword(true);
+                camera.Render();
+                Color32[] anchoredIce = ReadTargetPixels();
+                SetFrozenIceShaderKeyword(false);
+                camera.Render();
+                Color32[] anchoredPlain = ReadTargetPixels();
+                Vector3 projectionOffset = new Vector3(17f, -11f, 0f);
+                root.transform.position += projectionOffset;
+                camera.transform.position += projectionOffset;
+                camera.Render();
+                Color32[] movedPlain = ReadTargetPixels();
+                SetFrozenIceShaderKeyword(true);
+                camera.Render();
+                Color32[] movedIce = ReadTargetPixels();
+                int shifted = 0, maxShift = 0;
+                for (int y = 44; y < 636; y += 2)
+                for (int x = 524; x < 716; x += 2)
+                {
+                    int index = y * Width + x;
+                    int difference = IceContributionDifference(anchoredIce[index], anchoredPlain[index],
+                        movedIce[index], movedPlain[index]);
+                    if (difference >= 6) shifted++;
+                    maxShift = Math.Max(maxShift, difference);
+                }
+                return new JObject
+                {
+                    ["iceMaterials"] = iceMaterials, ["groundMaterials"] = groundMaterials,
+                    ["matchedOrigins"] = matchedOrigins, ["changedPixels"] = changed,
+                    ["maxDifference"] = maxDifference, ["shiftedPixels"] = shifted,
+                    ["maxShiftDifference"] = maxShift
+                };
+            }
+            finally
+            {
+                root.transform.position = originalRootPosition;
+                camera.transform.position = originalCameraPosition;
+                SetFrozenIceShaderKeyword(true);
+                camera.Render();
+            }
+        }
+
+        private void SetFrozenIceShaderKeyword(bool enabled)
+        {
+            foreach (GameObject ice in iceRoots)
+            {
+                Material material = ice.GetComponent<MeshRenderer>().sharedMaterial;
+                if (enabled) material.EnableKeyword(ChunkGroundMeshRenderer.FrozenIceShaderKeyword);
+                else material.DisableKeyword(ChunkGroundMeshRenderer.FrozenIceShaderKeyword);
+            }
+        }
+
+        private Color32[] ReadTargetPixels()
+        {
+            RenderTexture previous = RenderTexture.active;
+            var image = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+            try
+            {
+                RenderTexture.active = target;
+                image.ReadPixels(new Rect(0f, 0f, Width, Height), 0, 0, false);
+                image.Apply(false, false);
+                return image.GetPixels32();
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(image);
+            }
+        }
+
+        private static int PixelDifference(Color32 left, Color32 right) =>
+            Math.Abs(left.r - right.r) + Math.Abs(left.g - right.g) + Math.Abs(left.b - right.b);
+
+        private static int IceContributionDifference(Color32 originalIce, Color32 originalPlain,
+            Color32 movedIce, Color32 movedPlain) =>
+            Math.Abs((originalIce.r - originalPlain.r) - (movedIce.r - movedPlain.r)) +
+            Math.Abs((originalIce.g - originalPlain.g) - (movedIce.g - movedPlain.g)) +
+            Math.Abs((originalIce.b - originalPlain.b) - (movedIce.b - movedPlain.b));
 
         internal void ShowAllChunks()
         {

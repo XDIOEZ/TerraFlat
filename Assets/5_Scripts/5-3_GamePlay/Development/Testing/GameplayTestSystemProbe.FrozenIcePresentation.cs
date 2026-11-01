@@ -177,7 +177,7 @@ public static partial class GameplayTestSystemProbe
         try
         {
             using var mesh = new ChunkGroundMeshRenderer(root.transform, 6, 4, material,
-                ChunkBatchRendererGroupService.VisualLayer.Ice);
+                ChunkBatchRendererGroupService.VisualLayer.Ice, new Vector2Int(-2000000000, 2000000000));
             void Put(int x, int y, Sprite sprite, Matrix4x4 transform)
             {
                 if (!mesh.TrySetCell(x, y, sprite, Color.white, transform, Vector4.zero, 0f, Vector4.zero))
@@ -224,11 +224,27 @@ public static partial class GameplayTestSystemProbe
             mesh.BeginBulkUpdate();
             Put(0, 0, ice, iceTransform); Put(4, 2, ice, iceTransform); mesh.ClearCell(5, 3);
             mesh.EndBulkUpdate();
+            bool bulk = Matches(iceFilter, 0, 0, 5, 3);
+            Vector4 origin = iceFilter.GetComponent<MeshRenderer>().sharedMaterial.GetVector("_FrozenIcePatternOrigin");
+            bool originWrapped = origin.x == 11264f && origin.y == 5120f;
+            Put(0, 0, ice, Matrix4x4.Scale(new Vector3(1.5f, 1.5f, 1f)));
+            bool expandedMeshUsesIceShader = false;
+            foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Material groupMaterial = filter.GetComponent<MeshRenderer>().sharedMaterial;
+                if (filter.sharedMesh.vertexCount > 4 && filter.gameObject.activeSelf &&
+                    groupMaterial.mainTexture == ice.texture &&
+                    groupMaterial.IsKeywordEnabled(ChunkGroundMeshRenderer.FrozenIceShaderKeyword) &&
+                    !groupMaterial.IsKeywordEnabled("FLATWORLD_CHUNK_CELL_BUFFER") &&
+                    groupMaterial.GetVector("_FrozenIcePatternOrigin") == origin)
+                    expandedMeshUsesIceShader = true;
+            }
             return new JObject
             {
                 ["available"] = true, ["initial"] = initial, ["interior"] = interior,
                 ["shrinkX"] = shrinkX, ["shrinkY"] = shrinkY, ["empty"] = empty,
-                ["reused"] = reused, ["switched"] = switched, ["bulk"] = Matches(iceFilter, 0, 0, 5, 3)
+                ["reused"] = reused, ["switched"] = switched, ["bulk"] = bulk,
+                ["originWrapped"] = originWrapped, ["expandedMeshUsesIceShader"] = expandedMeshUsesIceShader
             };
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }

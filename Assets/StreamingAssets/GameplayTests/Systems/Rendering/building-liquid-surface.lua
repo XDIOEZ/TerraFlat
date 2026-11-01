@@ -67,6 +67,8 @@ test.system("rendering", "frozen_ice_surface", {}, function(data)
             "冰面网格增删后边界错误")
         assert(geometry.empty and geometry.reused and geometry.switched and geometry.bulk,
             "冰面网格清空、重用、纹理切换或批量更新错误")
+        assert(geometry.originWrapped and geometry.expandedMeshUsesIceShader,
+            "冰面大坐标或逐格网格没有使用正确的冰纹材质")
     end
 end, "天然海冰、河湖冰：底床、半透明、合批、融化回滚与重绑")
 
@@ -79,6 +81,12 @@ test.system("rendering", "frozen_ice_visual", {}, function(data)
     for _, row in ipairs(data.preview.rows) do
         assert(row.eligible > 100 and row.blended > row.eligible * .6, "真实画面没有把冰与底床混合")
     end
+    local shader = data.shader
+    assert(shader.iceMaterials == 16 and shader.groundMaterials == 0 and shader.matchedOrigins == 16,
+        "冰纹材质没有隔离普通地面或没有使用规范区块坐标")
+    assert(shader.changedPixels > 100 and shader.maxDifference >= 12,
+        "真实冰面没有显示冰纹和霜色")
+    assert(shader.shiftedPixels == 0, "区块镜像移动时冰纹发生滑动")
     assert(data.renderSamples == 16 and data.bindMilliseconds >= 0
         and data.baselineRenderMilliseconds >= 0 and data.iceRenderMilliseconds >= 0,
         "冰面 CPU 提交采样不完整")

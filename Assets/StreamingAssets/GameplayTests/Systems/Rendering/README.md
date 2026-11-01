@@ -1,6 +1,6 @@
 # 渲染、光照与特效
 
-`rendering/frozen_ice_visual` 用编辑态隔离相机读回裸底床、半透明冰和原冰对照，检查真实像素混合及16区块合批；耗时仅为编辑器相机的 CPU 提交采样，不代表游戏帧率或 GPU 耗时。截图保存在本轮测试包中。
+`rendering/frozen_ice_visual` 用编辑态隔离相机读回裸底床、半透明冰和原冰对照，检查像素混合、冰纹开关、地面材质隔离、投影平移及16区块合批；耗时仅为编辑器相机的 CPU 提交采样，不代表游戏帧率或 GPU 耗时。截图保存在本轮测试包中。
 
 `rules.lua` 的 `rendering/held_food_bites` 通过正式手持模块与本地/角色 MPB 控制器检查零进度不建资源、圆参数数量、确定性还原、横纵翻转、空 Sprite 恢复、最终隐藏、收起后原排序和纹理清理，以及超过32口不截断。Shader 三Pass使用相同本地坐标裁剪；真实 GPU 画面仍需场景验收。离线几何与 HLSL 回归入口为 `Tools/Tests/HeldFoodBites/verify.py`。
 
