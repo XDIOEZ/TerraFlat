@@ -688,6 +688,16 @@ public partial class GameManager : SingletonAutoMono<GameManager>
                 return;
             }
 
+            try
+            {
+                saveDataMgr.RestorePendingModSaveMetadataAfterWorldResourcesReady();
+            }
+            catch (Exception exception)
+            {
+                FailWorldEntry($"存档 MOD 状态恢复失败：{exception.Message}", exception);
+                return;
+            }
+
             saveDataMgr.CurrentContrrolPlayerName = playerName;
 
             // 1. 根据存档立即确定玩家所在的星球名

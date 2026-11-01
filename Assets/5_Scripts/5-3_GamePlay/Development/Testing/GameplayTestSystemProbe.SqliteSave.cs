@@ -51,8 +51,13 @@ public static partial class GameplayTestSystemProbe
         catch (InvalidDataException) { unknownRejected = true; }
         var host = new GameObject("probe:inactive-sqlite-read");
         host.SetActive(false);
-        JObject readFailures;
-        try { readFailures = host.AddComponent<SaveDataMgr>().CaptureTestSqliteReadFailureState(); }
+        JObject readFailures, modMetadataDeferral;
+        try
+        {
+            SaveDataMgr probe = host.AddComponent<SaveDataMgr>();
+            readFailures = probe.CaptureTestSqliteReadFailureState();
+            modMetadataDeferral = probe.CaptureTestSqliteModMetadataDeferral();
+        }
         finally { UnityEngine.Object.DestroyImmediate(host); }
         return new JObject
         {
@@ -60,6 +65,7 @@ public static partial class GameplayTestSystemProbe
             ["futureStageIsolated"] = futureStageIsolated, ["futureStageRetained"] = futureStageRetained,
             ["canceled"] = canceled, ["failurePreserved"] = failurePreserved, ["previousRestored"] = previous,
             ["frozenItemIds"] = new JArray(restored.RemovedItemGuids), ["futureSchemaRejected"] = unknownRejected,
+            ["modMetadataDeferral"] = modMetadataDeferral,
             ["chunkFailurePreserved"] = readFailures["chunkFailurePreserved"],
             ["weatherFailurePreserved"] = readFailures["weatherFailurePreserved"],
             ["path"] = path

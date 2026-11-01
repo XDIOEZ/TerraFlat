@@ -356,6 +356,7 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = false;
+        SaveDataMgr.Instance?.ClearPendingModSaveMetadataAfterRuntimeRestore();
         Debug.Log($"[GameManager] 世界进入总耗时 {Time.realtimeSinceStartup - worldEntryStartedAt:0.00} 秒。");
         PersistentRuntimeObjectHierarchy.OrganizeUnregisteredPersistentRoots();
         PublishCurrentWorldEntryProgress(title, status, 1f, WorldEntryProgressState.Completed);
@@ -403,6 +404,10 @@ public partial class GameManager
                 try { resources.ReleaseWorldResourcesAndRestoreStartup(); }
                 catch (Exception cleanupException) { Debug.LogException(cleanupException, this); }
             }
+        }
+        else
+        {
+            SaveDataMgr.Instance?.ClearPendingModSaveMetadataAfterRuntimeRestore();
         }
 
         if (exception != null)

@@ -20,6 +20,60 @@ public partial class SaveDataMgr
         return ReadSqliteArchiveCandidate(store, out _);
     }
 
+    internal JObject CaptureTestSqliteModMetadataDeferral()
+    {
+        if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))
+            throw new InvalidOperationException("MOD 元数据延迟测试必须使用停用独立 SaveDataMgr。");
+
+        string path = Path.Combine(Application.temporaryCachePath, "FlatWorldGameplayTests", "SqliteRules",
+            Guid.NewGuid().ToString("N"), "save.sqlite");
+        string missingModId = "probe:unloaded-" + Guid.NewGuid().ToString("N");
+        var source = new GameSaveData { saveName = "probe:sqlite-metadata" };
+        var modMetadata = new ModSaveMetadata
+        {
+            Mods = new() { new ModSaveRecord { Id = missingModId } }
+        };
+        using (var store = new SqliteSaveArchiveStore(path, true))
+        {
+            store.CommitSnapshotAsync("probe-mod-metadata", 1, source.saveName, new[]
+            {
+                ArchiveRecord("global", "", "core", MemoryPackSerializer.Serialize(source)),
+                ArchiveRecord("global", "", "mods", MemoryPackSerializer.Serialize(modMetadata))
+            }).GetAwaiter().GetResult();
+        }
+
+        bool readAccepted = false, metadataPending = false, deferredRejects = false, pendingRetained = false;
+        string readFailure = null, restoreFailure = null;
+        try
+        {
+            readAccepted = LoadSaveByDisk(path);
+            if (!readAccepted) readFailure = LastArchiveError;
+            metadataPending = hasPendingModSaveMetadata &&
+                pendingModSaveMetadata?.Mods?.Exists(record => record?.Id == missingModId) == true;
+            if (readAccepted)
+            {
+                try { RestorePendingModSaveMetadataAfterWorldResourcesReady(); }
+                catch (Exception exception)
+                {
+                    restoreFailure = exception.GetType().Name;
+                    deferredRejects = exception is InvalidOperationException || exception is InvalidDataException;
+                }
+                pendingRetained = hasPendingModSaveMetadata;
+            }
+        }
+        finally { CloseSqliteArchive(); }
+
+        return new JObject
+        {
+            ["readAccepted"] = readAccepted,
+            ["readFailure"] = readFailure,
+            ["metadataPending"] = metadataPending,
+            ["deferredRejects"] = deferredRejects,
+            ["restoreFailure"] = restoreFailure,
+            ["pendingRetained"] = pendingRetained
+        };
+    }
+
     internal JObject CaptureTestSqliteReadFailureState()
     {
         if (ReferenceEquals(this, instance) || gameObject.activeInHierarchy || !string.IsNullOrEmpty(UserSavePath))

@@ -43,6 +43,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 ## SQLite 事务与按需契约
 
 - 固定 `unity-sqlite-net 1.3.3`，每档一个 worker/连接：WAL、FULL、2MiB page cache、mmap=0、有界队列；直接打开真实数据库文件，不经资产接口载入整库。
+- 主菜单选档只解码 SQLite 并暂存 MOD 元数据；完整世界资源 Ready 后、场景激活和玩家创建前校验/恢复。入世前失败且 MOD runtime 卸载时保留重试；runtime 保留时清除，避免重复调用 `OnLoadSave`；切换 SaveData 根时清除。
 - 卸载脏记录先 Stage 到 session/revision，成功后才能撤掉解码数据。正式 Commit 只纳入冻结点之前的暂存，之后的修改留下一轮；未提交暂存不作为崩溃后的正式进度。保留当前/上一逻辑提交，共享未变行，无变化只更新时间；世界永久退役通过同修订的 scope removal 清理，失败不发布。
 - 生成与 chunk/weather 读取并行，全部就绪才 Commit Ready/恢复实体/申请表现；读取失败不能当作空差量。冷地表返回 Pending 时保留落地、爆炸和掉落的待结算预算。
 - 可逐出缓存只留冻结字节：Android 8MiB/256、Windows 32MiB/1024，任一触限逐出；活跃模型与系统租约另计。并发读取共享工作，各调用者独立取消；最后等待者离开才撤掉未完成读取，旧会话/旧 state 不得发布。

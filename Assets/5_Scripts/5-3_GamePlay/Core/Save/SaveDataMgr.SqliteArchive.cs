@@ -13,6 +13,8 @@ public partial class SaveDataMgr
     #region SQLite 会话与独立记录
     private ISaveArchiveStore archiveStore;
     private string archivePath, archiveSession;
+    private ModSaveMetadata pendingModSaveMetadata;
+    private bool hasPendingModSaveMetadata;
     private CancellationTokenSource archiveReadCancellation = new();
     private long archiveRecordRevision;
     private readonly Dictionary<string, PersistedChunkRead> persistedChunkReads = new();
@@ -53,6 +55,8 @@ public partial class SaveDataMgr
         networkWeatherRevisions.Clear();
         retiredArchiveWorlds.Clear();
         archiveRecordRevision = 0;
+        pendingModSaveMetadata = null;
+        hasPendingModSaveMetadata = false;
     }
 
     private void OpenSqliteArchive(string path, bool create)
@@ -257,9 +261,24 @@ public partial class SaveDataMgr
         OpenSqliteArchive(path, false);
         GameSaveData candidate = ReadSqliteArchiveCandidate(archiveStore, out ModSaveMetadata modMetadata);
         SaveData = candidate;
-        ValidateAndRestoreModMetadata(modMetadata);
+        pendingModSaveMetadata = modMetadata;
+        hasPendingModSaveMetadata = true;
         ResetChunkDifferenceState();
         return true;
+    }
+
+    internal void RestorePendingModSaveMetadataAfterWorldResourcesReady()
+    {
+        if (!hasPendingModSaveMetadata) return;
+
+        ModSaveMetadata metadata = pendingModSaveMetadata;
+        ValidateAndRestoreModMetadata(metadata);
+    }
+
+    internal void ClearPendingModSaveMetadataAfterRuntimeRestore()
+    {
+        pendingModSaveMetadata = null;
+        hasPendingModSaveMetadata = false;
     }
 
     private static GameSaveData ReadSqliteArchiveCandidate(ISaveArchiveStore store, out ModSaveMetadata modMetadata)
@@ -317,11 +336,6 @@ public partial class SaveDataMgr
         if (!string.IsNullOrWhiteSpace(candidate.SpaceStateJson)) _ = DeserializeSpaceState(candidate.SpaceStateJson);
         if (machines.Metadata != null) MachineWorld.RestoreArchive(candidate, MemoryPackSerializer.Serialize(machines));
         DroppedItemService.RestoreArchive(candidate, MemoryPackSerializer.Serialize(drops));
-        ModRuntimeManager mods = ModRuntimeManager.Instance;
-        if (mods == null || !mods.IsReady)
-            throw new InvalidDataException("MOD 运行环境尚未准备完成，无法校验存档。");
-        if (!mods.ValidateSaveMetadata(modMetadata, out string error))
-            throw new InvalidDataException($"存档 MOD 环境不兼容：{error}");
         return candidate;
     }
 
