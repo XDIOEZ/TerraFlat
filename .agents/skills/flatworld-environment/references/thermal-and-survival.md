@@ -18,7 +18,7 @@
 - `SurvivalNumericBatch` 统一氧气、气压及体温的纯数值阶段并提供 Span 入口；模块仍按原频率逐阶段采样/提交，供氧通知、死亡扣血和水冷后的环境传热保持原回调边界，不跨对象延迟事件。
 - 玩家默认安全5～40℃、普通生物5～50℃，Actor可覆写、装备 SetSafeTemperatureRangeModifier。越界且共用缓冲耗尽才挂冻伤/热射病，安全移除，TemperatureMgr 不直接扣血。
 - RemainingTemperatureBufferSeconds 冷热共用：危险扣1/秒，安全补1/秒，默认容量60；短暂安全/冷热切换/清Buff不重置，保存剩余量；RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点、向外随机引导，普通陆移也保留短期方向偏置，不回退旧安全点。
-- TemperatureWarningPresentationRules 共用体温条/TemperatureScreenRendererFeature，读最终体温与装备安全线；条提前3℃渐色（窄区取1/4宽），屏幕越线10℃满，以真实秒平滑、冷热有符号互斥；仅表现，不改缓冲/Buff。
+- TemperatureWarningPresentationRules 共用体温条/TemperatureScreenRendererFeature，读最终体温与装备安全线；条在安全线中点满格，向低温/高温线线性缩短并变蓝/红，越线为空；屏幕越线10℃满，以真实秒平滑、冷热有符号互斥；仅表现，不改缓冲/Buff。
 
 ## 氧气、压力与有限大气
 

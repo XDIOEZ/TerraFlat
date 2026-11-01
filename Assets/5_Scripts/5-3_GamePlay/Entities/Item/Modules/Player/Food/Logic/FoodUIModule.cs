@@ -480,15 +480,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return;
         }
 
-        temperature.GetSafeTemperatureRange(out float coldStart, out float safeMaximum);
-        float hotStart = Mathf.Max(coldStart + 1f, safeMaximum);
-        float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
         if (slider != null)
-            SetStatusBarValue(
-                slider,
-                coldStart - buffer,
-                hotStart + buffer,
-                temperature.Data.CurrentTemperature);
+        {
+            temperature.GetSafeTemperatureRange(out float minimum, out float maximum);
+            TemperatureWarningPresentationSample sample = TemperatureWarningPresentationRules.Evaluate(
+                temperature.Data.CurrentTemperature, minimum, maximum);
+            SetStatusBarValue(slider, 0f, 1f, sample.BarFill);
+        }
 
         if (dataText != null)
         {

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>体温条与屏幕边缘共用的只读预警强度。</summary>
+/// <summary>体温条与屏幕边缘共用的只读预警采样。</summary>
 public readonly struct TemperatureWarningPresentationSample
 {
     #region 预警采样
@@ -11,6 +11,7 @@ public readonly struct TemperatureWarningPresentationSample
     public float HeatDanger { get; }
     public float SignedWarning => HeatWarning - ColdWarning;
     public float SignedDanger => HeatDanger - ColdDanger;
+    public float BarFill { get; }
 
     public TemperatureWarningPresentationSample(
         float coldWarning, float heatWarning, float coldDanger, float heatDanger)
@@ -19,6 +20,7 @@ public readonly struct TemperatureWarningPresentationSample
         HeatWarning = heatWarning;
         ColdDanger = coldDanger;
         HeatDanger = heatDanger;
+        BarFill = 1f - Mathf.Abs(heatWarning - coldWarning);
     }
 
     #endregion
@@ -29,14 +31,13 @@ public static class TemperatureWarningPresentationRules
 {
     #region 温度预警规则
 
-    public const float WarningRangeCelsius = 3f;
     public const float DangerRangeCelsius = 10f;
     public const float DefaultTransitionSeconds = 1f;
 
     public static readonly Color ColdBarColor = new Color(0.24f, 0.61f, 0.97f, 1f);
     public static readonly Color HeatBarColor = new Color(1f, 0.30f, 0.20f, 1f);
 
-    // 体温条提前变色，屏幕边缘只在真正越过安全线后从零渐强。
+    // 体温条以安全范围中点为满格，屏幕边缘仍只在越过安全线后渐强。
     public static TemperatureWarningPresentationSample Evaluate(
         float currentTemperature, float safeMinimum, float safeMaximum)
     {
@@ -44,17 +45,15 @@ public static class TemperatureWarningPresentationRules
             !float.IsFinite(safeMaximum) || safeMaximum < safeMinimum)
             return default;
 
-        float warningWidth = Mathf.Min(WarningRangeCelsius, (safeMaximum - safeMinimum) * 0.25f);
-        float coldWarning = warningWidth > 0f
-            ? SmoothUnit((safeMinimum + warningWidth - currentTemperature) / warningWidth)
-            : currentTemperature < safeMinimum ? 1f : 0f;
-        float heatWarning = warningWidth > 0f
-            ? SmoothUnit((currentTemperature - (safeMaximum - warningWidth)) / warningWidth)
-            : currentTemperature > safeMaximum ? 1f : 0f;
+        float halfRange = (safeMaximum - safeMinimum) * 0.5f;
+        float midpoint = safeMinimum + halfRange;
+        float barSeverity = halfRange > 0f
+            ? Mathf.Clamp((currentTemperature - midpoint) / halfRange, -1f, 1f)
+            : currentTemperature < midpoint ? -1f : currentTemperature > midpoint ? 1f : 0f;
 
         return new TemperatureWarningPresentationSample(
-            coldWarning,
-            heatWarning,
+            Mathf.Max(0f, -barSeverity),
+            Mathf.Max(0f, barSeverity),
             SmoothUnit((safeMinimum - currentTemperature) / DangerRangeCelsius),
             SmoothUnit((currentTemperature - safeMaximum) / DangerRangeCelsius));
     }

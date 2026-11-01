@@ -131,34 +131,32 @@ for _, case in ipairs(temperatureCases) do
 end
 
 local temperaturePresentationCases = {
-    {name = "正常体温保持原色", temperature = 36.5, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温预警起点", temperature = 8, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温预警四分之一", temperature = 7.25, coldWarning = .15625, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温预警一半", temperature = 6.5, coldWarning = .5, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温预警四分之三", temperature = 5.75, coldWarning = .84375, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温安全线只变蓝不结冰", temperature = 5, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "低温刚越界无强度跳变", temperature = 4.999, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "结冰四分之一", temperature = 2.5, coldWarning = 1, heatWarning = 0, coldDanger = .15625, heatDanger = 0},
-    {name = "结冰一半", temperature = 0, coldWarning = 1, heatWarning = 0, coldDanger = .5, heatDanger = 0},
-    {name = "结冰四分之三", temperature = -2.5, coldWarning = 1, heatWarning = 0, coldDanger = .84375, heatDanger = 0},
-    {name = "结冰满强度", temperature = -5, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
-    {name = "极冷强度钳制", temperature = -100, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
-    {name = "高温预警起点", temperature = 37, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
-    {name = "高温预警四分之一", temperature = 37.75, coldWarning = 0, heatWarning = .15625, coldDanger = 0, heatDanger = 0},
-    {name = "高温预警一半", temperature = 38.5, coldWarning = 0, heatWarning = .5, coldDanger = 0, heatDanger = 0},
-    {name = "高温预警四分之三", temperature = 39.25, coldWarning = 0, heatWarning = .84375, coldDanger = 0, heatDanger = 0},
-    {name = "高温安全线只变红无热浪", temperature = 40, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
-    {name = "高温刚越界无强度跳变", temperature = 40.001, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
-    {name = "热浪四分之一", temperature = 42.5, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .15625},
-    {name = "热浪一半", temperature = 45, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .5},
-    {name = "热浪四分之三", temperature = 47.5, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .84375},
-    {name = "热浪满强度", temperature = 50, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1},
-    {name = "极热强度钳制", temperature = 100, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1}
+    {name = "安全中点满格原色", temperature = 22.5, barFill = 1, coldWarning = 0, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "向低温偏离四分之一", temperature = 18.125, barFill = .75, coldWarning = .25, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "向低温偏离一半", temperature = 13.75, barFill = .5, coldWarning = .5, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "向低温偏离四分之三", temperature = 9.375, barFill = .25, coldWarning = .75, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温安全线空格蓝色不结冰", temperature = 5, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "低温刚越界无强度跳变", temperature = 4.999, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = 0, heatDanger = 0},
+    {name = "结冰四分之一", temperature = 2.5, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = .15625, heatDanger = 0},
+    {name = "结冰一半", temperature = 0, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = .5, heatDanger = 0},
+    {name = "结冰四分之三", temperature = -2.5, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = .84375, heatDanger = 0},
+    {name = "结冰满强度", temperature = -5, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
+    {name = "极冷强度钳制", temperature = -100, barFill = 0, coldWarning = 1, heatWarning = 0, coldDanger = 1, heatDanger = 0},
+    {name = "向高温偏离四分之一", temperature = 26.875, barFill = .75, coldWarning = 0, heatWarning = .25, coldDanger = 0, heatDanger = 0},
+    {name = "向高温偏离一半", temperature = 31.25, barFill = .5, coldWarning = 0, heatWarning = .5, coldDanger = 0, heatDanger = 0},
+    {name = "向高温偏离四分之三", temperature = 35.625, barFill = .25, coldWarning = 0, heatWarning = .75, coldDanger = 0, heatDanger = 0},
+    {name = "高温安全线空格红色无热浪", temperature = 40, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
+    {name = "高温刚越界无强度跳变", temperature = 40.001, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 0},
+    {name = "热浪四分之一", temperature = 42.5, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .15625},
+    {name = "热浪一半", temperature = 45, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .5},
+    {name = "热浪四分之三", temperature = 47.5, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = .84375},
+    {name = "热浪满强度", temperature = 50, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1},
+    {name = "极热强度钳制", temperature = 100, barFill = 0, coldWarning = 0, heatWarning = 1, coldDanger = 0, heatDanger = 1}
 }
 for _, sample in ipairs(temperaturePresentationCases) do
     local input = sample
     test.system("survival", "temperature_presentation", {temperature = input.temperature}, function(data)
-        for _, key in ipairs({"coldWarning", "heatWarning", "coldDanger", "heatDanger"}) do
+        for _, key in ipairs({"barFill", "coldWarning", "heatWarning", "coldDanger", "heatDanger"}) do
             near(data[key], input[key], "体温表现强度：" .. key)
             assert(data[key] >= 0 and data[key] <= 1, "体温表现强度没有钳制到零至一")
         end
@@ -170,17 +168,19 @@ for _, sample in ipairs(temperaturePresentationCases) do
 end
 
 for _, sample in ipairs({
-    {name = "窄安全区中间不变色", args = {minimum = 10, maximum = 12, temperature = 11}, cold = 0, hot = 0},
-    {name = "窄安全区低温渐变缩至四分之一宽度", args = {minimum = 10, maximum = 12, temperature = 10.25}, cold = .5, hot = 0},
-    {name = "窄安全区高温渐变缩至四分之一宽度", args = {minimum = 10, maximum = 12, temperature = 11.75}, cold = 0, hot = .5},
-    {name = "零宽安全线仍安全", args = {minimum = 10, maximum = 10, temperature = 10}, cold = 0, hot = 0},
-    {name = "零宽安全线低温不同时变红", args = {minimum = 10, maximum = 10, temperature = 9}, cold = 1, hot = 0},
-    {name = "零宽安全线高温不同时变蓝", args = {minimum = 10, maximum = 10, temperature = 11}, cold = 0, hot = 1}
+    {name = "窄安全区中点满格", args = {minimum = 10, maximum = 12, temperature = 11}, fill = 1, cold = 0, hot = 0},
+    {name = "窄安全区低温渐变", args = {minimum = 10, maximum = 12, temperature = 10.25}, fill = .25, cold = .75, hot = 0},
+    {name = "窄安全区高温渐变", args = {minimum = 10, maximum = 12, temperature = 11.75}, fill = .25, cold = 0, hot = .75},
+    {name = "不对称安全区中点满格", args = {minimum = -5, maximum = 60, temperature = 27.5}, fill = 1, cold = 0, hot = 0},
+    {name = "零宽安全线中点满格", args = {minimum = 10, maximum = 10, temperature = 10}, fill = 1, cold = 0, hot = 0},
+    {name = "零宽安全线低温空格", args = {minimum = 10, maximum = 10, temperature = 9}, fill = 0, cold = 1, hot = 0},
+    {name = "零宽安全线高温空格", args = {minimum = 10, maximum = 10, temperature = 11}, fill = 0, cold = 0, hot = 1}
 }) do
     local input = sample
     test.system("survival", "temperature_presentation", input.args, function(data)
-        near(data.coldWarning, input.cold, "窄安全区低温预警")
-        near(data.heatWarning, input.hot, "窄安全区高温预警")
+        near(data.barFill, input.fill, "安全区体温条填充")
+        near(data.coldWarning, input.cold, "安全区低温颜色")
+        near(data.heatWarning, input.hot, "安全区高温颜色")
         assert(data.coldDanger * data.heatDanger == 0, "窄安全区冷热屏幕效果冲突")
     end, "体温表现边界：" .. input.name)
 end
@@ -194,7 +194,7 @@ for _, sample in ipairs({
 }) do
     local input = sample
     test.system("survival", "temperature_presentation", input.args, function(data)
-        for _, key in ipairs({"coldWarning", "heatWarning", "coldDanger", "heatDanger", "signedWarning", "signedDanger"}) do
+        for _, key in ipairs({"barFill", "coldWarning", "heatWarning", "coldDanger", "heatDanger", "signedWarning", "signedDanger"}) do
             near(data[key], 0, "非法体温表现输入归零：" .. key)
         end
     end, "体温表现保护：" .. input.name)
@@ -206,10 +206,12 @@ test.system("survival", "temperature_presentation_range", {}, function(data)
     near(data.initial.cold.coldDanger, .028, "默认安全线下的结冰强度")
     near(data.initial.hot.heatDanger, .352, "默认安全线上的热浪强度")
     near(data.equipped.minimum, -5, "装备耐寒修正")
-    near(data.equipped.maximum, 50, "装备耐热修正")
-    near(data.equipped.cold.signedWarning, 0, "耐寒装备后体温条归正常色")
+    near(data.equipped.maximum, 60, "装备耐热修正")
+    near(data.equipped.cold.signedWarning, -47 / 65, "装备后低温颜色按新中点变化")
+    near(data.equipped.cold.barFill, 18 / 65, "装备后低温填充按新范围变化")
     near(data.equipped.cold.signedDanger, 0, "耐寒装备后屏幕结冰目标归零")
-    near(data.equipped.hot.signedWarning, 0, "耐热装备后体温条归正常色")
+    near(data.equipped.hot.signedWarning, 33 / 65, "装备后高温颜色按新中点变化")
+    near(data.equipped.hot.barFill, 32 / 65, "装备后高温填充按新范围变化")
     near(data.equipped.hot.signedDanger, 0, "耐热装备后屏幕热浪目标归零")
     near(data.restored.minimum, 5, "卸下装备后恢复耐寒线")
     near(data.restored.maximum, 40, "卸下装备后恢复耐热线")
