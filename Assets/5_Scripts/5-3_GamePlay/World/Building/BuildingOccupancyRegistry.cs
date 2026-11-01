@@ -172,6 +172,9 @@ public static class BuildingOccupancyRegistry
     internal static WindBlockingQuery CaptureWindBlockingQuery(string worldKey)
         => new(worlds.TryGetValue(worldKey ?? string.Empty, out WorldIndex index) ? index.WindBlocked : null);
 
+    internal static uint GetWindBlockingRevision(string worldKey)
+        => worlds.TryGetValue(worldKey ?? string.Empty, out WorldIndex index) ? index.Revision : 0;
+
     public static bool IsWindBlockingNormalized(Vector2Int cell)
         => CaptureWindBlockingQuery().IsBlocked(cell);
 

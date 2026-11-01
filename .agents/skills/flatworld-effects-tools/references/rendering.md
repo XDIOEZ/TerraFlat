@@ -45,6 +45,8 @@
 
 ## 后处理与远景
 
+- 风纹避障由 `WindStreakObstacleField` 读取已加载地形及建筑/机械挡风格，按连通墙体和风向生成两侧绕流、墙后汇流的纹理；镜头跨格、挡风版本、地形 BlockingRevision 或风向明显改变才重算，Shader 每像素一次采样。Lua 仅验证纯格流场，不代表真实 GPU 画面。
+
 - 雾、云和风纹共用 `WeatherScreenRenderingContext` 查询本地玩家及最终相机栈；雾/云读取当前执行世界天气，风纹读取玩家场景天气，各自保留失效清理时机。共享查询不缓存世界或当前相机，效果原有身份记录仍用于重置。
 - `WindStreakRendererFeature/WindStreaks` 读取所属本机世界 `WeatherMgr.PresentedWind`，与植被共用平滑风向/强度；`windStreaks` 渲染 JSON 管阈值、速度、尺寸和透明度。只在本地主相机最终堆栈绘制一次，位于大雾后、加载边界云和宇宙远景前，不复制屏幕或建粒子；相位逐帧积分并补最短镜头位移，CPU/Shader 共用128格周期。无风/禁天气/换玩家或世界清理，暂停不推进；规则 `rendering/wind_streaks` 不代表 GPU 画面验收。
 

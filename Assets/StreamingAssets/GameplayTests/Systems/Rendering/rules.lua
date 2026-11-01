@@ -127,6 +127,44 @@ do
     test.system("rendering", "wind_streaks", { config = { width = 0 }, steps = { {} } }, function(data)
         assert(not data.validConfig and not data.samples[1].visible, "无效风纹尺寸没有关闭绘制")
     end, "风纹：拒绝无效尺寸")
+
+    -- 连续墙体的绕流只看真实墙格和主风向，不引入每条线独立的随机偏转。
+    test.system("rendering", "wind_streaks", {
+        windX = 1, windY = 0,
+        obstacleRows = {
+            ".............", ".............", ".............", ".............",
+            ".............", "......#......", "......#......", "......#......",
+            ".............", ".............", ".............", ".............", "............."
+        },
+        flowSamples = {
+            { x = 5, y = 4 }, { x = 5, y = 8 }, { x = 6, y = 6 },
+            { x = 12, y = 4 }, { x = 1, y = 1 }
+        }
+    }, function(data)
+        local flow = data.flowSamples
+        assert(flow[1].bend < -0.1 and flow[2].bend > 0.1,
+            "墙体上下两侧没有按最近的绕行方向分流")
+        assert(flow[3].blocked, "风线没有遮挡真实墙格")
+        assert(math.abs(flow[4].bend) < math.abs(flow[1].bend),
+            "墙后风线没有逐渐汇回主风流")
+        assert(math.abs(flow[5].bend) < 0.03 and not flow[5].blocked,
+            "远离墙体的主风流被错误改变")
+    end, "风纹：墙前两侧分流、遮挡墙格、墙后汇流及远场不扰动")
+
+    test.system("rendering", "wind_streaks", {
+        windX = 0, windY = 1,
+        obstacleRows = {
+            ".............", ".............", ".............", ".............",
+            ".....###.....", ".............", ".............", ".............",
+            ".............", ".............", ".............", ".............", "............."
+        },
+        flowSamples = { { x = 4, y = 3 }, { x = 8, y = 3 }, { x = 6, y = 4 } }
+    }, function(data)
+        local flow = data.flowSamples
+        assert(flow[1].bend > 0.1 and flow[2].bend < -0.1,
+            "风向旋转后没有相对风向重新选择两侧通道")
+        assert(flow[3].blocked, "横向墙体没有挡住风线")
+    end, "风纹：旋转风向后仍按障碍形状分流")
 end
 
 do
