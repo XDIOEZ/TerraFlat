@@ -33,6 +33,12 @@ public static partial class GameplayTestSystemProbe
         float teleported = history.Evaluate(0.15d).x;
         history.Reset(new Vector3(-3f, 0f, 0f), 0.2d);
         float reused = history.Evaluate(0.225d).x;
+        var idleResume = new WorldVisualMotionHistory();
+        idleResume.Reset(Vector3.zero, 0d);
+        idleResume.Capture(Vector3.zero, 0.05d);
+        idleResume.Capture(Vector3.zero, 0.1d);
+        idleResume.Capture(Vector3.right, 0.15d);
+        float idleResumeMid = idleResume.Evaluate(0.175d).x;
 
         var wrapped = new WorldVisualMotionHistory();
         var domain = new WorldTopologyDomain(new int2(0, 0), new int2(100, 100), true);
@@ -74,6 +80,7 @@ public static partial class GameplayTestSystemProbe
             ["pausedUnchanged"] = pausedUnchanged,
             ["teleported"] = teleported,
             ["reused"] = reused,
+            ["idleResumeMid"] = idleResumeMid,
             ["seamMid"] = seamMid,
             ["pixelAligned"] = WorldVisualMotionHistory.PixelAlignTranslation(new Vector3(0.12f, 0f), 32f).x,
             ["sourceUnchanged"] = sourceUnchanged,

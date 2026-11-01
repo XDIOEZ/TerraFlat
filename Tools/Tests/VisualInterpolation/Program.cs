@@ -38,6 +38,12 @@ internal static class Program
         Near(history.Evaluate(.225d).x, -2f, "非固定步移动不插值");
         history.Capture(new Vector3(-1f, 0f, 0f), .25d);
         Near(history.Evaluate(.2d).x, -2f, "时间不倒流");
+        var idleResume = new WorldVisualMotionHistory();
+        idleResume.Reset(Vector3.zero, 0d);
+        idleResume.Capture(Vector3.zero, .05d);
+        idleResume.Capture(Vector3.zero, .1d);
+        idleResume.Capture(Vector3.right, .15d);
+        Near(idleResume.Evaluate(.175d).x, .5f, "静止多Tick后首次移动依旧按单步插值");
         var wrapped = new WorldVisualMotionHistory();
         wrapped.Reset(new Vector3(99f, 0f, 0f), 1d);
         wrapped.CaptureWrapped(new Vector2(0f, 0f), new WorldTopologyDomain(), 1.05d);

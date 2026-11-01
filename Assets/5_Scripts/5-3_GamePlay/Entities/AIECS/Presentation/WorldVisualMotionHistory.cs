@@ -36,7 +36,17 @@ public sealed class WorldVisualMotionHistory
             Reset(position, simulationTime);
             return;
         }
-        if ((position - current).sqrMagnitude < 0.0000000001f) return;
+        if ((position - current).sqrMagnitude < 0.0000000001f)
+        {
+            // 静止步也更新采样时间，避免待机后首次移动按数个Tick的跨度缓慢补间。
+            if (simulationTime > lastChangeTime)
+            {
+                previous = current;
+                lastChangeTime = simulationTime;
+                interval = 0f;
+            }
+            return;
+        }
         double seconds = simulationTime - lastChangeTime;
         if (seconds <= 0d)
         {

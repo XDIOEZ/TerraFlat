@@ -14,6 +14,7 @@ test.system("rendering", "visual_motion_interpolation", {}, function(data)
     assert(data.pausedUnchanged, "暂停时显示位置继续推进")
     near(data.teleported, 20, "瞬移后残留旧位置")
     near(data.reused, -3, "对象池复用后继承旧实体轨迹")
+    near(data.idleResumeMid, 0.5, "静止多逻辑步后首次移动不应延长补间时间")
     near(data.seamMid, 99.5, "跨环绕接缝绕远路插值")
     near(data.pixelAligned, 0.125, "插值偏移未对齐像素网格")
     assert(data.sourceUnchanged and data.projectionTranslated and data.projectionRestored,
