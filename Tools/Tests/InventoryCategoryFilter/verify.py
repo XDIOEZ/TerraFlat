@@ -29,9 +29,15 @@ def assets():
     assert 'guid: 3e32f389c0c274b4288fdff15830c523' in text
     assert text.count('m_Name: FWUI_InventoryCategoryTabs') == 1
     assert 'guid: cc2da5b9a43a4cc88c3419ff189391d3' not in text
-    assert '  m_SizeDelta: {x: 1148, y: 560}\n' in text
-    assert '  m_AnchoredPosition: {x: 192, y: -112}\n' in text
-    assert '  m_SizeDelta: {x: -240, y: -192}\n' in text
+    assert '  m_SizeDelta: {x: 1148, y: 572}\n' in text
+    assert '  m_AnchoredPosition: {x: 192, y: -92}\n' in text
+    assert '  m_SizeDelta: {x: -240, y: -156}\n' in text
+    assert '  m_AnchoredPosition: {x: 26, y: -92}\n' in text
+    assert '  m_SizeDelta: {x: 140, y: -156}\n' in text
+    assert text.count('propertyPath: m_FlexibleHeight\n      value: 1') == 9
+    assert '  m_ChildForceExpandHeight: 1\n' in text
+    assert re.search(r'm_Padding:\n\s+m_Left: 8\n\s+m_Right: 8\n'
+                     r'\s+m_Top: 0\n\s+m_Bottom: 0\n\s+m_ChildAlignment: 0', text)
     assert text.count('propertyPath: m_Navigation.m_Mode\n      value: 3') == 9
     for category in ['all', 'building', 'nature', 'functional', 'tool', 'equipment', 'food', 'material', 'transport']:
         assert f'value: FWUI_Category_{category}\n' in text, category

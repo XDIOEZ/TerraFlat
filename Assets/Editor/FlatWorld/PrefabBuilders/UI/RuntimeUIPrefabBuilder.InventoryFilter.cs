@@ -15,17 +15,17 @@ public static partial class RuntimeUIPrefabBuilder
 
         // 左侧增加分类栏宽度，原十列物品网格与右侧滚动条保持原尺寸。
         RectTransform panel = (RectTransform)root.transform;
-        panel.sizeDelta = new Vector2(Mathf.Max(1148f, panel.sizeDelta.x), panel.sizeDelta.y);
+        panel.sizeDelta = new Vector2(Mathf.Max(1148f, panel.sizeDelta.x), Mathf.Max(572f, panel.sizeDelta.y));
         UIDragResizer resizer = root.GetComponent<UIDragResizer>();
         if (resizer != null)
         {
             resizer.minWidth = Mathf.Max(1148f, resizer.minWidth);
-            resizer.minHeight = Mathf.Max(560f, resizer.minHeight);
+            resizer.minHeight = Mathf.Max(572f, resizer.minHeight);
         }
         RectTransform scroll = FindTransform(root.transform, "Scroll View") as RectTransform;
         if (scroll == null) throw new MissingReferenceException("UI_Bag 缺少 Scroll View。");
-        scroll.anchoredPosition = new Vector2(192f, -112f);
-        scroll.sizeDelta = new Vector2(-240f, -192f);
+        scroll.anchoredPosition = new Vector2(192f, -92f);
+        scroll.sizeDelta = new Vector2(-240f, -156f);
 
         Transform oldDropdown = FindTransform(root.transform, "FWUI_InventoryCategories");
         if (oldDropdown != null)
@@ -38,8 +38,8 @@ public static partial class RuntimeUIPrefabBuilder
         rect.anchorMin = new Vector2(0f, 0f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(26f, -112f);
-        rect.sizeDelta = new Vector2(140f, -192f);
+        rect.anchoredPosition = new Vector2(26f, -92f);
+        rect.sizeDelta = new Vector2(140f, -156f);
 
         VerticalLayoutGroup layout = tabs.GetComponent<VerticalLayoutGroup>() ??
                                      tabs.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -48,7 +48,7 @@ public static partial class RuntimeUIPrefabBuilder
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        layout.childForceExpandHeight = true;
 
         const string tabPath = "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab";
         GameObject tabPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(tabPath);
@@ -85,7 +85,7 @@ public static partial class RuntimeUIPrefabBuilder
         LayoutElement element = tab.GetComponent<LayoutElement>() ?? tab.AddComponent<LayoutElement>();
         element.preferredWidth = 140f;
         element.preferredHeight = 36f;
-        element.flexibleHeight = 0f;
+        element.flexibleHeight = 1f;
         Button button = tab.GetComponent<Button>();
         if (button != null) button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
         TMP_Text label = tab.GetComponentInChildren<TMP_Text>(true);

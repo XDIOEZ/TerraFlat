@@ -647,12 +647,12 @@ public static partial class GameUIPrefabRebuilder
 
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 使用 1148×560 窗口、左侧分类栏和十列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 使用 1148×572 窗口、左侧分类栏和十列滚动布局，让五排槽位完整贴合正文上下边界。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
         const float width = 1148f;
-        const float height = 560f;
+        const float height = 572f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
         RectTransform rootRect = (RectTransform)root.transform;
@@ -717,8 +717,8 @@ public static partial class GameUIPrefabRebuilder
         {
             scroll.anchorMin = Vector2.zero;
             scroll.anchorMax = Vector2.one;
-            scroll.offsetMin = new Vector2(192f, 80f);
-            scroll.offsetMax = new Vector2(-48f, -112f);
+            scroll.offsetMin = new Vector2(192f, 64f);
+            scroll.offsetMax = new Vector2(-48f, -92f);
             Image scrollImage = scroll.GetComponent<Image>();
             if (scrollImage != null)
             {
@@ -735,7 +735,7 @@ public static partial class GameUIPrefabRebuilder
             grid.constraintCount = 10;
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
-            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.padding = new RectOffset(8, 8, 0, 0);
             grid.childAlignment = TextAnchor.UpperLeft;
         }
 
