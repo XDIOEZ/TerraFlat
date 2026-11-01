@@ -83,7 +83,8 @@ public sealed partial class WorldPhysicsService2D
             body.MovePosition(target);
             return true;
         }
-        body.velocity = Vector2.zero;
+        // 静态刚体只允许更新位置，不设置无效速度。
+        if (body.bodyType != RigidbodyType2D.Static) body.velocity = Vector2.zero;
         body.position = target;
         item.transform.position = new Vector3(target.x, target.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
@@ -287,8 +288,11 @@ public sealed partial class WorldPhysicsService2D
         body.bodyType = GetConfiguredItemPhysics(item)?.Mode == WorldPhysicsProxyMode2D.WorldFixed
             ? RigidbodyType2D.Static : RigidbodyType2D.Kinematic;
         body.simulated = simulated;
-        body.velocity = Vector2.zero;
-        body.angularVelocity = 0f;
+        if (body.bodyType != RigidbodyType2D.Static)
+        {
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
     }
 
     internal static void RestoreItemBodyRepresentation(Item item, Rigidbody2D body,
@@ -296,7 +300,8 @@ public sealed partial class WorldPhysicsService2D
     {
         if (body == null) return;
         RestoreItemBodyRepresentationType(item, body, state);
-        if (clearVelocity) { body.velocity = Vector2.zero; body.angularVelocity = 0f; }
+        if (clearVelocity && body.bodyType != RigidbodyType2D.Static)
+        { body.velocity = Vector2.zero; body.angularVelocity = 0f; }
         body.simulated = state.Simulated;
     }
 

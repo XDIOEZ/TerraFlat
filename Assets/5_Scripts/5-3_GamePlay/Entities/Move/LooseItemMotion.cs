@@ -210,7 +210,12 @@ public static partial class LooseItemMotion
         if (movement.sqrMagnitude <= .00000001f) return false;
         Vector3 display = new(before.x + movement.x, before.y + movement.y, item.transform.position.z);
         Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
-        if (body != null) { body.position = display; body.velocity = Vector2.zero; }
+        if (body != null)
+        {
+            body.position = display;
+            // 静态刚体没有速度，避免风推动反复触发 Unity 物理警告。
+            if (body.bodyType != RigidbodyType2D.Static) body.velocity = Vector2.zero;
+        }
         item.transform.position = display;
         item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
         if (world == GameplayWorldRegistry.ExecutionWorldKey)
