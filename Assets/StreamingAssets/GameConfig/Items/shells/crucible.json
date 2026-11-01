@@ -95,7 +95,8 @@
           "molten_copper": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
           "molten_tin": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
           "molten_iron": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png"
-        }
+        },
+        "liquidSurface": { "bounds": { "x": 0.1875, "y": 0.6875, "width": 0.625, "height": 0.1875 }, "maxSourceChannel": 112 }
       },
       "modules": {
         "vessel": {
@@ -184,6 +185,7 @@
           "molten_tin": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png",
           "molten_iron": "Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png"
         },
+        "liquidSurface": { "bounds": { "x": 0.1875, "y": 0.6875, "width": 0.625, "height": 0.1875 }, "maxSourceChannel": 112 },
         "collider": {
           "size": {
             "x": 0.8,
