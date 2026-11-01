@@ -40,7 +40,9 @@ public static class FlatWorldUITheme
     public static Color StatusBarBackground => ThemeColor("statusBarBackground");
     public static Color StatusBarDefault => ThemeColor("statusBarDefault");
     public static Color StatusBarFoodHud => ThemeColor("statusBarFoodHud");
+    public static Color StatusBarFoodHudHealth => ThemeColor("statusBarFoodHudHealth");
     public static Color StatusBarHealth => ThemeColor("statusBarHealth");
+    public static Color StatusBarWater => ThemeColor("statusBarWater");
     public static Color SaveItemNormal => ThemeColor("saveNormal");
     public static Color SaveItemSelected => ThemeColor("saveSelected");
     public static Color SaveItemFocused => ThemeColor("saveFocused");
@@ -231,8 +233,7 @@ public static class FlatWorldUITheme
 
             Image fill = slider.fillRect.GetComponent<Image>();
             if (fill != null)
-                fill.color = IsHealthName(BuildPath(slider.transform)) ? StatusBarHealth :
-                    IsFoodStatusHud(root.name) ? StatusBarFoodHud : StatusBarDefault;
+                fill.color = GetStatusBarFillColor(root, slider);
         }
 
         if (IsFoodStatusHud(root.name))
@@ -974,8 +975,7 @@ public static class FlatWorldUITheme
                 Image fill = slider.fillRect.GetComponent<Image>();
                 if (fill != null)
                 {
-                    fill.color = IsHealthName(slider.name) ? StatusBarHealth :
-                        IsFoodStatusHud(root.name) ? StatusBarFoodHud : StatusBarDefault;
+                    fill.color = GetStatusBarFillColor(root, slider);
                     fill.sprite = null;
                     fill.type = Image.Type.Simple;
                     fill.preserveAspect = false;
@@ -1524,6 +1524,17 @@ public static class FlatWorldUITheme
     private static bool IsFoodStatusHud(string rootName) =>
         string.Equals(rootName, "UI_Food", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(rootName, "UI_Food(Clone)", StringComparison.OrdinalIgnoreCase);
+
+    private static Color GetStatusBarFillColor(Transform root, Slider slider)
+    {
+        bool isFoodStatusHud = IsFoodStatusHud(root.name);
+        string fullName = BuildPath(slider.transform);
+        if (IsHealthName(fullName))
+            return isFoodStatusHud ? StatusBarFoodHudHealth : StatusBarHealth;
+        if (isFoodStatusHud && ContainsAny(fullName, "水", "Water"))
+            return StatusBarWater;
+        return isFoodStatusHud ? StatusBarFoodHud : StatusBarDefault;
+    }
 
     private static bool IsHud(string rootName)
     {

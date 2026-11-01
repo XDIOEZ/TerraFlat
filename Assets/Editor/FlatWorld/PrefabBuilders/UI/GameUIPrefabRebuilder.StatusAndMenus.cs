@@ -339,7 +339,7 @@ public static partial class GameUIPrefabRebuilder
 
         EnsureNutritionTemperatureRow(panel);
         EnsureNutritionHealthRow(panel);
-        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 186f));
+        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 162f));
 
         // 参数 HUD 不使用卡片底板或装饰描边，避免透明区域遮挡世界和制造视觉焦点。
         Image panelImage = panel.GetComponent<Image>();
@@ -361,7 +361,7 @@ public static partial class GameUIPrefabRebuilder
             bool isFood = sliders[i] == "食物";
             if (slider != null)
             {
-                SetTopLeft(slider, 0f, top, 326f, isFood ? 50f : 26f);
+                SetTopLeft(slider, 0f, top, 326f, 26f);
                 Slider sliderComponent = slider.GetComponent<Slider>();
                 if (sliderComponent != null)
                     sliderComponent.interactable = false;
@@ -370,13 +370,13 @@ public static partial class GameUIPrefabRebuilder
                 else
                     ConfigureNutritionRowTexts(slider);
             }
-            top += isFood ? 58f : 34f;
+            top += 34f;
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
     }
 
-    // 食物三色条持有自己的语义色，图例独占一行，不与总量文字或相邻状态条重叠。
+    // 食物三色条保留自己的语义色，隐藏图例并只保留一行填充。
     private static void ConfigureCombinedFoodRow(RectTransform row)
     {
         if (row.GetComponent<UIVisualOwner>() == null)
@@ -384,35 +384,11 @@ public static partial class GameUIPrefabRebuilder
         RectTransform track = FindRect(row, "FoodTrack");
         RectTransform legend = FindRect(row, "FoodLegend");
         SetTopLeft(track, 0f, 0f, 326f, 26f);
-        SetTopLeft(legend, 0f, 28f, 326f, 22f);
+        if (legend != null)
+            legend.gameObject.SetActive(false);
         ConfigureNutritionRowTexts(track);
-        foreach (TextMeshProUGUI text in row.GetComponentsInChildren<TextMeshProUGUI>(true))
+        foreach (TextMeshProUGUI text in track.GetComponentsInChildren<TextMeshProUGUI>(true))
             text.color = FlatWorldUITheme.TextPrimary;
-
-        ThreeSegmentStatusBarGraphic segments = row.GetComponentInChildren<ThreeSegmentStatusBarGraphic>(true);
-        string[] nutrients = { "Carbohydrates", "Fat", "Protein" };
-        string[] values = { "碳水", "脂肪", "蛋白质" };
-        float[] starts = { 0f, 138f, 220f };
-        float[] labelWidths = { 90f, 28f, 50f };
-        float[] valueWidths = { 26f, 30f, 32f };
-        Color[] colors = { segments.FirstColor, segments.SecondColor, segments.ThirdColor };
-        for (int i = 0; i < nutrients.Length; i++)
-        {
-            RectTransform swatch = FindRect(legend, "FoodLegend_" + nutrients[i] + "Color");
-            SetTopLeft(swatch, starts[i] + 6f, 7f, 8f, 8f);
-            swatch.GetComponent<Image>().color = colors[i];
-            RectTransform label = FindRect(legend, "FoodLegend_" + nutrients[i] + "Label");
-            RectTransform value = FindRect(legend, "DataText_" + values[i]);
-            SetTopLeft(label, starts[i] + 18f, 1f, labelWidths[i], 20f);
-            SetTopLeft(value, starts[i] + 18f + labelWidths[i], 1f, valueWidths[i], 20f);
-            foreach (RectTransform textRect in new[] { label, value })
-            {
-                TextMeshProUGUI text = textRect.GetComponent<TextMeshProUGUI>();
-                FlatWorldUITextLayout.Configure(text, 14f);
-                text.alignment = textRect == value ? TextAlignmentOptions.Right : TextAlignmentOptions.Left;
-                text.raycastTarget = false;
-            }
-        }
     }
 
     /// <summary>左右分栏对齐状态名称和数值，防止数值越出状态条边缘。</summary>

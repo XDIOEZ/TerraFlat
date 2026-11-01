@@ -35,11 +35,17 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
         return .2126 * linear(color[1]) + .7152 * linear(color[2]) + .0722 * linear(color[3])
     end
     assert(data.panelVisible and #data.bars == 5 and data.sliderCount == 4, "生存状态条未合并为五项，或仍有旧营养滑条")
+    assert(data.legendVisible == false, "食物营养图例行仍然显示")
     for _, bar in ipairs(data.bars) do
         local fill, text = luminance(bar.fill), luminance(bar.text)
         local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)
         assert(bar.visible and bar.fill[4] > .99 and bar.text[4] > .99 and contrast >= 4,
             bar.name .. "状态条的填充遮住数值文字")
+        if bar.name == "血量" then
+            assert(bar.fill[1] > bar.fill[2] and bar.fill[1] > bar.fill[3], "血量条没有使用红色")
+        elseif bar.name == "水" then
+            assert(bar.fill[3] > bar.fill[2] and bar.fill[2] > bar.fill[1], "水量条没有使用蓝色")
+        end
         if bar.name == "食物" then
             assert(#bar.segmentColors == 3, "食物条缺少三种营养颜色")
             for index, color in ipairs(bar.segmentColors) do
@@ -49,21 +55,26 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
                 assert(math.abs(color[1] - nextColor[1]) + math.abs(color[2] - nextColor[2]) +
                     math.abs(color[3] - nextColor[3]) > .2, "食物三段颜色无法区分")
             end
+            local protein, fat, carbohydrates = bar.segmentColors[1], bar.segmentColors[2], bar.segmentColors[3]
+            assert(protein[3] > protein[1] and protein[1] > protein[2], "蛋白质颜色未排在食物条最左侧")
+            assert(fat[3] > fat[2] and fat[2] > fat[1], "脂肪颜色未留在食物条中间")
+            assert(carbohydrates[1] > carbohydrates[2] and carbohydrates[2] > carbohydrates[3],
+                "碳水颜色未排在食物条最右侧")
         end
     end
     local total, maximum = 0, 0
     for index = 1, 3 do
         total = total + data.nutrition[index]
         maximum = maximum + data.maxima[index]
-        local shown = tonumber(data.legend[index])
-        assert(shown and math.abs(shown - data.nutrition[index]) <= .501, "图例数值没有同步真实营养")
     end
     local shownTotal, shownMaximum = string.match(data.foodText, "^(%d+)/(%d+)$")
     assert(shownTotal and math.abs(tonumber(shownTotal) - total) <= .501 and
         math.abs(tonumber(shownMaximum) - maximum) <= .501, "食物总量不是三项加算")
     for index = 1, 3 do
-        local expected = maximum > 0 and data.nutrition[index] / maximum or 0
-        assert(math.abs(data.fractions[index] - expected) < .0001, "食物段按剩余总量而非总容量缩放")
+        local nutrientIndex = 4 - index
+        local expected = maximum > 0 and data.nutrition[nutrientIndex] / maximum or 0
+        assert(math.abs(data.fractions[index] - expected) < .0001,
+            "食物段未按蛋白质、脂肪、碳水顺序显示总容量比例")
     end
 end, "真实生存状态条文字与填充可读性")
 

@@ -1287,6 +1287,7 @@
         "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Furnace.prefab",
         "Assets/Editor/FlatWorld/PrefabBuilders/UI/GameUIPrefabRebuilder*.cs",
         "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Food.prefab",
+        "Assets/Resources/GameConfig/UI/ui-theme.json",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Food/Logic/FoodUIModule.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestGamepadInputLifecycleProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/WaterVisualSettings.cs",

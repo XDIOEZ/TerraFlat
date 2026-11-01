@@ -18,7 +18,9 @@
     { "id": "statusBarBackground", "hex": "3D3D3DFA" },
     { "id": "statusBarDefault", "hex": "D7D7D7FF" },
     { "id": "statusBarFoodHud", "hex": "696969FF" },
+    { "id": "statusBarFoodHudHealth", "hex": "B3261EFF" },
     { "id": "statusBarHealth", "hex": "8A6662FF" },
+    { "id": "statusBarWater", "hex": "1565C0FF" },
 
     { "id": "overlay", "hex": "242424B8" },
     { "id": "worldLoading", "hex": "030304FF" },

@@ -8,9 +8,9 @@ public sealed class ThreeSegmentStatusBarGraphic : MaskableGraphic
 {
     #region 三段填充与过渡
 
-    [SerializeField] private Color firstColor = new Color(0.44f, 0.30f, 0.08f, 1f);
+    [SerializeField] private Color firstColor = new Color(0.40f, 0.20f, 0.42f, 1f);
     [SerializeField] private Color secondColor = new Color(0.12f, 0.32f, 0.48f, 1f);
-    [SerializeField] private Color thirdColor = new Color(0.40f, 0.20f, 0.42f, 1f);
+    [SerializeField] private Color thirdColor = new Color(0.44f, 0.30f, 0.08f, 1f);
     private Vector3 startFractions;
     private Vector3 targetFractions;
     private float elapsed;

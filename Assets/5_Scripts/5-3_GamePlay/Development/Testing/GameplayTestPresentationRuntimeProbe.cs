@@ -60,6 +60,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         panel.TryGetText("DataText_食物", out TextMeshProUGUI foodText);
         if (segments == null || foodText == null)
             throw new InvalidOperationException("食物状态条缺少三色填充或合计数值。");
+        Transform foodLegend = panel.transform.Find("Panel/食物/FoodLegend");
         Color foodTextColor = foodText.color;
         var colors = new JArray();
         foreach (Color color in new[] { segments.FirstColor, segments.SecondColor, segments.ThirdColor })
@@ -67,16 +68,11 @@ public static partial class GameplayTestPresentationRuntimeProbe
         bars.Add(new JObject { ["name"] = "食物", ["visible"] = segments.gameObject.activeInHierarchy,
             ["fill"] = colors[0].DeepClone(), ["segmentColors"] = colors,
             ["text"] = new JArray(foodTextColor.r, foodTextColor.g, foodTextColor.b, foodTextColor.a) });
-        var legend = new JArray();
-        foreach (string name in new[] { "碳水", "脂肪", "蛋白质" })
-        {
-            panel.TryGetText("DataText_" + name, out TextMeshProUGUI value);
-            legend.Add(value != null && value.gameObject.activeInHierarchy ? value.text : null);
-        }
         Nutrition nutrition = food.Data.nutrition;
         Vector3 targets = segments.TargetFractions;
         return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars,
-            ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text, ["legend"] = legend,
+            ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text,
+            ["legendVisible"] = foodLegend != null && foodLegend.gameObject.activeInHierarchy,
             ["nutrition"] = new JArray(nutrition.Carbohydrates, nutrition.Fat, nutrition.Protein),
             ["maxima"] = new JArray(nutrition.Max_Carbohydrates, nutrition.Max_Fat, nutrition.Max_Protein),
             ["fractions"] = new JArray(targets.x, targets.y, targets.z) };

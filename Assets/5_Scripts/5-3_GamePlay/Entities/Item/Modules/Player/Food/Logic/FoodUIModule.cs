@@ -49,9 +49,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private Graphic temperatureFillGraphic;
     private Color temperatureNormalColor;
     private float temperatureColorSeverity;
-    private TMPro.TextMeshProUGUI carbohydratesText;
-    private TMPro.TextMeshProUGUI fatText;
-    private TMPro.TextMeshProUGUI proteinText;
     private TMPro.TextMeshProUGUI waterText;
     private TMPro.TextMeshProUGUI vitaminsText;
     private TMPro.TextMeshProUGUI healthText;
@@ -59,9 +56,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private Mod_Temperature temperatureModule;
     private uint temperatureModuleStructureVersion;
     private uint temperatureModuleGeneration;
-    private DisplayedRange carbohydratesDisplay;
-    private DisplayedRange fatDisplay;
-    private DisplayedRange proteinDisplay;
     private DisplayedRange waterDisplay;
     private DisplayedRange vitaminsDisplay;
     private DisplayedRange healthDisplay;
@@ -263,9 +257,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             if (temperatureFillGraphic != null)
                 temperatureNormalColor = temperatureFillGraphic.color;
         }
-        panel.TryGetText("DataText_碳水", out carbohydratesText);
-        panel.TryGetText("DataText_脂肪", out fatText);
-        panel.TryGetText("DataText_蛋白质", out proteinText);
         panel.TryGetText("DataText_水", out waterText);
         panel.TryGetText("DataText_维生素", out vitaminsText);
         panel.TryGetText("DataText_血量", out healthText);
@@ -306,9 +297,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         vitaminsSlider = null;
         healthSlider = null;
         temperatureSlider = null;
-        carbohydratesText = null;
-        fatText = null;
-        proteinText = null;
         waterText = null;
         vitaminsText = null;
         healthText = null;
@@ -316,9 +304,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         temperatureModule = null;
         temperatureModuleStructureVersion = 0;
         temperatureModuleGeneration = 0;
-        carbohydratesDisplay = default;
-        fatDisplay = default;
-        proteinDisplay = default;
         waterDisplay = default;
         vitaminsDisplay = default;
         healthDisplay = default;
@@ -363,7 +348,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     #region 食物合并显示
 
-    // 只合并显示三项能量及其容量，保留各营养原有的进食、消耗与存档规则。
+    // 只调换三段显示顺序，保留各营养原有的进食、消耗与存档规则。
     private void UpdateCombinedFoodUI(Nutrition nutrition)
     {
         float carbohydrates = Mathf.Clamp(nutrition.Carbohydrates, 0f, Mathf.Max(0f, nutrition.Max_Carbohydrates));
@@ -372,11 +357,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         float maximum = Mathf.Max(0f, nutrition.Max_Carbohydrates) +
             Mathf.Max(0f, nutrition.Max_Fat) + Mathf.Max(0f, nutrition.Max_Protein);
         if (foodFillGraphic != null)
-            foodFillGraphic.SetSegmentValues(new Vector3(carbohydrates, fat, protein), maximum, StatusBarTransitionDuration);
+            foodFillGraphic.SetSegmentValues(new Vector3(protein, fat, carbohydrates), maximum, StatusBarTransitionDuration);
         UpdateRangeText(foodText, ref foodDisplay, carbohydrates + fat + protein, maximum);
-        UpdateRangeText(carbohydratesText, ref carbohydratesDisplay, carbohydrates, nutrition.Max_Carbohydrates, false);
-        UpdateRangeText(fatText, ref fatDisplay, fat, nutrition.Max_Fat, false);
-        UpdateRangeText(proteinText, ref proteinDisplay, protein, nutrition.Max_Protein, false);
     }
 
     #endregion

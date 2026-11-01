@@ -26,7 +26,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 
 - `CreatePanelFromGameObject` 归当前 `SceneUI/SafeAreaRoot`；玩家HUD/库存/设置/死亡页显式用 `CreatePersistentPanelFromGameObject`。共享库存按对象分流，弹窗/键盘用 `GetPanelRootFor` 继承；全屏只提排序。
 - 左上角 `PlayerWorldCoordinateHUD` 的 FPS 开关同时显示实际 FPS/TPS；共用0.5秒真实时间窗口，TPS 取统一固定步序号差，暂停后归零。
-- `UI_Food` 将碳水/脂肪/蛋白质加算为食物条，容量同样加算；`ThreeSegmentStatusBarGraphic` 按总容量绘三段并复用 HUD 过渡时钟，图例保留独立数值。专用子树挂 `UIVisualOwner` 保语义色，Prefab/构建器同步；不改营养消耗顺序，回归 `food_segmented_bar/status_hud_readability`。
+- UI_Food 将碳水/脂肪/蛋白质及其容量加算为食物条，显示顺序为蛋白质/脂肪/碳水，隐藏营养图例且不改营养消耗顺序；血量红、水量蓝。ThreeSegmentStatusBarGraphic 按总容量绘制并复用 HUD 过渡时钟，食物条专用子树用 UIVisualOwner 保语义色，Prefab/构建器同步；回归 food_segmented_bar/status_hud_readability。
 - 同根靠兄弟顺序置顶，sortingOrder 只管独立 Canvas；模态持玩法锁/顶层手柄焦点，关闭/失败释放，HUD仅按钮接射线。
 - 普通窗口用 `BasePanel.PrepareForGameplayWindow`，并行、可导航/取消、可窗外丢弃、不持玩法锁；开关经 `Mod_GameController.CanToggleGameplayWindow`。背景透明，拖动仅标题/窄边框；快捷栏随根排序，手机模态拖放临时升 Canvas。
 - `SetHeldItemWorldDropAllowed` 声明丢弃，专用锁才传自身 Owner。UIManager 聚合阻断窗口/锁和真实矩形（优先 WindowRect）；未知锁/未授权窗口拦截，窗内透明区也不可落物。

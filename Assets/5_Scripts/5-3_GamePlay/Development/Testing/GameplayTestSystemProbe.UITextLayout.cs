@@ -51,7 +51,8 @@ public static partial class GameplayTestSystemProbe
             bool bounded = true, transparent = true;
             foreach (RectTransform rect in row.GetComponentsInChildren<RectTransform>(true))
             {
-                if (rect == row.transform) continue;
+                if (rect == row.transform || !IsActiveWithinFoodRowHierarchy(rect, row.transform))
+                    continue;
                 RectTransform parent = (RectTransform)rect.parent;
                 var corners = new Vector3[4];
                 rect.GetLocalCorners(corners);
@@ -77,6 +78,19 @@ public static partial class GameplayTestSystemProbe
                 ["ordinarySliders"] = prefab.GetComponentsInChildren<Slider>(true).Length };
         }
         finally { Object.DestroyImmediate(holder); }
+    }
+
+    private static bool IsActiveWithinFoodRowHierarchy(Transform element, Transform rowRoot)
+    {
+        for (Transform current = element; current != null; current = current.parent)
+        {
+            if (!current.gameObject.activeSelf)
+                return false;
+            if (current == rowRoot)
+                return true;
+        }
+
+        return false;
     }
 
     private static JObject CaptureUITextLayoutAssets(JObject args)
