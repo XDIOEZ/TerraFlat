@@ -660,7 +660,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             ReusableUITabVisual sharedVisual = tabButtons[index].GetComponent<ReusableUITabVisual>();
             if (sharedVisual != null)
             {
-                sharedVisual.SetSelected(active);
+                // 设置侧栏统一未选中配色，不沿用公共页签 Prefab 的较亮底色。
+                sharedVisual.SetSelected(active, FlatWorldUITheme.TabInactive, FlatWorldUITheme.TabLabelInactive);
                 continue;
             }
             tabBackgrounds[index].color = active ? FlatWorldUITheme.TabActive : FlatWorldUITheme.TabInactive;

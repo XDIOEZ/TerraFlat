@@ -377,11 +377,13 @@ public static partial class GameplayTestPresentationRuntimeProbe
             try { panel.Open(); panel.Open(); }
             finally { panel.Opened -= onOpen; panel.Closed -= onClose; }
             bool invalidLocale = FlatWorldLocalizationService.TrySetLocale("lua-probe-missing-locale");
+            JObject sidebarVisuals = CaptureSettingsSidebarTabVisuals(panel);
             var group = panel.GetComponent<CanvasGroup>();
             var result = new JObject
             {
                 ["formalWindow"] = panel.GetComponent<SettingsEditSessionController>() != null,
                 ["commonPageControllers"] = commonPageControllers,
+                ["sidebarVisuals"] = sidebarVisuals,
                 ["registered"] = fixture.Ui.GetAllPanelsOfType(GameManager.MainMenuSettingsPanelKey).Contains(panel),
                 ["open"] = panel.IsOpen(), ["blocking"] = panel.IsGameplayInputBlocking,
                 ["managerBlocking"] = fixture.Ui.HasOpenGameplayInputBlockingPanel(),
@@ -413,6 +415,52 @@ public static partial class GameplayTestPresentationRuntimeProbe
             complete(result);
         }
         finally { if (!retained) fixture.Dispose(); }
+    }
+
+    /// <summary>在正式设置窗口切到镜头页，采样所有左侧页签后恢复原始界面页。</summary>
+    private static JObject CaptureSettingsSidebarTabVisuals(BasePanel panel)
+    {
+        Transform tabList = panel.GetComponentsInChildren<Transform>(true)
+            .FirstOrDefault(node => node.name == SettingsActionListPagination.TabListName);
+        if (tabList == null)
+            throw new MissingReferenceException("正式设置窗口缺少左侧分页列表。");
+
+        Button[] buttons = tabList.GetComponentsInChildren<Button>(true);
+        Button camera = Array.Find(buttons, button => button.name == "镜头控制");
+        Button initial = Array.Find(buttons, button => button.name == "UI设置");
+        if (buttons.Length < 9 || camera == null || initial == null)
+            throw new MissingReferenceException("正式设置窗口左侧分页按钮不完整。");
+
+        JArray SampleColor(Color color) => new JArray(color.r, color.g, color.b, color.a);
+        var tabs = new JArray();
+        camera.onClick.Invoke();
+        try
+        {
+            foreach (Button button in buttons)
+            {
+                Image background = button.GetComponent<Image>();
+                TMP_Text caption = button.GetComponentInChildren<TMP_Text>(true);
+                if (background == null || caption == null)
+                    throw new MissingReferenceException("设置页签缺少背景或文字：" + button.name);
+
+                tabs.Add(new JObject
+                {
+                    ["name"] = button.name,
+                    ["background"] = SampleColor(background.color),
+                    ["caption"] = SampleColor(caption.color)
+                });
+            }
+        }
+        finally { initial.onClick.Invoke(); }
+
+        return new JObject
+        {
+            ["tabs"] = tabs,
+            ["activeBackground"] = SampleColor(FlatWorldUITheme.TabActive),
+            ["inactiveBackground"] = SampleColor(FlatWorldUITheme.TabInactive),
+            ["activeCaption"] = SampleColor(FlatWorldUITheme.TabLabelActive),
+            ["inactiveCaption"] = SampleColor(FlatWorldUITheme.TabLabelInactive)
+        };
     }
 
     // 从正式窗口采样共用页并再次装配，Lua 检查唯一组件、原实例和页面归属。
