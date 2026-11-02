@@ -209,6 +209,10 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         Data.isRunning = false;
 
         rb = ItemPhysicsProjection2D.EnsureMovable(item);
+        // 脚本驱动的物理步由统一渲染器补间，本地主角不再使用 Unity 固定时钟插值。
+        if (rb != null && item is Player { IsLocalProfile: true } &&
+            Physics2D.simulationMode == SimulationMode2D.Script)
+            rb.interpolation = RigidbodyInterpolation2D.None;
         physicsAllowsIndependentMotion = WorldPhysicsService2D.CanItemUseIndependentMotion(item);
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         _wasMoving = IsMoving = false;

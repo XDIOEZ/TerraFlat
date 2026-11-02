@@ -44,6 +44,25 @@ public sealed partial class WorldRenderingManager
 
     private void ClearVisualInterpolationHistory() => itemVisualMotion.Clear();
 
+    /// <summary>相机与头顶气泡读取与画面相同的插值位置，不改变物理或存档坐标。</summary>
+    public Vector3 GetItemRenderedWorldPosition(Item item)
+    {
+        if (item == null) return Vector3.zero;
+        Vector3 sourcePosition = item.transform.position;
+        if (!renderingServicesActive || !itemVisualMotion.TryGetValue(item, out var entry) ||
+            entry.Generation != item.RuntimeGeneration || entry.WorldKey != GameplayWorldRegistry.GetItemWorldKey(item) ||
+            Time.frameCount - entry.LastVisibleFrame > 1 || !entry.History.HasSnapshot ||
+            entry.Body != null && entry.Body.interpolation != RigidbodyInterpolation2D.None)
+            return sourcePosition;
+
+        entry.History.Capture(sourcePosition, GameplayFixedStepSimulation.CurrentTime);
+        Sprite sprite = item.Sprite != null ? item.Sprite.sprite : null;
+        float ppu = sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, sprite.pixelsPerUnit)
+            : WorldVisualMotionHistory.PixelGrid;
+        Vector3 offset = entry.History.Evaluate(GameplayFixedStepSimulation.PresentationTime) - sourcePosition;
+        return sourcePosition + WorldVisualMotionHistory.PixelAlignTranslation(offset, ppu);
+    }
+
     private Vector3 GetVisualMotionOffsetForReflection(Item item, Sprite sprite)
     {
         // 已借出的角色 Sprite 本身就在视觉根下，不可二次补偿。

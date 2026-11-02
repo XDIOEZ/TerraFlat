@@ -21,6 +21,17 @@ public static partial class GameplayTestSystemProbe
             return samples;
         }
 
+        JArray CaptureTierDisplayFrames(int tps, int fps)
+        {
+            var motion = new WorldVisualMotionHistory();
+            motion.Reset(Vector3.zero, 0d);
+            motion.Capture(Vector3.right, 1d / tps);
+            var samples = new JArray();
+            for (int i = 0; i <= fps / tps; i++)
+                samples.Add(motion.Evaluate(1d / tps + (double)i / fps).x);
+            return samples;
+        }
+
         JArray at60Fps = CaptureDisplayFrames(60);
         JArray at120Fps = CaptureDisplayFrames(120);
         JArray at240Fps = CaptureDisplayFrames(240);
@@ -76,6 +87,9 @@ public static partial class GameplayTestSystemProbe
             ["fps60"] = at60Fps,
             ["fps120"] = at120Fps,
             ["fps240"] = at240Fps,
+            ["tps30Fps60"] = CaptureTierDisplayFrames(30, 60),
+            ["tps30Fps120"] = CaptureTierDisplayFrames(30, 120),
+            ["tps120Fps240"] = CaptureTierDisplayFrames(120, 240),
             ["nextTickMid"] = nextTickMid,
             ["pausedUnchanged"] = pausedUnchanged,
             ["teleported"] = teleported,

@@ -10,6 +10,14 @@ test.system("rendering", "visual_motion_interpolation", {}, function(data)
             near(value, (i - 1) * 20 / fps, "20TPS插值对应画面" .. fps .. "FPS，第" .. i .. "帧")
         end
     end
+    for _, config in ipairs({ {data.tps30Fps60, 30, 60}, {data.tps30Fps120, 30, 120},
+                              {data.tps120Fps240, 120, 240} }) do
+        local frames, tps, fps = config[1], config[2], config[3]
+        assert(#frames == fps / tps + 1, "TPS档位的显示帧采样数量错误：" .. tps .. "/" .. fps)
+        for i, value in ipairs(frames) do
+            near(value, (i - 1) * tps / fps, "模拟" .. tps .. "TPS/画面" .. fps .. "FPS，第" .. i .. "帧")
+        end
+    end
     near(data.nextTickMid, 1.5, "下一逻辑步未从上一目标连续过渡")
     assert(data.pausedUnchanged, "暂停时显示位置继续推进")
     near(data.teleported, 20, "瞬移后残留旧位置")
@@ -19,4 +27,4 @@ test.system("rendering", "visual_motion_interpolation", {}, function(data)
     near(data.pixelAligned, 0.125, "插值偏移未对齐像素网格")
     assert(data.sourceUnchanged and data.projectionTranslated and data.projectionRestored,
         "显示投影改变了权威Transform，或下一帧残留平移")
-end, "视觉插值：20TPS×60/120/240FPS、暂停、环绕、瞬移、复用与源位置隔离")
+end, "视觉插值：20/30/120TPS与更高FPS、暂停、环绕、瞬移、复用与源位置隔离")

@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 相机跟随管理器
 /// </summary>
+[DefaultExecutionOrder(-1000)]
 public class Mod_Cam : Module
 {
     private const float DefaultPovValue = 10f;
@@ -48,6 +49,7 @@ public class Mod_Cam : Module
     private float _baseYDamping;
     private bool _cameraFollowDefaultsCaptured;
     private Transform _followOverride;
+    private Transform _defaultPresentationFollowTarget;
     private float _followOverrideMaxPov;
     private float _followOverrideZoomMultiplier = 1f;
     private FollowMode _followOverrideMode;
@@ -107,8 +109,13 @@ public class Mod_Cam : Module
     // 星区浮点重定位同时移动镜头缓存，保持屏幕上的位置和跟随惯性。
     public void ShiftSpacePresentation(Vector2 shift)
     {
+        Vector3 previousCameraPosition = ControllerCamera != null ? ControllerCamera.transform.position : Vector3.zero;
+        if (_defaultPresentationFollowTarget != null)
+            _defaultPresentationFollowTarget.position += (Vector3)shift;
+        WorldRenderingManager.ExistingInstance?.SnapItemVisualPresentation(CameraFollowItem);
         if (vcam != null && vcam.Follow != null) vcam.OnTargetObjectWarped(vcam.Follow, shift);
-        if (ControllerCamera != null) ControllerCamera.transform.position += (Vector3)shift;
+        // Cinemachine Warp 可能同步改动相机姿态，真实镜头仍只应平移一次。
+        if (ControllerCamera != null) ControllerCamera.transform.position = previousCameraPosition + (Vector3)shift;
     }
 
     /// <summary>
@@ -142,6 +149,7 @@ public class Mod_Cam : Module
 
     private void LateUpdate()
     {
+        UpdateDefaultPresentationFollowTarget();
         naturalAmbience.Advance(Player, Time.deltaTime);
         // 临时目标被外部销毁时释放租约，避免镜头继续保留驾驶更新方式。
         if (!ReferenceEquals(_followOverride, null) && _followOverride == null)
@@ -191,10 +199,13 @@ public class Mod_Cam : Module
             }
         }
     
-        // 初始化虚拟相机跟随目标
-        if (Vcam != null && CameraFollowItem != null)
+        // 镜头跟随独立表现锚点，避免低 TPS 的物理阶梯运动拖动整幅画面。
+        if (Vcam != null && Player != null && Player.IsLocalProfile)
         {
-            Vcam.Follow = CameraFollowItem.transform;
+            _defaultPresentationFollowTarget = new GameObject("玩家镜头表现锚点").transform;
+            UpdateDefaultPresentationFollowTarget();
+            PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(
+                _defaultPresentationFollowTarget.gameObject, PersistentRuntimeObjectCategory.Rendering);
         }
 
         if (ControllerCamera != null)
@@ -235,6 +246,9 @@ public class Mod_Cam : Module
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         ClearWorldAudioListener();
         RestoreCameraUpdateMode();
+        if (_defaultPresentationFollowTarget != null)
+            Destroy(_defaultPresentationFollowTarget.gameObject);
+        _defaultPresentationFollowTarget = null;
 
         // 注销事件
         if (GameController != null && GameController._inputActions != null)
@@ -329,7 +343,7 @@ public class Mod_Cam : Module
         if (_cameraBrain == null && ControllerCamera != null)
             _cameraBrain = ControllerCamera.GetComponent<CinemachineBrain>();
         if (_cameraBrain == null) return;
-        if (!UsesPresentationLockedFollow)
+        if (!UsesPresentationLockedFollow && (HasFollowOverride || _defaultPresentationFollowTarget == null))
         {
             RestoreCameraUpdateMode();
             return;
@@ -409,7 +423,8 @@ public class Mod_Cam : Module
 
     private void ApplyFollowTarget()
     {
-        Transform target = _followOverride != null ? _followOverride : CameraFollowItem?.transform;
+        Transform target = _followOverride != null ? _followOverride :
+            _defaultPresentationFollowTarget != null ? _defaultPresentationFollowTarget : CameraFollowItem?.transform;
         if (Vcam != null)
         {
             Vcam.Follow = target;
@@ -417,6 +432,17 @@ public class Mod_Cam : Module
         if (_rotationFollower != null) _rotationFollower.FollowTarget = target;
         if (_wrappedWorldRenderer != null)
             _wrappedWorldRenderer.Configure(ControllerCamera, Vcam, target);
+    }
+
+    /// <summary>每渲染帧同步主角显示坐标，相机不再直接读取逐 Tick 跳变的刚体根。</summary>
+    private void UpdateDefaultPresentationFollowTarget()
+    {
+        if (_defaultPresentationFollowTarget == null || CameraFollowItem == null) return;
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        Vector3 position = rendering != null
+            ? rendering.GetItemRenderedWorldPosition(CameraFollowItem)
+            : CameraFollowItem.transform.position;
+        _defaultPresentationFollowTarget.SetPositionAndRotation(position, CameraFollowItem.transform.rotation);
     }
 
     /// <summary>

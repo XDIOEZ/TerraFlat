@@ -10,6 +10,7 @@ namespace FlatWorld.Dialogue
     /// 气泡固定处于交互面板下方，不接收射线、不参与输入，也不依赖具体台词来源。
     /// </summary>
     [DisallowMultipleComponent]
+    [DefaultExecutionOrder(11000)]
     public sealed class ScreenSpaceSpeechBubblePresenter :
         MonoBehaviour,
         ICharacterSpeechPresenter
@@ -35,11 +36,14 @@ namespace FlatWorld.Dialogue
         private TextMeshProUGUI label;
         private Coroutine hideRoutine;
         private Camera worldCamera;
+        private Item followItem;
         private bool isVisible;
         private CharacterSpeechPriority visiblePriority;
 
         public bool IsVisible => isVisible;
         public CharacterSpeechPriority VisiblePriority => visiblePriority;
+
+        private void Awake() => followItem = GetComponentInParent<Item>();
 
         private void LateUpdate()
         {
@@ -230,8 +234,11 @@ private bool EnsureView()
                 return false;
             }
 
-            Vector3 screenPoint =
-                worldCamera.WorldToScreenPoint(transform.position + worldOffset);
+            Vector3 worldPosition = transform.position;
+            WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+            if (followItem != null && rendering != null)
+                worldPosition += rendering.GetItemRenderedWorldPosition(followItem) - followItem.transform.position;
+            Vector3 screenPoint = worldCamera.WorldToScreenPoint(worldPosition + worldOffset);
             bool onScreen = screenPoint.z >= 0f &&
                             screenPoint.x >= 0f &&
                             screenPoint.x <= Screen.width &&
