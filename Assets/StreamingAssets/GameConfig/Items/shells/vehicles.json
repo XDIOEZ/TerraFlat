@@ -211,6 +211,11 @@
         "sortingLayerName": "Player",
         "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png",
+        "shadows": {
+          "contactWidth": 1.9,
+          "footOverlap": 0.0,
+          "footLocalPosition": { "x": -0.02, "y": -0.63 }
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": false,

@@ -1,6 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>组合 Sprite 物体提供整体可见占地，供接触阴影和太阳阴影共用。</summary>
+public interface IShadowFootprintBoundsProvider
+{
+    Bounds MeasureWorldShadowFootprintBounds(SpriteRenderer sourceRenderer);
+}
+
 /// <summary>
 /// 从 Sprite 可见轮廓计算世界脚底；太阳投影与接触阴影共用同一落地点规则。
 /// 脚点向贴图内预留少量重叠，避免透明底边和旧配置把阴影推离主体。

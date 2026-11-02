@@ -27,6 +27,11 @@ test.system("player", "bicycle_carrier", {}, function(data)
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
     near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
     near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
+    local shadow = data.groundShadow
+    assert(shadow.enabled and shadow.width >= 1.85 and shadow.width <= 1.95, "紧凑自行车的接触阴影没有贴合双轮")
+    near(shadow.footX, -.02, "自行车阴影没有居中于前后车轮")
+    near(shadow.footY, -.63, "自行车阴影没有贴合轮胎落地点")
+    near(shadow.overlap, 0, "自行车阴影落地点被默认内缩规则抬高")
     assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射、表现或按世界租借的物理声明缺失")
     local recipe = data.recipe
     assert(recipe.requiredStation == "workbench" and recipe.outputs[1].itemId == "Bicycle" and recipe.outputs[1].amount == 1,

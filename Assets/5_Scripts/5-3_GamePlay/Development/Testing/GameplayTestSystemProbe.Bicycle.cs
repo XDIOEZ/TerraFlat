@@ -89,6 +89,15 @@ public static partial class GameplayTestSystemProbe
             Mod_Building.Building_Data state = new();
             definitions["Bicycle"].Modules[ModText.Building].Data.ToObject<Ex_ModData>().ReadData(ref state);
             samples["summonerBody"] = state.BuildingPrefabId;
+            ItemShadowVisualDefinitionDto shadow = definitions["Bicycle_Building"].Visual?.Shadows;
+            samples["groundShadow"] = new JObject
+            {
+                ["width"] = shadow?.ContactWidth ?? 0f,
+                ["footX"] = shadow?.FootLocalPosition?.x ?? 999f,
+                ["footY"] = shadow?.FootLocalPosition?.y ?? 999f,
+                ["overlap"] = shadow?.FootOverlap ?? -1f,
+                ["enabled"] = shadow?.Enabled != false
+            };
 #if UNITY_EDITOR
             GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Gameplay/Items/Common/BicycleBodyShell.prefab");

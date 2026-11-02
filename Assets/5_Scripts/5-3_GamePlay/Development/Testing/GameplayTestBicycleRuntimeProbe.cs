@@ -119,8 +119,28 @@ public static class GameplayTestBicycleRuntimeProbe
                 ["blockedWheelTurn"] = Mathf.Abs(Mathf.DeltaAngle(blockedWheelAngle, wheels.WheelAngle)),
                 ["pusherIsPlayer"] = Carrier.PushSource == Mover,
                 ["seatError"] = WorldTopologyRuntime.Distance(player.transform.position, Carrier.SeatPosition),
+                ["contactShadowBound"] = WorldRenderingManager.ExistingInstance?.IsItemContactShadowBound(bicycle) == true,
+                ["shadowGrounded"] = IsShadowFootAlignedWithWheels(wheels),
                 ["inWater"] = ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(Carrier.Body.position, out RuntimeTerrainTileSample tile) && tile.LiquidDepth > 0f
             };
+        }
+
+        private bool IsShadowFootAlignedWithWheels(CarrierWheelPresentation wheels)
+        {
+            SpriteRenderer rear = wheels.RearWheel.GetComponent<SpriteRenderer>();
+            SpriteRenderer front = wheels.FrontWheel.GetComponent<SpriteRenderer>();
+            if (rear == null || front == null || wheels.FrameRenderer == null ||
+                !GameRes.ExistingInstance.TryGetItemDefinition(bicycle.itemData.IDName, out RuntimeItemDefinition definition))
+                return false;
+
+            ItemShadowVisualDefinitionDto shadow = definition.Visual?.Shadows;
+            if (shadow?.FootLocalPosition == null) return false;
+            Bounds footprint = wheels.MeasureWorldShadowFootprintBounds(wheels.FrameRenderer);
+            float footY = ShadowFootprintResolver.ResolveFoot(bicycle, footprint,
+                shadow.FootLocalPosition, footOverlap: shadow.FootOverlap).y;
+            float wheelBottom = Mathf.Min(ShadowFootprintResolver.MeasureVisibleWorldBounds(rear).min.y,
+                ShadowFootprintResolver.MeasureVisibleWorldBounds(front).min.y);
+            return footY <= wheelBottom + .08f;
         }
 
         public void FillWater()

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>侧视车架保持直立，车轮只按车体真实位移转动，与骑行和推动来源无关。</summary>
-public sealed class CarrierWheelPresentation : MonoBehaviour
+public sealed class CarrierWheelPresentation : MonoBehaviour, IShadowFootprintBoundsProvider
 {
     #region 车轮表现配置与状态
     public SpriteRenderer FrameRenderer;
@@ -12,6 +12,7 @@ public sealed class CarrierWheelPresentation : MonoBehaviour
     public float WheelAngle { get; private set; }
     private Vector2 previousPosition;
     private Vector3 rearOffset, frontOffset;
+    private SpriteRenderer rearWheelSprite, frontWheelSprite;
     private bool offsetsCaptured;
     private bool facesLeft;
     #endregion
@@ -22,6 +23,8 @@ public sealed class CarrierWheelPresentation : MonoBehaviour
     public void ResetWheelPresentationMotionBaseline()
     {
         previousPosition = transform.position;
+        rearWheelSprite = RearWheel != null ? RearWheel.GetComponent<SpriteRenderer>() : null;
+        frontWheelSprite = FrontWheel != null ? FrontWheel.GetComponent<SpriteRenderer>() : null;
         if (!offsetsCaptured && RearWheel != null && FrontWheel != null)
         {
             rearOffset = RearWheel.localPosition;
@@ -56,6 +59,21 @@ public sealed class CarrierWheelPresentation : MonoBehaviour
 
     public static float CalculateWheelRotationDegrees(float distance, float radius, bool left)
         => radius > 0f ? distance / radius * Mathf.Rad2Deg * (left ? 1f : -1f) : 0f;
+
+    /// <summary>车架与两轮合并计算落地轮廓，避免阴影被夹到车架图片底部。</summary>
+    public Bounds MeasureWorldShadowFootprintBounds(SpriteRenderer sourceRenderer)
+    {
+        Bounds footprint = ShadowFootprintResolver.MeasureVisibleWorldBounds(sourceRenderer);
+        IncludeWheelShadowBounds(ref footprint, rearWheelSprite);
+        IncludeWheelShadowBounds(ref footprint, frontWheelSprite);
+        return footprint;
+    }
+
+    private static void IncludeWheelShadowBounds(ref Bounds footprint, SpriteRenderer wheel)
+    {
+        if (wheel != null && wheel.isActiveAndEnabled && wheel.sprite != null)
+            footprint.Encapsulate(ShadowFootprintResolver.MeasureVisibleWorldBounds(wheel));
+    }
 
     private void ApplyWheelPose()
     {

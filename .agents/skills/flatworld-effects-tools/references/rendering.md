@@ -32,6 +32,7 @@
 ## 阴影与遮光
 
 - `ActorShadowManager` 按完整注册/注销与结构事件维护，旧 Item 椭圆用 `ContactShadowBatchRenderer`；根植植物从 Tree/Plant 或 IPlantableCrop 接入。`Shadow.prefab` 是 ShadowCaster2D，与可见脚底阴影独立；实际 SpaceScene 内两种阴影均隐藏，人工重力不恢复，返回地表复用绑定。
+- 车架与车轮等组合 Sprite 用 `IShadowFootprintBoundsProvider` 计算合并占地，接触/太阳阴影共用实际落地点，避免主图把脚点夹到车轮上方。
 - 接触/太阳共用 `IVisualGroundOffset`、晨昏透明度、`_WorldSunShadowColor/_WorldSunShadowBlur`，关闭太阳不关接触。脚点/宽度来自 `visual.shadows.contactWidth/footLocalPosition/footOverlap`；`ShadowFootprintResolver` 限于可见底边，AIECS 用待机帧固定 VisibleRect，不随攻击/跑步帧伸缩。
 - 默认脚点向主体内重叠高度的25%、最多0.25格，覆盖小物品导入轮廓的透明边距；显式 `footOverlap=0` 保留。`rendering/shadow_footprint_matrix` 同时检查普通/缩小物品与阴影贴合。
 - 接触阴影宽度统一按实际显示缩放计算；默认2.5格上限只约束未放大的物体，巨型自然资源、显式宽度物品及机械随视觉倍率放宽，不改变角色动画的固定宽度策略。
