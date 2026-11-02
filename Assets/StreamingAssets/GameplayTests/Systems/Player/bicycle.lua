@@ -41,7 +41,12 @@ test.runtime("player", "bicycle_lifecycle", {action = "push_sample"}, function(d
     assert(not data.mounted and data.riderBodySimulated and data.pushDistance > .1,
         "没有乘坐时，实际碰撞未能推动自行车")
 end, "真实移动碰撞可以推动空车")
-test.wait(.4)
+test.wait(.5)
+test.runtime("player", "bicycle_lifecycle", {action = "push_coast"}, function(data)
+    assert(not data.pusherIsPlayer and data.coastStartSpeed > .5 and
+        data.coastDistance > .3 and data.drivenSpeed > .2,
+        "玩家松开推动后，自行车没有继续以滚动惯性前进")
+end, "松开推动后车轮继续滚动，速度逐渐衰减")
 test.runtime("player", "bicycle_lifecycle", {action = "finish"}, function(data)
     assert(data.mountedAfterAction, "推动后无法重新骑车")
 end, "重新上车并保留截图现场")

@@ -36,12 +36,21 @@ public static partial class GameplayTestSystemProbe
                 Vector2 stopped = coast;
                 for (int i = 0; i < 100; i++)
                     stopped = carrier.SmoothDrivenVelocity(stopped, Vector2.zero, false, false, .02f);
+                Vector2 rolling = settled;
+                float rollingDistance = 0f;
+                for (int i = 0; i < 50; i++)
+                {
+                    rolling = carrier.SmoothDrivenVelocity(rolling, Vector2.zero, false, false, .02f, true);
+                    rollingDistance += rolling.magnitude * .02f;
+                }
                 samples[id] = new JObject
                 {
                     ["land"] = carrier.ResolveSurfaceSpeedLimit(false), ["water"] = carrier.ResolveSurfaceSpeedLimit(true),
                     ["boostLand"] = carrier.ResolveSurfaceSpeedLimit(false, true), ["boostWater"] = carrier.ResolveSurfaceSpeedLimit(true, true),
                     ["start"] = carrier.SmoothDrivenVelocity(Vector2.zero, Vector2.right, false, false, .02f).magnitude,
                     ["diagonal"] = settled.magnitude, ["coast"] = coast.magnitude, ["stopped"] = stopped.magnitude,
+                    ["freeRollingDeceleration"] = carrier.FreeRollingDeceleration,
+                    ["freeRollingSpeedAfterOneSecond"] = rolling.magnitude, ["freeRollingDistanceOneSecond"] = rollingDistance,
                     ["settledWater"] = water.magnitude,
                     ["zeroTime"] = carrier.SmoothDrivenVelocity(settled, Vector2.zero, false, false, 0f).magnitude,
                     ["landPush"] = WorldMotionSystem.CalculatePushVelocity(Vector2.right * 6f, false, carrier.LandPushSpeedMultiplier, carrier.WaterPushSpeedMultiplier).x,

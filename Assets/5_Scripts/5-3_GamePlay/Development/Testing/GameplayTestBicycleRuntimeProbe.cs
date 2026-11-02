@@ -28,6 +28,7 @@ public static class GameplayTestBicycleRuntimeProbe
         }
         BicycleScope scope = active ?? throw new InvalidOperationException("自行车现场尚未建立。");
         if (action == "wall_mark") scope.MarkBlockedWheelPose();
+        if (action == "push_sample") scope.MarkCoastingStart();
         JObject result = scope.Sample();
         if (action == "wall") scope.AddBlockingWall();
         if (action == "water") scope.FillWater();
@@ -46,7 +47,8 @@ public static class GameplayTestBicycleRuntimeProbe
         private readonly List<(Vector2 position, string liquid, int level)> liquids = new();
         private Item bicycle;
         private GameObject wall;
-        private Vector2 startPosition, pushStart;
+        private Vector2 startPosition, pushStart, coastStart;
+        private float coastStartSpeed;
         private Vector2 blockedPosition;
         private float blockedWheelAngle;
         private bool disposed;
@@ -109,6 +111,8 @@ public static class GameplayTestBicycleRuntimeProbe
                 ["riderBodySimulated"] = Mover.rb.simulated, ["bodySimulated"] = Carrier.Body.simulated,
                 ["distance"] = WorldTopologyRuntime.Distance(startPosition, Carrier.Body.position),
                 ["pushDistance"] = WorldTopologyRuntime.Distance(pushStart, Carrier.Body.position),
+                ["coastDistance"] = WorldTopologyRuntime.Distance(coastStart, Carrier.Body.position),
+                ["coastStartSpeed"] = coastStartSpeed,
                 ["speed"] = Carrier.CurrentVelocity.magnitude, ["drivenSpeed"] = Carrier.DrivenVelocity.magnitude,
                 ["wheelAngle"] = wheels.WheelAngle, ["sameWheelRotation"] = wheels.RearWheel.localRotation == wheels.FrontWheel.localRotation,
                 ["blockedDistance"] = WorldTopologyRuntime.Distance(blockedPosition, Carrier.Body.position),
@@ -171,10 +175,20 @@ public static class GameplayTestBicycleRuntimeProbe
             pushStart = Carrier.Body.position;
         }
 
+        public void MarkCoastingStart()
+        {
+            coastStart = Carrier.Body.position;
+            coastStartSpeed = Carrier.CurrentVelocity.magnitude;
+        }
+
         public void MountForScreenshot()
         {
             Carrier.StopMotion();
-            if (Carrier.Rider == null) Carrier.OnInteractStart(player);
+            if (Carrier.Rider == null)
+            {
+                SetPlayerPosition(Carrier.Body.position + Vector2.down);
+                Carrier.OnInteractStart(player);
+            }
         }
 
         private void SetPlayerPosition(Vector2 position)

@@ -17,6 +17,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     [Min(1f)] public float BoostSpeedMultiplier = 1.5f; // 乘员主动加速时的最高速度倍率。
     [Min(0.1f)] public float Acceleration = 3f; // 加速度。
     [Min(0.1f)] public float Braking = 6f; // 松杆减速度。
+    [Min(0f)] public float FreeRollingDeceleration = 0f; // 空车松推后的滚动阻力；0 沿用通常制动。
     [Min(1f)] public float FacingTurnSpeed = 30f; // 船上操作者划行时的固定船头转速（度/秒），与平移速度无关。
     [Min(0.05f)] public float Radius = 0.35f; // 交互与下船安全半径。
     [Range(0.01f, 1f)] public float LandSpeedMultiplier = 0.1f; // 陆地最高速度相对水面的倍率。
@@ -83,6 +84,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     protected override void OnLoad()
     {
         if (!(MaxSpeed > 0 && BoostSpeedMultiplier >= 1f && Acceleration > 0 && Braking > 0 && FacingTurnSpeed > 0 && Radius > 0) ||
+            !float.IsFinite(FreeRollingDeceleration) || FreeRollingDeceleration < 0f ||
             !(LandSpeedMultiplier > 0f && LandSpeedMultiplier <= 1f) ||
             !(WaterSpeedMultiplier > 0f && WaterSpeedMultiplier <= 1f) ||
             !(LandPushSpeedMultiplier > 0f && LandPushSpeedMultiplier <= 1f) ||
@@ -362,7 +364,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         else
         {
             DrivenVelocity = SmoothDrivenVelocity(DrivenVelocity, input,
-                IsWaterSurface(body.position), Rider != null && requestedBoost, deltaTime);
+                IsWaterSurface(body.position), Rider != null && requestedBoost, deltaTime, Rider == null);
         }
         ExternalVelocity = WorldMotionSystem.SampleWaterVelocity(body.position, WaterCurrentSpeed);
         ExternalVelocity += WorldMotionSystem.SampleWindVelocity(body.position,
@@ -380,6 +382,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         if (!IsAvailable || body == null || !body.simulated || !GameNetwork.HasStateAuthority) return;
         Vector2 previousVelocity = CurrentVelocity;
         CurrentVelocity = body.velocity;
+        if (motionDriver == null && Rider == null && PushSource == null && FreeRollingDeceleration > 0f)
+            DrivenVelocity = CurrentVelocity - ExternalVelocity; // 空车滑行跟随碰撞后的真实速度，不能撞停后自行再启动。
         CurrentForce = (CurrentVelocity - previousVelocity) *
             (body.mass / Mathf.Max(0.001f, deltaTime));
         TrackPhysicsMovement();
@@ -539,11 +543,12 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         => MaxSpeed * (inWater ? WaterSpeedMultiplier : LandSpeedMultiplier) *
            (boostRequested ? BoostSpeedMultiplier : 1f);
 
-    /// <summary>乘坐与松手滑行共用有限加减速，不改变环境推动速度。</summary>
-    public Vector2 SmoothDrivenVelocity(Vector2 current, Vector2 input, bool inWater, bool boostRequested, float deltaTime)
+    /// <summary>空车滚动可使用更低减速度；乘坐操控和未配置的载具保持原制动。</summary>
+    public Vector2 SmoothDrivenVelocity(Vector2 current, Vector2 input, bool inWater, bool boostRequested, float deltaTime, bool freeRolling = false)
     {
         Vector2 desired = Vector2.ClampMagnitude(input, 1f) * ResolveSurfaceSpeedLimit(inWater, boostRequested);
-        float rate = desired.sqrMagnitude > 0.0001f ? Acceleration : Braking;
+        float rate = desired.sqrMagnitude > 0.0001f ? Acceleration :
+            freeRolling && FreeRollingDeceleration > 0f ? FreeRollingDeceleration : Braking;
         return Vector2.MoveTowards(current, desired, rate * Mathf.Max(0f, deltaTime));
     }
 
