@@ -66,14 +66,32 @@ def save_sample(path: Path, samples: np.ndarray) -> float:
     return len(clip) / RATE
 
 
-def ensure_meta(asset: Path, template: Path) -> str:
+def ensure_meta(asset: Path, template: Path, origin: str = "CC0_Thimras") -> str:
     meta = Path(str(asset) + ".meta")
     if not meta.exists():
         original = template.read_text(encoding="utf-8")
         original = re.sub(r"guid: [a-f0-9]{32}", "guid: " + uuid.uuid4().hex, original, count=1)
-        original = original.replace("LMMS_MCP_Gameplay", "CC0_Thimras")
+        original = original.replace("LMMS_MCP_Gameplay", origin)
         meta.write_text("\n".join(line.rstrip() for line in original.splitlines()) + "\n", encoding="utf-8")
     return re.search(r"guid: ([a-f0-9]{32})", meta.read_text(encoding="utf-8")).group(1)
+
+
+def install_cue(cue_id: str, clips: list[dict]) -> None:
+    cue_path = PROJECT / f"Assets/Resources/Audio/Cues/{cue_id}.asset"
+    template = PROJECT / "Assets/Resources/Audio/Cues/player.footstep.stone.asset"
+    config = cue_path.read_text(encoding="utf-8") if cue_path.exists() else template.read_text(encoding="utf-8").replace("player.footstep.stone", cue_id)
+    entries = "  clips:\n" + "".join(f"  - {{fileID: 8300000, guid: {clip['guid']}, type: 3}}\n" for clip in clips)
+    config, changes = re.subn(r"  clips:\n(?:  - [^\n]*\n)+", entries, config)
+    if changes != 1:
+        raise ValueError("音频 Cue 未找到唯一 clips 列表")
+    cue_path.write_text(config, encoding="utf-8")
+    cue_guid = ensure_meta(cue_path, PROJECT / "Assets/Resources/Audio/Cues/player.footstep.wood.asset.meta")
+
+    catalog_path = PROJECT / "Assets/Resources/Audio/AudioCatalog.asset"
+    catalog = catalog_path.read_text(encoding="utf-8")
+    line = f"  - {{fileID: 11400000, guid: {cue_guid}, type: 2}}"
+    if line not in catalog:
+        catalog_path.write_text(catalog.rstrip() + "\n" + line + "\n", encoding="utf-8")
 
 
 def prepare() -> None:
@@ -93,22 +111,7 @@ def prepare() -> None:
                       "guid": guid, "seconds": seconds,
                       "sha256": hashlib.sha256(asset.read_bytes()).hexdigest()})
 
-    cue_path = PROJECT / f"Assets/Resources/Audio/Cues/{CUE_ID}.asset"
-    template = PROJECT / "Assets/Resources/Audio/Cues/player.footstep.stone.asset"
-    config = cue_path.read_text(encoding="utf-8") if cue_path.exists() else template.read_text(encoding="utf-8").replace("player.footstep.stone", CUE_ID)
-    entries = "  clips:\n" + "".join(f"  - {{fileID: 8300000, guid: {clip['guid']}, type: 3}}\n" for clip in clips)
-    config, changes = re.subn(r"  clips:\n(?:  - [^\n]*\n)+", entries, config)
-    if changes != 1:
-        raise ValueError("音频 Cue 未找到唯一 clips 列表")
-    cue_path.write_text(config, encoding="utf-8")
-    cue_guid = ensure_meta(cue_path, PROJECT / "Assets/Resources/Audio/Cues/player.footstep.wood.asset.meta")
-
-    catalog_path = PROJECT / "Assets/Resources/Audio/AudioCatalog.asset"
-    catalog = catalog_path.read_text(encoding="utf-8")
-    line = f"  - {{fileID: 11400000, guid: {cue_guid}, type: 2}}"
-    if line not in catalog:
-        catalog_path.write_text(catalog.rstrip() + "\n" + line + "\n", encoding="utf-8")
-
+    install_cue(CUE_ID, clips)
     manifest = {"sourcePage": source["sourcePage"], "license": source["license"],
                 "archiveSha256": source["sourceSha256"], "sampleRate": RATE, "channels": 1,
                 "clips": clips}

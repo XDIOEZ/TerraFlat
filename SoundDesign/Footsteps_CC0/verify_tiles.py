@@ -26,6 +26,16 @@ def verify() -> None:
     walkable = [tile for tile in tiles if tile["data"]["parameters"].get("isWalkable")]
     missing = [tile["id"] for tile in walkable if not tile.get("footstepCueId")]
     assert not missing, f"缺少脚步音色的可走地块：{missing}"
+    expected = {
+        "TileBase_Stone": "stone", "Tile_Stone": "stone", "Tile_Ice": "ice",
+        "Tile_Grass": "grass", "Tile_Sand": "sand", "Tile_Dirt": "dirt",
+        "Tile_Floor_Stone": "stone", "Tile_WaterPlatform": "wood",
+        "Tile_Platform_Copper": "metal", "Tile_Floor_Iron": "metal",
+        "Tile_MoonRegolith": "sand"
+    }
+    for tile in walkable:
+        if tile["id"] in expected:
+            assert tile["footstepCueId"] == "player.footstep." + expected[tile["id"]], f"地块音色分配错误：{tile['id']}"
 
     sources = {}
     for folder in (AUDIO / "Generated", AUDIO / "FootstepsCC0"):
@@ -52,14 +62,15 @@ def verify() -> None:
                 assert (recording.getframerate(), recording.getnchannels(), recording.getsampwidth()) == (48000, 1, 2), f"脚步录音格式错误：{sources[clip_guid]}"
                 assert recording.getnframes() > 0, f"脚步录音为空：{sources[clip_guid]}"
 
-    metal = json.loads((PROJECT / "SoundDesign/Footsteps_CC0/manifest-metal.json").read_text(encoding="utf-8"))
-    assert len(metal["clips"]) == 8, "金属脚步生成清单不完整"
-    for clip in metal["clips"]:
-        actual = PROJECT / clip["file"]
-        assert hashlib.sha256(actual.read_bytes()).hexdigest() == clip["sha256"], f"金属录音被意外修改：{actual}"
+    for material in ("metal", "ice"):
+        manifest = json.loads((PROJECT / f"SoundDesign/Footsteps_CC0/manifest-{material}.json").read_text(encoding="utf-8"))
+        assert len(manifest["clips"]) == 8, f"{material} 脚步生成清单不完整"
+        for clip in manifest["clips"]:
+            actual = PROJECT / clip["file"]
+            assert hashlib.sha256(actual.read_bytes()).hexdigest() == clip["sha256"], f"录音被意外修改：{actual}"
 
     counts = Counter(tile["footstepCueId"].removeprefix("player.footstep.") for tile in walkable)
-    print(f"地块脚步映射通过：正式 {len(tiles)} 种，允许行走 {len(walkable)} 种；材质分布 {dict(sorted(counts.items()))}；8 类 Cue × 8 声均已注册")
+    print(f"地块脚步映射通过：正式 {len(tiles)} 种，允许行走 {len(walkable)} 种；材质分布 {dict(sorted(counts.items()))}；9 类 Cue × 8 声均已注册")
 
 
 if __name__ == "__main__":

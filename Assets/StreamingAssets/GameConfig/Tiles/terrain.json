@@ -130,7 +130,7 @@
     },
     {
       "id": "Tile_Ice",
-      "footstepCueId": "player.footstep.stone",
+      "footstepCueId": "player.footstep.ice",
       "runtimeTileId": 9,
       "loadCapacity": 8,
       "displayName": "Tile_Ice",

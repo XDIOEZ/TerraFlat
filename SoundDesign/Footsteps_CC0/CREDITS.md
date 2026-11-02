@@ -6,6 +6,7 @@
 - **Fantozzi's Footsteps (Grass/Sand & Stone)** — Fantozzi；qubodup 分切与发布 — https://opengameart.org/content/fantozzis-footsteps-grasssand-stone — CC0 1.0 — 沙地脚步（player.footstep.sand）— 采用 SandL1、SandL2、SandR1，重采样、裁切与增益整理。
 - **Different steps on wood, stone, leaves, gravel and mud** — TinyWorlds；由 pdsounds.org 录音整理 — https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud — CC0 1.0 — 泥土、碎砾和枯叶地表脚步（player.footstep.dirt）— 采用 mud02、gravel、leaves01，重采样、裁切与增益整理。
 - **Metal footsteps on concrete** — Thimras — https://opengameart.org/content/metal-footsteps-on-concrete — CC0 1.0 — 铜、铁、青铜地板与平台脚步（player.footstep.metal）— 从原始 25 声中选取 8 声，转 48kHz 单声道 PCM16、去静音、淡入淡出与增益整理。
+- **9 wet snow steps** — Iwan “qubodup” Gabovitch — https://opengameart.org/content/9-wet-snow-steps — CC0 1.0 — 结冰地表的脆裂踩踏声（player.footstep.ice）— 取其中 8 段硬壳冰雪脚步实录，低通降采样至 48kHz，转单声道、裁切和增益整理；与松软积雪脚步分开。
 - **Water Splash** — Sara Lana 录音，felix.blume 上传 — https://freesound.org/people/felix.blume/sounds/434978/ — CC0 1.0 — 浅水脚步水花（player.footstep.water）— 复用项目游泳声的已整理近录水花片段，截取短水花、淡入淡出和增益整理。
 
 许可证：https://creativecommons.org/publicdomain/zero/1.0/

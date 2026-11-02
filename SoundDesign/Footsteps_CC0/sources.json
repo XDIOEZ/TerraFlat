@@ -1,6 +1,17 @@
 {
   "verifiedOn": "2026-10-21",
   "recordings": {
+    "ice": {
+      "title": "9 wet snow steps",
+      "author": "Iwan 'qubodup' Gabovitch",
+      "sourcePage": "https://opengameart.org/content/9-wet-snow-steps",
+      "downloadUrl": "https://opengameart.org/sites/default/files/qubodup-wet_snow_steps.7z",
+      "sourceArchive": "Sources/qubodup-wet_snow_steps.7z",
+      "sourceSha256": "699f5327342bcd5ea7478f8ad84144de15dcb4161b9916ae065e550921beacf9",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "verifiedOn": "2026-11-03"
+    },
     "metal": {
       "title": "Metal footsteps on concrete",
       "author": "Thimras",
@@ -55,7 +66,17 @@
     { "variant": 7, "archiveFile": "metal_steps_19.wav" },
     { "variant": 8, "archiveFile": "metal_steps_22.wav" }
   ],
-  "processing": "Mono 48kHz PCM16, highpass 60Hz, remove DC and silent head/tail, 3ms head and 25ms tail fade, peak -12dB. No synthesized layers. Metal recording is resampled to mono PCM16 with fades and gain using prepare_metal.py.",
+  "iceSegments": [
+    { "variant": 1, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-01.flac" },
+    { "variant": 2, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-02.flac" },
+    { "variant": 3, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-03.flac" },
+    { "variant": 4, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-04.flac" },
+    { "variant": 5, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-05.flac" },
+    { "variant": 6, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-06.flac" },
+    { "variant": 7, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-07.flac" },
+    { "variant": 8, "archiveFile": "qubodup-wet_snow_steps/snow_step_wet-08.flac" }
+  ],
+  "processing": "Mono 48kHz PCM16, highpass 60Hz, remove DC and silent head/tail, 3ms head and 25ms tail fade, peak -12dB. No synthesized layers. Metal recording uses prepare_metal.py, ice recording uses 96kHz FIR lowpass downsampling in prepare_ice.py; both are converted to mono PCM16 with fades and gain.",
   "segments": [
     {
       "cue": "player.footstep.grass",
