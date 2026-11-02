@@ -31,6 +31,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - `SharedSpriteMeshCache.IsSessionEnding` 时停止区块提交、分帧推进与 Owner 恢复；活跃期登记/恢复失败保留异常。BRG 禁用/域重载幂等 Dispose：先释放组，再 finally 释放自有缓冲/Mesh/材质，按需重建。
 - 草层改由 `ChunkGrassMeshBatchService` 以 128 格区域及纹理/材质合并实际 Sprite 几何和 UV；普通地表跨 Chunk 共享 Mesh，投影世界临时按 Owner 独立批次。仍通过 Chunk Owner 镜像与外部排序域维护显示，草变化只标脏组、渲染前上传；规则 `rendering/grass_mesh_batch` 核对批次、删除及投影回收。
 - 启动 SpriteAtlas 按 Menu/GameplayUI/CommonItems/WorldEnvironment/Creatures/Shared 收集，并读取液体 WorldWater Sprite。仅管理实际页及用途目录引用的源纹理；`ProjectSettings/FlatWorldSpriteAtlasSourceEntries.json` 记录源组和地址并支持失活恢复。验收看 Unity 实际 `PackAtlases/CanBindTo`、页尺寸及配置 fallback，不以 shelf 估算替代。
+- 打包纹理：Android 图集与未入图集、不可读的源 Sprite 使用 ASTC 6x6，Windows Standalone 使用 BC7；已入图集的源 Sprite 不重复有损压缩。原始尺寸、PPU、Point 过滤与可读纹理例外保持不变；变更源纹理导入后重新生成图集计划。
 
 ## 按主题读取
 
