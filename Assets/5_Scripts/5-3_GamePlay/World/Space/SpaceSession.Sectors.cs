@@ -185,6 +185,8 @@ namespace FlatWorld.Spaceflight
                 observer.RealmRevision = passenger.RealmRevision;
                 observedNetworkRealms[profileId] = (observer.WorldKey, observer.InSpace, observer.RealmRevision);
             }
+            observer.IsDirectSurfaceTeleport = !observer.InSpace && observer.RealmRevision != 0 &&
+                passenger.DirectSurfaceTeleportRevision == observer.RealmRevision;
             return true;
         }
         #endregion

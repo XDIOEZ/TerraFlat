@@ -93,7 +93,8 @@ namespace FlatWorld.Spaceflight
         {
             // 所有显示对象共用同一个渲染进度，物理状态始终保留固定步结果。
             presentationAlpha = hasPresentationSample
-                ? Math.Clamp((Time.timeAsDouble - presentationSampleTime) / presentationInterval, 0d, 1d) : 1d;
+                ? Math.Clamp(((GameNetwork.HasStateAuthority ? GameplayFixedStepSimulation.PresentationTime :
+                    Time.timeAsDouble) - presentationSampleTime) / presentationInterval, 0d, 1d) : 1d;
             renderedShipPoses.Clear();
             foreach (var sample in shipPresentation)
                 renderedShipPoses.Add(sample.Key, sample.Value.Track.Evaluate(presentationAlpha));

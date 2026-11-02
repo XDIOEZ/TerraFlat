@@ -28,6 +28,7 @@ public static class GameplayTestBicycleRuntimeProbe
         }
         BicycleScope scope = active ?? throw new InvalidOperationException("自行车现场尚未建立。");
         if (action == "wall_mark") scope.MarkBlockedWheelPose();
+        if (action == "push_sample") scope.MarkCoastingStart();
         JObject result = scope.Sample();
         if (action == "wall") scope.AddBlockingWall();
         if (action == "water") scope.FillWater();
@@ -46,9 +47,11 @@ public static class GameplayTestBicycleRuntimeProbe
         private readonly List<(Vector2 position, string liquid, int level)> liquids = new();
         private Item bicycle;
         private GameObject wall;
-        private Vector2 startPosition, pushStart;
+        private Vector2 startPosition, pushStart, coastStart;
+        private float coastStartSpeed;
         private Vector2 blockedPosition;
         private float blockedWheelAngle;
+        private float blockedPedalAngle;
         private bool disposed;
         public Mod_Mover Mover { get; }
         public Mod_Carrier Carrier { get; private set; }
@@ -75,7 +78,7 @@ public static class GameplayTestBicycleRuntimeProbe
             Carrier = bicycle.GetComponentInChildren<Mod_Carrier>(true);
             if (Carrier == null || !Carrier.IsAvailable) throw new InvalidOperationException("自行车正式载具未就绪。");
             startPosition = Carrier.Body.position;
-            Carrier.OnInteractStart(player);
+            Carrier.ToggleRider(player, Mover);
         }
 
         private Vector2 FindClearRidingSite()
@@ -103,20 +106,51 @@ public static class GameplayTestBicycleRuntimeProbe
         public JObject Sample()
         {
             CarrierWheelPresentation wheels = bicycle.GetComponent<CarrierWheelPresentation>();
+            Mod_TileEffectReceiver terrainContact = player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
             return new JObject
             {
                 ["available"] = Carrier.IsAvailable, ["mounted"] = Carrier.Rider == Mover,
                 ["riderBodySimulated"] = Mover.rb.simulated, ["bodySimulated"] = Carrier.Body.simulated,
                 ["distance"] = WorldTopologyRuntime.Distance(startPosition, Carrier.Body.position),
                 ["pushDistance"] = WorldTopologyRuntime.Distance(pushStart, Carrier.Body.position),
+                ["coastDistance"] = WorldTopologyRuntime.Distance(coastStart, Carrier.Body.position),
+                ["coastStartSpeed"] = coastStartSpeed,
                 ["speed"] = Carrier.CurrentVelocity.magnitude, ["drivenSpeed"] = Carrier.DrivenVelocity.magnitude,
                 ["wheelAngle"] = wheels.WheelAngle, ["sameWheelRotation"] = wheels.RearWheel.localRotation == wheels.FrontWheel.localRotation,
+                ["pedalAngle"] = wheels.PedalAngle,
+                ["pedalTransformSynced"] = wheels.PedalCrank != null &&
+                    Mathf.Abs(Mathf.DeltaAngle(wheels.PedalAngle, wheels.PedalCrank.localEulerAngles.z)) < .1f,
                 ["blockedDistance"] = WorldTopologyRuntime.Distance(blockedPosition, Carrier.Body.position),
                 ["blockedWheelTurn"] = Mathf.Abs(Mathf.DeltaAngle(blockedWheelAngle, wheels.WheelAngle)),
+                ["blockedPedalTurn"] = Mathf.Abs(Mathf.DeltaAngle(blockedPedalAngle, wheels.PedalAngle)),
                 ["pusherIsPlayer"] = Carrier.PushSource == Mover,
                 ["seatError"] = WorldTopologyRuntime.Distance(player.transform.position, Carrier.SeatPosition),
+                ["riderTerrainContact"] = terrainContact != null && terrainContact.HasTerrainContact,
+                ["riderInWater"] = terrainContact != null && terrainContact.IsInWater,
+                ["riderLiquidDepth"] = terrainContact != null ? terrainContact.LiquidDepth : 0f,
+                ["wakeReady"] = bicycle.GetComponent<CarrierWaterWake>() != null,
+                ["contactShadowBound"] = WorldRenderingManager.ExistingInstance?.IsItemContactShadowBound(bicycle) == true,
+                ["shadowGrounded"] = IsShadowFootAlignedWithWheels(wheels),
                 ["inWater"] = ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(Carrier.Body.position, out RuntimeTerrainTileSample tile) && tile.LiquidDepth > 0f
             };
+        }
+
+        private bool IsShadowFootAlignedWithWheels(CarrierWheelPresentation wheels)
+        {
+            SpriteRenderer rear = wheels.RearWheel.GetComponent<SpriteRenderer>();
+            SpriteRenderer front = wheels.FrontWheel.GetComponent<SpriteRenderer>();
+            if (rear == null || front == null || wheels.FrameRenderer == null ||
+                !GameRes.ExistingInstance.TryGetItemDefinition(bicycle.itemData.IDName, out RuntimeItemDefinition definition))
+                return false;
+
+            ItemShadowVisualDefinitionDto shadow = definition.Visual?.Shadows;
+            if (shadow?.FootLocalPosition == null) return false;
+            Bounds footprint = wheels.MeasureWorldShadowFootprintBounds(wheels.FrameRenderer);
+            float footY = ShadowFootprintResolver.ResolveFoot(bicycle, footprint,
+                shadow.FootLocalPosition, footOverlap: shadow.FootOverlap).y;
+            float wheelBottom = Mathf.Min(ShadowFootprintResolver.MeasureVisibleWorldBounds(rear).min.y,
+                ShadowFootprintResolver.MeasureVisibleWorldBounds(front).min.y);
+            return footY <= wheelBottom + .08f;
         }
 
         public void FillWater()
@@ -159,22 +193,34 @@ public static class GameplayTestBicycleRuntimeProbe
         public void MarkBlockedWheelPose()
         {
             blockedPosition = Carrier.Body.position;
-            blockedWheelAngle = bicycle.GetComponent<CarrierWheelPresentation>().WheelAngle;
+            CarrierWheelPresentation wheels = bicycle.GetComponent<CarrierWheelPresentation>();
+            blockedWheelAngle = wheels.WheelAngle;
+            blockedPedalAngle = wheels.PedalAngle;
         }
 
         public void BeginPush()
         {
             Carrier.StopMotion();
             RestoreWater();
-            Carrier.OnInteractStart(player);
+            Carrier.ToggleRider(player, Mover);
             SetPlayerPosition(Carrier.Body.position + Vector2.left * 1.35f + Vector2.down * .22f);
             pushStart = Carrier.Body.position;
+        }
+
+        public void MarkCoastingStart()
+        {
+            coastStart = Carrier.Body.position;
+            coastStartSpeed = Carrier.CurrentVelocity.magnitude;
         }
 
         public void MountForScreenshot()
         {
             Carrier.StopMotion();
-            if (Carrier.Rider == null) Carrier.OnInteractStart(player);
+            if (Carrier.Rider == null)
+            {
+                SetPlayerPosition(Carrier.Body.position + Vector2.down);
+                Carrier.ToggleRider(player, Mover);
+            }
         }
 
         private void SetPlayerPosition(Vector2 position)

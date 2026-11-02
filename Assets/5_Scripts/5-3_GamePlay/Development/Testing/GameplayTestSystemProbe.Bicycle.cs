@@ -36,39 +36,72 @@ public static partial class GameplayTestSystemProbe
                 Vector2 stopped = coast;
                 for (int i = 0; i < 100; i++)
                     stopped = carrier.SmoothDrivenVelocity(stopped, Vector2.zero, false, false, .02f);
+                Vector2 rolling = settled;
+                float rollingDistance = 0f;
+                for (int i = 0; i < 50; i++)
+                {
+                    rolling = carrier.SmoothDrivenVelocity(rolling, Vector2.zero, false, false, .02f, true);
+                    rollingDistance += rolling.magnitude * .02f;
+                }
                 samples[id] = new JObject
                 {
                     ["land"] = carrier.ResolveSurfaceSpeedLimit(false), ["water"] = carrier.ResolveSurfaceSpeedLimit(true),
                     ["boostLand"] = carrier.ResolveSurfaceSpeedLimit(false, true), ["boostWater"] = carrier.ResolveSurfaceSpeedLimit(true, true),
                     ["start"] = carrier.SmoothDrivenVelocity(Vector2.zero, Vector2.right, false, false, .02f).magnitude,
                     ["diagonal"] = settled.magnitude, ["coast"] = coast.magnitude, ["stopped"] = stopped.magnitude,
+                    ["freeRollingDeceleration"] = carrier.FreeRollingDeceleration,
+                    ["freeRollingSpeedAfterOneSecond"] = rolling.magnitude, ["freeRollingDistanceOneSecond"] = rollingDistance,
                     ["settledWater"] = water.magnitude,
                     ["zeroTime"] = carrier.SmoothDrivenVelocity(settled, Vector2.zero, false, false, 0f).magnitude,
                     ["landPush"] = WorldMotionSystem.CalculatePushVelocity(Vector2.right * 6f, false, carrier.LandPushSpeedMultiplier, carrier.WaterPushSpeedMultiplier).x,
                     ["waterPush"] = WorldMotionSystem.CalculatePushVelocity(Vector2.right * 6f, true, carrier.LandPushSpeedMultiplier, carrier.WaterPushSpeedMultiplier).x,
-                    ["wake"] = carrier.EmitWaterWake, ["rotateFrame"] = carrier.RotateVisualWithHeading
+                    ["wake"] = carrier.EmitWaterWake, ["rotateFrame"] = carrier.RotateVisualWithHeading,
+                    ["riderExposed"] = carrier.AllowsRiderTerrainContact,
+                    ["seatX"] = carrier.SeatOffset.x, ["seatY"] = carrier.SeatOffset.y
                 };
             }
+            Vector2 configuredSeat = new((float)samples["Bicycle_Building"]["seatX"],
+                (float)samples["Bicycle_Building"]["seatY"]);
             SpriteRenderer frame = new GameObject("Frame").AddComponent<SpriteRenderer>();
             frame.transform.SetParent(root.transform, false);
             var wheels = root.AddComponent<CarrierWheelPresentation>();
             wheels.FrameRenderer = frame;
             wheels.RearWheel = new GameObject("RearWheel").transform;
             wheels.FrontWheel = new GameObject("FrontWheel").transform;
+            wheels.PedalCrank = new GameObject("PedalCrank").transform;
             wheels.RearWheel.SetParent(frame.transform, false);
             wheels.FrontWheel.SetParent(frame.transform, false);
+            wheels.PedalCrank.SetParent(frame.transform, false);
             wheels.RearWheel.localPosition = new Vector3(-.7f, -.3f);
             wheels.FrontWheel.localPosition = new Vector3(.7f, -.3f);
+            wheels.PedalCrank.localPosition = new Vector3(-.09f, -.09f);
             wheels.ResetWheelPresentationMotionBaseline();
             wheels.AdvanceWheelRotationByDisplacement(Vector2.right * .1f);
             float rightAngle = wheels.WheelAngle;
+            float rightPedal = wheels.PedalAngle;
+            Quaternion rightPedalRotation = wheels.PedalCrank.localRotation;
             wheels.AdvanceWheelRotationByDisplacement(Vector2.zero);
             bool still = wheels.WheelAngle == rightAngle;
+            bool pedalStill = wheels.PedalAngle == rightPedal && wheels.PedalCrank.localRotation == rightPedalRotation;
+            wheels.SetFacingFromPointerDirection(Vector2.left);
+            bool pointerLeftWhileStill = frame.flipX && wheels.WheelAngle == rightAngle;
+            wheels.AdvanceWheelRotationByDisplacement(Vector2.right * .1f);
+            bool movingRightKeepsLeft = frame.flipX;
+            wheels.SetFacingFromPointerDirection(Vector2.right);
+            bool pointerRightWhileStill = !frame.flipX;
             wheels.AdvanceWheelRotationByDisplacement(Vector2.left * .1f);
+            bool movingLeftKeepsRight = !frame.flipX;
+            wheels.SetFacingFromPointerDirection(Vector2.left);
             samples["wheels"] = new JObject
             {
                 ["rightAngle"] = rightAngle, ["still"] = still, ["mirrored"] = frame.flipX,
+                ["pointerLeftWhileStill"] = pointerLeftWhileStill, ["pointerRightWhileStill"] = pointerRightWhileStill,
+                ["movingRightKeepsLeft"] = movingRightKeepsLeft, ["movingLeftKeepsRight"] = movingLeftKeepsRight,
                 ["rearMirrored"] = wheels.RearWheel.localPosition.x > 0f,
+                ["pedalTurned"] = Mathf.Abs(Mathf.DeltaAngle(0f, rightPedal)) > .1f,
+                ["pedalStill"] = pedalStill, ["pedalMirrored"] = wheels.PedalCrank.localPosition.x > 0f,
+                ["seatRightX"] = configuredSeat.x, ["seatLeftX"] = wheels.ResolveSeatOffset(configuredSeat).x,
+                ["seatLeftY"] = wheels.ResolveSeatOffset(configuredSeat).y,
                 ["sameRotation"] = wheels.RearWheel.localRotation == wheels.FrontWheel.localRotation,
                 ["frameAngle"] = frame.transform.localEulerAngles.z,
                 ["fullTurn"] = CarrierWheelPresentation.CalculateWheelRotationDegrees(Mathf.PI * 2f * wheels.WheelRadius, wheels.WheelRadius, false)
@@ -80,6 +113,15 @@ public static partial class GameplayTestSystemProbe
             Mod_Building.Building_Data state = new();
             definitions["Bicycle"].Modules[ModText.Building].Data.ToObject<Ex_ModData>().ReadData(ref state);
             samples["summonerBody"] = state.BuildingPrefabId;
+            ItemShadowVisualDefinitionDto shadow = definitions["Bicycle_Building"].Visual?.Shadows;
+            samples["groundShadow"] = new JObject
+            {
+                ["width"] = shadow?.ContactWidth ?? 0f,
+                ["footX"] = shadow?.FootLocalPosition?.x ?? 999f,
+                ["footY"] = shadow?.FootLocalPosition?.y ?? 999f,
+                ["overlap"] = shadow?.FootOverlap ?? -1f,
+                ["enabled"] = shadow?.Enabled != false
+            };
 #if UNITY_EDITOR
             GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Gameplay/Items/Common/BicycleBodyShell.prefab");
@@ -87,6 +129,7 @@ public static partial class GameplayTestSystemProbe
             ItemPhysicsTemplate2D physics = prefab != null ? prefab.GetComponent<ItemPhysicsTemplate2D>() : null;
             samples["prefabReady"] = presentation != null && presentation.FrameSprite != null &&
                 presentation.FrameRenderer != null && presentation.RearWheel != null && presentation.FrontWheel != null &&
+                presentation.PedalCrank != null && presentation.PedalCrank.GetComponent<SpriteRenderer>()?.sprite != null &&
                 prefab.GetComponent<UnityEngine.Rendering.SortingGroup>() != null && physics != null &&
                 physics.hasBody && physics.bodyType == RigidbodyType2D.Kinematic &&
                 prefab.GetComponent<Rigidbody2D>() == null;

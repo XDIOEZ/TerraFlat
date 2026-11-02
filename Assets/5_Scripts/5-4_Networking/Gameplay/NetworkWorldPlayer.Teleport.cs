@@ -70,7 +70,7 @@ namespace FlatWorld.Networking.Gameplay
             authoritativePosition = logical;
             authoritativeVelocity = Vector2.zero;
             authoritativeVisualState = NetworkPlayerVisualState.Idle;
-            session.TryBeginNetworkSurfaceTransfer(corePlayer, world, logical);
+            session.TryBeginNetworkSurfaceTransfer(corePlayer, world, logical, isDirectTeleport: true);
             RefreshSpaceAuthority();
             ResetTeleportMotion(logical);
             ApplyRemoteVisualState(authoritativeVisualState);

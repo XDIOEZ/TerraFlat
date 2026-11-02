@@ -1301,11 +1301,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
         data.FlowX = shadow;
         Bounds shadowBounds = SharedSpriteMeshCache.GetSunShadowWorldBounds(sprite, localToWorld);
         data.FlowX.w = Mathf.Max(0.01f, shadowBounds.max.y - shadow.y);
-        ChunkBatchRendererGroupService.SetVisual(this, slot,
-            new ChunkBatchRendererGroupService.Visual(sunShadow
-                    ? ChunkBatchRendererGroupService.VisualLayer.NaturalShadow
-                    : ChunkBatchRendererGroupService.VisualLayer.NaturalStatic,
-                sprite, material, data, sortingPosition));
+        ChunkSharedSpriteMeshBatchService.SetNaturalShadow(this, slot, sprite, material, data);
     }
 
     internal void ClearNaturalEntityVisual(int guid) => ClearNaturalEntityPart(guid, 0);
@@ -1314,6 +1310,7 @@ public sealed partial class ChunkTilemapRenderer : MonoBehaviour, IIncrementalCh
     {
         depthMesh?.Remove(ChunkDepthMeshRenderer.NaturalDomain, entityId, part);
         if (!naturalVisualSlots.Remove((entityId, part), out int slot)) return;
+        ChunkSharedSpriteMeshBatchService.ClearNaturalShadow(this, slot);
         ChunkBatchRendererGroupService.ClearVisual(this, slot);
         freeNaturalVisualSlots.Push(slot);
     }

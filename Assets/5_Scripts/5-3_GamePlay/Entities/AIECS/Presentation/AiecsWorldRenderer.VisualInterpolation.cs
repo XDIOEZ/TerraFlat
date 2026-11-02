@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlatWorld.Combat;
+using FlatWorld.Simulation;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -23,9 +24,9 @@ namespace FlatWorld.AIECS
             if (!visualMotionHistories.TryGetValue(identity, out WorldVisualMotionHistory history))
                 visualMotionHistories.Add(identity, history = new WorldVisualMotionHistory());
             history.CaptureWrapped(new Vector2(sourcePosition.x, sourcePosition.y), domain,
-                Time.fixedTimeAsDouble);
+                GameplaySimulationTime.CurrentTime);
             Vector3 translation = WorldVisualMotionHistory.PixelAlignTranslation(
-                history.Evaluate(Time.timeAsDouble) - history.Current, WorldVisualMotionHistory.PixelGrid);
+                history.Evaluate(GameplaySimulationTime.PresentationTime) - history.Current, WorldVisualMotionHistory.PixelGrid);
             Vector3 presentation = history.Current + translation;
             return new float2(presentation.x, presentation.y);
         }

@@ -8,7 +8,7 @@ using UnityEngine;
 
 public static class GameplayTestFixedStepClockRuntimeProbe
 {
-    #region 固定步真实时钟采样
+    #region 独立游戏时钟与原生物理采样
 
     private const int CatchUpHitchMilliseconds = 200;
 
@@ -32,8 +32,11 @@ public static class GameplayTestFixedStepClockRuntimeProbe
                 ["tick"] = (long)GameplayFixedStepSimulation.TickIndex,
                 ["frame"] = Time.frameCount,
                 ["delta"] = deltaTime,
-                ["fixedTime"] = Time.fixedTimeAsDouble,
-                ["clock"] = GameplayFixedStepSimulation.CurrentTime
+                ["unityFixedTime"] = Time.fixedTimeAsDouble,
+                ["clock"] = GameplayFixedStepSimulation.CurrentTime,
+                ["physicsDispatch"] = (long)GameplayWorldRegistry.PhysicsDispatchCount,
+                ["physicsSceneSteps"] = (long)GameplayWorldRegistry.PhysicsSceneStepCount,
+                ["manualPhysicsMode"] = Physics2D.simulationMode == SimulationMode2D.Script
             });
         }
     }
@@ -76,7 +79,6 @@ public static class GameplayTestFixedStepClockRuntimeProbe
             }
             finally
             {
-                Time.fixedDeltaTime = OriginalFixedDeltaTime;
                 Time.timeScale = OriginalTimeScale;
                 Application.targetFrameRate = OriginalTargetFrameRate;
                 QualitySettings.vSyncCount = OriginalVSyncCount;
@@ -88,7 +90,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
         }
     }
 
-    // 记录引擎真实 FixedUpdate、渲染帧和墙钟，不自行模拟补步。
+    // 记录真实游戏 Tick、手动原生物理、Unity 固定时钟和渲染帧，不在测试里自行推进游戏世界。
     private static IEnumerator CaptureFixedStepClock(Player player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
@@ -104,8 +106,11 @@ public static class GameplayTestFixedStepClockRuntimeProbe
                 ["managerOwnsActiveHost"] = hosts.Length == 1 && manager != null &&
                     hosts[0].gameObject == manager.gameObject && hosts[0].isActiveAndEnabled,
                 ["defaultTicksPerSecond"] = GameplayFixedStepSimulation.DefaultTicksPerSecond,
-                ["defaultFixedDelta"] = GameplayFixedStepSimulation.DefaultFixedDeltaTime,
-                ["maximumDelta"] = Time.maximumDeltaTime,
+                ["defaultTickDelta"] = GameplayFixedStepSimulation.DefaultTickDeltaTime,
+                ["selectedTicksPerSecond"] = GameplayTickRateUserSettings.SelectedTicksPerSecond,
+                ["effectiveTicksPerSecond"] = GameplayTickRateUserSettings.EffectiveTicksPerSecond,
+                ["maximumCatchUpTicks"] = GameplaySimulationFrameClock.MaximumCatchUpTicks,
+                ["manualPhysicsMode"] = Physics2D.simulationMode == SimulationMode2D.Script,
                 ["original"] = new JObject
                 {
                     ["timeScale"] = fixture.OriginalTimeScale,
@@ -165,10 +170,14 @@ public static class GameplayTestFixedStepClockRuntimeProbe
         observer.Steps.Clear();
         double startWall = Time.realtimeSinceStartupAsDouble;
         double startFixed = Time.fixedTimeAsDouble;
+        double startClock = GameplayFixedStepSimulation.CurrentTime;
         double startGameTime = Time.timeAsDouble;
+        long startPhysicsDispatch = (long)GameplayWorldRegistry.PhysicsDispatchCount;
+        long startPhysicsSceneSteps = (long)GameplayWorldRegistry.PhysicsSceneStepCount;
         long startTick = (long)GameplayFixedStepSimulation.TickIndex;
         int startFrame = Time.frameCount;
         float fixedDelta = Time.fixedDeltaTime;
+        float tickDelta = GameplayFixedStepSimulation.TickDeltaTime;
         float timeScale = Time.timeScale;
         int targetFrameRate = Application.targetFrameRate;
         int vSyncCount = QualitySettings.vSyncCount;
@@ -189,10 +198,16 @@ public static class GameplayTestFixedStepClockRuntimeProbe
         {
             ["startWall"] = startWall, ["endWall"] = Time.realtimeSinceStartupAsDouble,
             ["startFixedTime"] = startFixed, ["endFixedTime"] = Time.fixedTimeAsDouble,
+            ["startClock"] = startClock, ["endClock"] = GameplayFixedStepSimulation.CurrentTime,
+            ["startPhysicsDispatch"] = startPhysicsDispatch,
+            ["endPhysicsDispatch"] = (long)GameplayWorldRegistry.PhysicsDispatchCount,
+            ["startPhysicsSceneSteps"] = startPhysicsSceneSteps,
+            ["endPhysicsSceneSteps"] = (long)GameplayWorldRegistry.PhysicsSceneStepCount,
             ["startGameTime"] = startGameTime, ["endGameTime"] = Time.timeAsDouble,
             ["startTick"] = startTick, ["endTick"] = (long)GameplayFixedStepSimulation.TickIndex,
             ["startFrame"] = startFrame, ["endFrame"] = Time.frameCount,
             ["fixedDelta"] = fixedDelta, ["endFixedDelta"] = Time.fixedDeltaTime,
+            ["tickDelta"] = tickDelta, ["endTickDelta"] = GameplayFixedStepSimulation.TickDeltaTime,
             ["timeScale"] = timeScale, ["endTimeScale"] = Time.timeScale,
             ["targetFrameRate"] = targetFrameRate, ["endTargetFrameRate"] = Application.targetFrameRate,
             ["vSyncCount"] = vSyncCount, ["endVSyncCount"] = QualitySettings.vSyncCount,
@@ -202,13 +217,15 @@ public static class GameplayTestFixedStepClockRuntimeProbe
         });
     }
 
-    // 故意阻塞一帧，核对 Unity 丢弃超额追赶时间，而不是补算欠下的固定步。
+    // 故意阻塞一帧，核对独立游戏时钟的追赶预算与物理分发次数。
     private static IEnumerator CaptureBoundedCatchUpAfterHitch(FixedStepClockObservation observer, Action<JObject> completed)
     {
         observer.Steps.Clear();
         double startWall = Time.realtimeSinceStartupAsDouble;
         double startGameTime = Time.timeAsDouble;
         double startFixedTime = Time.fixedTimeAsDouble;
+        double startClock = GameplayFixedStepSimulation.CurrentTime;
+        long startPhysicsDispatch = (long)GameplayWorldRegistry.PhysicsDispatchCount;
         long startTick = (long)GameplayFixedStepSimulation.TickIndex;
         int startFrame = Time.frameCount;
         float timeScale = Time.timeScale;
@@ -222,10 +239,15 @@ public static class GameplayTestFixedStepClockRuntimeProbe
             ["startWall"] = startWall, ["endWall"] = Time.realtimeSinceStartupAsDouble,
             ["startGameTime"] = startGameTime, ["endGameTime"] = Time.timeAsDouble,
             ["startFixedTime"] = startFixedTime, ["endFixedTime"] = Time.fixedTimeAsDouble,
+            ["startClock"] = startClock, ["endClock"] = GameplayFixedStepSimulation.CurrentTime,
+            ["startPhysicsDispatch"] = startPhysicsDispatch,
+            ["endPhysicsDispatch"] = (long)GameplayWorldRegistry.PhysicsDispatchCount,
             ["startTick"] = startTick, ["endTick"] = (long)GameplayFixedStepSimulation.TickIndex,
             ["startFrame"] = startFrame, ["endFrame"] = Time.frameCount,
             ["timeScale"] = timeScale, ["endTimeScale"] = Time.timeScale,
             ["fixedDelta"] = Time.fixedDeltaTime, ["maximumDelta"] = Time.maximumDeltaTime,
+            ["tickDelta"] = GameplayFixedStepSimulation.TickDeltaTime,
+            ["manualPhysicsMode"] = Physics2D.simulationMode == SimulationMode2D.Script,
             ["scaledDelta"] = Time.deltaTime, ["unscaledDelta"] = Time.unscaledDeltaTime,
             ["steps"] = new JArray(observer.Steps)
         });

@@ -3,10 +3,8 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 世界常态后处理的画质适配器，挂在 WorldManager 的 Global Volume 上。
-/// 美术参数由世界渲染 JSON 定义，只在世界存续期间创建并调整泛光成本：
-/// 高档使用配置原值，中档按 JSON 降低采样与强度，低档关闭泛光。
-/// 调色、色调映射与轻暗角在各档保持一致；低血量警示仍由高优先级的独立 Volume 合成。
+/// 世界常态后处理适配器：三种画面风格与三档后处理性能独立组合。
+/// 只创建一次 VolumeProfile，切换时原位更新颜色与光晕，保留所有屏幕警示效果。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Volume))]
@@ -24,8 +22,8 @@ public sealed class WorldPostProcessQuality : MonoBehaviour
     private Volume worldVolume; // 世界已有的全局 Volume。
     private VolumeProfile runtimeProfile; // 本组件创建的临时配置和子组件。
     private Bloom runtimeBloom;
-    private static WorldRenderingConfig.WorldVolume Defaults =>
-        WorldRenderingConfigCatalog.Default.postProcess.worldVolume;
+    private static WorldRenderingConfig.WorldVolume CurrentStyle =>
+        WorldRenderingConfigCatalog.Default.postProcess.worldVolumes[(int)ScreenPostProcessSettings.Style];
 
     #endregion
 
@@ -55,7 +53,7 @@ public sealed class WorldPostProcessQuality : MonoBehaviour
         ExitWorld();
     }
 
-    /// <summary>进入世界时从统一 JSON 创建画面配置，按当前特效质量启用画面。</summary>
+    /// <summary>进入世界时仅创建一次 Volume 配置，画风切换复用已有组件。</summary>
     private void EnterWorld()
     {
         if (runtimeProfile != null)
@@ -64,48 +62,22 @@ public sealed class WorldPostProcessQuality : MonoBehaviour
         runtimeProfile = ScriptableObject.CreateInstance<VolumeProfile>();
         runtimeProfile.name = "World Rendering JSON Volume";
         runtimeBloom = runtimeProfile.Add<Bloom>(true);
-        runtimeBloom.threshold.Override(Defaults.bloom.threshold);
-        runtimeBloom.intensity.Override(Defaults.bloom.intensity);
-        runtimeBloom.scatter.Override(Defaults.bloom.scatter);
-        runtimeBloom.clamp.Override(Defaults.bloom.clamp);
-        runtimeBloom.highQualityFiltering.Override(Defaults.bloom.highQualityFiltering);
-        runtimeBloom.downscale.Override((BloomDownscaleMode)Defaults.bloom.downscale);
-        runtimeBloom.maxIterations.Override(Defaults.bloom.maxIterations);
-
-        ColorAdjustments grading = runtimeProfile.Add<ColorAdjustments>(true);
-        grading.postExposure.Override(Defaults.colorGrading.postExposure);
-        grading.contrast.Override(Defaults.colorGrading.contrast);
-        grading.saturation.Override(Defaults.colorGrading.saturation);
-
-        WhiteBalance whiteBalance = runtimeProfile.Add<WhiteBalance>(true);
-        whiteBalance.temperature.Override(Defaults.whiteBalance.temperature);
-        whiteBalance.tint.Override(Defaults.whiteBalance.tint);
-
-        SplitToning splitToning = runtimeProfile.Add<SplitToning>(true);
-        splitToning.shadows.Override(Defaults.splitToning.shadows);
-        splitToning.highlights.Override(Defaults.splitToning.highlights);
-        splitToning.balance.Override(Defaults.splitToning.balance);
-
-        Tonemapping tonemapping = runtimeProfile.Add<Tonemapping>(true);
-        tonemapping.mode.Override((TonemappingMode)Defaults.tonemappingMode);
-
-        Vignette vignette = runtimeProfile.Add<Vignette>(true);
-        vignette.color.Override(Defaults.vignette.color);
-        vignette.center.Override(Defaults.vignette.center);
-        vignette.intensity.Override(Defaults.vignette.intensity);
-        vignette.smoothness.Override(Defaults.vignette.smoothness);
-        vignette.rounded.Override(Defaults.vignette.rounded);
+        runtimeProfile.Add<ColorAdjustments>(true);
+        runtimeProfile.Add<WhiteBalance>(true);
+        runtimeProfile.Add<SplitToning>(true);
+        runtimeProfile.Add<Tonemapping>(true);
+        runtimeProfile.Add<Vignette>(true);
 
         worldVolume.sharedProfile = runtimeProfile;
-        ScreenPostProcessSettings.Changed += ApplyQuality;
-        ApplyQuality();
+        ScreenPostProcessSettings.Changed += ApplyStyleAndQuality;
+        ApplyStyleAndQuality();
         worldVolume.enabled = true;
     }
 
     /// <summary>取消订阅并释放运行时配置及其子资源，防止反复进出世界累积配置。</summary>
     private void ExitWorld()
     {
-        ScreenPostProcessSettings.Changed -= ApplyQuality;
+        ScreenPostProcessSettings.Changed -= ApplyStyleAndQuality;
         if (worldVolume != null)
             worldVolume.enabled = false;
 
@@ -125,25 +97,56 @@ public sealed class WorldPostProcessQuality : MonoBehaviour
 
     #endregion
 
-    #region 画质适配
+    #region 画面风格与性能适配
 
-    /// <summary>从 JSON 原值重新计算泛光，避免多次切换后强度累计衰减。</summary>
-    private void ApplyQuality()
+    /// <summary>颜色与光晕按当前风格更新；性能档位只降低 Bloom 成本，不改变昼夜权威光照。</summary>
+    private void ApplyStyleAndQuality()
     {
+        if (runtimeProfile == null || runtimeBloom == null)
+            return;
+
+        WorldRenderingConfig.WorldVolume style = CurrentStyle;
         ScreenPostProcessQuality quality = ScreenPostProcessSettings.Quality;
         bool medium = quality == ScreenPostProcessQuality.Medium;
 
-        // 低档停用整个泛光组件，省去下采样与上采样链；调色继续共用 URP LUT。
-        runtimeBloom.active = Defaults.bloom.enabled && quality != ScreenPostProcessQuality.Low;
-        runtimeBloom.intensity.Override(Defaults.bloom.intensity *
-            (medium ? Defaults.mediumBloomIntensityScale : 1f));
+        // 所有风格在低档保留调色，但跳过 Bloom 全部采样链。
+        runtimeBloom.active = style.bloom.enabled && quality != ScreenPostProcessQuality.Low;
+        runtimeBloom.threshold.Override(style.bloom.threshold);
+        runtimeBloom.intensity.Override(style.bloom.intensity *
+            (medium ? style.mediumBloomIntensityScale : 1f));
+        runtimeBloom.scatter.Override(style.bloom.scatter);
+        runtimeBloom.clamp.Override(style.bloom.clamp);
         runtimeBloom.highQualityFiltering.Override(
-            quality == ScreenPostProcessQuality.High && Defaults.bloom.highQualityFiltering);
+            quality == ScreenPostProcessQuality.High && style.bloom.highQualityFiltering);
         runtimeBloom.downscale.Override(medium ? BloomDownscaleMode.Quarter :
-            (BloomDownscaleMode)Defaults.bloom.downscale);
+            (BloomDownscaleMode)style.bloom.downscale);
         runtimeBloom.maxIterations.Override(medium
-            ? Mathf.Min(Defaults.mediumBloomMaxIterations, Defaults.bloom.maxIterations)
-            : Defaults.bloom.maxIterations);
+            ? Mathf.Min(style.mediumBloomMaxIterations, style.bloom.maxIterations)
+            : style.bloom.maxIterations);
+
+        runtimeProfile.TryGet(out ColorAdjustments grading);
+        grading.postExposure.Override(style.colorGrading.postExposure);
+        grading.contrast.Override(style.colorGrading.contrast);
+        grading.saturation.Override(style.colorGrading.saturation);
+
+        runtimeProfile.TryGet(out WhiteBalance balance);
+        balance.temperature.Override(style.whiteBalance.temperature);
+        balance.tint.Override(style.whiteBalance.tint);
+
+        runtimeProfile.TryGet(out SplitToning toning);
+        toning.shadows.Override(style.splitToning.shadows);
+        toning.highlights.Override(style.splitToning.highlights);
+        toning.balance.Override(style.splitToning.balance);
+
+        runtimeProfile.TryGet(out Tonemapping mapping);
+        mapping.mode.Override((TonemappingMode)style.tonemappingMode);
+
+        runtimeProfile.TryGet(out Vignette vignette);
+        vignette.color.Override(style.vignette.color);
+        vignette.center.Override(style.vignette.center);
+        vignette.intensity.Override(style.vignette.intensity);
+        vignette.smoothness.Override(style.vignette.smoothness);
+        vignette.rounded.Override(style.vignette.rounded);
     }
 
     #endregion

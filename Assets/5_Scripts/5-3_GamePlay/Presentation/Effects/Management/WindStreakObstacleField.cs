@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using Unity.Profiling;
 using UnityEngine.Rendering;
 
 /// <summary>把现有挡风格投影成可缓存的绕流纹理，供风线 Shader 一次采样。</summary>
@@ -11,12 +12,14 @@ public sealed class WindStreakObstacleField
 
     private const int PaddingCells = 12;
     private const int MaximumGridSide = 224;
+    private const int CameraMovementCacheCells = 8;
     private const float MaximumLateralBend = 6f;
     private const float ApproachDistance = 5f;
     private const float RejoinDistance = 7f;
     private const float SideInfluenceDistance = 3f;
     private const float MiddleBlendDistance = 0.75f;
     private const float WindDirectionRebuildDot = 0.9962f;
+    private static readonly ProfilerMarker RebuildMarker = new("WindStreaks.ObstacleField.Rebuild");
 
     private readonly List<(ChunkTerrainData terrain, long revision)> terrainVersions = new();
     private Texture2D flowTexture;
@@ -79,15 +82,17 @@ public sealed class WindStreakObstacleField
         int nextHeight = Mathf.CeilToInt(extentY * 2f) + PaddingCells * 2 + 2;
         if (nextWidth > MaximumGridSide || nextHeight > MaximumGridSide || nextWidth < 1 || nextHeight < 1)
         {
-            HasObstacles = false;
+            Reset();
             return;
         }
 
         int nextOriginX = Mathf.FloorToInt(cameraPosition.x - extentX) - PaddingCells - 1;
         int nextOriginY = Mathf.FloorToInt(cameraPosition.y - extentY) - PaddingCells - 1;
         uint nextRevision = BuildingOccupancyRegistry.GetWindBlockingRevision(worldKey);
-        bool dirty = cachedWorld != worldKey || originX != nextOriginX || originY != nextOriginY ||
-                     width != nextWidth || height != nextHeight || cachedChunkCount != chunks.Chunks.Count ||
+        // 镜头在已采样区域内移动时直接复用纹理，不因跨过一格而重新扫描和上传整片地形。
+        bool needsNewArea = cachedWorld != worldKey || !ContainsArea(originX, originY, width, height,
+            nextOriginX, nextOriginY, nextWidth, nextHeight);
+        bool dirty = needsNewArea || cachedChunkCount != chunks.Chunks.Count ||
                      cachedBuildingRevision != nextRevision ||
                      Vector2.Dot(cachedDirection, windDirection) < WindDirectionRebuildDot;
         if (!dirty)
@@ -103,11 +108,17 @@ public sealed class WindStreakObstacleField
             }
         }
         if (!dirty) return;
+        using var rebuildSample = RebuildMarker.Auto();
 
-        originX = nextOriginX;
-        originY = nextOriginY;
-        width = nextWidth;
-        height = nextHeight;
+        if (needsNewArea)
+        {
+            int marginX = Mathf.Min(CameraMovementCacheCells, (MaximumGridSide - nextWidth) / 2);
+            int marginY = Mathf.Min(CameraMovementCacheCells, (MaximumGridSide - nextHeight) / 2);
+            originX = nextOriginX - marginX;
+            originY = nextOriginY - marginY;
+            width = nextWidth + marginX * 2;
+            height = nextHeight + marginY * 2;
+        }
         cachedWorld = worldKey;
         cachedDirection = windDirection;
         cachedBuildingRevision = nextRevision;
@@ -124,7 +135,8 @@ public sealed class WindStreakObstacleField
         {
             if (!chunks.TryCreateTerrainPresenceQuery(out ChunkMgr.RuntimeTerrainPresenceQuery terrain))
             {
-                HasObstacles = false;
+                // 地形尚未就绪时失效缓存，防止下次进入同一视口仍使用空结果。
+                Reset();
                 return;
             }
 
@@ -172,6 +184,13 @@ public sealed class WindStreakObstacleField
         flowTexture.SetPixels32(flowPixels);
         flowTexture.Apply(false, false);
     }
+
+    internal static bool ContainsArea(int cacheX, int cacheY, int cacheWidth, int cacheHeight,
+        int requiredX, int requiredY, int requiredWidth, int requiredHeight)
+        => cacheWidth > 0 && cacheHeight > 0 && requiredWidth > 0 && requiredHeight > 0 &&
+           requiredX >= cacheX && requiredY >= cacheY &&
+           (long)requiredX + requiredWidth <= (long)cacheX + cacheWidth &&
+           (long)requiredY + requiredHeight <= (long)cacheY + cacheHeight;
 
     #endregion
 

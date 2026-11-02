@@ -19,8 +19,8 @@ MonoBehaviour:
   selection: 0
   loop: 1
   volume:
-    Min: 0.450
-    Max: 0.450
+    Min: 0.260
+    Max: 0.260
   pitch:
     Min: 1
     Max: 1

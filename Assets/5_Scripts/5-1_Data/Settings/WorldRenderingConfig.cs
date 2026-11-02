@@ -28,6 +28,7 @@ public sealed partial class WorldRenderingConfig
         public int postProcessQuality;
         public int waterStyle;
         public bool playerOcclusion;
+        public int postProcessStyle;
     }
 
     [MemoryPack.MemoryPackable]
@@ -227,7 +228,8 @@ public sealed partial class WorldRenderingConfig
     [Serializable]
     public sealed partial class RenderingPostProcess
     {
-        public WorldVolume worldVolume;
+        // 固定三档画面风格：清晰原色、自然柔光、电影氛围；与画质档位独立。
+        public WorldVolume[] worldVolumes;
         public float transitionSeconds;
         public float minimumActiveIntensity;
         public float defaultVignetteSmoothness;
@@ -366,16 +368,12 @@ public static class WorldRenderingConfigCatalog
         if (config == null)
             throw new InvalidOperationException($"缺少世界渲染配置：Resources/{ResourcePath}.json");
 
-        if (config.schemaVersion != 2 || config.preferences == null ||
+        if (config.schemaVersion != 3 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
             config.denseFog == null || config.zoomClouds == null || config.windStreaks == null || config.universeView == null ||
-            config.postProcess == null || config.postProcess.worldVolume == null ||
-            config.postProcess.worldVolume.bloom == null ||
-            config.postProcess.worldVolume.colorGrading == null ||
-            config.postProcess.worldVolume.whiteBalance == null ||
-            config.postProcess.worldVolume.splitToning == null ||
-            config.postProcess.worldVolume.vignette == null || config.grass == null || config.sorting == null ||
+            config.postProcess == null || config.postProcess.worldVolumes == null ||
+            config.postProcess.worldVolumes.Length != 3 || config.grass == null || config.sorting == null ||
             config.sorting.profiles == null || config.sorting.dynamicCategories == null ||
             config.sorting.batchProfiles == null ||
             string.IsNullOrWhiteSpace(config.sorting.terrainSortingLayer))
@@ -383,6 +381,7 @@ public static class WorldRenderingConfigCatalog
         if (!config.denseFog.IsValid || !config.zoomClouds.IsValid || !config.windStreaks.IsValid || !config.universeView.IsValid ||
             config.preferences.graphicsPreset < 0 || config.preferences.graphicsPreset > 5 ||
             config.preferences.postProcessQuality < 0 || config.preferences.postProcessQuality > 2 ||
+            config.preferences.postProcessStyle < 0 || config.preferences.postProcessStyle >= config.postProcess.worldVolumes.Length ||
             config.preferences.waterStyle < 0 || config.preferences.waterStyle > 3 ||
             config.shadows.minimumBlurStrength < 0f ||
             config.shadows.maximumBlurStrength < config.shadows.minimumBlurStrength ||
@@ -414,9 +413,6 @@ public static class WorldRenderingConfigCatalog
             config.interactionOutline.maximumThicknessPixels < config.interactionOutline.minimumThicknessPixels ||
             config.interactionOutline.thicknessPixels < config.interactionOutline.minimumThicknessPixels ||
             config.interactionOutline.thicknessPixels > config.interactionOutline.maximumThicknessPixels ||
-            config.postProcess.worldVolume.bloom.maxIterations < 1 ||
-            config.postProcess.worldVolume.mediumBloomMaxIterations < 1 ||
-            config.postProcess.worldVolume.mediumBloomIntensityScale < 0f ||
             config.grass.positionJitter < 0f ||
             config.grass.scaleRange.x <= 0f || config.grass.scaleRange.y <= 0f ||
             config.grass.accentVariantChance < 0f || config.grass.accentVariantChance > 1f ||
@@ -425,6 +421,17 @@ public static class WorldRenderingConfigCatalog
             config.sorting.batchRenderQueueBase < 0 || config.sorting.batchRenderQueueBase > 5000 ||
             config.sorting.batchProfiles.Length == 0)
             throw new InvalidOperationException($"世界渲染配置数值无效：Resources/{ResourcePath}.json");
+
+        foreach (WorldRenderingConfig.WorldVolume style in config.postProcess.worldVolumes)
+        {
+            if (style?.bloom == null || style.colorGrading == null || style.whiteBalance == null ||
+                style.splitToning == null || style.vignette == null ||
+                style.bloom.maxIterations < 1 || style.mediumBloomMaxIterations < 1 ||
+                style.mediumBloomIntensityScale < 0f || style.bloom.intensity < 0f ||
+                style.bloom.threshold < 0f || style.vignette.intensity < 0f ||
+                style.vignette.intensity > 1f)
+                throw new InvalidOperationException($"世界渲染画面风格无效：Resources/{ResourcePath}.json");
+        }
 
         var batchLayers = new HashSet<string>(StringComparer.Ordinal);
         foreach (WorldRenderingConfig.BatchSortingProfile profile in config.sorting.batchProfiles)

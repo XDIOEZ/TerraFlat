@@ -180,7 +180,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         {
             // 联机恢复只迁移本机权威角色，禁止落入旧的全世界退出和重建事务。
             if (toSpace || !GameNetwork.HasStateAuthority) return false;
-            if (!TryBeginLocalDimensionPresentation(player, targetAddress, definition)) return false;
+            if (!TryBeginLocalDimensionPresentation(player, targetAddress, definition, showLoadingPresentation: true)) return false;
             LocalDimensionPresentation presentation = localDimensionPresentation;
             networkTransitionPending = true;
             bool replied = false, acceptedReply = false;
@@ -220,7 +220,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         if (!source.IsValid || source.DimensionId == targetDimensionId) return false;
         Mod_DimensionPortal portal = sourcePortalItem.GetComponentInChildren<Mod_DimensionPortal>(true);
         if (portal == null || !portal.ValidateNetworkTransition(player, source, targetDimensionId, generatedWorldPortal)) return false;
-        if (!TryBeginLocalDimensionPresentation(player, source.WithDimension(targetDimensionId), definition)) return false;
+        if (!TryBeginLocalDimensionPresentation(player, source.WithDimension(targetDimensionId), definition,
+            showLoadingPresentation: true)) return false;
         LocalDimensionPresentation presentation = localDimensionPresentation;
 
         // 请求等待也是迁移的一部分，不能在服务器准备目标期间再启动第二次请求。
@@ -432,7 +433,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         GameManager.Instance.SetDimensionTransitionLoading("正在完成目标维度加载…", 0.96f);
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
         GameManager.Instance.CompleteDimensionTransitionLoading();
 
         targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
@@ -706,7 +707,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
 
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
     }
 
     // 出口归目标世界所有，准备出口不会移动任何玩家或改变主机活动场景。

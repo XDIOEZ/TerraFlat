@@ -372,7 +372,7 @@ namespace FlatWorld.Spaceflight
         {
             if (GameNetwork.HasStateAuthority || received == null) return false;
             if (!fullSnapshot && State != null && received.SimulationSeconds < State.SimulationSeconds) return false;
-            double presentationSeconds = State == null ? Time.fixedDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
+            double presentationSeconds = State == null ? GameplayFixedStepSimulation.TickDeltaTime : received.SimulationSeconds - State.SimulationSeconds;
             InteriorNetworkSnapshot interior = PrepareInteriorNetworkSnapshot(received, fullSnapshot);
             CapturePresentationState(false);
             RemoveObsoleteInteriorNetworkItems(interior);

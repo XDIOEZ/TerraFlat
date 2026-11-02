@@ -38,15 +38,21 @@ test.runtime("core_lifecycle", "persistent_object_hierarchy", {}, function(data)
     assert(data.gameManagerGrouped and data.uiGrouped and data.audioGrouped, "正式管理器未进入对应分类")
 end, "常驻对象跨场景保留、第三方收纳与独立释放")
 
--- 低帧率、倍速和暂停都读取 Unity 实际推进，不在测试中补算或调用固定步。
+-- 真正驱动由游戏 Update 时钟负责，不假设 Unity FixedUpdate 与 TPS 相同。
 test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     local function near(actual, expected, tolerance, message)
         assert(type(actual) == "number" and math.abs(actual - expected) < tolerance, message)
     end
-    assert(data.hostCount == 1 and data.managerOwnsActiveHost, "固定步驱动不是 GameManager 上的唯一活动宿主")
-    assert(data.defaultTicksPerSecond == 60, "默认固定步频率不是 60 Hz")
-    near(data.defaultFixedDelta, 1 / 60, .000001, "默认固定步时长错误")
-    near(data.maximumDelta, 4 / 60, .000001, "单帧固定步追赶预算不是约 4 步")
+    assert(data.hostCount == 1 and data.managerOwnsActiveHost, "游戏时钟驱动不是 GameManager 的唯一活动宿主")
+    assert(data.defaultTicksPerSecond == 30, "默认 TPS 不是 30 Hz")
+    near(data.defaultTickDelta, 1 / 30, .000001, "默认游戏 Tick 时长错误")
+    assert(data.manualPhysicsMode, "Unity 2D 物理没有交给脚本手动模拟")
+    local baseRate = data.effectiveTicksPerSecond
+    assert((baseRate == 30 or baseRate == 60 or baseRate == 120) and
+        (data.selectedTicksPerSecond == 30 or data.selectedTicksPerSecond == 60 or data.selectedTicksPerSecond == 120),
+        "玩家模拟频率无效")
+    local maxStepsPerFrame = data.maximumCatchUpTicks
+    assert(maxStepsPerFrame == 4, "独立时钟追赶上限不再是4个 Tick")
     assert(data.afterRegister == data.beforeRegister + 1 and data.afterUnregister == data.beforeUnregister - 1,
         "临时观察系统登记或卸载错误")
 
@@ -58,26 +64,31 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
         assert(sample.timeScale == speed and sample.endTimeScale == speed, "采样期间游戏倍速改变")
         assert(sample.targetFrameRate == 30 and sample.endTargetFrameRate == 30 and
             sample.vSyncCount == 0 and sample.endVSyncCount == 0, "低帧率现场未生效或中途被改变")
-        near(sample.fixedDelta, 1 / 60, .000001, "Unity 固定步不是 60 Hz")
-        near(sample.endFixedDelta, sample.fixedDelta, .000001, "采样期间 Unity 固定步长被改变")
-        assert(#sample.steps == ticks, "固定步计数与观察系统实际调用次数不一致")
-        near(sample.endFixedTime - sample.startFixedTime, ticks * sample.fixedDelta, .001,
-            "Unity 固定时间与正式固定步数不一致")
-        near(sample.endFixedTime - sample.startFixedTime, sample.endGameTime - sample.startGameTime,
-            sample.fixedDelta * 2 + .005, "固定时间没有跟随引擎游戏时间")
+        near(sample.tickDelta, 1 / baseRate, .000001, "自有时钟 Tick 时长错误")
+        near(sample.endTickDelta, sample.tickDelta, .000001, "采样中 Tick 步长发生变化")
+        near(sample.endFixedDelta, sample.fixedDelta, .000001, "游戏 Tick 意外改写 Unity FixedUpdate")
+        assert(#sample.steps == ticks, "游戏 Tick 计数与观察系统实际调用次数不一致")
+        near(sample.endClock - sample.startClock, ticks * sample.tickDelta, .001,
+            "自有游戏时钟与实际 Tick 次数不一致")
+        assert(sample.endPhysicsDispatch - sample.startPhysicsDispatch == ticks,
+            "世界原生物理分发没有按游戏 Tick 一对一执行")
+        assert(sample.endPhysicsSceneSteps - sample.startPhysicsSceneSteps >= ticks or ticks == 0,
+            "物理分发没有推进任何有效原生 PhysicsScene2D")
         local sameFrameSteps = false
         local stepsPerFrame = {}
         local previous
         for index, step in ipairs(sample.steps) do
-            assert(step.tick == sample.startTick + index, "固定步序号不连续")
-            near(step.delta, sample.fixedDelta, .000001, "系统收到的时间不是 Unity 固定步长")
-            near(step.clock, step.fixedTime, .000001, "公共时钟没有使用 Unity 固定时间")
+            assert(step.tick == sample.startTick + index, "游戏 Tick 序号不连续")
+            near(step.delta, sample.tickDelta, .000001, "系统收到的时间不是游戏 Tick 时长")
+            near(step.clock, sample.startClock + index * sample.tickDelta, .001, "公共时钟没有按 Tick 推进")
+            assert(step.physicsDispatch == sample.startPhysicsDispatch + index and
+                step.manualPhysicsMode, "物理未随同一次游戏 Tick 手动推进")
             stepsPerFrame[step.frame] = (stepsPerFrame[step.frame] or 0) + 1
-            assert(stepsPerFrame[step.frame] <= 4, "同一渲染帧执行超过 4 次 FixedUpdate")
+            assert(stepsPerFrame[step.frame] <= maxStepsPerFrame, "同一渲染帧的游戏 Tick 超过追赶预算")
             if previous then
-                assert(step.frame >= previous.frame, "固定步的渲染帧序号倒退")
+                assert(step.frame >= previous.frame, "游戏 Tick 的渲染帧序号倒退")
                 if step.frame == previous.frame then sameFrameSteps = true end
-                near(step.fixedTime - previous.fixedTime, sample.fixedDelta, .0001, "连续固定时间不对应一次引擎固定步")
+                near(step.clock - previous.clock, sample.tickDelta, .0001, "相邻游戏 Tick 时长不一致")
             end
             previous = step
         end
@@ -87,8 +98,9 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     local normalWall, normalTicks, normalFrames, normalMulti = check_window(data.normal, 1, 1.5)
     local doubleWall, doubleTicks, doubleFrames, doubleMulti = check_window(data.double, 2, 1.5)
     assert(normalFrames / normalWall <= 36 and doubleFrames / doubleWall <= 36,
-        "现场没有实际降到约 30 渲染帧，不能验证低帧率补步")
-    assert(normalMulti and doubleMulti, "低帧率下没有观察到同一渲染帧中的多个真实固定步")
+        "现场没有实际降到约30渲染帧，不能验证低帧率独立追赶")
+    assert((baseRate <= 30 or normalMulti) and doubleMulti,
+        "低帧率下没有观察到同一渲染帧中的多个真实游戏 Tick")
     local function check_unclipped_time_scale(sample, speed)
         local scaled, unscaled = 0, 0
         for _, frame in ipairs(sample.frames) do
@@ -103,30 +115,29 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     check_unclipped_time_scale(data.normal, 1)
     check_unclipped_time_scale(data.double, 2)
 
-    -- 受控卡顿要被引擎时间预算截断，不能在下一帧补跑约 200ms 的固定步。
+    -- 受控卡顿按游戏自己的 Tick 预算丢弃超额时间，不能用 Unity 时间截断代替。
     local function check_bounded_hitch(sample, speed)
         local wall = sample.endWall - sample.startWall
-        local gameTime = sample.endGameTime - sample.startGameTime
-        local fixedTime = sample.endFixedTime - sample.startFixedTime
+        local simulatedTime = sample.endClock - sample.startClock
         local ticks = sample.endTick - sample.startTick
         assert(sample.hitchMilliseconds >= 200 and wall >= .18 and sample.unscaledDelta >= .18,
             "受控卡顿未触发，无法验证追赶上限")
         assert(sample.timeScale == speed and sample.endTimeScale == speed,
             "卡顿采样期间倍速发生变化")
         assert(sample.endFrame == sample.startFrame + 1, "卡顿采样不是相邻的两个渲染帧")
-        near(sample.fixedDelta, 1 / 60, .000001, "卡顿后物理固定步长发生变化")
-        near(sample.maximumDelta, data.maximumDelta, .000001, "卡顿后最大追赶预算发生变化")
-        assert(ticks >= 1 and ticks <= 4 and #sample.steps == ticks,
-            "卡顿后单帧固定步执行次数不是 1～4 次")
-        assert(gameTime > 0 and gameTime <= sample.maximumDelta + .003 and
-            sample.scaledDelta <= sample.maximumDelta + .003,
-            "超额卡顿时间没有被截断，游戏仍在追债")
-        assert(wall > gameTime * 2, "卡顿后游戏时间没有按预算减速")
-        near(fixedTime, ticks * sample.fixedDelta, .001, "卡顿后物理时间与固定步数不匹配")
+        near(sample.tickDelta, 1 / baseRate, .000001, "卡顿后游戏 Tick 时长发生变化")
+        assert(ticks >= 1 and ticks <= maxStepsPerFrame and #sample.steps == ticks,
+            "卡顿后单帧游戏 Tick 次数超出 TPS 预算")
+        assert(sample.manualPhysicsMode and
+            sample.endPhysicsDispatch - sample.startPhysicsDispatch == ticks,
+            "卡顿后原生物理未和游戏 Tick 保持一对一")
+        assert(simulatedTime <= maxStepsPerFrame * sample.tickDelta + .003 and
+            simulatedTime < sample.unscaledDelta * speed,
+            "卡顿后独立时钟未丢弃超额模拟时间")
+        near(simulatedTime, ticks * sample.tickDelta, .001, "卡顿后游戏时钟与 Tick 不匹配")
         for index, step in ipairs(sample.steps) do
             assert(step.frame == sample.endFrame and step.tick == sample.startTick + index,
-                "卡顿后的固定步没有落在同一个连续渲染帧")
-            near(step.clock, step.fixedTime, .000001, "卡顿后的公共时钟偏离 Unity 固定时钟")
+                "卡顿后的 Tick 没有落在同一个渲染帧")
         end
     end
     check_bounded_hitch(data.normalHitch, 1)
@@ -146,12 +157,11 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
 
     local pausedWall, pausedTicks, pausedFrames = check_window(data.paused, 0, 1.0)
     assert(check_hud_rate(data.paused, pausedWall, pausedTicks, "暂停") == 0, "暂停后 TPS 没有归零")
-    assert(pausedFrames > 0 and pausedTicks == 0 and data.paused.endFixedTime == data.paused.startFixedTime and
-        data.paused.endGameTime == data.paused.startGameTime,
-        "暂停后固定步仍推进或渲染停止")
+    assert(pausedFrames > 0 and pausedTicks == 0 and data.paused.endClock == data.paused.startClock,
+        "暂停后独立游戏时钟仍推进或渲染停止")
     local _, resumedTicks, resumedFrames = check_window(data.resumed, 1, .35)
     assert(resumedTicks > 0 and resumedFrames > 0, "恢复正常时间后固定步或渲染没有继续")
     for _, key in ipairs({ "timeScale", "fixedDelta", "targetFrameRate", "vSyncCount", "showFps", "showFpsKeyExists", "showFpsStored" }) do
         assert(data.restored[key] == data.original[key], "现场结束后设置没有恢复：" .. key)
     end
-end, "真实 30 帧画面、60 Hz 固定步、倍速、暂停与设置恢复")
+end, "真实30帧画面、自有30Hz TPS、原生手动物理、倍速暂停与设置恢复")

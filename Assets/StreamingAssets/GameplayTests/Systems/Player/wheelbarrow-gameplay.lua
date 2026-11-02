@@ -7,6 +7,25 @@ test.runtime("player", "wheelbarrow_setup", {}, function(data)
     assert(data.twelveAccepted and not data.thirteenthAccepted, "货仓格数没有限制为 12 格")
 end, "独轮车正式放置及真实库存容量")
 
+test.runtime("player", "wheelbarrow_hold_board", {}, function(data)
+    assert(data.tapped and data.cargoOpened and data.tapKeptWalking,
+        "短按交互键应打开车斗，但不能使玩家进入推行状态")
+    assert(data.held and data.mounted and data.behindCart and data.playerBodyDisabled,
+        "长按交互键未取得手推车控制权，或玩家没有站在车尾")
+    assert(data.progressStarted and data.progressAdvanced and data.progressFilled and data.progressCleared,
+        "长按期间光标进度环没有从零填满，或松手后没有恢复普通光标")
+    assert(data.releaseKeptMounted and data.tappedWhileMounted and data.mountedTapKeptMounted,
+        "长按完成后松键、再次短按不应自动下车")
+end, "独轮车短按开仓与长按站立手推")
+test.move(0, -1, .8)
+test.runtime("player", "wheelbarrow_hold_leave", {}, function(data)
+    assert(data.mountedBefore and data.movedDistance > .05,
+        "手推模式没有消费正常移动输入推动独轮车")
+    assert(data.held and data.dismounted, "再次长按未释放载具租约并恢复玩家刚体")
+    assert(data.canceledHold and data.canceledKeptWalking and data.canceledCursorCleared,
+        "取消长按后错误上车，或圆形加载光标没有复原")
+end, "独轮车推行、长按下车与取消保护")
+
 local function prepare(side)
     test.runtime("player", "wheelbarrow_prepare", {side = side}, function(data)
         assert(data.ready and not data.rider and not data.carrierSource, "车体或角色状态不适合本轮推动")

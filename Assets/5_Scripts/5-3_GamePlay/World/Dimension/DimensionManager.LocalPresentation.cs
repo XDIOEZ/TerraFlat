@@ -21,13 +21,15 @@ public sealed partial class DimensionManager
         public readonly Rigidbody2D Body;
         public readonly bool WasSimulated;
         public readonly bool WasRunning;
+        public readonly bool ShowsLoadingPresentation;
         public bool Committed;
         private bool disposed;
 
-        public LocalDimensionPresentation(Player actor, WorldAddress target)
+        public LocalDimensionPresentation(Player actor, WorldAddress target, bool showsLoadingPresentation)
         {
             Actor = actor;
             Target = target;
+            ShowsLoadingPresentation = showsLoadingPresentation;
             Save = SaveDataMgr.Instance?.SaveData;
             Game = GameManager.Instance;
             Session = GameNetwork.Session;
@@ -75,17 +77,19 @@ public sealed partial class DimensionManager
         }
     }
 
-    private bool TryBeginLocalDimensionPresentation(Player actor, WorldAddress target, DimensionDefinition definition)
+    private bool TryBeginLocalDimensionPresentation(Player actor, WorldAddress target, DimensionDefinition definition,
+        bool showLoadingPresentation)
     {
         if (localDimensionPresentation != null)
             return localDimensionPresentation.Actor == actor && localDimensionPresentation.Target == target &&
                 IsLocalDimensionPresentationValid(localDimensionPresentation) &&
-                localDimensionPresentation.Game.BeginNetworkDimensionLoading(definition);
+                (!localDimensionPresentation.ShowsLoadingPresentation ||
+                 localDimensionPresentation.Game.BeginNetworkDimensionLoading(definition));
         if (actor == null || actor != ItemMgr.Instance?.User_Player ||
-            !GameManager.Instance.BeginNetworkDimensionLoading(definition)) return false;
+            showLoadingPresentation && !GameManager.Instance.BeginNetworkDimensionLoading(definition)) return false;
         try
         {
-            localDimensionPresentation = new LocalDimensionPresentation(actor, target);
+            localDimensionPresentation = new LocalDimensionPresentation(actor, target, showLoadingPresentation);
             localDimensionPresentation.Game.Event_GameWorldExit += OnLocalDimensionWorldExit;
             localDimensionPresentation.Session.StateChanged += OnLocalDimensionSessionChanged;
             localDimensionPresentation.Freeze();
@@ -93,7 +97,8 @@ public sealed partial class DimensionManager
         }
         catch
         {
-            GameManager.ExistingInstance?.EndNetworkDimensionLoading(false, "维度切换保护未能建立。");
+            if (showLoadingPresentation)
+                GameManager.ExistingInstance?.EndNetworkDimensionLoading(false, "维度切换保护未能建立。");
             ReleaseLocalDimensionPresentation(localDimensionPresentation);
             throw;
         }

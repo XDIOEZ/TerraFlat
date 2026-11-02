@@ -60,6 +60,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         public ItemShadowVisualDefinitionDto ShadowVisual;
         public Mod_Building Building;
         public IVisualGroundOffset GroundOffsetProvider;
+        public IShadowFootprintBoundsProvider FootprintProvider;
         public float NextCheck;
         public bool InvalidGeometryReported;
     }
@@ -418,7 +419,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             Authoring = authoring,
             ShadowVisual = shadowVisual,
             Building = building,
-            GroundOffsetProvider = VisualGroundOffsetResolver.FindProvider(item)
+            GroundOffsetProvider = VisualGroundOffsetResolver.FindProvider(item),
+            FootprintProvider = item.GetComponent<IShadowFootprintBoundsProvider>()
         });
     }
 
@@ -689,7 +691,9 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         }
 
         Vector3 visualOffset = VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider, source.transform);
-        Bounds footprint = ShadowFootprintResolver.MeasureVisibleWorldBounds(source);
+        Bounds footprint = binding.FootprintProvider != null
+            ? binding.FootprintProvider.MeasureWorldShadowFootprintBounds(source)
+            : ShadowFootprintResolver.MeasureVisibleWorldBounds(source);
         footprint.center -= visualOffset;
         float footY = ResolveFootY(owner, footprint, authoring, binding.ShadowVisual);
         Bounds sourceBounds = source.drawMode == SpriteDrawMode.Simple

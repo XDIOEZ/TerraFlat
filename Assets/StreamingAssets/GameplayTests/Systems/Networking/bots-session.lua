@@ -33,6 +33,10 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
     end
     assert(data.transport == "mirror-in-memory" and data.requestedCount == 4 and #data.players == 4,
         "正式 Mirror 内存传输没有创建四名远端假人")
+    assert(data.canPauseWithoutRemotePlayers and not data.canPauseDuringRemoteHandshake
+        and not data.canPauseWithRemotePlayer
+        and data.canPauseAfterRemoteDisconnect,
+        "单人 Host、远端加入或全部断开后的世界暂停资格错误")
     local profiles, net_ids, guids = {}, {}, {}
     for _, player in ipairs(data.players) do
         assert(type(player.profile) == "string" and #player.profile > 0 and not profiles[player.profile],
@@ -154,6 +158,8 @@ test.runtime("networking", "bots_reconnect", {}, function(data)
             "重连复用了旧网络角色或保留了旧出生对象")
         net_ids[round.netId] = true
         assert(round.connections == 1, "复用连接 ID 后服务端出现重复连接")
+        assert(not round.canPauseWithRemotePlayer and round.canPauseWithoutRemotePlayer,
+            "主机在远端连接或断开后没有正确切换暂停资格")
         assert(round.freshSequence.present and math.abs(round.freshSequence.x - 0.5) < 0.000001
             and round.freshSequence.y == 0, "新连接仍被上一轮输入序号挡住")
         if round.staleCleanupPreservedInput then

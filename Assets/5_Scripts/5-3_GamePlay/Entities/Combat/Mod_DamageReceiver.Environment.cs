@@ -38,7 +38,8 @@ public partial class Mod_DamageReceiver
             Credit = source, Damage = GameplayCombatBridge.Values(damage), ImpactKind = (byte)damage.DominantKind,
             DeathCauseId = GameplayCombatBridge.NarrativeCauseId(deathCauseId),
             Origin = logicalOrigin, HitPoint = (Vector2)WorldLocalPresentation.ToLogical(item.transform.position),
-            Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime },
+            Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = GameplayFixedStepSimulation.CurrentTime,
+                DeltaTime = GameplayFixedStepSimulation.TickDeltaTime },
             BuildingMultiplier = 1f, ResourceToolEfficiency = 1f, IsTrueDamage = (byte)(isTrueDamage ? 1 : 0)
         };
         return HurtContext(context, 1f, ignoreInterval: true, deathCause: origin);

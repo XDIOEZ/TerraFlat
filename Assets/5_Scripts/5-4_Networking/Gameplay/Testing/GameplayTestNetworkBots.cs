@@ -58,11 +58,17 @@ namespace FlatWorld.Networking.Gameplay
             using var world = new BotWorld(local);
             var result = new JObject { ["transport"] = "mirror-in-memory", ["requestedCount"] = count,
                 ["hostPreparation"] = world.HostPreparation };
+            result["canPauseWithoutRemotePlayers"] = GameNetwork.CanPauseLocalWorld;
             var players = new JArray();
             for (int i = 0; i < count; i++)
             {
                 int id = 31 + i;
                 yield return world.Join(id, world.Prefix + "same", i == 0);
+                if (i == 0)
+                {
+                    result["canPauseDuringRemoteHandshake"] = world.CanPauseDuringRemoteHandshake;
+                    result["canPauseWithRemotePlayer"] = GameNetwork.CanPauseLocalWorld;
+                }
                 NetworkWorldPlayer bot = world.Core(id);
                 uint netId = bot.netId;
                 world.Transport.Receive(id, new NetworkWorldReady());
@@ -155,6 +161,7 @@ namespace FlatWorld.Networking.Gameplay
             result["liveConnections"] = NetworkServer.connections.Count;
             world.Dispose();
             yield return null;
+            result["canPauseAfterRemoteDisconnect"] = GameNetwork.CanPauseLocalWorld;
             result["cleanup"] = world.CleanupSample();
             completed(result);
         }
@@ -499,7 +506,8 @@ namespace FlatWorld.Networking.Gameplay
                 var sample = new JObject { ["profile"] = bot.DisplayName, ["netId"] = bot.netId,
                     ["sameSavedData"] = i == 0 || ReferenceEquals(previousData, bot.CorePlayer.Data),
                     ["oldSpawnPresent"] = previousId != 0 && NetworkServer.spawned.ContainsKey(previousId),
-                    ["connections"] = NetworkServer.connections.Count };
+                    ["connections"] = NetworkServer.connections.Count,
+                    ["canPauseWithRemotePlayer"] = GameNetwork.CanPauseLocalWorld };
                 previousData = bot.CorePlayer.Data;
                 previousId = bot.netId;
                 world.Transport.Receive(71, new NetworkSpaceInput { Sequence = 1, Input = new SpacePassengerInput { MoveX = .5f } });
@@ -512,6 +520,7 @@ namespace FlatWorld.Networking.Gameplay
                 }
                 previousConnection = NetworkServer.connections[71];
                 world.Transport.ServerDisconnect(71);
+                sample["canPauseWithoutRemotePlayer"] = GameNetwork.CanPauseLocalWorld && NetworkServer.active;
                 sample["runtimePresentAfterDisconnect"] = ItemMgr.Instance.Player_DIC.ContainsKey(profile);
                 sample["inputAfterDisconnect"] = InputSample(world.Session, profile);
                 sample["savedAfterDisconnect"] = SaveDataMgr.Instance.SaveData.PlayerData_Dict.ContainsKey(profile);
@@ -550,6 +559,7 @@ namespace FlatWorld.Networking.Gameplay
             private bool disposed;
             public JObject ReplayedHandshake { get; private set; }
             public JObject HostPreparation { get; private set; }
+            public bool CanPauseDuringRemoteHandshake { get; private set; }
 
             public BotWorld(Player player)
             {
@@ -683,6 +693,7 @@ namespace FlatWorld.Networking.Gameplay
                 SeedProfile(requested);
                 SeedProfile(requested + "_" + id + "_1");
                 Transport.ConnectBot(id);
+                CanPauseDuringRemoteHandshake = GameNetwork.CanPauseLocalWorld;
                 Transport.Receive(id, Hello());
                 Transport.Receive(id, new NetworkJoinRequest { PlayerName = requested });
                 yield return Wait(() => Transport.Count<NetworkWorldSnapshotBegin>(id) > 0 &&

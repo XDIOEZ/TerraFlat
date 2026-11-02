@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
@@ -78,14 +78,15 @@ public sealed partial class DimensionManager
 
     #region 本机维度呈现事务
     // 维度切换只锁定本机角色，不触发全服世界退出或暂停玩法时钟。
-    public IEnumerator ApplyNetworkPresentation(Player actor, WorldAddress target, Vector3 position)
+    public IEnumerator ApplyNetworkPresentation(Player actor, WorldAddress target, Vector3 position,
+        bool showLoadingPresentation = true)
     {
         if (actor == null || actor != ItemMgr.Instance?.User_Player ||
             !target.IsValid || !IsFinitePosition(position) || isTransitioning)
             throw new InvalidOperationException("本机维度呈现请求无效或已有切换正在执行。");
         if (!TryGetDefinition(target.DimensionId, out DimensionDefinition definition) ||
-            !TryBeginLocalDimensionPresentation(actor, target, definition))
-            throw new InvalidOperationException("目标维度加载页尚未就绪。");
+            !TryBeginLocalDimensionPresentation(actor, target, definition, showLoadingPresentation))
+            throw new InvalidOperationException("目标维度呈现保护未能建立。");
         LocalDimensionPresentation presentation = localDimensionPresentation;
         presentation.Committed = true;
         isTransitioning = true;
@@ -94,21 +95,25 @@ public sealed partial class DimensionManager
         try
         {
             yield return GameManager.RunWorldTransitionSteps(
-                ApplyNetworkPresentationSteps(actor, target, position, () => IsLocalDimensionPresentationValid(presentation)), error => failure = error);
+                ApplyNetworkPresentationSteps(actor, target, position, () => IsLocalDimensionPresentationValid(presentation),
+                    presentation.ShowsLoadingPresentation), error => failure = error);
             if (failure != null) throw failure;
             presentation.RestorePhysics();
             Physics2D.SyncTransforms();
-            yield return new WaitForFixedUpdate();
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             if (!IsLocalDimensionPresentationValid(presentation))
                 throw new InvalidOperationException("维度呈现完成前角色或连接已改变。");
             actor.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
-            presentation.Game.EndNetworkDimensionLoading(true);
-            // 加载幕完全退场后才归还控制，避免淡出期间的按住移动泄漏到目标世界。
-            while (presentation.Game.IsDimensionLoadingPresentationActive)
+            if (presentation.ShowsLoadingPresentation)
             {
-                if (!IsLocalDimensionPresentationValid(presentation))
-                    throw new InvalidOperationException("维度加载幕退场期间角色或连接已改变。");
-                yield return null;
+                presentation.Game.EndNetworkDimensionLoading(true);
+                // 加载幕完全退场后才归还控制，避免淡出期间的按住移动泄漏到目标世界。
+                while (presentation.Game.IsDimensionLoadingPresentationActive)
+                {
+                    if (!IsLocalDimensionPresentationValid(presentation))
+                        throw new InvalidOperationException("维度加载幕退场期间角色或连接已改变。");
+                    yield return null;
+                }
             }
             NetworkDimensionBridge.NotifyPresentationReady(actor, target.WorldKey);
             completed = true;
@@ -121,31 +126,38 @@ public sealed partial class DimensionManager
             {
                 if (completed || !IsLocalDimensionPresentationValid(presentation) || !presentation.RequiresConnection)
                 {
-                    if (!completed && presentation.Game != null) presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
+                    if (!completed && presentation.Game != null && presentation.ShowsLoadingPresentation)
+                        presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
                     ReleaseLocalDimensionPresentation(presentation);
                 }
                 else
                 {
                     // 权威归属已提交时，表现失败仍保持冻结，等待目标快照重试或断线退出。
                     if (presentation.Body != null) presentation.Body.simulated = false;
-                    presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
+                    if (presentation.ShowsLoadingPresentation)
+                        presentation.Game.EndNetworkDimensionLoading(false, failure?.Message);
                 }
             }
         }
     }
 
-    private IEnumerator ApplyNetworkPresentationSteps(Player actor, WorldAddress target, Vector3 position, Func<bool> stillValid)
+    private IEnumerator ApplyNetworkPresentationSteps(Player actor, WorldAddress target, Vector3 position,
+        Func<bool> stillValid, bool showLoadingPresentation)
     {
-        double deadline = Time.realtimeSinceStartupAsDouble + 15d;
-        while (!GameManager.Instance.IsDimensionLoadingPresentationVisible)
+        if (showLoadingPresentation)
         {
-            if (!stillValid() || actor == null || Time.realtimeSinceStartupAsDouble > deadline)
-                throw new InvalidOperationException("维度加载页未能准备完成，或连接已断开。");
-            yield return null;
+            double deadline = Time.realtimeSinceStartupAsDouble + 15d;
+            while (!GameManager.Instance.IsDimensionLoadingPresentationVisible)
+            {
+                if (!stillValid() || actor == null || Time.realtimeSinceStartupAsDouble > deadline)
+                    throw new InvalidOperationException("维度加载页未能准备完成，或连接已断开。");
+                yield return null;
+            }
+            yield return new WaitForEndOfFrame();
         }
-        yield return new WaitForEndOfFrame();
         actor.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.PrepareForWorldTransition();
-        GameManager.Instance.ReportNetworkDimensionLoading("正在准备目标世界…", .35f);
+        if (showLoadingPresentation)
+            GameManager.Instance.ReportNetworkDimensionLoading("正在准备目标世界…", .35f);
         yield return GameplayWorldRegistry.PrepareWorld(target.WorldKey, position);
         if (!stillValid() || actor == null)
             throw new InvalidOperationException("维度准备期间连接已断开。");
@@ -163,12 +175,17 @@ public sealed partial class DimensionManager
         actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
         PlayerTeleportService.ApplySurfacePose(actor, position);
         GameManager.AssignRegisteredPlayerAndChildItemsToWorld(actor, target.WorldKey);
-        GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f);
-        yield return PlayerTeleportService.WaitForSurfaceArrival(actor, position,
-            progress => GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f + progress * .25f), stillValid);
+        if (showLoadingPresentation)
+            GameManager.Instance.ReportNetworkDimensionLoading("正在绘制目标区域…", .75f);
+        Action<float> reportProgress = null;
+        if (showLoadingPresentation)
+            reportProgress = progress => GameManager.Instance.ReportNetworkDimensionLoading(
+                "正在绘制目标区域…", .75f + progress * .25f);
+        yield return PlayerTeleportService.WaitForSurfaceArrival(actor, position, reportProgress, stillValid);
         if (!stillValid() || actor == null)
             throw new InvalidOperationException("维度呈现期间连接已断开。");
-        GameManager.Instance.ReportNetworkDimensionLoading("目标区域已准备完成。", 1f);
+        if (showLoadingPresentation)
+            GameManager.Instance.ReportNetworkDimensionLoading("目标区域已准备完成。", 1f);
     }
 
     #endregion

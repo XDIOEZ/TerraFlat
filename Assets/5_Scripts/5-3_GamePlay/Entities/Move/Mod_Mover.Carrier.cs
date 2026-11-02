@@ -35,7 +35,9 @@ public partial class Mod_Mover
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         CarrierSource = source;
         ResetSwimmingAudio();
-        carrierTileEffects.SetEffectsSuppressed(this, true);
+        // 船舱隔绝环境，自行车等敞开载具继续让乘员感受真实水体和地形效果。
+        if (source is not ICarrierRiderTerrainContactPolicy policy || !policy.AllowsRiderTerrainContact)
+            carrierTileEffects.SetEffectsSuppressed(this, true);
         carrierHealth.DeathStarted += HandleCarrierRiderDeath;
         carrierGame = GameManager.Instance;
         if (carrierGame != null) carrierGame.Event_GameWorldExit += HandleCarrierWorldExit;
@@ -90,8 +92,15 @@ public partial class Mod_Mover
         {
             ExternalVelocity = CarrierSource.CurrentVelocity;
             ApplyCarrierPosition(CarrierSource.SeatPosition);
+            // 手推车站立操作时播放行走动画，普通乘坐继续保持非步行状态。
+            bool walksWhileOperating = CarrierSource is Mod_Carrier { RiderWalksWhileOperating: true };
+            DrivenVelocity = walksWhileOperating && !locked && hasMoveInput
+                ? CarrierSource.CurrentVelocity : Vector2.zero;
+            UpdateMovementState();
+            if (walksWhileOperating && IsMoving && stamina != null && GameNetwork.HasStateAuthority)
+                stamina.ConsumeStaminaPerSecond(StaminaConsumptionSources.MovementWalk, MoveStaminaConsume, deltaTime);
+            hungerActionInstance?.SetMovementState(walksWhileOperating && IsMoving, false);
         }
-        hungerActionInstance?.SetMovementState(false, false);
         return true;
     }
 
@@ -187,7 +196,8 @@ public partial class Mod_Mover
     #region 载具推动阻力反馈
     private Mod_Carrier resistedCarrier;
     private Vector2 pushResistanceNormal;
-    private float pushResistanceSpeed, pushResistanceUntil;
+    private float pushResistanceSpeed;
+    private double pushResistanceUntil;
     public Vector2 CarrierPushIntentVelocity => DrivenVelocity;
 
     /// <summary>接触反馈只限制实际提交速度，保留未受限制的推动意图避免倍率闭环。</summary>
@@ -196,7 +206,7 @@ public partial class Mod_Mover
         if (carrier == null || !carrier.CanReceivePush(this) || !float.IsFinite(normal.sqrMagnitude) ||
             normal.sqrMagnitude < .0001f || !float.IsFinite(maximumSpeed) || maximumSpeed < 0f) return;
         resistedCarrier = carrier; pushResistanceNormal = normal.normalized;
-        pushResistanceSpeed = maximumSpeed; pushResistanceUntil = Time.time + .1f;
+        pushResistanceSpeed = maximumSpeed; pushResistanceUntil = GameplayFixedStepSimulation.CurrentTime + .1f;
         if (rb != null && rb.simulated) rb.velocity = ResolveCarrierPushResistance(DrivenVelocity + ExternalVelocity);
     }
 
@@ -204,7 +214,7 @@ public partial class Mod_Mover
     {
         if (resistedCarrier == null) return velocity;
         if (rb == null || !resistedCarrier.IsAvailable || !resistedCarrier.CanReceivePush(this) ||
-            resistedCarrier.gameObject.scene != gameObject.scene || Time.time > pushResistanceUntil ||
+            resistedCarrier.gameObject.scene != gameObject.scene || GameplayFixedStepSimulation.CurrentTime > pushResistanceUntil ||
             Vector2.Dot(DrivenVelocity, pushResistanceNormal) <= .0001f ||
             WorldTopologyRuntime.Distance(rb.position, resistedCarrier.Body.position) >
                 resistedCarrier.PushHalfExtents.magnitude + pushContactRadius + .25f)
@@ -222,6 +232,6 @@ public partial class Mod_Mover
     }
 
     private void ClearCarrierPushResistance()
-    { resistedCarrier = null; pushResistanceNormal = Vector2.zero; pushResistanceSpeed = pushResistanceUntil = 0f; }
+    { resistedCarrier = null; pushResistanceNormal = Vector2.zero; pushResistanceSpeed = 0f; pushResistanceUntil = 0d; }
     #endregion
 }

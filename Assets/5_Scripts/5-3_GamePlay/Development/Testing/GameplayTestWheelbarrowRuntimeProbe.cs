@@ -7,6 +7,7 @@ using FlatWorld.WorldModel;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityInputSystem = UnityEngine.InputSystem.InputSystem;
@@ -27,6 +28,8 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_setup", Setup);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_hold_board", HoldBoard);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_hold_leave", HoldLeave);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_prepare", Prepare);
         GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_sample", Sample);
         GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_carrier_occupancy_lifecycle", CarrierOccupancyLifecycle);
@@ -75,6 +78,82 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         };
     }
 
+    /// <summary>通过正式交互发送器验证短按开仓、长按接管与松键不误下车。</summary>
+    private static IEnumerator HoldBoard(Player player, JObject args, Action<JObject> completed)
+    {
+        Fixture fixture = Require(player);
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
+            ?? throw new InvalidOperationException("独轮车长按回归缺少交互发送器。");
+        bool tapped = sender.TryInteractTarget(fixture.Carrier);
+        bool cargoOpened = fixture.Driver.CargoInventory.basePanel?.IsOpen() == true;
+        bool tapKeptWalking = fixture.Mover.CarrierSource == null && fixture.Carrier.Rider == null;
+        fixture.Driver.CargoInventory.basePanel?.Close();
+        yield return null;
+
+        bool held = sender.TryBeginHeldInteraction(fixture.Carrier);
+        GamepadUIRuntimeController cursor = EventSystem.current?.GetComponent<GamepadUIRuntimeController>();
+        bool progressStarted = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                               cursor.WorldInteractionHoldProgress01 < .2f;
+        float halfway = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds * .5f;
+        while (Time.unscaledTime < halfway) yield return null;
+        bool progressAdvanced = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                                cursor.WorldInteractionHoldProgress01 > .2f &&
+                                cursor.WorldInteractionHoldProgress01 < 1f;
+        float deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .15f;
+        while (Time.unscaledTime < deadline) yield return null;
+        bool progressFilled = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                              cursor.WorldInteractionHoldProgress01 >= .99f;
+        bool mounted = fixture.Carrier.Rider == fixture.Mover &&
+                       ReferenceEquals(fixture.Mover.CarrierSource, fixture.Carrier);
+        bool behindCart = Vector2.Dot(
+            WorldTopologyRuntime.ShortestDelta(player.transform.position, fixture.Carrier.Body.position).normalized,
+            fixture.Driver.ForwardDirection) > .7f;
+        bool playerBodyDisabled = !fixture.Mover.rb.simulated;
+        sender.EndHeldInteraction();
+        bool progressCleared = cursor != null && !cursor.IsWorldInteractionHoldCursorVisible;
+        bool releaseKeptMounted = fixture.Carrier.Rider == fixture.Mover;
+        bool tappedWhileMounted = sender.TryInteractTarget(fixture.Carrier);
+        bool mountedTapKeptMounted = fixture.Carrier.Rider == fixture.Mover;
+        completed(new JObject
+        {
+            ["tapped"] = tapped, ["cargoOpened"] = cargoOpened, ["tapKeptWalking"] = tapKeptWalking,
+            ["held"] = held, ["mounted"] = mounted, ["behindCart"] = behindCart,
+            ["progressStarted"] = progressStarted, ["progressAdvanced"] = progressAdvanced,
+            ["progressFilled"] = progressFilled, ["progressCleared"] = progressCleared,
+            ["playerBodyDisabled"] = playerBodyDisabled, ["releaseKeptMounted"] = releaseKeptMounted,
+            ["tappedWhileMounted"] = tappedWhileMounted, ["mountedTapKeptMounted"] = mountedTapKeptMounted
+        });
+    }
+
+    /// <summary>人力推行后再次长按下车，取消中的长按不能残留驾驶命令。</summary>
+    private static IEnumerator HoldLeave(Player player, JObject args, Action<JObject> completed)
+    {
+        Fixture fixture = Require(player);
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
+            ?? throw new InvalidOperationException("独轮车下车回归缺少交互发送器。");
+        float movedDistance = WorldTopologyRuntime.Distance(fixture.Site, fixture.Carrier.Body.position);
+        bool mountedBefore = fixture.Carrier.Rider == fixture.Mover;
+        bool held = sender.TryBeginHeldInteraction(fixture.Carrier);
+        float deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .15f;
+        while (Time.unscaledTime < deadline) yield return null;
+        sender.EndHeldInteraction();
+        bool dismounted = fixture.Carrier.Rider == null && fixture.Mover.CarrierSource == null &&
+                          fixture.Mover.rb.simulated;
+        bool canceledHold = sender.TryBeginHeldInteraction(fixture.Carrier);
+        sender.CancelCurrentInteraction();
+        bool canceledCursorCleared = EventSystem.current?.GetComponent<GamepadUIRuntimeController>()
+            ?.IsWorldInteractionHoldCursorVisible != true;
+        deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .1f;
+        while (Time.unscaledTime < deadline) yield return null;
+        bool canceledKeptWalking = fixture.Carrier.Rider == null && fixture.Mover.CarrierSource == null;
+        completed(new JObject
+        {
+            ["mountedBefore"] = mountedBefore, ["held"] = held, ["movedDistance"] = movedDistance,
+            ["dismounted"] = dismounted, ["canceledHold"] = canceledHold,
+            ["canceledKeptWalking"] = canceledKeptWalking, ["canceledCursorCleared"] = canceledCursorCleared
+        });
+    }
+
     private static JObject Prepare(Player player, JObject args)
     {
         Fixture fixture = Require(player);
@@ -110,7 +189,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     private static IEnumerator Sample(Player player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(fixture.Recorder.Capture());
     }
 
@@ -126,7 +205,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         bool occupiedWhileUnloaded = BuildingOccupancyRegistry.IsOccupied(cell);
         bool occupiedByOther = BuildingOccupancyRegistry.IsOccupied(cell, building);
         fixture.Carrier.Load();
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(new JObject { ["occupiedBefore"] = occupiedBefore, ["unloaded"] = unloaded,
             ["occupiedWhileUnloaded"] = occupiedWhileUnloaded, ["occupiedByOther"] = occupiedByOther,
             ["reloaded"] = fixture.Carrier.IsRuntimeLoaded, ["occupiedAfterReload"] = BuildingOccupancyRegistry.IsOccupied(cell),
@@ -242,7 +321,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         bool pushed = fixture.Recorder.EverPushed;
         bool accepted = PlayerTeleportService.TryTeleportToSurface(player,
             WorldTopologyRuntime.NormalizePosition(fixture.Site + Vector2.up * 2f));
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(new JObject { ["everPushed"] = pushed, ["teleported"] = accepted,
             ["stopped"] = fixture.Carrier.Body.velocity.sqrMagnitude < .0001f,
             ["pushAfterRelease"] = fixture.Carrier.PushSource != null });
@@ -442,7 +521,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
 }
 
 /// <summary>在真实物理帧记录独轮车速度与推动来源。</summary>
-public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
+public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     #region 推动采样
     private Mod_Carrier carrier;
@@ -463,7 +542,10 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         EverPushed = unlockedWhilePushing = buildingBlockedWhilePushing = false;
     }
 
-    private void FixedUpdate()
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
+    public void SimulateFixedStep(float deltaTime)
     {
         if (carrier == null || carrier.Body == null || driver == null || mover == null) return;
         frames++;
@@ -477,7 +559,7 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         unlockedWhilePushing |= (carrier.Body.constraints &
             (RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezePositionY)) == 0;
         if (buildingObstacle != null)
-            buildingBlockedWhilePushing |= !carrier.CanTraversePosition(carrier.Body.position + carrier.PushedVelocity * Time.fixedDeltaTime);
+            buildingBlockedWhilePushing |= !carrier.CanTraversePosition(carrier.Body.position + carrier.PushedVelocity * deltaTime);
     }
 
     public JObject Capture()

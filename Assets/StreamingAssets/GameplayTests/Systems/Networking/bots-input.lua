@@ -73,6 +73,8 @@ test.runtime("networking", "bots_teleport", {}, function(data)
     assert_position(data.teleported, data.targetX, data.targetY, "GM 传送")
     assert(data.teleported.revision > data.start.revision and data.teleported.velocity == 0,
         "传送没有刷新地表归属或清零速度")
+    assert(data.teleported.directTeleport and data.afterFresh.directTeleport,
+        "同世界 GM 传送未标记为免加载幕，可能错误进入维度切换页面")
     assert_position(data.afterRejected, data.targetX, data.targetY, "重复、非法或其他连接的传送请求")
     assert(data.afterRejected.revision == data.teleported.revision, "拒绝的请求重复执行了传送")
     assert_position(data.afterFresh, data.otherX, data.otherY, "旧世界请求拒绝后的新世界合法传送")

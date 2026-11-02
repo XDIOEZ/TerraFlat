@@ -90,6 +90,8 @@ GM最终复扫补充三类滚动容器的Viewport/Content正式构建采样，�
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共用同一个 `ui_localization_gameplay` 案例；不重复登记第二份脚本。
 
+显示/画质归并回归：`settings_locale_open` 使用正式主菜单设置窗口，核对左侧恰有九个客户端分类、显示与画质相邻、旧视觉特效分类与页面已移除；显示页仍绑定坐标与帧率控制器，画质页同一滚动内容同时含预设、后处理及视觉效果控制器。Lua 不实际调整画质，画面与恢复默认交互仍需编辑器目视验收。
+
 真实流程覆盖：在已经正式入世的隔离世界中，调用 `GameManager.OpenMainMenuSettings` 创建正式客户端设置 Prefab，通过现有语言下拉、音量滑块和保存按钮检查中英文正式表/TMP Binder 刷新、节点身份、缺项回退、非法 Locale 拒绝、设置保存基线与关闭放弃、重复 Open 幂等、面板注册、射线交互、可取消导航和 UIManager 玩法阻断；还检查窗口打开时 AI 头顶调试标签主动避让。截图保留已经切到英语的实际窗口，随后显式关闭、注销，并恢复原音量/语言及涉及的 PlayerPrefs 原值和原有无；Lua 失败、中止也经租约清理。
 
 语言切换等待正式 LanguageChanged 与原 TMP 文本在 8 秒内就绪，记录耗时和事件，不手动刷新 Binder；实例 ID 同时确认文字节点和 Binder 没有被替换。

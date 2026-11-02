@@ -1,4 +1,50 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "natural_shadow_mesh_batch", {}, function(data)
+    assert(data.mergedBatches == 1 and data.mergedPages == 1 and data.mergedVertices == 12,
+        "自然物太阳阴影没有把跨区块同纹理的不同Sprite合并成一个Mesh")
+    assert(data.resourceShader and data.differentUvs and data.shadowParams,
+        "阴影网格丢失资源Shader、图集UV、柔边或半埋裁剪参数")
+    assert(data.grassSeparate and data.grassClearKeepsShadow,
+        "同纹理草层与太阳阴影被错误地合成相同材质批次或互相清理")
+    assert(data.removedVertices == 8 and data.shiftedBatches == 2 and data.returnedBatches == 1,
+        "太阳阴影单实例删除或区域迁移没有正确更新Mesh")
+    assert(data.projectedBatches == 2 and data.restoredBatches == 1 and data.clearedBatches == 0,
+        "太阳阴影外部投影或退出区块后残留批次")
+end, "自然物太阳阴影：共纹理网格、参数完整性、投影与回收")
+
+test.system("rendering", "grass_mesh_batch", {}, function(data)
+    assert(data.mergedBatches == 1 and data.mergedPages == 1 and
+        data.mergedVertices == 12 and data.ownerVisuals == 2,
+        "同纹理不同Sprite与跨区块草未合并为一张网格")
+    assert(data.nativeMaterials == 1 and data.removedVertices == 8,
+        "草网格材质没有使用原生顶点模式或局部删除未正确刷新")
+    assert(data.shiftedBatches == 2 and data.returnedBatches == 1,
+        "区块镜像移动后未正确迁移区域批次")
+    assert(data.projectedBatches == 2 and data.restoredBatches == 1,
+        "外部投影显示没有与普通地表批次隔离或正确恢复")
+    assert(data.clearedBatches == 0 and data.clearedPages == 0,
+        "清空最后一个草格后仍保留空绘制批次")
+end, "草地网格：共纹理UV合批、增量删除、区域迁移和投影回收")
+
+test.system("rendering", "post_process_styles", {}, function(data)
+    assert(#data.styleOptions == 3 and #data.profiles == 3 and data.qualityOptions == 3,
+        "画面风格与画质档位的三种选项未独立注册")
+    assert(data.defaultStyle == 1, "默认画面风格应为自然柔光")
+    assert(data.styleOptions[1] == "clear" and data.styleOptions[2] == "soft"
+        and data.styleOptions[3] == "cinematic", "画面风格持久化选项顺序改变")
+    local clear, soft, cinema = data.profiles[1], data.profiles[2], data.profiles[3]
+    assert(clear.bloom < soft.bloom and soft.bloom < cinema.bloom,
+        "三种画面风格没有明显不同的泛光强度")
+    assert(clear.vignette < soft.vignette and soft.vignette < cinema.vignette,
+        "三种画面风格没有明显不同的暗角强度")
+    assert(clear.saturation < soft.saturation and cinema.saturation < soft.saturation,
+        "自然柔光未保留更鲜明的色彩")
+    assert(clear.threshold > soft.threshold and soft.threshold > cinema.threshold,
+        "清晰原色的高亮阈值没有保护像素边缘")
+    assert(data.shadowBlur > 0.3 and data.shadowOpacity < 0.34,
+        "世界光照阴影没有变得更柔和")
+end, "画面风格：三套独立配置、默认值和柔和光照")
+
 do
     local function sameCircles(first, second)
         assert(#first == #second, "重新手持改变了咬痕数量")
@@ -70,17 +116,18 @@ do
     end
 
     test.system("rendering", "wind_streaks", { steps = {
-        { x = 0 }, { x = 0.1 }, { x = 0.15 }, { x = 0.4 }, { x = 0.65 }, { x = 0.85 }, { x = 2 }
+        { x = 0 }, { x = 0.1 }, { x = 0.15 }, { x = 0.599 }, { x = 0.6 },
+        { x = 0.65 }, { x = 0.85 }, { x = 2 }, { x = 0.59 }, { x = 0.6 }
     } }, function(data)
         assert(data.validConfig, "默认风纹配置无效")
-        for index = 1, 3 do
-            assert(not data.samples[index].visible, "静风或微风仍在绘制风纹")
+        for index = 1, 4 do
+            assert(not data.samples[index].visible, "低于六级风时仍在绘制风纹")
         end
-        for index = 4, 6 do
+        for index = 5, 8 do
             local sample = data.samples[index]
             assert(sample.visible and sample.directionX == 1 and sample.directionY == 0,
-                "风纹没有沿实际吹去方向移动")
-            if index > 4 then
+                "六级及以上风纹没有沿实际吹去方向移动")
+            if index > 5 and index < 8 then
                 for _, key in ipairs({ "speed", "opacity", "density", "length" }) do
                     assert(sample[key] > data.samples[index - 1][key], "风力增大没有增强风纹：" .. key)
                 end
@@ -88,9 +135,38 @@ do
             near(sample.phaseX, 0, "只改风力却跳变风纹相位")
         end
         for _, key in ipairs({ "speed", "opacity", "density", "length" }) do
-            near(data.samples[6][key], data.samples[7][key], "超上限风力没有钳制：" .. key)
+            near(data.samples[7][key], data.samples[8][key], "超上限风力没有钳制：" .. key)
         end
-    end, "风纹：静风关闭、风力增强、吹去方向与上限")
+        assert(not data.samples[9].visible and data.samples[9].opacity == 0,
+            "风力降回六级以下没有立即清除风纹")
+        assert(data.samples[10].visible and data.samples[10].phaseX == 0,
+            "恢复六级风后继承了旧风纹相位")
+    end, "风纹：六级风门槛、风力增强、吹去方向、降风重置与上限")
+
+    test.system("rendering", "wind_streaks", { steps = {
+        { x = -0.599 }, { x = -0.6 }, { x = 0.42, y = 0.42 }, { x = 0.43, y = 0.43 }
+    } }, function(data)
+        assert(not data.samples[1].visible and data.samples[2].visible,
+            "反向风没有使用统一的六级门槛")
+        assert(not data.samples[3].visible and data.samples[4].visible,
+            "斜向风没有按合成风强判定六级门槛")
+    end, "风纹：反向及斜向风的六级边界")
+
+    test.system("rendering", "wind_streaks", { steps = {
+        { x = 0.85, actualStrength = 0.59 },
+        { x = 0.2, actualStrength = 0.6 },
+        { x = 0.85, actualStrength = 0.6 },
+        { x = 0.85, actualStrength = 0.59 }
+    } }, function(data)
+        assert(not data.samples[1].visible and data.samples[1].opacity == 0,
+            "实际风力不足六级时平滑残余仍然绘制风纹")
+        assert(data.samples[2].visible and data.samples[2].opacity > 0,
+            "实际六级风仍被尚未追上的视觉风强度拒绝")
+        assert(data.samples[3].visible and data.samples[3].opacity > data.samples[2].opacity,
+            "视觉风强度上升时风纹没有平滑增强")
+        assert(not data.samples[4].visible and data.samples[4].opacity == 0,
+            "实际风力跌破六级时没有立刻清除风纹")
+    end, "风纹：实际六级门槛优先于平滑风强度")
 
     for _, direction in ipairs({ { 0.85, 0, 1, 0 }, { -0.85, 0, -1, 0 },
         { 0, 0.85, 0, 1 }, { 0, -0.85, 0, -1 }, { 0.6, 0.6, math.sqrt(0.5), math.sqrt(0.5) } }) do
@@ -127,6 +203,14 @@ do
     test.system("rendering", "wind_streaks", { config = { width = 0 }, steps = { {} } }, function(data)
         assert(not data.validConfig and not data.samples[1].visible, "无效风纹尺寸没有关闭绘制")
     end, "风纹：拒绝无效尺寸")
+
+    test.system("rendering", "wind_streaks", {}, function(data)
+        local cache = data.cacheCoverage
+        assert(cache.initial and cache.moveEightRight and cache.moveEightLeft and cache.negativeCoordinates,
+            "镜头仍位于缓存网格时不应重新采样挡风纹理")
+        assert(not cache.moveNineRight and not cache.zoomBeyondCache and not cache.emptyCache,
+            "镜头越过缓存边界或放大可视范围时必须重建挡风纹理")
+    end, "风纹：空间缓存覆盖、移动边界、缩放与负坐标")
 
     -- 连续墙体的绕流只看真实墙格和主风向，不引入每条线独立的随机偏转。
     test.system("rendering", "wind_streaks", {

@@ -51,7 +51,8 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        public bool TryBeginNetworkSurfaceTransfer(Player player, string world, Vector2 position)
+        public bool TryBeginNetworkSurfaceTransfer(Player player, string world, Vector2 position,
+            bool isDirectTeleport = false)
         {
             if (!GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || State == null || player?.Data == null ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
@@ -60,6 +61,8 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState passenger = GetPassenger(player);
             passenger.IsInSpace = false; passenger.LandingWorldKey = world;
             unchecked { ++passenger.RealmRevision; }
+            // 同世界 GM 传送保留新代际门禁，但不要求重新显示维度加载幕。
+            passenger.DirectSurfaceTeleportRevision = isDirectTeleport ? passenger.RealmRevision : 0;
             if (!passenger.Supported)
             {
                 passenger.LandingX = position.x; passenger.LandingY = position.y;

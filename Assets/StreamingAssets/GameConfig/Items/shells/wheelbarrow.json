@@ -7,7 +7,7 @@
       "shellPrefab": "BuildingSummonerShell",
       "requiredGroundSupport": 3,
       "gameName": "木制独轮手推车",
-      "description": "全木制的手推车，放置后从车斗后方推动。按 F 打开车斗库存，可装 12 格物品。",
+      "description": "全木制的手推车，短按 F 打开 12 格货仓，长按 F 抓住或松开车把，用方向键步行推动。",
       "amount": 1,
       "weight": 45,
       "volume": 120,
@@ -67,7 +67,7 @@
       "shellPrefab": "CarrierBodyShell",
       "requiredGroundSupport": 3,
       "gameName": "木制独轮手推车",
-      "description": "全木制的手推车，站在车斗后方推动。按 F 打开车斗库存，可装 12 格物品。",
+      "description": "短按 F 打开 12 格货仓，长按 F 开始或结束手推驾驶；也可从车尾直接碰撞推动。",
       "amount": 1,
       "weight": 45,
       "volume": 120,
@@ -161,9 +161,9 @@
           "parameters": {
             "MaxSpeed": 5,
             "BoostSpeedMultiplier": 1,
-            "Acceleration": 3,
-            "Braking": 6,
-            "FacingTurnSpeed": 90,
+            "Acceleration": 18,
+            "Braking": 24,
+            "FacingTurnSpeed": 180,
             "Radius": 0.35,
             "LandSpeedMultiplier": 1,
             "LandPushSpeedMultiplier": 1,
@@ -176,7 +176,8 @@
               "x": 0,
               "y": 0
             },
-            "AllowsWater": false
+            "AllowsWater": false,
+            "ExposesRiderToTerrain": true
           }
         }
       }

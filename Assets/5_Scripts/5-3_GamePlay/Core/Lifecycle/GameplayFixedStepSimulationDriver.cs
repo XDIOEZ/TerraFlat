@@ -1,11 +1,12 @@
 using UnityEngine;
 
-/// <summary>游戏世界的唯一固定步驱动，不接管 Unity 的时间累积与补步。</summary>
+/// <summary>独立游戏时钟的唯一驱动，Unity 2D 原生物理由模拟阶段显式推进。</summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(10000)]
 public sealed class GameplayFixedStepSimulationDriver : MonoBehaviour
 {
     #region 固定步宿主生命周期
+    private SimulationMode2D previousPhysicsSimulationMode;
 
     public static void EnsureForOwner(GameManager owner)
     {
@@ -13,10 +14,20 @@ public sealed class GameplayFixedStepSimulationDriver : MonoBehaviour
             owner.gameObject.AddComponent<GameplayFixedStepSimulationDriver>();
     }
 
-    private void FixedUpdate()
+    private void OnEnable()
+    {
+        previousPhysicsSimulationMode = Physics2D.simulationMode;
+        Physics2D.simulationMode = SimulationMode2D.Script;
+    }
+
+    private void OnDisable() => Physics2D.simulationMode = previousPhysicsSimulationMode;
+
+    private void Update()
     {
         if (GameManager.ExistingInstance == null || GameManager.ExistingInstance.gameObject != gameObject) return;
-        GameplayFixedStepSimulation.SimulateFixedStep(Time.fixedDeltaTime);
+        GameplayTickRateUserSettings.RefreshWhenNetworkStateChanges();
+        GameplayFixedStepSimulation.SimulateFrame(Time.unscaledDeltaTime, Time.timeScale,
+            GameplayTickRateUserSettings.EffectiveTicksPerSecond);
     }
 
     #endregion

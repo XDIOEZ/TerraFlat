@@ -18,7 +18,20 @@ SpriteAtlasImporter:
     buildTarget: Standalone
     maxTextureSize: 2048
     resizeAlgorithm: 0
-    textureFormat: -1
+    textureFormat: 25
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 50
     textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
@@ -38,6 +51,6 @@ SpriteAtlasImporter:
   secondaryTextureSettings: {}
   variantMultiplier: 1
   bindAsDefault: 1
-  userData: FlatWorldSpriteAtlas:v1:16EABA8F97E45D762BD39579DBC4D16D9B4BE1615A63B185FA855EF40801F475
+  userData: FlatWorldSpriteAtlas:v1:6D47C38F355E82824AFB9039F2B1044022D858FF4CD73B4458C36E2D0557F488
   assetBundleName: 
   assetBundleVariant: 

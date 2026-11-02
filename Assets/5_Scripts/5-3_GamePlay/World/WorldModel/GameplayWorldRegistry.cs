@@ -43,6 +43,8 @@ public static partial class GameplayWorldRegistry
     private static readonly List<GameplayWorldRuntime> releaseDispatch = new();
     private static readonly HashSet<PhysicsScene2D> physicsScenes = new();
     internal static bool IsPhysicsDispatchInProgress { get; private set; }
+    internal static ulong PhysicsDispatchCount { get; private set; }
+    internal static ulong PhysicsSceneStepCount { get; private set; }
     private static bool sceneCacheBound;
     private static Scene localScene;
     private static string localSceneKey;
@@ -679,11 +681,12 @@ public static partial class GameplayWorldRegistry
     #endregion
 
     #region 独立场景物理与本机显示
-    internal static void SimulatePhysics()
+    internal static void SimulatePhysics(float deltaTime)
     {
-        if (Time.timeScale <= 0f) return;
+        if (!float.IsFinite(deltaTime) || deltaTime <= 0f) return;
         if (IsPhysicsDispatchInProgress)
             throw new InvalidOperationException("不能重入世界物理模拟分发。");
+        PhysicsDispatchCount++;
         IsPhysicsDispatchInProgress = true;
         try
         {
@@ -700,7 +703,8 @@ public static partial class GameplayWorldRegistry
                 try
                 {
                     using var machines = next.Chunks != null ? MachineWorld.UseScope(physics.WorldKey) : default;
-                    physics.Simulate(Time.fixedDeltaTime);
+                    physics.Simulate(deltaTime);
+                    PhysicsSceneStepCount++;
                 }
                 finally { execution = previous; }
             }
@@ -788,12 +792,9 @@ internal sealed class GameplayWorldPresentationOwner : MonoBehaviour
 internal sealed class GameplayWorldRegistryHost : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private GameManager manager;
-    private SimulationMode2D previousSimulation;
     #region 世界会话驱动
     private void OnEnable()
     {
-        previousSimulation = Physics2D.simulationMode;
-        Physics2D.simulationMode = SimulationMode2D.Script;
         manager = GameManager.Instance;
         if (manager != null) manager.Event_GameWorldExit += GameplayWorldRegistry.ReleaseAll;
         ItemMgr.RuntimeItemRegistered += GameplayWorldRegistry.RegisterItemPresentation;
@@ -805,12 +806,11 @@ internal sealed class GameplayWorldRegistryHost : MonoBehaviour, IGameplayFixedS
         GameplayFixedStepSimulation.Unregister(this);
         if (manager != null) manager.Event_GameWorldExit -= GameplayWorldRegistry.ReleaseAll;
         manager = null;
-        Physics2D.simulationMode = previousSimulation;
         ItemMgr.RuntimeItemRegistered -= GameplayWorldRegistry.RegisterItemPresentation;
         Item.RuntimeStructureChanged -= GameplayWorldRegistry.RegisterItemPresentation;
     }
     // 退出进程或 PlayMode 时，在 Unity 卸载场景前释放世界物理代理。
     private void OnApplicationQuit() => GameplayWorldRegistry.ReleaseAllWorldPhysics();
-    public void SimulateFixedStep(float deltaTime) => GameplayWorldRegistry.SimulatePhysics();
+    public void SimulateFixedStep(float deltaTime) => GameplayWorldRegistry.SimulatePhysics(deltaTime);
     #endregion
 }

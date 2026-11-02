@@ -339,7 +339,7 @@ def verify_nature_audio_assets(items: list[dict], settings: dict, manifest: dict
         for metric in ("globalRmsDbfs", "minWindowRmsDbfs", "minWindowRmsToGlobalRmsRatio", "loopSeamMinWindowRmsToGlobalRmsRatio"):
             if abs(saved[metric] - rms_metrics[metric]) > 0.002:
                 raise RuntimeError(f"{item['cueId']} 的 manifest {metric} 与音频不匹配")
-        if saved["windowRmsSeconds"] != 0.1 or len(saved["windowRmsDbfs"]) != 200:
+        if saved["windowRmsSeconds"] != 0.1 or len(saved["windowRmsDbfs"]) != round(float(item["loopSeconds"]) / 0.1):
             raise RuntimeError(f"{item['cueId']} 的 manifest 缺少完整 100 ms RMS 采样")
         if any(abs(saved_value - actual_value) > 0.002 for saved_value, actual_value in zip(saved["windowRmsDbfs"], rms_metrics["windowRmsDbfs"], strict=True)):
             raise RuntimeError(f"{item['cueId']} 的 manifest RMS 采样与音频不匹配")

@@ -32,6 +32,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private RectTransform canvasRect;
     private Canvas canvas;
     private RectTransform cursorRect;
+    private GamepadCursorGraphic cursorGraphic;
     private PointerEventData pointerEventData;
     private EventSystem pointerEventSystem;
     private GameObject hoveredObject;
@@ -51,9 +52,16 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private bool gamepadMode;
     private bool cursorMode;
     private bool mobileAimCursorVisible;
+    private bool worldInteractionHoldCursorVisible;
+    private bool nativeCursorSuppressedByWorldInteractionHold;
+    private bool nativeCursorVisibleBeforeWorldInteractionHold;
+    private float worldInteractionHoldProgress01;
 
     public bool IsGamepadMode => gamepadMode;
     public bool IsVirtualCursorMode => cursorMode;
+    public bool IsWorldInteractionHoldCursorVisible => worldInteractionHoldCursorVisible && cursorRect != null &&
+        cursorRect.gameObject.activeInHierarchy && cursorGraphic != null && cursorGraphic.IsInteractionHoldProgressActive;
+    public float WorldInteractionHoldProgress01 => worldInteractionHoldProgress01;
 
     /// <summary>Profiler 可读取的根 Canvas 解析尝试次数。</summary>
     public int CanvasResolveCount { get; private set; }
@@ -83,6 +91,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
     private void OnDisable()
     {
+        ClearWorldInteractionHoldCursor();
         GamepadVirtualKeyboardController.Closed -= OnVirtualKeyboardClosed;
         UnbindCancelAction();
         submitAction = null;
@@ -95,6 +104,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
     private void OnDestroy()
     {
+        ClearWorldInteractionHoldCursor();
         if (cursorRect != null)
             Destroy(cursorRect.gameObject);
     }
@@ -103,11 +113,19 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         DetectInputModeWithoutPlayerController();
 
-        if (!gamepadMode && !mobileAimCursorVisible)
+        if (!gamepadMode && !mobileAimCursorVisible && !worldInteractionHoldCursorVisible)
             return;
 
         RefreshInteractionSurfaceState();
         EnsureCursorVisual();
+
+        if (worldInteractionHoldCursorVisible)
+        {
+            RefreshCanvasMetrics();
+            if (cursorPositionDirty && PositionCursor())
+                cursorPositionDirty = false;
+            return;
+        }
 
         if (mobileAimCursorVisible && !gamepadMode)
         {
@@ -290,6 +308,54 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (positionChanged)
             cursorPositionDirty = true;
         SetMobileAimCursorVisible(true);
+    }
+
+    /// <summary>复用唯一 UI 光标，把物理鼠标或虚拟准线临时切换为顺时针进度环。</summary>
+    public void SetWorldInteractionHoldCursor(float progress01, Vector2 screenPosition)
+    {
+        worldInteractionHoldCursorVisible = true;
+        worldInteractionHoldProgress01 = Mathf.Clamp01(progress01);
+        bool positionChanged = !cursorPositionInitialized ||
+            (cursorScreenPosition - screenPosition).sqrMagnitude > CursorPositionEpsilonSquared;
+        cursorScreenPosition = screenPosition;
+        cursorPositionInitialized = true;
+        if (positionChanged) cursorPositionDirty = true;
+        RefreshInteractionSurfaceState();
+        EnsureCursorVisual();
+        RefreshCanvasMetrics();
+        if (cursorGraphic != null)
+        {
+            if (!cursorGraphic.IsInteractionHoldProgressActive)
+                cursorGraphic.color = FlatWorldUITheme.AimCursor;
+            cursorGraphic.SetInteractionHoldProgress(true, worldInteractionHoldProgress01);
+        }
+        if (cursorPositionDirty && PositionCursor()) cursorPositionDirty = false;
+        SetCursorVisible(true);
+        if (cursorRect != null && !nativeCursorSuppressedByWorldInteractionHold)
+        {
+            nativeCursorVisibleBeforeWorldInteractionHold = Cursor.visible;
+            Cursor.visible = false;
+            nativeCursorSuppressedByWorldInteractionHold = true;
+        }
+    }
+
+    public void ClearWorldInteractionHoldCursor()
+    {
+        if (!worldInteractionHoldCursorVisible && !nativeCursorSuppressedByWorldInteractionHold)
+            return;
+        worldInteractionHoldCursorVisible = false;
+        worldInteractionHoldProgress01 = 0f;
+        if (cursorGraphic != null)
+        {
+            cursorGraphic.SetInteractionHoldProgress(false, 0f);
+            cursorGraphic.color = FlatWorldUITheme.SelectionOutline;
+        }
+        if (nativeCursorSuppressedByWorldInteractionHold)
+        {
+            Cursor.visible = nativeCursorVisibleBeforeWorldInteractionHold;
+            nativeCursorSuppressedByWorldInteractionHold = false;
+        }
+        SetCursorVisible(cursorMode || mobileAimCursorVisible);
     }
 
     /// <summary>退出手柄模式时清除按钮/槽位焦点框，但保留正在键盘输入的文本框。</summary>
@@ -672,10 +738,15 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         cursorRect.anchorMin = new Vector2(0.5f, 0.5f);
         cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
         cursorRect.pivot = new Vector2(0.5f, 0.5f);
-        cursorRect.sizeDelta = new Vector2(28f, 28f);
-        GamepadCursorGraphic cursorGraphic = cursorObject.GetComponent<GamepadCursorGraphic>();
+        cursorRect.sizeDelta = new Vector2(36f, 36f);
+        cursorGraphic = cursorObject.GetComponent<GamepadCursorGraphic>();
         cursorGraphic.color = FlatWorldUITheme.SelectionOutline;
         cursorGraphic.raycastTarget = false;
+        if (worldInteractionHoldCursorVisible)
+        {
+            cursorGraphic.color = FlatWorldUITheme.AimCursor;
+            cursorGraphic.SetInteractionHoldProgress(true, worldInteractionHoldProgress01);
+        }
         cursorObject.transform.SetAsLastSibling();
         lastScreenWidth = -1;
         lastScreenHeight = -1;
@@ -734,7 +805,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private void SetCursorVisible(bool visible)
     {
         if (cursorRect != null)
-            cursorRect.gameObject.SetActive(visible);
+            cursorRect.gameObject.SetActive(visible || worldInteractionHoldCursorVisible);
     }
 
     private bool UpdateHoverTarget()
@@ -840,21 +911,68 @@ public sealed class GamepadInputFieldNavigationBridge : MonoBehaviour, IMoveHand
 }
 
 /// <summary>
-/// 无需额外贴图的十字准星图形，作为手柄虚拟光标的可视化标记。
+/// 无需额外贴图的十字准星，长按载具交互时切换为顺时针进度圆环。
 /// </summary>
 public sealed class GamepadCursorGraphic : Graphic
 {
     private const float OuterRadius = 12f;
     private const float InnerRadius = 7f;
     private const float ArmWidth = 2f;
+    private const float HoldRingOuterRadius = 15f;
+    private const float HoldRingInnerRadius = 10.5f;
+    private const int HoldRingSegments = 48;
+    private bool interactionHoldProgressActive;
+    private float interactionHoldProgress01;
+
+    public bool IsInteractionHoldProgressActive => interactionHoldProgressActive;
+    public float InteractionHoldProgress01 => interactionHoldProgress01;
+
+    public void SetInteractionHoldProgress(bool active, float progress01)
+    {
+        float normalized = Mathf.Clamp01(progress01);
+        if (interactionHoldProgressActive == active &&
+            (!active || Mathf.Approximately(interactionHoldProgress01, normalized)))
+            return;
+        interactionHoldProgressActive = active;
+        interactionHoldProgress01 = normalized;
+        SetVerticesDirty();
+    }
 
     protected override void OnPopulateMesh(VertexHelper vertexHelper)
     {
         vertexHelper.Clear();
+        if (interactionHoldProgressActive)
+        {
+            Color trackColor = color;
+            trackColor.a *= .25f;
+            AddClockwiseRingArc(vertexHelper, 1f, trackColor);
+            AddClockwiseRingArc(vertexHelper, interactionHoldProgress01, color);
+            return;
+        }
         AddQuad(vertexHelper, new Vector2(-OuterRadius, -ArmWidth), new Vector2(-InnerRadius, ArmWidth));
         AddQuad(vertexHelper, new Vector2(InnerRadius, -ArmWidth), new Vector2(OuterRadius, ArmWidth));
         AddQuad(vertexHelper, new Vector2(-ArmWidth, -OuterRadius), new Vector2(ArmWidth, -InnerRadius));
         AddQuad(vertexHelper, new Vector2(-ArmWidth, InnerRadius), new Vector2(ArmWidth, OuterRadius));
+    }
+
+    /// <summary>从正上方十二点起沿顺时针生成环形扇段，不依赖贴图资源。</summary>
+    private static void AddClockwiseRingArc(VertexHelper vertexHelper, float progress01, Color tint)
+    {
+        int segmentCount = Mathf.CeilToInt(Mathf.Clamp01(progress01) * HoldRingSegments);
+        for (int segment = 0; segment < segmentCount; segment++)
+        {
+            float startAngle = (90f - segment * 360f / HoldRingSegments) * Mathf.Deg2Rad;
+            float endAngle = (90f - Mathf.Min((segment + 1f) / HoldRingSegments, progress01) * 360f) * Mathf.Deg2Rad;
+            Vector2 start = new Vector2(Mathf.Cos(startAngle), Mathf.Sin(startAngle));
+            Vector2 end = new Vector2(Mathf.Cos(endAngle), Mathf.Sin(endAngle));
+            int index = vertexHelper.currentVertCount;
+            vertexHelper.AddVert(start * HoldRingOuterRadius, tint, Vector2.zero);
+            vertexHelper.AddVert(start * HoldRingInnerRadius, tint, Vector2.zero);
+            vertexHelper.AddVert(end * HoldRingInnerRadius, tint, Vector2.zero);
+            vertexHelper.AddVert(end * HoldRingOuterRadius, tint, Vector2.zero);
+            vertexHelper.AddTriangle(index, index + 2, index + 1);
+            vertexHelper.AddTriangle(index + 2, index, index + 3);
+        }
     }
 
     private void AddQuad(VertexHelper vertexHelper, Vector2 min, Vector2 max)

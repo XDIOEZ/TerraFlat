@@ -141,6 +141,7 @@ namespace FlatWorld.Spaceflight
         [Newtonsoft.Json.JsonExtensionData] public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> UnknownOptionalFields;
         public string ProfileId, ShipId, ConsolePieceId;
         public uint RealmRevision;
+        public uint DirectSurfaceTeleportRevision;
         public double LocalX, LocalY;
         public SpaceMotionState FreeMotion = new();
         public SpaceVector2 FreeWalkVelocity;

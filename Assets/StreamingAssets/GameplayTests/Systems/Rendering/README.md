@@ -1,5 +1,9 @@
 # 渲染、光照与特效
 
+`rendering_rules` 的 `rendering/post_process_styles` 从正式配置目录及设置 Provider 读取三套画风、默认索引、稳定选项 ID、Bloom/暗角等参数和阴影柔化值；不改真实 PlayerPrefs。默认自然柔光，清晰原色与电影氛围可独立于高/中/低特效质量切换。此规则不验证 GPU 像素、低档性能和设置面板实际点击，后者需现场验收。
+
+2026-11-02 `20261102T063400861Z_0a6378ee` 的 `rendering_rules` 专项通过（1/1）。完整渲染规则 `20261102T063142035Z_6e8fd41b` 为6通过、2失败：`item_sorting_configuration` 和 `unified_manager` 均在 `RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot` 的测试场景迁移抛出 `Destination scene is not valid`，不将其记录为通过；同轮未进入 PlayMode，也未验证三套画风的 GPU 实际画面。
+
 `rendering_visual_interpolation` 使用正式表现层位置历史与纯视觉投影夹具，断言20TPS配60/120/240FPS的绘制中间点、暂停冻结、瞬移、环绕接缝、对象池复用、像素量化和权威 Transform 不被改写。玩家/GO角色/普通物品由 `WorldRenderingManager.VisualInterpolation.cs` 统一平移视觉根，ECS生物批绘及阴影倒影共用表现脚点，轻量掉落物使用池内视觉历史；已有 Rigidbody2D 原生插值及客户端网络补间不重复执行。静态规则不等于真实GPU帧率验收，PlayMode运行期间不自动进入场景测试。
 
 `rendering/frozen_ice_visual` 用编辑态隔离相机读回裸底床、半透明冰和原冰对照，检查像素混合、冰纹开关、地面材质隔离、投影平移及16区块合批；耗时仅为编辑器相机的 CPU 提交采样，不代表游戏帧率或 GPU 耗时。截图保存在本轮测试包中。

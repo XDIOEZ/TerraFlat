@@ -578,10 +578,11 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
         if (GeneratedVesselSprites.TryGetValue(key, out Sprite cachedSprite) && cachedSprite != null)
             return cachedSprite;
 
-        Color32[] texturePixels = sourceTexture.GetPixels32();
+        // 只读取容器 Sprite 区域，避免首次装液时复制整张大图集。
+        Color[] sourcePixels = sourceTexture.GetPixels(sourceX, sourceY, width, height);
         Color32[] spritePixels = new Color32[width * height];
-        for (int y = 0; y < height; y++)
-            Array.Copy(texturePixels, (sourceY + y) * sourceTexture.width + sourceX, spritePixels, y * width, width);
+        for (int i = 0; i < spritePixels.Length; i++)
+            spritePixels[i] = sourcePixels[i];
 
         Color32 shadowColor = (Color32)Color.Lerp((Color)liquidColor, new Color(0.03f, 0.06f, 0.08f, 1f), LiquidSurfaceShadowBlend);
         Color32 highlightColor = (Color32)Color.Lerp((Color)liquidColor, Color.white, LiquidSurfaceHighlightBlend);

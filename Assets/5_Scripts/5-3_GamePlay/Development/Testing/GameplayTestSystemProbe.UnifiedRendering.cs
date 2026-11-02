@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FlatWorld.AIECS;
 using FlatWorld.Combat;
 using FlatWorld.NaturalEntities;
+using FlatWorld.Settings;
 using Newtonsoft.Json.Linq;
 using Unity.Collections;
 using Unity.Mathematics;
@@ -30,6 +31,8 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("rendering/grass_mesh_batch", CaptureGrassMeshBatch);
+        operations.Add("rendering/natural_shadow_mesh_batch", CaptureNaturalShadowMeshBatch);
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
         operations.Add("rendering/held_food_bites", CaptureHeldFoodShaderBites);
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
@@ -37,6 +40,45 @@ public static partial class GameplayTestSystemProbe
         operations.Add("rendering/cold_projection_initialization", CaptureColdProjectionResourceInitialization);
         operations.Add("rendering/visual_motion_interpolation", CaptureVisualMotionInterpolation);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
+        operations.Add("rendering/post_process_styles", CapturePostProcessStyleProfiles);
+    }
+
+    /// <summary>只读正式画风配置与设置选项，不改动玩家的 PlayerPrefs 和当前画面。</summary>
+    private static JObject CapturePostProcessStyleProfiles(JObject args)
+    {
+        WorldRenderingConfig config = WorldRenderingConfigCatalog.Default;
+        ISettingsDropdown styleSetting = ScreenPostProcessSettings.SettingsProvider
+            .GetDropdown(ScreenPostProcessSettings.StyleSettingKey);
+        ISettingsDropdown qualitySetting = ScreenPostProcessSettings.SettingsProvider
+            .GetDropdown(ScreenPostProcessSettings.QualitySettingKey);
+        var options = new JArray();
+        foreach (SettingOption option in styleSetting.Options)
+            options.Add(option.Id);
+
+        var samples = new JArray();
+        foreach (WorldRenderingConfig.WorldVolume style in config.postProcess.worldVolumes)
+        {
+            samples.Add(new JObject
+            {
+                ["bloom"] = style.bloom.intensity,
+                ["threshold"] = style.bloom.threshold,
+                ["contrast"] = style.colorGrading.contrast,
+                ["saturation"] = style.colorGrading.saturation,
+                ["temperature"] = style.whiteBalance.temperature,
+                ["vignette"] = style.vignette.intensity,
+                ["mediumScale"] = style.mediumBloomIntensityScale
+            });
+        }
+
+        return new JObject
+        {
+            ["defaultStyle"] = config.preferences.postProcessStyle,
+            ["styleOptions"] = options,
+            ["qualityOptions"] = qualitySetting.Options.Count,
+            ["profiles"] = samples,
+            ["shadowBlur"] = config.shadows.blurStrength,
+            ["shadowOpacity"] = config.shadows.maximumOpacity
+        };
     }
 
     private static SortingDomainRankProbe CreateSortingDomainRankProbe(Transform sourceParent,

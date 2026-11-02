@@ -103,7 +103,7 @@ internal sealed class ContactDamageRuntime
     {
         if (!GameNetwork.HasStateAuthority || !source.IsValid || string.IsNullOrEmpty(worldKey) ||
             !isSourceActive()) return;
-        double now = Time.timeAsDouble;
+        double now = GameplayFixedStepSimulation.CurrentTime;
         expired.Clear();
         foreach (var pair in cooldowns)
             if (now >= pair.Value) expired.Add(pair.Key);
@@ -155,7 +155,8 @@ internal sealed class ContactDamageRuntime
                 ImpactKind = (byte)settings.DamageValues.DominantKind,
                 Origin = center,
                 HitPoint = collider.ClosestPoint(center),
-                Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = now, DeltaTime = Time.deltaTime },
+                Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = now,
+                    DeltaTime = GameplayFixedStepSimulation.TickDeltaTime },
                 SourceIsPlayer = (byte)(sourceItem != null && ActorIdentity.IsPlayer(sourceItem) ? 1 : 0),
                 BuildingMultiplier = 1f
             };

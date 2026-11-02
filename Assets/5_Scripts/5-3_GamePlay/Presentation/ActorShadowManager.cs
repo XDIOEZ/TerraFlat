@@ -205,7 +205,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         shadowBatch ??= new ContactShadowBatchRenderer();
         bindings.Add(item, new ShadowBinding(
             isRootedPlant ? null : VisualGroundOffsetResolver.FindProvider(item),
-            isRootedPlant, shadowVisual));
+            isRootedPlant, shadowVisual, item.GetComponent<IShadowFootprintBoundsProvider>()));
     }
 
     /// <summary>移除实体对应的阴影绑定。</summary>
@@ -291,7 +291,9 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         if (binding.InWater || visualOpacity <= 0.001f)
             return;
 
-        Bounds footprint = ShadowFootprintResolver.MeasureVisibleWorldBounds(sourceRenderer);
+        Bounds footprint = binding.FootprintProvider != null
+            ? binding.FootprintProvider.MeasureWorldShadowFootprintBounds(sourceRenderer)
+            : ShadowFootprintResolver.MeasureVisibleWorldBounds(sourceRenderer);
         if (!binding.IsRootedPlant)
             footprint.center -= VisualGroundOffsetResolver.Resolve(binding.GroundOffsetProvider,
                 sourceRenderer.transform);
@@ -504,16 +506,18 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         public readonly IVisualGroundOffset GroundOffsetProvider;
         public readonly bool IsRootedPlant;
         public readonly ItemShadowVisualDefinitionDto ShadowVisual;
+        public readonly IShadowFootprintBoundsProvider FootprintProvider;
         public SpriteRenderer SourceRenderer;
         public float ShadowWidth;
         public bool InWater;
 
         public ShadowBinding(IVisualGroundOffset groundOffsetProvider, bool isRootedPlant,
-            ItemShadowVisualDefinitionDto shadowVisual)
+            ItemShadowVisualDefinitionDto shadowVisual, IShadowFootprintBoundsProvider footprintProvider)
         {
             GroundOffsetProvider = groundOffsetProvider;
             IsRootedPlant = isRootedPlant;
             ShadowVisual = shadowVisual;
+            FootprintProvider = footprintProvider;
         }
     }
 

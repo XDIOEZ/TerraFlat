@@ -8,7 +8,7 @@
       "parent": "BasicItem_Base",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "简易木筏",
-      "description": "用四块木板和两根原木制作；放置后朝木筏移动可推动。陆地或水中都需要将光标指向木筏再按 F 登船；方向键或摇杆正常划行不消耗体力，按住 Shift 可按奔跑消耗频率加速；乘船后同样需要指向木筏按 F 下船，优先落到附近陆地，否则进入海水。",
+      "description": "用四块木板和两根原木制作；放置后朝木筏移动可推动。光标指向木筏长按 F 上下船；方向键或摇杆划行，按住 Shift 加速；下船优先落在陆地，远海则进入海水。",
       "weight": 60,
       "volume": 180,
       "amount": 1,
@@ -45,7 +45,7 @@
       "parent": "BasicItem_Base",
       "shellPrefab": "CarrierBodyShell",
       "gameName": "简易木筏",
-      "description": "光标指向木筏显示白色描边；陆地或水中都必须指向木筏再按 F 上船或下船。正常划行不消耗体力，按住 Shift 且有移动输入时消耗体力并加速。光标指向可触及海水时，F 键仍用于水体交互与喝水。木筏会随水流漂移；远海下船时没有陆地则进入海水。读档恢复为空船。",
+      "description": "光标指向木筏显示白色描边，长按 F 上船或下船；短按不切换驾驶。按住 Shift 且有移动输入时消耗体力并加速。指向海水时 F 仍可用于水体交互。木筏随水流漂移，远海可下到水里，读档为空船。",
       "weight": 60,
       "volume": 180,
       "amount": 1,
@@ -131,7 +131,7 @@
       "parent": "BasicItem_Base",
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "自行车",
-      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车按F上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，起步和松手都有轻微惯性。",
+      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车长按 F 上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，空车松推后还能继续滚动。",
       "weight": 18,
       "volume": 80,
       "amount": 1,
@@ -172,7 +172,7 @@
       "parent": "BasicItem_Base",
       "shellPrefab": "BicycleBodyShell",
       "gameName": "自行车",
-      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车按F上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，起步和松手都有轻微惯性。",
+      "description": "在工作台用6块铁锭、2份橡胶和1份皮革制作。放置后可以推动；光标指向自行车长按 F 上下车，方向键或摇杆骑行，Shift加速。水中速度只有陆地的10%，空车松推后还能继续滚动。",
       "weight": 18,
       "volume": 80,
       "amount": 1,
@@ -197,11 +197,11 @@
           "isTrigger": true,
           "offset": {
             "x": 0,
-            "y": -0.22
+            "y": -0.27
           },
           "size": {
-            "x": 2,
-            "y": 0.65
+            "x": 1.85,
+            "y": 0.66
           }
         },
         "weakTool": 0,
@@ -211,17 +211,22 @@
         "sortingLayerName": "Player",
         "sortingOrder": 99,
         "spriteAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png",
+        "shadows": {
+          "contactWidth": 1.9,
+          "footOverlap": 0.0,
+          "footLocalPosition": { "x": -0.02, "y": -0.63 }
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": false,
           "isTrigger": false,
           "offset": {
             "x": 0,
-            "y": -0.22
+            "y": -0.27
           },
           "size": {
-            "x": 2,
-            "y": 0.65
+            "x": 1.85,
+            "y": 0.66
           }
         }
       },
@@ -248,6 +253,7 @@
             "BoostSpeedMultiplier": 1.5,
             "Acceleration": 18,
             "Braking": 24,
+            "FreeRollingDeceleration": 2,
             "FacingTurnSpeed": 360,
             "Radius": 0.3,
             "LandSpeedMultiplier": 1,
@@ -256,16 +262,17 @@
             "WaterPushSpeedMultiplier": 0.1,
             "WaterCurrentSpeed": 0,
             "HullSize": {
-              "x": 2,
-              "y": 0.65
+              "x": 1.85,
+              "y": 0.66
             },
             "SeatOffset": {
-              "x": -0.05,
-              "y": -0.12
+              "x": -0.16,
+              "y": -0.20
             },
             "AllowsWater": true,
+            "ExposesRiderToTerrain": true,
             "RotateVisualWithHeading": false,
-            "EmitWaterWake": false
+            "EmitWaterWake": true
           }
         }
       }

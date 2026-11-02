@@ -4,9 +4,9 @@ using FlatWorld.WorldModel;
 using Unity.Profiling;
 using UnityEngine;
 
-/// <summary>独轮车只接受玩家从车尾的真实碰撞推动，货仓复用普通箱子面板。</summary>
+/// <summary>独轮车通过站立手推租约或车尾碰撞推动，货仓复用普通箱子面板。</summary>
 public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPushMotionPolicy,
-    ICarrierPushEligibilityPolicy, IItemModuleDependencyBinder
+    ICarrierPushEligibilityPolicy, ICarrierTapInteractionPolicy, ICarrierOperatorPresentationPolicy, IItemModuleDependencyBinder
 {
     #region 车体配置和生命周期
     public const string ModuleId = "Mod_Wheelbarrow";
@@ -16,6 +16,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float PushSpeedMultiplier = .65f;
     public bool AllowsRiderBoost => false;
+    public bool AnimateOperatorWalking => true;
     public Mod_Carrier Carrier { get; private set; }
     public Inventory CargoInventory => inventory?.CargoInventory;
     public bool IsAvailable => loaded && isActiveAndEnabled && Carrier != null && Carrier.IsAvailable;
@@ -64,14 +65,16 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
         => Data.WriteData(new WheelbarrowState { ForwardX = forwardDirection.x, ForwardY = forwardDirection.y });
     protected override void OnUnload()
     {
-        CloseCargoPanel(); loaded = false; Carrier?.StopMotion(); RestoreWheelbarrowBodyConstraints();
+        CloseCargoPanel(); Carrier?.Rider?.ReleaseCarrierLease(); loaded = false;
+        Carrier?.StopMotion(); RestoreWheelbarrowBodyConstraints();
     }
     private void OnEnable()
     {
         if (loaded && Carrier != null && Carrier.IsAvailable && Carrier.Body != null)
             ActivateCarrier(Carrier, Carrier.Body);
     }
-    private void OnDisable() { CloseCargoPanel(); Carrier?.StopMotion(); RestoreWheelbarrowBodyConstraints(); }
+    private void OnDisable()
+    { CloseCargoPanel(); Carrier?.Rider?.ReleaseCarrierLease(); Carrier?.StopMotion(); RestoreWheelbarrowBodyConstraints(); }
     private void OnDestroy() => Unload();
     #endregion
 
@@ -88,11 +91,29 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     }
 
     public bool CanInteractWithCarrier(Player player, Mod_Mover mover)
-        => mover != null && mover.CarrierSource == null && CargoInventory != null && CanAccess(player);
+        => mover != null && (mover.CarrierSource == null && Carrier.Rider == null ||
+                            ReferenceEquals(mover.CarrierSource, Carrier) && Carrier.Rider == mover) &&
+           CargoInventory != null && CanAccess(player);
 
     public void InteractWithCarrier(Player player, Mod_Mover mover)
     {
         if (!CanInteractWithCarrier(player, mover)) return;
+        CloseCargoPanel();
+        if (Carrier.Rider == null)
+        {
+            Vector2 towardCart = WorldTopologyRuntime.ShortestDelta(player.transform.position, body.position);
+            Vector2 previousForward = forwardDirection;
+            if (towardCart.sqrMagnitude > .0001f) forwardDirection = towardCart.normalized;
+            if (!CanOperatorStandAt(ResolveOperatorPosition(Carrier)) || !Carrier.ToggleRider(player, mover))
+                forwardDirection = previousForward;
+        }
+        else Carrier.ToggleRider(player, mover);
+        Carrier.ApplyDrivenVelocity(Vector2.zero, -forwardDirection);
+    }
+
+    public void InteractWithCarrierOnTap(Player player, Mod_Mover mover)
+    {
+        if (!CanInteractWithCarrier(player, mover) || Carrier.Rider != null) return;
         Inventory cargo = CargoInventory;
         Carrier.StopMotion();
         viewingPlayer = player;
@@ -100,6 +121,23 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
         cargo.DefaultTarget_Inventory = player.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         cargo.InventoryPanel_Prefab ??= GameRes.Instance.GetPrefab("UI_Bag");
         cargo.SwitchUI();
+    }
+
+    public Vector2 ResolveOperatorPosition(Mod_Carrier carrier)
+        => (Vector2)item.transform.position - forwardDirection *
+           ResolveOperatorDistance(carrier);
+
+    private static float ResolveOperatorDistance(Mod_Carrier carrier)
+        => Mathf.Max(carrier.PushHalfExtents.x, carrier.PushHalfExtents.y) + .4f;
+
+    private bool CanOperatorStandAt(Vector2 position)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        return manager != null && manager.IsRuntimeWalkableLand(position) &&
+               manager.IsRuntimeWalkableLand(position + Vector2.right * .2f) &&
+               manager.IsRuntimeWalkableLand(position + Vector2.left * .2f) &&
+               manager.IsRuntimeWalkableLand(position + Vector2.up * .2f) &&
+               manager.IsRuntimeWalkableLand(position + Vector2.down * .2f);
     }
 
     private bool CanAccessOpenCargoPanel()
@@ -156,7 +194,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
 
     public bool CanReceiveCarrierPush(Mod_Mover source)
     {
-        if (!IsAvailable || source == null || !source.isActiveAndEnabled || source.IsLock || source.rb == null ||
+        if (!IsAvailable || Carrier.Rider != null || source == null || !source.isActiveAndEnabled || source.IsLock || source.rb == null ||
             !source.rb.simulated || source.item is not Player player || !player.IsLocalProfile || player.DestructionHandled ||
             source.gameObject.scene != item.gameObject.scene || body == null) return false;
         Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -185,6 +223,11 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     {
         if (!loaded || !isActiveAndEnabled) return;
         using var motionSample = CarrierMotionMarker.Auto();
+        if (carrier.Rider != null && ReferenceEquals(carrier.Rider.CarrierSource, carrier))
+        {
+            StepOperatorPush(carrier, input, controlsLocked, deltaTime);
+            return;
+        }
         Mod_Mover source = carrier.PushSource;
         Vector2 pushing = carrier.PushedVelocity;
         if (source == null || !CanReceiveCarrierPush(source) || pushing.sqrMagnitude < .0001f || !(deltaTime > 0f))
@@ -199,6 +242,26 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
         float allowed = CalculateWheelbarrowMovementClearance(velocity, source.rb, deltaTime);
         if (allowed > 0f && speed > .0001f) forwardDirection = direction;
         SetWheelbarrowPositionLocked(allowed <= 0f || speed <= .0001f);
+        carrier.ApplyDrivenVelocity(velocity * allowed, -forwardDirection);
+    }
+
+    /// <summary>抓住车把后复用载具速度和物理清障，玩家留在车尾步行，不坐进车斗。</summary>
+    private void StepOperatorPush(Mod_Carrier carrier, Vector2 input, bool controlsLocked, float deltaTime)
+    {
+        if (controlsLocked || input.sqrMagnitude < .001f || !(deltaTime > 0f))
+        {
+            SetWheelbarrowPositionLocked(true);
+            carrier.ApplyDrivenVelocity(Vector2.zero, -forwardDirection);
+            return;
+        }
+        Vector2 heading = Vector3.RotateTowards(forwardDirection, input.normalized,
+            carrier.FacingTurnSpeed * Mathf.Deg2Rad * deltaTime, 0f).normalized;
+        Vector2 velocity = carrier.SmoothDrivenVelocity(carrier.DrivenVelocity,
+            heading * (input.magnitude * PushSpeedMultiplier), false, false, deltaTime);
+        float allowed = CanOperatorStandAt(body.position + velocity * deltaTime - heading * ResolveOperatorDistance(carrier))
+            ? CalculateWheelbarrowMovementClearance(velocity, null, deltaTime) : 0f;
+        if (allowed > 0f) forwardDirection = heading;
+        SetWheelbarrowPositionLocked(allowed <= 0f);
         carrier.ApplyDrivenVelocity(velocity * allowed, -forwardDirection);
     }
 

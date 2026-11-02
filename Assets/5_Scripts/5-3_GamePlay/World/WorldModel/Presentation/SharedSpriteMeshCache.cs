@@ -23,6 +23,7 @@ public static class SharedSpriteMeshCache
     internal sealed class SunShadowGeometry
     {
         internal Mesh Mesh;
+        internal Geometry Geometry;
         internal Vector4 UvBounds;
         internal Vector3 UvToLocalY;
         internal float TexelScale;
@@ -52,6 +53,18 @@ public static class SharedSpriteMeshCache
             geometries.Add(sprite, geometry = new Geometry(mesh.vertices, mesh.uv, mesh.triangles, mesh.bounds));
         return geometry;
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // 隔离规则仅归还自己创建的临时 Sprite 缓存，不清空其它系统仍在使用的资源。
+    internal static void ReleaseTemporarySpriteGeometryForTests(Sprite sprite)
+    {
+        if (ReferenceEquals(sprite, null)) return;
+        if (sunShadowGeometries.Remove(sprite, out SunShadowGeometry shadow))
+            DestroyMesh(shadow.Mesh, false);
+        geometries.Remove(sprite);
+        if (meshes.Remove(sprite, out Mesh mesh)) DestroyMesh(mesh, false);
+    }
+#endif
     /// <summary>资源销毁前通知使用者释放注册和引用；只允许主线程订阅。</summary>
     internal static event Action Clearing;
     /// <summary>会话结束后禁止重新登记渲染资源，直到下一次运行初始化。</summary>
@@ -177,15 +190,17 @@ public static class SharedSpriteMeshCache
             vertices[corner] = point;
             uv[corner] = origin + uvX * point.x + uvY * point.y;
         }
+        int[] triangles = { 0, 1, 2, 0, 2, 3 };
         var mesh = new Mesh { name = $"SunShadow_{sprite.name}", hideFlags = HideFlags.HideAndDontSave };
         try
         {
             mesh.vertices = vertices;
             mesh.uv = uv;
             mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
-            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.triangles = triangles;
             mesh.RecalculateBounds();
-            existing = new SunShadowGeometry { Mesh = mesh, UvBounds = source.UvRect,
+            existing = new SunShadowGeometry { Mesh = mesh, Geometry = new Geometry(vertices, uv, triangles, mesh.bounds),
+                UvBounds = source.UvRect,
                 UvToLocalY = new Vector3(uvToY.x, uvToY.y, -Vector2.Dot(uvToY, origin)),
                 TexelScale = texelScale };
             sunShadowGeometries.Add(sprite, existing);

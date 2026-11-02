@@ -213,7 +213,7 @@ public static partial class GameplayTestSystemProbe
         catch (ArgumentException error) { duplicateError = error.GetType().Name; }
         var recovered = new List<DroppedItemSaveRecord> { ColdMotionRecord(4, 0f, 2f, 1f) };
         DroppedItemService.StepColdDropMotion(recovered, .25f, default);
-        float fixedStep = float.IsFinite(Time.fixedDeltaTime) && Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : .02f;
+        float fixedStep = GameplayFixedStepSimulation.TickDeltaTime;
         var delayed = new List<DroppedItemSaveRecord> { ColdMotionRecord(5, 0f, 100f, 100f) };
         delayed[0].PendingSurfaceMotionSeconds = fixedStep * 2f;
         DroppedItemService.StepColdDropMotion(delayed, fixedStep, default);

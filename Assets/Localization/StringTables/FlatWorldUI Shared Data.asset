@@ -15,6 +15,22 @@ MonoBehaviour:
   m_TableCollectionName: FlatWorldUI
   m_TableCollectionNameGuidString: 97b6da030a122b84bafa606b8b1b64db
   m_Entries:
+  - m_Id: 202611020000001
+    m_Key: ui.text.FC6D2AEA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000002
+    m_Key: ui.text.C838EC3D
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000003
+    m_Key: ui.text.72AA7BE2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000004
+    m_Key: ui.text.713FBDA4
+    m_Metadata:
+      m_Items: []
   - m_Id: 28102700009000001
     m_Key: ui.text.0F352BB3
     m_Metadata:

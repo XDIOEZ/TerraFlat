@@ -23,6 +23,11 @@ namespace FlatWorld.Networking
 
         public static bool IsOnline => Session.IsOnline;
 
+        /// <summary>离线和仅本机 Host 可暂停世界；远端连接尚未入世时也不阻塞其加入。</summary>
+        public static bool CanPauseLocalWorld =>
+            (!Session.IsClient && !Session.IsServer) ||
+            (Session.IsServer && !Session.HasRemoteConnections);
+
         /// <summary>
         /// Offline games and the server/host are authoritative. Use this gate
         /// for world simulation, spawning, combat resolution and saving.
@@ -57,6 +62,7 @@ namespace FlatWorld.Networking
             public bool IsOnline => false;
             public bool IsServer => false;
             public bool IsClient => false;
+            public bool HasRemoteConnections => false;
 
             public event Action<NetworkSessionState> StateChanged
             {

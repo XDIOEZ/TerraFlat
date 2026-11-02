@@ -382,7 +382,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             Contacts.Add(new JObject
             {
                 ["tick"] = (long)GameplayFixedStepSimulation.TickIndex, ["frame"] = Time.frameCount,
-                ["inFixedStep"] = Time.inFixedTimeStep, ["windowOpen"] = damage.IsDamageEnabled()
+                ["inFixedStep"] = GameplayFixedStepSimulation.IsSimulatingTick, ["windowOpen"] = damage.IsDamageEnabled()
             });
         }
 
@@ -392,7 +392,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             Windows.Add(new JObject
             {
                 ["tick"] = (long)GameplayFixedStepSimulation.TickIndex, ["frame"] = Time.frameCount,
-                ["inFixedStep"] = Time.inFixedTimeStep, ["delta"] = deltaTime,
+                ["inFixedStep"] = GameplayFixedStepSimulation.IsSimulatingTick, ["delta"] = deltaTime,
                 ["damageTickEnabled"] = damage.TickMode == ModuleTickMode.EveryFrame
             });
         }

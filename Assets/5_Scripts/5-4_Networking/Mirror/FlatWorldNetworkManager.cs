@@ -25,6 +25,28 @@ namespace FlatWorld.Networking.MirrorAdapter
         public bool IsServer => NetworkServer.active;
         public bool IsClient => NetworkClient.active;
 
+        #region 远端连接状态
+
+        // 本机 Host 的回环连接不算其他玩家；正在握手的远端连接也应阻止暂停。
+        public bool HasRemoteConnections
+        {
+            get
+            {
+                if (!NetworkServer.active)
+                    return NetworkClient.active;
+
+                foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                {
+                    if (connection != null && connection is not LocalConnectionToClient)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        #endregion
+
         public event Action<NetworkSessionState> StateChanged;
         public event Action<string> Error;
 

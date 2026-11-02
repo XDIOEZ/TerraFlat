@@ -9,20 +9,38 @@ test.system("player", "bicycle_carrier", {}, function(data)
     near(bike.diagonal, bike.land, "斜向骑行突破速度上限")
     assert(bike.coast > 0 and bike.coast < bike.diagonal, "松手没有减速滑行")
     near(bike.stopped, 0, "松手后无法最终停住")
+    near(bike.freeRollingDeceleration, 2, "自行车空车滚动减速度配置错误")
+    assert(bike.freeRollingSpeedAfterOneSecond > bike.land * .5 and bike.freeRollingDistanceOneSecond > bike.land * .65,
+        "空车松推后的滚动惯性仍然过小")
     near(bike.settledWater, bike.water, "从陆地驶入水中后未收敛到限速")
     near(bike.zeroTime, bike.diagonal, "零时间仍改变速度")
     near(bike.landPush, 6, "自行车陆地推动意图丢失")
     near(bike.waterPush, .6, "自行车水中推动阻力失效")
-    assert(not bike.wake and not bike.rotateFrame, "自行车错误沿用船尾流或旋转整幅车架")
+    assert(bike.wake and not bike.rotateFrame and bike.riderExposed,
+        "自行车涉水缺少波纹或骑手地形接触，或车架被错误旋转")
     near(boat.land, .5, "木筏陆地速度回归")
     near(boat.water, 5, "木筏水面速度回归")
     near(boat.landPush, 1.2, "木筏陆地推动阻力回归")
     near(boat.waterPush, 6, "木筏水中推动回归")
-    assert(boat.wake and boat.rotateFrame, "木筏原有表现被改变")
+    near(boat.freeRollingDeceleration, 0, "木筏不应继承自行车的空车滚动阻力")
+    assert(boat.wake and boat.rotateFrame and not boat.riderExposed, "木筏尾流、转向或乘员环境隔绝被改变")
     assert(data.wheels.rightAngle > 0 and data.wheels.still, "移动不转轮或静止仍转轮")
+    assert(data.wheels.pointerLeftWhileStill and data.wheels.pointerRightWhileStill and
+        data.wheels.movingRightKeepsLeft and data.wheels.movingLeftKeepsRight,
+        "自行车车头没有跟随光标，或被实际位移方向覆盖")
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
+    assert(data.wheels.pedalTurned and data.wheels.pedalStill and data.wheels.pedalMirrored,
+        "曲柄没有随车轮转动、静止时仍在转动或左右翻面没有同步")
+    near(data.wheels.seatLeftX, -data.wheels.seatRightX, "向左骑时座位没有随着车架翻面")
+    near(data.wheels.seatLeftY, bike.seatY, "车架翻面错误移动了座位高度")
+    assert(bike.seatX < -.1 and bike.seatY <= -.2, "Q版低座自行车乘坐锚点退回旧版")
     near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
     near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
+    local shadow = data.groundShadow
+    assert(shadow.enabled and shadow.width >= 1.85 and shadow.width <= 1.95, "紧凑自行车的接触阴影没有贴合双轮")
+    near(shadow.footX, -.02, "自行车阴影没有居中于前后车轮")
+    near(shadow.footY, -.63, "自行车阴影没有贴合轮胎落地点")
+    near(shadow.overlap, 0, "自行车阴影落地点被默认内缩规则抬高")
     assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射、表现或按世界租借的物理声明缺失")
     local recipe = data.recipe
     assert(recipe.requiredStation == "workbench" and recipe.outputs[1].itemId == "Bicycle" and recipe.outputs[1].amount == 1,

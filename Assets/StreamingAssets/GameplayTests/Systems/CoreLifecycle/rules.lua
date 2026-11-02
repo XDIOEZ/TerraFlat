@@ -43,21 +43,26 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
         "独立规则采样意外依赖真实渲染帧")
 
     local rates = {60, 30, 20, 10, 5}
-    local function check_tiered(sample, multiplier, label)
-        assert(sample.ticks == 60 * multiplier and sample.uniqueRegistrations == 5,
+    local function check_tiered(sample, multiplier, label, baseRate)
+        baseRate = baseRate or 60
+        assert(sample.ticks == baseRate * multiplier and sample.uniqueRegistrations == 5,
             label .. "重复注册、物理步次数或时间倍率错误")
         assert(#sample.tiers == #rates, label .. "缺少分类 TPS 档位")
         for i, rate in ipairs(rates) do
             local tier = sample.tiers[i]
-            assert(tier.rate == rate and tier.calls == rate * multiplier,
+            local expectedCalls = (rate == 60 and baseRate or rate) * multiplier
+            assert(tier.rate == rate and tier.calls == expectedCalls,
                 label .. "的 " .. rate .. " TPS 执行次数错误")
             near(tier.seconds, multiplier, label .. "的 " .. rate .. " TPS 累计时间")
-            near(tier.largestStep, 1 / rate, label .. "的 " .. rate .. " TPS 步长")
+            local expectedLargest = rate == 60 and 1 / baseRate or math.ceil(baseRate / rate - .000001) / baseRate
+            near(tier.largestStep, expectedLargest, label .. "的 " .. rate .. " TPS 步长")
         end
     end
     check_tiered(data.tiered60Fps, 1, "60FPS")
     check_tiered(data.tiered30Fps, 1, "30FPS 每帧双步")
     check_tiered(data.tiered15Fps, 1, "15FPS 每帧四步")
+    check_tiered(data.tieredBase30Tps, 1, "基础 30 TPS", 30)
+    check_tiered(data.tieredBase120Tps, 1, "基础 120 TPS", 120)
     check_tiered(data.tieredDoubleSpeed, 2, "2 倍速")
     check_tiered(data.tieredPaused, 1, "暂停恢复")
     local before = data.tieredPaused.beforeResume
@@ -76,6 +81,37 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
     assert(data.tieredReadiness.prematureCalls == 0 and data.tieredReadiness.calls == 1,
         "世界未就绪期间的旧会话时间混入了新会话")
     near(data.tieredReadiness.seconds, .05, "世界重新就绪后的累计时间")
+    assert(data.tickRatePreference.rejectedInvalid, "非法 TPS 选项未被拒绝")
+    local rates = {30, 60, 120}
+    for i, sample in ipairs(data.tickRatePreference.samples) do
+        local rate = rates[i]
+        assert(sample.accepted and sample.selectedIndex == i - 1 and
+            sample.effectiveRate == rate and sample.savedRate == rate,
+            "TPS 设置没有保存或立即生效：" .. rate)
+        near(sample.fixedStep, data.tickRatePreference.samples[1].fixedStep, "Unity FixedUpdate 不应跟随 TPS")
+        near(sample.maximumStep, data.tickRatePreference.samples[1].maximumStep, "Unity 最大时间预算不应跟随 TPS")
+    end
+    local clock = data.independentFrameClock
+    assert(clock.defaultTickRate == 30, "游戏时钟默认 TPS 不是30")
+    for _, sample in ipairs({clock.normal, clock.lowFps}) do
+        assert(sample.ticks == 30 and sample.tickRate == 30 and sample.maximumGroup <= 4,
+            "独立时钟 1倍速未维持30 TPS")
+        near(sample.seconds, 1, "独立时钟一秒总游戏时间")
+        near(sample.clockSeconds, 1, "独立时钟累计秒数")
+    end
+    assert(clock.doubleSpeed.ticks == 60 and clock.doubleSpeed.maximumGroup <= 4 and
+        clock.highRate.ticks == 120 and clock.highRate.tickRate == 120,
+        "独立时钟倍速或120 TPS执行错误")
+    near(clock.doubleSpeed.clockSeconds, 2, "两倍速游戏时间")
+    near(clock.highRate.clockSeconds, 1, "120 TPS游戏时间")
+    assert(clock.overloaded.ticks == 20 and clock.overloaded.maximumGroup == 4 and
+        clock.hitchTicks == 4 and clock.afterHitchTicks == 0,
+        "低帧率或卡顿未按最大4 Tick预算丢弃超额时间")
+    near(clock.hitchSeconds, 4 / 30, "卡顿追赶推进时长")
+    assert(clock.pausedTicks == 0 and clock.resumedTicks == 1 and
+        clock.changedTicks == 1 and clock.changedRate == 120,
+        "暂停恢复或动态切换 TPS 没有刷新独立时钟")
+    near(clock.changedSeconds, 1 / 120, "切档后不能沿用旧 Tick 零头")
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)
