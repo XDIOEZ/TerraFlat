@@ -43,21 +43,26 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
         "独立规则采样意外依赖真实渲染帧")
 
     local rates = {60, 30, 20, 10, 5}
-    local function check_tiered(sample, multiplier, label)
-        assert(sample.ticks == 60 * multiplier and sample.uniqueRegistrations == 5,
+    local function check_tiered(sample, multiplier, label, baseRate)
+        baseRate = baseRate or 60
+        assert(sample.ticks == baseRate * multiplier and sample.uniqueRegistrations == 5,
             label .. "重复注册、物理步次数或时间倍率错误")
         assert(#sample.tiers == #rates, label .. "缺少分类 TPS 档位")
         for i, rate in ipairs(rates) do
             local tier = sample.tiers[i]
-            assert(tier.rate == rate and tier.calls == rate * multiplier,
+            local expectedCalls = (rate == 60 and baseRate or rate) * multiplier
+            assert(tier.rate == rate and tier.calls == expectedCalls,
                 label .. "的 " .. rate .. " TPS 执行次数错误")
             near(tier.seconds, multiplier, label .. "的 " .. rate .. " TPS 累计时间")
-            near(tier.largestStep, 1 / rate, label .. "的 " .. rate .. " TPS 步长")
+            local expectedLargest = rate == 60 and 1 / baseRate or math.ceil(baseRate / rate - .000001) / baseRate
+            near(tier.largestStep, expectedLargest, label .. "的 " .. rate .. " TPS 步长")
         end
     end
     check_tiered(data.tiered60Fps, 1, "60FPS")
     check_tiered(data.tiered30Fps, 1, "30FPS 每帧双步")
     check_tiered(data.tiered15Fps, 1, "15FPS 每帧四步")
+    check_tiered(data.tieredBase30Tps, 1, "基础 30 TPS", 30)
+    check_tiered(data.tieredBase120Tps, 1, "基础 120 TPS", 120)
     check_tiered(data.tieredDoubleSpeed, 2, "2 倍速")
     check_tiered(data.tieredPaused, 1, "暂停恢复")
     local before = data.tieredPaused.beforeResume
@@ -76,6 +81,16 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
     assert(data.tieredReadiness.prematureCalls == 0 and data.tieredReadiness.calls == 1,
         "世界未就绪期间的旧会话时间混入了新会话")
     near(data.tieredReadiness.seconds, .05, "世界重新就绪后的累计时间")
+    assert(data.tickRatePreference.rejectedInvalid, "非法 TPS 选项未被拒绝")
+    local rates = {30, 60, 120}
+    for i, sample in ipairs(data.tickRatePreference.samples) do
+        local rate = rates[i]
+        assert(sample.accepted and sample.selectedIndex == i - 1 and
+            sample.effectiveRate == rate and sample.savedRate == rate,
+            "TPS 设置没有保存或立即生效：" .. rate)
+        near(sample.fixedStep, 1 / rate, "TPS 固定步间隔")
+        near(sample.maximumStep, math.max(4 / 60, 4 / rate), "TPS 追赶预算")
+    end
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)

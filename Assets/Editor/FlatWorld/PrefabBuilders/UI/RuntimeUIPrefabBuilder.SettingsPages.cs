@@ -332,6 +332,20 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         CreateSettingsHint(content, "选择自定义后输入整数，按回车或移开焦点即可应用。", 54f);
         CreateSettingsHint(content, "帧数上限不保证实际帧数；手机还会受到屏幕刷新率限制。", 54f);
+
+        CreateSettingsSection(content, "模拟频率", string.Empty);
+        TMP_Dropdown tickRateDropdown = CreateSettingsDropdownRow(content, "模拟频率",
+            FrameRateSettingsPanelController.TickRateDropdownName, new[] { "30 TPS", "60 TPS", "120 TPS" });
+        LayoutElement tickRateLayout = tickRateDropdown.GetComponent<LayoutElement>();
+        tickRateLayout.preferredWidth = 300f;
+        tickRateLayout.preferredHeight = 60f;
+        tickRateLayout.flexibleWidth = 1f;
+        tickRateDropdown.transform.parent.GetComponent<LayoutElement>().preferredHeight = 64f;
+        tickRateDropdown.SetValueWithoutNotify(1);
+        TextMeshProUGUI tickRateStatus = CreateText(FrameRateSettingsPanelController.TickRateStatusName, content,
+            "当前模拟频率：60 TPS", 16f, Muted);
+        tickRateStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+        CreateSettingsHint(content, "降低 TPS 会降低物理精度；提高 TPS 会增加 CPU 开销。联机固定为 60 TPS。", 54f);
     }
 
     /// <summary>构建主菜单退出确认窗口；取消是默认焦点，确认按钮才真正关闭应用。</summary>

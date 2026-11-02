@@ -14,7 +14,7 @@ public enum GameplayFixedStepSimulationPhase
     AfterPhysics
 }
 
-/// <summary>逻辑系统的目标频率；Unity 物理和游戏时钟始终保持 60 Hz。</summary>
+/// <summary>逻辑系统的目标频率；物理和游戏时钟跟随玩家选择的基础 TPS。</summary>
 public enum GameplayFixedStepTickRate
 {
     Hz60 = 60,
@@ -46,6 +46,7 @@ public sealed class GameplayFixedStepSimulationScheduler
         public LinkedListNode<Registration> Node;
         public GameplayFixedStepTickRate Rate;
         public double AccumulatedSeconds;
+        public double PhaseSeconds;
         public bool Active = true;
     }
 
@@ -95,12 +96,14 @@ public sealed class GameplayFixedStepSimulationScheduler
             if (registration.System is Behaviour behaviour && (behaviour == null || !behaviour.isActiveAndEnabled))
             {
                 registration.AccumulatedSeconds = 0d;
+                registration.PhaseSeconds = 0d;
                 continue;
             }
             if (registration.System is IGameplayFixedStepSimulationReadiness readiness &&
                 !readiness.CanAccumulateFixedStepTime)
             {
                 registration.AccumulatedSeconds = 0d;
+                registration.PhaseSeconds = 0d;
                 continue;
             }
             float elapsed = deltaTime;
@@ -108,9 +111,13 @@ public sealed class GameplayFixedStepSimulationScheduler
             {
                 // 低频系统一次只消费真实累计时间，绝不在单个物理步内循环追债。
                 registration.AccumulatedSeconds += deltaTime;
-                if (registration.AccumulatedSeconds + 0.00000001d < 1d / (int)registration.Rate) continue;
+                registration.PhaseSeconds += deltaTime;
+                double interval = 1d / (int)registration.Rate;
+                if (registration.PhaseSeconds + 0.00000001d < interval) continue;
                 elapsed = (float)registration.AccumulatedSeconds;
                 registration.AccumulatedSeconds = 0d;
+                registration.PhaseSeconds -= Math.Floor((registration.PhaseSeconds + 0.00000001d) / interval) * interval;
+                if (registration.PhaseSeconds < 0d) registration.PhaseSeconds = 0d;
             }
             try
             {

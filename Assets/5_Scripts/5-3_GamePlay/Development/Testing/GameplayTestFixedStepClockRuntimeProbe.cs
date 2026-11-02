@@ -105,6 +105,8 @@ public static class GameplayTestFixedStepClockRuntimeProbe
                     hosts[0].gameObject == manager.gameObject && hosts[0].isActiveAndEnabled,
                 ["defaultTicksPerSecond"] = GameplayFixedStepSimulation.DefaultTicksPerSecond,
                 ["defaultFixedDelta"] = GameplayFixedStepSimulation.DefaultFixedDeltaTime,
+                ["selectedTicksPerSecond"] = GameplayTickRateUserSettings.SelectedTicksPerSecond,
+                ["effectiveTicksPerSecond"] = GameplayTickRateUserSettings.EffectiveTicksPerSecond,
                 ["maximumDelta"] = Time.maximumDeltaTime,
                 ["original"] = new JObject
                 {

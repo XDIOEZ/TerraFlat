@@ -112,11 +112,14 @@ public static partial class GameplayTestSystemProbe
             result["tiered60Fps"] = CaptureTieredFixedStepGrouping(60, 1);
             result["tiered30Fps"] = CaptureTieredFixedStepGrouping(30, 2);
             result["tiered15Fps"] = CaptureTieredFixedStepGrouping(15, 4);
+            result["tieredBase30Tps"] = CaptureTieredFixedStepGrouping(30, 1, baseTickRate: 30);
+            result["tieredBase120Tps"] = CaptureTieredFixedStepGrouping(120, 1, baseTickRate: 120);
             result["tieredDoubleSpeed"] = CaptureTieredFixedStepGrouping(60, 2);
             result["tieredPaused"] = CaptureTieredFixedStepGrouping(30, 2, pauseAtHalf: true);
             result["tieredHitch"] = CaptureTieredFixedStepHitch();
             result["tieredDisabled"] = CaptureTieredFixedStepDisabled();
             result["tieredReadiness"] = CaptureTieredFixedStepReadiness();
+            result["tickRatePreference"] = CaptureTickRatePreference();
             return result;
         }
         finally { UnityEngine.Object.DestroyImmediate(host); }
@@ -142,7 +145,8 @@ public static partial class GameplayTestSystemProbe
     }
 
     // 用正式调度器采样所有频率，不模拟机器产量或物理引擎。
-    private static JObject CaptureTieredFixedStepGrouping(int groups, int stepsPerGroup, bool pauseAtHalf = false)
+    private static JObject CaptureTieredFixedStepGrouping(int groups, int stepsPerGroup, bool pauseAtHalf = false,
+        int baseTickRate = 60)
     {
         var scheduler = new GameplayFixedStepSimulationScheduler();
         GameplayFixedStepTickRate[] rates =
@@ -187,7 +191,7 @@ public static partial class GameplayTestSystemProbe
                 // 暂停时没有 FixedUpdate，不能人为推进累计器或补欠下的时间。
                 pauseSnapshot = Capture();
             }
-            for (int step = 0; step < stepsPerGroup; step++) scheduler.SimulateFixedStep(1f / 60f);
+            for (int step = 0; step < stepsPerGroup; step++) scheduler.SimulateFixedStep(1f / baseTickRate);
         }
         JObject result = Capture();
         result["uniqueRegistrations"] = uniqueCount;
@@ -264,6 +268,47 @@ public static partial class GameplayTestSystemProbe
         int prematureCalls = calls;
         scheduler.SimulateFixedStep(1f / 60f);
         return new JObject { ["prematureCalls"] = prematureCalls, ["calls"] = calls, ["seconds"] = seconds };
+    }
+
+    private static JObject CaptureTickRatePreference()
+    {
+        const string key = "FlatWorld.Simulation.TickRate";
+        bool hadPreference = PlayerPrefs.HasKey(key);
+        int originalPreference = PlayerPrefs.GetInt(key);
+        int originalSelection = GameplayTickRateUserSettings.SelectedIndex;
+        float originalStep = Time.fixedDeltaTime;
+        float originalMaximum = Time.maximumDeltaTime;
+        var samples = new JArray();
+        try
+        {
+            for (int index = 0; index < 3; index++)
+            {
+                bool accepted = GameplayTickRateUserSettings.TrySetSelectedIndex(index, out _);
+                samples.Add(new JObject
+                {
+                    ["accepted"] = accepted,
+                    ["selectedIndex"] = GameplayTickRateUserSettings.SelectedIndex,
+                    ["effectiveRate"] = GameplayTickRateUserSettings.EffectiveTicksPerSecond,
+                    ["fixedStep"] = Time.fixedDeltaTime,
+                    ["maximumStep"] = Time.maximumDeltaTime,
+                    ["savedRate"] = PlayerPrefs.GetInt(key)
+                });
+            }
+            int indexBeforeInvalid = GameplayTickRateUserSettings.SelectedIndex;
+            bool rejectedInvalid = !GameplayTickRateUserSettings.TrySetSelectedIndex(-1, out _) &&
+                !GameplayTickRateUserSettings.TrySetSelectedIndex(3, out _) &&
+                GameplayTickRateUserSettings.SelectedIndex == indexBeforeInvalid;
+            return new JObject { ["samples"] = samples, ["rejectedInvalid"] = rejectedInvalid };
+        }
+        finally
+        {
+            GameplayTickRateUserSettings.TrySetSelectedIndex(originalSelection, out _);
+            if (hadPreference) PlayerPrefs.SetInt(key, originalPreference);
+            else PlayerPrefs.DeleteKey(key);
+            PlayerPrefs.Save();
+            Time.fixedDeltaTime = originalStep;
+            Time.maximumDeltaTime = originalMaximum;
+        }
     }
 
     #endregion

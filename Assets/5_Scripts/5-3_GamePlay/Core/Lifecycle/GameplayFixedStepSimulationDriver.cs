@@ -13,6 +13,8 @@ public sealed class GameplayFixedStepSimulationDriver : MonoBehaviour
             owner.gameObject.AddComponent<GameplayFixedStepSimulationDriver>();
     }
 
+    private void Update() => GameplayTickRateUserSettings.RefreshWhenNetworkStateChanges();
+
     private void FixedUpdate()
     {
         if (GameManager.ExistingInstance == null || GameManager.ExistingInstance.gameObject != gameObject) return;

@@ -46,7 +46,12 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     assert(data.hostCount == 1 and data.managerOwnsActiveHost, "固定步驱动不是 GameManager 上的唯一活动宿主")
     assert(data.defaultTicksPerSecond == 60, "默认固定步频率不是 60 Hz")
     near(data.defaultFixedDelta, 1 / 60, .000001, "默认固定步时长错误")
-    near(data.maximumDelta, 4 / 60, .000001, "单帧固定步追赶预算不是约 4 步")
+    local baseRate = data.effectiveTicksPerSecond
+    assert((baseRate == 30 or baseRate == 60 or baseRate == 120) and
+        (data.selectedTicksPerSecond == 30 or data.selectedTicksPerSecond == 60 or data.selectedTicksPerSecond == 120),
+        "玩家模拟频率无效")
+    near(data.maximumDelta, math.max(4 / 60, 4 / baseRate), .000001, "固定步追赶预算与 TPS 不匹配")
+    local maxStepsPerFrame = math.floor(data.maximumDelta * baseRate + .0001)
     assert(data.afterRegister == data.beforeRegister + 1 and data.afterUnregister == data.beforeUnregister - 1,
         "临时观察系统登记或卸载错误")
 
@@ -58,7 +63,7 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
         assert(sample.timeScale == speed and sample.endTimeScale == speed, "采样期间游戏倍速改变")
         assert(sample.targetFrameRate == 30 and sample.endTargetFrameRate == 30 and
             sample.vSyncCount == 0 and sample.endVSyncCount == 0, "低帧率现场未生效或中途被改变")
-        near(sample.fixedDelta, 1 / 60, .000001, "Unity 固定步不是 60 Hz")
+        near(sample.fixedDelta, 1 / baseRate, .000001, "Unity 固定步没有采用当前 TPS")
         near(sample.endFixedDelta, sample.fixedDelta, .000001, "采样期间 Unity 固定步长被改变")
         assert(#sample.steps == ticks, "固定步计数与观察系统实际调用次数不一致")
         near(sample.endFixedTime - sample.startFixedTime, ticks * sample.fixedDelta, .001,
@@ -73,7 +78,7 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
             near(step.delta, sample.fixedDelta, .000001, "系统收到的时间不是 Unity 固定步长")
             near(step.clock, step.fixedTime, .000001, "公共时钟没有使用 Unity 固定时间")
             stepsPerFrame[step.frame] = (stepsPerFrame[step.frame] or 0) + 1
-            assert(stepsPerFrame[step.frame] <= 4, "同一渲染帧执行超过 4 次 FixedUpdate")
+            assert(stepsPerFrame[step.frame] <= maxStepsPerFrame, "同一渲染帧 FixedUpdate 超过追赶预算")
             if previous then
                 assert(step.frame >= previous.frame, "固定步的渲染帧序号倒退")
                 if step.frame == previous.frame then sameFrameSteps = true end
@@ -88,7 +93,8 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     local doubleWall, doubleTicks, doubleFrames, doubleMulti = check_window(data.double, 2, 1.5)
     assert(normalFrames / normalWall <= 36 and doubleFrames / doubleWall <= 36,
         "现场没有实际降到约 30 渲染帧，不能验证低帧率补步")
-    assert(normalMulti and doubleMulti, "低帧率下没有观察到同一渲染帧中的多个真实固定步")
+    assert((baseRate <= 30 or normalMulti) and doubleMulti,
+        "低帧率下没有观察到同一渲染帧中的多个真实固定步")
     local function check_unclipped_time_scale(sample, speed)
         local scaled, unscaled = 0, 0
         for _, frame in ipairs(sample.frames) do
@@ -114,14 +120,14 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
         assert(sample.timeScale == speed and sample.endTimeScale == speed,
             "卡顿采样期间倍速发生变化")
         assert(sample.endFrame == sample.startFrame + 1, "卡顿采样不是相邻的两个渲染帧")
-        near(sample.fixedDelta, 1 / 60, .000001, "卡顿后物理固定步长发生变化")
+        near(sample.fixedDelta, 1 / baseRate, .000001, "卡顿后物理固定步长发生变化")
         near(sample.maximumDelta, data.maximumDelta, .000001, "卡顿后最大追赶预算发生变化")
-        assert(ticks >= 1 and ticks <= 4 and #sample.steps == ticks,
-            "卡顿后单帧固定步执行次数不是 1～4 次")
+        assert(ticks >= 1 and ticks <= maxStepsPerFrame and #sample.steps == ticks,
+            "卡顿后单帧固定步执行次数超出 TPS 预算")
         assert(gameTime > 0 and gameTime <= sample.maximumDelta + .003 and
             sample.scaledDelta <= sample.maximumDelta + .003,
             "超额卡顿时间没有被截断，游戏仍在追债")
-        assert(wall > gameTime * 2, "卡顿后游戏时间没有按预算减速")
+        assert(wall > gameTime * 1.2, "卡顿后游戏时间没有按预算减速")
         near(fixedTime, ticks * sample.fixedDelta, .001, "卡顿后物理时间与固定步数不匹配")
         for index, step in ipairs(sample.steps) do
             assert(step.frame == sample.endFrame and step.tick == sample.startTick + index,
