@@ -81,7 +81,8 @@ namespace FlatWorld.Networking.Gameplay
                 ["physicsX"] = physics.x, ["physicsY"] = physics.y,
                 ["savedX"] = saved.x, ["savedY"] = saved.y,
                 ["observerX"] = observer.Position.LocalMeters.X, ["observerY"] = observer.Position.LocalMeters.Y,
-                ["revision"] = observer.RealmRevision, ["shipId"] = observer.ShipId,
+                ["revision"] = observer.RealmRevision, ["directTeleport"] = observer.IsDirectSurfaceTeleport,
+                ["shipId"] = observer.ShipId,
                 ["velocity"] = rigidbody.velocity.magnitude
             };
         }

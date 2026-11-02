@@ -9,6 +9,7 @@ namespace FlatWorld.Spaceflight
     public struct SpaceNetworkObserver
     {
         public bool InSpace;
+        public bool IsDirectSurfaceTeleport;
         public uint RealmRevision;
         public SpaceSectorPosition Position;
         public SpaceVector2 Velocity;

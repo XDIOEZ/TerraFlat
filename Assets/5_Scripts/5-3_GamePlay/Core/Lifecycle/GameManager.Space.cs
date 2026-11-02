@@ -86,8 +86,9 @@ public partial class GameManager
                 {
                     Vector3 point = new((float)observer.Position.LocalMeters.X, (float)observer.Position.LocalMeters.Y);
                     Exception failure = null;
+                    bool showLoadingPresentation = key != networkLocalWorldKey || !observer.IsDirectSurfaceTeleport;
                     yield return RunWorldTransitionSteps(DimensionManager.Instance.ApplyNetworkPresentation(player,
-                        WorldAddress.FromWorldKey(key), point), error => failure = error);
+                        WorldAddress.FromWorldKey(key), point, showLoadingPresentation), error => failure = error);
                     if (failure != null)
                     {
                         if (Time.unscaledTime >= nextSurfaceTransferWarning)

@@ -308,7 +308,9 @@ namespace FlatWorld.Networking.Gameplay
             if (SpaceSession.Current.TryGetNetworkObserver(profile, out SpaceNetworkObserver realm) && !realm.InSpace &&
                 (state.MetadataWorldKey != realm.WorldKey || state.MetadataRealmRevision != realm.RealmRevision))
             {
-                SendWorldSnapshot(connection, realm.WorldKey, realm.RealmRevision);
+                // 同世界 GM 传送只改变落点和输入代际，不重发元数据或清空客户端区块。
+                if (state.MetadataWorldKey != realm.WorldKey || !realm.IsDirectSurfaceTeleport)
+                    SendWorldSnapshot(connection, realm.WorldKey, realm.RealmRevision);
                 state.MetadataWorldKey = realm.WorldKey;
                 state.MetadataRealmRevision = realm.RealmRevision;
             }

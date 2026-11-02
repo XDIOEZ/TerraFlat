@@ -12,6 +12,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
+    public const float HoldToDriveSeconds = 0.55f;
     public Ex_ModData Data = new(); // 标准 JSON 模块数据。
     [Min(0.1f)] public float MaxSpeed = 5f; // 满幅速度。
     [Min(1f)] public float BoostSpeedMultiplier = 1.5f; // 乘员主动加速时的最高速度倍率。
