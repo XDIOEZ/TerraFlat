@@ -8,7 +8,8 @@ using UnityEngine.UI;
 /// <summary>
 /// 存档与角色动态条目的视觉状态；数据选中和导航焦点可同时保留。
 /// </summary>
-public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectHandler
+public sealed class GameSaveItemView : MonoBehaviour,
+    IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
 {
     #region 引用与状态
 
@@ -18,6 +19,7 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
 
     private bool dataSelected;
     private bool navigationFocused;
+    private bool pointerHovered;
 
     #endregion
 
@@ -43,6 +45,7 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
     private void OnDisable()
     {
         navigationFocused = false;
+        pointerHovered = false;
     }
 
     #endregion
@@ -83,9 +86,22 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
         RefreshVisual();
     }
 
+    /// <summary>鼠标悬浮只预览条目，不修改已经确认的存档选择。</summary>
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        pointerHovered = true;
+        RefreshVisual();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        pointerHovered = false;
+        RefreshVisual();
+    }
+
     private void RefreshVisual()
     {
-        bool focused = navigationFocused;
+        bool focused = navigationFocused || pointerHovered;
         bool highlighted = dataSelected || focused;
         if (Background != null)
             Background.color = focused

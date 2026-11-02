@@ -69,7 +69,7 @@ public static class FlatWorldUITheme
     private static Color ButtonPrimary => ThemeColor("buttonPrimary");
     private static Color ButtonClose => ThemeColor("buttonClose");
     private static Color TintNormal => ThemeColor("tintNormal");
-    private static Color TintHighlight => ThemeColor("tintHighlight");
+    public static Color TintHighlight => ThemeColor("tintHighlight");
     private static Color TintPressed => ThemeColor("tintPressed");
     private static Color TintSelected => ThemeColor("tintSelected");
     private static Color TintDisabled => ThemeColor("tintDisabled");

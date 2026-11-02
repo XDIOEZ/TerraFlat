@@ -1,4 +1,13 @@
 -- 固定二级页签与每页独立滚动，窄内容区也不能把导航挤出边界。
+test.system("ui_settings", "button_hover_feedback", {}, function(data)
+    assert(data.unifiedTint and data.hoveredSelected and data.exitsToNormal,
+        "普通按钮的悬浮色、点击后预选或移出恢复未统一")
+    assert(data.dedicatedTransitionPreserved,
+        "统一悬浮反馈不得覆盖独立控件自己的视觉过渡")
+    assert(data.saveHover and data.saveHoverCleared and data.saveSelectionPreserved,
+        "存档列表悬浮不能预选，或鼠标移出时错误清除了已确认选择")
+end, "按钮统一悬浮与存档条目预选")
+
 test.system("ui_settings", "scroll_wheel_step", {}, function(data)
     assert(data.scrollCount > 0 and data.nativeScrollCount == 0,
         "自有UI仍有未接入通用滚轮规则的滚动列表")

@@ -29,10 +29,76 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
         Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
         Register("ui_settings", "scroll_wheel_step", CaptureScrollWheelStep);
+        Register("ui_settings", "button_hover_feedback", CaptureButtonHoverFeedback);
 #endif
     }
 
 #if UNITY_EDITOR
+    /// <summary>验证统一悬浮配色、鼠标选中态回退和独立存档条目的预选反馈。</summary>
+    private static JObject CaptureButtonHoverFeedback(JObject _)
+    {
+        GameObject root = new GameObject("[LuaButtonHoverFeedback]", typeof(RectTransform));
+        root.SetActive(false);
+        try
+        {
+            GameObject buttonObject = new GameObject("Button", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(root.transform, false);
+            Button button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = buttonObject.GetComponent<Image>();
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = Color.red;
+            colors.selectedColor = Color.red;
+            colors.fadeDuration = 0.5f;
+            button.colors = colors;
+
+            FlatWorldUIFeedback feedback = buttonObject.AddComponent<FlatWorldUIFeedback>();
+            feedback.RefreshInteractionColors();
+            bool unifiedTint = button.colors.highlightedColor == FlatWorldUITheme.TintHighlight &&
+                               Mathf.Abs(button.colors.fadeDuration - 0.11f) < 0.001f;
+            feedback.OnPointerEnter(null);
+            feedback.OnSelect(null);
+            bool hoveredSelected = button.colors.selectedColor == FlatWorldUITheme.TintHighlight;
+            feedback.OnPointerExit(null);
+            bool exitsToNormal = button.colors.selectedColor == button.colors.normalColor;
+
+            button.transition = Selectable.Transition.None;
+            colors = button.colors;
+            colors.highlightedColor = Color.red;
+            button.colors = colors;
+            feedback.RefreshInteractionColors();
+            bool dedicatedTransitionPreserved = button.colors.highlightedColor == Color.red;
+
+            GameObject saveObject = new GameObject("Save", typeof(RectTransform),
+                typeof(CanvasRenderer), typeof(Image));
+            saveObject.transform.SetParent(root.transform, false);
+            Image saveBackground = saveObject.GetComponent<Image>();
+            GameSaveItemView saveItem = saveObject.AddComponent<GameSaveItemView>();
+            saveItem.Background = saveBackground;
+            saveItem.SetSelected(false);
+            saveItem.OnPointerEnter(null);
+            bool saveHover = saveBackground.color == FlatWorldUITheme.SaveItemFocused;
+            saveItem.OnPointerExit(null);
+            bool saveHoverCleared = saveBackground.color == FlatWorldUITheme.SaveItemNormal;
+            saveItem.SetSelected(true);
+            saveItem.OnPointerEnter(null);
+            saveItem.OnPointerExit(null);
+            bool saveSelectionPreserved = saveBackground.color == FlatWorldUITheme.SaveItemSelected;
+
+            return new JObject
+            {
+                ["unifiedTint"] = unifiedTint,
+                ["hoveredSelected"] = hoveredSelected,
+                ["exitsToNormal"] = exitsToNormal,
+                ["dedicatedTransitionPreserved"] = dedicatedTransitionPreserved,
+                ["saveHover"] = saveHover,
+                ["saveHoverCleared"] = saveHoverCleared,
+                ["saveSelectionPreserved"] = saveSelectionPreserved
+            };
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
     /// <summary>验证自有 UI 列表都使用公共滚轮规则，且大型分组不会冒充一行。</summary>
     private static JObject CaptureScrollWheelStep(JObject _)
     {
