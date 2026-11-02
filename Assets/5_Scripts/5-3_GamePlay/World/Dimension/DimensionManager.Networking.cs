@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
@@ -100,7 +100,7 @@ public sealed partial class DimensionManager
             if (failure != null) throw failure;
             presentation.RestorePhysics();
             Physics2D.SyncTransforms();
-            yield return new WaitForFixedUpdate();
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             if (!IsLocalDimensionPresentationValid(presentation))
                 throw new InvalidOperationException("维度呈现完成前角色或连接已改变。");
             actor.GetComponentInChildren<Mod_TileEffectReceiver>(true)?.RefreshCurrentTileEffects();

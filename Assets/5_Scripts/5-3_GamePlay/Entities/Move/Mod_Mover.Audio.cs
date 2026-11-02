@@ -304,11 +304,11 @@ public partial class Mod_Mover
                               DrivenVelocity.sqrMagnitude > 0.16f &&
                               RequestedMoveInput.sqrMagnitude > InputMoveThresholdSqr;
         float drivenDistance = activelyMoving
-            ? Mathf.Min(displacement.magnitude, DrivenVelocity.magnitude * Time.fixedDeltaTime)
+            ? Mathf.Min(displacement.magnitude, DrivenVelocity.magnitude * GameplayFixedStepSimulation.TickDeltaTime)
             : 0f;
         string cueId = swimmingAudioState.Advance(liquidDepth,
             swimmingAudioTileEffects.CurrentWaterImmersion, waterContact,
-            activelyMoving, drivenDistance, Time.fixedDeltaTime);
+            activelyMoving, drivenDistance, GameplayFixedStepSimulation.TickDeltaTime);
 
         if (swimmingAudioState.LoopVolume > 0f)
         {

@@ -535,7 +535,7 @@ public abstract class Item : MonoBehaviour
     /// <summary>
     /// 物品的更新逻辑，由 ItemMgr 统一驱动
     /// </summary>
-    public void Tick(float deltaTime) => TickAtSimulationTime(deltaTime, Time.timeAsDouble);
+    public void Tick(float deltaTime) => TickAtSimulationTime(deltaTime, GameplayFixedStepSimulation.CurrentTime);
 
     internal void TickAtSimulationTime(float deltaTime, double currentTime)
     {

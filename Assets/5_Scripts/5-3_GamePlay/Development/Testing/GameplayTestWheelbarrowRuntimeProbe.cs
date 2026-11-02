@@ -189,7 +189,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     private static IEnumerator Sample(Player player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(fixture.Recorder.Capture());
     }
 
@@ -205,7 +205,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         bool occupiedWhileUnloaded = BuildingOccupancyRegistry.IsOccupied(cell);
         bool occupiedByOther = BuildingOccupancyRegistry.IsOccupied(cell, building);
         fixture.Carrier.Load();
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(new JObject { ["occupiedBefore"] = occupiedBefore, ["unloaded"] = unloaded,
             ["occupiedWhileUnloaded"] = occupiedWhileUnloaded, ["occupiedByOther"] = occupiedByOther,
             ["reloaded"] = fixture.Carrier.IsRuntimeLoaded, ["occupiedAfterReload"] = BuildingOccupancyRegistry.IsOccupied(cell),
@@ -321,7 +321,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         bool pushed = fixture.Recorder.EverPushed;
         bool accepted = PlayerTeleportService.TryTeleportToSurface(player,
             WorldTopologyRuntime.NormalizePosition(fixture.Site + Vector2.up * 2f));
-        for (int i = 0; i < 3; i++) yield return new WaitForFixedUpdate();
+        for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(new JObject { ["everPushed"] = pushed, ["teleported"] = accepted,
             ["stopped"] = fixture.Carrier.Body.velocity.sqrMagnitude < .0001f,
             ["pushAfterRelease"] = fixture.Carrier.PushSource != null });
@@ -521,7 +521,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
 }
 
 /// <summary>在真实物理帧记录独轮车速度与推动来源。</summary>
-public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
+public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     #region 推动采样
     private Mod_Carrier carrier;
@@ -542,7 +542,10 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         EverPushed = unlockedWhilePushing = buildingBlockedWhilePushing = false;
     }
 
-    private void FixedUpdate()
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
+    public void SimulateFixedStep(float deltaTime)
     {
         if (carrier == null || carrier.Body == null || driver == null || mover == null) return;
         frames++;
@@ -556,7 +559,7 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour
         unlockedWhilePushing |= (carrier.Body.constraints &
             (RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezePositionY)) == 0;
         if (buildingObstacle != null)
-            buildingBlockedWhilePushing |= !carrier.CanTraversePosition(carrier.Body.position + carrier.PushedVelocity * Time.fixedDeltaTime);
+            buildingBlockedWhilePushing |= !carrier.CanTraversePosition(carrier.Body.position + carrier.PushedVelocity * deltaTime);
     }
 
     public JObject Capture()

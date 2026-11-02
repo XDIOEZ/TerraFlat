@@ -209,15 +209,15 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         if (entered && mover?.rb != null && controller != null)
         {
             movementDelegated = !session.HandlePassengerInput(player, mover, controller,
-                Vector2.zero, 0f, Time.fixedDeltaTime);
+                Vector2.zero, 0f, GameplayFixedStepSimulation.TickDeltaTime);
             Vector2 beforeMove = mover.rb.position;
             mover.rb.velocity = Vector2.right * 2f;
             firstWorld.Physics.PrimarySpace.PhysicsScene.Simulate(.1f);
             Vector2 afterMove = mover.rb.position;
             mover.rb.velocity = Vector2.zero;
             result["passengerMovedByNativePhysics"] = Vector2.Distance(beforeMove, afterMove) > .01f;
-            session.HandlePassengerInput(player, mover, controller, Vector2.zero, 0f, Time.fixedDeltaTime);
-            yield return new WaitForFixedUpdate();
+            session.HandlePassengerInput(player, mover, controller, Vector2.zero, 0f, GameplayFixedStepSimulation.TickDeltaTime);
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             yield return null;
             GameplayWorldRegistry.RegisterPresentation(surfacePresentation);
             bool registeredSurfaceVisible = !surfaceRenderer.forceRenderingOff;
@@ -276,7 +276,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                     firstSortingDomain != null && firstSortingDomain.Root != secondSortingDomain.Root;
             double interiorGravity = session.GetShipInteriorWalkingGravity(secondShip, new Vector2(1.5f, .5f));
             bool delegated = !session.HandlePassengerInput(player, mover, controller,
-                Vector2.zero, 0f, Time.fixedDeltaTime);
+                Vector2.zero, 0f, GameplayFixedStepSimulation.TickDeltaTime);
             mover.rb.velocity = Vector2.zero;
             Vector2 before = mover.rb.position;
             mover.MoveByInput(Vector2.right, .1f);
@@ -377,7 +377,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             mover.rb.position = rightSide;
             player.transform.position = rightSide;
             movementDelegated &= !session.HandlePassengerInput(player, mover, controller,
-                Vector2.zero, 0f, Time.fixedDeltaTime);
+                Vector2.zero, 0f, GameplayFixedStepSimulation.TickDeltaTime);
             movedPlayerToRight = movementDelegated && Math.Abs(passenger.LocalX - rightSide.x) < .01d;
         }
 
@@ -388,7 +388,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         bool splitCommitted = false;
         for (int i = 0; i < 240 && !splitCommitted; i++)
         {
-            yield return new WaitForFixedUpdate();
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             session.FindPiece(rightDoorPiece.PieceId, out ShipState rightOwner, out _);
             splitCommitted = splitDamageAccepted && rightOwner != null && rightOwner != firstShip &&
                 GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(rightOwner.ShipId);
@@ -799,7 +799,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 foreach (JObject projection in projections)
                     if (projection.Value<int>("sourceId") == chicken.gameObject.GetInstanceID())
                     { hasProjection = true; break; }
-            chicken.Tick(Time.fixedDeltaTime);
+            chicken.Tick(GameplayFixedStepSimulation.TickDeltaTime);
             result["ordinaryChickenTickedWithoutView"] = !hasProjection && chicken.IsInitialized &&
                 !chicken.ShouldUseSimulationRange() && GameplayWorldRegistry.SimulatesWithoutObservers(world.WorldKey) &&
                 AiRuntimeBackendService.TryGetGameObjectActor(chicken, out IAIActor activeActor) && activeActor.IsAlive &&

@@ -742,7 +742,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             if (!windOwned && windSuppressionLeases == 0)
                 velocity += WorldMotionSystem.SampleWindVelocity(rb.position, item.itemData.Stack.CurrentWeight);
             if (item is Player player && player.IsLocalProfile && item.gameObject.scene.name == MachineWorld.WorldKey)
-                velocity += MachineWorld.SampleConveyorVelocity(rb.position, Time.fixedDeltaTime);
+                velocity += MachineWorld.SampleConveyorVelocity(rb.position, GameplayFixedStepSimulation.TickDeltaTime);
         }
         return velocity;
     }

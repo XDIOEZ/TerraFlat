@@ -88,9 +88,30 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
         assert(sample.accepted and sample.selectedIndex == i - 1 and
             sample.effectiveRate == rate and sample.savedRate == rate,
             "TPS 设置没有保存或立即生效：" .. rate)
-        near(sample.fixedStep, 1 / rate, "TPS 固定步间隔")
-        near(sample.maximumStep, math.max(4 / 60, 4 / rate), "TPS 追赶预算")
+        near(sample.fixedStep, data.tickRatePreference.samples[1].fixedStep, "Unity FixedUpdate 不应跟随 TPS")
+        near(sample.maximumStep, data.tickRatePreference.samples[1].maximumStep, "Unity 最大时间预算不应跟随 TPS")
     end
+    local clock = data.independentFrameClock
+    assert(clock.defaultTickRate == 30, "游戏时钟默认 TPS 不是30")
+    for _, sample in ipairs({clock.normal, clock.lowFps}) do
+        assert(sample.ticks == 30 and sample.tickRate == 30 and sample.maximumGroup <= 4,
+            "独立时钟 1倍速未维持30 TPS")
+        near(sample.seconds, 1, "独立时钟一秒总游戏时间")
+        near(sample.clockSeconds, 1, "独立时钟累计秒数")
+    end
+    assert(clock.doubleSpeed.ticks == 60 and clock.doubleSpeed.maximumGroup <= 4 and
+        clock.highRate.ticks == 120 and clock.highRate.tickRate == 120,
+        "独立时钟倍速或120 TPS执行错误")
+    near(clock.doubleSpeed.clockSeconds, 2, "两倍速游戏时间")
+    near(clock.highRate.clockSeconds, 1, "120 TPS游戏时间")
+    assert(clock.overloaded.ticks == 20 and clock.overloaded.maximumGroup == 4 and
+        clock.hitchTicks == 4 and clock.afterHitchTicks == 0,
+        "低帧率或卡顿未按最大4 Tick预算丢弃超额时间")
+    near(clock.hitchSeconds, 4 / 30, "卡顿追赶推进时长")
+    assert(clock.pausedTicks == 0 and clock.resumedTicks == 1 and
+        clock.changedTicks == 1 and clock.changedRate == 120,
+        "暂停恢复或动态切换 TPS 没有刷新独立时钟")
+    near(clock.changedSeconds, 1 / 120, "切档后不能沿用旧 Tick 零头")
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)

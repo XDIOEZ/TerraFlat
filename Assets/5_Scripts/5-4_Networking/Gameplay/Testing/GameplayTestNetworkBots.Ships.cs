@@ -193,7 +193,7 @@ namespace FlatWorld.Networking.Gameplay
                 throw new InvalidOperationException("区块边界现场未准备。");
             string stage = args.Value<string>("stage");
             if (stage != "before" && stage != "after") throw new ArgumentException("区块边界阶段无效。");
-            yield return new WaitForFixedUpdate();
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             yield return Wait(() => fixture.TargetAndPresentedWindowsMatchPlayer(), "本地玩家跨块后真实流送窗口交接", 8d,
                 () => fixture.Sample(stage).ToString(Newtonsoft.Json.Formatting.None));
             JObject result = fixture.Sample(stage);

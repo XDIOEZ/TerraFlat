@@ -46,10 +46,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (world != key) return;
             ulong tick = GameplayFixedStepSimulation.TickIndex;
             notifications++;
-            allInFixedStep &= Time.inFixedTimeStep;
+            allInFixedStep &= GameplayFixedStepSimulation.IsSimulatingTick;
             consecutiveTicks &= tick == previousTick + 1;
             previousTick = tick;
-            expectedElapsed += Time.fixedDeltaTime * clock.TimeScaleModifier * GameRuleConfiguration.Current.World.TimeSpeedMultiplier;
+            expectedElapsed += GameplayFixedStepSimulation.TickDeltaTime * clock.TimeScaleModifier * GameRuleConfiguration.Current.World.TimeSpeedMultiplier;
         };
         service.TimeAdvanced += onTime;
         try

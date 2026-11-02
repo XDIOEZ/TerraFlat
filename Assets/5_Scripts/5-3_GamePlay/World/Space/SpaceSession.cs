@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using MemoryPack;
@@ -324,7 +324,7 @@ namespace FlatWorld.Spaceflight
                 }
             }
             StepExplosions();
-            CompletePresentationSample(seconds, Time.fixedTimeAsDouble);
+            CompletePresentationSample(seconds, GameplayFixedStepSimulation.CurrentTime);
         }
         private void LateUpdate()
         {

@@ -293,9 +293,9 @@ namespace FlatWorld.Localization.Editor
                 { "模拟频率", "Simulation Tick Rate" },
                 { "TPS 档位无效。", "Invalid TPS option." },
                 { "当前模拟频率：{0} TPS", "Current simulation rate: {0} TPS" },
-                { "当前模拟频率：60 TPS", "Current simulation rate: 60 TPS" },
-                { "联机固定 60 TPS，单机时应用所选频率。", "Multiplayer uses 60 TPS; your choice applies offline." },
-                { "降低 TPS 会降低物理精度；提高 TPS 会增加 CPU 开销。联机固定为 60 TPS。", "Lower TPS reduces physics precision; higher TPS increases CPU load. Multiplayer uses 60 TPS." },
+                { "当前模拟频率：30 TPS", "Current simulation rate: 30 TPS" },
+                { "联机固定 30 TPS，单机时应用所选频率。", "Multiplayer uses 30 TPS; your choice applies offline." },
+                { "降低 TPS 会降低物理精度；提高 TPS 会增加 CPU 开销。联机固定为 30 TPS。", "Lower TPS reduces physics precision; higher TPS increases CPU load. Multiplayer uses 30 TPS." },
                 // 起降高度尺的动态读数与触地提醒同步两种语言。
                 { "飞行高度", "FLIGHT ALTITUDE" },
                 { "{0} m", "{0} m" },

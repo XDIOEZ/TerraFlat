@@ -341,11 +341,11 @@ public static partial class RuntimeUIPrefabBuilder
         tickRateLayout.preferredHeight = 60f;
         tickRateLayout.flexibleWidth = 1f;
         tickRateDropdown.transform.parent.GetComponent<LayoutElement>().preferredHeight = 64f;
-        tickRateDropdown.SetValueWithoutNotify(1);
+        tickRateDropdown.SetValueWithoutNotify(0);
         TextMeshProUGUI tickRateStatus = CreateText(FrameRateSettingsPanelController.TickRateStatusName, content,
-            "当前模拟频率：60 TPS", 16f, Muted);
+            "当前模拟频率：30 TPS", 16f, Muted);
         tickRateStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
-        CreateSettingsHint(content, "降低 TPS 会降低物理精度；提高 TPS 会增加 CPU 开销。联机固定为 60 TPS。", 54f);
+        CreateSettingsHint(content, "降低 TPS 会降低物理精度；提高 TPS 会增加 CPU 开销。联机固定为 30 TPS。", 54f);
     }
 
     /// <summary>构建主菜单退出确认窗口；取消是默认焦点，确认按钮才真正关闭应用。</summary>

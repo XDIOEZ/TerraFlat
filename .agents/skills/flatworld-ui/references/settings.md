@@ -11,6 +11,6 @@
 - `WaterVisualSettings` Dropdown稳定ID：stylized/realistic/unity-stylized-water/low-spec；`UI_VisualEffectsSettings` 作为画质页唯一滚动内容，原 `VisualEffectsSettingsPanelLauncher` 继续绑定视觉细项。`GraphicsSettingsPanelLauncher` 负责六档预设和后处理，两个控制器共用页底「恢复默认」按钮并各自重置所属 Provider；UI顺序不等于持久化枚举；只有显式选预设才联动水体/阴影/后处理，启动/放弃恢复各项，保留微调。重建入口 `Rebuild Graphics Settings UI` 同步游戏内和主菜单 Prefab。
 - 画质页新增独立 `ScreenPostProcessSettings.StyleSettingKey` 下拉（clear/soft/cinematic），当前旧 Prefab 缺行时 `GraphicsSettingsPanelLauncher` 只在初始化复用正式“特效质量”整行，未来 Builder 生成直接使用固定节点；主菜单与游戏内共用保存/放弃/恢复默认会话。风格不被整体画质预设覆盖；画质仍仅控制后处理开销。
 - `FrameRateUserSettings` 持帧率，默认60，预设/不限与1～1000整数输入均进会话；FrameRateSettingsPanelController只绑控件，切画质后重应用、移动启动不覆上限。手机不限用屏幕刷新率，避免-1降30帧。
-- `GameplayTickRateUserSettings` 独立管理固定模拟 TPS（30/60/120，默认60，联机强制60），随显示设置页的模拟频率下拉参与保存/放弃与恢复默认。FPS 限制与 TPS 设置独立；旧显示 Prefab 缺控件时 FrameRateSettingsPanelController 复用现有下拉行兼容，编辑器构建器生成正式控件。
+- `GameplayTickRateUserSettings` 独立管理游戏模拟 TPS（30/60/120，默认30，联机强制30），仅改变自主游戏时钟与同频脚本物理，不改 Unity `Time.fixedDeltaTime`；随显示设置页下拉参与保存/放弃与恢复默认。FPS 上限独立，旧显示 Prefab 缺控件时 FrameRateSettingsPanelController 复用现有下拉行兼容，编辑器构建器生成正式控件。
 - 主菜单/游戏内共用NewWorldUserSettings，每次打开回填、名称/世界页切换保输入；返回先难度层→名称页→窗口。难度用GameDifficultyCatalog的0～20级，摘要分战斗/生存/世界/生产。
 - PlayerRestartButton仅保存后重启整游戏，清克隆事件、不支持平台禁用标注。保存退出确认左右固定“不保存直接退出”/“保存并退出”，Prefab/构建器/本地化同时维护。

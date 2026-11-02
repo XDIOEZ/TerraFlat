@@ -165,7 +165,7 @@ public static partial class DroppedItemService
     private const int MaxColdMotionCatchUpSteps = 64;
 
     private static float ColdMotionFixedStep()
-        => float.IsFinite(Time.fixedDeltaTime) && Time.fixedDeltaTime > 0f ? Time.fixedDeltaTime : .02f;
+        => GameplayFixedStepSimulation.TickDeltaTime;
 
     private static float ValidColdMotionBudget(float value)
         => float.IsFinite(value) && value > 0f ? value : 0f;

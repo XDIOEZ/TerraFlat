@@ -433,7 +433,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         GameManager.Instance.SetDimensionTransitionLoading("正在完成目标维度加载…", 0.96f);
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
         GameManager.Instance.CompleteDimensionTransitionLoading();
 
         targetPlayer.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
@@ -707,7 +707,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
 
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
     }
 
     // 出口归目标世界所有，准备出口不会移动任何玩家或改变主机活动场景。

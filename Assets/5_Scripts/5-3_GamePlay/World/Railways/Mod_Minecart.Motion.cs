@@ -118,12 +118,12 @@ public sealed partial class Mod_Minecart
 
     public void StepCarrierMotion(Mod_Carrier carrier, Vector2 input, bool locked, float deltaTime)
     {
-        requestedInput = input; controlsLocked = locked; lastInputAt = Time.time;
+        requestedInput = input; controlsLocked = locked; lastInputAt = (float)GameplayFixedStepSimulation.CurrentTime;
         if (locked || input.sqrMagnitude <= .001f)
         { heldDrivingDirection = Vector2.zero; heldDrivingSign = 0f; }
         train ??= new MinecartTrain(this);
-        if (!ReferenceEquals(train.Cars[0], this) || train.LastStep == Time.fixedTime) return;
-        train.LastStep = Time.fixedTime; train.Step(deltaTime);
+        if (!ReferenceEquals(train.Cars[0], this) || train.LastStep == GameplayFixedStepSimulation.TickIndex) return;
+        train.LastStep = GameplayFixedStepSimulation.TickIndex; train.Step(deltaTime);
     }
 
     public void StopCarrierMotion()
@@ -210,7 +210,7 @@ public sealed partial class Mod_Minecart
     {
         public readonly List<Mod_Minecart> Cars = new();
         public float Speed;
-        public float LastStep = float.NegativeInfinity;
+        public ulong LastStep;
         public int GroundResistanceCount { get; private set; }
         private readonly List<RailPosition> positions = new();
         private readonly List<Vector2> velocities = new();
@@ -275,7 +275,8 @@ public sealed partial class Mod_Minecart
             for (int i = 0; i < Cars.Count; i++)
             {
                 Mod_Minecart cart = Cars[i];
-                bool eligible = cart.Carrier.Rider != null && !cart.controlsLocked && Time.time - cart.lastInputAt <= .25f;
+                bool eligible = cart.Carrier.Rider != null && !cart.controlsLocked &&
+                    GameplayFixedStepSimulation.CurrentTime - cart.lastInputAt <= .25f;
                 Vector2 input = eligible ? cart.requestedInput : Vector2.zero;
                 float throttle = cart.onRail ? MinecartDrivingRules.ResolveThrottle(input, positions[i].Tangent,
                     ref cart.heldDrivingDirection, ref cart.heldDrivingSign) : 0f;

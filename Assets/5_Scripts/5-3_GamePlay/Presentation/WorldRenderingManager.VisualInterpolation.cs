@@ -51,7 +51,7 @@ public sealed partial class WorldRenderingManager
             entry.LastVisibleFrame != Time.frameCount ||
             entry.Body != null && entry.Body.interpolation != RigidbodyInterpolation2D.None)
             return Vector3.zero;
-        Vector3 delta = entry.History.Evaluate(Time.timeAsDouble) - entry.History.Current;
+        Vector3 delta = entry.History.Evaluate(GameplayFixedStepSimulation.PresentationTime) - entry.History.Current;
         float ppu = sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, sprite.pixelsPerUnit)
             : WorldVisualMotionHistory.PixelGrid;
         return WorldVisualMotionHistory.PixelAlignTranslation(delta, ppu);
@@ -61,7 +61,7 @@ public sealed partial class WorldRenderingManager
     {
         if (!renderingServicesActive) return;
         double simulationTime = GameplayFixedStepSimulation.CurrentTime;
-        double renderTime = Time.timeAsDouble;
+        double renderTime = GameplayFixedStepSimulation.PresentationTime;
 
         foreach (ActorView view in actorViews.Values)
         {

@@ -4,7 +4,7 @@ using FlatWorld.Networking;
 using FlatWorld.Settings;
 using UnityEngine;
 
-/// <summary>本机游戏固定步频率偏好；联机会话统一使用默认频率。</summary>
+/// <summary>本机游戏模拟频率偏好；联机会话统一使用默认频率。</summary>
 public static class GameplayTickRateUserSettings
 {
     #region 选项与本机持久化
@@ -12,8 +12,7 @@ public static class GameplayTickRateUserSettings
     public const string SettingsProviderId = "simulation-tick-rate";
     public const string TickRateSettingKey = "simulation-tick-rate.limit";
     private const string PreferenceKey = "FlatWorld.Simulation.TickRate";
-    private const int CatchUpSteps = 4;
-    private static readonly int[] Rates = { 30, GameplayFixedStepSimulation.DefaultTicksPerSecond, 120 };
+    private static readonly int[] Rates = { GameplayFixedStepSimulation.DefaultTicksPerSecond, 60, 120 };
     private static readonly IReadOnlyList<SettingOption> Options = new SettingOption[]
     {
         new("30", "30 TPS"),
@@ -64,17 +63,13 @@ public static class GameplayTickRateUserSettings
 
     #region Unity 时钟与网络会话
 
-    /// <summary>保持有限追赶，较高 TPS 至少保留原有的时间预算。</summary>
+    /// <summary>只更新独立游戏时钟目标频率，不修改 Unity FixedUpdate 或物理自动更新率。</summary>
     public static void ApplyCurrentSettings()
     {
-        int rate = EffectiveTicksPerSecond;
-        Time.fixedDeltaTime = 1f / rate;
-        Time.maximumDeltaTime = Mathf.Max(CatchUpSteps * GameplayFixedStepSimulation.DefaultFixedDeltaTime,
-            CatchUpSteps * Time.fixedDeltaTime);
         lastAppliedOnline = GameNetwork.IsOnline;
     }
 
-    /// <summary>联机进入或退出时恢复统一 60 TPS，离线再使用玩家选择。</summary>
+    /// <summary>联机进入或退出时恢复统一 30 TPS，离线再使用玩家选择。</summary>
     public static void RefreshWhenNetworkStateChanges()
     {
         if (lastAppliedOnline != GameNetwork.IsOnline)
@@ -115,7 +110,7 @@ public static class GameplayTickRateUserSettings
                 index => TrySetSelectedIndex(index, out string error) ? null : error)
         };
 
-        public void ResetToDefaults() => TrySetSelectedIndex(1, out _);
+        public void ResetToDefaults() => TrySetSelectedIndex(0, out _);
     }
 
     #endregion

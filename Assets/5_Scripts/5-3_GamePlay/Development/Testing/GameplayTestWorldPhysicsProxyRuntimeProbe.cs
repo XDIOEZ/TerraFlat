@@ -299,12 +299,12 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             fixedProxy.Body.AddForce(Vector2.right * fixedProxy.Body.mass * 3f, ForceMode2D.Impulse);
             movingProxy.Body.AddForce(Vector2.right * movingProxy.Body.mass * 3f, ForceMode2D.Impulse);
         }
-        float startTime = Time.fixedTime;
+        double startTime = GameplayFixedStepSimulation.CurrentTime;
         float deadline = Time.realtimeSinceStartup + 12f;
-        while (Time.fixedTime - startTime < .6f)
+        while (GameplayFixedStepSimulation.CurrentTime - startTime < .6f)
         {
-            if (Time.realtimeSinceStartup > deadline) throw new TimeoutException("原生代理固定步推进超时。");
-            yield return new WaitForFixedUpdate();
+            if (Time.realtimeSinceStartup > deadline) throw new TimeoutException("原生代理游戏 Tick 推进超时。");
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
         }
         using (GameplayWorldRegistry.UseWorld(world))
         {

@@ -96,7 +96,7 @@ public static class SimulationRangePreferences
     {
         return tier switch
         {
-            SimulationRangeTier.Near => Time.fixedDeltaTime,
+            SimulationRangeTier.Near => GameplayFixedStepSimulation.TickDeltaTime,
             SimulationRangeTier.Middle => 1f / 30f,
             SimulationRangeTier.Far => 1f / 10f,
             _ => 0f

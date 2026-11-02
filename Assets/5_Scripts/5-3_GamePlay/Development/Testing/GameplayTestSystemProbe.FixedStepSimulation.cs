@@ -120,6 +120,7 @@ public static partial class GameplayTestSystemProbe
             result["tieredDisabled"] = CaptureTieredFixedStepDisabled();
             result["tieredReadiness"] = CaptureTieredFixedStepReadiness();
             result["tickRatePreference"] = CaptureTickRatePreference();
+            result["independentFrameClock"] = CaptureIndependentGameplayFrameClock();
             return result;
         }
         finally { UnityEngine.Object.DestroyImmediate(host); }
@@ -309,6 +310,66 @@ public static partial class GameplayTestSystemProbe
             Time.fixedDeltaTime = originalStep;
             Time.maximumDeltaTime = originalMaximum;
         }
+    }
+
+    /// <summary>正式帧累积器独立运行，验证默认30Hz、倍速、追赶丢弃、暂停与切档。</summary>
+    private static JObject CaptureIndependentGameplayFrameClock()
+    {
+        JObject Capture(int fps, float speed, int rate, int frames)
+        {
+            var clock = new GameplaySimulationFrameClock();
+            int ticks = 0;
+            double deliveredSeconds = 0d;
+            int largestGroup = 0;
+            for (int i = 0; i < frames; i++)
+            {
+                int group = clock.AdvanceFrame(1f / fps, speed, rate, delta =>
+                {
+                    ticks++;
+                    deliveredSeconds += delta;
+                });
+                largestGroup = Math.Max(largestGroup, group);
+            }
+            return new JObject
+            {
+                ["ticks"] = ticks,
+                ["seconds"] = deliveredSeconds,
+                ["clockSeconds"] = clock.CurrentTime,
+                ["maximumGroup"] = largestGroup,
+                ["tickRate"] = clock.TicksPerSecond
+            };
+        }
+
+        var hitchClock = new GameplaySimulationFrameClock();
+        int hitchTicks = hitchClock.AdvanceFrame(.2f, 1f, 30, _ => { });
+        double hitchTime = hitchClock.CurrentTime;
+        int afterHitch = hitchClock.AdvanceFrame(1f / 60f, 1f, 30, _ => { });
+
+        var pauseClock = new GameplaySimulationFrameClock();
+        int paused = pauseClock.AdvanceFrame(1f, 0f, 30, _ => { });
+        int resumed = pauseClock.AdvanceFrame(1f / 30f, 1f, 30, _ => { });
+
+        var changedClock = new GameplaySimulationFrameClock();
+        changedClock.AdvanceFrame(1f / 60f, 1f, 30, _ => { });
+        int changed = changedClock.AdvanceFrame(1f / 120f, 1f, 120, _ => { });
+
+        return new JObject
+        {
+            ["defaultTickRate"] = new GameplaySimulationFrameClock().TicksPerSecond,
+            ["normal"] = Capture(60, 1f, 30, 60),
+            ["lowFps"] = Capture(15, 1f, 30, 15),
+            ["doubleSpeed"] = Capture(30, 2f, 30, 30),
+            ["highRate"] = Capture(120, 1f, 120, 120),
+            ["overloaded"] = Capture(5, 1f, 30, 5),
+            ["hitchTicks"] = hitchTicks,
+            ["hitchSeconds"] = hitchTime,
+            ["afterHitchTicks"] = afterHitch,
+            ["pausedTicks"] = paused,
+            ["resumedTicks"] = resumed,
+            ["changedTicks"] = changed,
+            ["changedRate"] = changedClock.TicksPerSecond,
+            ["changedSeconds"] = changedClock.CurrentTime
+        };
     }
 
     #endregion

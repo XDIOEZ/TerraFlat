@@ -102,7 +102,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     // 定时伤害相关
     [SerializeField]
-    private float lastDamageTime = 0f;
+    private double lastDamageTime = 0d;
     private List<Mod_DamageReceiver> insideReceivers = new List<Mod_DamageReceiver>();
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
     private readonly HashSet<Mod_DamageReceiver> windowScanHitReceivers = new HashSet<Mod_DamageReceiver>();
@@ -231,7 +231,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>仅对一次实际 Pulse 导出真实 BoxCollider 姿态，并使用当前模拟输入时间。</summary>
     private void EmitDataPulse()
     {
-        nextDataPulseTime = Time.timeAsDouble + Mathf.Max(0f, DamageInterval);
+        nextDataPulseTime = GameplayFixedStepSimulation.CurrentTime + Mathf.Max(0f, DamageInterval);
         EmitDataShape(Vector2.zero);
     }
 
@@ -255,7 +255,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (damageCollider == null || !damageCollider.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0)
             return true;
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
-            Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime });
+            Tick = GameplayFixedStepSimulation.TickIndex, Time = GameplayFixedStepSimulation.CurrentTime,
+            DeltaTime = GameplayFixedStepSimulation.TickDeltaTime });
         context.Attack.Sequence = attackSequence;
         context.Attack.Window = 1;
         context.Attack.Pulse = ++attackPulse;
@@ -275,7 +276,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             HalfExtents = new Unity.Mathematics.float2(box.size.x * axisX.magnitude, box.size.y * axisY.magnitude) * 0.5f,
             Rotation = Mathf.Atan2(axisX.y, axisX.x), SweepDelta = displacement };
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
-            Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+            Tick = GameplayFixedStepSimulation.TickIndex, Time = GameplayFixedStepSimulation.CurrentTime,
+            DeltaTime = GameplayFixedStepSimulation.TickDeltaTime });
         context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
         context.Origin = shape.Center - shape.SweepDelta;
         if (UsesExternalCombatQueriesOnly() ||
@@ -439,12 +441,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (DamageInterval >= 0 && damageCollider != null && damageCollider.enabled && CanDealDamageNow())
         {
             // 检查是否到了造成伤害的时间
-            if (DamageInterval == 0 || Time.time - lastDamageTime >= DamageInterval)
+            if (DamageInterval == 0 || GameplayFixedStepSimulation.CurrentTime - lastDamageTime >= DamageInterval)
             {
                 // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
                 ApplyDamageToInsideReceivers();
             }
-            if (!explicitProjectileSweep && Time.timeAsDouble >= nextDataPulseTime)
+            if (!explicitProjectileSweep && GameplayFixedStepSimulation.CurrentTime >= nextDataPulseTime)
                 EmitDataPulse();
         }
     }
@@ -550,7 +552,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             {
                 // DamageInterval == 0：视为“每帧都可伤害”，进入时也允许立刻打一击
                 // DamageInterval  > 0：需要满足冷却时间
-                if (DamageInterval == 0f || Time.time - lastDamageTime >= DamageInterval)
+                if (DamageInterval == 0f || GameplayFixedStepSimulation.CurrentTime - lastDamageTime >= DamageInterval)
                 {
                     // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
                     ApplyDamageToReceiver(receiver, other);
@@ -643,7 +645,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         OnDamageApplied?.Invoke(acDamage);
 
 
-        lastDamageTime = Time.time;
+        lastDamageTime = GameplayFixedStepSimulation.CurrentTime;
 
     }
 
@@ -790,14 +792,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (result.AppliedDamage >= 0f)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
-        lastDamageTime = Time.time;
+        lastDamageTime = GameplayFixedStepSimulation.CurrentTime;
     }
 
     private bool IsDamageIntervalReady()
     {
         return animationDrivenDamageWindow || DamageInterval < 0f ||
                DamageInterval == 0f ||
-               Time.time - lastDamageTime >= DamageInterval;
+               GameplayFixedStepSimulation.CurrentTime - lastDamageTime >= DamageInterval;
     }
 
     /// <summary>重置本次攻击命中集合，并立即补查当前重叠的实体与格子建筑。</summary>

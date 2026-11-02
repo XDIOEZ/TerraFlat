@@ -45,7 +45,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
     public Vector2 ExternalVelocity { get; private set; } // 环境传入的被动速度。
     public Mod_Mover PushSource { get; private set; } // 当前推动来源，瞬时关系不入存档。
-    public Vector2 PushedVelocity => PushSource != null && Time.time <= pushValidUntil && CanReceivePush(PushSource)
+    public Vector2 PushedVelocity => PushSource != null && GameplayFixedStepSimulation.CurrentTime <= pushValidUntil && CanReceivePush(PushSource)
         ? pushedVelocity : Vector2.zero;
     public Vector2 PushHalfExtents => Vector2.Scale(HullSize * 0.5f,
         new Vector2(Mathf.Abs(item.transform.lossyScale.x), Mathf.Abs(item.transform.lossyScale.y)));
@@ -68,7 +68,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     private bool loaded, activated, motionAllowed;
     private Vector2 pushedVelocity;
     private Vector2 facingHeading = Vector2.up; // 船头只由操作者划行输入改变，推动、水流和滑行都保留朝向。
-    private float pushValidUntil;
+    private double pushValidUntil;
     private CarrierWaterWake waterWake;
     private ICarrierMotionDriver motionDriver;
     private Player holdingPlayer;
@@ -450,7 +450,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
         Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
         Vector2 intent = source.CarrierPushIntentVelocity;
         if (Vector2.Dot(intent, towardCarrier) <= 0.001f) return;
-        Vector2 accepted = RequestPush(source, intent, Time.fixedDeltaTime);
+        Vector2 accepted = RequestPush(source, intent, GameplayFixedStepSimulation.TickDeltaTime);
         if (motionDriver is ICarrierPushMotionPolicy policy) accepted = policy.ResolvePusherLimit(accepted);
         Vector2 normal = towardCarrier.normalized;
         source.SetCarrierPushResistance(this, normal, Mathf.Max(0f, Vector2.Dot(accepted, normal)));
@@ -467,7 +467,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
         pushedVelocity = motionDriver is ICarrierPushMotionPolicy policy
             ? policy.ResolveCarrierPush(velocity, inWater)
             : WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier, WaterPushSpeedMultiplier);
-        pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
+        pushValidUntil = GameplayFixedStepSimulation.CurrentTime + Mathf.Max(0.1f, deltaTime * 2f);
         return pushedVelocity;
     }
 
@@ -475,7 +475,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     private void RefreshPushSource()
     {
         if (PushSource == null) return;
-        if (!PushSource.isActiveAndEnabled || !CanReceivePush(PushSource) || Time.time > pushValidUntil ||
+        if (!PushSource.isActiveAndEnabled || !CanReceivePush(PushSource) || GameplayFixedStepSimulation.CurrentTime > pushValidUntil ||
             PushSource.gameObject.scene != gameObject.scene ||
             WorldTopologyRuntime.Distance(PushSource.rb.position, body.position) > PushHalfExtents.magnitude + PushSource.pushContactRadius + 0.25f)
         {

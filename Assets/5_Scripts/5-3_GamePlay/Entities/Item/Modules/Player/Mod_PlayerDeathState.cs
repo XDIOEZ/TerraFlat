@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using Sirenix.OdinInspector;
@@ -546,7 +546,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         }
 
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
 
         CompleteRespawnState(restartChunkStreaming: false, unlockInput: true);
         gameManager?.CompleteRespawnLoadingPresentation();

@@ -167,7 +167,7 @@ public sealed class FrameRateSettingsPanelController : MonoBehaviour, ISettingsP
         if (tickRateLabel != null)
             tickRateLabel.text = FlatWorldLocalizationService.GetUiText("模拟频率");
         tickRateStatus.text = GameplayTickRateUserSettings.EffectiveTicksPerSecond != GameplayTickRateUserSettings.SelectedTicksPerSecond
-            ? FlatWorldLocalizationService.GetUiText("联机固定 60 TPS，单机时应用所选频率。")
+            ? FlatWorldLocalizationService.GetUiText("联机固定 30 TPS，单机时应用所选频率。")
             : FlatWorldLocalizationService.GetUiFormat("当前模拟频率：{0} TPS", GameplayTickRateUserSettings.EffectiveTicksPerSecond);
     }
 

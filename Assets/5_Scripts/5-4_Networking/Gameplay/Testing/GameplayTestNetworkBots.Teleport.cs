@@ -146,7 +146,7 @@ namespace FlatWorld.Networking.Gameplay
                 "传送后的普通移动沿新落点继续", 12d, () => $"已发包={movementSent}，目标={next}，发送后={movementImmediately}，" +
                     $"当前={TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None)}；" +
                     DescribeBotCommandAuthority(world, 92, actor, MotionCommandName, "lastServerTeleportRequest"));
-            yield return new WaitForFixedUpdate();
+            yield return GameplayFixedStepSimulation.WaitForNextTick();
             yield return null;
             result["nextX"] = next.x;
             result["nextY"] = next.y;

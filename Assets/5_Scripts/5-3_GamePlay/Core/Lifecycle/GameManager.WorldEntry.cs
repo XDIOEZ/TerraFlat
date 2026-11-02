@@ -325,9 +325,9 @@ public partial class GameManager
 
         Debug.Log($"[GameManager] 完整可见窗口就绪耗时 {Time.realtimeSinceStartup - windowStartedAt:0.00} 秒。");
 
-        // 碰撞体变更需要在加载页淡出前同步，并等待一次固定帧完成物理收尾。
+        // 碰撞体变更需要在加载页淡出前同步，并等待一次游戏 Tick 完成物理收尾。
         Physics2D.SyncTransforms();
-        yield return new WaitForFixedUpdate();
+        yield return GameplayFixedStepSimulation.WaitForNextTick();
 
         worldEntryCompletionCoroutine = null;
         CompleteWorldEntry("加载完成", "世界已经准备完毕。");

@@ -128,7 +128,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         bool stillFlying = item != null && !item.DestructionHandled && Mod_Droping.IsDropInProgress(item);
         if (stillFlying)
         {
-            if (Time.timeAsDouble < damageEndTime) TryStartDamage();
+            if (GameplayFixedStepSimulation.CurrentTime < damageEndTime) TryStartDamage();
             else CloseDamageWindow();
             return;
         }
@@ -157,7 +157,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
 
         thrower = context.SourceItem;
         flightOutcome = default;
-        damageEndTime = Time.timeAsDouble + context.Duration;
+        damageEndTime = GameplayFixedStepSimulation.CurrentTime + context.Duration;
         armedByDiscard = true;
         item?.MarkModuleScheduleDirty();
         TryStartDamage();
@@ -167,7 +167,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
     private void TryStartDamage()
     {
         if (!armedByDiscard || damageActive || item == null || damageModule == null ||
-            Time.timeAsDouble >= damageEndTime || !Mod_Droping.IsDropInProgress(item))
+            GameplayFixedStepSimulation.CurrentTime >= damageEndTime || !Mod_Droping.IsDropInProgress(item))
         {
             return;
         }
@@ -274,7 +274,7 @@ public sealed class Mod_DiscardFlightDamage : Module, IItemModuleDependencyBinde
         if (resources == null || !resources.TryGetItemDefinition(HardImpactTransformItemId, out _))
             return false;
 
-        double now = Time.timeAsDouble;
+        double now = GameplayFixedStepSimulation.CurrentTime;
         if (targetKey == lastHardImpactTargetKey && now - lastHardImpactTime < 0.12d)
             return false;
 

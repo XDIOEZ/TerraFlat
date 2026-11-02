@@ -585,7 +585,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
             double remaining = (new SpaceVector2(task.TargetX, task.TargetY) - position).Magnitude;
             double speed = new SpaceVector2(assembly.VelocityX, assembly.VelocityY).Magnitude;
             text.AppendLine(Format("剩余距离  {0:0.0} m\n当前刹停距离  {1:0.0} m", remaining,
-                ShipCruiseGuidance.BrakingDistance(speed, SpaceGameplaySettings.Current, Time.fixedDeltaTime)));
+                ShipCruiseGuidance.BrakingDistance(speed, SpaceGameplaySettings.Current, GameplayFixedStepSimulation.TickDeltaTime)));
         }
         text.AppendLine(landingTarget == null ? Text("靠近目标星体后可降落；有燃料平稳着陆，无燃料下落。") :
             Format("可降落星体  {0}；有燃料平稳着陆，无燃料下落。", landingTarget.DisplayName));

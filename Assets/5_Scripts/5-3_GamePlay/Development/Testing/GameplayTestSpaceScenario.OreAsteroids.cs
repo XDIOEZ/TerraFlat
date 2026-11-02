@@ -302,7 +302,8 @@ public sealed partial class GameplayTestSpaceScenario
             SourceIsPlayer = 1, ResourceToolKind = (int)ResourceToolKind.Pickaxe, ResourceToolTier = 3,
             ResourceToolEfficiency = 1f, Damage = new float4(mine.Health.x * 10f + 1000f, 0f, 0f, 0f),
             Origin = (Vector2)CurrentPlayer().transform.position, HitPoint = minePoint,
-            Clock = new CombatClock { Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime }
+            Clock = new CombatClock { Time = GameplayFixedStepSimulation.CurrentTime,
+                DeltaTime = GameplayFixedStepSimulation.TickDeltaTime }
         };
         float applied = NaturalEntityEcsService.ApplyDamage(mine.Handle, context);
         yield return WaitUntil(() => !NaturalEntityEcsService.Contains(mine.Handle),
