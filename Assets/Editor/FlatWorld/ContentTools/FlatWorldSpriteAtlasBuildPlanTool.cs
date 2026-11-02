@@ -502,10 +502,28 @@ public static class FlatWorldSpriteAtlasBuildPlanTool
         IReadOnlyDictionary<string, SpriteCandidate> candidates, ISet<string> excludedPlayerSprites)
     {
         var result = new List<SpritePlanEntry>(candidates.Count);
+        var importedPixelScales = new Dictionary<string, (float X, float Y)>(StringComparer.OrdinalIgnoreCase);
         foreach (SpriteCandidate candidate in candidates.Values)
         {
             int width = Mathf.CeilToInt(candidate.Sprite.rect.width);
             int height = Mathf.CeilToInt(candidate.Sprite.rect.height);
+            // 图集规划使用实际导入的像素占用，不能把降采样前的 Sprite.rect 当作打包尺寸。
+            if (!importedPixelScales.TryGetValue(candidate.Path, out var scale))
+            {
+                scale = (1f, 1f);
+                if (AssetImporter.GetAtPath(candidate.Path) is TextureImporter importer &&
+                    importer.spriteImportMode == SpriteImportMode.Single)
+                {
+                    importer.GetSourceTextureWidthAndHeight(out int sourceWidth, out int sourceHeight);
+                    Texture2D importedTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(candidate.Path);
+                    if (importedTexture != null && sourceWidth > 0 && sourceHeight > 0)
+                        scale = (Mathf.Min(1f, (float)importedTexture.width / sourceWidth),
+                                 Mathf.Min(1f, (float)importedTexture.height / sourceHeight));
+                }
+                importedPixelScales.Add(candidate.Path, scale);
+            }
+            width = Mathf.Max(1, Mathf.CeilToInt(width * scale.X));
+            height = Mathf.Max(1, Mathf.CeilToInt(height * scale.Y));
             bool isPlayerAppearance = excludedPlayerSprites.Contains($"{candidate.Guid}:{candidate.LocalId}");
             // 按源表移动 UV 的 GPU 动画不能把独立帧重排进 SpriteAtlas。
             bool preservesSourceSheetUv = AssetDatabase.GetLabels(AssetDatabase.LoadMainAssetAtPath(candidate.Path))
