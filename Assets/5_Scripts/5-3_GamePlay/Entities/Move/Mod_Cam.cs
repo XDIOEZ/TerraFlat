@@ -58,6 +58,7 @@ public class Mod_Cam : Module
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
     private readonly NaturalAmbientAudioPresenter naturalAmbience = new();
+    private readonly CaveSurfaceAudioPresenter caveSurfaceAudio = new();
     [SerializeField]
     private float povValue = DefaultPovValue;
 
@@ -143,6 +144,7 @@ public class Mod_Cam : Module
     private void LateUpdate()
     {
         naturalAmbience.Advance(Player, Time.deltaTime);
+        caveSurfaceAudio.Advance(Player, Time.deltaTime);
         // 临时目标被外部销毁时释放租约，避免镜头继续保留驾驶更新方式。
         if (!ReferenceEquals(_followOverride, null) && _followOverride == null)
             ClearFollowOverride(_followOverride);
@@ -275,12 +277,34 @@ public class Mod_Cam : Module
 
         AudioListener listener = ControllerCamera.GetComponent<AudioListener>();
         if (listener != null)
-            AudioService.Instance.SetWorldListener(Player.transform, listener);
+        {
+            AudioService audio = AudioService.Instance;
+            audio.SetWorldListener(Player.transform, listener);
+            audio.SourceWorldKeyResolver = ResolveAudioSourceWorldKey;
+            audio.WorldDeltaResolver = ResolveAudioWorldDelta;
+        }
+    }
+
+    private static Vector2 ResolveAudioWorldDelta(Vector2 from, Vector2 to) =>
+        WorldTopologyRuntime.ShortestDelta(from, to);
+
+    private static string ResolveAudioSourceWorldKey(Transform source)
+    {
+        if (source != null)
+        {
+            Item item = source.GetComponentInParent<Item>();
+            if (item != null)
+                return GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name;
+            if (GameplayWorldRegistry.TryGet(source.gameObject.scene.name, out _))
+                return source.gameObject.scene.name;
+        }
+        return GameplayWorldRegistry.ExecutionWorldKey;
     }
 
     private void ClearWorldAudioListener()
     {
         naturalAmbience.Dispose();
+        caveSurfaceAudio.Dispose();
         if (Player != null && AudioService.HasInstance)
             AudioService.Instance.ClearWorldListener(Player.transform);
     }

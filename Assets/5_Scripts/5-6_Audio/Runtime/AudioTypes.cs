@@ -58,7 +58,10 @@ namespace FlatWorld.Audio
     {
         public Transform FollowTarget;
         public Vector3 WorldPosition;
+        public string SourceWorldKey;
         public bool HasWorldPosition;
+        public bool ForceSpatial;
+        public float SpatialMaxDistanceOverride;
         public float VolumeScale;
         public float PitchScale;
         public float FadeIn;
@@ -104,6 +107,20 @@ namespace FlatWorld.Audio
             if (PitchScale <= 0f)
                 PitchScale = 1f;
             FadeIn = Mathf.Max(0f, FadeIn);
+            SpatialMaxDistanceOverride = Mathf.Max(0f, SpatialMaxDistanceOverride);
+        }
+    }
+
+    /// <summary>一条开放洞口的地表入口和洞内出口位置。</summary>
+    public readonly struct AudioPortalLink
+    {
+        public readonly Vector2 SurfacePosition;
+        public readonly Vector2 CavePosition;
+
+        public AudioPortalLink(Vector2 surfacePosition, Vector2 cavePosition)
+        {
+            SurfacePosition = surfacePosition;
+            CavePosition = cavePosition;
         }
     }
 

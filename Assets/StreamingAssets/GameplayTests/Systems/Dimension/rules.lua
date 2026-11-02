@@ -99,8 +99,12 @@ test.system("dimension", "cave_exit_cache_natural", {}, function(data)
     assert(data.empty.factor == 0 and data.empty.openCount == 0, "没有出口时洞穴仍有出口采光")
     assert(data.opened.factor == 1 and data.opened.openCount == 1, "天然出口所在格没有完整采光")
     assert(data.opened.positions[1].x == 0.5 and data.opened.positions[1].y == 0.5, "天然入口没有按正式格中心恢复出口")
+    assert(data.opened.audioLinkCount == 1 and data.opened.audioLinks[1].surfaceX == 0.5 and
+        data.opened.audioLinks[1].caveX == 0.5, "天然洞口的声音出口没有与入口同格配对")
     assert_cave_rebuild(data.empty, data.opened, "生成天然入口")
     assert(data.blocked.factor == 0 and data.blocked.openCount == 0 and data.blockedFlag, "封堵天然入口没有立即移除采光")
+    assert(data.blocked.audioLinkCount == 0 and data.restored.audioLinkCount == 1,
+        "封堵或恢复天然洞口没有同步更新传声通道")
     assert(data.generatedWhileBlocked, "封堵入口丢失了天然生成身份")
     assert_cave_rebuild(data.opened, data.blocked, "封堵天然入口")
     assert(data.restored.factor == 1 and data.restored.openCount == 1 and not data.restoredBlockedFlag, "修复天然入口没有立即恢复采光")
@@ -109,18 +113,26 @@ end, "天然洞口生成、即时封堵与修复的采光缓存")
 
 test.system("dimension", "cave_exit_cache_manual", {}, function(data)
     assert(data.opened.factor == 1 and data.opened.openCount == 1 and not data.initialBlocked, "正式手工锚点没有提供出口采光")
+    assert(data.opened.audioLinkCount == 1 and data.opened.audioLinks[1].surfaceX == 30.5,
+        "手工洞口声音源头没有使用地表入口的实际位置")
     assert(data.blocked.factor == 0 and data.blocked.openCount == 0 and data.blockedFlag, "手工洞口封堵没有立即作用于锚点出口")
+    assert(data.blocked.audioLinkCount == 0 and data.restored.audioLinkCount == 1,
+        "手工洞口封堵后仍在传声或恢复后未重新开放")
     assert_cave_rebuild(data.opened, data.blocked, "封堵手工入口")
     assert(data.restored.factor == 1 and data.restored.openCount == 1 and not data.restoredBlockedFlag, "手工入口修复没有立即恢复锚点出口")
     assert_cave_rebuild(data.blocked, data.restored, "修复手工入口")
     assert(data.moved.factor == 1 and data.moved.openCount == 1, "正式更新出口位置后采光仍使用旧锚点")
     assert(data.moved.positions[1].x == 20.5 and data.moved.positions[1].y == 0.5, "出口集合没有读取正式保存的新锚点位置")
+    assert(data.moved.audioLinkCount == 1 and data.moved.audioLinks[1].surfaceX == 30.5 and
+        data.moved.audioLinks[1].caveX == 20.5, "移动矿洞出口后声音没有从新的洞内坐标传出")
     assert_cave_rebuild(data.restored, data.moved, "更新手工出口锚点")
 end, "正式手工锚点写入、封堵恢复与移动后的采光缓存")
 
 test.system("dimension", "cave_exit_cache_players", {}, function(data)
     assert(data.natural.factor == 1 and data.natural.openCount == 1, "多个角色保存的同一天然出口没有按格去重")
     assert(data.all.factor == 1 and data.all.openCount == 3, "没有合并两个角色各自的手工锚点和公共天然入口")
+    assert(data.all.audioLinkCount == 3 and data.partlyBlocked.audioLinkCount == 1 and
+        data.restored.audioLinkCount == 3, "多人世界的洞口声音没有按共享封堵状态增减")
     assert_cave_rebuild(data.natural, data.all, "汇总多角色锚点")
     assert(data.partlyBlocked.factor == 1 and data.partlyBlocked.openCount == 1, "封堵一个手工入口与公共天然入口后误伤剩余出口或遗漏封堵")
     assert_cave_rebuild(data.all, data.partlyBlocked, "多角色入口部分封堵")

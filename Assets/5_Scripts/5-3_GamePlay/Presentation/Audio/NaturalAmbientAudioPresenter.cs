@@ -54,8 +54,22 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
     #region 本机世界与音量推进
     public void Advance(Player player, float deltaTime)
     {
-        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled ||
-            !GameplayWorldRegistry.TryGet(GameplayWorldRegistry.GetItemWorldKey(player), out var context) ||
+        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled)
+        { Dispose(); return; }
+        AdvanceForWorld(player, deltaTime, GameplayWorldRegistry.GetItemWorldKey(player),
+            WorldLocalPresentation.ToLogical(player.transform.position));
+    }
+
+    public void AdvanceFromSurfacePortal(Player player, float deltaTime, string surfaceWorldKey, Vector2 entrance)
+    {
+        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled)
+        { Dispose(); return; }
+        AdvanceForWorld(player, deltaTime, surfaceWorldKey, entrance);
+    }
+
+    private void AdvanceForWorld(Player player, float deltaTime, string sourceWorldKey, Vector2 listener)
+    {
+        if (!GameplayWorldRegistry.TryGet(sourceWorldKey, out var context) ||
             context.Chunks == null || context.Chunks.IsWorldRuntimeShuttingDown || context.Chunks.WorldRuntime == null)
         { Dispose(); return; }
 
@@ -64,7 +78,6 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
         using var scope = worldKey != GameplayWorldRegistry.ExecutionWorldKey ? GameplayWorldRegistry.UseWorld(worldKey) : default;
         if (deltaTime <= 0f) return;
 
-        Vector2 listener = WorldLocalPresentation.ToLogical(player.transform.position);
         RuntimeWorldAddress address = manager.ResolveWorldAddress(listener);
         if (!listenerChunk.HasValue || listenerChunk.Value != address || windowDirty)
         {
@@ -94,15 +107,16 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
         WeatherMgr weather = WeatherMgr.GetForWorld(worldKey);
         if (nearbyFoliageCount > 0 && weather != null && weather.TryGetWindBlendAt(foliagePosition, out var blend))
             wind = math.length(blend.Wind);
-        AdvanceLoop(foliage, foliagePosition, ResolveFoliageVolume(nearbyFoliageCount, wind), player, deltaTime);
-        AdvanceLoop(river, riverPosition, riverStrength, player, deltaTime);
+        AdvanceLoop(foliage, foliagePosition, ResolveFoliageVolume(nearbyFoliageCount, wind), player, deltaTime, worldKey);
+        AdvanceLoop(river, riverPosition, riverStrength, player, deltaTime, worldKey);
     }
 
     // 没有叶簇或风时静音，密度和风强分别平滑增强，不制造与场景无关的底噪。
     public static float ResolveFoliageVolume(int nearbySourceCount, float windStrength) =>
         Mathf.Sqrt(Mathf.InverseLerp(0.03f, 0.8f, windStrength)) * Mathf.Clamp01(nearbySourceCount / 4f);
 
-    private static void AdvanceLoop(AmbientLoop loop, Vector2 position, float target, Player player, float deltaTime)
+    private static void AdvanceLoop(AmbientLoop loop, Vector2 position, float target, Player player,
+        float deltaTime, string sourceWorldKey)
     {
         loop.Volume = Mathf.MoveTowards(loop.Volume, target, deltaTime / 1.2f);
         if (loop.Volume <= 0.0001f || loop.Cue == null)
@@ -111,7 +125,11 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
         Vector2 presented = WorldLocalPresentation.ProjectPosition(loop.Position, player.transform.position);
         AudioService service = AudioService.Instance;
         if (!loop.Handle.IsPlaying)
-            loop.Handle = service.Play(loop.Cue, AudioPlayOptions.At(presented, loop.Volume));
+        {
+            AudioPlayOptions options = AudioPlayOptions.At(presented, loop.Volume);
+            options.SourceWorldKey = sourceWorldKey;
+            loop.Handle = service.Play(loop.Cue, options);
+        }
         service.SetWorldPosition(loop.Handle, presented);
         service.SetVolumeScale(loop.Handle, loop.Volume);
     }
