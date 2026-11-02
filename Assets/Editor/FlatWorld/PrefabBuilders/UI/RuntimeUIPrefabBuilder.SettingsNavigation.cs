@@ -466,14 +466,7 @@ public static partial class RuntimeUIPrefabBuilder
         VerticalLayoutGroup layout = page.GetComponent<VerticalLayoutGroup>();
         if (layout == null)
             layout = page.gameObject.AddComponent<VerticalLayoutGroup>();
-        // 普通入口页与内嵌设置页共用 20/18 留白、10 行距。
-        layout.padding = new RectOffset(20, 20, 18, 18);
-        layout.spacing = 10f;
-        layout.childAlignment = TextAnchor.UpperCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        ConfigureSettingsPageVerticalLayout(layout);
         return page;
     }
 

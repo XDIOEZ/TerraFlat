@@ -263,7 +263,7 @@ MonoBehaviour:
     m_Right: 20
     m_Top: 18
     m_Bottom: 18
-  m_ChildAlignment: 1
+  m_ChildAlignment: 0
   m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
@@ -2604,7 +2604,7 @@ MonoBehaviour:
     m_Right: 20
     m_Top: 18
     m_Bottom: 18
-  m_ChildAlignment: 1
+  m_ChildAlignment: 0
   m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
@@ -2672,7 +2672,7 @@ MonoBehaviour:
     m_Right: 20
     m_Top: 18
     m_Bottom: 18
-  m_ChildAlignment: 1
+  m_ChildAlignment: 0
   m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0

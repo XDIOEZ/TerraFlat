@@ -11,6 +11,25 @@ public static partial class RuntimeUIPrefabBuilder
 {
     #region 公共控件构建
 
+    private const int SettingsPageHorizontalPadding = 20;
+    private const int SettingsPageVerticalPadding = 18;
+    private const float SettingsPageRowSpacing = 10f;
+    private const float SettingsPageHeaderHeight = 76f;
+
+    /// <summary>设置分页统一使用同一组内边距、行距及左上对齐。</summary>
+    private static void ConfigureSettingsPageVerticalLayout(VerticalLayoutGroup layout)
+    {
+        layout.padding = new RectOffset(
+            SettingsPageHorizontalPadding, SettingsPageHorizontalPadding,
+            SettingsPageVerticalPadding, SettingsPageVerticalPadding);
+        layout.spacing = SettingsPageRowSpacing;
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+    }
+
     /// <summary>创建带页内纵向滚动的可嵌入设置页。</summary>
     private static GameObject CreateSettingsPageRoot(string name, out Transform content)
     {
@@ -42,12 +61,7 @@ public static partial class RuntimeUIPrefabBuilder
         contentRect.sizeDelta = Vector2.zero;
 
         VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(20, 20, 18, 18);
-        layout.spacing = 10f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        ConfigureSettingsPageVerticalLayout(layout);
         contentObject.AddComponent<ContentSizeFitter>().verticalFit =
             ContentSizeFitter.FitMode.PreferredSize;
 
@@ -78,12 +92,7 @@ public static partial class RuntimeUIPrefabBuilder
         image.raycastTarget = true;
 
         VerticalLayoutGroup layout = root.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(20, 20, 18, 18);
-        layout.spacing = 10f;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        ConfigureSettingsPageVerticalLayout(layout);
         return root;
     }
 
@@ -181,7 +190,7 @@ public static partial class RuntimeUIPrefabBuilder
     {
         GameObject header = CreateUIObject("标题", parent, typeof(Image));
         header.GetComponent<Image>().color = SurfaceRaised;
-        header.AddComponent<LayoutElement>().preferredHeight = 76f;
+        header.AddComponent<LayoutElement>().preferredHeight = SettingsPageHeaderHeight;
 
         HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(18, 12, 8, 8);
@@ -535,7 +544,7 @@ public static partial class RuntimeUIPrefabBuilder
     {
         GameObject scrollRoot = CreateUIObject("绑定列表", parent, typeof(Image), typeof(ItemStepScrollRect));
         LayoutElement scrollElement = scrollRoot.AddComponent<LayoutElement>();
-        scrollElement.minHeight = 180f;
+        scrollElement.minHeight = 140f;
         scrollElement.flexibleHeight = 1f;
         scrollRoot.GetComponent<Image>().color = Surface;
 
@@ -553,7 +562,7 @@ public static partial class RuntimeUIPrefabBuilder
         contentRect.sizeDelta = Vector2.zero;
         VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
         contentLayout.padding = new RectOffset(8, 8, 8, 8);
-        contentLayout.spacing = 7f;
+        contentLayout.spacing = SettingsPageRowSpacing;
         contentLayout.childControlWidth = true;
         contentLayout.childControlHeight = true;
         contentLayout.childForceExpandWidth = true;

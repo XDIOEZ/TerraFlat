@@ -504,11 +504,10 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject root = CreateFixedSettingsPageRoot(RuntimeUIPrefabKeys.InputBindingSettings);
         Transform content = root.transform;
 
-        // 固定区共 182，列表最小 180；操作选项与按键行共用滚动内容，新增设置不挤占窄屏高度。
-        VerticalLayoutGroup pageLayout = root.GetComponent<VerticalLayoutGroup>();
-        pageLayout.padding = new RectOffset(20, 20, 12, 12);
-        pageLayout.spacing = 8f;
-        CreateCompactInputBindingHeader(content);
+        // 统一标题与行距，绑定列表保留弹性高度和独立滚动。
+        CreateSettingsHeader(content, "按键绑定");
+        CreateSettingsHint(content, "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。", 34f);
+        CreateInputBindingControlModeRow(content);
 
         GameObject deviceTabs = CreateUIObject("设备分页", content);
         deviceTabs.AddComponent<LayoutElement>().preferredHeight = 36f;
@@ -535,7 +534,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject options = CreateUIObject("操作选项", parent);
         VerticalLayoutGroup layout = options.AddComponent<VerticalLayoutGroup>();
         layout.padding = new RectOffset(4, 4, 4, 4);
-        layout.spacing = 8f;
+        layout.spacing = SettingsPageRowSpacing;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
@@ -591,61 +590,15 @@ public static partial class RuntimeUIPrefabBuilder
         value.gameObject.AddComponent<LayoutElement>().preferredWidth = 64f;
     }
 
-    /// <summary>标题、单行说明与控制方式共用一条横向顶栏，避免文字各占一整行。</summary>
-    private static void CreateCompactInputBindingHeader(Transform parent)
+    /// <summary>把控制方式单独放在标准设置行内，保证标题栏只显示页名。</summary>
+    private static void CreateInputBindingControlModeRow(Transform parent)
     {
-        GameObject header = CreateUIObject("按键绑定顶部栏", parent, typeof(Image));
-        header.AddComponent<LayoutElement>().preferredHeight = 56f;
-        Image background = header.GetComponent<Image>();
-        background.color = SurfaceRaised;
-        background.raycastTarget = false;
-
-        HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(16, 14, 5, 5);
-        layout.spacing = 12f;
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        // 下拉框保持自身首选高度，不随顶部栏被拉高。
-        layout.childForceExpandHeight = false;
-
-        TextMeshProUGUI title = CreateText("标题文本", header.transform, "按键绑定", 22f, Cream);
-        title.fontStyle = FontStyles.Bold;
-        title.enableWordWrapping = false;
-        title.overflowMode = TextOverflowModes.Ellipsis;
-        LayoutElement titleElement = title.gameObject.AddComponent<LayoutElement>();
-        titleElement.minWidth = 130f;
-        titleElement.preferredWidth = 150f;
-
-        TextMeshProUGUI hint = CreateText(
-            "说明文本",
-            header.transform,
-            "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。",
-            14f,
-            Muted);
-        hint.enableWordWrapping = false;
-        hint.overflowMode = TextOverflowModes.Ellipsis;
-        LayoutElement hintElement = hint.gameObject.AddComponent<LayoutElement>();
-        hintElement.minWidth = 140f;
-        hintElement.preferredWidth = 300f;
-        hintElement.flexibleWidth = 1f;
-
-        TextMeshProUGUI modeLabel = CreateText(
-            "控制方式标签",
-            header.transform,
-            "控制方式",
-            15f,
-            Cream);
-        modeLabel.enableWordWrapping = false;
-        modeLabel.overflowMode = TextOverflowModes.Ellipsis;
-        LayoutElement modeLabelElement = modeLabel.gameObject.AddComponent<LayoutElement>();
-        modeLabelElement.minWidth = 96f;
-        modeLabelElement.preferredWidth = 110f;
+        GameObject row = CreateRow("控制方式行", parent, 52f);
+        CreateRowLabel(row.transform, "控制方式", 112f);
 
         TMP_Dropdown controlModeDropdown = CreateDropdown(
             "控制模式下拉列表",
-            header.transform);
+            row.transform);
         LayoutElement controlModeElement =
             controlModeDropdown.gameObject.AddComponent<LayoutElement>();
         controlModeElement.minWidth = 240f;
