@@ -1282,6 +1282,21 @@ public static partial class GameplayTestSystemProbe
         var replica = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
         replica.ApplyReplicatedSnapshot(first);
         float replicaCooling = replica.SampleCoolingOffsetAt(new Int2(1, 1));
+        engine.ForceElement(origin, 0d, WeatherElementIds.Wind, .5f, 10f);
+        engine.TryGetSnapshot(origin, out RegionalWeatherSnapshot rainAndWind);
+        float combinedCooling = engine.SampleCoolingOffsetAt(new Int2(1, 1));
+        replica.ApplyReplicatedSnapshot(rainAndWind);
+        float replicaCombinedCooling = replica.SampleCoolingOffsetAt(new Int2(1, 1));
+        var windOnlyEngine = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        windOnlyEngine.RegisterChunk(origin, profile, 0d);
+        windOnlyEngine.ForceElement(origin, 0d, WeatherElementIds.Wind, .5f, 10f);
+        windOnlyEngine.TryGetSnapshot(origin, out RegionalWeatherSnapshot windOnly);
+        float windCooling = windOnlyEngine.SampleCoolingOffsetAt(new Int2(1, 1));
+        var windReplica = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        windReplica.ApplyReplicatedSnapshot(windOnly);
+        float replicaWindCooling = windReplica.SampleCoolingOffsetAt(new Int2(1, 1));
+        windOnlyEngine.Advance(origin, 10d, false);
+        float endedWindCooling = windOnlyEngine.SampleCoolingOffsetAt(new Int2(1, 1));
         bool frozenReady = engine.TryGetProfile(origin, out ChunkWeatherProfile frozen);
         RegionalWeatherAdvanceResult ended = engine.Advance(origin, 10d, false);
         float endedCooling = engine.SampleCoolingOffsetAt(new Int2(1, 1));
@@ -1309,6 +1324,10 @@ public static partial class GameplayTestSystemProbe
             ["firstSnow"] = first.SnowIntensity,
             ["rainCooling"] = firstCooling, ["neighborCooling"] = secondCooling,
             ["replicaCooling"] = replicaCooling, ["snapshotCooling"] = first.CoolingOffsetCelsius,
+            ["windCooling"] = windCooling, ["windSnapshotCooling"] = windOnly.CoolingOffsetCelsius,
+            ["replicaWindCooling"] = replicaWindCooling, ["endedWindCooling"] = endedWindCooling,
+            ["combinedCooling"] = combinedCooling, ["combinedSnapshotCooling"] = rainAndWind.CoolingOffsetCelsius,
+            ["replicaCombinedCooling"] = replicaCombinedCooling,
             ["endedCooling"] = endedCooling, ["endedSnapshotCooling"] = ended.Snapshot.CoolingOffsetCelsius,
             ["firstRegionX"] = first.Region.X, ["secondRegionX"] = second.Region.X,
             ["frozenReady"] = frozenReady, ["frozenTemperature"] = frozen?.Climate.TemperatureCelsius,

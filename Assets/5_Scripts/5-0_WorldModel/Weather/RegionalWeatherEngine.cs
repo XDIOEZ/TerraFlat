@@ -522,11 +522,13 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
-        // 降水固定降温十度，十度保底由环境温度合成层统一处理。
+        // 雨和风分别降温十度、五度，十度保底由环境温度合成层统一处理。
         private const float RainCoolingOffsetCelsius = -10f;
+        private const float WindCoolingOffsetCelsius = -5f;
 
-        private static float ResolveRainCoolingOffset(float precipitationIntensity)
-            => precipitationIntensity > 0.001f ? RainCoolingOffsetCelsius : 0f;
+        private static float ResolveWeatherCoolingOffset(float precipitationIntensity, float windStrength)
+            => (precipitationIntensity > 0.001f ? RainCoolingOffsetCelsius : 0f) +
+               (windStrength > 0.001f ? WindCoolingOffsetCelsius : 0f);
 
         public float SampleCoolingOffsetAt(Int2 cell)
         {
@@ -535,7 +537,8 @@ namespace FlatWorld.WorldModel
                 return replicas.TryGetValue(region, out RegionalWeatherSnapshot snapshot)
                     ? snapshot.CoolingOffsetCelsius : 0f;
             return states.TryGetValue(region, out RegionalWeatherState state)
-                ? ResolveRainCoolingOffset(ActiveIntensity(state, WeatherElementIds.Rain)) : 0f;
+                ? ResolveWeatherCoolingOffset(ActiveIntensity(state, WeatherElementIds.Rain),
+                    ResolveWindStrength(state)) : 0f;
         }
 
         public RegionalWeatherAdvanceResult SampleExposureAt(Int2 cell,
@@ -582,7 +585,7 @@ namespace FlatWorld.WorldModel
             {
                 Region = state.Region, SampleTime = state.LastStepTime,
                 AirHumidity = climate.AirHumidity, HumidityDeficit = 0f,
-                CoolingOffsetCelsius = ResolveRainCoolingOffset(precipitation),
+                CoolingOffsetCelsius = ResolveWeatherCoolingOffset(precipitation, wind.z),
                 RainIntensity = snow ? 0f : precipitation, SnowIntensity = snow ? precipitation : 0f,
                 PrecipitationIntensity = precipitation,
                 WindX = wind.x, WindY = wind.y, WindStrength = wind.z,
@@ -798,7 +801,7 @@ namespace FlatWorld.WorldModel
         private static bool ValidSnapshot(RegionalWeatherSnapshot value)
             => value.Revision >= 0 && value.LightningSequence >= 0 &&
                Unit(value.AirHumidity) && value.HumidityDeficit == 0f &&
-               value.CoolingOffsetCelsius == ResolveRainCoolingOffset(value.PrecipitationIntensity) &&
+               value.CoolingOffsetCelsius == ResolveWeatherCoolingOffset(value.PrecipitationIntensity, value.WindStrength) &&
                Unit(value.RainIntensity) && Unit(value.SnowIntensity) && Unit(value.PrecipitationIntensity) &&
                Finite(value.WindX) && Finite(value.WindY) && Math.Abs(value.WindX) <= 1f &&
                Math.Abs(value.WindY) <= 1f && Unit(value.WindStrength) &&
