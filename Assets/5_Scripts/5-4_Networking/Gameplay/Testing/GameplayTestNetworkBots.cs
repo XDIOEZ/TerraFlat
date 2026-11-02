@@ -230,6 +230,38 @@ namespace FlatWorld.Networking.Gameplay
                 Publish(true);
                 result["pendingInventoryForceCaptures"] = CaptureCount() - before;
                 result["retainedPayloadUnchanged"] = payload.SequenceEqual(retained);
+                var readiness = NetworkServer.connections.Values.Where(value => value != null)
+                    .Select(value => (connection: value, ready: value.isReady)).ToArray();
+                try
+                {
+                    // 同步采样内暂撤接收资格，覆盖私有 Host；不拆连接且退出时完整恢复。
+                    foreach (var state in readiness) state.connection.isReady = false;
+                    ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = static () => false;
+                    Field("itemStateDirty").SetValue(bot, true);
+                    Field("serverStateTimer").SetValue(bot, 0f);
+                    before = CaptureCount();
+                    Publish(false);
+                    result["privateHostCaptures"] = CaptureCount() - before;
+                    result["privateDirtyPreserved"] = (bool)Field("itemStateDirty").GetValue(bot) &&
+                        (float)Field("serverStateTimer").GetValue(bot) == 0f;
+                    before = CaptureCount();
+                    Publish(true);
+                    result["privateForcedCaptures"] = CaptureCount() - before;
+                    owned.SetValue(bot.netIdentity, false);
+                    Field("serverStateTimer").SetValue(bot, 0f);
+                    before = CaptureCount();
+                    Publish(false);
+                    result["remoteOwnerCaptures"] = CaptureCount() - before;
+                }
+                finally
+                {
+                    foreach (var state in readiness) state.connection.isReady = state.ready;
+                    owned.SetValue(bot.netIdentity, true);
+                }
+                Field("itemStateDirty").SetValue(bot, true);
+                before = CaptureCount();
+                Publish(false);
+                result["readyRecipientCaptures"] = CaptureCount() - before;
                 return result;
             }
             finally

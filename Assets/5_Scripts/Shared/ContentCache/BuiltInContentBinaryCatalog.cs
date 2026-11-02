@@ -172,6 +172,34 @@ public static class BuiltInContentBinaryCatalog
         return value;
     }
 
+    /// <summary>资源句柄留在主线程，配置解码与烘焙记录交给纯数据任务。</summary>
+    public static IEnumerator ReadResourceAsync<T>(string resourcePath, Func<string, T> parse,
+        Action<T> completed, Action<Exception> failed, int version = 1)
+    {
+        string key = "resource:" + resourcePath;
+        if (IsActive)
+        {
+            yield return StreamingAssetsTextLoader.BeginPureDataAsync(() =>
+            {
+                if (!TryRead(key, version, out T value))
+                    throw new InvalidDataException("构建期二进制目录缺少资源配置：" + resourcePath);
+                return value;
+            }, completed, failed);
+            yield break;
+        }
+
+        ResourceRequest request = Resources.LoadAsync<TextAsset>(resourcePath);
+        yield return request;
+        TextAsset asset = request.asset as TextAsset;
+        string text = asset != null ? asset.text : null;
+        yield return StreamingAssetsTextLoader.BeginPureDataAsync(() =>
+        {
+            T value = text != null ? parse(text) : default;
+            Record(key, version, value);
+            return value;
+        }, completed, failed);
+    }
+
     public static string[] ReadResourceDirectoryPaths(string resourceRoot)
     {
         string key = "resource-list:" + resourceRoot;

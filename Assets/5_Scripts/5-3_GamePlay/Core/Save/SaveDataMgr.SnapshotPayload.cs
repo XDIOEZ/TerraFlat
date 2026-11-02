@@ -365,14 +365,16 @@ public partial class SaveDataMgr
         ecologyItems.Clear();
         long archiveRevision = ReserveArchiveSnapshotRevision(fullPath);
         byte[] machines, droppedItems;
+        string frozenSpaceJson;
         List<FlatWorld.Persistence.SaveArchiveRecord> sqliteRecords;
         using (MachineWorld.BeginSaveSnapshotCapture())
         {
             using (SavePlayerCapturePoint.Measure()) captureCoreState();
             using (SaveMachinesCapturePoint.Measure()) machines = MachineWorld.CaptureArchive(capturedSave);
             using (SaveSpaceCapturePoint.Measure()) FlatWorld.Spaceflight.SpaceSession.Capture(capturedSave);
+            frozenSpaceJson = capturedSave.SpaceStateJson;
             using (SaveDropsCapturePoint.Measure()) droppedItems = DroppedItemService.CaptureArchive(capturedSave);
-            sqliteRecords = CaptureSqliteCoreRecords(capturedSave, machines, droppedItems);
+            sqliteRecords = CaptureSqliteCoreRecords(capturedSave, machines, droppedItems, includeSpaceRecords: false);
         }
         // 让帧期间发生的采矿/建造必须在联合点补冻，保持地形与最终库存、掉落一致。
         foreach (var changed in new List<KeyValuePair<string, long>>(chunkDifferenceRevisions))
@@ -415,6 +417,23 @@ public partial class SaveDataMgr
             onQueued?.Invoke(Task.FromResult(false));
             yield break;
         }
+
+        // 联合点已冻结不可变字符串，JSON 拆行和编码不再占用游戏主线程或读取活跃世界。
+        List<FlatWorld.Persistence.SaveArchiveRecord> spaceRecords = null;
+        Exception spaceEncodingFailure = null;
+        IEnumerator spaceEncoding = StreamingAssetsTextLoader.BeginPureDataAsync(
+            () => EncodeFrozenSqliteSpaceRecords(frozenSpaceJson),
+            value => spaceRecords = value, exception => spaceEncodingFailure = exception);
+        while (spaceEncoding.MoveNext())
+        {
+            yield return spaceEncoding.Current;
+            if (!IsCapturedSaveCurrent(capturedSave, fullPath, revision))
+            { onQueued?.Invoke(Task.FromResult(false)); yield break; }
+        }
+        if (spaceEncodingFailure != null)
+            throw new InvalidDataException("自动保存的太空记录编码失败。", spaceEncodingFailure);
+        if (spaceRecords == null) throw new InvalidDataException("自动保存的太空记录编码未完成。");
+        sqliteRecords.AddRange(spaceRecords);
 
         Task<bool> writeTask = CommitSqliteRecordsAndReportAsync(fullPath, capturedSave, sqliteRecords, archiveRevision, revision);
         onQueued?.Invoke(writeTask);

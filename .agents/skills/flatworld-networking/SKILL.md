@@ -5,6 +5,8 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 # FlatWorld 联机
 
+- `NetworkWorldPlayer.PublishServerPlayerState` 对无远端 Ready 接收者的本机 Host 跳过普通完整快照，保留脏标记；`force`、远端玩家权威状态和出现 Ready 接收者仍走原发布链。不得跳过事务基线或断线清理；`bots-session.lua` 覆盖跳过、恢复与强制发布。
+
 ## 入口
 
 - `SpaceNetworkIntent` 的 UsePlayerItem/Attack/HarvestNatural 同时覆盖普通地表；请求身份来自连接，WorldKey/RealmRevision 与迁移门禁拒绝旧世界操作。Natural 收获走真实实体 GUID/位置/距离校验，成功广播最终 ItemData 或 removed 状态，客户端通过正式生态差量和表现接口应用，不能本机重复采集/掉物。

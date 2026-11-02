@@ -14,6 +14,7 @@ public partial class GameRes
         // 候选目录不能改动当前世界的表现池，失败候选也不能清理正式池。
         if (preparingInPlaceReload) yield break;
 
+        yield return DeathMessageCatalog.PreloadAsync();
         BuffAttributeEffects.ModifyAttackDamage(null, Unity.Mathematics.float4.zero);
         if (ShouldYieldResourceWork()) yield return null;
         FlatWorld.Spaceflight.ShipCombatBridge.PrewarmQueryPools();
