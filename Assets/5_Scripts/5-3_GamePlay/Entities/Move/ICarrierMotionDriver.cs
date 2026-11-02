@@ -13,6 +13,19 @@ public interface ICarrierMotionDriver
     #endregion
 }
 
+/// <summary>短按交互键仅执行载具自己的辅助操作，上下车由长按统一处理。</summary>
+public interface ICarrierTapInteractionPolicy
+{
+    void InteractWithCarrierOnTap(Player player, Mod_Mover mover);
+}
+
+/// <summary>手推等站立操作的载具可自定义操作者站位和行走表现。</summary>
+public interface ICarrierOperatorPresentationPolicy
+{
+    Vector2 ResolveOperatorPosition(Mod_Carrier carrier);
+    bool AnimateOperatorWalking { get; }
+}
+
 public interface ICarrierBoostPolicy
 {
     bool AllowsRiderBoost { get; }

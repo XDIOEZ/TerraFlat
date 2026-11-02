@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
@@ -673,7 +673,8 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
     private void UpdateMovementState()
     {
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
-        bool isActuallyMoving = !HasDrivenMotion && CarrierSource == null && rb != null &&
+        bool isActuallyMoving = !HasDrivenMotion && (CarrierSource == null ||
+                                CarrierSource is Mod_Carrier { RiderWalksWhileOperating: true }) && rb != null &&
                                 DrivenVelocity.sqrMagnitude > stopThreshold * stopThreshold;
         IsMoving = isActuallyMoving;
         bool changed = _wasMoving != isActuallyMoving;

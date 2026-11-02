@@ -8,7 +8,7 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTerrainContactPolicy, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -26,7 +26,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     [Range(0.01f, 1f)] public float LandPushSpeedMultiplier = 0.2f; // 陆地推动按推动者当前速度的五分之一。
     [Range(0.01f, 1f)] public float WaterPushSpeedMultiplier = 1f; // 水中推动阻力独立于乘坐速度。
     public bool RotateVisualWithHeading = true; // 侧视车辆保持直立，由独立表现控制翻面。
-    public bool EmitWaterWake = true; // 只有适合水面航行的载具生成尾流。
+    public bool EmitWaterWake = true; // 由载具定义决定是否生成涉水波纹。
+    public bool ExposesRiderToTerrain; // 敞开式载具的乘员不应免疫水体和地形接触。
     [Min(0f)] public float WaterCurrentSpeed = 0.18f; // 水流经载具继续传递到乘员。
     public Vector2 HullSize = new(1.5f, 1f); // 作者定义的船体尺寸与下船净空。
     public Vector2 SeatOffset = new(0, 0.25f); // 座位相对船中心。
@@ -34,7 +35,11 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     public override string CanonicalModuleId => ModuleId;
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData)value; }
     public Component SourceComponent => this;
-    public Vector2 SeatPosition => (Vector2)item.transform.position + SeatOffset;
+    public bool AllowsRiderTerrainContact => ExposesRiderToTerrain;
+    public Vector2 SeatPosition => motionDriver is ICarrierOperatorPresentationPolicy operatorPolicy
+        ? operatorPolicy.ResolveOperatorPosition(this) : (Vector2)item.transform.position +
+        (seatOffsetResolver?.ResolveSeatOffset(SeatOffset) ?? SeatOffset);
+    public bool RiderWalksWhileOperating => motionDriver is ICarrierOperatorPresentationPolicy { AnimateOperatorWalking: true };
     public Vector2 CurrentVelocity { get; private set; }
     public Vector2 CurrentForce { get; private set; }
     public Vector2 DrivenVelocity { get; private set; } // 划船或主动推动的速度。
@@ -53,6 +58,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private BoxCollider2D physicalCollider;
     private Transform visualTransform;
     private SpriteRenderer visualRenderer;
+    private ICarrierSeatOffsetResolver seatOffsetResolver;
     private Quaternion visualBaseLocalRotation;
     private bool visualBaseRotationCaptured;
     private Vector2 requestedInput;
@@ -65,6 +71,9 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
     private float pushValidUntil;
     private CarrierWaterWake waterWake;
     private ICarrierMotionDriver motionDriver;
+    private Player holdingPlayer;
+    private float holdStartedAt;
+    private bool holdCompleted;
     public bool AllowsRiderBoost => motionDriver == null || motionDriver.AllowsRiderBoost;
     public Rigidbody2D Body => body;
     public bool RequiresIndependentWorldMotion => true;
@@ -112,6 +121,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         requestedBoost = false;
         lastPhysicsPosition = body.position;
         BindVisualTransform();
+        seatOffsetResolver = item.GetComponent<ICarrierSeatOffsetResolver>();
         if (motionDriver == null && EmitWaterWake)
         {
             waterWake = item.GetComponent<CarrierWaterWake>() ?? item.gameObject.AddComponent<CarrierWaterWake>();
@@ -136,6 +146,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
 
     private void SuspendRuntimeSources()
     {
+        ResetHeldInteraction();
         Rider?.ReleaseCarrierLease();
         StopMotion();
         if (health != null) health.DeathStarted -= HandleSourceDeath;
@@ -229,19 +240,48 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         return mover != null && (Rider == mover || (Rider == null && mover.CarrierSource == null));
     }
 
-    /// <summary>再次交互下船；优先落到附近安全陆地，远海则落到船体外侧的安全水面。</summary>
+    /// <summary>按下只开始计时；短按可打开货仓，长按才执行上车或下车。</summary>
     public void OnInteractStart(Item actor)
     {
         if (!CanInteract(actor)) return;
+        holdingPlayer = ResolvePlayer(actor);
+        holdStartedAt = Time.unscaledTime;
+        holdCompleted = false;
+    }
+
+    public void OnInteractUpdate(Item actor)
+    {
+        if (holdingPlayer == null || holdCompleted || ResolvePlayer(actor) != holdingPlayer ||
+            !CanInteract(actor) || Time.unscaledTime - holdStartedAt < HoldToDriveSeconds) return;
+        CompleteHeldDrivingInteraction();
+    }
+
+    private void CompleteHeldDrivingInteraction()
+    {
+        holdCompleted = true;
         ActivateInstalledCarrier();
+        Mod_Mover mover = holdingPlayer.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
+        if (motionDriver != null) motionDriver.InteractWithCarrier(holdingPlayer, mover);
+        else ToggleRider(holdingPlayer, mover);
+    }
+
+    public void OnInteractEnd(Item actor)
+    {
         Player player = ResolvePlayer(actor);
-        Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-        if (motionDriver != null)
-        {
-            motionDriver.InteractWithCarrier(player, mover);
-            return;
-        }
-        ToggleRider(player, mover);
+        if (!holdCompleted && player != null && player == holdingPlayer && CanInteract(actor) &&
+            Time.unscaledTime - holdStartedAt >= HoldToDriveSeconds)
+            CompleteHeldDrivingInteraction();
+        bool isTap = player != null && player == holdingPlayer && !holdCompleted;
+        ResetHeldInteraction();
+        if (isTap && CanInteract(actor) && motionDriver is ICarrierTapInteractionPolicy tapPolicy)
+            tapPolicy.InteractWithCarrierOnTap(player, player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover));
+    }
+
+    private void ResetHeldInteraction()
+    {
+        holdingPlayer = null;
+        holdCompleted = false;
+        holdStartedAt = 0f;
     }
 
     /// <summary>所有车型共用单座上下车与安全下车规则。</summary>
@@ -251,7 +291,12 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         if (Rider == mover)
         {
             StopMotion();
-            if (TryFindDismount(out Vector2 destination) || TryFindWaterDismount(mover, out destination))
+            if (motionDriver is ICarrierOperatorPresentationPolicy && IsSafeLand(SeatPosition))
+            {
+                mover.DetachCarrier(SeatPosition);
+                return true;
+            }
+            if (TryFindDismount(out Vector2 destination) || AllowsWater && TryFindWaterDismount(mover, out destination))
             {
                 mover.DetachCarrier(destination);
                 return true;
@@ -268,7 +313,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierBoostPol
         => actor as Player ?? actor?.Owner as Player ?? actor?.GetComponentInParent<Player>();
 
     /// <summary>焦点取消和临时输入锁不是下船指令。</summary>
-    public void OnInteractCancel(Item actor) { }
+    public void OnInteractCancel(Item actor) => ResetHeldInteraction();
 
     public void ReleaseRider(Mod_Mover rider)
     {

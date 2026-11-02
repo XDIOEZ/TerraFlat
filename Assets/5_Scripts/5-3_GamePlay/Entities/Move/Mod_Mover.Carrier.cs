@@ -35,7 +35,9 @@ public partial class Mod_Mover
         DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         CarrierSource = source;
         ResetSwimmingAudio();
-        carrierTileEffects.SetEffectsSuppressed(this, true);
+        // 船舱隔绝环境，自行车等敞开载具继续让乘员感受真实水体和地形效果。
+        if (source is not ICarrierRiderTerrainContactPolicy policy || !policy.AllowsRiderTerrainContact)
+            carrierTileEffects.SetEffectsSuppressed(this, true);
         carrierHealth.DeathStarted += HandleCarrierRiderDeath;
         carrierGame = GameManager.Instance;
         if (carrierGame != null) carrierGame.Event_GameWorldExit += HandleCarrierWorldExit;
@@ -90,8 +92,15 @@ public partial class Mod_Mover
         {
             ExternalVelocity = CarrierSource.CurrentVelocity;
             ApplyCarrierPosition(CarrierSource.SeatPosition);
+            // 手推车站立操作时播放行走动画，普通乘坐继续保持非步行状态。
+            bool walksWhileOperating = CarrierSource is Mod_Carrier { RiderWalksWhileOperating: true };
+            DrivenVelocity = walksWhileOperating && !locked && hasMoveInput
+                ? CarrierSource.CurrentVelocity : Vector2.zero;
+            UpdateMovementState();
+            if (walksWhileOperating && IsMoving && stamina != null && GameNetwork.HasStateAuthority)
+                stamina.ConsumeStaminaPerSecond(StaminaConsumptionSources.MovementWalk, MoveStaminaConsume, deltaTime);
+            hungerActionInstance?.SetMovementState(walksWhileOperating && IsMoving, false);
         }
-        hungerActionInstance?.SetMovementState(false, false);
         return true;
     }
 

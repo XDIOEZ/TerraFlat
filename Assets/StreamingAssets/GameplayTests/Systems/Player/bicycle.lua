@@ -1,15 +1,18 @@
 test.check("world_ready", "自行车隔离世界已进入")
 test.runtime("player", "bicycle_lifecycle", {action = "begin"}, function(data)
-    assert(data.available and data.mountedAfterAction and data.bodySimulated and not data.riderBodySimulated,
+    assert(data.available and data.mountedAfterAction and data.bodySimulated and not data.riderBodySimulated and
+        data.riderTerrainContact and data.wakeReady,
         "正式车体或上车租约未建立")
     assert(data.contactShadowBound, "自行车生成后未注册正式接触阴影")
 end, "生成自行车并通过正式交互上车")
 test.move(1, 0, .7)
 test.runtime("player", "bicycle_lifecycle", {action = "land"}, function(data)
-    assert(data.mounted and data.distance > 1 and data.drivenSpeed > 5.5 and data.drivenSpeed <= 6.01,
+    assert(data.mounted and data.distance > 1 and data.drivenSpeed > 5.5 and data.drivenSpeed <= 6.01 and
+        not data.riderInWater,
         "真实输入没有驱动自行车或陆地限速失效")
-    assert(data.wheelAngle > .01 and data.sameWheelRotation and data.seatError < .5,
-        "骑行车轮没有同步转动或乘员没有跟座")
+    assert(data.wheelAngle > .01 and data.sameWheelRotation and data.pedalAngle > .01 and
+        data.pedalTransformSynced and data.seatError < .05,
+        "骑行车轮或脚踏没有同步转动，或乘员没有准确跟座")
     assert(data.shadowGrounded, "自行车阴影落点被车架轮廓夹高，没有贴地")
 end, "真实骑行、速度、车轮与跟座")
 test.wait(.5)
@@ -22,8 +25,8 @@ test.runtime("player", "bicycle_lifecycle", {action = "wall_mark"}, function(dat
 end, "撞墙后记录真实车体和轮子状态")
 test.move(1, 0, .3)
 test.runtime("player", "bicycle_lifecycle", {action = "wall_sample"}, function(data)
-    assert(data.blockedDistance < .01 and data.blockedWheelTurn < .1,
-        "车体堵住后仍位移或车轮按输入空转")
+    assert(data.blockedDistance < .01 and data.blockedWheelTurn < .1 and data.blockedPedalTurn < .1,
+        "车体堵住后仍位移，或车轮及脚踏按输入空转")
 end, "保持骑行输入时，堵住的车轮不空转")
 test.wait(.5)
 test.runtime("player", "bicycle_lifecycle", {action = "water"}, function(data)
@@ -31,7 +34,8 @@ test.runtime("player", "bicycle_lifecycle", {action = "water"}, function(data)
 end, "松手制动并建立真实涉水区域")
 test.move(1, 0, 1)
 test.runtime("player", "bicycle_lifecycle", {action = "water_sample"}, function(data)
-    assert(data.mounted and data.inWater and data.drivenSpeed > .55 and data.drivenSpeed < .65,
+    assert(data.mounted and data.inWater and data.drivenSpeed > .55 and data.drivenSpeed < .65 and
+        data.riderTerrainContact and data.riderInWater and data.riderLiquidDepth > 0,
         "真实水面骑行速度没有保持陆地的10%")
 end, "真实水面骑行限速0.6格每秒")
 test.wait(.4)

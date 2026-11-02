@@ -51,6 +51,7 @@ public static class GameplayTestBicycleRuntimeProbe
         private float coastStartSpeed;
         private Vector2 blockedPosition;
         private float blockedWheelAngle;
+        private float blockedPedalAngle;
         private bool disposed;
         public Mod_Mover Mover { get; }
         public Mod_Carrier Carrier { get; private set; }
@@ -77,7 +78,7 @@ public static class GameplayTestBicycleRuntimeProbe
             Carrier = bicycle.GetComponentInChildren<Mod_Carrier>(true);
             if (Carrier == null || !Carrier.IsAvailable) throw new InvalidOperationException("自行车正式载具未就绪。");
             startPosition = Carrier.Body.position;
-            Carrier.OnInteractStart(player);
+            Carrier.ToggleRider(player, Mover);
         }
 
         private Vector2 FindClearRidingSite()
@@ -105,6 +106,7 @@ public static class GameplayTestBicycleRuntimeProbe
         public JObject Sample()
         {
             CarrierWheelPresentation wheels = bicycle.GetComponent<CarrierWheelPresentation>();
+            Mod_TileEffectReceiver terrainContact = player.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
             return new JObject
             {
                 ["available"] = Carrier.IsAvailable, ["mounted"] = Carrier.Rider == Mover,
@@ -115,10 +117,18 @@ public static class GameplayTestBicycleRuntimeProbe
                 ["coastStartSpeed"] = coastStartSpeed,
                 ["speed"] = Carrier.CurrentVelocity.magnitude, ["drivenSpeed"] = Carrier.DrivenVelocity.magnitude,
                 ["wheelAngle"] = wheels.WheelAngle, ["sameWheelRotation"] = wheels.RearWheel.localRotation == wheels.FrontWheel.localRotation,
+                ["pedalAngle"] = wheels.PedalAngle,
+                ["pedalTransformSynced"] = wheels.PedalCrank != null &&
+                    Mathf.Abs(Mathf.DeltaAngle(wheels.PedalAngle, wheels.PedalCrank.localEulerAngles.z)) < .1f,
                 ["blockedDistance"] = WorldTopologyRuntime.Distance(blockedPosition, Carrier.Body.position),
                 ["blockedWheelTurn"] = Mathf.Abs(Mathf.DeltaAngle(blockedWheelAngle, wheels.WheelAngle)),
+                ["blockedPedalTurn"] = Mathf.Abs(Mathf.DeltaAngle(blockedPedalAngle, wheels.PedalAngle)),
                 ["pusherIsPlayer"] = Carrier.PushSource == Mover,
                 ["seatError"] = WorldTopologyRuntime.Distance(player.transform.position, Carrier.SeatPosition),
+                ["riderTerrainContact"] = terrainContact != null && terrainContact.HasTerrainContact,
+                ["riderInWater"] = terrainContact != null && terrainContact.IsInWater,
+                ["riderLiquidDepth"] = terrainContact != null ? terrainContact.LiquidDepth : 0f,
+                ["wakeReady"] = bicycle.GetComponent<CarrierWaterWake>() != null,
                 ["contactShadowBound"] = WorldRenderingManager.ExistingInstance?.IsItemContactShadowBound(bicycle) == true,
                 ["shadowGrounded"] = IsShadowFootAlignedWithWheels(wheels),
                 ["inWater"] = ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(Carrier.Body.position, out RuntimeTerrainTileSample tile) && tile.LiquidDepth > 0f
@@ -183,14 +193,16 @@ public static class GameplayTestBicycleRuntimeProbe
         public void MarkBlockedWheelPose()
         {
             blockedPosition = Carrier.Body.position;
-            blockedWheelAngle = bicycle.GetComponent<CarrierWheelPresentation>().WheelAngle;
+            CarrierWheelPresentation wheels = bicycle.GetComponent<CarrierWheelPresentation>();
+            blockedWheelAngle = wheels.WheelAngle;
+            blockedPedalAngle = wheels.PedalAngle;
         }
 
         public void BeginPush()
         {
             Carrier.StopMotion();
             RestoreWater();
-            Carrier.OnInteractStart(player);
+            Carrier.ToggleRider(player, Mover);
             SetPlayerPosition(Carrier.Body.position + Vector2.left * 1.35f + Vector2.down * .22f);
             pushStart = Carrier.Body.position;
         }
@@ -207,7 +219,7 @@ public static class GameplayTestBicycleRuntimeProbe
             if (Carrier.Rider == null)
             {
                 SetPlayerPosition(Carrier.Body.position + Vector2.down);
-                Carrier.OnInteractStart(player);
+                Carrier.ToggleRider(player, Mover);
             }
         }
 

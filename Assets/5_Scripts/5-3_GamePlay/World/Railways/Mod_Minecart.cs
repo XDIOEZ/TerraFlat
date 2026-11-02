@@ -5,7 +5,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>矿车只消费通用动力和轨道路径，座位与玩家输入继续由统一载具管理。</summary>
-public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrierPushMotionPolicy, IItemModuleDependencyBinder,
+public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrierPushMotionPolicy, ICarrierTapInteractionPolicy, IItemModuleDependencyBinder,
     IBuildingPlacementCommitted, IBuildingDismantlePolicy
 {
     #region 矿车配置和关联
@@ -163,7 +163,11 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
         if (!CanInteractWithCarrier(player, mover)) return;
         if (Carrier.Rider == mover) { TryLeave(player); return; }
         if (Carrier.Rider == null && mover.CarrierSource == null) TryBoard(player);
-        MenuRequested?.Invoke(this, player);
+    }
+
+    public void InteractWithCarrierOnTap(Player player, Mod_Mover mover)
+    {
+        if (CanInteractWithCarrier(player, mover)) MenuRequested?.Invoke(this, player);
     }
     public bool TryBoard(Player player)
     {
