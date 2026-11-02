@@ -413,7 +413,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         finally { if (!retained) fixture.Dispose(); }
     }
 
-    /// <summary>在正式设置窗口切到镜头页，采样所有左侧页签后恢复原始界面页。</summary>
+    /// <summary>采样正式设置侧栏、显示页及合并后的可滚动画质页。</summary>
     private static JObject CaptureSettingsSidebarTabVisuals(BasePanel panel)
     {
         Transform tabList = panel.GetComponentsInChildren<Transform>(true)
@@ -424,8 +424,25 @@ public static partial class GameplayTestPresentationRuntimeProbe
         Button[] buttons = tabList.GetComponentsInChildren<Button>(true);
         Button camera = Array.Find(buttons, button => button.name == "镜头控制");
         Button initial = Array.Find(buttons, button => button.name == "UI设置");
-        if (buttons.Length < 9 || camera == null || initial == null)
+        if (buttons.Length != 9 || camera == null || initial == null)
             throw new MissingReferenceException("正式设置窗口左侧分页按钮不完整。");
+
+        SettingsActionListPagination pagination = panel.GetComponent<SettingsActionListPagination>();
+        Transform displayPage = pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName);
+        Transform graphicsPage = pagination?.GetPageRoot(SettingsActionListPagination.GraphicsPageName);
+        bool displayComplete = displayPage != null &&
+            displayPage.GetComponent<CoordinateDisplaySettingsPanelLauncher>() != null &&
+            displayPage.GetComponent<FrameRateSettingsPanelController>() != null;
+        bool graphicsComplete = graphicsPage != null &&
+            graphicsPage.GetComponent<GraphicsSettingsPanelLauncher>() != null &&
+            graphicsPage.GetComponentInChildren<VisualEffectsSettingsPanelLauncher>(true) != null &&
+            graphicsPage.GetComponentsInChildren<TMP_Dropdown>(true)
+                .Any(dropdown => dropdown.name == GameManager.MainMenuSettingsQualityPresetKey) &&
+            graphicsPage.GetComponentsInChildren<TMP_Dropdown>(true)
+                .Any(dropdown => dropdown.name == GameManager.MainMenuSettingsEffectsQualityKey) &&
+            graphicsPage.GetComponentInChildren<ScrollRect>(true)?.vertical == true;
+        bool legacyVisualPageRemoved = !panel.GetComponentsInChildren<Transform>(true)
+            .Any(node => node.name == SettingsActionListPagination.VisualEffectsPageName);
 
         JArray SampleColor(Color color) => new JArray(color.r, color.g, color.b, color.a);
         var tabs = new JArray();
@@ -452,6 +469,9 @@ public static partial class GameplayTestPresentationRuntimeProbe
         return new JObject
         {
             ["tabs"] = tabs,
+            ["displayComplete"] = displayComplete,
+            ["graphicsComplete"] = graphicsComplete,
+            ["legacyVisualPageRemoved"] = legacyVisualPageRemoved,
             ["activeBackground"] = SampleColor(FlatWorldUITheme.TabActive),
             ["inactiveBackground"] = SampleColor(FlatWorldUITheme.TabInactive),
             ["activeCaption"] = SampleColor(FlatWorldUITheme.TabLabelActive),

@@ -92,13 +92,16 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     end
     assert(next(expectedPages) == nil, "共用设置页漏装配")
     local sidebar = data.sidebarVisuals
-    assert(sidebar and #sidebar.tabs >= 9, "设置左侧分页列表缺少按钮")
-    local requiredTabs = { ["镜头控制"] = true, ["设置页签_画质"] = true,
+    assert(sidebar and #sidebar.tabs == 9, "设置左侧应只保留九个客户端分类")
+    local requiredTabs = { ["镜头控制"] = true, ["显示设置"] = true, ["设置页签_画质"] = true,
         ["设置页签_语言"] = true, ["设置页签_调试"] = true }
-    local selectedCount = 0
-    for _, tab in ipairs(sidebar.tabs) do
+    local selectedCount, displayIndex, graphicsIndex = 0, nil, nil
+    for index, tab in ipairs(sidebar.tabs) do
         local selected = tab.name == "镜头控制"
         if selected then selectedCount = selectedCount + 1 end
+        if tab.name == "显示设置" then displayIndex = index end
+        if tab.name == "设置页签_画质" then graphicsIndex = index end
+        assert(tab.name ~= "视觉特效", "视觉特效仍是独立分类")
         requiredTabs[tab.name] = nil
         local expectedBackground = selected and sidebar.activeBackground or sidebar.inactiveBackground
         local expectedCaption = selected and sidebar.activeCaption or sidebar.inactiveCaption
@@ -109,6 +112,9 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
         end
     end
     assert(selectedCount == 1 and next(requiredTabs) == nil, "设置侧栏必须只有镜头页高亮，且包含画质、语言、调试页")
+    assert(displayIndex and graphicsIndex == displayIndex + 1, "显示与画质页没有相邻排列")
+    assert(sidebar.displayComplete and sidebar.graphicsComplete and sidebar.legacyVisualPageRemoved,
+        "显示/画质没有集中对应控件，或仍残留旧视觉特效页")
     assert(data.blocking and data.managerBlocking and data.navigationPrepared and data.interactive, "打开设置后没有接管玩法交互或可取消导航")
     assert(data.debugWorldLabelsSuppressed, "打开正常设置窗口时，头顶 AI 调试标签仍会覆盖可交互控件")
     assert(data.expectedChinese == "保存" and data.observedChinese == data.expectedChinese, "正式中文字符串表或 TMP Binder 没有刷新")

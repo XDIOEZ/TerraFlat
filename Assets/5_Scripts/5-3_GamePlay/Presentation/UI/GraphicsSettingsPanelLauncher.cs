@@ -3,6 +3,7 @@ using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>主菜单与游戏内共用画质页，整体预设和细项分别保存与回填。</summary>
 [DisallowMultipleComponent]
@@ -13,6 +14,7 @@ public sealed class GraphicsSettingsPanelLauncher : MonoBehaviour, ISettingsPage
     private TMP_Dropdown presetDropdown;
     private TMP_Dropdown effectsDropdown;
     private TMP_Dropdown styleDropdown;
+    private Button resetButton;
     private ISettingsDropdown presetSetting;
     private ISettingsDropdown effectsSetting;
     private ISettingsDropdown styleSetting;
@@ -38,6 +40,11 @@ public sealed class GraphicsSettingsPanelLauncher : MonoBehaviour, ISettingsPage
             if (dropdown.name == GameManager.MainMenuSettingsQualityPresetKey) presetDropdown = dropdown;
             if (dropdown.name == GameManager.MainMenuSettingsEffectsQualityKey) effectsDropdown = dropdown;
             if (dropdown.name == GameManager.MainMenuSettingsPostProcessStyleKey) styleDropdown = dropdown;
+        }
+        foreach (Button button in GetComponentsInChildren<Button>(true))
+        {
+            if (button.name == "恢复默认按钮")
+                resetButton = button;
         }
         // 已发布的两份设置 Prefab 没有风格行，沿用正式下拉控件行的布局而不拼临时控件。
         if (styleDropdown == null && effectsDropdown != null)
@@ -68,6 +75,8 @@ public sealed class GraphicsSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         presetDropdown.onValueChanged.AddListener(SelectPreset);
         effectsDropdown.onValueChanged.AddListener(SelectEffects);
         styleDropdown.onValueChanged.AddListener(SelectStyle);
+        // 复用同一个重置按钮：视觉控制器重置细项，这里只负责预设与后处理。
+        resetButton?.onClick.AddListener(ResetGraphicsDefaults);
         RefreshOptions();
     }
 
@@ -96,6 +105,12 @@ public sealed class GraphicsSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         if (!styleSetting.TrySetSelectedIndex(index, out string error))
             Debug.LogWarning(error, this);
         RefreshView();
+    }
+
+    private void ResetGraphicsDefaults()
+    {
+        GraphicsUserSettings.SettingsProvider.ResetToDefaults();
+        ScreenPostProcessSettings.SettingsProvider.ResetToDefaults();
     }
 
     private void RefreshOptions()
@@ -161,6 +176,7 @@ public sealed class GraphicsSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         if (presetDropdown != null) presetDropdown.onValueChanged.RemoveListener(SelectPreset);
         if (effectsDropdown != null) effectsDropdown.onValueChanged.RemoveListener(SelectEffects);
         if (styleDropdown != null) styleDropdown.onValueChanged.RemoveListener(SelectStyle);
+        resetButton?.onClick.RemoveListener(ResetGraphicsDefaults);
     }
 
     #endregion

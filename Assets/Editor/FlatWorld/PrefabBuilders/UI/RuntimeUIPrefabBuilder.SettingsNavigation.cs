@@ -57,10 +57,8 @@ public static partial class RuntimeUIPrefabBuilder
             content,
             SettingsActionListPagination.AudioPageName,
             SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab");
-        Transform visualEffectsPage = EnsureEmbeddedActionListPage(
-            content,
-            SettingsActionListPagination.VisualEffectsPageName,
-            SettingsPanelsRoot + RuntimeUIPrefabKeys.VisualEffectsSettings + ".prefab");
+        // 旧视觉特效页的全部细项已合入画质页，删除遗留分页避免空入口。
+        DestroyDirectChild(content, SettingsActionListPagination.VisualEffectsPageName);
         Transform debugPage = EnsureEmbeddedActionListPage(
             content,
             SettingsActionListPagination.DebugPageName,
@@ -84,12 +82,11 @@ public static partial class RuntimeUIPrefabBuilder
         displayPage.SetSiblingIndex(3);
         cameraPage.SetSiblingIndex(4);
         audioPage.SetSiblingIndex(5);
-        visualEffectsPage.SetSiblingIndex(6);
-        debugPage.SetSiblingIndex(7);
-        sessionPage.SetSiblingIndex(8);
-        autoSavePage.SetSiblingIndex(9);
-        streamingPage.SetSiblingIndex(10);
-        difficultyPage.SetSiblingIndex(11);
+        debugPage.SetSiblingIndex(6);
+        sessionPage.SetSiblingIndex(7);
+        autoSavePage.SetSiblingIndex(8);
+        streamingPage.SetSiblingIndex(9);
+        difficultyPage.SetSiblingIndex(10);
         worldPage.gameObject.SetActive(true);
         sessionPage.gameObject.SetActive(false);
         EnsureActionListTabBar(root.transform);
@@ -104,7 +101,7 @@ public static partial class RuntimeUIPrefabBuilder
             root.transform,
             FindTransform(root.transform, SettingsActionListPagination.TabBarName),
             SettingsActionListPagination.GraphicsTabButtonName,
-            "画质设置");
+            "画质");
         EnsureActionListTabButton(
             root.transform,
             FindTransform(root.transform, SettingsActionListPagination.TabBarName),
@@ -114,31 +111,12 @@ public static partial class RuntimeUIPrefabBuilder
         SettingsActionListPagination.EnsureSidebarLayout(root.transform);
     }
 
-    /// <summary>主菜单和游戏内设置共用六档整体画质入口。</summary>
+    /// <summary>画质预设与视觉效果共享同一个可滚动的正式 Prefab。</summary>
     private static Transform ConfigureGraphicsSettingsPage(Transform content)
     {
-        Transform graphicsPage = EnsureActionListPage(content, SettingsActionListPagination.GraphicsPageName);
-        ClearDirectChildren(graphicsPage);
-        CreateSettingsHeader(graphicsPage, "画质设置");
-        CreateSettingsHint(graphicsPage, "选择预设会同时调整水体、阴影和后处理，之后仍可单独调整。", 60f);
-        TMP_Dropdown preset = CreateSettingsDropdownRow(
-            graphicsPage,
-            "画质预设",
-            GameManager.MainMenuSettingsQualityPresetKey,
-            new[] { "极低", "低", "中", "高", "极高", "极致" });
-        preset.SetValueWithoutNotify(3);
-        preset.RefreshShownValue();
-        CreateSettingsDropdownRow(
-            graphicsPage,
-            "特效质量",
-            GameManager.MainMenuSettingsEffectsQualityKey,
-            new[] { "高", "中", "低" });
-        CreateSettingsDropdownRow(
-            graphicsPage,
-            "画面风格",
-            GameManager.MainMenuSettingsPostProcessStyleKey,
-            new[] { "清晰原色", "自然柔光", "电影氛围" });
-        return graphicsPage;
+        return EnsureEmbeddedActionListPage(content,
+            SettingsActionListPagination.GraphicsPageName,
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.VisualEffectsSettings + ".prefab");
     }
 
     /// <summary>主菜单与游戏内共用同一语言设置页和下拉控件。</summary>
@@ -194,7 +172,8 @@ public static partial class RuntimeUIPrefabBuilder
             SettingsActionListPagination.AutoSavePageName,
             SettingsActionListPagination.WorldStreamingPageName,
             SettingsActionListPagination.DifficultyPageName,
-            SeasonSettingsPanel.PageName
+            SeasonSettingsPanel.PageName,
+            SettingsActionListPagination.VisualEffectsPageName
         };
         for (int index = 0; index < removedPages.Length; index++)
             DestroyDirectChild(content, removedPages[index]);
@@ -215,7 +194,6 @@ public static partial class RuntimeUIPrefabBuilder
             FindDirectChild(content, SettingsActionListPagination.DisplayPageName),
             FindDirectChild(content, SettingsActionListPagination.CameraPageName),
             FindDirectChild(content, SettingsActionListPagination.AudioPageName),
-            FindDirectChild(content, SettingsActionListPagination.VisualEffectsPageName),
             FindDirectChild(content, SettingsActionListPagination.DebugPageName),
             graphicsPage,
             languagePage
@@ -234,7 +212,7 @@ public static partial class RuntimeUIPrefabBuilder
             root.transform,
             tabBar,
             SettingsActionListPagination.GraphicsTabButtonName,
-            "画质设置");
+            "画质");
         Button languageTab = EnsureActionListTabButton(
             root.transform,
             tabBar,
@@ -253,7 +231,6 @@ public static partial class RuntimeUIPrefabBuilder
             FindTransform(root.transform, "显示设置")?.GetComponent<Button>(),
             FindTransform(root.transform, "镜头控制")?.GetComponent<Button>(),
             FindTransform(root.transform, "音量调节")?.GetComponent<Button>(),
-            FindTransform(root.transform, "视觉特效")?.GetComponent<Button>(),
             debugTab,
             graphicsTab,
             languageTab
@@ -341,11 +318,8 @@ public static partial class RuntimeUIPrefabBuilder
         foreach (UI_Drag drag in root.GetComponentsInChildren<UI_Drag>(true))
             drag.enabled = false;
 
-        Transform graphics = FindTransform(root.transform, SettingsActionListPagination.GraphicsPageName);
-        MoveEntryToPage(root.transform, graphics, "打开视觉特效");
-        MoveEntryToPage(root.transform, graphics, "打开显示设置");
-        SetButtonCaption(FindTransform(graphics, "打开视觉特效")?.GetComponent<Button>(), "视觉特效");
-        SetButtonCaption(FindTransform(graphics, "打开显示设置")?.GetComponent<Button>(), "显示设置");
+        DestroyTransformIfPresent(root.transform, "打开视觉特效");
+        DestroyTransformIfPresent(root.transform, "打开显示设置");
 
         Transform input = FindTransform(root.transform, SettingsActionListPagination.InputBindingPageName);
         Transform inputOptions = FindTransform(input, "操作选项");
@@ -702,10 +676,10 @@ public static partial class RuntimeUIPrefabBuilder
 
         Button audioTab = EnsureActionListTabButton(root, tabBar, "音量调节", "音量调节");
         Button uiTab = EnsureActionListTabButton(root, tabBar, "UI设置", "UI设置");
-        Button displayTab = EnsureActionListTabButton(root, tabBar, "显示设置", "显示设置");
+        Button displayTab = EnsureActionListTabButton(root, tabBar, "显示设置", "显示");
         Button bindingTab = EnsureActionListTabButton(root, tabBar, "按键绑定", "按键绑定");
         Button cameraTab = EnsureActionListTabButton(root, tabBar, "镜头控制", "镜头控制");
-        Button visualEffectsTab = EnsureActionListTabButton(root, tabBar, "视觉特效", "视觉特效");
+        DestroyTransformIfPresent(tabBar, "视觉特效");
         Button debugTab = EnsureActionListTabButton(
             root,
             tabBar,
@@ -730,7 +704,6 @@ public static partial class RuntimeUIPrefabBuilder
             displayTab,
             cameraTab,
             audioTab,
-            visualEffectsTab,
             debugTab,
             sessionTab
         };

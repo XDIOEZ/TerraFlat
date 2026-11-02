@@ -64,7 +64,6 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         DisplayPageName,
         CameraPageName,
         AudioPageName,
-        VisualEffectsPageName,
         SessionPageName,
         AutoSavePageName,
         WorldStreamingPageName,
@@ -84,7 +83,6 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "显示设置",
         "镜头控制",
         "音量调节",
-        "视觉特效",
         DebugTabButtonName,
         SessionTabButtonName,
         GraphicsTabButtonName,
@@ -100,12 +98,11 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         3,
         4,
         5,
-        6,
-        14,
-        7,
-        12,
         13,
-        15
+        6,
+        11,
+        12,
+        14
     };
 
     private static readonly int[] PageTabIndices =
@@ -116,19 +113,19 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         3,
         4,
         5,
-        6,
-        8,
-        0,
-        0,
-        0,
-        0,
-        9,
-        10,
         7,
-        11
+        0,
+        0,
+        0,
+        0,
+        8,
+        9,
+        6,
+        10
     };
 
-    private static readonly int[] SidebarTabOrder = { 11, 0, 1, 2, 3, 4, 5, 6, 9, 10, 7, 8 };
+    // 显示与画质相邻，视觉细项不再占据第三个分类。
+    private static readonly int[] SidebarTabOrder = { 10, 0, 3, 8, 1, 2, 4, 5, 9, 6, 7 };
 
     private static readonly string[] FirstSelectableNames =
     {
@@ -138,7 +135,6 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "世界坐标模式按钮",
         "双指缩放灵敏度",
         "MasterVolume",
-        "水体风格下拉列表",
         UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
@@ -273,10 +269,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         foreach (UI_Drag drag in GetComponentsInChildren<UI_Drag>(true))
             drag.enabled = false;
         BindTabButtons();
-        BindPageButton(pages[12], "打开视觉特效", VisualEffectsPageName);
-        BindPageButton(pages[12], "打开显示设置", DisplayPageName);
-        BindPageButton(pages[2], "打开镜头控制", CameraPageName);
-        BindPageButton(pages[1], "打开语言设置", LanguagePageName);
+        BindPageButton(pages[FindPageIndex(InputBindingPageName)], "打开镜头控制", CameraPageName);
+        BindPageButton(pages[FindPageIndex(InterfacePageName)], "打开语言设置", LanguagePageName);
         if (panelContext == SettingsPanelContext.InGame)
             BindWorldDetailButtons();
         BindPanelLifecycle();
@@ -336,6 +330,11 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             child.SetParent(tabList, false);
             child.SetAsFirstSibling();
         }
+
+        // 兼容尚未重建的旧 Prefab：旧视觉特效入口不能成为无响应的分类。
+        Transform obsoleteVisualTab = FindTransform(tabList, "视觉特效");
+        if (obsoleteVisualTab != null)
+            obsoleteVisualTab.gameObject.SetActive(false);
 
         // 旧版游戏内 Prefab 没有语言页签时，复用现有公共页签的视觉结构。
         if (FindTransform(tabList, LanguageTabButtonName) == null)
@@ -713,26 +712,22 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>判断当前环境是否应解析并显示指定分页。</summary>
     private bool IsPageIncluded(int pageIndex)
     {
-        if (pageIndex == 15)
+        if (pageIndex < 0 || pageIndex >= PageNames.Length)
+            return false;
+        if (panelContext == SettingsPanelContext.InGame)
             return true;
 
-        if (panelContext == SettingsPanelContext.InGame)
-            return pageIndex >= 0 && pageIndex <= 14;
-
-        return (pageIndex >= 1 && pageIndex <= 6) ||
-               pageIndex == 12 || pageIndex == 13 || pageIndex == 14;
+        string pageName = PageNames[pageIndex];
+        return pageName != WorldPageName && pageName != SessionPageName &&
+               pageName != AutoSavePageName && pageName != WorldStreamingPageName &&
+               pageName != DifficultyPageName && pageName != SeasonSettingsPanel.PageName;
     }
 
     /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
     private bool IsTabIncluded(int tabIndex)
     {
-        if (tabIndex == 11)
-            return true;
-
-        if (panelContext == SettingsPanelContext.InGame)
-            return tabIndex >= 0 && tabIndex <= 10;
-
-        return (tabIndex >= 1 && tabIndex <= 7) || tabIndex == 9 || tabIndex == 10;
+        return tabIndex >= 0 && tabIndex < TabPageIndices.Length &&
+               IsPageIncluded(TabPageIndices[tabIndex]);
     }
 
     /// <summary>只在给定父节点的直属子级中查找页面，避免串入嵌套 Prefab。</summary>

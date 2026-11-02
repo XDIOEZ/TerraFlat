@@ -101,6 +101,7 @@ public static partial class RuntimeUIPrefabBuilder
             return;
 
         SaveGameSettingsPrefab();
+        SaveVisualEffectsSettingsPrefab();
         GameUIPrefabRebuilder.RebuildActionListUI();
         UpdateExistingPrefab(
             MainMenuCoreRoot + "UI_ActionList.prefab",
@@ -109,7 +110,7 @@ public static partial class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
-            "设置", "视觉特效", "显示设置", "镜头控制", "语言", "提示", "存档加载失败", "确定",
+            "设置", "视觉特效", "显示", "画质", "镜头控制", "语言", "提示", "存档加载失败", "确定",
             "界面语言会立即切换，点击保存后保留修改。", "当前语言：简体中文", "当前语言：English");
         Debug.Log("[Runtime UI] 已固化游戏内设置主界面，并同步主菜单客户端设置子集。");
     }

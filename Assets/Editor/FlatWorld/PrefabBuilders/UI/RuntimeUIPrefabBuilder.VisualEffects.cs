@@ -4,32 +4,25 @@ using UnityEngine;
 using UnityEngine.UI;
 using static FlatWorldEditorUiLayout;
 
-/// <summary>视觉特效设置的正式 Prefab 构建入口，只更新本页及设置主面板的页签。</summary>
+/// <summary>画质分页复用现有视觉特效 Prefab，同时容纳整体预设和各项视觉效果。</summary>
 public static partial class RuntimeUIPrefabBuilder
 {
-    #region 视觉特效分页构建
+    #region 画质分页构建
 
-    /// <summary>定向固化视觉特效页面、序列化按钮引用和主设置入口。</summary>
-    [MenuItem("FlatWorld/其他工具/UI/Rebuild Visual Effects Settings UI")]
-    public static void RebuildVisualEffectsSettingsUI()
+    /// <summary>同步重建游戏内和主菜单的画质分页，移除旧视觉特效分类。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Rebuild Graphics Settings UI")]
+    public static void RebuildGraphicsSettingsUI()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
         if (font == null)
             throw new MissingReferenceException($"缺少设置字体：{FontPath}");
 
         SaveVisualEffectsSettingsPrefab();
-        UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", root =>
-        {
-            ScrollRect scroll = FindTransform(root.transform, "Scroll View").GetComponent<ScrollRect>();
-            Transform page = EnsureEmbeddedActionListPage(scroll.content,
-                SettingsActionListPagination.VisualEffectsPageName,
-                SettingsPanelsRoot + RuntimeUIPrefabKeys.VisualEffectsSettings + ".prefab");
-            page.SetSiblingIndex(6);
-            EnsureActionListTabBar(root.transform);
-        });
+        UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
+        SaveMainMenuSettingsPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化视觉特效分页及投影、透视、水体选项。");
+        Debug.Log("[Runtime UI] 已合并画质预设与视觉特效，并更新两种设置窗口。");
     }
 
     /// <summary>保存设置页，并按正式运行时 Prefab 契约登记 Addressables。</summary>
@@ -45,8 +38,21 @@ public static partial class RuntimeUIPrefabBuilder
     {
         GameObject root = CreateSettingsPageRoot(RuntimeUIPrefabKeys.VisualEffectsSettings,
             out Transform content);
-        CreateSettingsHeader(content, "视觉特效");
-        CreateSettingsHint(content, "调整会立即应用并自动保存。", 48f);
+        CreateSettingsHeader(content, "画质");
+        CreateSettingsHint(content, "选择预设会同时调整水体、阴影和后处理，之后仍可单独调整。", 60f);
+        CreateSettingsSection(content, "画质预设", string.Empty);
+        TMP_Dropdown preset = CreateSettingsDropdownRow(content, "画质预设",
+            GameManager.MainMenuSettingsQualityPresetKey,
+            new[] { "极低", "低", "中", "高", "极高", "极致" });
+        preset.SetValueWithoutNotify(3);
+        preset.RefreshShownValue();
+        CreateSettingsDropdownRow(content, "特效质量",
+            GameManager.MainMenuSettingsEffectsQualityKey, new[] { "高", "中", "低" });
+        CreateSettingsDropdownRow(content, "画面风格",
+            GameManager.MainMenuSettingsPostProcessStyleKey,
+            new[] { "清晰原色", "自然柔光", "电影氛围" });
+
+        CreateSettingsSection(content, "视觉特效", string.Empty);
 
         GameObject occlusionRow = CreateRow("物品透视行", content, 72f);
         TextMeshProUGUI occlusionLabel = CreateText("物品透视标签", occlusionRow.transform, "物品透视", 22f, Cream);
