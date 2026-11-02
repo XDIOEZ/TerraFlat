@@ -222,12 +222,12 @@ public sealed class CraftingStationController : IDisposable
         if (disposed) return;
         if (authoritativeProcessor != null)
         {
-            RuntimeRecipe recipe = selectedRecipe;
-            bool canStrike = recipe != null && !authoritativeProcessor.PausedForWorkingTool &&
+            RuntimeRecipe authoritativeRecipe = selectedRecipe;
+            bool canStrike = authoritativeRecipe != null && !authoritativeProcessor.PausedForWorkingTool &&
                 !MachineInventory.IsBeingDragged(inputInventory) &&
-                !MachineInventory.IsBeingDragged(outputInventory) && Preview(recipe).Success;
+                !MachineInventory.IsBeingDragged(outputInventory) && Preview(authoritativeRecipe).Success;
             bool accepted = performAuthoritativeWork?.Invoke() == true;
-            if (canStrike && accepted) PlayManualWorkCue(recipe);
+            if (canStrike && accepted) PlayManualWorkCue(authoritativeRecipe);
             RefreshCandidates();
             return;
         }

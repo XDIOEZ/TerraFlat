@@ -81,11 +81,11 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
 
     public void OnInteractCancel(Item actor) => panel?.Close();
 
-    /// <summary>手动锻打只推进目录已声明且输出可容纳的加工配方。</summary>
-    private void PerformWork(Player actor)
+    /// <summary>手动锻打返回本次是否有效推进，供共享面板判断是否播放敲击声。</summary>
+    private bool PerformWork(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || Processor == null || !CanUsePlacedStation())
-            return;
+            return false;
 
         Processor.AdvanceManually(WorkPerClick, actor, out bool worked);
         Save();
@@ -93,9 +93,10 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
         if (runtime.Exhausted)
         {
             if (!TryDestroyWornStation(out string reason)) Debug.LogError("[工作站损毁] " + reason);
-            return;
+            return worked;
         }
         panel?.Refresh();
+        return worked;
     }
 
     private bool TryDestroyWornStation(out string reason)

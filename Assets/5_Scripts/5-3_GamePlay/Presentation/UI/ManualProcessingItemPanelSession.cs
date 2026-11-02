@@ -17,7 +17,7 @@ public sealed class ManualProcessingItemPanelSession : IMachinePanelSession
     public bool IsAlive => !disposed && panel != null;
     public bool IsOpen => IsAlive && panel.IsOpen();
 
-    public ManualProcessingItemPanelSession(Item owner, ManualProcessingRuntime runtime, float workPerClick, Action<Player> work)
+    public ManualProcessingItemPanelSession(Item owner, ManualProcessingRuntime runtime, float workPerClick, Func<Player, bool> work)
     {
         this.owner = owner;
         this.runtime = runtime;
