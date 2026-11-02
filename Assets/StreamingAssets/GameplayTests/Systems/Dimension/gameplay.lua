@@ -6,6 +6,12 @@ test.runtime("dimension", "cave_roundtrip", {}, function(data)
         "普通地表角色的权威入口距离仍使用过期乘员位置")
     assert(data.sameDimensionRejected and data.concurrentRejected, "相同维度或并发迁移没有拒绝")
     assert(data.enterAccepted and data.returnAccepted, "正式维度入口或出口拒绝迁移")
+    for _, hold in ipairs({data.entranceHold, data.exitHold}) do
+        assert(hold.tapAccepted and hold.tapDidNotTravel and hold.heldAccepted and hold.heldDidNotTravel,
+            "山洞入口短按或开始长按时提前触发了维度切换")
+        assert(hold.sharedDuration and hold.circleShown and hold.circleCleared and hold.cancelDidNotTravel,
+            "山洞入口未复用自行车长按圆圈，或取消后残留了进度")
+    end
     for _, residents in ipairs({data.ecsResidentsBefore, data.ecsResidentsCave, data.ecsResidentsSurface}) do
         assert(residents.active and residents.sameBridge and residents.sameIdentities and residents.sameSpawned,
             "进出山洞销毁重建了开发模拟，或把同一批 ECS 居民重新生到目标维度")

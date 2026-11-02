@@ -6,6 +6,7 @@ using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 public static partial class GameplayTestNarrativeRuntimeProbe
@@ -299,6 +300,42 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         };
     }
 
+    /// <summary>进出矿洞都验证短按不传送、长按圆圈出现且中途取消可清理。</summary>
+    private static JObject SampleDimensionPortalHoldInteraction(Player player, Item portalItem)
+    {
+        Mod_DimensionPortal portal = portalItem?.GetComponentInChildren<Mod_DimensionPortal>(true)
+            ?? throw new InvalidOperationException("矿洞入口缺少长按交互模块。");
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
+            ?? throw new InvalidOperationException("矿洞交互缺少正式交互发送器。");
+        try
+        {
+            bool tapAccepted = sender.TryInteractTarget(portal);
+            bool tapDidNotTravel = !DimensionManager.ExistingInstance.IsTransitioning;
+            bool heldAccepted = sender.TryBeginHeldInteraction(portal);
+            bool heldDidNotTravel = !DimensionManager.ExistingInstance.IsTransitioning;
+            GamepadUIRuntimeController cursor = EventSystem.current?.GetComponent<GamepadUIRuntimeController>();
+            bool circleShown = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                               cursor.WorldInteractionHoldProgress01 < 0.2f;
+            sender.CancelCurrentInteraction();
+            return new JObject
+            {
+                ["tapAccepted"] = tapAccepted,
+                ["tapDidNotTravel"] = tapDidNotTravel,
+                ["heldAccepted"] = heldAccepted,
+                ["heldDidNotTravel"] = heldDidNotTravel,
+                ["circleShown"] = circleShown,
+                ["circleCleared"] = cursor != null && !cursor.IsWorldInteractionHoldCursorVisible,
+                ["cancelDidNotTravel"] = !DimensionManager.ExistingInstance.IsTransitioning,
+                ["sharedDuration"] = Mathf.Approximately(((IWorldHoldInteraction)portal).HoldSeconds,
+                    Mod_Carrier.HoldToDriveSeconds)
+            };
+        }
+        finally
+        {
+            sender.CancelCurrentInteraction();
+        }
+    }
+
     private static IEnumerator CaptureDimension(Player player, JObject args, Action<JObject> completed)
     {
         var scope = new DimensionScope(player);
@@ -320,6 +357,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         {
             Item entrance = scope.PrepareEntrance(player);
             result["entrance"] = DimensionPortalOwnershipSample(entrance);
+            result["entranceHold"] = SampleDimensionPortalHoldInteraction(player, entrance);
             result["ecsResidentsBefore"] = GameplayTestRuntimeProbe.Capture(player, "dimension", "ecs_residents_begin", new JObject());
             using (GameplayTestSpaceScenario.BeginExpectedMigration(player))
             {
@@ -350,6 +388,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["anchorSurface"] = paired?.SurfaceWorldKey;
             result["exitModulePresent"] = exit?.GetComponentInChildren<Mod_DimensionPortal>(true) != null;
             result["exitApproach"] = PrepareDimensionPortalInteraction(cavePlayer, exit);
+            result["exitHold"] = SampleDimensionPortalHoldInteraction(cavePlayer, exit);
             using (GameplayTestSpaceScenario.BeginExpectedMigration(cavePlayer))
             {
                 result["returnAccepted"] = DimensionManager.ExistingInstance.TryBeginTransition(cavePlayer, WorldAddress.SurfaceDimensionId, exit);
