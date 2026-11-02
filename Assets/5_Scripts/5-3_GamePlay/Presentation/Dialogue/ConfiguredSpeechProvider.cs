@@ -83,6 +83,16 @@ namespace FlatWorld.Dialogue
             return controller.Present(BuildRequest(entry));
         }
 
+        public bool IsEntryCompleted(string entryId)
+        {
+            if (string.IsNullOrWhiteSpace(entryId))
+                return false;
+
+            EnsureConfigurationLoaded();
+            return entriesById.TryGetValue(entryId, out CharacterSpeechConfigEntry entry) &&
+                   entry.Once && completionStore.IsCompleted(entry.CompletionFlag);
+        }
+
         public bool CanProvide(CharacterSpeechContext context)
         {
             EnsureConfigurationLoaded();

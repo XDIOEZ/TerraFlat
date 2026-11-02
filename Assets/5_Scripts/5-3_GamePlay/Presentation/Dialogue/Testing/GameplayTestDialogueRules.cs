@@ -24,6 +24,8 @@ namespace FlatWorld.Dialogue
             GameplayTestSystemProbe.Register("dialogue", "condition", CaptureCondition);
             GameplayTestSystemProbe.Register("dialogue", "config", CaptureConfiguration);
             GameplayTestSystemProbe.Register("dialogue", "builtin_locales", CaptureBuiltinLocales);
+            GameplayTestSystemProbe.Register("dialogue", "food_consumption_speech", CaptureFoodConsumptionSpeech);
+            GameplayTestSystemProbe.Register("dialogue", "food_consumption_snapshot", CaptureFoodConsumptionSnapshot);
             GameplayTestSystemProbe.Register("dialogue", "carry_weight_command", CaptureCarryWeightCommand);
             GameplayTestSystemProbe.Register("dialogue", "help_catalog", CaptureHelpCatalog);
             GameplayTestSystemProbe.Register("dialogue", "help_command", CaptureHelpCommand);
@@ -135,13 +137,21 @@ namespace FlatWorld.Dialogue
             foreach (CharacterSpeechConfigEntry entry in loaded.Entries)
             {
                 if (entry.Triggers.Contains(CharacterSpeechTrigger.External))
+                {
+                    List<string> externalEnglish = null;
+                    if (entry.LocalizedLines != null)
+                        entry.LocalizedLines.TryGetValue("en", out externalEnglish);
                     externalEntries.Add(new JObject
                     {
                         ["id"] = entry.Id, ["topic"] = entry.Topic,
                         ["externalOnly"] = entry.Triggers.TrueForAll(trigger => trigger == CharacterSpeechTrigger.External),
+                        ["once"] = entry.Once, ["completionFlag"] = entry.CompletionFlag ?? string.Empty,
                         ["priority"] = entry.Priority.ToString(), ["cooldown"] = entry.Cooldown,
-                        ["lines"] = new JArray(entry.Lines), ["conditions"] = entry.Conditions.Count
+                        ["lines"] = new JArray(entry.Lines),
+                        ["englishLines"] = externalEnglish != null ? new JArray(externalEnglish) : new JArray(),
+                        ["conditions"] = entry.Conditions.Count
                     });
+                }
                 lines += entry.Lines.Count;
                 List<string> english = null;
                 bool complete = entry.LocalizedLines != null &&
@@ -183,6 +193,52 @@ namespace FlatWorld.Dialogue
                 ["issues"] = loaded.Issues.Count,
                 ["incompleteIds"] = incompleteIds,
                 ["externalEntries"] = externalEntries
+            };
+        }
+
+        private static JObject CaptureFoodConsumptionSpeech(JObject args)
+        {
+            string itemId = GameplayTestSystemProbe.Text(args, "itemId", "Berry");
+            float remaining = (float)GameplayTestSystemProbe.Number(args, "remaining", 0);
+            float interval = (float)GameplayTestSystemProbe.Number(args, "interval", 0);
+            bool spoilageCompleted = GameplayTestSystemProbe.Flag(args, "spoilageCompleted", false);
+            bool tasteCompleted = GameplayTestSystemProbe.Flag(args, "tasteCompleted", false);
+            return new JObject
+            {
+                ["entryId"] = FoodConsumptionSpeechFeedback.SelectEntryId(
+                    itemId, remaining, interval, spoilageCompleted, tasteCompleted),
+                ["nearExpiry"] = FoodConsumptionSpeechFeedback.IsWithinSpoilageWarningWindow(remaining, interval)
+            };
+        }
+
+        private static JObject CaptureFoodConsumptionSnapshot(JObject args)
+        {
+            ModData_FoodData persistentData = new ModData_FoodData();
+            if (GameplayTestSystemProbe.Flag(args, "hasState", false))
+            {
+                FoodMechanicStateData state = new FoodMechanicStateData
+                {
+                    StateKey = FoodObserverStateStore.SpoilageStateKey,
+                    Data = new Dictionary<string, string>()
+                };
+                FoodObserverStateStore.WriteSpoilageTimer(state, new FoodTimerStateData
+                {
+                    Enabled = GameplayTestSystemProbe.Flag(args, "enabled", true),
+                    ElapsedSeconds = (float)GameplayTestSystemProbe.Number(args, "elapsed", 0),
+                    IntervalSeconds = (float)GameplayTestSystemProbe.Number(args, "interval", 100),
+                    TargetItemID = "Humus"
+                });
+                persistentData.MechanicStates.Add(state);
+            }
+
+            FoodRuntimeContext context = new FoodRuntimeContext(
+                null, persistentData, null, null, null, null, null);
+            FoodConsumeSnapshot snapshot = FoodConsumeSnapshot.Capture(context);
+            return new JObject
+            {
+                ["itemId"] = snapshot.ItemId,
+                ["remaining"] = snapshot.SpoilageRemainingSeconds,
+                ["interval"] = snapshot.SpoilageIntervalSeconds
             };
         }
 

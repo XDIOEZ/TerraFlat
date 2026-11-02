@@ -54,9 +54,20 @@ public static partial class GameplayTestRuntimeProbe
         root.SetActive(false);
         Func<bool> previousPending = ItemNetworkStateSerialization.IsLocalInventoryTransactionPending;
         IDisposable spawnLease = null;
+        int completedFoodEvents = 0;
+        string completedFoodId = string.Empty;
+        Player owner = null;
+        void HandleFoodCompleted(FoodConsumeResult result)
+        {
+            if (!ReferenceEquals(result.Consumer, owner)) return;
+            completedFoodEvents++;
+            completedFoodId = result.ConsumedItemId;
+        }
+
+        FoodConsumptionService.ConsumptionCompleted += HandleFoodCompleted;
         try
         {
-            Player owner = root.AddComponent<Player>();
+            owner = root.AddComponent<Player>();
             owner.BindData(new Data_Player
             {
                 IDName = "test:pending_pickup_player", Stack = new ItemStack { CanBePickedUp = false }
@@ -81,7 +92,7 @@ public static partial class GameplayTestRuntimeProbe
             {
                 FoodData = new Food
                 {
-                    Max_EatingProgress = 1f,
+                    Max_EatingProgress = 2f,
                     nutrition = new Nutrition { Carbohydrates = 5f, Fat = 0f, Protein = 0f, Water = 0f, Vitamins = 0f }
                 }
             };
@@ -106,7 +117,8 @@ public static partial class GameplayTestRuntimeProbe
                 ["pendingFoodAmount"] = foodSlot.itemData?.Stack.Amount ?? 0f,
                 ["pendingFoodProgress"] = source.EatingProgress,
                 ["pendingFoodUses"] = useCounter.Uses,
-                ["pendingNutrition"] = consumer.Data.nutrition.Carbohydrates
+                ["pendingNutrition"] = consumer.Data.nutrition.Carbohydrates,
+                ["pendingFoodCompletedEvents"] = completedFoodEvents
             };
 
             ItemData logs = GameRes.ExistingInstance.CreateItemData("Log");
@@ -129,6 +141,15 @@ public static partial class GameplayTestRuntimeProbe
             result["releasedFoodAmount"] = foodSlot.itemData?.Stack.Amount ?? 0f;
             result["releasedFoodUses"] = useCounter.Uses;
             result["releasedNutrition"] = consumer.Data.nutrition.Carbohydrates;
+            result["partialFoodProgress"] = source.EatingProgress;
+            result["partialFoodCompletedEvents"] = completedFoodEvents;
+            bool completedFoodAccepted = FoodConsumptionService.TryConsume(source, consumer, pipeline, nutrition);
+            result["completedFoodAccepted"] = completedFoodAccepted;
+            result["completedFoodEvents"] = completedFoodEvents;
+            result["completedFoodId"] = completedFoodId;
+            result["completedFoodAmount"] = foodSlot.itemData?.Stack.Amount ?? 0f;
+            result["completedNutrition"] = consumer.Data.nutrition.Carbohydrates;
+            result["completedFoodProgress"] = source.EatingProgress;
             discard.DropItemByCountAtWorldPosition(dropSlot, 1, Vector2.zero);
             result["releasedDiscardAmount"] = dropSlot.itemData?.Stack.Amount ?? 0f;
             result["releasedDropCalls"] = provider.Calls;
@@ -137,6 +158,7 @@ public static partial class GameplayTestRuntimeProbe
         }
         finally
         {
+            FoodConsumptionService.ConsumptionCompleted -= HandleFoodCompleted;
             ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = previousPending;
             try { spawnLease?.Dispose(); }
             finally { UnityEngine.Object.DestroyImmediate(root); }

@@ -42,7 +42,79 @@ test.system("dialogue", "builtin_locales", {}, function(data)
         "体力不足反馈的优先级或防刷屏冷却不正确")
     assert(#exhausted.lines == 4 and exhausted.lines[1] == "我已经筋疲力尽了"
         and exhausted.lines[2] == "让我歇会……", "体力不足台词缺少指定文案或随机变化")
+
+    local expectedFoodIds = {
+        "Apple", "Beeswax", "Berry", "BirdEgg", "CactusPiece", "Chili", "Coconut_Half", "CoconutMeat",
+        "CookedRice", "Egg", "Egg_Cooked", "Fat", "Flour", "FoxtailSpike", "HerbPoultice", "IceBlock",
+        "Jam", "Leaf", "Meat", "Meat_Cooked", "Meat_Cured", "Meat_Dehydrate", "Meat_Rotten", "Mushroom",
+        "Orange", "Peach", "Radish", "Rice", "Salt", "Seed_Apple", "Seed_Berry", "Seed_Cotton",
+        "Seed_Foxtail", "Seed_Herb", "Seed_Mushroom", "Seed_Radish", "Seed_Willow", "Tea", "WildDogMilk"
+    }
+    local expectedFoodSet, tasteEntries, spoilageEntries = {}, {}, {}
+    local foodEntryCount = 0
+    for _, itemId in ipairs(expectedFoodIds) do expectedFoodSet[itemId] = true end
+    for _, entry in ipairs(data.externalEntries) do
+        local tastePrefix, spoilagePrefix = "food.taste.", "food.spoilage."
+        if string.sub(entry.id, 1, #tastePrefix) == tastePrefix then
+            foodEntryCount = foodEntryCount + 1
+            tasteEntries[string.sub(entry.id, #tastePrefix + 1)] = entry
+        elseif string.sub(entry.id, 1, #spoilagePrefix) == spoilagePrefix then
+            foodEntryCount = foodEntryCount + 1
+            spoilageEntries[string.sub(entry.id, #spoilagePrefix + 1)] = entry
+        end
+    end
+    assert(#expectedFoodIds == 39, "可食用内置物品清单意外变化")
+    assert(foodEntryCount == #expectedFoodIds * 2, "食物口味/临期台词存在重复或多余条目")
+    local uniqueSpoilageLines, uniqueEnglishSpoilageLines = {}, {}
+    for _, itemId in ipairs(expectedFoodIds) do
+        for _, entry in ipairs({tasteEntries[itemId] or false, spoilageEntries[itemId] or false}) do
+            assert(entry and entry.externalOnly and entry.conditions == 0,
+                itemId .. " 缺少外部触发的口味或临期台词")
+            assert(entry.once and entry.completionFlag == entry.id,
+                itemId .. " 的一次性完成标记未按条目独立保存")
+            assert(#entry.lines == 1 and #entry.englishLines == 1,
+                itemId .. " 必须各有且只有一条中英文台词")
+        end
+        local chineseSpoilageLine = spoilageEntries[itemId].lines[1]
+        local englishSpoilageLine = spoilageEntries[itemId].englishLines[1]
+        assert(not uniqueSpoilageLines[chineseSpoilageLine], "多种食物共用了同一条中文临期台词")
+        assert(not uniqueEnglishSpoilageLines[englishSpoilageLine], "多种食物共用了同一条英文临期台词")
+        uniqueSpoilageLines[chineseSpoilageLine] = true
+        uniqueEnglishSpoilageLines[englishSpoilageLine] = true
+    end
+    for itemId, _ in pairs(tasteEntries) do assert(expectedFoodSet[itemId], "出现未登记食物的口味台词：" .. itemId) end
+    for itemId, _ in pairs(spoilageEntries) do assert(expectedFoodSet[itemId], "出现未登记食物的临期台词：" .. itemId) end
+    assert(string.find(spoilageEntries.Berry.lines[1], "酒味", 1, true), "浆果临期台词没有酒味描述")
 end, "正式角色台词完整覆盖中英文，体力不足只由工作失败触发")
+
+for _, row in ipairs({
+    { itemId = "Berry", remaining = 20, interval = 100, expected = "food.spoilage.Berry", nearExpiry = true },
+    { itemId = "Berry", remaining = 20.001, interval = 100, expected = "food.taste.Berry", nearExpiry = false },
+    { itemId = "Berry", remaining = 0, interval = 100, expected = "food.spoilage.Berry", nearExpiry = true },
+    { itemId = "Berry", remaining = 20, interval = 100, spoilageCompleted = true, expected = "food.taste.Berry", nearExpiry = true },
+    { itemId = "Berry", remaining = 20, interval = 100, tasteCompleted = true, expected = "food.spoilage.Berry", nearExpiry = true },
+    { itemId = "Berry", remaining = 20, interval = 100, tasteCompleted = true, spoilageCompleted = true, expected = "", nearExpiry = true },
+    { itemId = "Apple", remaining = 0, interval = 0, expected = "food.taste.Apple", nearExpiry = false },
+    { itemId = "Apple", remaining = 0, interval = -1, expected = "food.taste.Apple", nearExpiry = false },
+    { itemId = "", remaining = 0, interval = 100, expected = "", nearExpiry = true }
+}) do
+    test.system("dialogue", "food_consumption_speech", row, function(data)
+        assert(data.entryId == row.expected, "完整食用台词优先级或食物身份错误：" .. row.itemId)
+        assert(data.nearExpiry == row.nearExpiry, "腐败剩余时间20%边界判定错误")
+    end, "食物自言自语选择与临期边界")
+end
+
+for _, row in ipairs({
+    { hasState = false, remaining = 0, interval = 0 },
+    { hasState = true, enabled = false, elapsed = 80, interval = 100, remaining = 0, capturedInterval = 0 },
+    { hasState = true, enabled = true, elapsed = 80, interval = 100, remaining = 20, capturedInterval = 100 },
+    { hasState = true, enabled = true, elapsed = 0, interval = 0, remaining = 0, capturedInterval = 0 }
+}) do
+    test.system("dialogue", "food_consumption_snapshot", row, function(data)
+        assert(data.remaining == row.remaining and data.interval == (row.capturedInterval or 0),
+            "食用完成快照误用了不存在、关闭或无效的腐败计时")
+    end, "食物腐败计时快照")
+end
 
 local external = [[{"schemaVersion":1,"entries":[{"id":"probe.external","topic":"stamina","priority":"Player","triggers":["External"],"conditions":[],"lines":["让我歇会"]}]}]]
 for _, json in ipairs({external, (string.gsub(external, '"conditions":%[%]', '"conditions":null'))}) do

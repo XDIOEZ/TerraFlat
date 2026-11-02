@@ -2,13 +2,18 @@
 test.check("player_ready", "真实玩家就绪")
 test.runtime("inventory", "pending_pickup_guards", {}, function(data)
     assert(not data.pendingFoodAccepted and data.pendingFoodAmount == 3 and data.pendingFoodProgress == 0
-        and data.pendingFoodUses == 0 and data.pendingNutrition == 0,
+        and data.pendingFoodUses == 0 and data.pendingNutrition == 0 and data.pendingFoodCompletedEvents == 0,
         "库存待确认期间仍执行进食规则、推进进度、扣食物或增加营养")
     assert(data.pendingDiscardAmount == 3 and data.pendingDropCalls == 0
         and data.pendingGeneratedAmount == 0 and data.pendingWorldUnchanged,
         "库存待确认期间生成了世界掉落或扣减丢弃来源")
-    assert(data.releasedFoodAccepted and data.releasedFoodAmount == 2 and data.releasedFoodUses == 1
-        and data.releasedNutrition > 0, "库存确认后没有恢复真实进食事务")
+    assert(data.releasedFoodAccepted and data.releasedFoodAmount == 3 and data.releasedFoodUses == 1
+        and data.releasedNutrition == 0 and data.partialFoodProgress == 1
+        and data.partialFoodCompletedEvents == 0, "只吃一口时没有延续进度，或过早触发完整食用事件")
+    assert(data.completedFoodAccepted and data.completedFoodEvents == 1
+        and data.completedFoodId == "test:pending_pickup_food" and data.completedFoodAmount == 2
+        and data.completedNutrition > 0
+        and data.completedFoodProgress == 0, "完整吃完物品后没有恰好触发一次并保留食物 ID")
     assert(data.releasedDiscardAmount == 2 and data.releasedDropCalls == 1 and data.releasedGeneratedAmount == 1,
         "库存确认后丢弃事务未恢复，或没有先生成一份再扣除一份")
 end, "拾取待确认期间原生进食与丢弃拒绝，确认后恢复")

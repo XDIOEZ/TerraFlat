@@ -233,10 +233,21 @@ public sealed class FoodNutritionService
         context.NotifyStateChanged();
     }
 
-    public void ApplyConsumedNutrition(IFoodRuntimeContext consumer, IFoodRuntimeContext consumedFood)
+    public FoodConsumeResult ApplyConsumedNutrition(
+        IFoodRuntimeContext consumer,
+        IFoodRuntimeContext consumedFood,
+        FoodConsumeSnapshot snapshot)
     {
         if (consumer?.Data?.nutrition == null || consumedFood?.Data?.nutrition == null)
-            return;
+        {
+            return new FoodConsumeResult(
+                consumer?.Item,
+                consumedFood?.Item,
+                consumedFood != null ? consumedFood.ConsumeKind : FoodConsumeKind.Solid,
+                0f,
+                0f,
+                snapshot);
+        }
 
         float fatBefore = consumer.Data.nutrition.Fat;
         float fatMaximumBefore = consumer.Data.nutrition.Max_Fat;
@@ -265,7 +276,8 @@ public sealed class FoodNutritionService
             consumedFood.Item,
             consumedFood.ConsumeKind,
             consumedWater,
-            actualWaterGain);
+            actualWaterGain,
+            snapshot);
         consumer.NotifyConsumed(result);
         if (!ReferenceEquals(consumer, consumedFood))
         {
@@ -273,6 +285,7 @@ public sealed class FoodNutritionService
                 consumedRuntime.NotifyConsumedRulesOnly(result);
         }
         consumer.NotifyStateChanged();
+        return result;
     }
 
     public void ResetRuntimeMultipliers()
@@ -298,6 +311,8 @@ public sealed class FoodNutritionService
 /// <summary>进食次数、完成判断和营养结算服务。</summary>
 public static class FoodConsumptionService
 {
+    public static event Action<FoodConsumeResult> ConsumptionCompleted;
+
     public static bool TryConsume(
         IFoodRuntimeContext source,
         IFoodRuntimeContext consumer,
@@ -325,6 +340,7 @@ public static class FoodConsumptionService
         if (source.EatingProgress < source.Data.Max_EatingProgress)
             return true;
 
+        FoodConsumeSnapshot snapshot = FoodConsumeSnapshot.Capture(source);
         bool operationSucceeded;
         if (!string.IsNullOrWhiteSpace(source.ConsumeCompleteReplacementItemID))
         {
@@ -359,7 +375,8 @@ public static class FoodConsumptionService
 
         source.EatingProgress = 0f;
         source.NotifyStateChanged();
-        consumerNutrition.ApplyConsumedNutrition(consumer, source);
+        FoodConsumeResult result = consumerNutrition.ApplyConsumedNutrition(consumer, source, snapshot);
+        ConsumptionCompleted?.Invoke(result);
         return true;
     }
 }

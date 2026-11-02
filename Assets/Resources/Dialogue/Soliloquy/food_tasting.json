@@ -1,0 +1,1721 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "food.taste.Apple",
+      "topic": "food.taste.Apple",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "苹果咬起来脆脆的，清甜又多汁。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This apple is crisp, sweet, and full of juice."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Apple",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Apple",
+      "topic": "food.spoilage.Apple",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这苹果已经有些发软，甜味里透出一丝酸气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This apple has gone a little soft, and a hint of sourness cuts through the sweetness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Apple",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Beeswax",
+      "topic": "food.taste.Beeswax",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蜂蜡嚼着韧韧的，带着淡淡的蜂蜜香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The beeswax is chewy, with a faint honey scent."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Beeswax",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Beeswax",
+      "topic": "food.spoilage.Beeswax",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蜂蜡的香气淡了，嚼着还带一点发陈的味道。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The beeswax has lost its aroma and tastes a little stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Beeswax",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Berry",
+      "topic": "food.taste.Berry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "浆果酸甜多汁，咬下去满是清新的果香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The berry is juicy, sweet, and tart, with a fresh fruitiness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Berry",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Berry",
+      "topic": "food.spoilage.Berry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "浆果怎么有股酒味……看来快要坏了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "Why does this berry smell boozy...? It must be close to spoiling."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Berry",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.BirdEgg",
+      "topic": "food.taste.BirdEgg",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "鸟蛋的蛋黄很香，味道比想象中浓。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The bird egg has a rich yolk, more flavorful than I expected."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.BirdEgg",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.BirdEgg",
+      "topic": "food.spoilage.BirdEgg",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "鸟蛋闻着有些闷腥，得趁新鲜吃掉。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The bird egg smells a little stuffy and fishy. I should eat it while it's fresh."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.BirdEgg",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.CactusPiece",
+      "topic": "food.taste.CactusPiece",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "仙人掌肉脆脆的，汁水清凉，还带一点酸味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cactus flesh is crisp and cool with a little tang."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.CactusPiece",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.CactusPiece",
+      "topic": "food.spoilage.CactusPiece",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "仙人掌肉有点发黏，清爽的酸味也变重了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cactus flesh feels a little sticky, and its fresh tang has turned sour."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.CactusPiece",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Chili",
+      "topic": "food.taste.Chili",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "辣味一下子窜上来，舌头都热起来了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The chili's heat rushes in and warms my whole tongue."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Chili",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Chili",
+      "topic": "food.spoilage.Chili",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "辣椒的香气发闷了，辛辣里还混着一丝酸气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The chili smells dull, with a faint sour note beneath the heat."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Chili",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Coconut_Half",
+      "topic": "food.taste.Coconut_Half",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "椰子水清甜解渴，椰肉也带着浓浓的香气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The coconut water is sweet and refreshing, and the flesh is fragrant."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Coconut_Half",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Coconut_Half",
+      "topic": "food.spoilage.Coconut_Half",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "椰香里混进一丝酸味，椰水也没那么清爽了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "A sour note has crept into the coconut aroma, and the water tastes less fresh."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Coconut_Half",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.CoconutMeat",
+      "topic": "food.taste.CoconutMeat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "椰肉软韧清甜，嚼起来满是椰香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The coconut flesh is tender, chewy, and full of sweet coconut flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.CoconutMeat",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.CoconutMeat",
+      "topic": "food.spoilage.CoconutMeat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "椰肉开始发酸，原本的清甜里透出一点陈味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The coconut flesh is turning sour, with a stale note beneath its sweetness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.CoconutMeat",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.CookedRice",
+      "topic": "food.taste.CookedRice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "米饭软糯香甜，吃起来暖暖的很舒服。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rice is soft and tender, with a comforting warmth."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.CookedRice",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.CookedRice",
+      "topic": "food.spoilage.CookedRice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "米饭已经有股闷酸味，得尽快吃掉。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rice has a stuffy, sour smell. I should eat it soon."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.CookedRice",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Egg",
+      "topic": "food.taste.Egg",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蛋白滑嫩，蛋黄带着朴实又浓郁的鲜香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The white is tender, and the yolk has a simple, rich flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Egg",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Egg",
+      "topic": "food.spoilage.Egg",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "鸡蛋的腥味变重了，闻起来还有些发闷。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The egg smells more strongly of sulfur, with a stuffy note."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Egg",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Egg_Cooked",
+      "topic": "food.taste.Egg_Cooked",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "熟鸡蛋细嫩扎实，蛋黄香气很足。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cooked egg is tender and hearty, with a rich yolk."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Egg_Cooked",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Egg_Cooked",
+      "topic": "food.spoilage.Egg_Cooked",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "熟鸡蛋泛出一股闷闷的酸腥味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cooked egg has developed a stuffy, sour smell."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Egg_Cooked",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Fat",
+      "topic": "food.taste.Fat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这口脂肪油润浓厚，几乎尝不出别的味道。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The fat is rich and oily, with very little else to its flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Fat",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Fat",
+      "topic": "food.spoilage.Fat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "脂肪有股陈油味，原本的香气也发钝了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The fat tastes rancid, and its rich aroma has gone flat."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Fat",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Flour",
+      "topic": "food.taste.Flour",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "面粉细细的，带着淡淡的谷物香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The flour is fine and powdery, with a faint grain aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Flour",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Flour",
+      "topic": "food.spoilage.Flour",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "面粉闻着有点潮，谷物香里混着一股陈味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The flour smells a little damp, with a stale note replacing its grain aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Flour",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.FoxtailSpike",
+      "topic": "food.taste.FoxtailSpike",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "谷粒嚼起来有些粗糙，却带着淡淡的清香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The grains are a little coarse, but have a delicate, fresh aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.FoxtailSpike",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.FoxtailSpike",
+      "topic": "food.spoilage.FoxtailSpike",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "谷粒有股闷闷的仓储味，清香也散了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The grains have a stuffy, stored-away smell, and their fresh aroma is gone."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.FoxtailSpike",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.HerbPoultice",
+      "topic": "food.taste.HerbPoultice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草药糊苦中带辛，咽下后有股清凉的草本味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The herbal paste is bitter and peppery, with a cooling herbal finish."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.HerbPoultice",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.HerbPoultice",
+      "topic": "food.spoilage.HerbPoultice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草药糊的清香散了，泛出一股又苦又酸的闷味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The herbal paste has lost its fresh aroma and turned stuffy, bitter, and sour."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.HerbPoultice",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.IceBlock",
+      "topic": "food.taste.IceBlock",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "冰块入口冰凉，几乎尝不出什么味道。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The ice is icy cold and has almost no taste at all."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.IceBlock",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.IceBlock",
+      "topic": "food.spoilage.IceBlock",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "冰块化得有些久，入口带着一丝不太新鲜的水腥味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The ice has been melting for a while and tastes faintly stale and watery."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.IceBlock",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Jam",
+      "topic": "food.taste.Jam",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "果酱浓甜黏稠，果香在舌尖慢慢散开。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The jam is thick and sweet, with fruit flavor lingering on my tongue."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Jam",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Jam",
+      "topic": "food.spoilage.Jam",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "果酱带着一点发酵酸味，甜香也变淡了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The jam has a faint fermented tang, and its sweetness has faded."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Jam",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Leaf",
+      "topic": "food.taste.Leaf",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "叶片清苦，咬起来带着一点青涩的草木味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The leaf is pleasantly bitter, with a grassy, green edge."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Leaf",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Leaf",
+      "topic": "food.spoilage.Leaf",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "叶子有股潮湿的草腥味，苦味也更重了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The leaf smells damp and grassy, and its bitterness has grown stronger."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Leaf",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Meat",
+      "topic": "food.taste.Meat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "生肉带着浓郁的肉香，口感却有些韧。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The raw meat smells rich, though it is a little tough to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Meat",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Meat",
+      "topic": "food.spoilage.Meat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "肉腥味明显变重，还泛着一丝酸气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The meat smells much more gamey now, with a hint of sourness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Meat",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Meat_Cooked",
+      "topic": "food.taste.Meat_Cooked",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "熟肉外焦里嫩，香气一下子就散开了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cooked meat is crisp outside and tender within, with a savory aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Meat_Cooked",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Meat_Cooked",
+      "topic": "food.spoilage.Meat_Cooked",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "熟肉的油香淡了，咬开还有一丝酸味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cooked meat has lost its savory aroma and tastes faintly sour inside."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Meat_Cooked",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Meat_Cured",
+      "topic": "food.taste.Meat_Cured",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "腌肉咸香扎实，嚼起来很有韧劲。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cured meat is savory and salty, with a satisfying chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Meat_Cured",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Meat_Cured",
+      "topic": "food.spoilage.Meat_Cured",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "腌肉的咸香里混进了一丝酸腐味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "A sour, spoiled note has crept into the cured meat's salty aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Meat_Cured",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Meat_Dehydrate",
+      "topic": "food.taste.Meat_Dehydrate",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "肉干干香耐嚼，咸味一点点冒出来。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The jerky is dry and savory, with a salty flavor that builds as I chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Meat_Dehydrate",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Meat_Dehydrate",
+      "topic": "food.spoilage.Meat_Dehydrate",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "肉干的香味发钝，嚼着透出一点陈味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The jerky's aroma has gone flat, with a stale taste as I chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Meat_Dehydrate",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Meat_Rotten",
+      "topic": "food.taste.Meat_Rotten",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "腐肉又腥又酸，完全不像新鲜肉。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rotten meat is sour and foul, nothing like fresh meat."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Meat_Rotten",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Meat_Rotten",
+      "topic": "food.spoilage.Meat_Rotten",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "腐肉的酸腐气更重了，几乎盖过了腥味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rotten meat smells even more sour, almost overpowering its foulness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Meat_Rotten",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Mushroom",
+      "topic": "food.taste.Mushroom",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蘑菇软嫩，带着泥土和坚果般的香气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The mushroom is tender, with earthy, almost nutty notes."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Mushroom",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Mushroom",
+      "topic": "food.spoilage.Mushroom",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蘑菇的土香变成了潮闷酸味，得赶紧吃掉。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The mushroom's earthy aroma has turned damp and sour. I should eat it soon."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Mushroom",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Orange",
+      "topic": "food.taste.Orange",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "橙子汁水充足，酸甜里带着清新的果香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The orange is juicy and sweet-tart, with a bright citrus aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Orange",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Orange",
+      "topic": "food.spoilage.Orange",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "橙子的清香弱了，入口多了一股发苦的酸味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The orange has lost its bright aroma, and a bitter sourness is coming through."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Orange",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Peach",
+      "topic": "food.taste.Peach",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "桃子柔软多汁，甜香里带着一点微酸。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The peach is soft and juicy, with a sweet scent and a little tang."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Peach",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Peach",
+      "topic": "food.spoilage.Peach",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "桃肉变得绵软发酸，甜香也开始发闷。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The peach has gone mushy and sour, and its sweet aroma has turned stuffy."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Peach",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Radish",
+      "topic": "food.taste.Radish",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "萝卜脆爽清甜，尾调还有一点辛辣。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The radish is crisp and sweet, with a little peppery bite at the end."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Radish",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Radish",
+      "topic": "food.spoilage.Radish",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "萝卜闻着有股潮土味，咬下去还带点酸。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The radish smells damp and earthy, and tastes a little sour."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Radish",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Rice",
+      "topic": "food.taste.Rice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "米粒带着淡淡谷物香，嚼起来硬硬的。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rice has a faint grain aroma and is quite hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Rice",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Rice",
+      "topic": "food.spoilage.Rice",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "米粒带着陈仓味，原本的谷物香已经散了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The rice smells stale, and its gentle grain aroma has faded."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Rice",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Salt",
+      "topic": "food.taste.Salt",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "盐粒咸味直接，舌尖一碰就化开了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The salt is intensely savory and dissolves as soon as it touches my tongue."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Salt",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Salt",
+      "topic": "food.spoilage.Salt",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "盐受潮结块了，咸味里还带着一股潮气。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The salt has clumped from dampness, and even its flavor feels musty."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Salt",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Apple",
+      "topic": "food.taste.Seed_Apple",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "苹果籽苦苦的，还带着一点坚果般的香味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The apple seed is bitter, with a faint nutty note."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Apple",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Apple",
+      "topic": "food.spoilage.Seed_Apple",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "苹果籽的苦味更重了，嚼着有股陈旧的涩味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The apple seed tastes even more bitter, with a stale astringency."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Apple",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Berry",
+      "topic": "food.taste.Seed_Berry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "浆果种子细小脆硬，入口有点苦涩。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The berry seed is tiny and crunchy, with a slightly bitter edge."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Berry",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Berry",
+      "topic": "food.spoilage.Seed_Berry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "浆果种子泛出一股潮闷味，苦涩也更明显了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The berry seed smells a little damp and stuffy, and tastes more bitter."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Berry",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Cotton",
+      "topic": "food.taste.Seed_Cotton",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "棉籽嚼起来有点油香，尾味微苦。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cotton seed is a little oily, with a slight bitterness at the end."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Cotton",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Cotton",
+      "topic": "food.spoilage.Seed_Cotton",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "棉籽的油香变得发陈，苦味也更明显了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cotton seed's oily aroma has gone stale, and its bitterness is stronger."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Cotton",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Foxtail",
+      "topic": "food.taste.Seed_Foxtail",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "谷子籽味道淡淡的，嚼起来脆硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The foxtail seed has a mild grain flavor and a crunchy bite."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Foxtail",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Foxtail",
+      "topic": "food.spoilage.Seed_Foxtail",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "谷子籽有股陈仓味，嚼起来也不太清爽。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The foxtail seed smells stale and stored away, and is no longer pleasant to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Foxtail",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Herb",
+      "topic": "food.taste.Seed_Herb",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草籽有股淡淡青草香，咬着微微发涩。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The herb seed has a faint grassy aroma and a little astringency."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Herb",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Herb",
+      "topic": "food.spoilage.Seed_Herb",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草籽闻着有些潮闷，青草香已经变成陈味了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The herb seed smells damp and stuffy; its grassy aroma has turned stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Herb",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Mushroom",
+      "topic": "food.taste.Seed_Mushroom",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蘑菇种子带着一点菌香和湿润的泥土味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The mushroom seed has a faint mushroom aroma and damp, earthy notes."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Mushroom",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Mushroom",
+      "topic": "food.spoilage.Seed_Mushroom",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "蘑菇种子带着一股潮湿的霉土气，已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The mushroom seed smells damp and moldy, and is no longer very fresh."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Mushroom",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Radish",
+      "topic": "food.taste.Seed_Radish",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "萝卜籽带着微微辛香，嚼着干脆。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The radish seed is crisp, with a faint peppery aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Radish",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Radish",
+      "topic": "food.spoilage.Seed_Radish",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "萝卜籽的香气变淡了，咬下去还带点陈旧的苦味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The radish seed has lost its aroma and tastes a little stale and bitter."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Radish",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Willow",
+      "topic": "food.taste.Seed_Willow",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "柳树种子淡淡清苦，口感干干的。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The willow seed is mildly bitter and quite dry."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Willow",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Willow",
+      "topic": "food.spoilage.Seed_Willow",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "柳树种子闻着有股潮湿木屑味，清苦也发闷了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The willow seed smells damp and woody, and its mild bitterness has turned stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Willow",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Tea",
+      "topic": "food.taste.Tea",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "茶饮清淡回甘，带着一缕草木香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The tea is light and mellow, with a gentle herbal aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Tea",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Tea",
+      "topic": "food.spoilage.Tea",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "茶的清香散了，喝起来泛着闷闷的酸味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The tea has lost its fresh aroma and tastes stuffy and faintly sour."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Tea",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.WildDogMilk",
+      "topic": "food.taste.WildDogMilk",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "野犬奶浓厚微咸，带着明显的奶香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "Wild dog milk is rich and slightly salty, with a strong milky aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.WildDogMilk",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.WildDogMilk",
+      "topic": "food.spoilage.WildDogMilk",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "奶香里混进一股发酸的味道，得赶快喝完。"
+      ],
+      "localizedLines": {
+        "en": [
+          "A sour smell has crept into the milk. I should finish it soon."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.WildDogMilk",
+      "enabled": true
+    }
+  ]
+}

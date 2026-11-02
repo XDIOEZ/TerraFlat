@@ -1,5 +1,7 @@
 # 库存与装备测试
 
+2026-11-02：扩展 `inventory/pending_pickup_guards` 的食用现场断言：库存待确认及只吃第一口时完整食用事件均为0，第二口完成扣量后事件恰为1并保留原食物 ID。Unity 当前处于 PlayMode，本轮未运行回归。
+
 木制独轮车共用玩家系统的 `wheelbarrow_rules`、`wheelbarrow_gameplay` 和 `wheelbarrow_cleanup_gameplay`：检查 12 格、120 kg、300 L 的货仓边界、F 开仓、玩家背包存取，以及拆回、序列化和再次放置后的内容恢复。仅静态修改，未运行；真实画面与联机未验收。
 
 2026-10-24：新增 `equipment_eye_slots / equipment_quick_equip` 规则和 `held_equipment_shortcut` 现场采样。覆盖第九个独立眼部槽、眼镜头盔共存、通用槽位互斥的双向拒绝与同槽替换、装备栏内交换的最终互斥、空槽穿戴/旧件回手持槽、来源/拖拽/接收标签拒绝原子性，以及左右 Shift＋真实鼠标右键一次消费、普通右键/非装备沿用普通使用、锁定拒绝和夹具归还原引用。工程视野同时检查正式 `CanSee` 读取眼部槽。本轮只做静态修改，未编译、未运行 Lua，交用户验收；实际外观、UI布局、触屏和联机收发不据此判定通过。
