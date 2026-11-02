@@ -135,14 +135,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
         SpriteAtlasGenerationPlan generation = CreateSpriteAtlasGenerationPlan(settings, plan);
         ValidateSpriteAtlasGenerationPlan(settings, generation);
 
-        int optimizedSourceCount = FlatWorldPixelArtTextureOptimizer.PrepareForBuild(plan.sprites);
-        if (optimizedSourceCount != 0)
-        {
-            // 源纹理重新导入后 Sprite 实例可能失效，重新获取构建计划和实际引用。
-            plan = FlatWorldSpriteAtlasBuildPlanTool.CreateSpriteAtlasBuildPlan();
-            generation = CreateSpriteAtlasGenerationPlan(settings, plan);
-            ValidateSpriteAtlasGenerationPlan(settings, generation);
-        }
+        // 源图只由手动一次性工具优化，构建不再临时修改导入尺寸或源图。
 
         NewGeneratedAssetPaths.Clear();
         BackupExistingAsset(AssetDatabase.GetAssetPath(settings));
@@ -197,7 +190,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
                       $"可读纹理排除 {generation.ReadableTextureExclusionCount}、特殊Shader排除 {generation.SpecialShaderExclusionCount}、" +
                       $"大图排除 {generation.OversizedSpriteExclusionCount}、地址冲突 {generation.AmbiguousAddresses.Count}；" +
                       $"实际纹理页 {packed.actualTexturePageCount}、漏绑 {packed.missingSpriteCount}、源组恢复 {sources.Restored}、" +
-                      $"本次优化源纹理导入配置 {optimizedSourceCount} 张。" +
+                      "源纹理直接使用编辑器中的工作图，不执行构建期降分辨率。" +
                       "图集 IncludeInBuild 且显式 Addressable，catalog 由 Addressables 依赖图接入。");
         }
         catch (Exception exception)

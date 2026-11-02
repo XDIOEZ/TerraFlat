@@ -2,383 +2,348 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>构建前按像素画质量检测结果限制贴图尺寸，并压缩实际使用的 Sprite 源纹理。</summary>
-internal static class FlatWorldPixelArtTextureOptimizer
+/// <summary>手动一次性缩小工作贴图，原图留在 Assets 外，编辑器与构建共用同一份低分辨率源图。</summary>
+public static partial class FlatWorldPixelArtTextureOptimizer
 {
-    #region 规则和报告
+    #region 规则与结果
 
-    private const string ReportPath = "Library/FlatWorldSpriteAtlasPlan/texture-optimization.json";
-    private const string CachePath = "Library/FlatWorldSpriteAtlasPlan/texture-quality-cache.json";
-    private const string ArtRoot = "Assets/6_Art/";
+    public const string BackupRoot = "ArtSourceBackups/PixelArtTextures";
+    public const string ReportPath = "Library/FlatWorldSpriteAtlasPlan/texture-optimization.json";
     private const string GeneratedRoot = "Assets/6_Art/Generated/";
-    private const string KeepFullResolutionLabel = "FlatWorldKeepFullResolution";
-    private const int IconMaxSize = 256;
-    private const int WorldSpriteMaxSize = 512;
-    private const int PreviewMaxSize = 128;
-    private const int CacheVersion = 2;
     private const string ManagedLimitMarker = "\nFlatWorldAutoSpriteCap:v1:";
 
-    private sealed class ManagedLimits
-    {
-        public int android;
-        public int standalone;
-        public int cap;
-    }
-
     [Serializable]
-    private sealed class QualityEntry
+    public sealed class Entry
     {
         public string path;
-        public long length;
-        public long modifiedUtcTicks;
-        public int maxSize;
-        public bool accepted;
-        public float colorError;
-        public float silhouetteError;
-    }
-
-    [Serializable]
-    private sealed class QualityCache
-    {
-        public int version = CacheVersion;
-        public QualityEntry[] entries = Array.Empty<QualityEntry>();
-    }
-
-    [Serializable]
-    private sealed class TextureEntry
-    {
-        public string path;
+        public string guid;
+        public long spriteLocalId;
         public int originalWidth;
         public int originalHeight;
-        public int maxSize;
+        public int width;
+        public int height;
+        public float pixelsPerUnit;
         public float colorError;
         public float silhouetteError;
+        public long originalBytes;
+        public long optimizedBytes;
+        public string sourceHash;
+        public string metaHash;
+        public bool accepted;
+        public string status;
+        public string backupDirectory;
     }
 
     [Serializable]
-    private sealed class OptimizationReport
+    public sealed class Report
     {
-        public string generatedUtc;
-        public bool applied;
-        public int inspectedSourceCount;
-        public int compressedSpriteSourceCount;
-        public int eligibleResizeCount;
-        public int acceptedResizeCount;
-        public int changedImporterCount;
-        public TextureEntry[] resizedSprites;
+        public string generatedUtc = DateTime.UtcNow.ToString("O");
+        public string operation;
+        public int inspectedCount;
+        public int acceptedCount;
+        public int changedCount;
+        public bool cancelled;
+        public List<Entry> entries = new();
+        public List<string> errors = new();
+    }
+
+    private static void RequireEditMode()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || BuildPipeline.isBuildingPlayer)
+            throw new InvalidOperationException("请在非运行、非编译、非打包状态使用贴图工具；不会暂停或退出当前游戏。");
     }
 
     #endregion
 
-    #region 构建与只读预览
+    #region 手动扫描与执行
 
-    [MenuItem("FlatWorld/资源/贴图优化/生成只读预览")]
-    private static void Preview()
+    public static Report Preview()
     {
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
-        {
-            Debug.LogWarning("[贴图优化] 请退出 PlayMode 后生成预览。");
-            return;
-        }
-        Run(FlatWorldSpriteAtlasBuildPlanTool.CreateSpriteAtlasBuildPlan().sprites, false);
+        RequireEditMode();
+        return PreviewPaths(FlatWorldSpriteAtlasBuildPlanTool.CreateSpriteAtlasBuildPlan().sprites
+            .Select(sprite => sprite.sourcePath));
     }
 
-    internal static int PrepareForBuild(IReadOnlyList<FlatWorldSpriteAtlasBuildPlanTool.SpritePlanEntry> sprites) =>
-        Run(sprites, true);
-
-    private static int Run(IReadOnlyList<FlatWorldSpriteAtlasBuildPlanTool.SpritePlanEntry> sprites, bool apply)
+    public static Report PreviewPaths(IEnumerable<string> paths)
     {
-        var cache = LoadQualityCache();
-        var updatedCache = new List<QualityEntry>();
-        var candidates = new List<(TextureImporter Importer, string Path, int Cap)>();
-        var resized = new List<TextureEntry>();
-        int eligibleResizeCount = 0;
-        int inspected = 0;
-
-        foreach (string path in sprites.Select(sprite => sprite.sourcePath)
-                     .Where(path => path.StartsWith(ArtRoot, StringComparison.OrdinalIgnoreCase))
-                     .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.Ordinal))
-        {
-            if (AssetImporter.GetAtPath(path) is not TextureImporter importer ||
-                importer.textureType != TextureImporterType.Sprite || importer.isReadable)
-                continue;
-
-            inspected++;
-            int cap = 0;
-            if (IsSafeResizeCandidate(path, importer, out int width, out int height))
-            {
-                eligibleResizeCount++;
-                int requestedCap = Path.GetFileNameWithoutExtension(path).EndsWith("_Icon", StringComparison.OrdinalIgnoreCase)
-                    || path.IndexOf("/InventoryCrafting/", StringComparison.OrdinalIgnoreCase) >= 0
-                    ? IconMaxSize : WorldSpriteMaxSize;
-
-                if (Math.Max(width, height) >= requestedCap * 3 / 2)
-                {
-                    QualityEntry quality = CheckQuality(path, width, height, requestedCap, cache);
-                    updatedCache.Add(quality);
-                    if (quality.accepted)
-                    {
-                        cap = requestedCap;
-                        resized.Add(new TextureEntry
-                        {
-                            path = path, originalWidth = width, originalHeight = height,
-                            maxSize = cap, colorError = quality.colorError,
-                            silhouetteError = quality.silhouetteError
-                        });
-                    }
-                }
-            }
-            candidates.Add((importer, path, cap));
-        }
-
-        int changedCount = 0;
-        if (apply)
-        {
-            AssetDatabase.StartAssetEditing();
-            try
-            {
-                foreach (var candidate in candidates)
-                {
-                    ManagedLimits previous = ReadManagedLimits(candidate.Importer.userData, out string originalUserData);
-                    int androidOriginal = previous?.android ?? GetCurrentMaximum(candidate.Importer, "Android");
-                    int standaloneOriginal = previous?.standalone ?? GetCurrentMaximum(candidate.Importer, "Standalone");
-                    if (previous != null)
-                    {
-                        int androidCurrent = GetCurrentMaximum(candidate.Importer, "Android");
-                        int standaloneCurrent = GetCurrentMaximum(candidate.Importer, "Standalone");
-                        if (androidCurrent < Math.Min(previous.android, previous.cap))
-                            androidOriginal = androidCurrent;
-                        if (standaloneCurrent < Math.Min(previous.standalone, previous.cap))
-                            standaloneOriginal = standaloneCurrent;
-                    }
-                    bool changed = ConfigurePlatform(candidate.Importer, "Android",
-                        TextureImporterFormat.ASTC_6x6, candidate.Cap, androidOriginal);
-                    changed |= ConfigurePlatform(candidate.Importer, "Standalone",
-                        TextureImporterFormat.BC7, candidate.Cap, standaloneOriginal);
-                    bool constrained = candidate.Cap > 0 &&
-                        (androidOriginal > candidate.Cap || standaloneOriginal > candidate.Cap);
-                    string userData = constrained
-                        ? originalUserData + ManagedLimitMarker +
-                          androidOriginal + ":" + standaloneOriginal + ":" + candidate.Cap
-                        : originalUserData;
-                    if (candidate.Importer.userData != userData)
-                    {
-                        candidate.Importer.userData = userData;
-                        changed = true;
-                    }
-                    if (!changed) continue;
-                    candidate.Importer.SaveAndReimport();
-                    changedCount++;
-                }
-            }
-            finally { AssetDatabase.StopAssetEditing(); }
-        }
-
-        Directory.CreateDirectory(Path.GetDirectoryName(ReportPath));
-        File.WriteAllText(CachePath, JsonUtility.ToJson(new QualityCache
-        {
-            entries = updatedCache.ToArray()
-        }, true));
-        File.WriteAllText(ReportPath, JsonUtility.ToJson(new OptimizationReport
-        {
-            generatedUtc = DateTime.UtcNow.ToString("O"),
-            applied = apply,
-            inspectedSourceCount = inspected,
-            compressedSpriteSourceCount = candidates.Count,
-            eligibleResizeCount = eligibleResizeCount,
-            acceptedResizeCount = resized.Count,
-            changedImporterCount = changedCount,
-            resizedSprites = resized.ToArray()
-        }, true));
-        Debug.Log($"[贴图优化] {(apply ? "构建准备" : "只读预览")}：检查 {inspected} 张，" +
-                  $"平台压缩覆盖 {candidates.Count} 张，画质检测通过 {resized.Count}/{eligibleResizeCount} 张，" +
-                  $"本次修改导入配置 {changedCount} 张；报告：{ReportPath}");
-        return changedCount;
-    }
-
-    private static int GetCurrentMaximum(TextureImporter importer, string name)
-    {
-        TextureImporterPlatformSettings settings = importer.GetPlatformTextureSettings(name);
-        return settings.overridden ? settings.maxTextureSize : importer.maxTextureSize;
-    }
-
-    private static ManagedLimits ReadManagedLimits(string userData, out string originalUserData)
-    {
-        originalUserData = userData ?? string.Empty;
-        int index = originalUserData.LastIndexOf(ManagedLimitMarker, StringComparison.Ordinal);
-        if (index < 0) return null;
-        string[] fields = originalUserData.Substring(index + ManagedLimitMarker.Length).Split(':');
-        if (fields.Length != 3 || !int.TryParse(fields[0], out int android) ||
-            !int.TryParse(fields[1], out int standalone) || !int.TryParse(fields[2], out int cap) ||
-            android <= 0 || standalone <= 0 || cap <= 0)
-            return null;
-        originalUserData = originalUserData.Substring(0, index);
-        return new ManagedLimits { android = android, standalone = standalone, cap = cap };
-    }
-
-    private static bool ConfigurePlatform(TextureImporter importer, string name,
-        TextureImporterFormat format, int cap, int originalMax)
-    {
-        TextureImporterPlatformSettings settings = importer.GetPlatformTextureSettings(name);
-        int finalMax = cap > 0 ? Math.Min(originalMax, cap) : originalMax;
-        bool changed = !settings.overridden || settings.maxTextureSize != finalMax ||
-                       settings.format != format || settings.textureCompression != TextureImporterCompression.Compressed ||
-                       settings.crunchedCompression || (cap > 0 && settings.resizeAlgorithm != TextureResizeAlgorithm.Bilinear);
-        if (!changed) return false;
-
-        settings.name = name;
-        settings.overridden = true;
-        settings.maxTextureSize = finalMax;
-        settings.format = format;
-        settings.textureCompression = TextureImporterCompression.Compressed;
-        settings.crunchedCompression = false;
-        if (cap > 0) settings.resizeAlgorithm = TextureResizeAlgorithm.Bilinear;
-        importer.SetPlatformTextureSettings(settings);
-        return true;
-    }
-
-    #endregion
-
-    #region 像素画质量检测
-
-    private static bool IsSafeResizeCandidate(string path, TextureImporter importer,
-        out int width, out int height)
-    {
-        width = height = 0;
-        if (!path.StartsWith(GeneratedRoot, StringComparison.OrdinalIgnoreCase) ||
-            !path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
-            path.IndexOf("/FlatWorldSpriteAtlases/", StringComparison.OrdinalIgnoreCase) >= 0 ||
-            importer.spriteImportMode != SpriteImportMode.Single ||
-            importer.filterMode != FilterMode.Point || importer.mipmapEnabled ||
-            importer.spriteBorder != Vector4.zero || importer.npotScale != TextureImporterNPOTScale.None)
-            return false;
-
-        UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(path);
-        if (asset != null)
-        {
-            string[] labels = AssetDatabase.GetLabels(asset);
-            if (labels.Contains(KeepFullResolutionLabel) ||
-                labels.Contains(FlatWorldSpriteAtlasBuildPlanTool.PreserveSourceSpriteSheetUvLabel))
-                return false;
-        }
-        importer.GetSourceTextureWidthAndHeight(out width, out height);
-        return width > 0 && height > 0;
-    }
-
-    private static QualityEntry CheckQuality(string path, int width, int height, int maxSize,
-        IReadOnlyDictionary<string, QualityEntry> cache)
-    {
-        FileInfo file = new(path);
-        if (cache.TryGetValue(path, out QualityEntry previous) &&
-            previous.length == file.Length && previous.modifiedUtcTicks == file.LastWriteTimeUtc.Ticks &&
-            previous.maxSize == maxSize)
-            return previous;
-
-        var result = new QualityEntry
-        {
-            path = path, length = file.Length, modifiedUtcTicks = file.LastWriteTimeUtc.Ticks,
-            maxSize = maxSize
-        };
-        var source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        RequireEditMode();
+        var report = new Report { operation = "preview" };
+        string[] sources = paths.Where(path => path.StartsWith(GeneratedRoot, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.Ordinal).ToArray();
         try
         {
-            if (!ImageConversion.LoadImage(source, File.ReadAllBytes(path), false)) return result;
-            Color32[] pixels = source.GetPixels32();
-            int smallerWidth = Math.Max(1, Mathf.RoundToInt((float)width * maxSize / Math.Max(width, height)));
-            int smallerHeight = Math.Max(1, Mathf.RoundToInt((float)height * maxSize / Math.Max(width, height)));
-            int previewWidth = Math.Max(1, Mathf.RoundToInt((float)width * PreviewMaxSize / Math.Max(width, height)));
-            int previewHeight = Math.Max(1, Mathf.RoundToInt((float)height * PreviewMaxSize / Math.Max(width, height)));
-            double totalDifference = 0;
-            int changedSilhouettes = 0;
-            int strongDifferences = 0;
-            for (int y = 0; y < previewHeight; y++)
+            for (int index = 0; index < sources.Length; index++)
             {
-                int originalY = SampleNearest(y, previewHeight, height);
-                int reducedY = Math.Min(smallerHeight - 1,
-                    (int)((originalY + 0.5d) * smallerHeight / height));
-                int sampledY = SampleNearest(reducedY, smallerHeight, height);
-                for (int x = 0; x < previewWidth; x++)
+                string path = sources[index];
+                if (EditorUtility.DisplayCancelableProgressBar("贴图优化：只读检查", path, (float)index / sources.Length))
+                { report.cancelled = true; break; }
+                report.inspectedCount++;
+                try
                 {
-                    int originalX = SampleNearest(x, previewWidth, width);
-                    int reducedX = Math.Min(smallerWidth - 1,
-                        (int)((originalX + 0.5d) * smallerWidth / width));
-                    int sampledX = SampleNearest(reducedX, smallerWidth, width);
-                    Color32 a = pixels[originalY * width + originalX];
-                    Color32 b = pixels[sampledY * width + sampledX];
-                    Color imported = SampleBilinearResize(pixels, width, height, reducedX,
-                        reducedY, smallerWidth, smallerHeight);
-                    // 取最近邻和 Unity 导入双线性缩放中较差的结果，防止硬边与半透明轮廓失真。
-                    double nearestError = Math.Abs(a.a - b.a) +
-                        Math.Abs(a.r * a.a - b.r * b.a) / 255d +
-                        Math.Abs(a.g * a.a - b.g * b.a) / 255d +
-                        Math.Abs(a.b * a.a - b.b * b.a) / 255d;
-                    double importedAlpha = imported.a * 255d;
-                    double importedError = Math.Abs(a.a - importedAlpha) +
-                        Math.Abs(a.r * a.a / 255d - imported.r * importedAlpha) +
-                        Math.Abs(a.g * a.a / 255d - imported.g * importedAlpha) +
-                        Math.Abs(a.b * a.a / 255d - imported.b * importedAlpha);
-                    double error = Math.Max(nearestError, importedError);
-                    totalDifference += error;
-                    if ((a.a >= 128) != (b.a >= 128) ||
-                        (a.a >= 128) != (importedAlpha >= 128)) changedSilhouettes++;
-                    if (error > 160) strongDifferences++;
+                    Entry entry = Inspect(path);
+                    if (entry == null) continue;
+                    report.entries.Add(entry);
+                    if (entry.accepted) report.acceptedCount++;
+                }
+                catch (Exception error) { report.errors.Add(path + "：" + error.Message); }
+            }
+        }
+        finally { EditorUtility.ClearProgressBar(); }
+        WriteReport(report);
+        return report;
+    }
+
+    public static Report Apply(Report preview)
+    {
+        RequireEditMode();
+        if (preview == null || preview.operation != "preview" || preview.cancelled)
+            throw new InvalidOperationException("请先完成一次只读扫描，取消的扫描不能直接执行。");
+        var report = new Report { operation = "apply", inspectedCount = preview.inspectedCount,
+            acceptedCount = preview.acceptedCount, entries = preview.entries };
+        Entry[] candidates = preview.entries.Where(entry => entry.accepted).ToArray();
+        AssetDatabase.DisallowAutoRefresh();
+        try
+        {
+            for (int index = 0; index < candidates.Length; index++)
+            {
+                Entry entry = candidates[index];
+                if (EditorUtility.DisplayCancelableProgressBar("贴图优化：备份并缩小", entry.path, (float)index / candidates.Length))
+                { report.cancelled = true; break; }
+                try
+                {
+                    ApplyEntry(entry);
+                    report.changedCount++;
+                    entry.status = "已缩小，原图已备份";
+                }
+                catch (Exception error)
+                {
+                    entry.status = "未应用：" + error.Message;
+                    report.errors.Add(entry.path + "：" + error.Message);
                 }
             }
-
-            int samples = previewWidth * previewHeight;
-            result.colorError = (float)(totalDifference / (samples * 4d * 255d));
-            result.silhouetteError = (float)changedSilhouettes / samples;
-            result.accepted = result.colorError <= 0.025f &&
-                              result.silhouetteError <= 0.015f && strongDifferences <= samples * 0.08f;
         }
-        catch (Exception error) when (error is IOException || error is UnityException)
+        finally
         {
-            Debug.LogWarning($"[贴图优化] 不能解码 {path}，保留原分辨率：{error.Message}");
+            AssetDatabase.AllowAutoRefresh();
+            EditorUtility.ClearProgressBar();
+        }
+        WriteReport(report);
+        Debug.Log($"[贴图优化] 一次性处理结束：{report.changedCount}/{candidates.Length} 张，失败 {report.errors.Count} 张；" +
+                  $"取消={report.cancelled}。原图与导入设置：{BackupRoot}；报告：{ReportPath}。不会在构建时再次缩图。");
+        return report;
+    }
+
+    private static Entry Inspect(string path)
+    {
+        if (!path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+            path.IndexOf("/FlatWorldSpriteAtlases/", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            AssetImporter.GetAtPath(path) is not TextureImporter importer ||
+            importer.textureType != TextureImporterType.Sprite || importer.isReadable ||
+            importer.spriteImportMode != SpriteImportMode.Single || importer.filterMode != FilterMode.Point ||
+            importer.mipmapEnabled || importer.spriteBorder != Vector4.zero ||
+            importer.npotScale != TextureImporterNPOTScale.None)
+            return null;
+
+        UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(path);
+        string[] labels = asset == null ? Array.Empty<string>() : AssetDatabase.GetLabels(asset);
+        if (labels.Contains("FlatWorldKeepFullResolution") ||
+            labels.Contains(FlatWorldSpriteAtlasBuildPlanTool.PreserveSourceSpriteSheetUvLabel)) return null;
+        importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+        int cap = Path.GetFileNameWithoutExtension(path).EndsWith("_Icon", StringComparison.OrdinalIgnoreCase) ||
+                  path.IndexOf("/InventoryCrafting/", StringComparison.OrdinalIgnoreCase) >= 0 ? 256 : 512;
+        if (Math.Max(width, height) < cap * 3 / 2) return null;
+
+        var entry = new Entry { path = path, originalWidth = width, originalHeight = height,
+            pixelsPerUnit = importer.spritePixelsPerUnit, originalBytes = new FileInfo(path).Length };
+        if (!TryGetExactSize(width, height, cap, out entry.width, out entry.height))
+        { entry.status = "跳过：目标尺寸无法保持精确长宽比"; return entry; }
+        string meta = File.ReadAllText(path + ".meta");
+        if (Regex.IsMatch(meta, @"(?m)^    (?:outline|physicsShape|bones|vertices|edges|weights|secondaryTextures):[ \t]*\r?\n[ \t]*-"))
+        { entry.status = "跳过：包含自定义轮廓、骨骼或辅助贴图"; return entry; }
+        Sprite sprite = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().SingleOrDefault();
+        if (sprite == null || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sprite, out entry.guid, out entry.spriteLocalId) ||
+            entry.pixelsPerUnit <= 0 || float.IsNaN(entry.pixelsPerUnit) || float.IsInfinity(entry.pixelsPerUnit))
+        { entry.status = "跳过：Sprite 标识或像素单位无效"; return entry; }
+
+        byte[] bytes = File.ReadAllBytes(path);
+        entry.sourceHash = Hash(bytes);
+        entry.metaHash = Hash(File.ReadAllBytes(path + ".meta"));
+        Texture2D source = Decode(bytes);
+        try
+        {
+            if (source.width != width || source.height != height)
+                throw new InvalidOperationException("源图尺寸与导入缓存不同，请先正常刷新资源再扫描。");
+            CheckQuality(source.GetPixels32(), entry);
+            entry.status = entry.accepted ? "可缩小" : "保留：颜色或轮廓变化超过保护阈值";
         }
         finally { UnityEngine.Object.DestroyImmediate(source); }
+        return entry;
+    }
+
+    private static void ApplyEntry(Entry entry)
+    {
+        byte[] original = File.ReadAllBytes(entry.path);
+        byte[] meta = File.ReadAllBytes(entry.path + ".meta");
+        if (Hash(original) != entry.sourceHash || Hash(meta) != entry.metaHash ||
+            AssetDatabase.AssetPathToGUID(entry.path) != entry.guid)
+            throw new InvalidOperationException("扫描后资源已被修改，请重新扫描，未覆盖现有改动。");
+        byte[] optimized;
+        Texture2D source = Decode(original);
+        var reduced = new Texture2D(entry.width, entry.height, TextureFormat.RGBA32, false);
+        try
+        {
+            reduced.SetPixels32(ResizeNearest(source.GetPixels32(), source.width, source.height, entry.width, entry.height));
+            reduced.Apply(false, false);
+            optimized = ImageConversion.EncodeToPNG(reduced);
+            if (optimized == null || optimized.Length == 0) throw new IOException("低分辨率 PNG 编码失败。");
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(source);
+            UnityEngine.Object.DestroyImmediate(reduced);
+        }
+
+        BackupRecord backup = CreateBackup(entry, original, meta, optimized);
+        entry.backupDirectory = backup.directory;
+        try
+        {
+            AtomicWrite(entry.path, optimized);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(entry.path);
+            importer.spritePixelsPerUnit = entry.pixelsPerUnit * entry.width / entry.originalWidth;
+            int limit = Mathf.NextPowerOfTwo(Math.Max(entry.width, entry.height));
+            importer.maxTextureSize = limit;
+            // 只统一尺寸上限，不在此处额外改变平台编码或像素颜色。
+            foreach (Match match in Regex.Matches(System.Text.Encoding.UTF8.GetString(meta), @"(?m)^\s*buildTarget:[ \t]*([^\r\n]+)"))
+            {
+                string platform = match.Groups[1].Value.Trim();
+                if (platform == "DefaultTexturePlatform") continue;
+                TextureImporterPlatformSettings settings = importer.GetPlatformTextureSettings(platform);
+                if (!settings.overridden) continue;
+                settings.maxTextureSize = limit;
+                importer.SetPlatformTextureSettings(settings);
+            }
+            int marker = (importer.userData ?? string.Empty).LastIndexOf(ManagedLimitMarker, StringComparison.Ordinal);
+            if (marker >= 0) importer.userData = importer.userData.Substring(0, marker);
+            AssetDatabase.WriteImportSettingsIfDirty(entry.path);
+            backup.optimizedMetaHash = Hash(File.ReadAllBytes(entry.path + ".meta"));
+            SaveBackupRecord(backup);
+            AssetDatabase.ImportAsset(entry.path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            VerifyImportedSprite(entry);
+            backup.optimizedMetaHash = Hash(File.ReadAllBytes(entry.path + ".meta"));
+            backup.state = "applied";
+            SaveBackupRecord(backup);
+            entry.optimizedBytes = optimized.LongLength;
+        }
+        catch
+        {
+            // 单张失败恢复原图与原 meta，已完成的其他贴图和所有备份都保留。
+            AtomicWrite(entry.path, original);
+            AtomicWrite(entry.path + ".meta", meta);
+            AssetDatabase.ImportAsset(entry.path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            backup.state = "rolledBack";
+            SaveBackupRecord(backup);
+            throw;
+        }
+    }
+
+    private static void VerifyImportedSprite(Entry entry)
+    {
+        var importer = (TextureImporter)AssetImporter.GetAtPath(entry.path);
+        importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+        Sprite sprite = AssetDatabase.LoadAllAssetsAtPath(entry.path).OfType<Sprite>().SingleOrDefault();
+        if (width != entry.width || height != entry.height || sprite == null ||
+            !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sprite, out string guid, out long localId) ||
+            guid != entry.guid || localId != entry.spriteLocalId ||
+            Mathf.Abs(sprite.rect.width / sprite.pixelsPerUnit - entry.originalWidth / entry.pixelsPerUnit) > 0.001f ||
+            Mathf.Abs(sprite.rect.height / sprite.pixelsPerUnit - entry.originalHeight / entry.pixelsPerUnit) > 0.001f)
+            throw new InvalidOperationException("重新导入后的尺寸、世界单位或 Sprite 引用检查失败，已请求恢复原图。");
+    }
+
+    private static void WriteReport(Report report) =>
+        AtomicWrite(ReportPath, System.Text.Encoding.UTF8.GetBytes(JsonUtility.ToJson(report, true)));
+
+    #endregion
+
+    #region 最近邻与画质保护
+
+    internal static bool TryGetExactSize(int width, int height, int cap, out int outputWidth, out int outputHeight)
+    {
+        outputWidth = width; outputHeight = height;
+        if (width <= 0 || height <= 0 || cap <= 0 || Math.Max(width, height) <= cap) return false;
+        int a = width, b = height;
+        while (b != 0) { int remainder = a % b; a = b; b = remainder; }
+        int units = cap / Math.Max(width / a, height / a);
+        if (units <= 0) return false;
+        outputWidth = width / a * units;
+        outputHeight = height / a * units;
+        return outputWidth < width && outputHeight < height;
+    }
+
+    internal static Color32[] ResizeNearest(Color32[] source, int width, int height, int targetWidth, int targetHeight)
+    {
+        if (width <= 0 || height <= 0 || targetWidth <= 0 || targetHeight <= 0 || source == null || source.Length != width * height)
+            throw new ArgumentException("贴图像素数量或尺寸无效。");
+        var result = new Color32[checked(targetWidth * targetHeight)];
+        for (int y = 0; y < targetHeight; y++)
+        {
+            int row = SampleNearest(y, targetHeight, height) * width;
+            for (int x = 0; x < targetWidth; x++)
+                result[y * targetWidth + x] = source[row + SampleNearest(x, targetWidth, width)];
+        }
         return result;
+    }
+
+    private static void CheckQuality(Color32[] pixels, Entry entry)
+    {
+        double difference = 0;
+        int samples = 0, silhouettes = 0, strong = 0;
+        // 两种采样网格避免原图和缩图恰好对齐而漏掉细线，透明留白不稀释误差。
+        foreach (int previewSize in new[] { 127, 128 })
+        {
+            int previewWidth = Math.Max(1, Mathf.RoundToInt((float)entry.originalWidth * previewSize / Math.Max(entry.originalWidth, entry.originalHeight)));
+            int previewHeight = Math.Max(1, Mathf.RoundToInt((float)entry.originalHeight * previewSize / Math.Max(entry.originalWidth, entry.originalHeight)));
+            for (int y = 0; y < previewHeight; y++)
+            {
+                int originalY = SampleNearest(y, previewHeight, entry.originalHeight);
+                int reducedY = Math.Min(entry.height - 1, (int)((originalY + 0.5d) * entry.height / entry.originalHeight));
+                int sampledY = SampleNearest(reducedY, entry.height, entry.originalHeight);
+                for (int x = 0; x < previewWidth; x++)
+                {
+                    int originalX = SampleNearest(x, previewWidth, entry.originalWidth);
+                    int reducedX = Math.Min(entry.width - 1, (int)((originalX + 0.5d) * entry.width / entry.originalWidth));
+                    Color32 a = pixels[originalY * entry.originalWidth + originalX];
+                    Color32 b = pixels[sampledY * entry.originalWidth + SampleNearest(reducedX, entry.width, entry.originalWidth)];
+                    if (a.a == 0 && b.a == 0) continue;
+                    double error = Math.Abs(a.a - b.a) + Math.Abs(a.r * a.a - b.r * b.a) / 255d +
+                                   Math.Abs(a.g * a.a - b.g * b.a) / 255d + Math.Abs(a.b * a.a - b.b * b.a) / 255d;
+                    samples++;
+                    difference += error;
+                    if ((a.a >= 128) != (b.a >= 128)) silhouettes++;
+                    if (error > 160) strong++;
+                }
+            }
+        }
+        entry.colorError = samples == 0 ? 0 : (float)(difference / (samples * 4d * 255d));
+        entry.silhouetteError = samples == 0 ? 0 : (float)silhouettes / samples;
+        entry.accepted = samples > 0 && entry.colorError <= 0.025f && entry.silhouetteError <= 0.015f && strong <= samples * 0.08f;
     }
 
     private static int SampleNearest(int index, int sampleCount, int sourceCount) =>
         Math.Min(sourceCount - 1, (int)((index + 0.5d) * sourceCount / sampleCount));
 
-    private static Color SampleBilinearResize(Color32[] pixels, int width, int height,
-        int x, int y, int resizedWidth, int resizedHeight)
+    private static Texture2D Decode(byte[] bytes)
     {
-        float sourceX = (x + 0.5f) * width / resizedWidth - 0.5f;
-        float sourceY = (y + 0.5f) * height / resizedHeight - 0.5f;
-        int left = Mathf.FloorToInt(sourceX);
-        int bottom = Mathf.FloorToInt(sourceY);
-        float fractionX = sourceX - left;
-        float fractionY = sourceY - bottom;
-        int x0 = Mathf.Clamp(left, 0, width - 1);
-        int x1 = Mathf.Clamp(left + 1, 0, width - 1);
-        int y0 = Mathf.Clamp(bottom, 0, height - 1);
-        int y1 = Mathf.Clamp(bottom + 1, 0, height - 1);
-        return Color.LerpUnclamped(
-            Color.LerpUnclamped(pixels[y0 * width + x0], pixels[y0 * width + x1], fractionX),
-            Color.LerpUnclamped(pixels[y1 * width + x0], pixels[y1 * width + x1], fractionX), fractionY);
-    }
-
-    private static Dictionary<string, QualityEntry> LoadQualityCache()
-    {
-        if (!File.Exists(CachePath)) return new Dictionary<string, QualityEntry>(StringComparer.OrdinalIgnoreCase);
+        var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         try
         {
-            QualityCache cache = JsonUtility.FromJson<QualityCache>(File.ReadAllText(CachePath));
-            if (cache?.version == CacheVersion && cache.entries != null)
-                return cache.entries.Where(entry => !string.IsNullOrEmpty(entry.path))
-                    .GroupBy(entry => entry.path, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
+            if (ImageConversion.LoadImage(texture, bytes, false)) return texture;
+            throw new IOException("PNG 解码失败。");
         }
-        catch (Exception error) when (error is IOException || error is ArgumentException)
-        {
-            Debug.LogWarning($"[贴图优化] 质量缓存读取失败，将重新检查：{error.Message}");
-        }
-        return new Dictionary<string, QualityEntry>(StringComparer.OrdinalIgnoreCase);
+        catch { UnityEngine.Object.DestroyImmediate(texture); throw; }
     }
 
     #endregion

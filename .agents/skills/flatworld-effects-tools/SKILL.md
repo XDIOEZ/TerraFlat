@@ -31,7 +31,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - `SharedSpriteMeshCache.IsSessionEnding` 时停止区块提交、分帧推进与 Owner 恢复；活跃期登记/恢复失败保留异常。BRG 禁用/域重载幂等 Dispose：先释放组，再 finally 释放自有缓冲/Mesh/材质，按需重建。
 - 草与自然物太阳阴影共用 `ChunkSharedSpriteMeshBatchService`，按 128 格区域及纹理/源材质合并不同 Sprite 的几何与 UV，跨 Chunk 共享 Mesh、投影世界独立 Owner。太阳阴影用原始带外沿几何和 `_CHUNK_RESOURCE/_CHUNK_NATIVE_BATCH` 顶点通道保留模糊、裁剪、朝向，不按逐实例 Y 排序；草仍独立增量刷新，资源和投影沿用 Chunk Owner 生命周期。规则 `rendering/{grass_mesh_batch,natural_shadow_mesh_batch}` 核对合批及回收。
 - 启动 SpriteAtlas 按 Menu/GameplayUI/CommonItems/WorldEnvironment/Creatures/Shared 收集，并读取液体 WorldWater Sprite。仅管理实际页及用途目录引用的源纹理；`ProjectSettings/FlatWorldSpriteAtlasSourceEntries.json` 记录源组和地址并支持失活恢复。验收看 Unity 实际 `PackAtlases/CanBindTo`、页尺寸及配置 fallback，不以 shelf 估算替代。
-- 打包纹理：构建前 `FlatWorldPixelArtTextureOptimizer` 对用途目录中的不可读 Sprite（含已入图集但仍被 Addressables 直接打包的源图）应用 Android ASTC 6x6、Standalone BC7；Generated 单图且 Point 过滤的 PNG 通过 128px 显示尺寸的最近邻与双线性双重质量检测后，平台导入上限为物品图标 256、其他 512（不修改原始 PNG、PPU、过滤和可读贴图）。Unity 导入缩图用 Bilinear，并保留原平台尺寸以便取消优化后恢复；精细贴图可标记 `FlatWorldKeepFullResolution` 跳过降分辨率。源导入变化后按实际导入像素重新分桶，验收真实图集页；报告位于 `Library/FlatWorldSpriteAtlasPlan/texture-optimization.json`。
+- 贴图优化改为手动一次性工具：`FlatWorld/其他工具/美术/一次性贴图优化器`；构建不得再次降分辨率。用途目录引用的 Generated 单图 Point PNG 通过双采样网格颜色/轮廓检查后，以最近邻替换工作 PNG，图标上限256、其他512；严格保持长宽比、同步PPU、校验GUID/子Sprite ID和世界尺寸。原图及meta逐版本保存到项目根 `ArtSourceBackups/PixelArtTextures/`（不在Assets，不进包，不作Library缓存），先校验备份再修改，失败回滚、恢复不覆盖后续编辑。可读图、切片、自定义形状/骨骼/辅助图及 `FlatWorldKeepFullResolution` / UV保护标签跳过；平台编码沿用原设置。报告 `Library/FlatWorldSpriteAtlasPlan/texture-optimization.json`；真实Unity导入回归 `Tools/Tests/PixelArtTextures/verify.py`。
 
 ## 按主题读取
 
