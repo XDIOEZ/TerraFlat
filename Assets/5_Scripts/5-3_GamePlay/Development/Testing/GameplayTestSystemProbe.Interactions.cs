@@ -20,10 +20,32 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
         operations.Add("player/interaction_query_context", InteractionQueryContext);
         operations.Add("player/interaction_registry_prefilter", InteractionRegistryPrefilter);
+        operations.Add("player/precipitation_drinking", InteractionPrecipitationDrinking);
         operations.Add("player/grid_interaction_bands", InteractionGridBands);
         operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
         operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
     }
+
+    #endregion
+
+    #region 雨水长按饮用规则
+
+    private static JObject InteractionPrecipitationDrinking(JObject args) => new()
+    {
+        ["wetRain"] = Mod_InteractSender.IsRainDrinkingExposureValid(1, .5f),
+        ["dryRain"] = Mod_InteractSender.IsRainDrinkingExposureValid(0, .5f),
+        ["wetNoRain"] = Mod_InteractSender.IsRainDrinkingExposureValid(1, 0f),
+        ["wetInvalidRain"] = Mod_InteractSender.IsRainDrinkingExposureValid(1, float.NaN),
+        ["snowNoWet"] = Mod_InteractSender.IsSnowEatingExposureValid(.5f),
+        ["snowStopped"] = Mod_InteractSender.IsSnowEatingExposureValid(0f),
+        ["snowInvalid"] = Mod_InteractSender.IsSnowEatingExposureValid(float.NaN),
+        ["holdSeconds"] = Mod_InteractSender.PrecipitationDrinkingHoldSeconds,
+        ["tickSeconds"] = Mod_InteractSender.PrecipitationDrinkingTickSeconds,
+        ["waterPerTick"] = Mod_InteractSender.PrecipitationDrinkingWaterPerTick,
+        ["snowTemperatureDelta"] = Mod_InteractSender.SnowEatingTemperatureDropPerTick,
+        ["pureWaterId"] = VesselRainwaterCollection.ResolveLiquidId(0f),
+        ["dirtyWaterId"] = VesselRainwaterCollection.ResolveLiquidId(.1f)
+    };
 
     #endregion
 

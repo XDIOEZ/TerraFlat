@@ -401,23 +401,27 @@ public sealed class DrinkWaterActionDefinition : IEnvironmentActionDefinition
     public const string StableActionId = "environment.drink_water";
 
     public DrinkWaterActionDefinition(LiquidDefinition liquid, WaterEnvironmentKind waterKind, float holdSeconds,
-        float tickSeconds, float waterGainPerTick)
+        float tickSeconds, float waterGainPerTick, float temperatureDeltaPerPulse = 0f,
+        string displayNameKey = "喝水")
     {
         Liquid = liquid ?? throw new System.ArgumentNullException(nameof(liquid));
         WaterKind = waterKind;
         HoldSeconds = Mathf.Max(0f, holdSeconds);
         TickSeconds = Mathf.Max(0.05f, tickSeconds);
         WaterGainPerTick = Mathf.Max(0f, waterGainPerTick);
+        TemperatureDeltaPerPulse = temperatureDeltaPerPulse;
+        DisplayNameKey = displayNameKey;
     }
 
     public string ActionId => StableActionId;
-    public string DisplayNameKey => "喝水";
+    public string DisplayNameKey { get; }
     public int Priority => 100;
     public LiquidDefinition Liquid { get; }
     public WaterEnvironmentKind WaterKind { get; }
     public float HoldSeconds { get; }
     public float TickSeconds { get; }
     public float WaterGainPerTick { get; }
+    public float TemperatureDeltaPerPulse { get; }
     public IEnvironmentActionInstance CreateInstance(Item actor) =>
         new DrinkWaterActionInstance(actor, this);
 }
@@ -444,6 +448,9 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
     public bool IsHeld { get; private set; }
     public bool IsExecuting { get; private set; }
     public DrinkWaterActionDefinition Definition => definition;
+    public float PulseProgress => !IsHeld ? 0f : IsExecuting
+        ? Mathf.Clamp01(tickElapsed / definition.TickSeconds)
+        : Mathf.Clamp01(holdElapsed / Mathf.Max(0.01f, definition.HoldSeconds));
     public AudioHandle LastAudioHandle { get; private set; }
     public GameObject LastEffect { get; private set; }
 
@@ -504,6 +511,11 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         nutrition.Water = Mathf.Clamp(
             nutrition.Water + definition.WaterGainPerTick, 0f, nutrition.Max_Water);
         food.NotifyStateChanged();
+
+        // 吃雪与吃冰块共用体温模块，每次成功结算都降低5℃。
+        if (definition.TemperatureDeltaPerPulse != 0f)
+            actor.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature)
+                ?.AddTemperature(definition.TemperatureDeltaPerPulse);
 
         LiquidDrinkEffectProcessor.Result effectResult = LiquidDrinkEffectProcessor.Apply(
             actor,
@@ -568,19 +580,29 @@ public partial class Mod_InteractSender
     #region 环境动作转发
 
     private EnvironmentInteractionRunner environmentInteractionRunner;
+    private EnvironmentInteractionRunner precipitationDrinkingRunner;
+    private bool showsPrecipitationDrinkingCursor;
+    internal const float PrecipitationDrinkingHoldSeconds = 2.5f;
+    internal const float PrecipitationDrinkingTickSeconds = 3f;
+    internal const float PrecipitationDrinkingWaterPerTick = 5f;
+    internal const float SnowEatingTemperatureDropPerTick = -5f;
 
     public bool BeginEnvironmentActionHold()
     {
         ResolveEnvironmentInteractionRunner();
         if (environmentInteractionRunner != null &&
             environmentInteractionRunner.TryGetDefinition<DrinkWaterActionDefinition>(out _) &&
-            !CanPointAtEnvironmentWater()) return false;
-        return environmentInteractionRunner != null &&
-               environmentInteractionRunner.BeginPreferredAction();
+            !CanPointAtEnvironmentWater()) return TryBeginPrecipitationDrinking();
+        return (environmentInteractionRunner != null && environmentInteractionRunner.BeginPreferredAction()) ||
+               TryBeginPrecipitationDrinking();
     }
 
-    public void EndEnvironmentActionHold() =>
+    public void EndEnvironmentActionHold()
+    {
         environmentInteractionRunner?.CancelActiveAction();
+        precipitationDrinkingRunner?.CancelActiveAction();
+        ClearPrecipitationDrinkingCursor();
+    }
 
     public void TickEnvironmentInteraction(float deltaTime)
     {
@@ -590,8 +612,102 @@ public partial class Mod_InteractSender
             EndEnvironmentActionHold();
             return;
         }
+
+        if (precipitationDrinkingRunner?.ActiveAction is DrinkWaterActionInstance action &&
+            (!TryGetPrecipitationDrinkingLiquid(out LiquidDefinition currentLiquid, out bool snowing) ||
+             currentLiquid != action.Definition.Liquid ||
+             snowing != (action.Definition.TemperatureDeltaPerPulse < 0f)))
+        {
+            precipitationDrinkingRunner.CancelActiveAction();
+            ClearPrecipitationDrinkingCursor();
+        }
         environmentInteractionRunner?.TickActiveAction(deltaTime);
+        precipitationDrinkingRunner?.TickActiveAction(deltaTime);
     }
+
+    /// <summary>降水饮用复用世界交互的圆形进度光标，持续饮用时每口重新计时。</summary>
+    private void RefreshPrecipitationDrinkingCursor()
+    {
+        if (precipitationDrinkingRunner?.ActiveAction is not DrinkWaterActionInstance action ||
+            !action.IsHeld || gameController == null)
+        {
+            ClearPrecipitationDrinkingCursor();
+            return;
+        }
+
+        showsPrecipitationDrinkingCursor = true;
+        EventSystemGuard.SetWorldInteractionHoldCursor(action.PulseProgress,
+            gameController.GetPointerScreenPosition());
+    }
+
+    private void ClearPrecipitationDrinkingCursor()
+    {
+        if (!showsPrecipitationDrinkingCursor) return;
+        showsPrecipitationDrinkingCursor = false;
+        EventSystemGuard.ClearWorldInteractionHoldCursor();
+    }
+
+    /// <summary>雨水和雪共用独立环境动作，雪额外在每口结算时扣除体温。</summary>
+    private bool TryBeginPrecipitationDrinking()
+    {
+        if (!TryGetPrecipitationDrinkingLiquid(out LiquidDefinition liquid, out bool snowing))
+            return false;
+
+        precipitationDrinkingRunner ??= gameObject.AddComponent<EnvironmentInteractionRunner>();
+        precipitationDrinkingRunner.Bind(item);
+        precipitationDrinkingRunner.SetAvailableActions(new DrinkWaterActionDefinition(
+            liquid, liquid.Id == VesselRainwaterCollection.DirtyWaterLiquidId
+                ? WaterEnvironmentKind.DirtyFresh : WaterEnvironmentKind.CleanFresh,
+            PrecipitationDrinkingHoldSeconds, PrecipitationDrinkingTickSeconds,
+            PrecipitationDrinkingWaterPerTick,
+            snowing ? SnowEatingTemperatureDropPerTick : 0f, snowing ? "吃雪" : "喝水"));
+        if (!precipitationDrinkingRunner.BeginPreferredAction())
+            return false;
+
+        CancelCurrentInteraction();
+        environmentInteractionRunner?.CancelActiveAction();
+        return true;
+    }
+
+    /// <summary>雨水要求潮湿，雪只要求当地在下雪；两者都要求有效空地。</summary>
+    private bool TryGetPrecipitationDrinkingLiquid(out LiquidDefinition liquid, out bool snowing)
+    {
+        liquid = null;
+        snowing = false;
+        using var worldScope = UseActorInteractionWorld();
+        if (item == null || !IsLocalInteractionOwner() || IsGameplayInputLocked())
+            return false;
+
+        WeatherMgr weather = WeatherMgr.ExistingInstance;
+        if (weather == null ||
+            !weather.TryGetPrecipitationAt(item.transform.position, out float rain, out float snow))
+            return false;
+        snowing = IsSnowEatingExposureValid(snow);
+        if (!snowing)
+        {
+            Mod_BuffManager buffs = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+            if (!IsRainDrinkingExposureValid(buffs?.GetBuffStacks(WetBuffIds.Wet) ?? 0, rain))
+                return false;
+        }
+
+        if (!TryGetInteractionPointer(out Vector2 pointer) ||
+            MeasureActorInteractionDistance(item.transform.position, pointer) > maxInteractDistance ||
+            ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointer, out RuntimeTerrainTileSample tile) ||
+            tile.TopTileId == 0 || tile.LiquidDepth > 0f || FindReceiverAtPointer(pointer) != null ||
+            !ContaminationSystem.TryGetNormalizedLoad(item.transform.position, out float contamination))
+            return false;
+
+        string liquidId = VesselRainwaterCollection.ResolveLiquidId(contamination);
+        liquid = GameRes.ExistingInstance?.GetLiquidDefinition(liquidId);
+        return liquid?.Drinkable == true;
+    }
+
+    internal static bool IsRainDrinkingExposureValid(int wetStacks, float rainIntensity) =>
+        wetStacks > 0 && float.IsFinite(rainIntensity) && rainIntensity > 0f;
+
+    internal static bool IsSnowEatingExposureValid(float snowIntensity) =>
+        float.IsFinite(snowIntensity) && snowIntensity > 0f;
 
     private void ResolveEnvironmentInteractionRunner()
     {

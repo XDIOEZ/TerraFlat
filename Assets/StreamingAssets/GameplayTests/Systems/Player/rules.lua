@@ -50,6 +50,20 @@ test.system("player", "bicycle_carrier", {}, function(data)
     assert(materials.Ingot_RawIron == 6 and materials.Rubber == 2 and materials.Leather == 1, "自行车制作原料错误")
 end, "自行车：水中10%、轻惯性、推动、滚轮、配方与木筏回归")
 
+-- 雨水和雪共用慢饮动作，雨要求潮湿，雪额外降低体温。
+test.system("player", "precipitation_drinking", {}, function(data)
+    assert(data.wetRain and not data.dryRain and not data.wetNoRain and not data.wetInvalidRain,
+        "雨中喝水没有严格要求潮湿Buff与有效降雨")
+    assert(data.holdSeconds > 1 and data.tickSeconds > 1 and data.waterPerTick > 0 and
+        data.waterPerTick / data.tickSeconds < 25,
+        "雨水饮用速度没有显著低于地表水")
+    assert(data.pureWaterId == "core:pure_water" and data.dirtyWaterId == "core:dirty_water",
+        "雨中饮水没有沿用容器的污染水质规则")
+    assert(data.snowNoWet and not data.snowStopped and not data.snowInvalid,
+        "吃雪要求降雪但不应要求潮湿Buff，停雪后必须禁止")
+    assert(data.snowTemperatureDelta == -5, "每次吃雪必须扣除5℃体温")
+end, "雨中喝水与吃雪：天气准入、饮用速度、水质和体温")
+
 -- 同格从上到下按显示层级等分，查询顺序、重复视觉和边界不能改变结果。
 for _, case in ipairs({
     {layers = {-1, 0}, height = .9, selected = 1},

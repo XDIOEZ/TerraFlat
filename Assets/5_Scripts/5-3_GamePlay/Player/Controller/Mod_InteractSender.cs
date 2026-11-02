@@ -100,11 +100,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
         {
             ClearHeldInteractionCursor();
+            ClearPrecipitationDrinkingCursor();
             ClearInteractionPreview();
             return;
         }
         RefreshInteractionPreview();
         RefreshHeldInteractionCursor();
+        RefreshPrecipitationDrinkingCursor();
     }
     #endregion
 
@@ -139,6 +141,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
+            return;
+
+        // 雨雪天指向空地优先饮用降水，不被附近设施的半径兜底抢走交互键。
+        if (TryBeginPrecipitationDrinking())
             return;
 
         // 交互键只操作世界目标，手持建筑的放置状态不占用这条通道。
