@@ -124,3 +124,5 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 水生线路保留每 0.2 米采样，只合并同次调用中连续相同规范格的查询；每次重新读取水态，不跨帧缓存。鱼觅食筛选委托和捕食能力列表复用，模块结构变化仍自动失效。
 - 鱼饱食低于 90% 吃近物、低于 70% 主动觅食，先筛水域后选最近；`eatRange` 共用于扫描/计时/消费。Stranded 间歇蹦跳回水，起跳期间推进地面位移，逐段检查阻挡/未知格；离水回水优先温度游动，钓线/携带接管清蹦跳。
 - 鱼用 `underwater-creature` 整身染色，无实体阻挡/半身裁切，保留受击 Trigger；`AquaticActorPresentation` 保留水平翻面、水下排序与染色，单图摇摆及搁浅/携带的高度倾角交共用表现层，不旋根/碰撞体。无阴影物种在 `visual.shadows.enabled` 配置。
+
+- 群猎只有一个普通攻击动作节点；`attackLocked` 放在该分支的资格守卫内，禁止另设高优先攻击节点抢占自身前摇。`encirclementEnabled` 组合 `AnimalPackPursuitSteering`：稳定身份均分近身两翼，远处后方施压/双翼/前方有限预判，近身收拢；同目标支援不清阵型，包抄路径失败退回直追并等目标明显移动才重试。回归 `ai/wolf_attack_continuity`（20/30/60/120 TPS完整树）与 `ai/wolf_dispersed_pursuit`。

@@ -102,3 +102,5 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 举盾在权威端订阅生命 `OnHitReceived`，每次正式非环境命中（含全挡零伤）经 `Mod_Stamina.ConsumeStamina` 支付本角色翻滚费用，默认10点、不足扣到零；盾击/弹反、冷却或无敌拒绝、环境/直接扣血不消费。费用来源 `flatworld.combat.shield_guard_hit`，回归 `combat/shield_hit_stamina`。
 - 临时防御用 `AcquireTemporaryDefense`，不改存档基础防御；普通/部位结算均消费有效防御。客户端 `OffhandParry` 走现有战斗权威交接，`NetworkWorldPlayer.Shield` 只复制表现。协议版本 25。
 - 独立验证：`python Tools/Tests/ShieldActions/verify.py --build`；正式 Lua：`Systems/Combat/shield-rules.lua`。Unity 播放中不刷新或运行场景测试。
+
+- 撕咬的 `ActorActionConstraints.FollowLease` 自行登记 `PhysicsPreparation`，逐物理步读取双方权威刚体位置与锚点速度；技能模块只推进时长/伤害，不重复驱动跟随。`DrivenMotionLease.SetWorldVelocity` 明确提交总速度，避免再次叠加风/水流；释放、失效及丢权威时撤销调度。`combat/bite_attack` 补跨TPS跟随速度与限速边界，真实碰撞仍需现场回归。
