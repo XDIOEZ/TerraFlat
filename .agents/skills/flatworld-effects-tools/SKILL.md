@@ -29,6 +29,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - 池取出重置 Transform、Animator、颜色与寿命，回收清订阅。一次性粒子在源销毁前脱离；需要角色 OnDisable 回收的特效用独立根，Owner 与父级分离。睡眠只释放可见实例，状态请求仍归角色。
 - 完整 GameRes 的 `combat-prewarm` 按正式武器引用去重，每个命中 GameEffect 分帧准备 3 个空闲实例；`PrepareForPool` 不播放、不消费随机数。完整资源会话/世界释放旧代前清池，原位更新候选不预热。延迟回收队列保留未到期任务，提前回收取消旧任务，新租用不能继承旧截止时间。
 - `SharedSpriteMeshCache.IsSessionEnding` 时停止区块提交、分帧推进与 Owner 恢复；活跃期登记/恢复失败保留异常。BRG 禁用/域重载幂等 Dispose：先释放组，再 finally 释放自有缓冲/Mesh/材质，按需重建。
+- 草层改由 `ChunkGrassMeshBatchService` 以 128 格区域及纹理/材质合并实际 Sprite 几何和 UV；普通地表跨 Chunk 共享 Mesh，投影世界临时按 Owner 独立批次。仍通过 Chunk Owner 镜像与外部排序域维护显示，草变化只标脏组、渲染前上传；规则 `rendering/grass_mesh_batch` 核对批次、删除及投影回收。
 - 启动 SpriteAtlas 按 Menu/GameplayUI/CommonItems/WorldEnvironment/Creatures/Shared 收集，并读取液体 WorldWater Sprite。仅管理实际页及用途目录引用的源纹理；`ProjectSettings/FlatWorldSpriteAtlasSourceEntries.json` 记录源组和地址并支持失活恢复。验收看 Unity 实际 `PackAtlases/CanBindTo`、页尺寸及配置 fallback，不以 shelf 估算替代。
 
 ## 按主题读取

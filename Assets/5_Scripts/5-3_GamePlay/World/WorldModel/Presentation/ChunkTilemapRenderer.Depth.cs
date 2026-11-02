@@ -72,6 +72,7 @@ public sealed partial class ChunkTilemapRenderer
     internal void CollectVisualSnapshots(Matrix4x4 worldToDisplay, System.Collections.Generic.List<WorldVisualSnapshot> destination)
     {
         ChunkBatchRendererGroupService.CollectVisualSnapshots(this, destination);
+        ChunkGrassMeshBatchService.CollectVisualSnapshots(this, destination);
         depthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         // 起飞过渡只消费静态Sprite，程序化火焰不能把白色Quad误当火焰快照。
         mechanicalConnectorDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);

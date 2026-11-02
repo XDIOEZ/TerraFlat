@@ -31,6 +31,7 @@ public static partial class GameplayTestSystemProbe
 
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
+        operations.Add("rendering/grass_mesh_batch", CaptureGrassMeshBatch);
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
         operations.Add("rendering/held_food_bites", CaptureHeldFoodShaderBites);
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);

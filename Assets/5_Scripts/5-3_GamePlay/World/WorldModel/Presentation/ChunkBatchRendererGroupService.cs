@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
@@ -123,22 +123,28 @@ internal static class ChunkBatchRendererGroupService
     internal static void UnregisterOwner(ChunkTilemapRenderer owner)
     {
         backend?.UnregisterOwner(owner);
+        ChunkGrassMeshBatchService.UnregisterOwner(owner);
     }
 
     /// <summary>草花与区块共用本机镜像，避免由后续补绘相机覆盖已绘制的角色。</summary>
     internal static void RefreshOwnerProjection(ChunkTilemapRenderer owner)
-        => backend?.RefreshOwnerProjection(owner);
+    {
+        backend?.RefreshOwnerProjection(owner);
+        ChunkGrassMeshBatchService.RefreshOwnerProjection(owner);
+    }
 
     internal static void SetOwnerExternalProjection(ChunkTilemapRenderer owner, Matrix4x4 worldToDisplay, bool visible,
         WorldPresentationSortingDomain sortingDomain = null)
     {
         backend?.SetOwnerExternalProjection(owner, worldToDisplay, visible, sortingDomain);
+        ChunkGrassMeshBatchService.SetOwnerExternalProjection(owner, worldToDisplay, visible, sortingDomain);
         if (owner != null) owner.SetDepthEntitySortingForProjection(sortingDomain != null);
     }
 
     internal static void ClearOwnerExternalProjection(ChunkTilemapRenderer owner)
     {
         backend?.ClearOwnerExternalProjection(owner);
+        ChunkGrassMeshBatchService.ClearOwnerExternalProjection(owner);
         if (owner != null) owner.SetDepthEntitySortingForProjection(false);
     }
 

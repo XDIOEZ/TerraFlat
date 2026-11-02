@@ -1,4 +1,18 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "grass_mesh_batch", {}, function(data)
+    assert(data.mergedBatches == 1 and data.mergedPages == 1 and
+        data.mergedVertices == 12 and data.ownerVisuals == 2,
+        "同纹理不同Sprite与跨区块草未合并为一张网格")
+    assert(data.nativeMaterials == 1 and data.removedVertices == 8,
+        "草网格材质没有使用原生顶点模式或局部删除未正确刷新")
+    assert(data.shiftedBatches == 2 and data.returnedBatches == 1,
+        "区块镜像移动后未正确迁移区域批次")
+    assert(data.projectedBatches == 2 and data.restoredBatches == 1,
+        "外部投影显示没有与普通地表批次隔离或正确恢复")
+    assert(data.clearedBatches == 0 and data.clearedPages == 0,
+        "清空最后一个草格后仍保留空绘制批次")
+end, "草地网格：共纹理UV合批、增量删除、区域迁移和投影回收")
+
 test.system("rendering", "post_process_styles", {}, function(data)
     assert(#data.styleOptions == 3 and #data.profiles == 3 and data.qualityOptions == 3,
         "画面风格与画质档位的三种选项未独立注册")
