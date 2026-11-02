@@ -64,13 +64,14 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 使用同节点专用 Trigger，身体/拾取阻挡分开。GO 生物保留预制体刚体和碰撞模板，世界物理管理器在租借组件后登记原碰撞体，不为生物创建物理代理。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。
 - Mod_Weapon_AnimationAction 每段 StartAttack 调持有者 Stamina.TryConsumeStamina，不足不开始；配置 staminaCostPerAttack 受统一角色体力参数修正。Mod_ColdWeapon 仍按 ColdWeaponStaminaObserver.StaminaConsumeSpeed 每秒扣，基础与 StaminaConsumeSpeedRate 是不同参数。
+- 动画武器的基础挥击体力由物品 JSON 显式配置，平衡基准为向上取最近 0.5 的 `2 + 物理伤害×0.4 + 重量kg×0.35`；继承后伤害变更的子物品须单独覆盖 animation.parameters.staminaCostPerAttack，免得高伤害仍套父级低费用。
 - CombatImpactEffectSet 是类型特效，AttackEffects 是每次反馈；DominantKind 统一选类型，空反馈不阻断命中。JSON 不覆盖 Prefab Unity 资源引用集合。
 - 动画武器通过正伤害回执局部卡肉，`hitStopDuration` 默认0.12秒、每段挥击最多一次；独立动画时钟扣除停顿，不改 Time.timeScale，停用/卸载恢复当前攻速。`HitShakeDuration/HitShakeDistance` 默认0.16秒/0.035米，GO 经 `ActorRenderHitShakeEffect` 合成 Shader 位移并外扩裁剪边界，原生资源仅在提交显示矩阵时抖动，均不改碰撞/占格/掉落位置。规则入口 `combat/hit_feedback_clock`、`combat/hit_shake_render`；可选 AIECS 动物和联机远端表现未覆盖。
 - On-hit 的 applicationStacks/CombatOnHitBuff.Stacks 一次传完整层数并原子施加，GO 回调与纯数据各应用一次，Tile 不发实体命中事件。
 
 ## 弓、投射物与飞行
 
-- Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓/反曲弓基础每秒2.25，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
+- Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓每秒6、反曲弓每秒9，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭；吹箭/投石索每秒6。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
 - 弓伤害倍率经 Launch 传投射物；IProjectileChargeModifier 提供额外速度/伤害，蓄力结束收状态。麦克风修饰只由本地玩家蓄力期间拥有，不存档。
 - 投射模块仅飞行或附着时逐帧运行，状态改变立即失效调度；投射和丢弃伤害按模块来源独立请求空闲休眠，开窗及手持仍唤醒。动画伤害窗口随动作显式唤醒固定步采样，伤害碰撞体关闭且动作结束后休眠；LateUpdate 只同步表现姿态。
 - 投石索复用 Mod_Bow，以 AmmoItemId 或 AmmoTag 任一匹配选弹；石头与硬质矿石通过 SlingAmmo_Base 组合 Mod_Projectile+Mod_Damage，石头保留独立丢弃飞行伤害。不要给石头子定义统一增加 SlingAmmo 标签，以免黏土/硝石继承弹药资格；`combat/archery_cycle` 覆盖最终模块与配置边界。

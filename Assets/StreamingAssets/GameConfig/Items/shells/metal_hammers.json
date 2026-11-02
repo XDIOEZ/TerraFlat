@@ -32,7 +32,7 @@
           "parameters": {
             "idleAnimationName": "Idle_0",
             "attackAnimationNames": ["Attack_2"],
-            "staminaCostPerAttack": 2.7
+            "staminaCostPerAttack": 10.5
           }
         },
         "resourceTool": {
@@ -56,7 +56,7 @@
         "damage": {
           "parameters": {"DamageValues": {"Physical": 28, "ImpactKind": 4}}
         },
-        "animation": {"parameters": {"staminaCostPerAttack": 3}},
+        "animation": {"parameters": {"staminaCostPerAttack": 14.5}},
         "resourceTool": {"parameters": {"harvestTier": 4}}
       }
     },
@@ -73,6 +73,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Tools/MetalHammers/SteelHammer_Icon.png"
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 16 } },
         "damage": {
           "parameters": {"DamageValues": {"Physical": 32, "ImpactKind": 4}}
         },

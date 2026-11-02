@@ -41,7 +41,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.2
+            "staminaCostPerAttack": 4.5
           }
         },
         "damage": {
@@ -108,6 +108,7 @@
         }
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 6.5 } },
         "damage": {
           "parameters": {
             "$transform": {
@@ -154,6 +155,7 @@
         }
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 9 } },
         "damage": {
           "parameters": {
             "$transform": {
@@ -201,6 +203,7 @@
         }
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 6 } },
         "damage": {
           "parameters": {
             "DamageValues": {
@@ -388,7 +391,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.8,
+            "staminaCostPerAttack": 8.5,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -567,7 +570,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.8,
+            "staminaCostPerAttack": 11,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -746,7 +749,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 2.1,
+            "staminaCostPerAttack": 14,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -925,7 +928,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.8,
+            "staminaCostPerAttack": 8.5,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1025,7 +1028,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.5
+            "staminaCostPerAttack": 4.5
           }
         },
         "groundCoverHarvest": {
@@ -1121,7 +1124,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.2,
+            "staminaCostPerAttack": 3.5,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1337,7 +1340,7 @@
             "ProjectileDamageMultiplier": 1.0,
             "MaxAimDistance": 24.0,
             "SpawnForwardOffset": 0.45,
-            "StaminaConsumePerSecond": 2.25,
+            "StaminaConsumePerSecond": 6.0,
             "NockedArrowStartLocalPosition": {
               "x": 0.14,
               "y": 0.0,
@@ -1375,7 +1378,8 @@
       "modules": {
         "bow": {
           "parameters": {
-            "ProjectileDamageMultiplier": 1.5
+            "ProjectileDamageMultiplier": 1.5,
+            "StaminaConsumePerSecond": 9.0
           }
         }
       }
@@ -1417,7 +1421,7 @@
       "modules": {
         "bow": {
           "parameters": {
-            "StaminaConsumePerSecond": 1.5,
+            "StaminaConsumePerSecond": 6.0,
             "ShowNockedAmmo": false,
             "OverrideHeldVisualTransform": true,
             "HeldVisualLocalPosition": {
@@ -1487,7 +1491,7 @@
             "ProjectileSpeedMultiplier": 2.0,
             "MaxAimDistance": 32.0,
             "SpawnForwardOffset": 0.45,
-            "StaminaConsumePerSecond": 1.0,
+            "StaminaConsumePerSecond": 6.0,
             "ShowTrajectoryPreview": true,
             "TrajectoryPreviewSegments": 28,
             "TrajectoryPreviewLineWidth": 0.04,

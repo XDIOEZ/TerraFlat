@@ -42,14 +42,15 @@ test.check("gm_damage_normal", "伤害倍率恢复正常")
 
 -- 走真实定义、手持工厂和公开动作接口，业务断言留在 Lua；不直接打开伤害碰撞体。
 local referenceWeapon = nil
+local hammerReference = nil
 local function nearWeapon(actual, expected, label)
     assert(type(actual) == "number" and math.abs(actual - expected) < .0001, label .. "错误")
 end
 for _, weaponCase in ipairs({
-    {id = "ChippedTool", name = "打制石器", physical = 6, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1", timeScale = 1},
-    {id = "Obsidian", name = "黑曜石", physical = 9, stamina = 1.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
-    {id = "WoodHammer", name = "木锤", physical = 6, stamina = 0.9, impact = 4, shell = "Stick", attack = "Attack_2", timeScale = 2},
-    {id = "StoneHammer", name = "石锤", physical = 10, stamina = 2.7, impact = 4, shell = "Stick", attack = "Attack_2"}
+    {id = "ChippedTool", name = "打制石器", physical = 6, stamina = 4.5, impact = 1, shell = "ChippedTool", attack = "Attack_1", timeScale = 1},
+    {id = "Obsidian", name = "黑曜石", physical = 9, stamina = 6.5, impact = 1, shell = "ChippedTool", attack = "Attack_1"},
+    {id = "WoodHammer", name = "木锤", physical = 6, stamina = 5, impact = 4, shell = "Stick", attack = "Attack_2", timeScale = 2},
+    {id = "StoneHammer", name = "石锤", physical = 10, stamina = 7, impact = 4, shell = "Stick", attack = "Attack_2"}
 }) do
     local case = weaponCase
     test.runtime("combat", "held_weapon_action", {weaponId = case.id, attackStateName = case.attack,
@@ -112,10 +113,17 @@ for _, weaponCase in ipairs({
             assert(referenceWeapon ~= nil, "缺少打制石器的真实参考采样")
             assert(data.rendererPath == "Render/Render_1", "黑曜石贴图没有绑定武器的实际渲染节点")
             nearWeapon(data.physicalDamage, referenceWeapon.physicalDamage * 1.5, "黑曜石相对打制石器的伤害倍率")
-            nearWeapon(data.staminaCostPerAttack, referenceWeapon.staminaCostPerAttack, "两件武器的基础精力一致性")
+            assert(data.staminaCostPerAttack > referenceWeapon.staminaCostPerAttack, "黑曜石伤害提高后体力消耗未同步提高")
             nearWeapon(data.attackSpeedMultiplier, referenceWeapon.attackSpeedMultiplier, "两件武器的攻击速度一致性")
-            nearWeapon(data.staminaBeforeAction - data.staminaAfterAction,
-                referenceWeapon.staminaBeforeAction - referenceWeapon.staminaAfterAction, "同一玩家两件武器的即时精力扣除一致性")
+            assert(data.staminaBeforeAction - data.staminaAfterAction >
+                referenceWeapon.staminaBeforeAction - referenceWeapon.staminaAfterAction,
+                "高伤害武器没有消耗更多的实际体力")
+        elseif case.id == "WoodHammer" then
+            hammerReference = data
+        elseif case.id == "StoneHammer" then
+            assert(hammerReference ~= nil and data.physicalDamage > hammerReference.physicalDamage
+                and data.staminaCostPerAttack > hammerReference.staminaCostPerAttack,
+                "升级石锤后伤害提高，基础体力消耗却没有提高")
         end
     end, case.name .. "正式手持装配、数值与动画伤害窗")
 end

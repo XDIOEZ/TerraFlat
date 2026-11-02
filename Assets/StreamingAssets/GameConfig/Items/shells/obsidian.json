@@ -46,7 +46,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 1.5
+            "staminaCostPerAttack": 6.5
           }
         }
       }
@@ -106,6 +106,7 @@
         "flipY": false
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 6.5 } },
         "damage": {
           "parameters": {
             "DamageValues": {
@@ -134,6 +135,7 @@
         "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 9 } },
         "damage": {
           "parameters": {
             "DamageValues": {

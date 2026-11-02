@@ -75,8 +75,10 @@ test.system("combat", "archery_cycle", {steps = {
         assert(p[key] == reference[key], "弩的数值没有沿用反曲弓：" .. key)
     end
     assert(p.FullChargeSeconds == 1 and p.ProjectileDamageMultiplier == 1.5
-        and p.StaminaConsumePerSecond == 2.25 and data.woodBowStamina == 2.25
-        and data.blowgunStamina == 1.5, "弓体力未乘1.5或误改吹箭体力")
+        and p.StaminaConsumePerSecond == 9 and data.woodBowStamina == 6
+        and data.blowgunStamina == 6
+        and p.StaminaConsumePerSecond == data.woodBowStamina * p.ProjectileDamageMultiplier,
+        "高伤反曲弓、弩或吹箭的蓄力体力数值不符合平衡规则")
     assert(s[1].started and s[3].charge == 1 and s[4].shots == 0, "蓄满自动发射或蓄力比例错误")
     assert(s[5].release == "Loaded" and s[5].active and s[5].shots == 0,
         "弩第一次松手没有保留上膛状态")
@@ -85,7 +87,7 @@ test.system("combat", "archery_cycle", {steps = {
     assert(s[10].release == "Fire" and s[10].shots == 1 and not s[10].active
         and s[11].shots == 1, "第二次松手没有发射或重复发射")
     for index = 3, #s do
-        assert(math.abs(s[index].stamina - 2.25) < .00001, "蓄满后或上膛待发时继续耗体力")
+        assert(math.abs(s[index].stamina - 9) < .00001, "蓄满后或上膛待发时继续耗体力")
     end
 end, "弩：反曲弓数值、满蓄力停止耗体力、两次松开与防重复发射")
 
@@ -113,7 +115,7 @@ test.system("combat", "archery_cycle", {weaponId = "Bow_Recurve", steps = {
         "普通弓未满蓄力松手不再发射")
     assert(s[6].shots == 1 and s[7].shots == 2 and s[7].release == "Fire",
         "普通弓被改为自动发射或需要第二次松开")
-    assert(math.abs(s[6].stamina - 7.3125) < .00001, "普通弓满蓄力持箭不再持续消耗体力")
+    assert(math.abs(s[6].stamina - 29.25) < .00001, "普通弓满蓄力持箭不再持续消耗体力")
 end, "反曲弓：松手即发射与满蓄力持续耗体力")
 
 -- 投石索弹药必须在正式继承后具备投射物与伤害模块。
@@ -124,6 +126,8 @@ test.system("combat", "archery_cycle", {weaponId = "StoneThrowingRope", ammoIds 
     for _, entry in ipairs(data.ammunition) do ammo[entry.id] = entry end
     assert(p.AmmoItemId == "Ore_Stone" and p.AmmoTag == "SlingAmmo" and not p.UseHeldItemAsAmmo,
         "投石索没有从库存选取石头和矿石弹药")
+    assert(p.StaminaConsumePerSecond == 6 and p.FullChargeSeconds == 1.2,
+        "投石索没有应用重平衡后的蓄力体力消耗")
     local reference = ammo.SlingAmmo_Base.modules.projectile.parameters
     for _, id in ipairs({"Ore_Stone", "Ore_Copper", "Ore_Iron", "Ore_Tin", "Ore_Gold"}) do
         local modules = ammo[id].modules
