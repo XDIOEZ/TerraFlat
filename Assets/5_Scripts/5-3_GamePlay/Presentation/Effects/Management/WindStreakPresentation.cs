@@ -6,16 +6,19 @@ public sealed class WindStreakPresentation
     #region 风纹漂移
 
     public const float PatternRepeatCells = 128f;
+    private const int MinimumWindStreakLevel = 6;
 
     public Vector2 Phase { get; private set; }
     public Vector2 Direction { get; private set; }
     public Vector4 Parameters { get; private set; }
     public bool IsVisible { get; private set; }
 
-    public void Step(Vector2 wind, Vector2 cameraDelta, float deltaTime,
+    public void Step(Vector2 wind, float actualWindStrength, Vector2 cameraDelta, float deltaTime,
         WorldRenderingConfig.RenderingWindStreaks config)
     {
         if (!float.IsFinite(wind.x) || !float.IsFinite(wind.y) ||
+            // 实际风力负责显示门槛，平滑后的风只负责线条的方向与动画。
+            WindEnvironmentRules.ResolveWindLevel(actualWindStrength) < MinimumWindStreakLevel ||
             !float.IsFinite(cameraDelta.x) || !float.IsFinite(cameraDelta.y) ||
             config == null || !config.TryResolve(wind.magnitude, out Vector4 parameters))
         {

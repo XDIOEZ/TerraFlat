@@ -24,11 +24,15 @@ public static partial class GameplayTestSystemProbe
             foreach (JObject step in steps)
             {
                 if (Flag(step, "reset", false)) state.Reset();
-                else state.Step(new Vector2(
+                else
+                {
+                    Vector2 wind = new Vector2(
                         Flag(step, "invalidWind", false) ? float.NaN : (float)Number(step, "x", 0.85),
-                        (float)Number(step, "y", 0)),
-                    new Vector2((float)Number(step, "cameraX", 0), (float)Number(step, "cameraY", 0)),
-                    Flag(step, "invalidSeconds", false) ? float.NaN : (float)Number(step, "seconds", 0), config);
+                        (float)Number(step, "y", 0));
+                    state.Step(wind, (float)Number(step, "actualStrength", wind.magnitude),
+                        new Vector2((float)Number(step, "cameraX", 0), (float)Number(step, "cameraY", 0)),
+                        Flag(step, "invalidSeconds", false) ? float.NaN : (float)Number(step, "seconds", 0), config);
+                }
                 samples.Add(new JObject
                 {
                     ["visible"] = state.IsVisible,
@@ -43,7 +47,17 @@ public static partial class GameplayTestSystemProbe
         {
             ["validConfig"] = config.IsValid, ["samples"] = samples,
             ["cellX"] = config.cellSize.x, ["cellY"] = config.cellSize.y,
-            ["period"] = WindStreakPresentation.PatternRepeatCells
+            ["period"] = WindStreakPresentation.PatternRepeatCells,
+            ["cacheCoverage"] = new JObject
+            {
+                ["initial"] = WindStreakObstacleField.ContainsArea(0, 0, 60, 60, 8, 8, 44, 44),
+                ["moveEightRight"] = WindStreakObstacleField.ContainsArea(0, 0, 60, 60, 16, 8, 44, 44),
+                ["moveEightLeft"] = WindStreakObstacleField.ContainsArea(0, 0, 60, 60, 0, 8, 44, 44),
+                ["moveNineRight"] = WindStreakObstacleField.ContainsArea(0, 0, 60, 60, 17, 8, 44, 44),
+                ["zoomBeyondCache"] = WindStreakObstacleField.ContainsArea(0, 0, 60, 60, 8, 8, 53, 44),
+                ["negativeCoordinates"] = WindStreakObstacleField.ContainsArea(-64, -64, 60, 60, -56, -56, 44, 44),
+                ["emptyCache"] = WindStreakObstacleField.ContainsArea(0, 0, 0, 0, 8, 8, 44, 44)
+            }
         };
         if (args["obstacleRows"] is JArray rows && rows.Count > 0)
         {

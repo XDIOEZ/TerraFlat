@@ -95,7 +95,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
             Vector2 cameraPosition = WorldLocalPresentation.ToLogical((Vector2)source.transform.position);
             Vector2 delta = hasCameraPosition
                 ? WorldTopologyRuntime.ShortestDelta(lastCameraPosition, cameraPosition) : Vector2.zero;
-            presentation.Step(weather.PresentedWind, delta, Time.deltaTime, config);
+            presentation.Step(weather.PresentedWind, weather.CurrentWindStrength, delta, Time.deltaTime, config);
             lastCameraPosition = cameraPosition;
             hasCameraPosition = presentation.IsVisible;
             sampledFrame = Time.frameCount;
