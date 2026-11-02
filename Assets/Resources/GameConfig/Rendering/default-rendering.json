@@ -1,18 +1,19 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "preferences": {
     "graphicsPreset": 0,
     "postProcessQuality": 0,
+    "postProcessStyle": 1,
     "waterStyle": 1,
     "playerOcclusion": false
   },
   "shadows": {
     "sunEnabled": true,
     "blurEnabled": true,
-    "blurStrength": 0.3,
+    "blurStrength": 0.4,
     "minimumBlurStrength": 0.0,
     "maximumBlurStrength": 1.0,
-    "maximumOpacity": 0.34,
+    "maximumOpacity": 0.30,
     "minimumLength": 0.35,
     "maximumLength": 2.8,
     "maximumDistance": 8.0,
@@ -99,35 +100,95 @@
     "maximumThicknessPixels": 6.0
   },
   "postProcess": {
-    "worldVolume": {
-      "bloom": {
-        "enabled": true,
-        "threshold": 1.05,
-        "intensity": 0.3,
-        "scatter": 0.55,
-        "clamp": 8.0,
-        "highQualityFiltering": true,
-        "downscale": 0,
-        "maxIterations": 5
+    "worldVolumes": [
+      {
+        "bloom": {
+          "enabled": true,
+          "threshold": 1.25,
+          "intensity": 0.08,
+          "scatter": 0.38,
+          "clamp": 8.0,
+          "highQualityFiltering": true,
+          "downscale": 0,
+          "maxIterations": 4
+        },
+        "colorGrading": { "postExposure": 0.03, "contrast": 10.0, "saturation": 2.0 },
+        "whiteBalance": { "temperature": 0.0, "tint": 0.0 },
+        "splitToning": {
+          "shadows": { "r": 0.5, "g": 0.5, "b": 0.5, "a": 1.0 },
+          "highlights": { "r": 0.5, "g": 0.5, "b": 0.5, "a": 1.0 },
+          "balance": 0.0
+        },
+        "tonemappingMode": 1,
+        "vignette": {
+          "color": { "r": 0.025, "g": 0.035, "b": 0.055, "a": 1.0 },
+          "center": { "x": 0.5, "y": 0.5 },
+          "intensity": 0.035,
+          "smoothness": 0.65,
+          "rounded": false
+        },
+        "mediumBloomIntensityScale": 0.75,
+        "mediumBloomMaxIterations": 3
       },
-      "colorGrading": { "postExposure": 0.05, "contrast": 8.0, "saturation": 6.0 },
-      "whiteBalance": { "temperature": 3.0, "tint": 1.0 },
-      "splitToning": {
-        "shadows": { "r": 0.48, "g": 0.495, "b": 0.52, "a": 1.0 },
-        "highlights": { "r": 0.53, "g": 0.515, "b": 0.485, "a": 1.0 },
-        "balance": 0.0
+      {
+        "bloom": {
+          "enabled": true,
+          "threshold": 1.1,
+          "intensity": 0.27,
+          "scatter": 0.48,
+          "clamp": 8.0,
+          "highQualityFiltering": true,
+          "downscale": 0,
+          "maxIterations": 5
+        },
+        "colorGrading": { "postExposure": 0.065, "contrast": 10.0, "saturation": 6.0 },
+        "whiteBalance": { "temperature": 4.0, "tint": 1.0 },
+        "splitToning": {
+          "shadows": { "r": 0.48, "g": 0.492, "b": 0.513, "a": 1.0 },
+          "highlights": { "r": 0.531, "g": 0.518, "b": 0.488, "a": 1.0 },
+          "balance": 0.0
+        },
+        "tonemappingMode": 1,
+        "vignette": {
+          "color": { "r": 0.025, "g": 0.035, "b": 0.055, "a": 1.0 },
+          "center": { "x": 0.5, "y": 0.5 },
+          "intensity": 0.09,
+          "smoothness": 0.67,
+          "rounded": false
+        },
+        "mediumBloomIntensityScale": 0.75,
+        "mediumBloomMaxIterations": 4
       },
-      "tonemappingMode": 1,
-      "vignette": {
-        "color": { "r": 0.025, "g": 0.035, "b": 0.055, "a": 1.0 },
-        "center": { "x": 0.5, "y": 0.5 },
-        "intensity": 0.14,
-        "smoothness": 0.65,
-        "rounded": false
-      },
-      "mediumBloomIntensityScale": 0.75,
-      "mediumBloomMaxIterations": 4
-    },
+      {
+        "bloom": {
+          "enabled": true,
+          "threshold": 1.08,
+          "intensity": 0.36,
+          "scatter": 0.61,
+          "clamp": 8.0,
+          "highQualityFiltering": true,
+          "downscale": 0,
+          "maxIterations": 5
+        },
+        "colorGrading": { "postExposure": 0.02, "contrast": 15.0, "saturation": -4.0 },
+        "whiteBalance": { "temperature": -2.0, "tint": 0.0 },
+        "splitToning": {
+          "shadows": { "r": 0.45, "g": 0.485, "b": 0.55, "a": 1.0 },
+          "highlights": { "r": 0.57, "g": 0.53, "b": 0.475, "a": 1.0 },
+          "balance": 0.0
+        },
+        "tonemappingMode": 1,
+        "vignette": {
+          "color": { "r": 0.025, "g": 0.035, "b": 0.055, "a": 1.0 },
+          "center": { "x": 0.5, "y": 0.5 },
+          "intensity": 0.20,
+          "smoothness": 0.7,
+          "rounded": false
+        },
+        "mediumBloomIntensityScale": 0.75,
+        "mediumBloomMaxIterations": 4
+      }
+    ],
     "transitionSeconds": 0.12,
     "minimumActiveIntensity": 0.0005,
     "defaultVignetteSmoothness": 0.82,

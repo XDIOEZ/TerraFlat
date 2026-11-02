@@ -133,6 +133,11 @@ public static partial class RuntimeUIPrefabBuilder
             "特效质量",
             GameManager.MainMenuSettingsEffectsQualityKey,
             new[] { "高", "中", "低" });
+        CreateSettingsDropdownRow(
+            graphicsPage,
+            "画面风格",
+            GameManager.MainMenuSettingsPostProcessStyleKey,
+            new[] { "清晰原色", "自然柔光", "电影氛围" });
         return graphicsPage;
     }
 

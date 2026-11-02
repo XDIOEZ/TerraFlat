@@ -18,6 +18,22 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 202611020000001
+    m_Localized: "画面风格"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000002
+    m_Localized: "清晰原色"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000003
+    m_Localized: "自然柔光"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000004
+    m_Localized: "电影氛围"
+    m_Metadata:
+      m_Items: []
   - m_Id: 28102700009000001
     m_Localized: "大气检测仪"
     m_Metadata:

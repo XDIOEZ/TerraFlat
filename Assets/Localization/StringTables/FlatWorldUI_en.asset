@@ -18,6 +18,22 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 202611020000001
+    m_Localized: "Visual Style"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000002
+    m_Localized: "Clear Pixel"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000003
+    m_Localized: "Soft Natural"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000004
+    m_Localized: "Cinematic"
+    m_Metadata:
+      m_Items: []
   - m_Id: 28102700009000001
     m_Localized: "Atmosphere Analyzer"
     m_Metadata:

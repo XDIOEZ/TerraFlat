@@ -1,4 +1,23 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "post_process_styles", {}, function(data)
+    assert(#data.styleOptions == 3 and #data.profiles == 3 and data.qualityOptions == 3,
+        "画面风格与画质档位的三种选项未独立注册")
+    assert(data.defaultStyle == 1, "默认画面风格应为自然柔光")
+    assert(data.styleOptions[1] == "clear" and data.styleOptions[2] == "soft"
+        and data.styleOptions[3] == "cinematic", "画面风格持久化选项顺序改变")
+    local clear, soft, cinema = data.profiles[1], data.profiles[2], data.profiles[3]
+    assert(clear.bloom < soft.bloom and soft.bloom < cinema.bloom,
+        "三种画面风格没有明显不同的泛光强度")
+    assert(clear.vignette < soft.vignette and soft.vignette < cinema.vignette,
+        "三种画面风格没有明显不同的暗角强度")
+    assert(clear.saturation < soft.saturation and cinema.saturation < soft.saturation,
+        "自然柔光未保留更鲜明的色彩")
+    assert(clear.threshold > soft.threshold and soft.threshold > cinema.threshold,
+        "清晰原色的高亮阈值没有保护像素边缘")
+    assert(data.shadowBlur > 0.3 and data.shadowOpacity < 0.34,
+        "世界光照阴影没有变得更柔和")
+end, "画面风格：三套独立配置、默认值和柔和光照")
+
 do
     local function sameCircles(first, second)
         assert(#first == #second, "重新手持改变了咬痕数量")

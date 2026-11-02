@@ -38,6 +38,7 @@ public partial class GameManager
     public const string MainMenuSettingsPreferredControlKey = "界面缩放";
     public const string MainMenuSettingsQualityPresetKey = "画质预设下拉列表";
     public const string MainMenuSettingsEffectsQualityKey = "特效质量下拉列表";
+    public const string MainMenuSettingsPostProcessStyleKey = "画面风格下拉列表";
     public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
     public const string MainMenuSettingsLanguageStatusTextKey = "设置状态";
     public const string MainMenuExitConfirmationPanelKey = RuntimeUIPrefabKeys.MainMenuExitConfirmation;
@@ -946,7 +947,7 @@ public partial class GameManager
         SetMainMenuSettingsStatus(panel, "所有设置已恢复默认");
     }
 
-    /// <summary>按持久化设置回填两个画质下拉框。</summary>
+    /// <summary>按持久化设置回填整体画质、特效质量和画面风格。</summary>
     private static void RefreshMainMenuSettingsQuality(BasePanel panel)
     {
         TMP_Dropdown qualityDropdown = GetMainMenuSettingsDropdown(
@@ -955,6 +956,9 @@ public partial class GameManager
         TMP_Dropdown effectsQualityDropdown = GetMainMenuSettingsDropdown(
             panel,
             MainMenuSettingsEffectsQualityKey);
+        TMP_Dropdown styleDropdown = GetMainMenuSettingsDropdown(
+            panel,
+            MainMenuSettingsPostProcessStyleKey);
 
         ISettingsDropdown qualitySetting =
             GraphicsUserSettings.SettingsProvider.GetDropdown(
@@ -962,6 +966,9 @@ public partial class GameManager
         ISettingsDropdown effectsQualitySetting =
             ScreenPostProcessSettings.SettingsProvider.GetDropdown(
                 ScreenPostProcessSettings.QualitySettingKey);
+        ISettingsDropdown styleSetting =
+            ScreenPostProcessSettings.SettingsProvider.GetDropdown(
+                ScreenPostProcessSettings.StyleSettingKey);
 
         if (qualityDropdown != null && qualitySetting != null)
         {
@@ -974,6 +981,11 @@ public partial class GameManager
             effectsQualityDropdown.SetValueWithoutNotify(
                 effectsQualitySetting.SelectedIndex);
             effectsQualityDropdown.RefreshShownValue();
+        }
+        if (styleDropdown != null && styleSetting != null)
+        {
+            styleDropdown.SetValueWithoutNotify(styleSetting.SelectedIndex);
+            styleDropdown.RefreshShownValue();
         }
     }
 
