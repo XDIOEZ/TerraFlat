@@ -78,6 +78,7 @@ public static class ActorActionConstraints
         if (!remoteAuthority && !mover.TryAcquireDrivenMotion(Vector2.zero, out motion)) return false;
         lease = new FollowLease(follower, anchor, mover, motion, remoteAuthority);
         Followers[follower] = lease;
+        GameplayFixedStepSimulation.Register(lease, GameplayFixedStepSimulationPhase.PhysicsPreparation);
         return true;
     }
     public static bool TryGetForcedPosition(Item follower, out Vector3 position)
@@ -87,7 +88,23 @@ public static class ActorActionConstraints
         position = lease.Position;
         return true;
     }
-    public sealed class FollowLease : IDisposable
+    internal static Vector2 ResolveFollowWorldVelocity(Vector2 positionError, Vector2 anchorVelocity,
+        float seconds, float maximumCorrectionSpeed)
+    {
+        if (!float.IsFinite(seconds) || seconds <= 0f || !float.IsFinite(maximumCorrectionSpeed) ||
+            !float.IsFinite(positionError.x) || !float.IsFinite(positionError.y) ||
+            !float.IsFinite(anchorVelocity.x) || !float.IsFinite(anchorVelocity.y)) return Vector2.zero;
+        return anchorVelocity + Vector2.ClampMagnitude(positionError / seconds, Mathf.Max(0f, maximumCorrectionSpeed));
+    }
+
+    private static Vector3 ReadFollowPhysicsPosition(Item actor)
+    {
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(actor);
+        Vector3 position = actor.transform.position;
+        return body != null ? new Vector3(body.position.x, body.position.y, position.z) : position;
+    }
+
+    public sealed class FollowLease : IDisposable, IGameplayFixedStepSimulationSystem
     {
         private Item follower, anchor;
         private readonly ItemData followerData, anchorData;
@@ -102,7 +119,9 @@ public static class ActorActionConstraints
             follower = target; anchor = source; mover = movement; motion = driven; remoteAuthority = remote;
             followerData = target.itemData; anchorData = source.itemData; scene = source.gameObject.scene.handle;
             followerGeneration = target.RuntimeGeneration; anchorGeneration = source.RuntimeGeneration;
-            offset = Vector2.ClampMagnitude(WorldTopologyRuntime.ShortestDelta(source.transform.position, target.transform.position), .7f);
+            using var world = target.UseOwnedWorldForItemCallbacks();
+            offset = Vector2.ClampMagnitude(WorldTopologyRuntime.ShortestDelta(
+                ReadFollowPhysicsPosition(source), ReadFollowPhysicsPosition(target)), .7f);
         }
         public bool IsActive => follower != null && anchor != null && !follower.DestructionHandled && !anchor.DestructionHandled &&
             ReferenceEquals(follower.itemData, followerData) && ReferenceEquals(anchor.itemData, anchorData) &&
@@ -110,16 +129,32 @@ public static class ActorActionConstraints
             follower.gameObject.scene.handle == scene && anchor.gameObject.scene.handle == scene &&
             follower.gameObject.activeInHierarchy && anchor.gameObject.activeInHierarchy &&
             (remoteAuthority || motion?.IsActive == true);
-        public Vector3 Position => WorldTopologyRuntime.NormalizePosition(anchor.transform.position + (Vector3)offset);
-        public void Tick(float seconds)
+        public Vector3 Position
         {
-            if (!IsActive || seconds <= 0f) return;
+            get
+            {
+                using var world = anchor?.UseOwnedWorldForItemCallbacks();
+                return anchor != null ? WorldTopologyRuntime.NormalizePosition(
+                    ReadFollowPhysicsPosition(anchor) + (Vector3)offset) : default;
+            }
+        }
+        public void SimulateFixedStep(float seconds)
+        {
+            if (!IsActive || !GameNetwork.HasStateAuthority || !remoteAuthority && !mover.IsSurfaceMotionAvailable)
+            { Dispose(); return; }
+            if (!float.IsFinite(seconds) || seconds <= 0f) return;
             if (remoteAuthority) return;
-            Vector2 delta = WorldTopologyRuntime.ShortestDelta(follower.transform.position, Position);
-            motion.SetVelocity(Vector2.ClampMagnitude(delta / seconds, Mathf.Max(1f, mover.WalkingSpeed * 4f)));
+            using var world = follower.UseOwnedWorldForItemCallbacks();
+            Rigidbody2D anchorBody = WorldPhysicsService2D.GetItemRigidbody(anchor);
+            Vector2 anchorVelocity = anchorBody != null && anchorBody.simulated ? anchorBody.velocity : Vector2.zero;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(ReadFollowPhysicsPosition(follower), Position);
+            // 每个物理步追随锚点的真实速度，不依赖 AI 降频或渲染 Transform 的刷新顺序。
+            motion.SetWorldVelocity(ResolveFollowWorldVelocity(delta, anchorVelocity, seconds,
+                Mathf.Max(1f, mover.WalkingSpeed * 4f)));
         }
         public void Dispose()
         {
+            GameplayFixedStepSimulation.Unregister(this);
             if (!ReferenceEquals(follower, null) && Followers.TryGetValue(follower, out var current) && ReferenceEquals(current, this))
                 Followers.Remove(follower);
             motion?.Dispose(); follower = anchor = null;

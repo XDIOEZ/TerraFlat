@@ -123,7 +123,13 @@ public sealed class AnimalChasePositionCapability : AnimalBehaviorTreeCapability
         if (target == null || IsBlocked(target)) { context.Mod_Mover.StopMovement(); return; }
         Vector3 destination = targetPosition;
         float approach = range;
-        if (HasSidePosition)
+        bool dispersedPursuit = pack?.PursuitTarget.HasValue == true && !IsInsideRange(targetPosition, range);
+        if (dispersedPursuit)
+        {
+            destination = pack.PursuitTarget.Value;
+            approach = Mathf.Min(range, .3f);
+        }
+        else if (HasSidePosition)
         {
             destination = SidePosition(target, range);
             float horizontalMargin = range - Mathf.Abs(WorldTopologyRuntime.ShortestDelta(targetPosition, destination).x);
@@ -147,6 +153,15 @@ public sealed class AnimalChasePositionCapability : AnimalBehaviorTreeCapability
         }
         WorldNavigationDestinationResult result = context.Mod_Mover.SetInteractionDestination(destination, approach,
             AnimalLandTargetRules.Integer(config, "pathCostLimit", 440));
+        if (dispersedPursuit && (result == WorldNavigationDestinationResult.RejectedByPathCost ||
+            result == WorldNavigationDestinationResult.Failed))
+        {
+            // 包抄路线走不通只撤销战术偏移，不把仍可直追的真实目标判为不可达。
+            pack.RejectPursuitDestination();
+            destination = targetPosition;
+            result = context.Mod_Mover.SetInteractionDestination(destination, range,
+                AnimalLandTargetRules.Integer(config, "pathCostLimit", 440));
+        }
         if (result == WorldNavigationDestinationResult.RejectedByPathCost)
         {
             rejectedTarget = target;

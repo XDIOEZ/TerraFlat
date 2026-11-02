@@ -17,6 +17,11 @@ public static partial class GameplayTestSystemProbe
             new JObject { ["count"] = 3, ["probeMemory"] = true }));
         operations.Add("ai/wolf_combat_position", _ => EntityAiWolfPack(
             new JObject { ["count"] = 3, ["probeCombat"] = true }));
+        operations.Add("ai/wolf_attack_continuity", args => EntityAiWolfPack(
+            new JObject { ["count"] = 3, ["probeAttackContinuity"] = true,
+                ["ticksPerSecond"] = Number(args, "ticksPerSecond", 30) }));
+        operations.Add("ai/wolf_dispersed_pursuit", _ => EntityAiWolfPack(
+            new JObject { ["count"] = 4, ["probeDispersedPursuit"] = true }));
         operations.Add("ai/wolf_crowded_formation", _ => EntityAiWolfPack(
             new JObject { ["count"] = 12, ["probeCrowdedFormation"] = true }));
         operations.Add("ai/wolf_crowded_combat", _ => EntityAiWolfPack(
@@ -197,6 +202,10 @@ public static partial class GameplayTestSystemProbe
                 return SampleWolfTargetMemory(wolves, detectors, player);
             if (probeCombat)
                 return SampleWolfCombatPosition(wolves, detectors[0], player);
+            if (Flag(args, "probeAttackContinuity", false))
+                return SampleWolfAttackContinuity(wolves, player, (int)Number(args, "ticksPerSecond", 30));
+            if (Flag(args, "probeDispersedPursuit", false))
+                return SampleWolfDispersedPursuit(wolves, player);
             if (Flag(args, "probeCrowdedCombat", false))
                 return SampleWolfCrowdedCombatPosition(wolves, player);
             if (Flag(args, "probeCrowdedFormation", false))
@@ -261,6 +270,94 @@ public static partial class GameplayTestSystemProbe
             foreach (Item item in root.GetComponentsInChildren<Item>(true)) GameplayWorldRegistry.AssignItemToWorld(item, null);
             UnityEngine.Object.DestroyImmediate(root);
         }
+    }
+
+    private static JObject SampleWolfAttackContinuity(List<GameplayTestWolfPackProbeAI> wolves,
+        Item player, int ticksPerSecond)
+    {
+        if (Application.isPlaying || ChunkMgr.ExistingInstance != null)
+            throw new InvalidOperationException("狼连续攻击规则只允许在未加载世界的编辑态执行。");
+        GameplayTestWolfPackProbeAI wolf = wolves[0];
+        player.transform.position = Vector3.zero;
+        wolf.transform.position = new Vector3(-1.8f, 0f);
+        wolves[1].transform.position = new Vector3(4f, 2f);
+        wolves[2].transform.position = new Vector3(4f, -2f);
+        wolf.TickCombatProbe(0f);
+        bool firstStarted = wolf.IsAttackLocked;
+        bool previousWindow = wolf.IsDamageWindowActive;
+        bool continuedWindup = false;
+        int windows = 0;
+        float firstWindowSeconds = -1f;
+        ticksPerSecond = Mathf.Clamp(ticksPerSecond, 20, 120);
+        float step = 1f / ticksPerSecond;
+        // 连续推进完整生产树，不能只推进计时器而漏掉高优先分支抢占。
+        for (int tick = 1; tick <= ticksPerSecond * 6; tick++)
+        {
+            wolf.Host.ModUpdate(step);
+            if (tick == 1) continuedWindup = wolf.IsAttackLocked && wolf.AttackCooldownRemaining <= 0f;
+            bool window = wolf.IsDamageWindowActive;
+            if (window && !previousWindow)
+            {
+                windows++;
+                if (firstWindowSeconds < 0f) firstWindowSeconds = tick * step;
+            }
+            previousWindow = window;
+        }
+        return new JObject
+        {
+            ["ticksPerSecond"] = ticksPerSecond, ["firstStarted"] = firstStarted,
+            ["continuedWindup"] = continuedWindup, ["damageWindows"] = windows,
+            ["firstWindowSeconds"] = firstWindowSeconds, ["windupSeconds"] = wolf.attackDamageStartDelay
+        };
+    }
+
+    private static JObject SampleWolfDispersedPursuit(List<GameplayTestWolfPackProbeAI> wolves, Item player)
+    {
+        player.transform.position = new Vector3(15f, 0f);
+        var points = new JArray();
+        var distinctSlots = new HashSet<int>();
+        bool allAssigned = true;
+        for (int i = 0; i < wolves.Count; i++)
+        {
+            wolves[i].RefreshProbe();
+            allAssigned &= wolves[i].PursuitTarget.HasValue;
+            distinctSlots.Add(wolves[i].FormationSlot);
+            Vector3 point = wolves[i].PursuitTarget ?? player.transform.position;
+            points.Add(new JObject { ["x"] = point.x - player.transform.position.x,
+                ["y"] = point.y - player.transform.position.y });
+        }
+        GameplayTestWolfPackProbeAI first = wolves[0];
+        Vector3? beforeCall = first.ChaseFormationTarget;
+        int beforeSlot = first.FormationSlot;
+        first.ReceivePackCall(player, wolves[1]);
+        bool callKeepsFormation = first.ChaseFormationTarget == beforeCall && first.FormationSlot == beforeSlot;
+        first.RejectPursuitDestination();
+        first.RefreshProbe();
+        bool rejectedRouteSuppressed = !first.PursuitTarget.HasValue;
+        player.transform.position += Vector3.right * 1.1f;
+        first.RefreshProbe();
+        bool movedTargetAllowsRetry = first.PursuitTarget.HasValue;
+        Vector2 compact = new(-1.05f, 0f);
+        Vector2 near = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            1, 4, Vector2.right, compact, 2.1f, 2.1f, 3.2f, Vector2.right * 100f, .6f, 2f);
+        Vector2 still = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            1, 4, Vector2.right, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+        Vector2 moving = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            1, 4, Vector2.right, compact, 20f, 2.1f, 3.2f, Vector2.right * 100f, .6f, 2f);
+        Vector2 pairLeft = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            0, 2, Vector2.up, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+        Vector2 pairRight = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            1, 2, Vector2.up, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+        return new JObject
+        {
+            ["allAssigned"] = allAssigned, ["distinctSlots"] = distinctSlots.Count,
+            ["offsets"] = points, ["callKeepsFormation"] = callKeepsFormation,
+            ["rejectedRouteSuppressed"] = rejectedRouteSuppressed,
+            ["movedTargetAllowsRetry"] = movedTargetAllowsRetry,
+            ["nearReturnsToCombat"] = (near - compact).sqrMagnitude < .00001f,
+            ["predictionDistance"] = (moving - still).magnitude,
+            ["twoMemberFlanks"] = pairLeft.x < -3f && pairRight.x > 3f
+        };
     }
 
     // 直接推进正式攻击节点，采样偏离站位、刹车漂移、恢复追击和冷却连续性。
@@ -489,7 +586,10 @@ internal sealed class GameplayTestWolfPackProbeAI
     public bool WaitingAtLastThreatPosition => pack?.Memory.WaitingAtLastPosition == true;
     public Vector3 LastKnownThreatPosition => pack?.Memory.LastKnownPosition ?? default;
     public Vector3? ChaseFormationTarget => pack?.FormationTarget;
+    public Vector3? PursuitTarget => pack?.PursuitTarget;
+    public int FormationSlot => pack?.FormationSlot ?? -1;
     public bool IsAttackLocked => combat?.IsAttackLocked == true;
+    public bool IsDamageWindowActive => combat?.IsDamageWindowActive == true;
     public float AttackCooldownRemaining => combat?.CooldownRemaining ?? 0f;
     public float attackDamageStartDelay => Number("combat", "windup", .25f);
     public float attackDamageWindow => Number("combat", "damageWindow", .33333334f);
@@ -537,6 +637,7 @@ internal sealed class GameplayTestWolfPackProbeAI
 
     public void TriggerPackAttack(Item target) => pack.TriggerGroupAttack(target);
     public void ReceivePackCall(Item target, GameplayTestWolfPackProbeAI caller) => pack.ReceiveGroupCall(target, caller?.pack);
+    public void RejectPursuitDestination() => pack.RejectPursuitDestination();
     public void CancelAdvance() => Host.CancelAdvance();
     public T GetComponent<T>() where T : Component => Host.GetComponentInChildren<T>(true);
     public void ResetProbe() { Host.Unload(); Load(); }

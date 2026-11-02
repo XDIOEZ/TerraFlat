@@ -76,13 +76,37 @@ test.system("ai", "wolf_combat_position", {}, function(data)
         "丢失视野后仍在攻击隐藏目标")
 end, "狼攻击优先于精确站位，到点保持、明显位移追击且冷却不中断")
 
+for _, rate in ipairs({20, 30, 60, 120}) do
+    test.system("ai", "wolf_attack_continuity", {ticksPerSecond = rate}, function(data)
+        assert(data.firstStarted and data.continuedWindup,
+            "普通攻击刚起手就被另一条攻击分支取消")
+        assert(data.damageWindows >= 2 and data.firstWindowSeconds >= data.windupSeconds - .0001 and
+            data.firstWindowSeconds <= data.windupSeconds + 1 / data.ticksPerSecond + .0001,
+            "连续运行完整行为树时没有按秒开窗，或冷却后不再攻击")
+    end, "狼完整攻击流程在" .. rate .. "TPS下不自我打断")
+end
+
+test.system("ai", "wolf_dispersed_pursuit", {}, function(data)
+    assert(data.allAssigned and data.distinctSlots == 4, "四狼追击没有分配独立包抄路线")
+    assert(data.offsets[1].x < 0 and data.offsets[2].y > 2 and
+        data.offsets[3].y < -2 and data.offsets[4].x > 2,
+        "同侧出发的狼仍排队追尾，没有后方施压、两翼和前方截路")
+    assert(data.callKeepsFormation, "同目标支援呼叫清掉了已分配的阵型")
+    assert(data.nearReturnsToCombat and data.twoMemberFlanks,
+        "近身后仍追宽包围圈，或双狼没有分走两翼")
+    assert(math.abs(data.predictionDistance - 2) < .001,
+        "目标高速移动时预判距离没有受限")
+    assert(data.rejectedRouteSuppressed and data.movedTargetAllowsRetry,
+        "不可达包抄路线持续反复提交，或目标移动后仍不重新考虑包抄")
+end, "狼群分散包抄、有限预判、近身收拢和不可达路线回退")
+
 test.system("ai", "wolf_crowded_formation", {}, function(data)
-    assert(data.members == 12 and data.assigned == 5 and data.free == 7,
-        "同侧大量围攻者超过唯一站位容量后仍强制争抢编队位置")
+    assert(data.members == 12 and data.assigned == 10 and data.free == 2,
+        "同侧围攻者没有均分两翼，或超额成员仍强制争抢编队位置")
     assert(data.distinctPositions, "围攻槽位高度钳制后产生重叠位置")
     assert(data.overflowWithoutSlot and data.overflowAttackState == "Attack",
         "同侧超额的狼已经进入真实攻击范围，却仍被无站位状态挡住攻击")
-end, "十二狼同侧围攻只有唯一编队位，多余成员自由接敌")
+end, "十二狼同侧围攻均分十个唯一编队位，多余成员自由接敌")
 
 test.system("ai", "wolf_crowded_combat", {}, function(data)
     assert(data.formationActive and data.attackState == "Attack" and data.attackStarted,

@@ -230,6 +230,9 @@ test.system("combat", "bite_attack", {}, function(data)
     assert(data.invalidTimingRejected and data.invalidSlowRejected, "无效周期或100%减速配置未被拒绝")
     assert(data.leftFacingCorrect and data.rightFacingCorrect and data.mouthHeightUnchanged,
         "撕咬朝向未同步身体、自动注视点或嘴前命中框（可能出现背对目标攻击）")
+    assert(data.followsAnchorAtEveryRate and data.zeroErrorKeepsAnchorVelocity and
+        data.followCorrectionCapped and data.invalidFollowStepRejected,
+        "挂咬跟随缺少目标真实速度、依赖TPS或位置纠偏未限速")
 end, "撕咬身体质量、配置与多来源动作租约")
 
 test.system("combat", "faction_relation_lookup", {}, function(data)

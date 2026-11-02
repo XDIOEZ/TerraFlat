@@ -83,6 +83,17 @@ public static partial class GameplayTestSystemProbe
             bool rightFacingCorrect = facedRight && facing.currentDirection.x > 0f && mouth.localPosition.x > 0f &&
                 Mathf.Abs(Mathf.DeltaAngle(visual.localEulerAngles.y, 0f)) < .5f && focus.Data.See_Point.x > 0f;
             bool mouthHeightUnchanged = Mathf.Approximately(mouth.localPosition.y, .29f);
+            bool followsAnchorAtEveryRate = true;
+            foreach (int rate in new[] { 20, 30, 60, 120 })
+            {
+                float seconds = 1f / rate;
+                Vector2 velocity = ActorActionConstraints.ResolveFollowWorldVelocity(
+                    new Vector2(.2f, -.1f) * seconds, new Vector2(2f, 1f), seconds, 4f);
+                followsAnchorAtEveryRate &= (velocity - new Vector2(2.2f, .9f)).sqrMagnitude < .000001f;
+            }
+            Vector2 fastAnchor = new(8f, 0f);
+            Vector2 cappedFollow = ActorActionConstraints.ResolveFollowWorldVelocity(
+                Vector2.right * 100f, fastAnchor, 1f / 30f, 4f);
             return new JObject
             {
                 ["equalHalfUsesA"] = !Mod_BiteAttack.ShouldCarry(40f, 20f),
@@ -98,7 +109,13 @@ public static partial class GameplayTestSystemProbe
                 ["releasedBlock"] = releasedBlock, ["persistedCooldown"] = persistedCooldown,
                 ["invalidTimingRejected"] = invalidTimingRejected, ["invalidSlowRejected"] = invalidSlowRejected,
                 ["leftFacingCorrect"] = leftFacingCorrect, ["rightFacingCorrect"] = rightFacingCorrect,
-                ["mouthHeightUnchanged"] = mouthHeightUnchanged
+                ["mouthHeightUnchanged"] = mouthHeightUnchanged,
+                ["followsAnchorAtEveryRate"] = followsAnchorAtEveryRate,
+                ["followCorrectionCapped"] = Mathf.Abs((cappedFollow - fastAnchor).magnitude - 4f) < .0001f,
+                ["zeroErrorKeepsAnchorVelocity"] = ActorActionConstraints.ResolveFollowWorldVelocity(
+                    Vector2.zero, fastAnchor, 1f / 30f, 4f) == fastAnchor,
+                ["invalidFollowStepRejected"] = ActorActionConstraints.ResolveFollowWorldVelocity(
+                    Vector2.one, fastAnchor, float.NaN, 4f) == Vector2.zero
             };
         }
         finally

@@ -144,7 +144,6 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
         { Cancel(); return; }
         // 挂咬/拖行期间持续面向被咬者，不沿用追逐时最后一次移动朝向。
         turnBody?.FaceWorldPosition(target.transform.position, true);
-        follow.Tick(seconds);
         if (carrying)
         {
             if (draggingMotion?.IsActive != true) { Cancel(); return; }

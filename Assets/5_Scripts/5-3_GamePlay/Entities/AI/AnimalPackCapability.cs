@@ -27,6 +27,10 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     private Vector3 formationPosition;
     private int formationSlot = -1;
     private int formationMemberCount;
+    private bool hasPursuitDestination;
+    private bool pursuitPathRejected;
+    private Vector3 pursuitPosition;
+    private Vector3 rejectedPursuitTarget;
     private AnimalPackCapability leader;
     private Vector3 groupCenter;
 
@@ -38,6 +42,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     public AnimalTargetMemoryCapability Memory => memory;
     public bool IsLeader => leader == this;
     public Vector3? FormationTarget => hasFormation ? formationPosition : (Vector3?)null;
+    public Vector3? PursuitTarget => hasPursuitDestination && memory.Visible ? pursuitPosition : (Vector3?)null;
     public int FormationSlot => formationSlot;
     public int FormationMemberCount => formationMemberCount;
     public bool HasAlert => alertTimer > 0f;
@@ -149,13 +154,15 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     {
         if (caller == this || !AnimalLandTargetRules.IsUsableOpponent(context, target) ||
             caller != null && FactionRelationService.GetRelation(caller.Actor, Actor) != FactionRelation.Friendly) return;
+        bool changedTarget = !memory.Matches(target);
         float loss = AnimalLandTargetRules.Number(config, "lossDistance", 44f);
         if (AnimalLandTargetRules.IsVisible(context, target, loss))
             memory.Remember(target, target.transform.position, true, true);
         else if (caller != null && caller.memory.Visible && caller.memory.Matches(target))
             memory.Remember(target, caller.memory.LastKnownPosition, false, true);
         else return;
-        ClearFormation();
+        // 同一目标的支援情报不撤销已有分工和守位状态。
+        if (changedTarget) ClearFormation();
         alertTimer = Mathf.Max(alertTimer, AnimalLandTargetRules.Number(config, "alertDuration", 2f));
         assistTimer = Mathf.Max(assistTimer, AnimalLandTargetRules.Number(config, "assistDuration", 5f));
     }
@@ -231,10 +238,17 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         { ClearFormation(); return; }
         formationMembers.Sort(CompareMembers);
         WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        bool dispersedPursuit = AnimalLandTargetRules.Flag(config, "encirclementEnabled", false);
         int left = 0, right = 0, slot = -1;
         for (int i = 0; i < formationMembers.Count; i++)
         {
             AnimalPackCapability member = formationMembers[i];
+            if (dispersedPursuit)
+            {
+                // 稳定身份均分两翼，不把同侧出生的成员全部锁死在玩家身后。
+                if (member == this) { slot = i; break; }
+                continue;
+            }
             // 已经选定的左右翼不随短距离穿插反复翻转。
             bool useRight = member.hasFormation && member.memory.Target == memory.Target
                 ? (member.formationSlot & 1) != 0
@@ -262,6 +276,42 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         formationSlot = slot;
         formationMemberCount = formationMembers.Count;
         hasFormation = true;
+        RefreshDispersedPursuitDestination(dispersedPursuit, target, separated, attackRange, topology);
+    }
+
+    private void RefreshDispersedPursuitDestination(bool enabled, Vector3 target, Vector2 combatOffset,
+        float attackRange, in WorldTopologyDomain topology)
+    {
+        hasPursuitDestination = false;
+        if (!enabled) return;
+        if (pursuitPathRejected)
+        {
+            if (GetChaseDelta(rejectedPursuitTarget, target, topology).sqrMagnitude < 1f) return;
+            pursuitPathRejected = false;
+        }
+        Vector2 toTarget = GetChaseDelta(context.Position, target, topology);
+        if (toTarget.sqrMagnitude <= attackRange * attackRange) return;
+        Rigidbody2D targetBody = WorldPhysicsService2D.GetItemRigidbody(memory.Target);
+        Vector2 velocity = targetBody != null && targetBody.simulated ? targetBody.velocity : Vector2.zero;
+        Vector2 forward = velocity.sqrMagnitude > .25f ? velocity
+            : GetChaseDelta(formationMembers[0].context.Position, target, topology);
+        Vector2 offset = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
+            formationSlot, Mathf.Min(formationMemberCount, MaximumFormationSlotsPerSide * 2), forward,
+            combatOffset, toTarget.magnitude, attackRange,
+            AnimalLandTargetRules.Number(config, "pursuitSpreadRadius", 3.2f), velocity,
+            AnimalLandTargetRules.Number(config, "pursuitPredictionSeconds", .6f),
+            AnimalLandTargetRules.Number(config, "pursuitMaximumPredictionDistance", 2f));
+        Vector3 destination = NormalizeChasePosition(target + (Vector3)offset, topology);
+        if (!IsWalkable(destination)) return;
+        pursuitPosition = destination;
+        hasPursuitDestination = true;
+    }
+
+    public void RejectPursuitDestination()
+    {
+        hasPursuitDestination = false;
+        pursuitPathRejected = true;
+        rejectedPursuitTarget = memory.LastKnownPosition;
     }
 
     private Vector2 CalculateSeparation(in WorldTopologyDomain topology)
@@ -303,6 +353,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     {
         formationMembers.Clear();
         hasFormation = holdingPosition = false;
+        hasPursuitDestination = pursuitPathRejected = false;
         formationPosition = context.Position;
         formationSlot = -1;
         formationMemberCount = 0;
