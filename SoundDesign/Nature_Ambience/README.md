@@ -1,6 +1,6 @@
 # 自然环境循环声
 
-两段来自原作者发布页并核实为 CC0 的真实自然录音，成品绑定于 `ambient.foliage.rustle.loop` 和 `ambient.river.flow.loop`。
+两段来自原作者发布页并核实为 CC0 的真实自然录音，成品绑定于 `ambient.foliage.rustle.loop` 和 `ambient.river.flow.loop`。河流采用作者已处理为无缝循环的溪流实录，整理为较柔和的 30 秒循环，保持原 Cue 与 AudioClip GUID。
 
 用 Python 3 与 FFmpeg/FFprobe 重建 WAV、Unity Cue、`.meta` 和简短试听：
 
