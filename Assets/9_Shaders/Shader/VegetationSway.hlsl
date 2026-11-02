@@ -88,11 +88,10 @@ float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float
 
     float2 direction = _GrassDirection.xy / max(length(_GrassDirection.xy), 0.001);
     float amplitude = _GrassSwayAmplitude * ResolveVegetationVisualWindStrength(windStrength) * bendWeight;
-    float2 legacyOffset = (basisX * direction.x + basisY * direction.y)
-        * VegetationSwayWave(worldPosition, direction) * amplitude;
     float windLength = length(_GlobalWindDirection.xy);
     if (_GrassFollowWind < 0.5 || windStrength <= 0.5 || windLength <= 0.001)
-        return legacyOffset;
+        return (basisX * direction.x + basisY * direction.y)
+            * VegetationSwayWave(worldPosition, direction) * amplitude;
 
     float2 windDirection = _GlobalWindDirection.xy / windLength;
     float wave = VegetationSwayWave(swayRootWS, windDirection);
@@ -101,6 +100,11 @@ float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float
     float2 rockingOffset = rockingDirection * (0.35 * wave);
     float objectScale = max(length(basisX), length(basisY));
     float2 directionalOffset = (leanOffset + rockingOffset) * amplitude * objectScale;
+    // 六级以上强风已完全顺风摆动，避免再算一整套不会显示的旧波形。
+    if (windStrength >= 0.6)
+        return directionalOffset;
+    float2 legacyOffset = (basisX * direction.x + basisY * direction.y)
+        * VegetationSwayWave(worldPosition, direction) * amplitude;
     return lerp(legacyOffset, directionalOffset, smoothstep(0.5, 0.6, windStrength));
 }
 
