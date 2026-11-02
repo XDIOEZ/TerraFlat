@@ -39,12 +39,40 @@ public static partial class GameplayTestSystemProbe
                 });
             }
         }
-        return new JObject
+        var result = new JObject
         {
             ["validConfig"] = config.IsValid, ["samples"] = samples,
             ["cellX"] = config.cellSize.x, ["cellY"] = config.cellSize.y,
             ["period"] = WindStreakPresentation.PatternRepeatCells
         };
+        if (args["obstacleRows"] is JArray rows && rows.Count > 0)
+        {
+            int mapWidth = rows[0].ToString().Length, mapHeight = rows.Count;
+            var blocking = new bool[mapWidth * mapHeight];
+            for (int y = 0; y < mapHeight; y++)
+            for (int x = 0; x < mapWidth; x++)
+                blocking[y * mapWidth + x] = rows[y].ToString()[x] == '#';
+            var pixels = new Color32[blocking.Length];
+            new WindStreakObstacleField().BuildFlowPixels(blocking, mapWidth, mapHeight, Vector2Int.zero,
+                new Vector2((float)Number(args, "windX", 1), (float)Number(args, "windY", 0)), pixels);
+            var flowSamples = new JArray();
+            if (args["flowSamples"] is JArray probes)
+            {
+                foreach (JObject probe in probes)
+                {
+                    int x = (int)Number(probe, "x", 0), y = (int)Number(probe, "y", 0);
+                    Color32 pixel = pixels[y * mapWidth + x];
+                    flowSamples.Add(new JObject
+                    {
+                        ["x"] = x, ["y"] = y,
+                        ["bend"] = (pixel.r - 128f) * (6f / 127f),
+                        ["blocked"] = pixel.g == 255
+                    });
+                }
+            }
+            result["flowSamples"] = flowSamples;
+        }
+        return result;
     }
 
     #endregion

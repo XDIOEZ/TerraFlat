@@ -37,7 +37,7 @@ public static class BuffCatalogLoader
         ValidateManifest(manifest);
         var result = new BuffBinaryCatalog { Manifest = manifest };
         foreach (BuffPackageDto package in manifest.Packages)
-            if (package.Enabled) result.Catalogs.Add(BuffDefinitionFactory.Deserialize(
+            if (package.Enabled) result.Catalogs.Add(BuffDefinitionFactory.DeserializeWithoutDocumentCache(
                 cache.ReadText(ResolvePackagePath(package.Path))));
         return result;
     }
@@ -87,6 +87,11 @@ public static class BuffCatalogLoader
         GameRes gameRes,
         Action<int> onCompleted,
         Action<Exception> onFailed)
+        => LoadBuiltInAsync(gameRes, onCompleted, onFailed, null);
+
+    internal static IEnumerator LoadBuiltInAsync(
+        GameRes gameRes, Action<int> onCompleted, Action<Exception> onFailed,
+        BuffCatalogPreparation preparedCatalog)
     {
         if (gameRes == null)
         {
@@ -97,8 +102,7 @@ public static class BuffCatalogLoader
         List<BuffDefinition> definitions = null;
         Exception loadError = null;
         yield return LoadBuiltInDefinitionsAsync(
-            result => definitions = result,
-            exception => loadError = exception);
+            result => definitions = result, exception => loadError = exception, preparedCatalog);
 
         if (loadError != null)
         {
@@ -120,6 +124,7 @@ public static class BuffCatalogLoader
         }
     }
 
+    [BuiltInContentBake]
     public static List<BuffDefinition> LoadBuiltInDefinitions()
     {
         BinaryContentCache cache = CreateBinaryCache();
@@ -134,6 +139,68 @@ public static class BuffCatalogLoader
     public static IEnumerator LoadBuiltInDefinitionsAsync(
         Action<List<BuffDefinition>> onCompleted,
         Action<Exception> onFailed)
+        => LoadBuiltInDefinitionsAsync(onCompleted, onFailed, null);
+
+    internal sealed class BuffCatalogPreparation
+    {
+        public BinaryContentCache Cache;
+        public BuffBinaryCatalog Catalog;
+        public bool Hit;
+        public bool CacheWriteAttempted;
+        public double InputMilliseconds;
+    }
+
+    private static IEnumerator LoadBuiltInDefinitionsAsync(Action<List<BuffDefinition>> onCompleted,
+        Action<Exception> onFailed, BuffCatalogPreparation prepared)
+    {
+        Exception readError = null;
+        if (prepared == null)
+            yield return LoadBuiltInCatalogInputAsync(value => prepared = value, exception => readError = exception);
+        if (readError != null) { onFailed?.Invoke(readError); yield break; }
+        List<BuffDefinition> definitions;
+        try { definitions = BuildDefinitions(prepared.Catalog); }
+        catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+        if (!prepared.Hit && !prepared.CacheWriteAttempted) yield return prepared.Cache.StoreAsync(prepared.Catalog);
+        prepared.Cache.Report("Buff", definitions.Count, prepared.InputMilliseconds);
+        onCompleted?.Invoke(definitions);
+    }
+
+    /// <summary>提前读取私有配置，效果处理器仍在正式 Buff 阶段绑定。</summary>
+    internal static IEnumerator LoadBuiltInCatalogInputAsync(
+        Action<BuffCatalogPreparation> onCompleted, Action<Exception> onFailed)
+    {
+        string root = BuiltInBuffRoot, manifest = BuiltInManifestPath;
+        if (StreamingAssetsTextLoader.RequiresWebRequest(root))
+            return LoadPackagedCatalogInputAsync(onCompleted, onFailed);
+        BinaryContentCache cache = CreateBinaryCache();
+        return StreamingAssetsTextLoader.BeginPureDataAsync(
+            () => LoadLocalCatalogInput(cache, root, manifest), onCompleted, onFailed);
+    }
+
+    // 后台只构造纯 DTO，不绑定效果处理器、图标或正式目录。
+    internal static BuffCatalogPreparation LoadLocalCatalogInput(BinaryContentCache cache, string root, string manifestPath)
+    {
+        bool hit = cache.TryRead(out BuffBinaryCatalog binary);
+        if (!hit)
+        {
+            BuffManifestDto manifest = DeserializeManifest(cache.ReadText(manifestPath));
+            ValidateManifest(manifest, root);
+            binary = new BuffBinaryCatalog { Manifest = manifest };
+            foreach (BuffPackageDto package in manifest.Packages ?? new List<BuffPackageDto>())
+            {
+                if (!package.Enabled) continue;
+                string path = StreamingAssetsTextLoader.CombinePath(root, package.Path);
+                try { binary.Catalogs.Add(BuffDefinitionFactory.DeserializeWithoutDocumentCache(cache.ReadText(path))); }
+                catch (Exception error) { throw new InvalidDataException($"Buff 分包 {package.Id} JSON 无效", error); }
+            }
+        }
+        if (!hit) cache.Store(binary);
+        return new BuffCatalogPreparation
+        { Cache = cache, Catalog = binary, Hit = hit, CacheWriteAttempted = true, InputMilliseconds = cache.ElapsedMilliseconds };
+    }
+
+    private static IEnumerator LoadPackagedCatalogInputAsync(
+        Action<BuffCatalogPreparation> onCompleted, Action<Exception> onFailed)
     {
         BinaryContentCache cache = CreateBinaryCache();
         BuffBinaryCatalog binary = null;
@@ -168,55 +235,31 @@ public static class BuffCatalogLoader
             }
             catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
 
-            if (!StreamingAssetsTextLoader.RequiresWebRequest(BuiltInBuffRoot))
+            for (int i = 0; i < paths.Count; i++)
             {
-                // 本地分包一次后台读盘并解析，游戏下次启动只恢复二进制 DTO。
-                List<BuffCatalogDto> catalogs = null;
-                yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
+                string json = null;
+                yield return cache.ReadTextAsync(paths[i],
+                    value => json = value, exception => readError = exception);
+                if (readError != null)
                 {
-                    var result = new List<BuffCatalogDto>(paths.Count);
-                    for (int i = 0; i < paths.Count; i++)
-                    {
-                        try { result.Add(BuffDefinitionFactory.Deserialize(cache.ReadText(paths[i]))); }
-                        catch (Exception error) { throw new InvalidDataException($"Buff 分包 {enabled[i].Id} JSON 无效", error); }
-                    }
-                    return result;
-                }, value => catalogs = value, exception => readError = exception);
-                if (readError != null) { onFailed?.Invoke(readError); yield break; }
-                binary.Catalogs = catalogs;
-            }
-            else
-            {
-                for (int i = 0; i < paths.Count; i++)
-                {
-                    string json = null;
-                    yield return cache.ReadTextAsync(paths[i],
-                        value => json = value, exception => readError = exception);
-                    if (readError != null)
-                    {
-                        onFailed?.Invoke(new IOException($"Buff 分包 {enabled[i].Id} 读取失败：{paths[i]}", readError));
-                        yield break;
-                    }
-                    BuffCatalogDto catalog = null;
-                    yield return StreamingAssetsTextLoader.RunPureDataAsync(
-                        () => BuffDefinitionFactory.Deserialize(json),
-                        value => catalog = value, exception => readError = exception);
-                    if (readError != null)
-                    {
-                        onFailed?.Invoke(new InvalidDataException($"Buff 分包 {enabled[i].Id} JSON 无效", readError));
-                        yield break;
-                    }
-                    binary.Catalogs.Add(catalog);
+                    onFailed?.Invoke(new IOException($"Buff 分包 {enabled[i].Id} 读取失败：{paths[i]}", readError));
+                    yield break;
                 }
+                BuffCatalogDto catalog = null;
+                yield return StreamingAssetsTextLoader.RunPureDataAsync(
+                    () => BuffDefinitionFactory.DeserializeWithoutDocumentCache(json),
+                    value => catalog = value, exception => readError = exception);
+                if (readError != null)
+                {
+                    onFailed?.Invoke(new InvalidDataException($"Buff 分包 {enabled[i].Id} JSON 无效", readError));
+                    yield break;
+                }
+                binary.Catalogs.Add(catalog);
             }
         }
 
-        List<BuffDefinition> definitions;
-        try { definitions = BuildDefinitions(binary); }
-        catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
-        if (!hit) yield return cache.StoreAsync(binary);
-        cache.Report("Buff", definitions.Count);
-        onCompleted?.Invoke(definitions);
+        onCompleted?.Invoke(new BuffCatalogPreparation
+            { Cache = cache, Catalog = binary, Hit = hit, InputMilliseconds = cache.ElapsedMilliseconds });
     }
 
     public static BuffManifestDto DeserializeManifest(string json)
@@ -229,6 +272,9 @@ public static class BuffCatalogLoader
     }
 
     public static void ValidateManifest(BuffManifestDto manifest)
+        => ValidateManifest(manifest, BuiltInBuffRoot);
+
+    private static void ValidateManifest(BuffManifestDto manifest, string root)
     {
         if (manifest == null)
             throw new InvalidDataException("Buff 分包清单根对象为空");
@@ -253,7 +299,7 @@ public static class BuffCatalogLoader
                 throw new InvalidDataException($"Buff 清单包含重复文件路径：{package.Path}");
 
             // Resolve during validation so traversal and absolute paths fail before any package is read.
-            ResolvePackagePath(normalizedPath);
+            StreamingAssetsTextLoader.CombinePath(root, normalizedPath);
         }
     }
 

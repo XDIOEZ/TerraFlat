@@ -2,6 +2,7 @@
     "name": "FlatWorld.Audio",
     "rootNamespace": "FlatWorld.Audio",
     "references": [
+        "FlatWorld.ContentCache",
         "Data",
         "FlatWorld.Utilities"
     ],

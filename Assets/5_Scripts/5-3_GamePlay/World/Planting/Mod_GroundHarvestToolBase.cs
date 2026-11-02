@@ -1,18 +1,20 @@
 using FlatWorld.WorldModel;
 using UnityEngine;
 
-/// <summary>地表采挖工具共用选格、右键持续使用和挥动表现，具体工具只声明能力身份。</summary>
-public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemModuleDependencyBinder
+/// <summary>地表采挖工具共用选格与挥动表现，持续使用由快捷栏统一调度。</summary>
+public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemModuleDependencyBinder, IContinuousHeldItemUse
 {
     #region 配置与运行态
 
     protected virtual bool SupportsGroundHarvest => true;
+    protected virtual bool SupportsRightClickToolUse => SupportsGroundHarvest;
+    public bool SupportsHeldUseContinuation => SupportsRightClickToolUse;
 
     private IWeaponActionCompletionAnimation actionAnimation;
     private Mod_GameController ownerController;
     private WorldTileTargetOutline targetOutline;
     private bool actBound;
-    private bool continuousUseArmed;
+    private bool stopContinuousUse;
     private float nextUseTime;
     private RuntimeTerrainTileSample? pendingOverlayTarget;
     private Item pendingOverlayOwner;
@@ -26,7 +28,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
     /// <summary>采挖只依赖挥动表现接口，不引用伤害模块实现。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
-        actionAnimation = SupportsGroundHarvest
+        actionAnimation = SupportsRightClickToolUse
             ? modules.RequireSingleCapability<IWeaponActionCompletionAnimation>() : null;
     }
 
@@ -41,7 +43,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (actBound && item != null)
             item.OnAct -= Act;
         actBound = false;
-        continuousUseArmed = false;
+        stopContinuousUse = false;
         ClearPendingOverlay();
         nextUseTime = 0f;
         ownerController = null;
@@ -53,7 +55,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
     protected void OnDisable()
     {
-        continuousUseArmed = false;
+        stopContinuousUse = false;
         ClearPendingOverlay();
         nextUseTime = 0f;
         ownerController = null;
@@ -65,7 +67,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
     public override void OnResourcesReloaded()
     {
         base.OnResourcesReloaded();
-        if (SupportsGroundHarvest)
+        if (SupportsRightClickToolUse)
             BindAct();
         else
             Unload();
@@ -73,7 +75,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
     private void BindAct()
     {
-        if (!SupportsGroundHarvest || actBound || item == null)
+        if (!SupportsRightClickToolUse || actBound || item == null)
             return;
         item.OnAct += Act;
         actBound = true;
@@ -104,16 +106,24 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (!SupportsGroundHarvest || item?.Owner == null || pendingOverlayTarget.HasValue)
             return;
 
+        stopContinuousUse = false;
         ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        continuousUseArmed = ownerController?.IsRightClickHeld == true;
         TryPerformSwing(ownerController, true);
+    }
+
+    public virtual bool ContinueHeldUse()
+    {
+        if (!SupportsGroundHarvest || stopContinuousUse || item?.Owner == null)
+            return false;
+        ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        TryPerformSwing(ownerController, false);
+        return !stopContinuousUse;
     }
 
     protected void LateUpdate()
     {
         if (!SupportsGroundHarvest || item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
         {
-            continuousUseArmed = false;
             ClearPendingOverlay();
             ownerController = null;
             targetOutline?.Hide();
@@ -122,13 +132,15 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
         ownerController ??= player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         UpdateTargetVisuals();
-        if (ownerController == null)
-            return;
+    }
 
-        if (!ownerController.IsRightClickHeld)
-            continuousUseArmed = false;
-        if (continuousUseArmed)
-            TryPerformSwing(ownerController, false);
+    /// <summary>普通砍伐与地表采挖复用武器动作节拍和已有伤害窗口。</summary>
+    protected bool TryRequestWeaponSwing()
+    {
+        if (item == null || !item.InHand || item.Owner == null)
+            return false;
+        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionCompletionAnimation>();
+        return actionAnimation.TryRequestAction(queueIfBusy: false);
     }
 
     /// <summary>真实挥动开始后才提交一份挖掘进度。</summary>
@@ -147,9 +159,9 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
             return;
         }
 
-        actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionCompletionAnimation>();
         if (overlay)
         {
+            actionAnimation ??= item.itemMods.RequireSingleCapability<IWeaponActionCompletionAnimation>();
             if (!actionAnimation.TryRequestAction(CompleteOverlayWork)) return;
             pendingOverlayTarget = overlayTarget;
             pendingOverlayOwner = item.Owner;
@@ -158,7 +170,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
             return;
         }
 
-        if (!actionAnimation.TryRequestAction(queueIfBusy: false))
+        if (!TryRequestWeaponSwing())
             return;
 
         Vector2Int worldCell;
@@ -190,13 +202,13 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         if (!completed || !IsRuntimeLoaded || !isActiveAndEnabled || item == null ||
             !item.InHand || item.Owner != owner)
         {
-            continuousUseArmed = false;
+            stopContinuousUse = true;
             return;
         }
 
         if (!TryWorkOverlay(target, out Vector2Int cell, out float interval, out string reason))
         {
-            continuousUseArmed = false;
+            stopContinuousUse = true;
             if (showFailureFeedback && !string.IsNullOrEmpty(reason))
                 ItemActionFeedback.Show(item.Owner, reason);
             return;
@@ -205,7 +217,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
         nextUseTime = startedAt + interval;
         if (!TryResolveOverlayTarget(out RuntimeTerrainTileSample remaining) ||
             !ReferenceEquals(remaining.Terrain, target.Terrain) || remaining.WorldCell != target.WorldCell)
-            continuousUseArmed = false;
+            stopContinuousUse = true;
         if (HarvestKind == ResourceToolKind.Shovel)
             HoeTillingFeedback.PlayDigging(item, cell);
         UpdateTargetVisuals();

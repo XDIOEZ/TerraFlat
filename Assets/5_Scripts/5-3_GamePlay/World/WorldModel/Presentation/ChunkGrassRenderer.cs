@@ -320,12 +320,11 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
                     Sprite source = sources[index];
                     if (source == null)
                         throw new InvalidOperationException($"草地第 {index + 1} 个变体未绑定切片。");
-                    Sprite sprite = Sprite.Create(
-                        source.texture,
+                    Sprite sprite = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(
+                        source,
                         source.rect,
                         new Vector2(0.5f, 0.5f),
                         ppu,
-                        0,
                         SpriteMeshType.Tight);
                     sprite.name = "ChunkGrassDetail_" + index;
                     sprite.hideFlags = HideFlags.HideAndDontSave;

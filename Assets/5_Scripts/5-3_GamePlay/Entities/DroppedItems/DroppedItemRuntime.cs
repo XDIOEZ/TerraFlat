@@ -94,6 +94,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     public void Remove(int id)
     {
         if (!simulation.Contains(id)) return;
+        RemoveDroppedCombustibility(id);
         presentation?.Remove(id);
         if (spatialOwners.TryGetValue(id, out Vector2Int cell))
         {
@@ -126,6 +127,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             if (!spatial.TryGetValue(cell, out HashSet<int> bucket)) spatial.Add(cell, bucket = new HashSet<int>());
             bucket.Add(id); spatialOwners[id] = cell;
         }
+        PublishDroppedCombustibility(id);
         presentation?.Changed(id);
         if (MachineWorld.GetTransportAt(body.Position) != null) transportItems.Add(id);
         else transportItems.Remove(id);
@@ -252,6 +254,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         MachineWorld.WorldPresentationCellsChanged -= OnTransportCellsChanged;
         transportItems.Clear(); transportScratch.Clear();
         environmentMotionOwners.Clear();
+        ClearDroppedCombustibility();
         ClearTerrainSubscriptions();
         DetachScenePresentation(); simulation.Dispose();
         payloads.Clear(); savePayloads.Clear(); visuals.Clear(); visualCache.Clear(); spatial.Clear(); spatialOwners.Clear();

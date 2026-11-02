@@ -44,7 +44,9 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
 - 接口持有 Unity 组件时先按 UnityEngine.Object 原生存活状态检查；目标销毁后清除交互与描边缓存，不再向销毁对象发送回调，纯 C# 世界目标保持普通引用生命周期。
 - 右键只使用当前快捷栏中由本玩家持有的 `Item`，经 `Item.Act/OnAct` 分发；F 只交互世界建筑、工作台、设备、门、入口和载具。`CanPointerInteract` 默认 false，仅采集等左键动作显式允许；F 的指针选目标和描边不受点选权限影响。
+- 工具长按由 `Mod_HotBar` 在首次 `Act` 后登记同一手持物的 `IContinuousHeldItemUse`，松开、换物、输入锁或 UI 遮挡即撤销，普通物品只单次使用。斧头复用武器动作，镐/铲/锄/打制石器各自结算。
 - 鼠标右键按下时由控制器冻结左右 Shift 汇总态；手持装备经 `Mod_HotBar → Mod_Equipment.TryEquipFromSlot` 穿戴或替换，旧件回当前快捷栏槽。该组合键独占按下、持续和松开，拒绝也不再执行普通 `Act`；非装备、普通右键和其他设备沿用现有使用链。
+- 本地玩家换手持物由 `Mod_HotBar.HeldItemDraw` 将 SpriteRenderer 子节点从 15% 缩放到原尺寸（0.25 秒 OutBack），动画期 `Mod_GameController.IsHeldItemDrawLocked` 拦截物品攻击/使用；切换时撤销旧按住，不改变 Item 根、物理和存档尺寸，重复选同件不重播。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。
 - 中键 `PickWorldItem` 经正式输入仲裁后由 `WorldItemQuickPickService` 检索现有快捷栏/背包；先用发送器精确光标与同格分区，无光标目标才走可独立复用的世界格查询。数据目标通过 `IWorldInteractionTarget.ItemDefinitionId` 提供身份，建筑召唤器按建筑ID/TileBlockId匹配；空槽优先，满栏交换当前槽，网络事务确认后核对目标身份再切槽。
@@ -62,6 +64,9 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 位置突变后调用 `Mod_Mover.ResetMotion()`，统一撤销临时主动租约、清速度/输入/动画和位移音效基线，保留奔跑偏好；外部承载归属由调用方先释放。动作订阅 `MotionReset` 自行收尾，重置期间禁止重新驱动或取租约。回归 `player/motion_reset` 与 `roll_action`。
 - 地表速度沿用 `SpaceGameplaySettings.WalkingMultiplier`（低重力最高2倍）；起步/转向/刹停共用 `WalkingResponseMultiplier`，按当地重力/地球重力降低响应，月球级约慢6倍，最低重力沿用0.25，普通及高重力响应不变。玩家、GO动物导航和无人工重力的地表船内复用；人工重力按地球值，太空自由漂浮沿用独立规则。回归 `player/surface_gravity_movement`。
 - `Mod_Roll`（`Roll`）由中央 `Roll` Action 默认空格发动，方向取发动时移动输入，无输入时朝光标/准星，指针重合或无效时回退朝向；0.4秒、步行2倍、身体碰撞尺寸50%、全程临时无敌、冷却0秒（上一轮结束即可再次发动）、基础体力10点。动作持有 `Mod_Mover.DrivenMotionLease`，不重复计步行消耗；`RollVisual` 专用父层转一圈，不旋转物理根或镜头。死亡、输入锁、卸载、换场景还原尺寸和租约；载具/太空不发动。网络远端权威只推进体力和生命动作态，本地获服务器许可后复用移动租约；远端表现按序号与绝对进度幂等应用，不加载本地输入/UI。
+- 玩家脚底为立绘与受击框的共同 Y=0 基准，阻挡框仍独立占脚边；头顶 `PlayerOxygenWorldBar` 挂玩家根（不随 `RollVisual` 旋转），随角色身位变化校准，回归 `player/collider_visual_alignment`。
+- `Player` 根原点即脚底；`RollVisual` 与 `Module_Animator` 的局部 Y 分别为 +0.767/-0.767，角色底锚在 (0,0)。根非 Trigger 碰撞框只占脚下（0.4×0.3，Y=-0.07）；`Module_DamageReciver` 受击 Trigger 按 32×48/PPU32 画布居中于 Y=0.75（高1.5）；手持挂点与转身恢复 Y 同为 0.453125，回归 `player/collider_visual_alignment`。
+- 玩家根下的头顶气泡 `worldOffset.y=1.517`、世界氧气条 `anchoredPosition.y=1.067` 按脚底为零点配置，避免变更角色视觉锚点后遮挡头部。
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。

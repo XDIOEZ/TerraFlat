@@ -99,7 +99,7 @@ def compile_and_capture():
         "public static class GameplayCombatBridge {\n" +
         extract_expression(combat_bridge, "public static float4 Values(CombatDamage damage)") + "\n}\n" +
         "namespace FlatWorld.Combat { public static class CombatRules {\n" +
-        extract_expression(combat_source, "public static int BleedingTier(float4 actualLoss, bool hasBlood, bool alive, float random)") + "\n" +
+        extract_expression(combat_source, "public static int BleedingTier(float4 actualLoss, bool hasBlood, bool alive, float random, bool edged)") + "\n" +
         extract_block(combat_source, "public static int BleedingTier(float edged, bool hasBlood, bool alive, float random)") + "\n} }\n" +
         "namespace FlatWorld.AIECS.Gameplay {\n" +
         extract_block(ecs_source, "public struct AiecsBehaviorParameterSnapshot") + "\npublic static class AiecsDefinitionCompiler {\n" +

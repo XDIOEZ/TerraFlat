@@ -6,4 +6,7 @@ test.system("save", "sqlite_records", {}, function(data)
     assert(#data.frozenItemIds == 1 and data.frozenItemIds[1] == 71, "冻结后的源变化污染了旧提交")
     assert(data.futureSchemaRejected, "未知必要记录版本未被拒绝")
     assert(data.chunkFailurePreserved and data.weatherFailurePreserved, "损坏记录在读取失败前发布了部分地形、生态或天气")
+    assert(data.modMetadataDeferral.readAccepted and data.modMetadataDeferral.metadataPending and
+        data.modMetadataDeferral.deferredRejects and data.modMetadataDeferral.pendingRetained,
+        "选档阶段应暂存 MOD 元数据，并在兼容检查失败后保留待恢复状态")
 end, "SQLite暂存隔离、冻结修订、失败事务和上一提交")

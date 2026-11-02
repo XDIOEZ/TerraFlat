@@ -36,6 +36,29 @@ namespace UnityEditor
     public enum PlayModeStateChange { EnteredEditMode, ExitingEditMode, EnteredPlayMode, ExitingPlayMode }
     public static class Menu { public static void SetChecked(string path, bool value) { } }
     public static class EditorGUIUtility { public static string systemCopyBuffer; }
+    public static class EditorUtility
+    {
+        public static bool ProgressVisible;
+        public static int ShowCount, ClearCount;
+        public static string LastMessage;
+        public static void DisplayProgressBar(string title, string info, float progress)
+        {
+            ProgressVisible = true;
+            LastMessage = info;
+            ShowCount++;
+        }
+        public static void ClearProgressBar()
+        {
+            ProgressVisible = false;
+            ClearCount++;
+        }
+        public static void Reset()
+        {
+            ProgressVisible = false;
+            ShowCount = ClearCount = 0;
+            LastMessage = null;
+        }
+    }
     public static class EditorPrefs
     {
         private static readonly Dictionary<string, object> Values = new();

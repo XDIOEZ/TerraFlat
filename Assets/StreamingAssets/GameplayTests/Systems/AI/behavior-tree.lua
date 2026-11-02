@@ -96,9 +96,9 @@ test.system("ai", "aiecs_tree_parameters", {}, function(data)
     end
     assert(near(data.Chicken.eggDays, 2) and data.Chicken.eggItem == "Egg", "鸡的正式产蛋配置没有映射到 ECS")
     local snowDamage = data.SnowLeopard.damage
-    assert(snowDamage.cutting == 10 and snowDamage.piercing == 10 and snowDamage.chopping == 1 and snowDamage.blunt == 1 and
-        snowDamage.physical == 22 and snowDamage.bleedingAt83 == 3 and snowDamage.bleedingAt85 == 0,
-        "ECS 合并模块参数时改变了雪豹伤害四槽、总量或出血资格")
+    assert(snowDamage.physical == 22 and snowDamage.fire == 0 and snowDamage.radiation == 0 and
+        snowDamage.impactKind == 1 and snowDamage.bleedingAt87 == 3 and snowDamage.bleedingAt89 == 0,
+        "ECS 合并模块参数时改变了雪豹物理伤害、命中类型或出血资格")
     assert(near(data.WildBoar.fleeHealth, .2), "野猪的共享子树低血阈值没有映射到 ECS")
     assert(near(data.override.sense, 73) and near(data.override.speed, 7.25) and
         near(data.override.eggDays, 9) and data.override.eggItem == "OverrideEgg",
@@ -146,10 +146,9 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
         if actor.id == "SnowLeopard" then
             assert(not actor.hasPack, "雪豹继承了狼群能力配置")
             local damage = actor.damage
-            assert(damage.cutting == 10 and damage.piercing == 10 and damage.chopping == 1 and damage.blunt == 1 and
-                damage.physical == 22 and damage.cutting + damage.piercing + damage.chopping == 21,
-                "雪豹实际伤害模块丢失四槽或改变物理与刃伤总量")
-            assert(damage.bleedingAt83 == 3 and damage.bleedingAt85 == 0,
+            assert(damage.physical == 22 and damage.fire == 0 and damage.radiation == 0 and damage.impactKind == 1,
+                "雪豹实际伤害模块丢失物理与命中类型配置")
+            assert(damage.bleedingAt87 == 3 and damage.bleedingAt89 == 0,
                 "雪豹刃伤没有按正式出血概率与等级计算")
         end
     end

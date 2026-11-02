@@ -58,13 +58,14 @@ public static class FluidTankBlockVisual
             Rect slice = new(rect.x + rect.width * startX, rect.y + rect.height * startY,
                 rect.width * (x == 1 ? 1f - BorderFraction * 2f : BorderFraction),
                 rect.height * (y == 1 ? 1f - BorderFraction * 2f : BorderFraction));
-            result[x + y * 3] = Sprite.Create(source.texture, slice, new Vector2(.5f, .5f),
-                source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            result[x + y * 3] = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(source, slice,
+                new Vector2(.5f, .5f), source.pixelsPerUnit);
             result[x + y * 3].name = source.name + "_TankPart_" + (x + y * 3);
             result[x + y * 3].hideFlags = HideFlags.DontSave;
         }
-        result[9] = Sprite.Create(source.texture, new Rect(rect.x + rect.width * .2f, rect.y + rect.height * .2f,
-            rect.width * .04f, rect.height * .04f), new Vector2(.5f, .5f), source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+        result[9] = SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(source,
+            new Rect(rect.x + rect.width * .2f, rect.y + rect.height * .2f, rect.width * .04f, rect.height * .04f),
+            new Vector2(.5f, .5f), source.pixelsPerUnit);
         result[9].name = source.name + "_TankBlankPanel";
         result[9].hideFlags = HideFlags.DontSave;
         slices.Add(source, result);

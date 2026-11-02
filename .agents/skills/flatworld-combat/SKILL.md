@@ -32,10 +32,11 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 非均匀数量通过 `DiscreteTable/amountProbabilityTableId` 引用公共离散概率表；树叶引用 `loot.tree.leaf.amount`，GO 参数展开须保留表 ID，难度只在 `DiscreteProbabilityConfiguration.Modifying` 修正独立状态。`combat/discrete_probability` 覆盖原表/结构体复制隔离、最终百分比、抽样边界及冻结指纹。
 - Actor JSON modules 是生命/防御/攻击/窗口静态真源，当前 HP/攻击者由运行模块保存；管理员无敌监听伤害回满及死亡兜底。
 - 临时无敌由调用方持有 `AcquireTemporaryInvulnerability()` 的 `IDisposable` 租约，多来源独立释放；普通/上下文/环境/生存/结构损伤均拦截且不耗受击冷却，卸载、停用、死亡和回池作废旧租约，直接权威设置生命仍生效。
-- Physical 是统一物理攻击/防御，ImpactKind 决定表现与刃伤资格；ResolvePhysical 合计攻击、只扣一次防御。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0，Mod_ResourceHarvest 或生命 weakTool 单处声明。物品显式耐久优先，未填才按 `Resources/Config/Equipment/durability-materials.json` 给默认值；黑曜石50仅限武器。近战每次有效命中扣1，远程发射扣1且命中不再扣；正式受击只磨损覆盖命中部位的护甲，举盾/弹反另磨损盾牌，零伤也计入。
+- `CombatDamage`/`CombatDefense` 使用 Physical、Fire、Radiation 三种防护通道，伤害另有 `True` 绕防通道；`CombatRules.Resolve` 每类使用 `max(0, 攻击×攻击倍率－对应防御)×受击倍率`。`ImpactKind` 只决定物理命中表现与出血，不再分切/穿/劈/钝四套攻防。工具弱点防御后乘 2，小刀对低矮作物为 1.5；未破防仍 0。近战每次有效命中扣1，远程发射扣1且命中不再扣；护甲覆盖部位磨损、盾牌租约只增加物理防御，零伤命中也计入。
+- 17 件现有护甲的三类数值在 `GameConfig/Items/shells/{character_outfits,equipment,steel_equipment}.json`；`core:fire_damage`/`core:radiation_damage` 周期伤害也走正式减防。旧数据层 `Damage/Defense` 已移除，SQLite v1 玩家快照旧字段编号保留为空槽但不再用于战斗。
 - 战斗只读 `GameRuleConfiguration.Current.CreatureCombat`，纯值后端通过 `CombatTuning` 冻结参数；攻击修正在防御前，`CreatureCombatRuleSet.ResolveReceivedDamageMultiplier` 的玩家受击修正在防御后（含 ECS 转交命中），环境伤害、玩家攻击和非玩家目标不应用该受击修正。
 - 玩家死亡模块通过 `DropAllCarriedItems/SetDropAllCarriedItems/ClearDropAllCarriedItemsOverride` 接收来源无关的机制开关；角色覆盖随本模块保存，世界默认刷新不抹掉覆盖，卸载清运行缓存，新 Load 从自身载荷重建。回归 `combat/death_rule_override`。
-- 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。
+- 中立环境物理伤害由 HurtEnvironmentalDamage 与 IGameplayEnvironmentalDamageBridge 接入正式结算，忽略阵营和普通攻击间隔，也不消费普通受击冷却，仍保留防御/部位/死亡掉落；仅显式 `isTrueDamage: true` 绕过防御和部位生命，难度及目标受击倍率仍生效；雷击服务按世界、区块和序号去重，GO、原生动物/资源及建筑分别走自身生命权威。
 - 返回 0 是有效但全防御命中，可显示数字/附加状态；负值 -1 是死亡/冷却等拒绝，不触发表现或状态。ResolvedDamageValues 已应用难度、防御/倍率，按 DamageValue 裁过量。
 - 出血经 DamageReceivedStatusEffectRegistry 消费同一笔 DamageReceiverDamageInfo，要求 Blood 标签和实际切割/穿刺/劈砍损失；部位提示读同笔 BodyPartHits，不重新抽样。玩家受击表现由接收侧订阅保证。
 - 濒死 HP 不再被被动恢复改成小正数；控制/UI 在本地 Event_PlayerEnterWorld（模块已加载）按权威血量恢复，不重发 OnDead。
@@ -44,8 +45,9 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 ## 武器、命中与组合
 
 - GO 生物几何接触后的逻辑命中由 `CreatureHitChanceRules` 计算：攻击者生命模块 `AccuracyLevel` (0–10) ×10%，目标 `SizeLevel` (0–10) ×10%，再乘武器与体力/血量修正；`DodgeChance` 和每个已加载 `ICreatureDodgeChanceSource` 按 `(1-闪避率)` 逐项乘算（单项最多95%），绝不加算或保底覆盖0级。默认玩家命中7/体型5，蜜蜂体型2（无额外技能闪避时7级命中14%）；不改变飞行贴图受击盒或资源攻击。Lua `combat/logical_hit_levels` 在 `external-rules.lua`。
-- `Mod_BiteAttack` 是可组合的 `IAnimalCombatSkill`，通过 `IAnimalAttackRangeSource` 读取默认范围，不识别具体物种。仅比较 `Stack.Weight` 身体质量，目标至少为发动者一半时挂咬，否则拖行；3/6/9秒结算物理伤害，冷却180秒随模块快照保存。`ActorActionConstraints` 来源租约管理普攻禁止、乘法减速叠加与唯一跟随，双方死亡/卸载/代际变化/运动重置会释放；`core:bite_*` 为非持久来源标识。`IPeriodicDamageSource` 独立结算周期命中，不占普通受击冷却，防御、阵营和死亡仍走正式入口。
-- 联机玩家强制跟随及减速由 `NetworkWorldPlayer.ActionConstraints` 同步，服务器用同一跟随位置覆盖客户端移动提交，B目标不能翻滚挣脱。`combat/bite_attack` 覆盖质量边界、配置、减速/攻击租约和冷却快照；真实9秒时序、碰撞、多人叠加与断线/切世界仍需现场回归。
+- `Mod_BiteAttack` 是可组合的 `IAnimalCombatSkill`，通过 `IAnimalAttackRangeSource` 读取默认范围，不识别具体物种。仅比较 `Stack.Weight` 身体质量，目标至少为发动者一半时挂咬，否则拖行；持续3秒、每0.5秒结算2点物理伤害（含第3秒最后一次），冷却180秒随模块快照保存。`ActorActionConstraints` 来源租约管理普攻禁止、乘法减速叠加与唯一跟随，双方死亡/卸载/代际变化/运动重置会释放；`core:bite_*` 为非持久来源标识。`IPeriodicDamageSource` 独立结算周期命中，不占普通受击冷却，防御、阵营和死亡仍走正式入口。
+- 撕咬只选择 AI 明确指定的目标；起手和持续期间通过 `Mod_TurnBack.FaceWorldPosition` 对齐身体、注视点与嘴前命中盒，防止自动转身把头转回去。
+- 联机玩家强制跟随及减速由 `NetworkWorldPlayer.ActionConstraints` 同步，服务器用同一跟随位置覆盖客户端移动提交，B目标不能翻滚挣脱。`combat/bite_attack` 覆盖质量边界、配置、减速/攻击租约和冷却快照；真实3秒周期命中、碰撞、多人叠加与断线/切世界仍需现场回归。
 
 - 技能模块通过所属 `Item.OnAct` 接收使用并在 Unload 解绑，不直接订阅玩家右键；快捷栏独占手持物使用入口。
 - Mod_Damage 管统一发送/窗口，工具由 Mod_ResourceTool/Mod_Shovel 等通过 ICombatDamageContextModifier 附上下文；动作表现经 IWeaponActionAnimation，概率状态由独立 DamageOnHitBuffApplier 组合。
@@ -56,9 +58,10 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 武器自身 Source 与 Owner Credit 分开，防自伤在候选/扫描/结算排 Owner，不改 IDamageSender.attacker；上下文携 generation/world/dimension 和 double 模拟 Tick/Time。
 - 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。
 - 窗口打开主动扫已重叠目标；动画武器用 Unity `AnimatePhysics`，动作来源以 `SetAnimationDamageSamplingActive` 唤醒固定步命中采样；`LateUpdate` 只同步表现姿态。窗口预约集跨逻辑步保留、关窗清空，DamageInterval 不限制姿态采样；持续伤害用 Pulse。默认 MaxAttackTargets=3，可被 Prefab/JSON 覆盖。真实武器现场覆盖 30 FPS 下普通/两倍速的固定步开窗与命中回执。
+- 伤害 Collider 尚未租借或已归还时，关窗仍清理预约和调度状态；尝试开窗缺 Collider 继续报错。回归 `combat/damage_window_without_collider`。
 - AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - 机械武器 Pulse 的候选/去重/命中列表通过 Unity CollectionPool 租约在调用结束归还，支持重入；命中先按扫掠时间再按到接触点的距离排序，预先计算距离并复用静态比较器，不在排序时捕获当前攻击中心。分段 Marker 为 `FlatWorld.Combat.MachineCandidates/MachinePhysicsQuery/MachineApplyHits`；规则 `mechanical/machine_pulse_order`。
-- DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 自带同节点专用 Trigger，身体/拾取阻挡分开。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
+- DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 使用同节点专用 Trigger，身体/拾取阻挡分开。GO 生物保留预制体刚体和碰撞模板，世界物理管理器在租借组件后登记原碰撞体，不为生物创建物理代理。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。
 - Mod_Weapon_AnimationAction 每段 StartAttack 调持有者 Stamina.TryConsumeStamina，不足不开始；配置 staminaCostPerAttack 受统一角色体力参数修正。Mod_ColdWeapon 仍按 ColdWeaponStaminaObserver.StaminaConsumeSpeed 每秒扣，基础与 StaminaConsumeSpeedRate 是不同参数。
 - CombatImpactEffectSet 是类型特效，AttackEffects 是每次反馈；DominantKind 统一选类型，空反馈不阻断命中。JSON 不覆盖 Prefab Unity 资源引用集合。

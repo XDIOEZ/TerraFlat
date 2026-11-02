@@ -25,6 +25,9 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "proxy_chunk_streaming", CaptureProxyChunkStreaming);
         GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "resource_proxy_world_isolation", CaptureResourceProxyWorldIsolation);
         GameplayTestRuntimeProbe.Register("world_streaming", "resource_proxy_native_triggers", CaptureResourceProxyNativeTriggers);
+        GameplayTestRuntimeProbe.RegisterAsync("world_streaming", "natural_item_decoupling", CaptureNaturalItemDecoupling);
+        GameplayTestRuntimeProbe.Register("world_streaming", "prefab_creature_physics", CapturePrefabCreaturePhysics);
+        GameplayTestRuntimeProbe.Register("world_streaming", "item_visual_ownership", CaptureItemVisualOwnership);
     }
 
     private sealed class Fixture : IDisposable
@@ -118,6 +121,129 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             ["guid"] = saved.Guid, ["id"] = saved.IDName,
             ["hasHealth"] = target.HasHealth, ["mode"] = proxy.Mode.ToString(),
             ["bodyType"] = proxy.Body.bodyType.ToString()
+        };
+    }
+    #endregion
+
+    #region 生物预制体物理登记回归
+    private static JObject CapturePrefabCreaturePhysics(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var fixture = new Fixture();
+        GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        string world = GameplayWorldRegistry.GetItemWorldKey(player);
+        using var worldScope = GameplayWorldRegistry.UseWorld(world);
+        Vector2 point = WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + new Vector2(7f, 3f);
+        Item creature = fixture.SpawnItem("Chicken", point);
+        Mod_DamageReceiver health = creature.GetComponentInChildren<Mod_DamageReceiver>(true);
+        Collider2D hitbox = health != null ? health.GetComponent<Collider2D>() : null;
+        Rigidbody2D body = creature.GetComponent<Rigidbody2D>();
+        Collider2D rootShape = creature.GetComponent<Collider2D>();
+        int colliderCount = creature.GetComponentsInChildren<Collider2D>(true).Length;
+        RigidbodyType2D bodyType = body != null ? body.bodyType : RigidbodyType2D.Static;
+        if (!GameplayWorldRegistry.TryGetPhysics(world, out var physics))
+            throw new InvalidOperationException("正式生物未进入所属世界的物理管理器。");
+        bool hitboxRegistered = hitbox != null && WorldPhysicsService2D.TryResolveCollider(hitbox, out var hitBinding) &&
+            hitBinding.World == physics && hitBinding.Item == creature && hitBinding.Receiver == health &&
+            (hitBinding.Purpose & WorldPhysicsPurpose2D.Damage) != 0;
+        bool rootRegistered = rootShape == null || WorldPhysicsService2D.TryResolveCollider(rootShape, out var rootBinding) &&
+            rootBinding.World == physics && rootBinding.Item == creature;
+        bool hasProxy = physics.TryGetItemProxy(creature, out _);
+
+        // 重复登记必须保留生物原生组件与受击区域的准确归属。
+        physics.RegisterItem(creature);
+        bool rebound = hitbox != null && WorldPhysicsService2D.TryResolveCollider(hitbox, out var reboundBinding) &&
+            reboundBinding.Item == creature && reboundBinding.Receiver == health &&
+            (reboundBinding.Purpose & WorldPhysicsPurpose2D.Damage) != 0;
+        return new JObject
+        {
+            ["usesNativeBody"] = body != null && WorldPhysicsService2D.GetItemRigidbody(creature) == body,
+            ["noProxy"] = !hasProxy && !physics.TryGetItemProxy(creature, out _),
+            ["bodyTypePreserved"] = body != null && body.bodyType == bodyType,
+            ["hitboxRegistered"] = hitboxRegistered && rebound,
+            ["hitboxChannel"] = hitbox != null && hitbox.isTrigger && CombatPhysicsChannels.IsDamageReceiverCollider(hitbox),
+            ["rootRegistered"] = rootRegistered,
+            ["collidersReused"] = creature.GetComponentsInChildren<Collider2D>(true).Length == colliderCount &&
+                                  (health == null || health.GetComponent<Collider2D>() == hitbox) &&
+                                  creature.GetComponent<Collider2D>() == rootShape
+        };
+    }
+    #endregion
+
+    #region 玩家、生物与普通物品独立绘制回归
+    private static JObject CaptureItemVisualOwnership(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var fixture = new Fixture();
+        GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        string world = GameplayWorldRegistry.GetItemWorldKey(player);
+        using var worldScope = GameplayWorldRegistry.UseWorld(world);
+        Vector2 center = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
+        Item creature = fixture.SpawnItem("Chicken", center + new Vector2(6f, 2f));
+        Item ordinary = fixture.SpawnItem("StoneMortar", center + new Vector2(7f, 2f));
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (rendering == null) throw new InvalidOperationException("当前世界缺少统一渲染管理器。");
+
+        rendering.RegisterItemRendering(player);
+        rendering.RegisterItemRendering(creature);
+        rendering.RegisterItemRendering(ordinary);
+        rendering.RequestItemPresentation(player);
+        rendering.RequestItemPresentation(creature);
+        rendering.RequestItemPresentation(ordinary);
+
+        SpriteRenderer actorSprite = creature.Sprite;
+        bool actorSeparated = actorSprite != null &&
+            rendering.OwnsActorVisual(creature, actorSprite.transform) &&
+            !actorSprite.transform.IsChildOf(creature.transform) &&
+            actorSprite.gameObject.scene == creature.gameObject.scene &&
+            creature.GetComponent<Rigidbody2D>() != null &&
+            creature.GetComponentInChildren<Mod_DamageReceiver>(true) != null;
+        bool playerProjected = rendering.TryGetItemPresentation(player, out var playerView);
+        bool ordinaryBorrowed = ordinary.Sprite != null &&
+            rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform);
+        Transform ordinaryRoot = ordinaryBorrowed ? rendering.GetActorProjectionSource(ordinary) : null;
+        bool displayStateCorrect = player.Sprite != null && player.Sprite.forceRenderingOff &&
+            ordinaryBorrowed && ordinary.Sprite.enabled && !ordinary.Sprite.forceRenderingOff;
+        bool visualOnly = playerProjected && ordinaryRoot != null &&
+            playerView.GetComponentInChildren<Item>(true) == null &&
+            ordinaryRoot.GetComponentInChildren<Item>(true) == null &&
+            ordinaryRoot.GetComponentInChildren<Module>(true) == null &&
+            playerView.GetComponentInChildren<Collider2D>(true) == null &&
+            ordinaryRoot.GetComponentInChildren<Rigidbody2D>(true) == null;
+        bool inRendering = playerProjected && ordinaryBorrowed &&
+            playerView.transform.parent?.name == "Rendering" &&
+            ordinaryRoot.parent?.name == "Rendering" &&
+            playerView.gameObject.scene == player.gameObject.scene &&
+            ordinaryRoot.gameObject.scene == ordinary.gameObject.scene;
+        bool noSourceRender = ordinaryBorrowed && ordinary.GetComponentsInChildren<Renderer>(true).Length == 0;
+
+        rendering.RefreshItemRendering(player);
+        rendering.RefreshItemRendering(creature);
+        rendering.RefreshItemRendering(ordinary);
+        bool reused = rendering.TryGetItemPresentation(player, out var reboundPlayer) &&
+            ReferenceEquals(playerView, reboundPlayer) &&
+            ReferenceEquals(ordinaryRoot, rendering.GetActorProjectionSource(ordinary)) &&
+            rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
+            rendering.OwnsActorVisual(creature, actorSprite.transform);
+
+        rendering.UnregisterItemRendering(ordinary);
+        bool released = !rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
+            ordinary.Sprite.transform.IsChildOf(ordinary.transform);
+        rendering.RegisterItemRendering(ordinary);
+        rendering.RequestItemPresentation(ordinary);
+        bool restored = rendering.OwnsActorVisual(ordinary, ordinary.Sprite.transform) &&
+            rendering.GetActorProjectionSource(ordinary) != ordinaryRoot;
+        return new JObject
+        {
+            ["actorSeparated"] = actorSeparated,
+            ["playerProjected"] = playerProjected,
+            ["ordinaryBorrowed"] = ordinaryBorrowed,
+            ["displayStateCorrect"] = displayStateCorrect,
+            ["noSourceRender"] = noSourceRender,
+            ["viewHasNoLogicOrPhysics"] = visualOnly,
+            ["viewsUnderRendering"] = inRendering,
+            ["repeatReusesView"] = reused,
+            ["releaseAndRebind"] = released && restored
         };
     }
     #endregion

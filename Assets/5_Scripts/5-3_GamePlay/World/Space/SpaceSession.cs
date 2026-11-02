@@ -59,6 +59,7 @@ namespace FlatWorld.Spaceflight
             RegisterShipDamageFeedback();
             ItemEnvironmentSources.Register(this);
             MachineWorld.CellChanged += InvalidateGroundAtmosphere;
+            MachineWorld.NodeStateChanged += SynchronizeShipInteriorDataBuildingHealth;
             GameplayCombatBridge.Register(ShipCombatBridge.Instance);
             PressureExplosionQueue.WorldHandler = HandleShipExplosion;
             PressureExplosionQueue.WorldReady = IsShipExplosionGroundReady;
@@ -102,6 +103,7 @@ namespace FlatWorld.Spaceflight
             DroppedItemService.WorldItemsChanged -= QueueRetainedWorldRetirementForDrops;
             ItemEnvironmentSources.Unregister(this);
             MachineWorld.CellChanged -= InvalidateGroundAtmosphere;
+            MachineWorld.NodeStateChanged -= SynchronizeShipInteriorDataBuildingHealth;
             GameplayCombatBridge.Unregister(ShipCombatBridge.Instance);
             if (PressureExplosionQueue.WorldHandler == HandleShipExplosion) PressureExplosionQueue.WorldHandler = null;
             if (PressureExplosionQueue.WorldReady == IsShipExplosionGroundReady) PressureExplosionQueue.WorldReady = null;
@@ -151,6 +153,7 @@ namespace FlatWorld.Spaceflight
             if (string.IsNullOrWhiteSpace(save.SpaceStateJson) && template != null && !string.IsNullOrWhiteSpace(template.Name))
                 earth.PlanetId = template.Name;
             foreach (UniverseState sector in State.Sectors) RegisterSectorPlanets(sector, template);
+            RefreshElevatorGroundWarehouseWorldInfluenceHosts();
             foreach (ShipState ship in State.Ships)
                 foreach (ShipPieceState piece in ship.Pieces)
                     if (piece.IsAlive && !string.IsNullOrWhiteSpace(piece.SnapshotJson)) contents[piece.PieceId] = Decode(piece.SnapshotJson);

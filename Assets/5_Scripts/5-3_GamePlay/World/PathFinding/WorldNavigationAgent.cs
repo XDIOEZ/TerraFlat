@@ -18,7 +18,7 @@ public enum WorldNavigationDestinationResult
 /// compact waypoint list, so thousands of agents do not each run their own path search.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class WorldNavigationAgent : MonoBehaviour
+public sealed class WorldNavigationAgent : MonoBehaviour, IItemPhysicsComponentsReceiver2D
 {
     public const int PathFailureErrorThreshold = 4; // 同一目标连续失败达到此次数后公布错误结果。
     private const float MinimumWaypointDistance = 0.3f;
@@ -113,6 +113,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         schedulingPhase = (GetInstanceID() & 15) / 16f;
         Bind(GetComponent<Rigidbody2D>());
         nextRequestTime = Time.unscaledTime + schedulingPhase * Mathf.Max(0.05f, repathInterval);
+    }
+
+    void IItemPhysicsComponentsReceiver2D.OnItemPhysicsComponentsAvailable()
+    {
+        body = GetComponent<Rigidbody2D>();
     }
 
     private void OnEnable()

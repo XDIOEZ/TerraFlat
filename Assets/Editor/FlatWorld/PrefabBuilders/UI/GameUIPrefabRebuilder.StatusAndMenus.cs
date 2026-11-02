@@ -339,7 +339,7 @@ public static partial class GameUIPrefabRebuilder
 
         EnsureNutritionTemperatureRow(panel);
         EnsureNutritionHealthRow(panel);
-        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 230f));
+        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 162f));
 
         // 参数 HUD 不使用卡片底板或装饰描边，避免透明区域遮挡世界和制造视觉焦点。
         Image panelImage = panel.GetComponent<Image>();
@@ -353,21 +353,42 @@ public static partial class GameUIPrefabRebuilder
         if (panelOutline != null)
             UnityEngine.Object.DestroyImmediate(panelOutline);
 
-        string[] sliders = { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
+        string[] sliders = { "血量", "食物", "水", "维生素", "体温" };
+        float top = 0f;
         for (int i = 0; i < sliders.Length; i++)
         {
             RectTransform slider = FindRect(panel, sliders[i]);
+            bool isFood = sliders[i] == "食物";
             if (slider != null)
             {
-                SetTopLeft(slider, 0f, i * 34f, 326f, 26f);
+                SetTopLeft(slider, 0f, top, 326f, 26f);
                 Slider sliderComponent = slider.GetComponent<Slider>();
                 if (sliderComponent != null)
                     sliderComponent.interactable = false;
-                ConfigureNutritionRowTexts(slider);
+                if (isFood)
+                    ConfigureCombinedFoodRow(slider);
+                else
+                    ConfigureNutritionRowTexts(slider);
             }
+            top += 34f;
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+    }
+
+    // 食物三色条保留自己的语义色，隐藏图例并只保留一行填充。
+    private static void ConfigureCombinedFoodRow(RectTransform row)
+    {
+        if (row.GetComponent<UIVisualOwner>() == null)
+            row.gameObject.AddComponent<UIVisualOwner>();
+        RectTransform track = FindRect(row, "FoodTrack");
+        RectTransform legend = FindRect(row, "FoodLegend");
+        SetTopLeft(track, 0f, 0f, 326f, 26f);
+        if (legend != null)
+            legend.gameObject.SetActive(false);
+        ConfigureNutritionRowTexts(track);
+        foreach (TextMeshProUGUI text in track.GetComponentsInChildren<TextMeshProUGUI>(true))
+            text.color = FlatWorldUITheme.TextPrimary;
     }
 
     /// <summary>左右分栏对齐状态名称和数值，防止数值越出状态条边缘。</summary>

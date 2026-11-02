@@ -22,7 +22,7 @@ public static partial class GameplayTestSystemProbe
             List<string> tags = ReadInventoryCategoryRuleStringList(args["tags"]);
             return new JObject
             {
-                ["matches"] = InventoryCategoryFilter.MatchesAny(tags, ReadInventoryCategoryRuleStringList(args["selected"])),
+                ["matches"] = InventoryCategoryFilter.MatchesCategory(tags, args.Value<string>("selected")),
                 ["category"] = InventoryItemCategoryCatalog.GetPrimaryCategoryForItemTags(tags).Id
             };
         });
@@ -143,10 +143,12 @@ public static partial class GameplayTestSystemProbe
                 });
             }
 
-            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesAny(item.Tags, new[] { "tool" }));
+            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesCategory(item.Tags, "tool"));
             Sample("tools");
-            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesAny(item.Tags, new[] { "tool", "functional" }));
-            Sample("union");
+            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesCategory(item.Tags, "functional"));
+            Sample("functional");
+            grid.SetFilter(item => item != null && InventoryCategoryFilter.MatchesCategory(item.Tags, "tool"));
+            Sample("toolsAgain");
             bool filterPreservedData = slots.Count == 41 && ReferenceEquals(slots[8].itemData, original8);
             slots[39].itemData = Item("Tool", "InventoryGroup.MechanicalPower");
             grid.RefreshSlot(39);

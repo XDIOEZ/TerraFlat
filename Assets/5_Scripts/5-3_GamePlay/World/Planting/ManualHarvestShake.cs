@@ -1,35 +1,76 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>短暂采摘反馈只旋转可见节点，不移动碰撞与逻辑根。</summary>
+/// <summary>采摘只向主体与附属 Sprite 提交一次共享摇摆参数，不再逐帧旋转 Transform。</summary>
 public sealed class ManualHarvestShake : MonoBehaviour
 {
-    #region 采摘抖动
-    private Quaternion restRotation;
-    private float startedAt;
+    #region GPU采摘反馈
+    private const float MaximumRotationDisplacement = .13f;
+    private static readonly int HarvestShakeId = Shader.PropertyToID("_HarvestShake");
+    private readonly List<SpriteRenderer> renderers = new();
+    private MaterialPropertyBlock block;
+    private Item ownerItem;
     private bool active;
 
     public static void Play(Item target)
     {
-        if (target?.Sprite == null || target.Sprite.transform == target.transform) return;
-        var visual = target.Sprite.gameObject;
-        var shake = visual.GetComponent<ManualHarvestShake>() ?? visual.AddComponent<ManualHarvestShake>();
-        if (!shake.active) shake.restRotation = shake.transform.localRotation;
-        shake.startedAt = Time.time;
-        shake.active = true;
+        if (target?.Sprite == null) return;
+        var shake = target.GetComponent<ManualHarvestShake>() ?? target.gameObject.AddComponent<ManualHarvestShake>();
         shake.enabled = true;
+        shake.Restart(target);
     }
 
-    private void LateUpdate()
+    private void Restart(Item target)
     {
-        float elapsed = Time.time - startedAt;
-        transform.localRotation = restRotation * Quaternion.Euler(0f, 0f, ManualHarvestWork.ShakeAngle(elapsed));
-        if (elapsed >= .24f) { active = false; enabled = false; }
+        block ??= new MaterialPropertyBlock();
+        Clear();
+        ownerItem = target;
+        target.GetComponentsInChildren(true, renderers);
+        Vector3 root = target.Sprite.transform.position;
+        foreach (SpriteRenderer renderer in renderers)
+        {
+            if (renderer == null) continue;
+            // 每个附属 Sprite 保存同一根点的自身局部坐标，世界投影时也能正确跟随。
+            Vector3 pivot = renderer.transform.InverseTransformPoint(root);
+            Vector4 state = new(pivot.x, pivot.y, Time.time, 1f);
+            renderer.GetPropertyBlock(block);
+            block.SetVector(HarvestShakeId, state);
+            renderer.SetPropertyBlock(block);
+
+            // 扩大 CPU 裁剪边界覆盖 GPU 旋转；重复点击先恢复原边界，避免不断累加。
+            renderer.ResetLocalBounds();
+            Bounds bounds = renderer.localBounds;
+            float radius = new Vector2(Mathf.Abs(bounds.center.x - pivot.x) + bounds.extents.x,
+                Mathf.Abs(bounds.center.y - pivot.y) + bounds.extents.y).magnitude;
+            float padding = radius * MaximumRotationDisplacement;
+            bounds.Expand(new Vector3(padding * 2f, padding * 2f, 0f));
+            renderer.localBounds = bounds;
+        }
+        WorldPresentationProjection.RefreshItemVisualProperties(target, renderers);
+        active = true;
+        Invoke(nameof(Clear), ManualHarvestWork.ShakeDuration);
     }
 
-    private void OnDisable()
+    private void Clear()
     {
-        if (active) transform.localRotation = restRotation;
+        CancelInvoke(nameof(Clear));
+        if (active)
+        {
+            foreach (SpriteRenderer renderer in renderers)
+            {
+                if (renderer == null) continue;
+                renderer.GetPropertyBlock(block);
+                block.SetVector(HarvestShakeId, Vector4.zero);
+                renderer.SetPropertyBlock(block);
+                renderer.ResetLocalBounds();
+            }
+            WorldPresentationProjection.RefreshItemVisualProperties(ownerItem, renderers);
+        }
         active = false;
+        ownerItem = null;
+        renderers.Clear();
     }
+
+    private void OnDisable() => Clear();
     #endregion
 }

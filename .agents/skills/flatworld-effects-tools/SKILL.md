@@ -11,10 +11,13 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - 表现代码：`Assets/5_Scripts/5-3_GamePlay/Presentation/`。物品统一调用 `WorldRenderingManager`，内部按 Sorting/Shadows/Outlines/Effects 拆分；现有后端继续负责具体实现。`Effects/Management/VisualEffectManager` 管池，`Effects/Runtime/` 为独立 Effect.asmdef；`ActorRenderEffectController` 合成角色 MPB；`WorldSortingManager/WorldSortingMember` 管排序；`ActorShadowManager/WorldShadowProjectionManager` 管接触/太阳阴影。
 - 默认值：`Assets/Resources/GameConfig/Rendering/default-rendering.json`；Prefab 持有资源与逐物体外观，PlayerPrefs 持有本机偏好。表现只消费权威状态，不结算伤害、液量、引擎耗油或角色迁移。
 - AIECS：`Entities/AIECS/Presentation/`；开发工具：`Assets/5_Scripts/5-3_GamePlay/Development/{Debug,Diagnostics}/`；编辑器：`Assets/Editor/FlatWorld/`，内容工坊在 `ContentTools/ContentWorkshop/`。
-- 低帧率自动取证：`Automation/ProfilerAutoExporter` 与 `ProfilerAutoExportWindow`；顶栏「自动」/「<FPS」设置，默认关闭、30 FPS、启动/继续缓冲5秒、持续时间5秒。缓冲后按新 Profiler CPU 帧时间区间滚动统计，观察满窗口且低帧累计至少80%（5秒内累计4秒，无需连续，不按帧数）才暂停并导出窗口内仍保留的最慢帧；全部文件发布后自动继续，重新缓冲；失败保留暂停并关闭自动模式。暂停/继续、改设置或数据丢失清窗口。`auto-trigger.json` schema 3 区分最慢选中帧与达标触发帧，附累计秒数/比例/窗口边界；现场仍是暂停导出时刻。不改变手动/MCP无暂停契约。离线回归见 `Tools/Tests/ProfilerAutoExport/`。
+- 低帧率自动取证：`Automation/ProfilerAutoExporter` 与 `ProfilerAutoExportWindow`；顶栏「自动」/「<FPS」设置，默认关闭、30 FPS、启动/继续缓冲5秒、持续时间5秒。缓冲后按新 Profiler CPU 帧时间区间滚动统计，观察满窗口且低帧累计至少80%（5秒内累计4秒，无需连续，不按帧数）才显示 Editor 进度浮窗、暂停并导出窗口内仍保留的最慢帧；全部文件发布后先清浮窗再自动继续，重新缓冲；取消或失败清浮窗，失败保留暂停并关闭自动模式。暂停/继续、改设置或数据丢失清窗口。`auto-trigger.json` schema 3 区分最慢选中帧与达标触发帧，附累计秒数/比例/窗口边界；现场仍是暂停导出时刻。不改变手动/MCP无暂停契约。离线回归见 `Tools/Tests/ProfilerAutoExport/`。
 - Effect 不反向引用 GamePlay 管理器；生产程序集不引用 FlatWorld.Gameplay.Debug；Debug 使用 GameNetwork 时显式引用 Networking.Core。
 
 ## 共用契约
+
+- 完整自然物的可见副本由 WorldRenderingManager.NaturalItems 持有，复用 WorldPresentationProjection 的 visualHierarchyOnly 模式，只复制绘制必需的节点；逻辑外壳暂保留隐藏的外观输入，不复制 Item、Module 或原生物理。撤销 ChunkView 只解绑投影，不销毁生态。Mod_HeldFood 只提交进食进度，WorldRenderingManager.HeldFood 持有排序和咬痕资源；MPB 清空咬痕用计数关闭及共享空纹理，不传 null。规则 world_streaming/detached_item_projection、rendering/held_food_bites，正式 Leaf 重绑见 natural_item_decoupling_gameplay。
+- SingleSprite GO Actor 和已初始化、纯视觉子树的普通/自然物由 WorldRenderingManager 直接借出 Render 到所属场景 Rendering；Item、模块及物理留逻辑树，回池还原原层级和动画 PoseRoot。玩家及混有逻辑/物理的复杂视觉继续以 visualHierarchyOnly 投影，源隐藏、显示副本不复制逻辑；自然物区块租约仍由 NaturalItems 负责。注册世界 Renderer 时不要把投影临时 forceRenderingOff 当作原始隐藏值；跨场景、手持和注销均清理旧视图。
 
 - 排序类别由 WorldSorting JSON 经 GamePlay 桥接 AIECS。动态实体共用 Player，地面印记/水花/预览走 Shadow，离体特效走 world-effect；SortingGroup 只设最外层键，内部保持相对序，代理继承外层有效键。贴地设施为 ground-building，Carrier 判定先于 Building。
 - 投影世界各持有 `WorldPresentationSortingDomain`，同世界区块与实体共用域。域内显式提交原层序与脚点，渲染前计算临时 Order 恢复 Y 混排；不能把整个 SortingGroup 内的相机距离当排序依据。静态键、模拟根和存档不改，退出恢复并注销。
@@ -25,6 +28,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - 池取出重置 Transform、Animator、颜色与寿命，回收清订阅。一次性粒子在源销毁前脱离；需要角色 OnDisable 回收的特效用独立根，Owner 与父级分离。睡眠只释放可见实例，状态请求仍归角色。
 - 完整 GameRes 的 `combat-prewarm` 按正式武器引用去重，每个命中 GameEffect 分帧准备 3 个空闲实例；`PrepareForPool` 不播放、不消费随机数。完整资源会话/世界释放旧代前清池，原位更新候选不预热。延迟回收队列保留未到期任务，提前回收取消旧任务，新租用不能继承旧截止时间。
 - `SharedSpriteMeshCache.IsSessionEnding` 时停止区块提交、分帧推进与 Owner 恢复；活跃期登记/恢复失败保留异常。BRG 禁用/域重载幂等 Dispose：先释放组，再 finally 释放自有缓冲/Mesh/材质，按需重建。
+- 启动 SpriteAtlas 按 Menu/GameplayUI/CommonItems/WorldEnvironment/Creatures/Shared 收集，并读取液体 WorldWater Sprite。仅管理实际页及用途目录引用的源纹理；`ProjectSettings/FlatWorldSpriteAtlasSourceEntries.json` 记录源组和地址并支持失活恢复。验收看 Unity 实际 `PackAtlases/CanBindTo`、页尺寸及配置 fallback，不以 shelf 估算替代。
 
 ## 按主题读取
 

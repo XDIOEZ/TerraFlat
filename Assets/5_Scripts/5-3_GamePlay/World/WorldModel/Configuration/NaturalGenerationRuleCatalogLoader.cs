@@ -29,11 +29,14 @@ public static class NaturalGenerationRuleCatalogLoader
     private static string ManifestPath =>
         StreamingAssetsTextLoader.CombinePath(BuiltInRoot, ManifestFileName);
 
+    /// <summary>反序列化自然物规则清单纯 DTO。</summary>
+    private static NaturalGenerationManifest ParseManifest(string json) =>
+        Deserialize<NaturalGenerationManifest>(json, ManifestFileName);
+
     /// <summary>检查清单、分包标识与路径；文件必须显式列入清单。</summary>
-    private static NaturalGenerationManifest DeserializeManifest(string json)
+    private static void ValidateManifest(NaturalGenerationManifest manifest)
     {
-        NaturalGenerationManifest manifest = Deserialize<NaturalGenerationManifest>(json, ManifestFileName);
-        if (manifest.SchemaVersion != SupportedSchemaVersion || manifest.Packages == null ||
+        if (manifest == null || manifest.SchemaVersion != SupportedSchemaVersion || manifest.Packages == null ||
             manifest.Packages.Count == 0)
             throw new InvalidDataException("自然物规则清单版本无效或 packages 为空。");
 
@@ -49,7 +52,6 @@ public static class NaturalGenerationRuleCatalogLoader
                 !ids.Add(package.Id) || !paths.Add(package.Path))
                 throw new InvalidDataException($"自然物规则分包 ID/路径重复或路径不是 JSON：{package.Id} / {package.Path}");
         }
-        return manifest;
     }
 
     /// <summary>严格解析 JSON；未知或缺失字段会指出具体文件。</summary>
@@ -72,18 +74,22 @@ public static class NaturalGenerationRuleCatalogLoader
 
     #region 文件加载
 
-    /// <summary>编辑器预览的同步读取入口；游戏资源加载使用异步入口。</summary>
+    /// <summary>同步读取并校验内建目录；烘焙只记录清单与启用的纯 DTO 分包。</summary>
+    [BuiltInContentBake]
     public static NaturalGenerationRuleCatalog LoadBuiltIn()
     {
-        NaturalGenerationManifest manifest = DeserializeManifest(
-            StreamingAssetsTextLoader.ReadAllText(ManifestPath));
+        NaturalGenerationManifest manifest = BuiltInContentBinaryCatalog.ReadFile(
+            ManifestPath, ParseManifest, SupportedSchemaVersion);
+        ValidateManifest(manifest);
         var catalog = new NaturalGenerationRuleCatalog();
         foreach (NaturalGenerationPackageReference package in manifest.Packages)
         {
             if (!package.Enabled) continue;
-            string json = StreamingAssetsTextLoader.ReadAllText(
-                StreamingAssetsTextLoader.CombinePath(BuiltInRoot, package.Path));
-            catalog.Register(Deserialize<NaturalGenerationRulePackage>(json, package.Path), package.Path);
+            string path = StreamingAssetsTextLoader.CombinePath(BuiltInRoot, package.Path);
+            NaturalGenerationRulePackage rulePackage = BuiltInContentBinaryCatalog.ReadFile(
+                path, json => Deserialize<NaturalGenerationRulePackage>(json, package.Path),
+                SupportedSchemaVersion);
+            catalog.Register(rulePackage, package.Path);
         }
         EnsureNonEmpty(catalog);
         return catalog;
@@ -94,29 +100,30 @@ public static class NaturalGenerationRuleCatalogLoader
         Action<NaturalGenerationRuleCatalog> onCompleted,
         Action<Exception> onFailed)
     {
-        string json = null;
+        NaturalGenerationManifest manifest = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            ManifestPath, value => json = value, error => readError = error);
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+            ManifestPath, ParseManifest, value => manifest = value, error => readError = error,
+            SupportedSchemaVersion);
         if (readError != null) { onFailed?.Invoke(readError); yield break; }
 
-        NaturalGenerationManifest manifest;
-        try { manifest = DeserializeManifest(json); }
+        try { ValidateManifest(manifest); }
         catch (Exception error) { onFailed?.Invoke(error); yield break; }
 
         var catalog = new NaturalGenerationRuleCatalog();
         foreach (NaturalGenerationPackageReference package in manifest.Packages)
         {
             if (!package.Enabled) continue;
-            json = null;
+            NaturalGenerationRulePackage rulePackage = null;
             readError = null;
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                StreamingAssetsTextLoader.CombinePath(BuiltInRoot, package.Path),
-                value => json = value, error => readError = error);
+            string path = StreamingAssetsTextLoader.CombinePath(BuiltInRoot, package.Path);
+            yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+                path, json => Deserialize<NaturalGenerationRulePackage>(json, package.Path),
+                value => rulePackage = value, error => readError = error, SupportedSchemaVersion);
             if (readError != null) { onFailed?.Invoke(readError); yield break; }
             try
             {
-                catalog.Register(Deserialize<NaturalGenerationRulePackage>(json, package.Path), package.Path);
+                catalog.Register(rulePackage, package.Path);
             }
             catch (Exception error) { onFailed?.Invoke(error); yield break; }
         }

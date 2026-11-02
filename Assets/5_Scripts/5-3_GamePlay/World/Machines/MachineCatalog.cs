@@ -8,6 +8,7 @@ using UnityEngine;
 public static class MachineCatalog
 {
     #region 目录与扩展
+    private const string ResourcePath = "Config/Mechanical/mechanical-catalog";
     private static Dictionary<string, MachineDefinition> definitions = new(StringComparer.Ordinal);
     private static Dictionary<string, MachineProcessDefinition> processes = new(StringComparer.Ordinal);
     // 旧存档/热重载仍保留字符串键字典；热配方查询改用值类型组合键，避免每步拼接站点和材料名。
@@ -114,10 +115,21 @@ public static class MachineCatalog
     public static void EnsureLoaded()
     {
         if (loaded) return;
-        TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
-        if (asset == null) throw new InvalidOperationException("缺少机械扭矩配置目录。");
-        MachineCatalogDocument document = JsonConfigurationCache.Deserialize<MachineCatalogDocument>(asset.text);
-        if (document == null || document.Version != 1) throw new InvalidOperationException("机械目录版本无效。");
+        MachineCatalogDocument document = LoadDefaultDocument();
+        Settings = document.Settings;
+        foreach (MachineDefinition definition in document.Nodes) RegisterDefinitionCore(definition);
+        foreach (MachineProcessDefinition process in document.Processes) RegisterProcessCore(process);
+        loaded = true;
+    }
+
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration() => _ = LoadDefaultDocument();
+
+    private static MachineCatalogDocument LoadDefaultDocument()
+    {
+        MachineCatalogDocument document = BuiltInContentBinaryCatalog.ReadResource(ResourcePath, ParseDefaultDocument);
+        if (document == null) throw new InvalidOperationException("缺少机械扭矩配置目录。");
+        if (document.Version != 1) throw new InvalidOperationException("机械目录版本无效。");
         if (document.Settings == null || document.Nodes == null || document.Processes == null)
             throw new InvalidOperationException("机械目录缺少参数或内容列表。");
         document.Settings.Validate();
@@ -125,11 +137,12 @@ public static class MachineCatalog
             (definition ?? throw new InvalidOperationException("机械目录含空节点。")).Validate();
         foreach (MachineProcessDefinition process in document.Processes)
             (process ?? throw new InvalidOperationException("机械目录含空加工规则。")).Validate();
-        Settings = document.Settings;
-        foreach (MachineDefinition definition in document.Nodes) RegisterDefinitionCore(definition);
-        foreach (MachineProcessDefinition process in document.Processes) RegisterProcessCore(process);
-        loaded = true;
+        return document;
     }
+
+    private static MachineCatalogDocument ParseDefaultDocument(string json)
+        => JsonConfigurationCache.Deserialize<MachineCatalogDocument>(json)
+           ?? throw new InvalidOperationException("机械目录版本无效。");
 
     public static MachineDefinition Get(string id)
     {
@@ -186,13 +199,13 @@ public static class MachineCatalog
     #endregion
 }
 
-/// <summary>机械首版加载参数：默认 0.1 秒模拟步长、1/2 区块激活滞回、5 秒远离冷却。</summary>
+/// <summary>机械首版加载参数：默认 0.05 秒模拟步长、1/2 区块激活滞回、5 秒远离冷却。</summary>
 [MemoryPack.MemoryPackable]
 [Serializable]
 public sealed partial class MechanicalSettings
 {
     #region 参数
-    public float TickSeconds = 0.1f;
+    public float TickSeconds = 0.05f;
     public int ActivationChunks = 1;
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;

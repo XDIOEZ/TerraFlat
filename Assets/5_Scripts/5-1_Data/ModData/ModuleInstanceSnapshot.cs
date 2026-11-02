@@ -217,7 +217,10 @@ public static class ModuleInstanceStateCodecs
             var state = MemoryPackSerializer.Deserialize<InventoryModuleInstanceState>(payload);
             var target = (Inventory_ModuleData)data;
             if (state.Inventories != null)
+            {
                 InventoryInstanceSnapshot.RestoreDictionary(state.Inventories, target.Data ??= new());
+                target.NotifyInventoryMapStructureChanged();
+            }
             target.PanleRectPosition = new Vector3(state.PanelPositionX, state.PanelPositionY, state.PanelPositionZ);
             target.BasePanelIsOpen = state.PanelIsOpen;
         }

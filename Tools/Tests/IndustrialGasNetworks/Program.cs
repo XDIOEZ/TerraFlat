@@ -30,6 +30,59 @@ public static class Program
     {
         foreach (string id in new[] { "test:a", "test:b" }) FluidCatalog.Default.Register(new FluidDefinition(new FluidDefinitionDto
         { Id = id, MolarMassKgPerMol = 1, LiquidDensityKgPerLiter = 1, GasHeatCapacityJPerMolKelvin = 20, LiquidHeatCapacityJPerMolKelvin = 40 }));
+        Run("liquid network mixes once by liters and preserves split temperature", () =>
+        {
+            var first = new FluidInventory(); var second = new FluidInventory();
+            var fluid = FluidCatalog.Default.Find("test:a");
+            first.TryAdd(FluidInventory.CreateBatch(fluid, 0m, 100m, 373.15), 1000, .001);
+            second.TryAdd(FluidInventory.CreateBatch(fluid, 0m, 50m, 323.15), 1000, .001);
+            var network = new IndustrialLiquidNetworkTemperature();
+            network.AddInventory(first); network.AddInventory(second); network.AddInventory(first);
+            network.RefreshContents();
+            Require(Near(network.TotalLiquidLiters, 150) && Near(network.TemperatureKelvin - 273.15, 250d / 3), "weighted temperature or inventory deduplication");
+            Require(Near(first.GetTemperatureKelvin(), second.GetTemperatureKelvin()), "contents retain two temperatures");
+            first.TryTakeExact("test:a", FluidPhase.Liquid, 10m, out _); network.RefreshContents();
+            Require(Near(network.TotalLiquidLiters, 140) && Near(network.TemperatureKelvin - 273.15, 250d / 3), "outflow changed temperature");
+            var split = new IndustrialLiquidNetworkTemperature(); split.AddInventory(first); split.RefreshContents();
+            Require(Near(split.TemperatureKelvin, network.TemperatureKelvin), "split restored old temperature");
+            double energy = first.State.TotalInternalEnergyJoules;
+            network.MirrorAuthoritativeTemperature(300);
+            Require(first.State.TotalInternalEnergyJoules == energy && network.TemperatureKelvin == 300, "client changed authoritative contents");
+            Require(Near(IndustrialLiquidNetworkTemperature.AverageWithAmbientCells(283.15, 50, 2), 293.15), "grid samples not averaged directly");
+        });
+        Run("liquid temperature reuses valve and material filtered port graph", () =>
+        {
+            var left = Node(710, 0, "device", "liquid"); var valve = Node(711, 1, "pipe", "liquid");
+            var right = Node(712, 2, "device", "liquid");
+            var fluid = FluidCatalog.Default.Find("test:a");
+            left.Local.TryAdd(FluidInventory.CreateBatch(fluid, 0, 100, 373.15), 1000, .001);
+            right.Local.TryAdd(FluidInventory.CreateBatch(fluid, 0, 50, 323.15), 1000, .001);
+            var graph = new FluidNetworkGraph(cell => cell); graph.Rebuild(new[] { left, valve, right });
+            var group = graph.GetLiquidTemperatureComponent(left, "main", "test:a");
+            group.Temperature.RefreshContents();
+            Require(group.Members.Count == 3 && group.Cells.Count == 3 && Near(group.Temperature.TotalLiquidLiters, 150), "network members or dry pipe coverage");
+            valve.State.ValveOpen = false; graph.Rebuild(new[] { left, valve, right });
+            var split = graph.GetLiquidTemperatureComponent(left, "main", "test:a"); split.Temperature.RefreshContents();
+            Require(split.Members.Count == 1 && Near(split.Temperature.TemperatureKelvin, group.Temperature.TemperatureKelvin), "closed valve crosses or temperature reverted");
+            valve.State.ValveOpen = true; valve.Definition.Fluid.Ports[0].FluidId = "test:b";
+            graph.Rebuild(new[] { left, valve, right });
+            Require(graph.GetLiquidTemperatureComponent(left, "main", "test:a").Members.Count == 1, "material filter crossed");
+        });
+        Run("dynamic grid exchanges replace, average, freeze and bind terrain identity", () =>
+        {
+            var field = new DynamicGridTemperatureExchangeField();
+            object terrain = new(), first = new(), second = new();
+            var cell = new Vector2Int(0, 0);
+            var values = new Dictionary<Vector2Int, DynamicGridTemperatureExchangeField.CellOffset> { [cell] = new(terrain, -10) };
+            Require(field.ReplaceSourceOffsets(first, values), "first publication absent");
+            long revision = field.Revision; field.ReplaceSourceOffsets(first, values);
+            Require(field.Revision == revision && field.GetOffset(cell, terrain) == -10, "repeat accumulated offset");
+            values[cell] = new(terrain, 0); field.ReplaceSourceOffsets(second, values);
+            float[] frozen = field.CaptureChunkOffsets(cell, 1, 1, terrain);
+            Require(field.GetOffset(cell, terrain) == -5, "overlap not averaged");
+            field.RemoveSource(first);
+            Require(field.GetOffset(cell, terrain) == 0 && frozen[0] == -5 && field.GetOffset(cell, new object()) == 0, "remove, freeze or reload leaked");
+        });
         Run("quantity kernel reaches fixed capacity without overflow", () =>
         { var source = Gas(300); var target = Gas(0); double moved = IndustrialFluidTransfer.Transfer(source, target, FluidPhase.Gas, 200, 100, 100);
           Require(Near(moved,100) && Near(Liters(target),100) && Near(Liters(source),200), "capacity or conservation");

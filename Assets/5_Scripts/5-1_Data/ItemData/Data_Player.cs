@@ -15,9 +15,6 @@ public partial class Data_Player : ItemData
     #region 生命
     [Tooltip("血量")]
     [MemoryPackIgnore] public Hp hp = new Hp(30);
-
-    [Tooltip("防御力")]
-    [MemoryPackIgnore] public Defense defense = new(5, 5, 5, 5);
     #endregion
 
     #region 速度

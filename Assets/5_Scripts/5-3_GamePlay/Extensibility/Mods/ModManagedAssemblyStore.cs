@@ -103,7 +103,7 @@ public static class ModManagedAssemblyStore
         throw new PlatformNotSupportedException("当前 IL2CPP 平台不支持托管 DLL / Harmony MOD；JSON、资源及 Lua MOD 不受此限制。");
 #else
         if (package == null) throw new ArgumentNullException(nameof(package));
-        EnsureBuiltInHarmonyLoaded();
+        LoadBuiltInHarmonyRuntimeAssembly();
         foreach (AssemblyImage image in package.Images)
         {
             if (processImages.TryGetValue(image.Name, out var existing))
@@ -123,22 +123,23 @@ public static class ModManagedAssemblyStore
 #endif
     }
 
-    /// <summary>按程序集名加载游戏自带 Harmony，避免 GamePlay 对补丁库建立编译期引用并被 Burst 扫描。</summary>
-    private static void EnsureBuiltInHarmonyLoaded()
+    /// <summary>仅在托管 MOD 启用时加载原始 Harmony，不让补丁库参与 Unity 编译和 Burst 扫描。</summary>
+    internal static Assembly LoadBuiltInHarmonyRuntimeAssembly()
     {
         const string harmonyAssemblyName = "0Harmony";
-        if (AppDomain.CurrentDomain.GetAssemblies().Any(value =>
-                string.Equals(value.GetName().Name, harmonyAssemblyName, StringComparison.OrdinalIgnoreCase)))
-            return;
+        Assembly loaded = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(value =>
+            string.Equals(value.GetName().Name, harmonyAssemblyName, StringComparison.OrdinalIgnoreCase));
+        if (loaded != null) return loaded;
 
         try
         {
-            Assembly.Load(harmonyAssemblyName);
+            return Assembly.LoadFrom(Path.Combine(UnityEngine.Application.streamingAssetsPath,
+                "ManagedModRuntime", harmonyAssemblyName + ".dll"));
         }
         catch (Exception exception)
         {
             throw new FileLoadException(
-                "游戏自带 Harmony 运行库未能加载；请确认发行包包含 0Harmony.dll。", exception);
+                "游戏自带 Harmony 运行库未能加载；请确认发行包包含 StreamingAssets/ManagedModRuntime/0Harmony.dll。", exception);
         }
     }
 

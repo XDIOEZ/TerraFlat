@@ -173,7 +173,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       }
     }
   ]

@@ -20,15 +20,11 @@ public sealed partial class TileBuildingDamageProfile
     [Min(1f)]
     public float MaxHealth = 100f;
 
-    [Tooltip("格子建筑的单一物理防御。")]
+    [Tooltip("格子建筑的物理、火焰与辐射防御。")]
     public CombatDefense DefenseValues = new CombatDefense();
 
     [Tooltip("工具弱点；匹配时在防御后乘二，None 表示没有工具弱点。")]
     public TileDamageToolKind RequiredTool = TileDamageToolKind.None;
-
-    [Min(0f)]
-    [Tooltip("历史兼容字段；物理伤害不再使用最低伤害保底。")]
-    public float MinimumWeaponDamage;
 
     public CombatImpactMaterial ImpactMaterial = CombatImpactMaterial.Default;
 

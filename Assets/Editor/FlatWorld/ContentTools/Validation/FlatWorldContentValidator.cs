@@ -1609,8 +1609,10 @@ public static class FlatWorldContentValidator
                     $"建筑及其召唤器定义 '{expectedSummonerId}' 均未提供生命值模块。",
                     module);
             }
-            if (record.Prefab.GetComponentInChildren<BoxCollider2D>(true) == null)
-                AddError(report, "FWC-BUILDING-014", record.Path, "BoxCollider2D", "建筑缺少必填占地碰撞体。", module);
+            if (record.Prefab.GetComponentInChildren<BoxCollider2D>(true) == null &&
+                !record.Prefab.GetComponentsInChildren<ItemPhysicsTemplate2D>(true)
+                    .Any(physics => physics.colliderType == nameof(BoxCollider2D)))
+                AddError(report, "FWC-BUILDING-014", record.Path, "ItemPhysicsTemplate2D", "建筑缺少必填占地碰撞声明。", module);
             if (record.Prefab.GetComponentInChildren<SpriteRenderer>(true) == null)
                 AddError(report, "FWC-BUILDING-015", record.Path, "SpriteRenderer", "建筑缺少放置预览所需的 SpriteRenderer。", module);
         }

@@ -74,28 +74,20 @@ public static partial class GameplayTestSystemProbe
             JObject smelterFlame = (JObject)smelter["modules"]["combustionVisual"];
             JObject smelterParameters = (JObject)smelterFlame["parameters"];
             Material chunkFireMaterial = null;
-            Sprite chunkFireSprite = null;
             string chunkFireMaterialPath = null;
-            int chunkFireFrameCount = 0;
-            bool chunkFireFullRect = false;
+            bool chunkFireUsesProceduralQuad = false;
 #if UNITY_EDITOR
             const string chunkViewPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
-            const string chunkFireSheetPath = "Assets/6_Art/PracticalEffects/Burning/CreatureBurning_Sheet.png";
             GameObject chunkViewPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(chunkViewPath);
             ChunkTilemapRenderer chunkViewRenderer = chunkViewPrefab != null
                 ? chunkViewPrefab.GetComponent<ChunkTilemapRenderer>() : null;
             var chunkViewFields = chunkViewRenderer != null
                 ? new UnityEditor.SerializedObject(chunkViewRenderer) : null;
             chunkFireMaterial = chunkViewFields?.FindProperty("fireMaterial")?.objectReferenceValue as Material;
-            chunkFireSprite = chunkViewFields?.FindProperty("fireSprite")?.objectReferenceValue as Sprite;
             chunkFireMaterialPath = chunkFireMaterial != null
                 ? UnityEditor.AssetDatabase.GetAssetPath(chunkFireMaterial) : null;
-            chunkFireFrameCount = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(chunkFireSheetPath).OfType<Sprite>().Count();
-            var chunkFireImporter = UnityEditor.AssetImporter.GetAtPath(chunkFireSheetPath) as UnityEditor.TextureImporter;
-            var chunkFireImporterSettings = new UnityEditor.TextureImporterSettings();
-            chunkFireImporter?.ReadTextureSettings(chunkFireImporterSettings);
-            chunkFireFullRect = chunkFireImporter != null &&
-                chunkFireImporterSettings.spriteMeshType == UnityEngine.SpriteMeshType.FullRect;
+            chunkFireUsesProceduralQuad = chunkViewFields?.FindProperty("fireSprite") == null &&
+                SharedSpriteMeshCache.GetWorldEffectQuad().texture == Texture2D.whiteTexture;
 #endif
 
             return new JObject
@@ -132,9 +124,8 @@ public static partial class GameplayTestSystemProbe
                 ["chunkFireMaterialPath"] = chunkFireMaterialPath,
                 ["chunkFireMaterialShader"] = chunkFireMaterial != null && chunkFireMaterial.shader != null
                     ? chunkFireMaterial.shader.name : null,
-                ["chunkFireSpriteAssigned"] = chunkFireSprite != null,
-                ["chunkFireFrameCount"] = chunkFireFrameCount,
-                ["chunkFireFullRect"] = chunkFireFullRect,
+                ["chunkFireSharesFlameMaterial"] = chunkFireMaterial == material,
+                ["chunkFireUsesProceduralQuad"] = chunkFireUsesProceduralQuad,
                 ["attachedUpX"] = attachedUp.x,
                 ["attachedUpY"] = attachedUp.y,
                 ["uprightUpX"] = uprightUp.x,
@@ -215,7 +206,12 @@ public static partial class GameplayTestSystemProbe
             var adapterRoot = new GameObject("Lua 炉口烟雾适配器");
             adapterRoot.transform.SetParent(root.transform, false);
             adapterRoot.transform.localScale = new Vector3(2f, 2f, 1f);
+            adapterRoot.AddComponent<SpriteRenderer>();
             CombustionVisualEffect adapter = adapterRoot.AddComponent<CombustionVisualEffect>();
+            // 连同正式火焰偏移装配，检查烟雾在缩放后真正落到顶部炉口。
+            adapter.ConfigureFlamePresentation(prototype.flameScale, prototype.flameHeightRatio,
+                prototype.flameEmissionMultiplier, prototype.attachFlameToAnchor,
+                prototype.followSourceRenderer, prototype.sourceRendererAnchorOffset);
             adapter.BindWorldPresentation(adapter, 0, 80);
             adapter.SetCombustionActive(true);
             bool optIn = adapterRoot.GetComponentInChildren<ShaderSmokeEffect>(true) == null;
@@ -223,8 +219,11 @@ public static partial class GameplayTestSystemProbe
                 prototype.smokeSize, prototype.smokeDensity);
             ShaderSmokeEffect adapted = adapterRoot.GetComponentInChildren<ShaderSmokeEffect>(true);
             bool adapterEmits = adapted != null && adapted.Renderer.enabled;
+            Vector3 mouthLocalPosition = adapterRoot.transform.InverseTransformPoint(adapted.transform.position);
+            Vector3 flameLocalPosition = adapterRoot.transform.InverseTransformPoint(
+                adapterRoot.GetComponentInChildren<ShaderFlameEffect>(true).transform.position);
             float anchorError = Vector3.Distance(adapted.transform.position,
-                adapterRoot.transform.TransformPoint(prototype.smokeAnchorOffset));
+                adapterRoot.transform.TransformPoint(prototype.sourceRendererAnchorOffset + prototype.smokeAnchorOffset));
             int order = adapted.Renderer.sortingOrder;
             adapterRoot.transform.localRotation = Quaternion.Euler(0f, 180f, 35f);
             adapter.ConfigureSmokePresentation(true, prototype.smokeAnchorOffset, prototype.smokeSize, 1f);
@@ -242,7 +241,8 @@ public static partial class GameplayTestSystemProbe
             return new JObject
             {
                 ["enabledItems"] = enabledItems,
-                ["mouthLocalY"] = prototype.sourceRendererAnchorOffset.y + prototype.smokeAnchorOffset.y,
+                ["mouthLocalY"] = mouthLocalPosition.y,
+                ["flameLocalY"] = flameLocalPosition.y,
                 ["configuredWidth"] = prototype.smokeSize.x, ["configuredHeight"] = prototype.smokeSize.y,
                 ["shader"] = material != null && material.shader != null ? material.shader.name : null,
                 ["supported"] = material != null && material.shader != null && material.shader.isSupported,

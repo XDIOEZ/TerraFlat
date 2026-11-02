@@ -35,6 +35,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 ## 地块与液体
 
+- 天然水域取水唤醒后的固定步扩散由 `WorldLiquidBodySystem` 使用 `WorldLiquidDiffusionBatch` 累计本轮水量，再复用 `SetLiquidBatch/RecordLiquidBatch` 按区块一次写回和通知；存档差量有序二分更新，避免逐格渲染和排序。回归 `surface_fluids/diffusion_batch`。
+
 - JSON 构建 `RuntimeTileDefinition` 和共享 Behaviour；`TileBehaviourRegistry` 按显式 `type` 工厂解析，未知字段/非法数值失败。`TileData.ID/Name` 来自定义，位置/进度属于实例，`CreateTileData/Clone` 产生单格副本。`TileDefinitionEditorCatalog` 保存 JSON，`GameRes.GetTileBlock` 返回运行时定义。
 - Ground 是真实底材，Liquid 独立保存深度与身份。`WorldLiquidSystem.TryPump/TrySet` 改液体，地面替换不自动清水。`TerrainSupportLayer` 投影平台表面并遮断底部液体接触，底部液体仍存在。
 - 天然水域底床写入 `terrain.surface.naturalDepthLevels`：海洋为初始水面的十档等级加 1（2～11 层），河湖/洞穴水量 1～50 份降低 2 层、51～100 份降低 3 层；冻结前生成，抽水/倒水不改底床。天然水面统一低于同地势岸边 1 层，抽干后露出真实底床；原始 `height`、玩家采挖与填土独立叠加。
@@ -69,6 +71,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 洞穴散矿读取基础生态阶段实际矿山：距离任意矿山至少 5 格、来源最多 12 格（固定地图格数）；`cave.resource.looseDensity/looseStoneDensity` 默认互斥 2% 对应矿石、5% 石头，石头矿山不贡献额外矿石概率。邻块基础生态通过有界缓存共享，来源坐标保存在散矿 RuleId，不能用只支持同块宿主显示的 `HostGuid`。
 - 洞穴河湖岸泥土由 `cave.dirtGround.enabled/tileId/chance` 控制，只替换开放干格的 Ground（默认 Profile 为 `Tile_Dirt` 29），不写 Blocking、不提高导航代价；普通岩壁仍独立生成。
 - 自然物数量和聚落分布以规则配置与正式生成器为准；聚落中心来自全局种子网格。
+- 普通自然生态同格只选一种独立自然物；带宿主 GUID 的伴生物仍可同格，邻区宿主标签以实际互斥结果为准。回归 `ecology/host_cell_occupancy`。
 - 自然物数量、岩浆湖半径、河床边缘沉积及聚落距离档位共用 `DiscreteProbability` 与 `generation.*` 概率表；Profile 创建时冻结最终概率到数字参数，保存/派生窗口继续沿用，生成与生态指纹均覆盖概率。聚落用11个归一化距离档的二项概率表读取生成倍率；原有地形、范围和总生成率规则仍由各系统负责。
 - `CompanionHostTag` 要求同格实际宿主；`RequiredChunkTag/RequiredTagChunkRadius` 查确定性邻区标签，不依赖加载顺序。洞穴占格顺序为入口 → 配置植物 → 藤蔓/矿物，安全区不生植物。
 - 草与可采植被分别由 `ChunkGrassRenderer/ChunkGroundCoverRenderer` 绘制；`groundCover:true` 保留确定性点，采集才创建 Item，持久化用生态删除 GUID。`GroundCoverSystem` 管理选格/图层，解绑不是采集。
@@ -83,5 +86,6 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 - 山顶岩浆湖由 `lake.lava.*` 和确定性山峰候选生成；`rareMaxRadius` 是长尾上限，`lava.shore` 仅标天然岸带。岩浆与油池共用区域遍历和缓存操作，选址规则及各自 256 项缓存独立。接触属性来自 `WorldLiquidSettings`，热源读未被平台遮挡的实际液体。
 - 独立陆地油池由 `lake.oil.enabled/regionSize/chance/areaRatio` 控制，复用岩浆湖尺寸概率与轮廓；默认面积约20%，半径按比例开方。真实 Liquid 身份为 `core:crude_oil`，保留底材与天然底床，不覆盖已有水/岩浆、不随水结冰或贡献淡水供湿。回归 `terrain/petroleum_land_basins` 与 `Tools/Tests/PetroleumTerrain/verify.py`。
 - `groundHarvest` 声明工具/等级/产物/距离/使用次数/挖后地表。`Mod_GroundHarvestToolBase → GroundTileHarvestSystem` 累积并保存进度，完成一层才生成掉落/提交地面；`GroundTileLayerSystem` 保存天然层数和覆盖栈，覆盖栈含原地块、进度、草层，开采优先弹栈。
+- 铲子可挖表面有水的开放地格，每次进度是干地的 25%（四倍次数），排除岩浆/石油；仅采挖通道放行水，不放宽耕地/覆盖层。回归 `terrain/harvest_rules`。
 - 采挖 Ground 后 `RuntimeGrassClearing.Clear` 同步独立草层和差量；工具白框共用实际操作的只读校验，铲子优先积雪。平台/地板仍属于独立支撑层。
 - 每采掉天然一层都更新 `TerrainSurfaceHeightLayer` 的表面深度，独立于五层石头产量；快照/回滚/存档同时保存 `ExcavatedSurfaceLevels`。地块 JSON 的 `minimumSurfaceDepth` 声明露出底材的最低深度，基岩为 5；地板与普通地面齐平，高低阴影统一交 `TerrainHeightShadowManager`。

@@ -26,6 +26,10 @@ Shader "Hidden/FlatWorld/WindStreaks"
             float4 _WindStreakPattern;
             float4 _WindStreakShape;
             half4 _WindStreakColor;
+            TEXTURE2D(_WindObstacleFlow);
+            SAMPLER(sampler_WindObstacleFlow);
+            float4 _WindObstacleRect;
+            float4 _WindObstacleCamera;
 
             struct Attributes
             {
@@ -66,7 +70,18 @@ Shader "Hidden/FlatWorld/WindStreaks"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float2 direction = _WindStreakDirection.xy;
                 float2 across = float2(-direction.y, direction.x);
-                float2 pattern = float2(dot(input.worldOffset, direction), dot(input.worldOffset, across)) /
+                float lateralBend = 0.0;
+                float obstacleMask = 0.0;
+                if (_WindObstacleCamera.z > 0.5)
+                {
+                    float2 worldPosition = _WindObstacleCamera.xy + input.worldOffset;
+                    float2 flowUv = (worldPosition - _WindObstacleRect.xy) * _WindObstacleRect.zw;
+                    float2 flow = SAMPLE_TEXTURE2D(_WindObstacleFlow, sampler_WindObstacleFlow, flowUv).rg;
+                    lateralBend = (flow.r * 255.0 - 128.0) * (6.0 / 127.0);
+                    obstacleMask = flow.g;
+                }
+                float2 pattern = float2(dot(input.worldOffset, direction),
+                    dot(input.worldOffset, across) - lateralBend) /
                     _WindStreakPattern.zw + _WindStreakPattern.xy;
                 float3 random = HashCell(floor(pattern));
                 float2 local = frac(pattern);
@@ -84,7 +99,8 @@ Shader "Hidden/FlatWorld/WindStreaks"
                     abs(lateral + halfWidth));
                 float taper = smoothstep(0.0, 0.22, progress) * (1.0 - smoothstep(0.86, 1.0, progress));
                 float visible = saturate((_WindStreakShape.y - random.z) * 10.0);
-                float alpha = max(core, shadow * 0.38) * taper * visible * _WindStreakShape.x;
+                float alpha = max(core, shadow * 0.38) * taper * visible * _WindStreakShape.x *
+                    (1.0 - obstacleMask);
                 // 淡暗边让雪地也能看见风，亮色细线保留轻盈的空气感。
                 half3 color = lerp(half3(0.18, 0.27, 0.34), _WindStreakColor.rgb, core);
                 return half4(color, alpha);

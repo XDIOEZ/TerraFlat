@@ -29,12 +29,12 @@ namespace FlatWorld.Spaceflight
             float armTop = Mathf.Ceil(rect.height * .541f);
             result = new[]
             {
-                Sprite.Create(source.texture, new Rect(rect.x + centerStart, rect.y + Mathf.Round(rect.height * .416f),
+                SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(source, new Rect(rect.x + centerStart, rect.y + Mathf.Round(rect.height * .416f),
                     centerEnd - centerStart, Mathf.Round(rect.height * .168f)), new Vector2(.5f, .5f),
-                    rect.width, 0, SpriteMeshType.FullRect),
-                Sprite.Create(source.texture, new Rect(rect.x + centerEnd, rect.y + armBottom,
+                    rect.width),
+                SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite(source, new Rect(rect.x + centerEnd, rect.y + armBottom,
                     rect.width - centerEnd, armTop - armBottom), new Vector2(0f, .5f),
-                    rect.width, 0, SpriteMeshType.FullRect)
+                    rect.width)
             };
             for (int i = 0; i < result.Length; i++)
             {

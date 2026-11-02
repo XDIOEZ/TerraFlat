@@ -38,8 +38,8 @@
       "inputRule": "unordered",
       "inputs": [
         {
-          "match": "exact_item",
-          "itemId": "Ore_Stone",
+          "match": "tag",
+          "tag": "StoneCraftingMaterial",
           "amount": 2
         },
         {

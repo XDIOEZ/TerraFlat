@@ -51,10 +51,6 @@ public static partial class GameplayTestSystemProbe
                 ("hp", value => value.hp.Value -= 1),
                 ("max_hp", value => value.hp.maxValue += 1),
                 ("weakness", value => value.hp.Weaknesses.Add("probe")),
-                ("cutting", value => value.defense.Cutting += 1),
-                ("piercing", value => value.defense.Piercing += 1),
-                ("chopping", value => value.defense.Chopping += 1),
-                ("blunt", value => value.defense.Blunt += 1),
                 ("speed_base", value => value.Speed.BaseValue += 1),
                 ("speed_base_add", value => value.Speed.BaseAdditive += 1),
                 ("speed_add", value => value.Speed.AdditiveModifier += 1),
@@ -69,7 +65,6 @@ public static partial class GameplayTestSystemProbe
                 ("carry_volume", value => value.MaxCarryVolume += 1),
                 ("perception", value => value.PerceptionRadiusMultiplier += 1),
                 ("null_hp", value => value.hp = null),
-                ("null_defense", value => value.defense = null),
                 ("null_speed", value => value.Speed = null)
             };
             var samples = new JArray();

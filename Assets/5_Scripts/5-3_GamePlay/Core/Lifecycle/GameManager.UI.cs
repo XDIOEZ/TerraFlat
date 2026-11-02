@@ -1086,7 +1086,11 @@ public partial class GameManager
 
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_NewGame, NewGamePanelKey);
         panel.SetButtonOnClick(NewGameStartButtonKey, CreateNewWorld);
-        panel.SetButtonOnClick(NewGameBackButtonKey, panel.Close);
+        panel.SetButtonOnClick(NewGameBackButtonKey, () =>
+        {
+            if (!TryReturnFromNewGameDetailPage(panel))
+                panel.Close();
+        });
         panel.GetInputField(NewGamePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
         panel.GetInputField(NewGameSaveInputKey)?.onValueChanged.AddListener(OnSaveNameChanged);
 
@@ -1131,7 +1135,6 @@ public partial class GameManager
             if (HasNewGameWorldContent(panel))
                 ShowNewGamePage(panel, true, true);
         });
-        panel.SetButtonOnClick(NewGameIdentityButtonKey, () => ShowNewGamePage(panel, false, true));
         panel.Opened += () => ShowNewGamePage(panel, false, false);
         panel.CancelOverride = eventData =>
         {
@@ -1148,7 +1151,10 @@ public partial class GameManager
         SetChildVisible(panel, NewGameIdentityPageKey, !worldSettings);
         SetChildVisible(panel, NewGameWorldPageKey, worldSettings);
         panel.SetButtonVisible(NewGameWorldSettingsButtonKey, !worldSettings);
-        panel.SetButtonVisible(NewGameIdentityButtonKey, worldSettings);
+        panel.SetButtonVisible(NewGameIdentityButtonKey, false);
+        LocalizedTextRuntime.SetText(
+            panel.GetText(NewGameBackButtonKey + "_文字"),
+            worldSettings ? "关闭" : "返回主界面");
         panel.RefreshGamepadNavigationState();
 
         if (!EventSystemGuard.IsGamepadMode || !focusFirstControl || !panel.IsOpen() || EventSystem.current == null)
@@ -1531,11 +1537,12 @@ public partial class GameManager
             return;
         }
 
-        string path = SaveDataMgr.Instance.GetFullSavePath(selectedSaveName);
+        string path = SaveDataManager_UI.Instance?.SelectedSaveArchivePath;
         if (!SaveDataMgr.Instance.LoadSaveByDisk(path))
         {
+            string failureReason = SaveDataMgr.Instance.LastArchiveError;
             SaveDataManager_UI.Instance?.GeneratePlayerButtons();
-            ShowSaveLoadFailure();
+            ShowSaveLoadFailure(failureReason);
             return;
         }
 
@@ -1549,7 +1556,7 @@ public partial class GameManager
     }
 
     /// <summary>加载失败必须由玩家确认，复用正式确认窗口且不再继续角色选择。</summary>
-    private void ShowSaveLoadFailure()
+    private void ShowSaveLoadFailure(string failureReason)
     {
         const string panelKey = "UI_SaveLoadFailure";
         UIManager manager = UIManager.Instance;
@@ -1567,12 +1574,17 @@ public partial class GameManager
             notice.SetButtonVisible(MainMenuExitConfirmationCancelButtonKey, false);
             notice.PrepareForGamepadNavigation(MainMenuExitConfirmationConfirmButtonKey);
         }
-        notice.SetText("退出确认提示", FlatWorldLocalizationService.GetUiText("存档加载失败"));
+        string failureMessage = FlatWorldLocalizationService.GetUiText("存档加载失败");
+        if (!string.IsNullOrWhiteSpace(failureReason))
+            failureMessage += "\n" + failureReason;
+        notice.SetText("退出确认提示", failureMessage);
         foreach (TextMeshProUGUI text in notice.GetComponentsInChildren<TextMeshProUGUI>(true))
         {
             FlatWorld.Localization.LocalizedTextBinder binder = text.GetComponent<FlatWorld.Localization.LocalizedTextBinder>();
             if (binder != null)
                 binder.enabled = false;
+            if (text.name == "退出确认提示")
+                text.richText = false;
             if (text.name == "标题文本")
                 text.text = FlatWorldLocalizationService.GetUiText("提示");
         }

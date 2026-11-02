@@ -193,6 +193,16 @@ public partial class Mod_GameController : Module
         _gameplayInputLockOwners.Count > 0 ||
         IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
 
+    public bool IsHeldItemDrawLocked
+    {
+        get
+        {
+            if (_playerHotBar == null && item != null)
+                _playerHotBar = item.GetComponentInChildren<Mod_HotBar>(true);
+            return _playerHotBar?.IsDrawingHeldItem == true;
+        }
+    }
+
     /// <summary>普通窗口共用开关准入；允许关掉自身，打开时服从硬锁和模态面板。</summary>
     public bool CanToggleGameplayWindow(BasePanel panel)
     {
@@ -204,7 +214,7 @@ public partial class Mod_GameController : Module
     public bool IsGameplayInputExplicitlyLocked => _isGameplayInputLocked; // 只读过场显式锁，不包含面板锁或外部控制租约。
     public int GameplayInputLockOwnerCount => _gameplayInputLockOwners.Count; // 面板叠加锁数量只用于区分总锁来源。
 
-    public bool IsRightClickHeld => _rightClickHeld; // 玩法模块只读取中央输入层维护的持续“使用”状态
+    public bool IsRightClickHeld => _rightClickHeld && !IsHeldItemDrawLocked; // 玩法模块只读取中央输入层维护的持续“使用”状态
     public bool IsShiftRightClickRequested { get; private set; } // 只在本次鼠标使用分发期间保留修饰键快照。
 
     /// <summary>一次性快捷动作消费后，阻止本次按住和松开继续使用换上来的手持物。</summary>
@@ -365,7 +375,7 @@ public partial class Mod_GameController : Module
             return;
         }
 
-        if (IsGameplayInputLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
+        if (IsGameplayInputLocked || IsHeldItemDrawLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
         {
             _suppressLeftClickUntilRelease = true;
             return;
@@ -426,7 +436,7 @@ public partial class Mod_GameController : Module
             return;
         }
 
-        if (IsGameplayInputLocked || (!isMobileUse && IsPointerOverUI()) || EventSystemGuard.IsGamepadUISelectionActive)
+        if (IsGameplayInputLocked || IsHeldItemDrawLocked || (!isMobileUse && IsPointerOverUI()) || EventSystemGuard.IsGamepadUISelectionActive)
         {
             _rightClickHeld = false;
             _suppressRightClickUntilRelease = true;
@@ -754,7 +764,7 @@ public partial class Mod_GameController : Module
     /// <summary>只在玩法输入可用时，把旋转请求转发给当前手持建筑。</summary>
     private void HandleBuildingRotation(InputAction.CallbackContext context)
     {
-        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked ||
+        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked || IsHeldItemDrawLocked ||
             IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive) return;
         BuildingRotationRequested?.Invoke();
     }
@@ -777,7 +787,7 @@ public partial class Mod_GameController : Module
     private bool TryGetBuildingPreviewRotation(Vector2 screenPosition, out IBuildingPreviewRotation rotation)
     {
         rotation = null;
-        if (_preferredInputDevice != InputDeviceType.Mobile || IsGameplayInputLocked ||
+        if (_preferredInputDevice != InputDeviceType.Mobile || IsGameplayInputLocked || IsHeldItemDrawLocked ||
             !IsGameplayInputAllowed(Touchscreen.current) || EventSystemGuard.IsGamepadUISelectionActive)
             return false;
 
@@ -995,7 +1005,7 @@ public partial class Mod_GameController : Module
         _mobileAttackAimStrength = 0f;
         UpdateMobileRadialCursor();
 
-        if (IsGameplayInputLocked)
+        if (IsGameplayInputLocked || IsHeldItemDrawLocked)
         {
             _suppressMobileAttackUntilRelease = true;
             return;
@@ -1196,6 +1206,7 @@ public partial class Mod_GameController : Module
     private void SetAttackSourceHeld(AttackInputSource source, bool held)
     {
         using var worldScope = item?.UseOwnedWorldForItemCallbacks();
+        if (held && IsHeldItemDrawLocked) return;
         bool wasHeld = _keyboardMouseAttackHeld || _gamepadAttackHeld || _mobileAttackInputHeld;
         switch (source)
         {
@@ -1215,6 +1226,27 @@ public partial class Mod_GameController : Module
             AttackStarted?.Invoke();
         else if (wasHeld && !isHeld)
             AttackEnded?.Invoke();
+    }
+
+    /// <summary>手持物切换时结束旧物品的使用与攻击，不打断移动摇杆。</summary>
+    public void CancelHeldItemActions()
+    {
+        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
+        if (_rightClickHeld) RightClickUp.Invoke();
+        if (_keyboardMouseAttackHeld || _gamepadAttackHeld) LeftClickUp.Invoke();
+        _rightClickHeld = false;
+        _suppressRightClickUntilRelease = true;
+        _suppressLeftClickUntilRelease = true;
+        _suppressMobileAttackUntilRelease = true;
+        _mobileAttackActive = false;
+        SetAttackSourceHeld(AttackInputSource.KeyboardMouse, false);
+        SetAttackSourceHeld(AttackInputSource.Gamepad, false);
+        SetAttackSourceHeld(AttackInputSource.Mobile, false);
+        if (_externalAttackHeld)
+        {
+            _externalAttackHeld = false;
+            AttackEnded?.Invoke();
+        }
     }
 
     /// <summary>释放输入锁、暂停和失焦等场景的持续输入，保留最后有效瞄准，杜绝移动或攻击卡住。</summary>

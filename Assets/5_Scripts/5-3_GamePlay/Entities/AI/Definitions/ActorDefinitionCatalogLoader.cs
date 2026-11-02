@@ -87,14 +87,14 @@ public static class ActorDefinitionCatalogLoader
         ActorDefinitionManifestDto manifest = DeserializeManifest(manifestJson);
         ValidateManifest(manifest);
 
-        var catalogs = new List<string>();
+        var catalogs = new List<JObject>();
         foreach (ActorDefinitionPackageDto package in manifest.Packages.Where(entry => entry.Enabled))
         {
             string packagePath = ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, package.Path);
-            catalogs.Add(ConvertActorCatalogToItemCatalog(cache.ReadText(packagePath), package.Id));
+            catalogs.Add(ConvertActorCatalogToItemRoot(cache.ReadText(packagePath), package.Id));
         }
 
-        List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
+        List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjectsFromCatalogRoots(catalogs);
         Dictionary<string, string> subtreeFiles = ReadBehaviorSubtreeFilePaths(cache.ReadText(
             ItemDefinitionCatalogLoader.ResolvePackagePath(BuiltInActorRoot, manifest.BehaviorSubtrees)));
         ApplySharedBehaviorSubtrees(resolved, ReadBehaviorSubtrees(subtreeFiles.Select(entry =>
@@ -107,7 +107,86 @@ public static class ActorDefinitionCatalogLoader
     }
 
     private static BinaryContentCache CreateBinaryCache()
-        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 3);
+        => BinaryContentCache.ForBuiltIn<ActorDefinitionInputs>("actors", BuiltInActorRoot, BuiltInManifestPath, 4);
+
+    /// <summary>烘焙只合并私有 DTO，不发布 Actor 来源或公共行为子树。</summary>
+    [BuiltInContentBake]
+    public static List<ItemDefinitionDto> LoadBuiltInDefinitionsForBake()
+    {
+        BinaryContentCache cache = CreateBinaryCache();
+        ActorCatalogPreparation input = LoadLocalCatalogInput(cache, BuiltInActorRoot, BuiltInManifestPath, false);
+        if (input.Cached != null) return input.Cached.Definitions;
+        List<ItemDefinitionDto> definitions = ConvertResolvedDefinitions(input.Sources);
+        cache.Store(new ActorDefinitionInputs { Sources = input.Sources, Definitions = definitions });
+        return definitions;
+    }
+
+    internal sealed class ActorCatalogPreparation
+    {
+        public BinaryContentCache Cache;
+        public ActorDefinitionInputs Cached;
+        public List<JObject> Sources;
+        public double InputMilliseconds;
+    }
+
+    /// <summary>只预读 Actor 私有输入，行为树与目录仍由正式阶段接入。</summary>
+    internal static IEnumerator LoadBuiltInCatalogInputAsync(Action<ActorCatalogPreparation> completed,
+        Action<Exception> failed, bool isReload, Action<float> progress = null)
+    {
+        string root = BuiltInActorRoot, manifest = BuiltInManifestPath;
+        if (StreamingAssetsTextLoader.RequiresWebRequest(root))
+            return LoadPackagedCatalogInputAsync(completed, failed, isReload, progress);
+        BinaryContentCache cache = CreateBinaryCache();
+        return StreamingAssetsTextLoader.BeginPureDataAsync(
+            () => LoadLocalCatalogInput(cache, root, manifest, isReload), completed, failed);
+    }
+
+    // 清单、子树和跨包继承只经过一次后台事务，行为树编译与目录发布留在主线程。
+    internal static ActorCatalogPreparation LoadLocalCatalogInput(BinaryContentCache cache, string root,
+        string manifestPath, bool isReload)
+    {
+        ActorDefinitionInputs cached = null;
+        if (!isReload) cache.TryRead(out cached);
+        List<JObject> resolved = cached?.Sources;
+        if (resolved == null)
+        {
+            ActorDefinitionManifestDto manifest = DeserializeManifest(cache.ReadText(manifestPath));
+            ValidateManifest(manifest);
+            var packages = manifest.Packages.Where(package => package.Enabled).ToArray();
+            var paths = packages.Select(package => StreamingAssetsTextLoader.CombinePath(root, package.Path)).ToArray();
+            string indexPath = StreamingAssetsTextLoader.CombinePath(root, manifest.BehaviorSubtrees);
+            var subtreePaths = ReadBehaviorSubtreeFilePaths(cache.ReadText(indexPath))
+                .Select(entry => new KeyValuePair<string, string>(entry.Key,
+                    StreamingAssetsTextLoader.CombinePath(root, entry.Value))).ToArray();
+            var catalogs = new List<JObject>(packages.Length);
+            for (int i = 0; i < packages.Length; i++)
+            {
+                try { catalogs.Add(ConvertActorCatalogToItemRoot(cache.ReadText(paths[i]), packages[i].Id)); }
+                catch (Exception error) { throw new IOException($"Actor 分包读取失败：{packages[i].Id} ({paths[i]})", error); }
+            }
+            var subtrees = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var entry in subtreePaths) subtrees.Add(entry.Key, cache.ReadText(entry.Value));
+            resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjectsFromCatalogRoots(catalogs);
+            ApplySharedBehaviorSubtrees(resolved, ReadBehaviorSubtrees(subtrees));
+        }
+        return new ActorCatalogPreparation
+        { Cache = cache, Cached = cached, Sources = resolved, InputMilliseconds = cache.ElapsedMilliseconds };
+    }
+
+    private static IEnumerator LoadPackagedCatalogInputAsync(Action<ActorCatalogPreparation> completed,
+        Action<Exception> failed, bool isReload, Action<float> progress)
+    {
+        BinaryContentCache cache = CreateBinaryCache();
+        ActorDefinitionInputs cached = null;
+        if (!isReload) yield return cache.TryReadAsync<ActorDefinitionInputs>(value => cached = value);
+        List<JObject> resolved = cached?.Sources;
+        Exception error = null;
+        if (resolved == null)
+            yield return LoadBuiltInSourcesAsync(cache, value => resolved = value, exception => error = exception, progress);
+        if (error != null) { failed?.Invoke(error); yield break; }
+        completed?.Invoke(new ActorCatalogPreparation
+            { Cache = cache, Cached = cached, Sources = resolved, InputMilliseconds = cache.ElapsedMilliseconds });
+    }
 
     private static IEnumerator LoadBuiltInSourcesAsync(BinaryContentCache cache,
         Action<List<JObject>> completed, Action<Exception> failed, Action<float> progress)
@@ -122,7 +201,7 @@ public static class ActorDefinitionCatalogLoader
         catch (Exception exception) { failed?.Invoke(exception); yield break; }
 
         ActorDefinitionPackageDto[] packages = manifest.Packages.Where(entry => entry.Enabled).ToArray();
-        var catalogs = new List<string>(packages.Length);
+        var catalogs = new List<JObject>(packages.Length);
         for (int index = 0; index < packages.Length; index++)
         {
             ActorDefinitionPackageDto package = packages[index];
@@ -138,9 +217,9 @@ public static class ActorDefinitionCatalogLoader
                 failed?.Invoke(new IOException($"Actor 分包读取失败：{package.Id} ({packagePath})", readError));
                 yield break;
             }
-            string converted = null;
+            JObject converted = null;
             yield return StreamingAssetsTextLoader.RunPureDataAsync(
-                () => ConvertActorCatalogToItemCatalog(packageJson, package.Id),
+                () => ConvertActorCatalogToItemRoot(packageJson, package.Id),
                 value => converted = value, exception => readError = exception);
             if (readError != null) { failed?.Invoke(readError); yield break; }
             catalogs.Add(converted);
@@ -167,7 +246,7 @@ public static class ActorDefinitionCatalogLoader
         }
         yield return StreamingAssetsTextLoader.RunPureDataAsync(() =>
         {
-            List<JObject> sources = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
+            List<JObject> sources = ItemDefinitionCatalogLoader.ResolveDefinitionObjectsFromCatalogRoots(catalogs);
             ApplySharedBehaviorSubtrees(sources, ReadBehaviorSubtrees(subtreeSources));
             return sources;
         }, completed, failed);
@@ -180,6 +259,11 @@ public static class ActorDefinitionCatalogLoader
         Action<Exception> failed,
         Action<float> progress = null,
         ReloadSnapshot previous = null)
+        => LoadBuiltInAsync(gameRes, completed, failed, progress, previous, null);
+
+    internal static IEnumerator LoadBuiltInAsync(GameRes gameRes, Action<int> completed,
+        Action<Exception> failed, Action<float> progress, ReloadSnapshot previous,
+        ActorCatalogPreparation prepared)
     {
         if (gameRes == null)
         {
@@ -187,18 +271,14 @@ public static class ActorDefinitionCatalogLoader
             yield break;
         }
 
-        BinaryContentCache cache = CreateBinaryCache();
-        ActorDefinitionInputs cached = null;
-        // 世界内逐个隔离无效 Actor 的重载仍读取原始候选，不缓存保留旧版后的混合结果。
-        if (previous == null) yield return cache.TryReadAsync<ActorDefinitionInputs>(value => cached = value);
-        List<JObject> resolved = cached?.Sources;
         Exception readError = null;
-        if (resolved == null)
-        {
-            yield return LoadBuiltInSourcesAsync(cache, value => resolved = value,
-                exception => readError = exception, progress);
-            if (readError != null) { failed?.Invoke(readError); yield break; }
-        }
+        if (prepared == null)
+            yield return LoadBuiltInCatalogInputAsync(value => prepared = value,
+                exception => readError = exception, previous != null, progress);
+        if (readError != null) { failed?.Invoke(readError); yield break; }
+        BinaryContentCache cache = prepared.Cache;
+        ActorDefinitionInputs cached = prepared.Cached;
+        List<JObject> resolved = prepared.Sources;
         List<ItemDefinitionDto> definitions;
         var rejected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -220,7 +300,7 @@ public static class ActorDefinitionCatalogLoader
         {
             if (cached == null)
                 yield return cache.StoreAsync(new ActorDefinitionInputs { Sources = resolved, Definitions = definitions });
-            cache.Report("生物", definitions.Count);
+            cache.Report("生物", definitions.Count, prepared.InputMilliseconds);
         }
 
         ItemDefinitionDto[] concrete = definitions.Where(definition => !definition.Abstract).ToArray();
@@ -350,7 +430,7 @@ public static class ActorDefinitionCatalogLoader
             }
 
             var selected = new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
-            var prototypeCache = new ItemModulePrototypeCache();
+            var prototypeCache = new ItemModulePrototypeCache(requireBuiltInBakedParameters: true);
             foreach (ItemDefinitionDto definition in candidates)
             {
                 string id = definition.Id.Trim();
@@ -599,7 +679,7 @@ public static class ActorDefinitionCatalogLoader
         }
     }
 
-    private static string ConvertActorCatalogToItemCatalog(string json, string sourceName)
+    internal static JObject ConvertActorCatalogToItemRoot(string json, string sourceName)
     {
         JObject root;
         try
@@ -622,7 +702,7 @@ public static class ActorDefinitionCatalogLoader
         {
             ["schemaVersion"] = SupportedSchemaVersion,
             ["items"] = actors.DeepClone()
-        }.ToString(Formatting.None);
+        };
     }
 
     private static List<ItemDefinitionDto> ConvertResolvedDefinitions(IEnumerable<JObject> sources)
@@ -649,10 +729,35 @@ public static class ActorDefinitionCatalogLoader
         }
     }
 
-    private static ItemDefinitionDto ConvertResolvedActor(JObject source)
+    internal static ItemDefinitionDto ConvertResolvedActor(JObject source)
     {
         if (source["modules"]?["ai"]?["parameters"]?["behaviorTree"] is JObject tree)
-            AnimalBehaviorTreeNodeCatalog.Compile(tree.ToObject<AnimalBehaviorTreeDefinition>());
+        {
+            AnimalBehaviorTreeDefinition definition = tree.ToObject<AnimalBehaviorTreeDefinition>();
+            var required = new HashSet<string>(StringComparer.Ordinal);
+            bool selfContained = true;
+            void Visit(AnimalBehaviorTreeNodeDefinition node)
+            {
+                if (node == null) return;
+                if (node.Type == "subtree" && node.Name != null && required.Add(node.Name))
+                {
+                    if (definition.Subtrees != null && definition.Subtrees.TryGetValue(node.Name, out var subtree)) Visit(subtree.Root);
+                    else selfContained = false;
+                }
+                if (node.Children != null) foreach (var child in node.Children) Visit(child);
+            }
+            Visit(definition.Root);
+            // 完整来源仍供 MOD/F5 继承，运行模块只携带当前树真正引用的闭包，避免每次装配重读整个库。
+            if (selfContained && tree["subtrees"] is JObject library && required.Count < library.Count)
+            {
+                definition.Subtrees = required.ToDictionary(name => name, name => definition.Subtrees[name], StringComparer.Ordinal);
+                source = (JObject)source.DeepClone();
+                var retained = new JObject();
+                foreach (string name in required) retained.Add(name, library[name].DeepClone());
+                source["modules"]["ai"]["parameters"]["behaviorTree"]["subtrees"] = retained;
+            }
+            AnimalBehaviorTreeNodeCatalog.Compile(definition);
+        }
         return source.ToObject<ItemDefinitionDto>() ?? throw new InvalidDataException($"无法解析 Actor：{source.Value<string>("id")}");
     }
 

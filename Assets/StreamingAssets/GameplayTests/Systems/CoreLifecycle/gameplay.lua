@@ -23,6 +23,9 @@ test.runtime("core_lifecycle", "live_entry", {}, function(data)
 end, "正式入世、玩家生命周期和表现就绪")
 
 test.runtime("core_lifecycle", "persistent_object_hierarchy", {}, function(data)
+    assert(data.persistentRootHideFlags == 0 and data.sceneRootHideFlags == 0,
+        "运行时分类根使用了会让整棵对象树残留的 HideFlags")
+    assert(data.sceneHierarchyDestroyedWithScene, "场景卸载后分类根和子对象仍然残留")
     assert(data.persistentScene and data.idempotent and data.ownedChildPreserved and data.inactiveAndPosePreserved,
         "常驻挂接改变了所有权、激活状态或姿态，或重复创建了分类")
     assert(data.sourceSceneUnloaded and data.transientDestroyed and data.persistentTreeSurvived,
@@ -43,6 +46,7 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     assert(data.hostCount == 1 and data.managerOwnsActiveHost, "固定步驱动不是 GameManager 上的唯一活动宿主")
     assert(data.defaultTicksPerSecond == 60, "默认固定步频率不是 60 Hz")
     near(data.defaultFixedDelta, 1 / 60, .000001, "默认固定步时长错误")
+    near(data.maximumDelta, 4 / 60, .000001, "单帧固定步追赶预算不是约 4 步")
     assert(data.afterRegister == data.beforeRegister + 1 and data.afterUnregister == data.beforeUnregister - 1,
         "临时观察系统登记或卸载错误")
 
@@ -62,11 +66,14 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
         near(sample.endFixedTime - sample.startFixedTime, sample.endGameTime - sample.startGameTime,
             sample.fixedDelta * 2 + .005, "固定时间没有跟随引擎游戏时间")
         local sameFrameSteps = false
+        local stepsPerFrame = {}
         local previous
         for index, step in ipairs(sample.steps) do
             assert(step.tick == sample.startTick + index, "固定步序号不连续")
             near(step.delta, sample.fixedDelta, .000001, "系统收到的时间不是 Unity 固定步长")
             near(step.clock, step.fixedTime, .000001, "公共时钟没有使用 Unity 固定时间")
+            stepsPerFrame[step.frame] = (stepsPerFrame[step.frame] or 0) + 1
+            assert(stepsPerFrame[step.frame] <= 4, "同一渲染帧执行超过 4 次 FixedUpdate")
             if previous then
                 assert(step.frame >= previous.frame, "固定步的渲染帧序号倒退")
                 if step.frame == previous.frame then sameFrameSteps = true end
@@ -95,6 +102,35 @@ test.runtime("core_lifecycle", "fixed_step_clock", {}, function(data)
     end
     check_unclipped_time_scale(data.normal, 1)
     check_unclipped_time_scale(data.double, 2)
+
+    -- 受控卡顿要被引擎时间预算截断，不能在下一帧补跑约 200ms 的固定步。
+    local function check_bounded_hitch(sample, speed)
+        local wall = sample.endWall - sample.startWall
+        local gameTime = sample.endGameTime - sample.startGameTime
+        local fixedTime = sample.endFixedTime - sample.startFixedTime
+        local ticks = sample.endTick - sample.startTick
+        assert(sample.hitchMilliseconds >= 200 and wall >= .18 and sample.unscaledDelta >= .18,
+            "受控卡顿未触发，无法验证追赶上限")
+        assert(sample.timeScale == speed and sample.endTimeScale == speed,
+            "卡顿采样期间倍速发生变化")
+        assert(sample.endFrame == sample.startFrame + 1, "卡顿采样不是相邻的两个渲染帧")
+        near(sample.fixedDelta, 1 / 60, .000001, "卡顿后物理固定步长发生变化")
+        near(sample.maximumDelta, data.maximumDelta, .000001, "卡顿后最大追赶预算发生变化")
+        assert(ticks >= 1 and ticks <= 4 and #sample.steps == ticks,
+            "卡顿后单帧固定步执行次数不是 1～4 次")
+        assert(gameTime > 0 and gameTime <= sample.maximumDelta + .003 and
+            sample.scaledDelta <= sample.maximumDelta + .003,
+            "超额卡顿时间没有被截断，游戏仍在追债")
+        assert(wall > gameTime * 2, "卡顿后游戏时间没有按预算减速")
+        near(fixedTime, ticks * sample.fixedDelta, .001, "卡顿后物理时间与固定步数不匹配")
+        for index, step in ipairs(sample.steps) do
+            assert(step.frame == sample.endFrame and step.tick == sample.startTick + index,
+                "卡顿后的固定步没有落在同一个连续渲染帧")
+            near(step.clock, step.fixedTime, .000001, "卡顿后的公共时钟偏离 Unity 固定时钟")
+        end
+    end
+    check_bounded_hitch(data.normalHitch, 1)
+    check_bounded_hitch(data.doubleHitch, 2)
 
     local function check_hud_rate(sample, wall, ticks, label)
         assert(sample.hudVisible and type(sample.hudText) == "string", label .. "没有显示正式 FPS/TPS 文本")

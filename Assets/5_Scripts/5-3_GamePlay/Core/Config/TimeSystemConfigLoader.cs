@@ -38,21 +38,27 @@ public static class TimeSystemConfigLoader
 
     #region 加载
 
+    [BuiltInContentBake]
     public static TimeSystemConfigCatalog LoadBuiltIn()
     {
-        return Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInConfigPath));
+        TimeSystemConfigCatalog catalog = BuiltInContentBinaryCatalog.ReadFile(
+            BuiltInConfigPath, ParseConfiguration, SupportedSchemaVersion);
+        Validate(catalog);
+        return catalog;
     }
 
     public static IEnumerator LoadBuiltInAsync(
         Action<TimeSystemConfigCatalog> onCompleted,
         Action<Exception> onFailed)
     {
-        string builtInJson = null;
+        TimeSystemConfigCatalog builtInCatalog = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
             BuiltInConfigPath,
-            text => builtInJson = text,
-            exception => readError = exception);
+            ParseConfiguration,
+            catalog => builtInCatalog = catalog,
+            exception => readError = exception,
+            SupportedSchemaVersion);
 
         if (readError != null)
         {
@@ -63,7 +69,8 @@ public static class TimeSystemConfigLoader
         TimeSystemConfigCatalog catalog;
         try
         {
-            catalog = Deserialize(builtInJson);
+            Validate(builtInCatalog);
+            catalog = builtInCatalog;
         }
         catch (Exception exception)
         {
@@ -95,14 +102,17 @@ public static class TimeSystemConfigLoader
 
     public static TimeSystemConfigCatalog Deserialize(string json)
     {
+        TimeSystemConfigCatalog catalog = ParseConfiguration(json);
+        Validate(catalog);
+        return catalog;
+    }
+
+    private static TimeSystemConfigCatalog ParseConfiguration(string json)
+    {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("时间系统 JSON 为空");
 
-        TimeSystemConfigCatalog catalog = JsonConfigurationCache.Deserialize<TimeSystemConfigCatalog>(
-            json,
-            StrictJsonSettings);
-        Validate(catalog);
-        return catalog;
+        return JsonConfigurationCache.Deserialize<TimeSystemConfigCatalog>(json, StrictJsonSettings);
     }
 
     public static void Validate(TimeSystemConfigCatalog catalog)

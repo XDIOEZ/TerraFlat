@@ -50,12 +50,13 @@ public sealed partial class Mod_AnimalFlightMovement : IAquaticPredatorThreat
     {
         get
         {
-            fishPredationDamageValues.Cutting = 0f;
-            fishPredationDamageValues.Piercing = fishPredationDamageOverride >= 0f
+            fishPredationDamageValues.Physical = fishPredationDamageOverride >= 0f
                 ? fishPredationDamageOverride
                 : Mathf.Max(0f, fishDiveDamage);
-            fishPredationDamageValues.Chopping = 0f;
-            fishPredationDamageValues.Blunt = 0f;
+            fishPredationDamageValues.Fire = 0f;
+            fishPredationDamageValues.Radiation = 0f;
+            fishPredationDamageValues.True = 0f;
+            fishPredationDamageValues.ImpactKind = CombatDamageKind.Piercing;
             return fishPredationDamageValues;
         }
     }

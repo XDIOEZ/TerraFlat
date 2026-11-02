@@ -24,6 +24,9 @@ public sealed partial class GameplayWorldRuntime
 public static partial class GameplayWorldRegistry
 {
     #region 世界注册与同步上下文
+    // 世界运行服务就绪后通知依赖该世界的运行时系统。
+    internal static event Action<string> RuntimeWorldReady;
+
     private static readonly Dictionary<string, GameplayWorldRuntime> worlds = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, WorldRuntime> ownedWorldModels = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, ChunkMgr> ownedWorldModelManagers = new(StringComparer.Ordinal);
@@ -214,13 +217,15 @@ public static partial class GameplayWorldRegistry
         Vector3 sourceWorldPosition = item.transform.position;
         Quaternion sourceWorldRotation = item.transform.rotation;
         ItemData originalData = item.itemData;
-        Rigidbody2D sourceBody = item.GetComponent<Rigidbody2D>();
+        Rigidbody2D sourceBody = WorldPhysicsService2D.GetItemRigidbody(item);
         WorldPhysicsItemBodyRepresentation2D sourceRepresentation = sourceBody != null
             ? WorldPhysicsService2D.CaptureItemBodyRepresentation(sourceBody) : default;
         Vector2 sourceVelocity = sourceBody != null ? sourceBody.velocity : Vector2.zero;
         float sourceAngularVelocity = sourceBody != null ? sourceBody.angularVelocity : 0f;
+        WorldPhysicsEntityProxy2D sourceProxy = null;
         bool hadSourceProxy = TryGetPhysics(sourceWorld, out var sourcePhysics) &&
-            sourcePhysics.TryGetItemProxy(item, out _);
+            sourcePhysics.TryGetItemProxy(item, out sourceProxy);
+        bool independent = hadSourceProxy && sourceProxy.Mode == WorldPhysicsProxyMode2D.IndependentDynamic;
         Vector3 snapshotPosition = originalData?.transform?.position ?? sourceWorldPosition;
         Quaternion snapshotRotation = originalData?.transform?.rotation ?? sourceWorldRotation;
         Vector3 snapshotScale = originalData?.transform?.scale ?? sourceLocalScale;
@@ -241,7 +246,10 @@ public static partial class GameplayWorldRegistry
             snapshotAngularVelocity = originalData?.PhysicsState?.AngularVelocity ?? 0f;
             if (!worldItems.AssignItemToWorld(item, worldKey)) return;
             if (presentation != null) presentation.Release();
-            RegisterItemPhysics(item);
+            RegisterItemPhysics(item, independent);
+            if (sourceBody != null)
+                WorldPhysicsService2D.RestoreItemBodyRepresentation(item,
+                    WorldPhysicsService2D.GetItemRigidbody(item), sourceRepresentation);
             manager.NotifyRuntimeItemMoved(item);
             RegisterItemPresentation(item);
         }
@@ -284,12 +292,13 @@ public static partial class GameplayWorldRegistry
                 else if (originalData != null) originalData.PhysicsState = null;
                 using (TryGet(sourceWorld, out _) ? UseWorld(sourceWorld) : default)
                 {
-                    if (hadSourceProxy) RegisterItemPhysics(item);
+                    if (hadSourceProxy) RegisterItemPhysics(item, independent);
                     if (sourceBody != null)
                     {
-                        WorldPhysicsService2D.RestoreItemBodyRepresentation(item, sourceBody, sourceRepresentation);
-                        if (sourceBody.bodyType != RigidbodyType2D.Static)
-                        { sourceBody.velocity = sourceVelocity; sourceBody.angularVelocity = sourceAngularVelocity; }
+                        Rigidbody2D restoredBody = WorldPhysicsService2D.GetItemRigidbody(item);
+                        WorldPhysicsService2D.RestoreItemBodyRepresentation(item, restoredBody, sourceRepresentation);
+                        if (restoredBody != null && restoredBody.bodyType != RigidbodyType2D.Static)
+                        { restoredBody.velocity = sourceVelocity; restoredBody.angularVelocity = sourceAngularVelocity; }
                     }
                     manager.NotifyRuntimeItemMoved(item);
                     RegisterItemPresentation(item);
@@ -300,6 +309,11 @@ public static partial class GameplayWorldRegistry
                 throw new AggregateException("物品世界迁移失败，恢复源世界也失败。", failure, rollback);
             }
             throw;
+        }
+        finally
+        {
+            // 迁移回调可能提前结束，只有未被新世界登记的物理租约才需要回收。
+            WorldPhysicsService2D.ReturnUnownedItemPhysicsComponents(item);
         }
     }
 
@@ -401,7 +415,6 @@ public static partial class GameplayWorldRegistry
         _ = MonsterSpawnerManager.GetForWorld(worldKey);
         _ = WeatherMgr.GetForWorld(worldKey);
             RefreshLocalWorldAfterSceneBindingChange(scene);
-            return world;
         }
         catch
         {
@@ -413,6 +426,8 @@ public static partial class GameplayWorldRegistry
             RefreshLocalWorldAfterSceneBindingChange(scene);
             throw;
         }
+        RuntimeWorldReady?.Invoke(worldKey);
+        return world;
     }
 
     // 同步事务只切查询上下文，不切活动场景，不向其它玩家广播世界退出。
@@ -712,13 +727,21 @@ public static partial class GameplayWorldRegistry
             if (PresentationOwners.TryGetValue(renderer, out GameplayWorldPresentationOwner previous) && previous != owner &&
                 previous != null && previous.transform.IsChildOf(root.transform)) continue;
             PresentationOwners[renderer] = owner;
-            if (!world.Renderers.ContainsKey(renderer)) world.Renderers.Add(renderer, renderer.forceRenderingOff);
+            // 投影暂时隐藏的源 Renderer 不能被误记成世界物品自身的隐藏配置。
+            if (!world.Renderers.ContainsKey(renderer))
+                world.Renderers.Add(renderer,
+                    WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(renderer,
+                        out bool originalForceOff) ? originalForceOff : renderer.forceRenderingOff);
             if (!visible) renderer.forceRenderingOff = true;
         }
     }
 
     internal static void RegisterItemPresentation(Item item)
-    { if (item != null) RegisterPresentation(item.gameObject); }
+    {
+        if (item == null) return;
+        RegisterPresentation(item.gameObject);
+        WorldRenderingManager.ExistingInstance?.SynchronizeActorViewForPose(item);
+    }
 
     public static bool GetPresentationOriginalForceRenderingOff(Renderer renderer)
         => renderer != null && PresentationOwners.TryGetValue(renderer, out var owner) && owner != null

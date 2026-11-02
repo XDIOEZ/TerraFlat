@@ -10,6 +10,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
     [SerializeField] private Shader windShader;
 
     private readonly WindStreakPresentation presentation = new();
+    private readonly WindStreakObstacleField obstacleField = new();
     private Material material;
     private WindPass pass;
     private Player localPlayer;
@@ -38,6 +39,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
     private void ResetPresentation()
     {
         presentation.Reset();
+        obstacleField.Reset();
         localPlayer = null;
         cameraModule = null;
         sourceCamera = null;
@@ -101,7 +103,8 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
         if (!presentation.IsVisible || SurfaceZoomTransition.Sample(cameraModule) >= 1f)
             return;
 
-        pass.Setup(material, source, presentation, config);
+        obstacleField.RefreshIfDirty(source, player.gameObject.scene.name, presentation.Direction);
+        pass.Setup(material, source, presentation, config, obstacleField);
         renderer.EnqueuePass(pass);
     }
 
@@ -126,21 +129,26 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
         private static readonly int PatternId = Shader.PropertyToID("_WindStreakPattern");
         private static readonly int ShapeId = Shader.PropertyToID("_WindStreakShape");
         private static readonly int ColorId = Shader.PropertyToID("_WindStreakColor");
+        private static readonly int FlowTextureId = Shader.PropertyToID("_WindObstacleFlow");
+        private static readonly int FlowRectId = Shader.PropertyToID("_WindObstacleRect");
+        private static readonly int FlowCameraId = Shader.PropertyToID("_WindObstacleCamera");
         private readonly ProfilingSampler sampler = new("FlatWorld Wind Streaks");
         private Material passMaterial;
         private Camera sourceCamera;
         private WindStreakPresentation state;
         private WorldRenderingConfig.RenderingWindStreaks settings;
+        private WindStreakObstacleField obstacles;
 
         public WindPass() => renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
 
         public void Setup(Material target, Camera source, WindStreakPresentation presentation,
-            WorldRenderingConfig.RenderingWindStreaks config)
+            WorldRenderingConfig.RenderingWindStreaks config, WindStreakObstacleField obstacleField)
         {
             passMaterial = target;
             sourceCamera = source;
             state = presentation;
             settings = config;
+            obstacles = obstacleField;
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -169,6 +177,11 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
                 passMaterial.SetVector(ShapeId,
                     new Vector4(state.Parameters.y, state.Parameters.z, state.Parameters.w, settings.width));
                 passMaterial.SetColor(ColorId, settings.color);
+                passMaterial.SetTexture(FlowTextureId, obstacles.FlowTexture);
+                passMaterial.SetVector(FlowRectId, obstacles.WorldRect);
+                passMaterial.SetVector(FlowCameraId, new Vector4(
+                    sourceCamera.transform.position.x, sourceCamera.transform.position.y,
+                    obstacles.HasObstacles ? 1f : 0f, 0f));
                 CoreUtils.SetRenderTarget(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle);
                 cmd.DrawProcedural(Matrix4x4.identity, passMaterial, 0, MeshTopology.Triangles, 3, 1);
             }

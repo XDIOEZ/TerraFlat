@@ -9,15 +9,26 @@ using Newtonsoft.Json.Linq;
 #region Unity 与序列化环境替身
 namespace MemoryPack
 {
-    public sealed class MemoryPackableAttribute : Attribute { }
+    // 与生产代码的版本容忍标记保持一致，离线测试只验证行为不执行序列化。
+    public enum GenerateType { VersionTolerant }
+    public sealed class MemoryPackableAttribute : Attribute
+    {
+        public MemoryPackableAttribute(GenerateType generateType = default) { }
+    }
+    public sealed class MemoryPackOrderAttribute : Attribute
+    {
+        public MemoryPackOrderAttribute(int order) { }
+    }
     public sealed class MemoryPackConstructorAttribute : Attribute { }
     public sealed class MemoryPackIgnoreAttribute : Attribute { }
 }
+public sealed class BinaryJsonObjectAttribute : Attribute { }
 namespace UnityEngine
 {
     public sealed class HeaderAttribute : Attribute { public HeaderAttribute(string text) { } }
     public sealed class TooltipAttribute : Attribute { public TooltipAttribute(string text) { } }
     public sealed class HideInInspector : Attribute { }
+    public sealed class MinAttribute : Attribute { public MinAttribute(float value) { } }
     public static class Mathf
     {
         public static float Max(float left, float right) => Math.Max(left, right);

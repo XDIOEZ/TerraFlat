@@ -226,6 +226,7 @@ public partial class ChunkMgr
             return;
 
         independentNaturalEntities?.CaptureAll();
+        naturalItemRuntimes?.CaptureAll();
 
         foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
             binding?.View?.CaptureNaturalItemState();
@@ -240,6 +241,12 @@ public partial class ChunkMgr
         independentNaturalEntities?.CaptureAll();
 
         budget ??= new AutoSaveWorkBudget();
+        if (naturalItemRuntimes != null)
+        {
+            IEnumerator capture = naturalItemRuntimes.CaptureAllCoroutine(budget);
+            try { while (capture.MoveNext()) yield return capture.Current; }
+            finally { (capture as IDisposable)?.Dispose(); }
+        }
         List<ChunkView> views = new List<ChunkView>();
         foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
         {

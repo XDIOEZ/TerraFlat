@@ -27,6 +27,7 @@ test.system("inventory", "slot_binding_reuse", {}, function(data)
 end, "库存固定与虚拟槽共用绑定、去重监听和索引复用")
 
 test.system("inventory", "pointer_query_reuse", {}, function(data)
+    assert(data.eventSystemRestored, "库存指针采样未恢复原事件系统")
     assert(data.slotMatched and data.dropMatched and data.blocked,
         "共享指针命中丢失库存槽、玩法目标或 UI 阻挡")
     assert(data.disabledRejected and data.outsideRejected,

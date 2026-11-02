@@ -21,6 +21,8 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
         and data.otherWorldSurvived,
         "源碰撞销毁或世界释放后仍可命中旧目标，或服务释放错误关闭了借用场景")
     local query = data.combatQueries
+    assert(query.returnedCollectionReused and query.worldIdentityPreserved and query.disposedWorldRentRejected,
+        "受击碰撞集合没有从所属世界统一领取/复用，或关闭的世界仍能发放新租约")
     assert(query.defaultSceneChanged and query.fixedSpaceHit and query.separateCandidateHit and query.fixedSpaceSweep,
         "战斗临时投影未固定到租用时的物理空间，或切换默认世界后查询发生漂移")
     assert(query.oldCandidateCleared and query.newCandidateHit and query.disposedSpaceRejected
@@ -44,6 +46,11 @@ test.system("world_streaming", "world_physics_ownership", {}, function(data)
 end, "世界物理原生隔离、真实接触和多区域归属生命周期")
 
 test.system("world_streaming", "world_physics_definition", {}, function(data)
+    assert(data.declaredWithoutNativeComponents and data.returnedComponentsInactive and
+        data.rentedComponentsReused and data.worldReleasedRentedComponents,
+        "物理声明提前生成了原生组件，或世界领取、回收复用、关闭清理契约失效")
+    assert(data.moduleDisabledOnlyOwnRegion and data.moduleReenabledBeforeLoad,
+        "关闭模块未禁用自身区域、误关其他区域，或重启时没有复用并恢复自身受击形状")
     assert(data.regionCount == 5 and data.stableRegions and data.shapeReset and data.baselineStable,
         "JSON区域重复配置新建节点、遗漏重置几何，或破坏物品对象池的层级基线")
     assert(data.oldShapesDisabled and data.interactionIsCircle,
@@ -74,3 +81,36 @@ test.system("world_streaming", "world_physics_proxy_modes", {}, function(data)
         and interaction.boundsOffsetError < 0.0001 and interaction.boundsSizeError < 0.0001,
         "自然资源默认交互区域没有保留非零渲染TRS或准确Sprite边界几何")
 end, "JSON游戏代理模式、固定格约束与共享合批资格")
+
+test.system("world_streaming", "detached_item_projection", {}, function(data)
+    assert(data.noNativePhysicsOnItem and data.separatePhysicsRoot and data.declaredGeometry,
+        "普通物品仍携带原生物理组件，或独立代理丢失声明几何")
+    assert(data.hitResolvesLogicalItem and data.nativeQueryFindsProxy,
+        "独立物理代理没有保留真实物品身份或无法被原生空间查询")
+    assert(data.viewHasNoLogicOrPhysics and data.noLogicPlaceholderNodes and data.realVisualCopied,
+        "视觉副本包含逻辑/碰撞组件或多余模块空节点，或没有绘制真实贴图")
+    assert(data.viewReleaseKeepsLogicAndPhysics and data.poseAndScaleFollowOwner,
+        "撤销绘制销毁了逻辑或物理，或位置代理没有同步姿态和尺寸")
+    assert(data.heldItemDisablesPhysics and data.dropReusesSameLease and data.releasedProxyCannotResolve
+        and data.reuseKeepsItemFreeOfNativePhysics,
+        "手持/落地、卸载或复租破坏了代理生命周期或重新给视觉外壳添加碰撞体")
+    assert(data.independentBodyDetached and data.nativeMovementWritesBack and data.reregisterPreservesRepresentation,
+        "独立运动仍依赖物品根刚体、原生结果未回写，或重新登记重置了临时运动接管状态")
+end, "普通物品逻辑、纯视觉投影和独立物理代理生命周期")
+
+test.runtime("world_streaming", "prefab_creature_physics", {}, function(data)
+    assert(data.usesNativeBody and data.noProxy and data.bodyTypePreserved,
+        "移动生物被迁入物理代理，或重复登记修改了预制体原有刚体")
+    assert(data.hitboxRegistered and data.hitboxChannel and data.rootRegistered and data.collidersReused,
+        "生物受击盒未按原预制体配置登记到物理管理器，或重复登记创建了多余碰撞体")
+end, "移动生物保留预制体碰撞并由世界物理管理器统一登记")
+
+test.runtime("world_streaming", "item_visual_ownership", {}, function(data)
+    assert(data.actorSeparated, "GO 单图生物的 SpriteRenderer 未迁至独立 Rendering 节点")
+    assert(data.playerProjected and data.ordinaryBorrowed and data.displayStateCorrect
+        and data.noSourceRender
+        and data.viewHasNoLogicOrPhysics
+        and data.viewsUnderRendering, "普通物品未移除逻辑树中的 Render，或显示管理混入逻辑与物理组件")
+    assert(data.repeatReusesView and data.releaseAndRebind,
+        "渲染重复登记创建副本，或取消登记后无法正常重绑")
+end, "GO 生物、玩家、普通物品统一渲染所有权及复用")

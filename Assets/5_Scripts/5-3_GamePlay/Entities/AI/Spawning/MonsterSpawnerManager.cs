@@ -67,7 +67,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
         enabled = false;
     }
 
-    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
+    private void OnEnable() => GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay,
+        GameplayFixedStepTickRate.Hz20);
     private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
 
     private void Start()

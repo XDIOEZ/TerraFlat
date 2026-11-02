@@ -9,6 +9,7 @@
 - 液体用 radiantHeatRadius/radiantTargetTemperature 同模型（岩浆环境目标180℃）；LiquidTemperatureField 仅索引加载液体，按目标温度缓存各格最大权重，依 Terrain/SurfaceLiquidRevision/目录失效。接触岩浆仍用1100℃物质温度/接触伤害，不强制环境到液体温度。
 - 单格按格中心算当地源/邻区稀疏液体源，不重建全块权重；雨雪批采仍走全块。液体源只在 Terrain 身份/液体修订变时扫描，重载清源/权重，两路共用最强规则。
 - 自然物同批 PointSamplingContext + LiquidTemperatureField.PointSamplingBatch 按目标块收已规范邻区，绑定 WorldRuntime/Epoch/Dimension；每格仍算真距离，下批重读地形身份/液体修订。跨程序集用 BeginAmbientPointSampling()。仅同步只读作用域，不跨帧缓存或中途改地形/源/目录；嵌套独立、退出释放、旧代际拒用。
+- `TemperatureMgr.ReplaceDynamicGridTemperatureExchangeTargets/RemoveDynamicGridTemperatureExchangeTargets` 按来源替换/撤销动态交换层；偏移相对不含交换层的实时环境，多来源同格取平均，以真实地形实例隔离重载，不改生成基温。单点、批量、最低温资格与冻结快照共用结果，修改使温度上下文版本失效；来源负责空网、拆除及退出撤销。工业液网先采样后统一发布，回归 `environment/dynamic_grid_temperature_exchange` 与 `industrial_fluids/liquid_grid_exchange`。
 
 ## 自然传热与体温
 
@@ -17,7 +18,7 @@
 - `SurvivalNumericBatch` 统一氧气、气压及体温的纯数值阶段并提供 Span 入口；模块仍按原频率逐阶段采样/提交，供氧通知、死亡扣血和水冷后的环境传热保持原回调边界，不跨对象延迟事件。
 - 玩家默认安全5～40℃、普通生物5～50℃，Actor可覆写、装备 SetSafeTemperatureRangeModifier。越界且共用缓冲耗尽才挂冻伤/热射病，安全移除，TemperatureMgr 不直接扣血。
 - RemainingTemperatureBufferSeconds 冷热共用：危险扣1/秒，安全补1/秒，默认容量60；短暂安全/冷热切换/清Buff不重置，保存剩余量；RestoreOnRespawn 补满并清旧水冷目标。AI 记危险锚点、向外随机引导，普通陆移也保留短期方向偏置，不回退旧安全点。
-- TemperatureWarningPresentationRules 共用体温条/TemperatureScreenRendererFeature，读最终体温与装备安全线；条提前3℃渐色（窄区取1/4宽），屏幕越线10℃满，以真实秒平滑、冷热有符号互斥；仅表现，不改缓冲/Buff。
+- TemperatureWarningPresentationRules 共用体温条/TemperatureScreenRendererFeature，读最终体温与装备安全线；条在安全线中点满格，向低温/高温线线性缩短并变蓝/红，越线为空；屏幕越线10℃满，以真实秒平滑、冷热有符号互斥；仅表现，不改缓冲/Buff。
 
 ## 氧气、压力与有限大气
 

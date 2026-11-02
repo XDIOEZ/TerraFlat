@@ -23,6 +23,54 @@ public static partial class GameplayTestSystemProbe
         operations.Add("navigation/topology_bounds_cache", NavigationTopologyBoundsCache);
         operations.Add("navigation/goal_cache_maintenance", NavigationGoalCacheMaintenance);
         operations.Add("navigation/goal_path_buffers", NavigationGoalPathBuffers);
+        operations.Add("navigation/animal_water_exit", NavigationAnimalWaterExit);
+    }
+
+    /// <summary>地面生物脱水按真实连通格找最近陆地，且不继承追击路径代价上限。</summary>
+    private static JObject NavigationAnimalWaterExit(JObject args)
+    {
+        var grid = new WorldNavigationGrid();
+        for (int x = -3; x <= 3; x++)
+        for (int y = -3; y <= 3; y++)
+            grid.SetCell(new Vector2Int(x, y), 100000u, true, true, .8f);
+        grid.SetCell(new Vector2Int(-1, 0), 5, true);
+        grid.SetCell(new Vector2Int(2, 0), 5, true);
+        grid.RegisterBlocker(77, new[] { new Vector2Int(-1, 0) });
+
+        Vector2 origin = new(.5f, .5f);
+        bool expensiveWater = grid.TryCalculateLineTraversalCost(
+            Vector2Int.zero, new Vector2Int(2, 0), out int routeCost) && routeCost > 440;
+        bool nearestReachable = AI_WanderUtility.TryFindNearestNavigableWaterExit(
+            grid, origin, 3, out Vector2 destination) && destination == new Vector2(2.5f, .5f);
+        bool radiusRespected = !AI_WanderUtility.TryFindNearestNavigableWaterExit(
+            grid, origin, 1, out _);
+
+        grid.UnregisterBlocker(77);
+        bool dynamicBlocker = AI_WanderUtility.TryFindNearestNavigableWaterExit(
+            grid, origin, 3, out destination) && destination == new Vector2(-.5f, .5f);
+        grid.SetCell(Vector2Int.zero, 5, true);
+        bool dryIgnored = !AI_WanderUtility.TryFindNearestNavigableWaterExit(grid, origin, 3, out _);
+
+        var corner = new WorldNavigationGrid();
+        corner.SetCell(Vector2Int.zero, 100000u, true, true, .8f);
+        corner.SetCell(new Vector2Int(1, 0), 5, false);
+        corner.SetCell(new Vector2Int(0, 1), 5, false);
+        corner.SetCell(new Vector2Int(1, 1), 5, true);
+        bool cornerBlocked = !AI_WanderUtility.TryFindNearestNavigableWaterExit(
+            corner, origin, 2, out _);
+        var unloaded = new WorldNavigationGrid();
+        unloaded.SetCell(Vector2Int.zero, 100000u, true, true, .8f);
+        unloaded.SetCell(new Vector2Int(2, 0), 5, true);
+        bool unloadedBlocked = !AI_WanderUtility.TryFindNearestNavigableWaterExit(
+            unloaded, origin, 3, out _);
+
+        return new JObject
+        {
+            ["expensiveWater"] = expensiveWater, ["nearestReachable"] = nearestReachable,
+            ["radiusRespected"] = radiusRespected, ["dynamicBlocker"] = dynamicBlocker,
+            ["dryIgnored"] = dryIgnored, ["cornerBlocked"] = cornerBlocked,
+            ["unloadedBlocked"] = unloadedBlocked
+        };
     }
 
     /// <summary>真实逆向目标场反复生成路径，检查缓冲复用不会泄漏到独立请求的路点数组。</summary>

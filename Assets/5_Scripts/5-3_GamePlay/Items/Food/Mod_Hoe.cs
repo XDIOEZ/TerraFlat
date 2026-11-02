@@ -4,11 +4,12 @@ using UnityEngine;
 
 /// <summary>
 /// 锄头持续使用入口；每次真实挥动只结算一次地块进度，地块进度不会随换工具重置。
-/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按共用 Mod_GameController 的使用状态。
+/// 木、石、铜、铁分别配置 6、4、3、2 次完成，右键/手机长按由快捷栏统一调度。
 /// </summary>
-public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
+public partial class Mod_Hoe : Module, IItemModuleDependencyBinder, IContinuousHeldItemUse
 {
     #region 数据与配置
+    public bool SupportsHeldUseContinuation => true;
 
     [System.Serializable, MemoryPackable(GenerateType.VersionTolerant)]
     public partial class Mod_Hoe_Data
@@ -27,7 +28,6 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
     private WorldTileTargetOutline targetOutline;
     private Mod_GameController ownerController;
     private IWeaponActionAnimation actionAnimation;
-    private bool continuousUseArmed;
 
     #endregion
 
@@ -54,7 +54,6 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
         if (actBound && item != null)
             item.OnAct -= Act;
         actBound = false;
-        continuousUseArmed = false;
         ReleaseOutline();
         ownerController = null;
         actionAnimation = null;
@@ -77,7 +76,6 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
     {
         if (item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
         {
-            continuousUseArmed = false;
             targetOutline?.Hide();
             ownerController = null;
             return;
@@ -100,12 +98,6 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
             targetOutline?.Hide();
         }
 
-        if (!ownerController.IsRightClickHeld)
-            continuousUseArmed = false;
-
-        // 只有本次按下已经通过 Item.Act 武装后才续挥，避免切换手持物时继承旧按住状态。
-        if (continuousUseArmed)
-            TryPerformTillingSwing(ownerController);
     }
 
     private void OnDisable() => ReleaseOutline();
@@ -116,15 +108,20 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder
         targetOutline = null;
     }
 
-    /// <summary>单次按下立即尝试第一挥；持续按住由 LateUpdate 按动画节拍续挥。</summary>
+    /// <summary>单次按下立即尝试第一挥，后续节拍由快捷栏统一分发。</summary>
     public override void Act()
     {
         if (item?.Owner == null)
             return;
 
         ownerController ??= item.Owner.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        continuousUseArmed = ownerController?.IsRightClickHeld == true;
         TryPerformTillingSwing(ownerController);
+    }
+
+    public bool ContinueHeldUse()
+    {
+        Act();
+        return true;
     }
 
     /// <summary>动画确认这一挥真实开始后，才对当前目标地块结算一次工作量。</summary>

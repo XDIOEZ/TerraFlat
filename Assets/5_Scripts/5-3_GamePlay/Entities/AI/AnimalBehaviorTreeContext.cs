@@ -29,6 +29,7 @@ public sealed partial class AnimalBehaviorTreeContext
     private readonly float _damageThreatMemoryDuration; // 受击来源记忆时长。
     private Mod_DamageReceiver _damageEventSource; // 当前受击事件来源。
     private Mod_TurnBack _turnBody; // 通用朝向模块。
+    private float _minimumRequiredDetectionRadius = float.NegativeInfinity;
 
     public AnimalBehaviorTreeContext(
         Item actor,
@@ -150,22 +151,7 @@ public sealed partial class AnimalBehaviorTreeContext
     /// <summary>立即面向目标；攻击节点不修改移动目标。</summary>
     public void FaceTarget(Vector3 targetPosition, bool immediate)
     {
-        if (_turnBody == null)
-            return;
-
-        Vector2 direction = WorldTopologyRuntime.ShortestDelta(Position, targetPosition);
-        if (direction.sqrMagnitude < 0.0001f)
-            return;
-        direction.Normalize();
-
-        if (immediate)
-            _turnBody.ResetTurnState();
-        _turnBody.TurnBodyToDirection(direction);
-        if (immediate)
-        {
-            _turnBody.UpdateTurn(float.MaxValue);
-            _turnBody.UpdateAllTransformDirections();
-        }
+        _turnBody?.FaceWorldPosition(targetPosition, immediate);
     }
 
     public bool IsLivingAttackTarget(Item target)
@@ -173,15 +159,31 @@ public sealed partial class AnimalBehaviorTreeContext
         return _perception.IsLivingAttackTarget(target);
     }
 
+    /// <summary>本棵树统一汇总能力所需的检测范围。</summary>
+    public void RequireMinimumDetectionRadius(float radius)
+    {
+        if (radius <= _minimumRequiredDetectionRadius) return;
+        _minimumRequiredDetectionRadius = radius;
+        if (Detector != null) Detector.SetMinimumDetectionRadiusForSource(this, radius);
+    }
+
     /// <summary>释放本只生物的能力与受击订阅。</summary>
     public void Dispose()
     {
-        for (int i = _capabilityList.Count - 1; i >= 0; i--) _capabilityList[i].Dispose();
-        _capabilityList.Clear();
-        _capabilities.Clear();
-        if (_damageEventSource != null)
-            _damageEventSource.OnDamageReceived -= HandleDamageReceived;
-        _damageEventSource = null;
+        try
+        {
+            for (int i = _capabilityList.Count - 1; i >= 0; i--) _capabilityList[i].Dispose();
+        }
+        finally
+        {
+            if (Detector != null) Detector.RemoveMinimumDetectionRadiusForSource(this);
+            _minimumRequiredDetectionRadius = float.NegativeInfinity;
+            _capabilityList.Clear();
+            _capabilities.Clear();
+            if (_damageEventSource != null)
+                _damageEventSource.OnDamageReceived -= HandleDamageReceived;
+            _damageEventSource = null;
+        }
     }
 
     private void BindDamageEvents()

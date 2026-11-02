@@ -41,6 +41,8 @@ public sealed partial class TileDefinitionCatalogDto
 [MemoryPack.MemoryPackable]
 public sealed partial class TileDefinitionDto
 {
+    [JsonProperty("combustibility")] public WorldCombustibilityDefinitionDto Combustibility;
+
     #region 配置
     [JsonProperty("id", Required = Required.Always)] public string Id;
     [JsonProperty("runtimeTileId")] public int RuntimeTileId;

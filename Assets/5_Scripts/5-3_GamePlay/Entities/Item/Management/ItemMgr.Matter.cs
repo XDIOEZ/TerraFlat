@@ -120,7 +120,8 @@ public partial class ItemMgr
             if (GameNetwork.HasStateAuthority && seconds > 0f)
             {
                 bool changed = WorldItemMatterRules.Advance(entry.Data, item.transform.position, seconds,
-                    liquidContact: true, out bool waterContact);
+                    liquidContact: true, out bool waterContact,
+                    advanceFuelCombustion: entry.Structure.ActiveCombustion == null);
                 // 热分解先交接新物质，避免同一轮燃烧把已满足转化条件的材料直接扣没。
                 if (WorldItemMatterRules.TryCreateTransitionOutputs(entry.Data, out IReadOnlyList<ItemData> products))
                 {

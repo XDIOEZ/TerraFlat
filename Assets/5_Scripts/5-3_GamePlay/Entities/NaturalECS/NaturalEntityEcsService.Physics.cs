@@ -334,8 +334,7 @@ namespace FlatWorld.NaturalEntities
                     binding.RegionId != "interaction" || binding.Purpose != WorldPhysicsPurpose2D.Interaction) continue;
                 Bounds bounds = sprite != null ? sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
                 Vector3 position = visual?.RendererLocalPosition ?? Vector3.zero;
-                Quaternion rotation = Quaternion.Euler((visual?.RendererLocalEulerAngles ?? Vector3.zero) +
-                    Vector3.forward * ManualHarvestWork.ShakeAngle(Time.time - record.HarvestShakeStartedAt));
+                Quaternion rotation = Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero);
                 if (box.offset != (Vector2)bounds.center) box.offset = bounds.center;
                 if (box.size != (Vector2)bounds.size) box.size = bounds.size;
                 if (box.transform.localPosition != position || box.transform.localRotation != rotation)

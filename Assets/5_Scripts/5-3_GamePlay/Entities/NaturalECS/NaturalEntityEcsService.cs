@@ -226,6 +226,7 @@ namespace FlatWorld.NaturalEntities
             GameplayCombatBridge.Unregister(runtimeModule);
             foreach (Record record in records.Values)
             {
+                WorldCombustibilitySystem.RemoveCombustibilitySource(record.WorldKey, record, preserveFuelConsumption: true);
                 ReleaseNaturalEntityPhysicsProxy(record);
                 ReleaseExtensionModules(record);
                 UnregisterNavigation(record);
@@ -413,7 +414,7 @@ namespace FlatWorld.NaturalEntities
             if (simulation.TryGet(handle.Id, out EntityPlantLifecycle previousPlant) && previousPlant.Cultivated != 0)
                 cultivatedCells.Remove(WorldTopologyRuntime.NormalizeCell(new Vector2Int(previousPlant.SoilCell.x, previousPlant.SoilCell.y)));
             UnregisterNavigation(record);
-            UnregisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh);
+            UnregisterSpatial(record, PhysicsBodyChangeReason.SnapshotRefresh, removeCombustibility: false);
             ReleaseNaturalEntityPhysicsProxy(record);
             if (record.Profile.HasClimate &&
                 (float.IsNaN(baselineCelsius) || float.IsInfinity(baselineCelsius)) &&

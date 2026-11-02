@@ -16,7 +16,15 @@ public class Mod_Fuel : Module
     #endregion
 
     public Ex_ModData_MemoryPackable ExData;
-    public override ModuleData _Data { get => ExData; set => ExData = (Ex_ModData_MemoryPackable)value; }
+    public override ModuleData _Data
+    {
+        get => ExData;
+        set
+        {
+            ExData = (Ex_ModData_MemoryPackable)value;
+            if (ExData?.ReadRuntimeState<FuelData>() is FuelData saved) Data = saved;
+        }
+    }
     public FuelData Data = new FuelData();
 
     // 是否点燃
@@ -44,7 +52,8 @@ public class Mod_Fuel : Module
 
     protected override void OnLoad()
     {
-        ExData.ReadData(ref Data);
+        Data = ExData.ReadRuntimeState<FuelData>() ?? Data;
+        ExData.WriteRuntimeState(Data);
         fuelLight ??= item.GetComponentInChildren<Light2D>(true);
 
         item.OnInHandChanged -= HandleInHandChanged;
@@ -61,7 +70,21 @@ public class Mod_Fuel : Module
 
     protected override void OnSave()
     {
-        ExData.WriteData(Data);
+        ExData.WriteRuntimeState(Data);
+    }
+
+    public override void ApplyResourceConfiguration(string itemId, string moduleName, string json)
+    {
+        FuelData saved = !IsRuntimeLoaded ? ExData.ReadRuntimeState<FuelData>() : null;
+        float remaining = Data.Fuel.x;
+        // 未加载配置使用独立对象，避免 Populate 改写存档或池上旧物品的燃料引用。
+        if (!IsRuntimeLoaded) Data = new FuelData { Fuel = Data.Fuel, MaxTemperature = Data.MaxTemperature };
+        base.ApplyResourceConfiguration(itemId, moduleName, json);
+        if (saved != null) Data = saved;
+        if (!IsRuntimeLoaded) return;
+        Data.Fuel.x = remaining;
+        ExData.WriteRuntimeState(Data);
+        UpdateLightState();
     }
 
     private void OnDestroy()
@@ -92,6 +115,7 @@ public class Mod_Fuel : Module
         if (amount <= 0f) return;
         // 完整保留最后一份燃料的热值，超过显示容量的部分作为隐藏储备继续燃烧。
         Data.Fuel.x += amount;
+        ExData.WriteRuntimeState(Data);
     }
 
     /// <summary>
@@ -105,6 +129,7 @@ public class Mod_Fuel : Module
             burnSpeedMultiplier *
             GameRuleConfiguration.Current.Production.FuelConsumptionMultiplier;
         Data.Fuel.x = Mathf.Max(Data.Fuel.x - actualAmount, 0f);
+        ExData.WriteRuntimeState(Data);
         
         if (Data.Fuel.x <= 0.01f) 
         {
@@ -229,13 +254,28 @@ public class Mod_Fuel : Module
     #region 冷数据解析
     /// <summary>库存里的 ItemData 没有实例化 Module 时，从保存态或当前物品定义解析燃料数据。</summary>
     public static bool TryResolveItemData(ItemData source, out FuelData fuelData)
+        => TryResolveItemDataFuelStorage(source, out _, out fuelData);
+
+    // 场景与库存直接扣同一份材料燃料，不带入炉体生产倍率或灯光规则。
+    public static bool ConsumeItemDataFuel(ItemData source, float amount)
+    {
+        if (amount <= 0f || !TryResolveItemDataFuelStorage(source, out var storage, out var fuel)) return false;
+        float remaining = Mathf.Max(0f, fuel.Fuel.x - amount);
+        if (remaining == fuel.Fuel.x) return false;
+        fuel.Fuel.x = remaining;
+        storage.WriteRuntimeState(fuel);
+        return true;
+    }
+
+    private static bool TryResolveItemDataFuelStorage(ItemData source,
+        out Ex_ModData_MemoryPackable storage, out FuelData fuelData)
     {
         fuelData = null;
+        storage = null;
         if (source?.ModuleDataDic == null)
             return false;
 
         string stableModuleName = null;
-        Ex_ModData_MemoryPackable storage = null;
         if (source.ModuleDataDic.TryGetValue(ModText.Fuel, out ModuleData direct) &&
             direct is Ex_ModData_MemoryPackable directStorage &&
             string.Equals(directStorage.ID, ModText.Fuel, System.StringComparison.Ordinal))
@@ -262,12 +302,8 @@ public class Mod_Fuel : Module
         if (storage == null)
             return false;
 
-        if (storage.BitData != null && storage.BitData.Length > 0)
-        {
-            fuelData = new FuelData();
-            storage.ReadData(ref fuelData);
-            return fuelData != null;
-        }
+        fuelData = storage.ReadRuntimeState<FuelData>();
+        if (fuelData != null) return true;
 
         GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes == null ||
@@ -299,7 +335,10 @@ public class Mod_Fuel : Module
 
             fuelData = dataToken.ToObject<FuelData>();
             if (fuelData != null)
+            {
+                storage.WriteRuntimeState(fuelData);
                 return true;
+            }
         }
 
         return false;

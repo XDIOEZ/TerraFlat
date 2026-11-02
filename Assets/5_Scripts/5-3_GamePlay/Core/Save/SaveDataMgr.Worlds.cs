@@ -279,6 +279,7 @@ public partial class SaveDataMgr
             terrain.GroundLayerCells = record.GroundLayerCells;
             terrain.SnowCells = record.SnowCells;
             terrain.FireCells = record.FireCells;
+            terrain.CombustibilityCells = record.CombustibilityCells;
             terrain.GrassDeltas = record.GrassDeltas;
             foreach (AgricultureCellSaveData cell in record.AgricultureCells)
                 terrain.AgricultureCells.Add(new AgricultureCellSaveData

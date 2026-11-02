@@ -46,7 +46,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             {
                 Attack = new CombatAttackKey { Source = new CombatIdentity { Backend = CombatBackend.External, Value = 1UL } },
                 IsTrueDamage = 1,
-                Damage = new Unity.Mathematics.float4(1f),
+                Damage = new Unity.Mathematics.float4(1f, 0f, 0f, 0f),
                 Clock = new CombatClock { Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime }
             };
             SourceDamageRejected = NaturalEntityEcsService.ApplyDamage(SourceHandle, damage) < 0f;
@@ -150,7 +150,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             RuntimeItemDefinition definition = own.InstallPhysicsDefinition("Tree_Pine", dynamicResourcePhysics);
             ChunkTilemapRenderer sourceOwner = source.GetComponentInChildren<ChunkTilemapRenderer>(true);
             ChunkTilemapRenderer destinationOwner = destination.GetComponentInChildren<ChunkTilemapRenderer>(true);
-            ChunkNaturalItemRenderer sourceRenderer = source.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+            ChunkNaturalItemRuntime sourceRenderer = manager.NaturalItemRuntimes.Ensure(source.Model);
             IndependentNaturalEntityRegistry registry = manager.IndependentNaturalEntities;
             registry.BindChunk(source.Model, sourceOwner);
             registry.BindChunk(destination.Model, destinationOwner);
@@ -233,7 +233,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         PhysicsTestTransferPresentation destination = BindPhysicsTestTransferPresentation(targetWorldKey, targetPosition);
         if (destination == null || destination.TerrainSource?.IsBound(destination.Chunk) != true)
             throw new InvalidOperationException("迁移目标没有真实ChunkView和通用物理的地形数据来源表现租约。");
-        ChunkNaturalItemRenderer sourceRenderer = sourceView.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+        ChunkNaturalItemRuntime sourceRenderer = sourceManager.NaturalItemRuntimes.Ensure(sourceView.Model);
         if (sourceRenderer == null) throw new InvalidOperationException("迁移源ChunkView缺少自然资源生成器。");
         var busyProbe = new TransferBusyReentrancyProbe();
         const string busyModuleSlot = "probe:world-transfer-busy";
@@ -260,7 +260,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     }
 
     private static void CaptureGeneratedResourceTransfer(Fixture own, string sourceWorldKey, string targetWorldKey,
-        ChunkMgr sourceManager, ChunkNaturalItemRenderer sourceRenderer, RuntimeWorldAddress sourceAddress,
+        ChunkMgr sourceManager, ChunkNaturalItemRuntime sourceRenderer, RuntimeWorldAddress sourceAddress,
         PhysicsTestTransferPresentation destination, Vector2Int sourceLocalCell, Vector2 sourcePosition,
         Vector2 targetPosition, TransferBusyReentrancyProbe busyProbe, string busyModuleSlot,
         string busyModulePrefab, string mode, string prefix, JObject result)
@@ -524,7 +524,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 }
 
-public sealed partial class ChunkNaturalItemRenderer
+public sealed partial class ChunkNaturalItemRuntime
 {
     #region 正式自然生成链路测试入口
     // 仅把自有生成点交给正式区块装配流程，测试不重算实体或代理规则。

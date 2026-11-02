@@ -3,6 +3,8 @@
 ## 数据与刷新
 
 - Ground/Liquid 独立合批，主路径 `ChunkGroundMeshRenderer/Chunk-Mesh-Water-Lit`，BRG 复用同一效果。外观来自 `LiquidDefinition.WorldWater`，岸线来自 LiquidDepth>0，水量0～100份由 `LiquidCellValue.ToVisualDepth` 向上归入十档后做四角连续插值；边界变更更新八邻共享边/角，深度 UV 用世界坐标和水层原点/边框，不用合批局部 POSITION。
+- 天然冻水格读取 `FrozenSurfaceWaterLayer` 的冻结前底床：Ground 画底床，独立 Ice Mesh 以原冰图 50% 透明度合批，排序在 Ground 与 Water 之间；缺少来源或贴图时保留原地块。冰层专用 Shader 变体以规范区块坐标绘制像素裂纹与霜色，保留 2D 光照和透明度；坐标按 16384 格循环以稳定大坐标和镜像重投影。融完等地块切换再撤冰，回滚和重绑重新投影；单 Quad 的活跃行列计数增量维护边界。规则 `rendering/frozen_ice_surface`。
+- `rendering/frozen_ice_visual` 在编辑态隔离相机中比较真实底床、冰纹开关和投影平移的像素，并采样 16 区块合批和 CPU 渲染提交；不代表实际 GPU 耗时或游戏帧率。
 - `ChunkTilemapRenderer` 的液体/相邻液体/材质变化只重提 Water Mesh；同一水面档位内扣量不重提，单格看 `AffectsLiquidVisuals`、批量只看 `VisualCellIndices`，原数据通知与全部真实变化索引仍完整发布。真实地形、邻块加载、全量绑定仍刷新 Ground/Back/Blocking。无岩浆时只看变化格是否新生岩浆，不因普通水流扫描全块；真实岩浆/平台遮挡照常重建，分帧绑定不绕预算。
 - 天然水面低于同地势岸 1 层，不随 2～3 层底床起伏，抽干才露底；普通倒水仍高于底床 1 层，采挖/填土照常叠加、平台与地面基准齐平。高度层只读天然凹陷，不识别河流来源或改水量。
 - `ChunkEnvironmentRenderer` 排除有液格，抽干恢复覆盖。`ChunkSnowCoverRenderer/ChunkSupportSurfaceRenderer` 只读所属层、释放自己的表现，支撑面不画阴影；覆雪 `_SnowCoverage` 用 MPB，脚印按自身寿命消退。无雪且无旧表现只查雪层正值，有雪复用有效地表查询；高低阴影位于地面/支撑/雪上、墙下。
@@ -26,5 +28,6 @@
 - 落地建筑/机器直接放在有液体且无 `TerrainSupportLayer` 的格时，共用区块水下行网格，排序为地形层、队列在海床后水面前；平台不清原始液体，只改变支撑判断。普通 GO 桥与数据机器统一选后端，平台增删、单格及批量液体通知仅在水下状态改变时迁移机器部件；船上设备不读地表水。回归 `rendering/building_liquid_surface` 覆盖规则与真实数据通知，最终遮挡仍需画面验收。
 
 - `ActorWaterCommon.hlsl` 共用 Sprite-Lit-Master/AIECS，旋转附属物用角色世界水线；读取 `Mod_TileEffectReceiver` 有效淹没，浮动不改权威 LiquidDepth。接触独立于 Ground，液体身份变化才 Exit/Enter，邻格容错只用于交互。
+- 生物水面倒影只使用表现层水线/当前动画帧：Mesh、BRG 和 Tilemap 水面写 Stencil 64，`Resources/Shaders/ActorWaterReflection` 按水面像素裁剪镜像；GO 复用 SpriteRenderer，AIECS 复用动画批次，离水隐藏、世界退出清理，不改游泳与液深结算。
 - 掉落沉没先浸没再远离，SubmergedProgress 只缩表现矩阵，不改质量/体积/原 Scale；WaterElapsed 延续进度，权威层销毁，离水/拾取/回池恢复。
 - 物件覆雪共用 `SpriteSnowCommon.hlsl`，按原图仿射包围盒的世界 Y 合成水平雪线；Sprite 的中心/半尺寸经控制器 MPB、行网格经 Tangent 传入，翻面和机械动画同步，不能退回本地 Y 随物件旋转。

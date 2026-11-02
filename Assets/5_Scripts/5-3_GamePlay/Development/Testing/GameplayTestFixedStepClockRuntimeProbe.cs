@@ -10,6 +10,8 @@ public static class GameplayTestFixedStepClockRuntimeProbe
 {
     #region 固定步真实时钟采样
 
+    private const int CatchUpHitchMilliseconds = 200;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void RegisterRuntime() => Register();
 #if UNITY_EDITOR
@@ -123,11 +125,13 @@ public static class GameplayTestFixedStepClockRuntimeProbe
             yield return null;
             yield return null;
             yield return CaptureWindow(fixture.Observer, 1.5d, value => result["normal"] = value);
+            yield return CaptureBoundedCatchUpAfterHitch(fixture.Observer, value => result["normalHitch"] = value);
 
             Time.timeScale = 2f;
             yield return null;
             yield return null;
             yield return CaptureWindow(fixture.Observer, 1.5d, value => result["double"] = value);
+            yield return CaptureBoundedCatchUpAfterHitch(fixture.Observer, value => result["doubleHitch"] = value);
 
             Time.timeScale = 0f;
             yield return null;
@@ -195,6 +199,35 @@ public static class GameplayTestFixedStepClockRuntimeProbe
             ["steps"] = new JArray(observer.Steps), ["frames"] = frames,
             ["hudVisible"] = fpsText != null && fpsText.isActiveAndEnabled,
             ["hudText"] = fpsText != null ? fpsText.text : string.Empty
+        });
+    }
+
+    // 故意阻塞一帧，核对 Unity 丢弃超额追赶时间，而不是补算欠下的固定步。
+    private static IEnumerator CaptureBoundedCatchUpAfterHitch(FixedStepClockObservation observer, Action<JObject> completed)
+    {
+        observer.Steps.Clear();
+        double startWall = Time.realtimeSinceStartupAsDouble;
+        double startGameTime = Time.timeAsDouble;
+        double startFixedTime = Time.fixedTimeAsDouble;
+        long startTick = (long)GameplayFixedStepSimulation.TickIndex;
+        int startFrame = Time.frameCount;
+        float timeScale = Time.timeScale;
+
+        System.Threading.Thread.Sleep(CatchUpHitchMilliseconds);
+        yield return null;
+
+        completed(new JObject
+        {
+            ["hitchMilliseconds"] = CatchUpHitchMilliseconds,
+            ["startWall"] = startWall, ["endWall"] = Time.realtimeSinceStartupAsDouble,
+            ["startGameTime"] = startGameTime, ["endGameTime"] = Time.timeAsDouble,
+            ["startFixedTime"] = startFixedTime, ["endFixedTime"] = Time.fixedTimeAsDouble,
+            ["startTick"] = startTick, ["endTick"] = (long)GameplayFixedStepSimulation.TickIndex,
+            ["startFrame"] = startFrame, ["endFrame"] = Time.frameCount,
+            ["timeScale"] = timeScale, ["endTimeScale"] = Time.timeScale,
+            ["fixedDelta"] = Time.fixedDeltaTime, ["maximumDelta"] = Time.maximumDeltaTime,
+            ["scaledDelta"] = Time.deltaTime, ["unscaledDelta"] = Time.unscaledDeltaTime,
+            ["steps"] = new JArray(observer.Steps)
         });
     }
 

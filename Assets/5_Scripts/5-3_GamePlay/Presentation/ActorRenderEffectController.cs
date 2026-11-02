@@ -43,6 +43,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
 
     private readonly List<Renderer> renderers = new List<Renderer>();
     private readonly List<Renderer> externalRenderers = new List<Renderer>();
+    private readonly List<Renderer> ownedDetachedRenderers = new List<Renderer>();
     private readonly List<ActorRenderEffectModule> modules = new List<ActorRenderEffectModule>();
     private readonly Dictionary<Renderer, Material[]> externalOriginalMaterials =
         new Dictionary<Renderer, Material[]>();
@@ -227,6 +228,11 @@ public sealed class ActorRenderEffectController : MonoBehaviour
             AddRenderer(externalRenderer);
         }
 
+        for (int i = ownedDetachedRenderers.Count - 1; i >= 0; i--)
+        {
+            if (ownedDetachedRenderers[i] == null) ownedDetachedRenderers.RemoveAt(i);
+            else AddRenderer(ownedDetachedRenderers[i]);
+        }
         modules.Sort(CompareModules);
         moduleVersions.Clear();
         moduleActiveStates.Clear();
@@ -245,6 +251,20 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     public void SetEffectSpriteMaterial(Material material)
     {
         effectSpriteMaterialOverride = material;
+    }
+
+    /// <summary>独立角色本体仍是自己的 Renderer，角色染色不按手持外部物品过滤。</summary>
+    internal void RegisterOwnedRenderer(Renderer renderer)
+    {
+        if (renderer == null || ownedDetachedRenderers.Contains(renderer)) return;
+        ownedDetachedRenderers.Add(renderer);
+        RefreshBindings();
+    }
+
+    internal void UnregisterOwnedRenderer(Renderer renderer)
+    {
+        if (ReferenceEquals(renderer, null) || !ownedDetachedRenderers.Remove(renderer)) return;
+        RefreshBindings();
     }
 
     /// <summary>注册手持物等不在角色表现节点下的附属 Renderer，并临时继承角色效果材质。</summary>

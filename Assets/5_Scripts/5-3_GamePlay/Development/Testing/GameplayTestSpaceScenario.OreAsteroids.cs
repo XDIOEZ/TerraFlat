@@ -300,7 +300,7 @@ public sealed partial class GameplayTestSpaceScenario
         {
             Attack = new CombatAttackKey { Source = source, Sequence = 1 }, Credit = source,
             SourceIsPlayer = 1, ResourceToolKind = (int)ResourceToolKind.Pickaxe, ResourceToolTier = 3,
-            ResourceToolEfficiency = 1f, Damage = new float4(0f, 0f, 0f, mine.Health.x * 10f + 1000f),
+            ResourceToolEfficiency = 1f, Damage = new float4(mine.Health.x * 10f + 1000f, 0f, 0f, 0f),
             Origin = (Vector2)CurrentPlayer().transform.position, HitPoint = minePoint,
             Clock = new CombatClock { Time = Time.timeAsDouble, DeltaTime = Time.fixedDeltaTime }
         };

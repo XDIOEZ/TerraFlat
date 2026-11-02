@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef91755adc06b5243b450932f635a391, type: 3}
+  m_Name: GameplayUI
+  m_EditorClassIdentifier: 
+  Entries:
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/ArmFracture.png[ArmFracture]
+    Sprite: {fileID: 21300000, guid: d75f4955e7c948c488cdc9ed44089cc6, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding1.png[Bleeding1]
+    Sprite: {fileID: 21300000, guid: 4571acf9805f403da0898ebd32bdb38a, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding2.png[Bleeding2]
+    Sprite: {fileID: 21300000, guid: 83bf8bced0c644a691272586ecc075d8, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding3.png[Bleeding3]
+    Sprite: {fileID: 21300000, guid: 1f80cde50d084d2c829017bc686596b3, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryAbdomen.png[BodyRecoveryAbdomen]
+    Sprite: {fileID: 21300000, guid: feb64c51bded4daaa9935ea40633c55d, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryChest.png[BodyRecoveryChest]
+    Sprite: {fileID: 21300000, guid: 0fdbfa8e4b7d4de590c52a96440afcb3, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryHead.png[BodyRecoveryHead]
+    Sprite: {fileID: 21300000, guid: ae97b4124f3240928c5eb55bb63732c2, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftHand.png[BodyRecoveryLeftHand]
+    Sprite: {fileID: 21300000, guid: 79debcbb3770407ebb396eda5fb4f64f, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftLeg.png[BodyRecoveryLeftLeg]
+    Sprite: {fileID: 21300000, guid: 382883fbbb504b6089698f7dd1fe82c5, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryPelvis.png[BodyRecoveryPelvis]
+    Sprite: {fileID: 21300000, guid: adce54d1bbbb452ea232ed826192f32c, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryRightHand.png[BodyRecoveryRightHand]
+    Sprite: {fileID: 21300000, guid: fc77dd5ed6904dcfa0b5e2058ee32116, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryRightLeg.png[BodyRecoveryRightLeg]
+    Sprite: {fileID: 21300000, guid: 46ae2c618ad84386b86a71c9d2c86e5b, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Burning.png[Burning]
+    Sprite: {fileID: 21300000, guid: 659939f4454a4c33a346bc1c52eac7d5, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Concussion.png[Concussion]
+    Sprite: {fileID: 21300000, guid: b2e5239f772e44f4989e54a7e7fb5b02, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/DamageReduction.png[DamageReduction]
+    Sprite: {fileID: 21300000, guid: d2b33a333ea541c4b2d93aba65929128, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Dehydration.png[Dehydration]
+    Sprite: {fileID: 21300000, guid: d20cd9fe8508435d9d8c3ffd50516e21, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Frostbite.png[Frostbite]
+    Sprite: {fileID: 21300000, guid: 297014c76ba14ce8905173729ab306f5, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/FusionContact.png[FusionContact]
+    Sprite: {fileID: 21300000, guid: 3a3a020f22e84543a6773001e5915b03, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/HealthRecovery.png[HealthRecovery]
+    Sprite: {fileID: 21300000, guid: e37aab2082da4b45a44d077addc66e88, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Heatstroke.png[Heatstroke]
+    Sprite: {fileID: 21300000, guid: a624c3f7167547bda463b75eaea62da7, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/HerbalRecovery.png[HerbalRecovery]
+    Sprite: {fileID: 21300000, guid: f852efc4de3747d988586ebdd173b80a, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Hydration.png[Hydration]
+    Sprite: {fileID: 21300000, guid: 5985d1be42b446c89ddfd28a4d033c04, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Immobilized.png[Immobilized]
+    Sprite: {fileID: 21300000, guid: 824103b54b2b4dddbeb0993b45de3794, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Infection.png[Infection]
+    Sprite: {fileID: 21300000, guid: 4b9925f6667f4e159e1d3fadb970482e, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/LegFracture.png[LegFracture]
+    Sprite: {fileID: 21300000, guid: 1baefdf4d3e94541bdc1f9298e521c37, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/NightVision.png[NightVision]
+    Sprite: {fileID: 21300000, guid: 9b2dc666d5ca4faeae8abc317c760a90, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Overweight.png[Overweight]
+    Sprite: {fileID: 21300000, guid: ab7022e0946b493ab2be9347727d463e, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Radiant.png[Radiant]
+    Sprite: {fileID: 21300000, guid: dd428ecdad8f4b1d9a7b918d499ffa69, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Running.png[Running]
+    Sprite: {fileID: 21300000, guid: ad805a6e5cfa413dbf243de6bc356bd1, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/SpeedBoost.png[SpeedBoost]
+    Sprite: {fileID: 21300000, guid: 4a7faf28d20c46dfb1450c6c680484e7, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Spicy.png[Spicy]
+    Sprite: {fileID: 21300000, guid: 7f05590e25164caeb61e044105b5c49d, type: 3}
+  - Address: Assets/6_Art/Generated/Buff/StatusIcons/Wet.png[Wet]
+    Sprite: {fileID: 21300000, guid: d99a3aa6565845738e7a4580e7a5687b, type: 3}
+  Locations: []

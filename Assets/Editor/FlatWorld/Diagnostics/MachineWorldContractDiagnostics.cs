@@ -337,7 +337,7 @@ public static class MachineWorldContractDiagnostics
         var health = new ItemHealthDefinitionDto
         {
             Hp = 180f, MaxHp = 180f,
-            Defense = new ItemDefenseDefinitionDto { Cutting = 8f, Piercing = 8f, Chopping = 8f, Blunt = 8f },
+            Defense = new ItemDefenseDefinitionDto { Physical = 8f, Fire = 3f, Radiation = 2f },
             Collider = new ItemColliderDefinitionDto
             {
                 Type = nameof(BoxCollider2D), Enabled = true, IsTrigger = true,
@@ -347,15 +347,17 @@ public static class MachineWorldContractDiagnostics
         MachineCombatBridge.ValidateHealth(health);
         var hit = new FlatWorld.Combat.CombatDamageContext
         {
-            Damage = new Unity.Mathematics.float4(0f, 0f, 0f, 12f), BuildingMultiplier = 10f
+            Damage = new Unity.Mathematics.float4(12f, 0f, 0f, 0f), BuildingMultiplier = 10f
         };
         Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 40f,
             "石锤的 12 点钝击应先扣 8 点防御，再应用 10 倍建筑伤害。");
-        hit.Damage.w = 6f;
+        hit.Damage.x = 6f;
         Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 0f,
             "完全被防御抵消的命中仍应是有效零伤害，不能绕过防御凭空扣血。");
-        hit.Damage.w = 12f;
-        hit.IsTrueDamage = 1;
+        hit.Damage = new Unity.Mathematics.float4(0f, 12f, 9f, 0f);
+        Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 160f,
+            "火焰与辐射分别扣对应防御后合计伤害。");
+        hit.Damage = new Unity.Mathematics.float4(0f, 0f, 0f, 12f);
         Require(MachineCombatBridge.CalculateDamage(health, hit, 1f) == 120f,
             "真实伤害应跳过防御，但仍使用建筑倍率。");
 

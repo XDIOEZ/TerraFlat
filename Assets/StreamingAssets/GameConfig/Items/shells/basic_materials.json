@@ -334,7 +334,7 @@
       "id": "Twine",
       "parent": "BasicItem_Base",
       "gameName": "藤蔓",
-      "description": "柔韧的植物藤蔓，可用于编织绳索和基础工具。",
+      "description": "柔韧的野生藤条，适合捆扎和编织。两根藤蔓可搓成一根绳子，也能用来制作藤甲或植物绷带。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

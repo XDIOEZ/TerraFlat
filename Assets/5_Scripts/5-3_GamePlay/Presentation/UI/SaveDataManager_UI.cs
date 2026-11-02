@@ -96,14 +96,24 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// <summary>选中存档的身份始终由条目持有，不以可编辑标题文字查询文件。</summary>
     public string SelectedSaveName => selectedSaveRow?.Value;
 
+    /// <summary>当前选中存档的真实归档路径。</summary>
+    public string SelectedSaveArchivePath => selectedSaveRow != null
+        ? saveArchivePaths.GetValueOrDefault(selectedSaveRow.Value, string.Empty)
+        : string.Empty;
+
     // UI 控件由当前存档面板的 BasePanel 统一获取。
 
-    // 使用Application.persistentDataPath作为基础路径
-    private string PathToSaveFolder 
-    { 
-        get 
-        { 
-            return Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData") + Path.DirectorySeparatorChar;
+    // 与当前存档服务共用目录，测试隔离期间也不会读取正式档案。
+    private string PathToSaveFolder
+    {
+        get
+        {
+            SaveDataMgr manager = SaveDataMgr.GetExistingInstance();
+            if (manager == null)
+                manager = saveAndLoad;
+            return manager == null || string.IsNullOrWhiteSpace(manager.UserSavePath)
+                ? SaveDataMgr.GetDefaultSavePath()
+                : manager.UserSavePath;
         }
     }
 
@@ -134,11 +144,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     private void EnsureSaveDirectoryExists()
     {
-        string directory = Path.GetDirectoryName(PathToSaveFolder);
-        if (!Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
+        Directory.CreateDirectory(PathToSaveFolder);
     }
 
     /// <summary>

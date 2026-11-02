@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using MemoryPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -13,10 +16,24 @@ public interface IModuleJsonParameterValidator
     void ValidateJsonParameters(JObject parameters);
 }
 
+/// <summary>构建时校验并拆分后的模块纯参数。</summary>
+[MemoryPackable]
+public sealed partial class BakedModuleJsonParameters
+{
+    public string ModuleType;
+    public string ColliderType;
+    [BinaryJsonObject] public JObject Regular;
+    [BinaryJsonObject] public JObject Transform;
+    public ItemColliderDefinitionDto Collider;
+    [BinaryJsonObject] public JObject CustomValidation;
+}
+
 /// <summary>把 ItemDefinition 中的参数应用到模块实例。</summary>
 public static class ModuleJsonConfigurator
 {
     #region 运行时配置计划
+
+    private const int BakedParametersVersion = 1;
 
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -96,6 +113,35 @@ public static class ModuleJsonConfigurator
             serializer = JsonSerializer.Create(Settings);
         }
 
+        /// <summary>复用私有只读参数树，每个定义仍独占错误身份与应用序列化器。</summary>
+        internal PreparedParameters BindDefinitionIdentity(string newItemId, string newModuleName, string newModuleId)
+            => new(moduleType, newItemId, newModuleName, newModuleId,
+                regular, transform, collider, colliderType, customValidationParameters);
+
+        internal BakedModuleJsonParameters CreateBakedSnapshot() => new()
+        {
+            ModuleType = GetStableTypeName(moduleType),
+            ColliderType = GetStableTypeName(colliderType),
+            Regular = regular,
+            Transform = transform,
+            Collider = collider,
+            CustomValidation = customValidationParameters
+        };
+
+        /// <summary>目录只读取需要的普通字段快照，不重新解析整段 JSON，也不暴露共享参数树。</summary>
+        internal JObject CopyRegularFields(IReadOnlyList<string> names)
+        {
+            JObject result = null;
+            foreach (string name in names)
+            {
+                JToken value = regular.GetValue(name, StringComparison.OrdinalIgnoreCase);
+                if (value == null) continue;
+                result ??= new JObject();
+                result[name] = value.DeepClone();
+            }
+            return result;
+        }
+
         /// <summary>配置语法和字段类型已在编译时检查，只复查当前原型结构与模块自有约束。</summary>
         internal void ValidateTarget(Module module)
         {
@@ -103,8 +149,8 @@ public static class ModuleJsonConfigurator
             {
                 if (module == null || module.GetType() != moduleType)
                     throw new InvalidOperationException("模块类型与已编译配置不一致。");
-                if (collider != null && module.GetComponent<Collider2D>()?.GetType() != colliderType)
-                    throw new MissingComponentException("Collider2D 与已编译配置不一致。");
+                if (collider != null && ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, collider.Type) != colliderType)
+                    throw new MissingComponentException("碰撞声明与已编译配置不一致。");
                 if (module is IModuleJsonParameterValidator validator)
                     validator.ValidateJsonParameters((JObject)customValidationParameters.DeepClone());
             }
@@ -140,6 +186,74 @@ public static class ModuleJsonConfigurator
 
     /// <summary>根据当前模块结构解析并校验一次不可变配置。</summary>
     public static PreparedParameters Prepare(Module module, string itemId, string moduleName,
+        string moduleId, string json, bool requireBuiltInBakedParameters = false)
+    {
+        if (BuiltInContentBinaryCatalog.IsRecording)
+        {
+            PreparedParameters prepared = PrepareFromSource(module, itemId, moduleName, moduleId, json);
+            RecordPreparedParameters(module, itemId, moduleName, moduleId, json, prepared);
+            return prepared;
+        }
+        if (!BuiltInContentBinaryCatalog.IsActive)
+            return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+
+        string key = GetBakedParametersKey(module, itemId, moduleName, moduleId, json);
+        if (BuiltInContentBinaryCatalog.TryRead(key, BakedParametersVersion, out BakedModuleJsonParameters baked))
+        {
+            Type moduleType = module.GetType();
+            Type colliderType = baked.Collider != null
+                ? ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, baked.Collider.Type) : null;
+            if (baked.ModuleType != GetStableTypeName(moduleType) || baked.Regular == null ||
+                module is IModuleJsonParameterValidator && baked.CustomValidation == null)
+                throw new InvalidOperationException($"物品 {itemId} 的模块 {moduleName} 烘焙参数与当前原型不一致。");
+            // MOD 替换同类型 Prefab 后，碰撞声明变化必须按新原型重新编译。
+            if (baked.ColliderType != GetStableTypeName(colliderType))
+            {
+                if (requireBuiltInBakedParameters)
+                    throw new InvalidOperationException($"内置物品 {itemId} 模块 {moduleName} 的碰撞原型与烘焙不一致。");
+                return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+            }
+
+            var parameters = new PreparedParameters(moduleType, itemId, moduleName, moduleId,
+                baked.Regular, baked.Transform, baked.Collider, colliderType, baked.CustomValidation);
+            parameters.ValidateTarget(module);
+            return parameters;
+        }
+        if (requireBuiltInBakedParameters)
+            throw new InvalidOperationException($"构建期目录缺少内置物品 {itemId} 的模块参数：{moduleName}({moduleId})");
+        return PrepareFromSource(module, itemId, moduleName, moduleId, json);
+    }
+
+    /// <summary>在 Editor 中用真实模块原型同步烘焙已合并定义的参数。</summary>
+    public static void Bake(Module module, string itemId, string moduleName, string moduleId, string json)
+    {
+        if (module == null || string.IsNullOrWhiteSpace(json)) return;
+        PreparedParameters prepared = PrepareFromSource(module, itemId, moduleName, moduleId, json);
+        RecordPreparedParameters(module, itemId, moduleName, moduleId, json, prepared);
+    }
+
+    internal static void RecordPreparedParameters(Module module, string itemId, string moduleName,
+        string moduleId, string json, PreparedParameters prepared)
+    {
+        if (!BuiltInContentBinaryCatalog.IsRecording) return;
+        BuiltInContentBinaryCatalog.Record(GetBakedParametersKey(module, itemId, moduleName, moduleId, json),
+            BakedParametersVersion, prepared.CreateBakedSnapshot());
+    }
+
+    private static string GetBakedParametersKey(Module module, string itemId, string moduleName,
+        string moduleId, string json)
+    {
+        var input = new StringBuilder();
+        void Append(string value) => input.Append(value?.Length ?? -1).Append(':').Append(value);
+        Append(itemId); Append(moduleName); Append(moduleId); Append(GetStableTypeName(module.GetType())); Append(json);
+        using var hash = SHA256.Create();
+        return "module-parameters/" + BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(input.ToString()))).Replace("-", "");
+    }
+
+    private static string GetStableTypeName(Type type)
+        => type == null ? null : type.Assembly.GetName().Name + ":" + type.FullName;
+
+    private static PreparedParameters PrepareFromSource(Module module, string itemId, string moduleName,
         string moduleId, string json)
     {
         JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
@@ -150,7 +264,8 @@ public static class ModuleJsonConfigurator
             JObject collider = parameters["$collider2D"] as JObject;
             JObject customValidationParameters = module is IModuleJsonParameterValidator
                 ? (JObject)parameters.DeepClone() : null;
-            Type colliderType = collider != null ? module.GetComponent<Collider2D>().GetType() : null;
+            Type colliderType = collider != null
+                ? ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, collider.Value<string>("type")) : null;
             parameters.Remove("$transform");
             parameters.Remove("$collider2D");
             return new PreparedParameters(module.GetType(), itemId, moduleName, moduleId,
@@ -258,9 +373,8 @@ public static class ModuleJsonConfigurator
         if (token is not JObject data)
             throw new JsonSerializationException("$collider2D 必须是对象");
 
-        Collider2D collider = module.GetComponent<Collider2D>();
-        if (collider == null)
-            throw new MissingComponentException($"模块 {module.GetType().Name} 缺少 JSON 所需的 Collider2D");
+        string configuredType = data.Value<string>("type");
+        Type colliderType = ItemPhysicsDefinitionRuntime.ResolveDeclaredColliderType(module, configuredType);
 
         foreach (JProperty property in data.Properties())
         {
@@ -269,26 +383,25 @@ public static class ModuleJsonConfigurator
                 "type" => typeof(string),
                 "enabled" or "isTrigger" => typeof(bool),
                 "offset" => typeof(Vector2),
-                "size" when collider is BoxCollider2D or CapsuleCollider2D => typeof(Vector2),
-                "edgeRadius" when collider is BoxCollider2D => typeof(float),
-                "radius" when collider is CircleCollider2D => typeof(float),
-                "direction" when collider is CapsuleCollider2D => typeof(int),
-                "points" when collider is PolygonCollider2D => typeof(Vector2[]),
+                "size" when colliderType == typeof(BoxCollider2D) || colliderType == typeof(CapsuleCollider2D) => typeof(Vector2),
+                "edgeRadius" when colliderType == typeof(BoxCollider2D) => typeof(float),
+                "radius" when colliderType == typeof(CircleCollider2D) => typeof(float),
+                "direction" when colliderType == typeof(CapsuleCollider2D) => typeof(int),
+                "points" when colliderType == typeof(PolygonCollider2D) => typeof(Vector2[]),
                 _ => null
             };
             if (valueType == null)
                 throw new JsonSerializationException(
-                    $"{collider.GetType().Name} 不支持 $collider2D.{property.Name}");
+                    $"{colliderType.Name} 不支持 $collider2D.{property.Name}");
 
             property.Value.ToObject(valueType, serializer);
         }
 
-        string configuredType = data.Value<string>("type");
         if (!string.IsNullOrWhiteSpace(configuredType) &&
-            !string.Equals(configuredType, collider.GetType().Name, StringComparison.Ordinal))
+            !string.Equals(configuredType, colliderType.Name, StringComparison.Ordinal))
         {
             throw new JsonSerializationException(
-                $"$collider2D.type={configuredType} 与目标组件 {collider.GetType().Name} 不一致");
+                $"$collider2D.type={configuredType} 与目标声明 {colliderType.Name} 不一致");
         }
     }
 
@@ -306,7 +419,7 @@ public static class ModuleJsonConfigurator
         }
 
         if (colliderObject != null)
-            ItemPhysicsDefinitionRuntime.ApplyColliderParameters(module.GetComponent<Collider2D>(), colliderObject);
+            ItemPhysicsDefinitionRuntime.ConfigureDeclaredCollider(module, colliderObject);
     }
 
     /// <summary>把 JSON 整数或字符串安全转换为 Unity LayerMask。</summary>
@@ -363,6 +476,7 @@ public static class ModuleJsonConfigurator
                 [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation),
                 [nameof(EquipmentInstance_ThermalInsulation)] = typeof(EquipmentInstance_ThermalInsulation),
                 [nameof(EquipmentInstance_PressureProtection)] = typeof(EquipmentInstance_PressureProtection),
+                [nameof(EquipmentInstance_RadiationProtection)] = typeof(EquipmentInstance_RadiationProtection),
                 [nameof(EquipmentInstance_SpacesuitSupport)] = typeof(EquipmentInstance_SpacesuitSupport)
             };
 

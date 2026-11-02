@@ -54,7 +54,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
             new AnimalTargetMemoryCapability(context, context.GetCapabilityConfiguration(memoryKey), data));
         float radius = Mathf.Max(AnimalLandTargetRules.Number(config, "chaseDistance", 28f),
             AnimalLandTargetRules.Number(config, "avoidSafeDistance", 30f));
-        if (context.Detector != null) context.Detector.DetectionRadius = Mathf.Max(context.Detector.DetectionRadius, radius);
+        context.RequireMinimumDetectionRadius(radius);
         leader = this;
     }
 
@@ -216,6 +216,8 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     #endregion
 
     #region 围攻槽位和移动滞回
+    private const int MaximumFormationSlotsPerSide = 5;
+
     public void RefreshFormation()
     {
         formationMembers.Clear();
@@ -233,11 +235,15 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         for (int i = 0; i < formationMembers.Count; i++)
         {
             AnimalPackCapability member = formationMembers[i];
-            bool useRight = ResolveRightChaseLane(memory.Target.transform.position, member.context.Position, i, topology);
+            // 已经选定的左右翼不随短距离穿插反复翻转。
+            bool useRight = member.hasFormation && member.memory.Target == memory.Target
+                ? (member.formationSlot & 1) != 0
+                : ResolveRightChaseLane(memory.Target.transform.position, member.context.Position, i, topology);
             int index = useRight ? right++ * 2 + 1 : left++ * 2;
             if (member == this) { slot = index; break; }
         }
-        if (slot < 0) { ClearFormation(); return; }
+        // 同侧过多时竖向偏移会被钳到相同坐标，剩余成员改用自由接敌而非争抢重叠槽位。
+        if (slot < 0 || slot / 2 >= MaximumFormationSlotsPerSide) { ClearFormation(); return; }
         float attackRange = AnimalLandTargetRules.Number(config, "attackRange", 2.1f);
         float maxRadius = Mathf.Max(.05f, attackRange - Mathf.Max(.05f, AnimalLandTargetRules.Number(config, "formationAttackMargin", .18f)));
         float radius = Mathf.Clamp(AnimalLandTargetRules.Number(config, "formationRadius", 1.05f), .05f, maxRadius);
@@ -284,7 +290,13 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         float arrival = Mathf.Max(AnimalLandTargetRules.Number(config, "formationArrival", .3f),
             context.Mod_Mover != null ? context.Mod_Mover.GetInteractionStopDistance(approachRange) : 0f);
         float tolerance = holdingPosition ? Mathf.Max(arrival, AnimalLandTargetRules.Number(config, "formationResume", .6f)) : arrival;
-        return holdingPosition = WorldTopologyRuntime.SqrDistance(context.Position, formationPosition) <= tolerance * tolerance;
+        if (WorldTopologyRuntime.SqrDistance(context.Position, formationPosition) <= tolerance * tolerance)
+            return holdingPosition = true;
+        float clearance = Mathf.Max(.05f, AnimalLandTargetRules.Number(config, "separationDistance", .85f) * .75f);
+        foreach (AnimalPackCapability ally in formationMembers)
+            if (ally != this && WorldTopologyRuntime.SqrDistance(ally.context.Position, formationPosition) < clearance * clearance)
+                return holdingPosition = true;
+        return holdingPosition = false;
     }
 
     public void ClearFormation()

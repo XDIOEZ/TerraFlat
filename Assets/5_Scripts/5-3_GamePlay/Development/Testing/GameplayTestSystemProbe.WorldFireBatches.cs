@@ -8,7 +8,6 @@ using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -21,8 +20,6 @@ public static partial class GameplayTestSystemProbe
     private const int FireBatchProbeCellCount = 100;
     private const int FireBatchProbeChunkSize = 16;
     private const int FireBatchProbeAnimationMode = 5;
-    private const int FireBatchProbeFrameCount = 8;
-    private const float FireBatchProbeFramesPerSecond = 12f;
     private const int FireBatchProbeSortingOrder = 1;
 
     [InitializeOnLoadMethod]
@@ -36,7 +33,7 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterWorldFireBatchesRule()
         => Register("rendering", "world_fire_batches", CaptureWorldFireBatches);
 
-    // 用正式 ChunkView 资源和真实 Mesh 上传路径构造一万格火场，并走轻量掉落物 Present 验证遮蔽恢复。
+    // 用正式Shader材质与共享白色四边形提交一万格火场，并验证上传和掉落火焰遮蔽恢复。
     private static JObject CaptureWorldFireBatches(JObject args)
     {
         const string chunkViewPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
@@ -44,10 +41,11 @@ public static partial class GameplayTestSystemProbe
         ChunkTilemapRenderer chunkView = chunkViewPrefab != null
             ? chunkViewPrefab.GetComponent<ChunkTilemapRenderer>() : null;
         var chunkViewFields = chunkView != null ? new SerializedObject(chunkView) : null;
-        Sprite fireSprite = chunkViewFields?.FindProperty("fireSprite")?.objectReferenceValue as Sprite;
+        Sprite fireSprite = SharedSpriteMeshCache.GetWorldEffectQuad();
         Material fireMaterial = chunkViewFields?.FindProperty("fireMaterial")?.objectReferenceValue as Material;
         Shader depthMeshShader = Resources.Load<Shader>("Shaders/ChunkDepthSpriteLit");
-        if (fireSprite == null || fireMaterial == null || fireMaterial.shader == null || depthMeshShader == null)
+        if (fireSprite == null || fireMaterial == null || fireMaterial.shader == null ||
+            fireMaterial.shader.name != ShaderFlameEffect.ShaderName || depthMeshShader == null)
             return new JObject
             {
                 ["assetsReady"] = false,
@@ -125,6 +123,20 @@ public static partial class GameplayTestSystemProbe
                 ? firstMesh.GetIndices(0) : Array.Empty<int>();
             Color32[] firstColorsAfterTint = firstMesh != null ? firstMesh.colors32 : Array.Empty<Color32>();
 
+            Vector3[] firstPositionsBeforeIntensity = firstMesh != null ? firstMesh.vertices : Array.Empty<Vector3>();
+            var firstAnimationBeforeIntensity = new List<Vector4>();
+            firstMesh?.GetUVs(4, firstAnimationBeforeIntensity);
+            SubmitFireQuad(renderers[0], 0, 0, fireSprite, fireMaterial,
+                new Color(1f, 1f, 1f, 0.72f), intensity: 0.25f);
+            FlushDiagnosticMeshes(renderers);
+            FireMeshMetrics intensityIncremental = FireMeshMetrics.Capture(renderers, fireMaterial, depthMeshShader);
+            Vector3[] firstPositionsAfterIntensity = firstMesh != null ? firstMesh.vertices : Array.Empty<Vector3>();
+            var firstAnimationAfterIntensity = new List<Vector4>();
+            firstMesh?.GetUVs(4, firstAnimationAfterIntensity);
+            int[] meshIdsAfterIntensity = ReadMeshInstanceIds(owners);
+            int[] firstIndicesAfterIntensity = firstMesh != null && firstMesh.subMeshCount > 0
+                ? firstMesh.GetIndices(0) : Array.Empty<int>();
+
             int actualMeshRendererCount = root.GetComponentsInChildren<MeshRenderer>(true).Count(renderer => renderer.enabled);
             int actualSortingGroupCount = root.GetComponentsInChildren<SortingGroup>(true).Length;
             bool noUploadForUnchangedVisual = initial.IndexBufferUploadCount == unchanged.IndexBufferUploadCount &&
@@ -138,16 +150,27 @@ public static partial class GameplayTestSystemProbe
                 incremental.IndexBufferUploadBytes == unchanged.IndexBufferUploadBytes &&
                 incremental.TopologyRebuildCount == unchanged.TopologyRebuildCount;
             bool tintChangedUploadedVertexColor = !firstColorsBeforeUpdate.SequenceEqual(firstColorsAfterTint);
+            bool intensityWasIncrementalVertexUpload =
+                intensityIncremental.VertexBufferUploadCount == incremental.VertexBufferUploadCount + 1 &&
+                intensityIncremental.VertexBufferUploadBytes > incremental.VertexBufferUploadBytes &&
+                intensityIncremental.IndexBufferUploadCount == incremental.IndexBufferUploadCount &&
+                intensityIncremental.IndexBufferUploadBytes == incremental.IndexBufferUploadBytes &&
+                intensityIncremental.TopologyRebuildCount == incremental.TopologyRebuildCount;
+            bool intensityChangedShaderInputs = !firstPositionsBeforeIntensity.SequenceEqual(firstPositionsAfterIntensity) &&
+                firstAnimationBeforeIntensity.Count > 0 &&
+                firstAnimationBeforeIntensity.Count == firstAnimationAfterIntensity.Count &&
+                firstAnimationBeforeIntensity[0].w > firstAnimationAfterIntensity[0].w;
 
             return new JObject
             {
                 ["assetsReady"] = true,
                 ["fireSpriteName"] = fireSprite.name,
+                ["fireQuadUsesWhiteTexture"] = fireSprite.texture == Texture2D.whiteTexture,
                 ["fireMaterialShader"] = fireMaterial.shader.name,
                 ["depthMeshShaderName"] = depthMeshShader.name,
                 ["fireAnimationMode"] = FireBatchProbeAnimationMode,
-                ["fireFrameCount"] = FireBatchProbeFrameCount,
-                ["fireFramesPerSecond"] = FireBatchProbeFramesPerSecond,
+                ["fireShaderPixelsPerUnit"] = fireMaterial.GetFloat("_PixelsPerUnit"),
+                ["fireShaderFramesPerSecond"] = fireMaterial.GetFloat("_AnimationFPS"),
                 ["cellCount"] = FireBatchProbeCellCount * FireBatchProbeCellCount,
                 ["cellsPerChunk"] = FireBatchProbeChunkSize,
                 ["expectedChunkCount"] = chunksPerAxis * chunksPerAxis,
@@ -161,13 +184,18 @@ public static partial class GameplayTestSystemProbe
                 ["initial"] = initial.ToJson(actualMeshRendererCount, actualSortingGroupCount),
                 ["unchanged"] = unchanged.ToJson(actualMeshRendererCount, actualSortingGroupCount),
                 ["incremental"] = incremental.ToJson(actualMeshRendererCount, actualSortingGroupCount),
+                ["intensityIncremental"] = intensityIncremental.ToJson(actualMeshRendererCount, actualSortingGroupCount),
                 ["meshInstancesStableAfterUnchanged"] = meshIdsBeforeUpdate.SequenceEqual(meshIdsAfterUnchanged),
                 ["meshInstancesStableAfterTint"] = meshIdsBeforeUpdate.SequenceEqual(meshIdsAfterTint),
                 ["indicesStableAfterUnchanged"] = firstIndicesBeforeUpdate.SequenceEqual(firstIndicesAfterUnchanged),
                 ["indicesStableAfterTint"] = firstIndicesBeforeUpdate.SequenceEqual(firstIndicesAfterTint),
+                ["meshInstancesStableAfterIntensity"] = meshIdsAfterTint.SequenceEqual(meshIdsAfterIntensity),
+                ["indicesStableAfterIntensity"] = firstIndicesAfterTint.SequenceEqual(firstIndicesAfterIntensity),
                 ["noUploadForUnchangedVisual"] = noUploadForUnchangedVisual,
                 ["tintWasIncrementalVertexUpload"] = tintWasIncrementalVertexUpload,
                 ["tintChangedUploadedVertexColor"] = tintChangedUploadedVertexColor,
+                ["intensityWasIncrementalVertexUpload"] = intensityWasIncrementalVertexUpload,
+                ["intensityChangedShaderInputs"] = intensityChangedShaderInputs,
                 ["displayEntry"] = CaptureDroppedItemFireMask(sprite: fireSprite)
             };
         }
@@ -179,15 +207,16 @@ public static partial class GameplayTestSystemProbe
     }
 
     private static void SubmitFireQuad(ChunkDepthMeshRenderer renderer, int worldX, int worldY,
-        Sprite sprite, Material material, Color tint)
+        Sprite sprite, Material material, Color tint, float intensity = 1f)
     {
         int localX = worldX % FireBatchProbeChunkSize;
         int localY = worldY % FireBatchProbeChunkSize;
         Vector3 world = new(worldX + 0.5f, worldY, 0f);
-        Matrix4x4 matrix = Matrix4x4.TRS(world, Quaternion.identity, Vector3.one);
+        float scale = Mathf.Lerp(0.65f, 1f, intensity);
+        Matrix4x4 matrix = Matrix4x4.TRS(world, Quaternion.identity, new Vector3(scale, scale, 1f));
         uint phaseSeed = unchecked((uint)worldX * 73856093u ^ (uint)worldY * 19349663u);
-        Vector4 animation = new(FireBatchProbeAnimationMode, FireBatchProbeFramesPerSecond,
-            phaseSeed % FireBatchProbeFrameCount, FireBatchProbeFrameCount);
+        Vector4 animation = new(FireBatchProbeAnimationMode, 0f,
+            (phaseSeed & 65535u) * (8f / 65535f), Mathf.Lerp(0.72f, 1f, intensity));
         renderer.Set(ChunkDepthMeshRenderer.FireDomain, localY * FireBatchProbeChunkSize + localX, 0,
             sprite, material, matrix, world, FireBatchProbeSortingOrder, tint, animation: animation);
     }
@@ -318,6 +347,7 @@ public static partial class GameplayTestSystemProbe
         string worldKey = "__lua_world_fire_visual_" + Guid.NewGuid().ToString("N");
         WorldRuntime world = null;
         Scene testScene = default;
+        Scene originalActiveScene = SceneManager.GetActiveScene();
         LightweightDroppedItemSimulation simulation = null;
         DroppedItemPresentation presentation = null;
         JObject result = null;
@@ -344,7 +374,7 @@ public static partial class GameplayTestSystemProbe
             bool firePresent = WorldFireSystem.TryGetWorldFireIntensity(worldKey, firePosition, out float fireIntensity) &&
                 fireIntensity > 0f;
 
-            testScene = SceneManager.CreateScene("LuaWorldFireVisual_" + worldKey.Substring(worldKey.Length - 8));
+            testScene = CreateGameplayTestProbeScene("LuaWorldFireVisual_" + worldKey.Substring(worldKey.Length - 8));
             var cameraRoot = new GameObject("Lua World Fire Camera");
             SceneManager.MoveGameObjectToScene(cameraRoot, testScene);
             Camera camera = cameraRoot.AddComponent<Camera>();
@@ -434,14 +464,15 @@ public static partial class GameplayTestSystemProbe
             simulation?.Dispose();
             if (world != null)
                 worldModelReleased = GameplayWorldRegistry.ReleaseOwnedWorldModel(worldKey, world);
-            if (testScene.IsValid() && testScene.isLoaded)
-            {
-                if (Application.isPlaying) SceneManager.UnloadSceneAsync(testScene);
-                else EditorSceneManager.CloseScene(testScene, true);
-            }
+            if (testScene.IsValid()) CloseGameplayTestProbeScene(testScene);
         }
 
-        if (result != null) result["worldModelReleased"] = worldModelReleased;
+        if (result != null)
+        {
+            result["worldModelReleased"] = worldModelReleased;
+            result["probeSceneReleased"] = !testScene.IsValid();
+            result["activeSceneUnchanged"] = SceneManager.GetActiveScene() == originalActiveScene;
+        }
         return result;
     }
 

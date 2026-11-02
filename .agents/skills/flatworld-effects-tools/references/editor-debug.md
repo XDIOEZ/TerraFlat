@@ -12,6 +12,8 @@
 
 ## 编辑器与运行工具
 
+- CodeAssist 的 MQTT 启动订阅等待使用 Editor 单调时间与 update 回调，不允许在构造函数中 `Thread.Sleep` 阻塞 Unity；清理时撤销待发握手，保留原连接与订阅流程。
+
 - 贴图世界尺寸检测：`FlatWorld/其他工具/美术/贴图世界尺寸检测` 异步调用只读 `Tools/Art/validate_sprite_world_size.py`，按可见 Alpha/PPU/缩放对照目标或参考图，提示建议 PPU 与导入降采样风险；说明 `Tools/Art/SpriteWorldSizeValidator.md`，离线回归 `Tools/Tests/SpriteWorldSize/test_validator.py`。这是源配置预测，不替代已加载 Sprite 或游戏观感验收，0.70单位仅钻木取火器样本目标。
 
 - MCP 合成截图异步等待自然渲染帧，禁止通过 `EditorApplication.Step` 或修改暂停状态取图；暂停时明确拒绝，无渲染帧时 10 秒超时并清理待截图对象。截图成功须以实际文件和画面为准，传输断连不代表文件一定未生成。

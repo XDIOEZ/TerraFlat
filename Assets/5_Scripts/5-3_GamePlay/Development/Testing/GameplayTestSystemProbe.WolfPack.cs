@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.AIECS;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
@@ -16,6 +17,25 @@ public static partial class GameplayTestSystemProbe
             new JObject { ["count"] = 3, ["probeMemory"] = true }));
         operations.Add("ai/wolf_combat_position", _ => EntityAiWolfPack(
             new JObject { ["count"] = 3, ["probeCombat"] = true }));
+        operations.Add("ai/wolf_crowded_formation", _ => EntityAiWolfPack(
+            new JObject { ["count"] = 12, ["probeCrowdedFormation"] = true }));
+        operations.Add("ai/wolf_crowded_combat", _ => EntityAiWolfPack(
+            new JObject { ["count"] = 3, ["probeCrowdedCombat"] = true }));
+        operations.Add("ai/ecs_crowded_attack_range", _ => EntityEcsCrowdedAttackRange());
+    }
+
+    private static JObject EntityEcsCrowdedAttackRange()
+    {
+        // 第九名没有接敌槽时仍可从真实距离起手，出圈后必须重新追击。
+        float range = 2.1f;
+        return new JObject
+        {
+            ["slotCapacity"] = AiecsEngagementSlots.DefaultCount,
+            ["withinWithoutSlot"] = AiecsEngagementSlots.IsWithinAttackStartRange(1.8f * 1.8f, range),
+            ["boundaryWithoutSlot"] = AiecsEngagementSlots.IsWithinAttackStartRange(range * range, range),
+            ["outsideWithoutSlot"] = AiecsEngagementSlots.IsWithinAttackStartRange(2.3f * 2.3f, range),
+            ["invalidRangeRejected"] = !AiecsEngagementSlots.IsWithinAttackStartRange(0f, -1f)
+        };
     }
 
     // 正式狼群站位算法在环绕、无限世界和半周期平局时保持同一距离及分翼规则。
@@ -97,7 +117,7 @@ public static partial class GameplayTestSystemProbe
             var wolves = new List<GameplayTestWolfPackProbeAI>();
             var detectors = new List<Mod_ItemDetector>();
             var candidates = new List<Item>();
-            int count = Mathf.Clamp((int)Number(args, "count", 4), 1, 4);
+            int count = Mathf.Clamp((int)Number(args, "count", 4), 1, 16);
             string exclusion = Text(args, "exclude", string.Empty);
             bool probeCombat = Flag(args, "probeCombat", false);
             for (int index = 0; index < count; index++)
@@ -177,6 +197,34 @@ public static partial class GameplayTestSystemProbe
                 return SampleWolfTargetMemory(wolves, detectors, player);
             if (probeCombat)
                 return SampleWolfCombatPosition(wolves, detectors[0], player);
+            if (Flag(args, "probeCrowdedCombat", false))
+                return SampleWolfCrowdedCombatPosition(wolves, player);
+            if (Flag(args, "probeCrowdedFormation", false))
+            {
+                var positions = new HashSet<Vector2>();
+                int assigned = 0, free = 0;
+                foreach (GameplayTestWolfPackProbeAI wolf in wolves)
+                {
+                    wolf.RefreshProbe();
+                    if (wolf.ChaseFormationTarget is Vector3 formation)
+                    {
+                        assigned++;
+                        positions.Add(formation);
+                    }
+                    else free++;
+                }
+                GameplayTestWolfPackProbeAI overflow = wolves[wolves.Count - 1];
+                overflow.transform.position = player.transform.position + Vector3.left * 1.8f;
+                string overflowAttackState = overflow.TickCombatProbe(0f);
+                return new JObject
+                {
+                    ["members"] = wolves[0].PackMemberCount,
+                    ["assigned"] = assigned, ["free"] = free,
+                    ["distinctPositions"] = positions.Count == assigned,
+                    ["overflowWithoutSlot"] = !overflow.ChaseFormationTarget.HasValue,
+                    ["overflowAttackState"] = overflowAttackState
+                };
+            }
             var packCounts = new JArray();
             var validatedAllyCounts = new JArray();
             var leaders = new JArray();
@@ -265,6 +313,38 @@ public static partial class GameplayTestSystemProbe
         result["hiddenState"] = wolf.TickCombatProbe(0f).ToString();
         result["hiddenAttackStopped"] = !wolf.IsAttackLocked;
         return result;
+    }
+
+    // 拥挤站位只阻止继续挤入同一位置，已有攻击机会和让位后的追近都必须保留。
+    private static JObject SampleWolfCrowdedCombatPosition(List<GameplayTestWolfPackProbeAI> wolves, Item player)
+    {
+        if (Application.isPlaying || ChunkMgr.ExistingInstance != null)
+            throw new InvalidOperationException("狼群拥挤规则只允许在未加载世界的编辑态执行。");
+        GameplayTestWolfPackProbeAI wolf = wolves[0];
+        Mod_Mover_AI mover = wolf.GetComponent<Mod_Mover_AI>();
+        player.transform.position = Vector3.zero;
+        wolf.transform.position = new Vector3(-1.8f, 0f);
+        wolves[1].transform.position = new Vector3(1.05f, 0f);
+        wolves[2].transform.position = new Vector3(1.05f, -.42f);
+        string attackState = wolf.TickCombatProbe(0f);
+        Vector3? formation = wolf.ChaseFormationTarget;
+        bool attackStarted = wolf.IsAttackLocked;
+
+        wolf.TickTimersProbe(wolf.attackDamageStartDelay + wolf.attackDamageWindow + .01f);
+        wolf.TickTimersProbe(wolf.attackRecoveryDuration + .01f);
+        if (formation.HasValue) wolves[1].transform.position = formation.Value;
+        string occupiedState = wolf.TickCombatProbe(0f);
+        bool occupiedStopped = !mover.CanMove && !mover.HasActiveDestination;
+
+        wolves[1].transform.position = new Vector3(1.05f, 0f);
+        string freeState = wolf.TickCombatProbe(0f);
+        return new JObject
+        {
+            ["formationActive"] = formation.HasValue,
+            ["attackState"] = attackState, ["attackStarted"] = attackStarted,
+            ["occupiedState"] = occupiedState, ["occupiedStopped"] = occupiedStopped,
+            ["freeState"] = freeState, ["freeResumed"] = mover.CanMove && mover.HasActiveDestination
+        };
     }
 
     // 无世界规则环境使用正式检测器的不可见结果，状态转换仍调用正式评估与切换钩子。

@@ -244,9 +244,21 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
 
     private void Awake()
     {
-        sourceRenderer = GetComponent<SpriteRenderer>();
+        sourceRenderer = ResolveSourceRenderer();
         ResolveSourceSortingGroup();
         BuildRuntimeVisuals();
+    }
+
+    private SpriteRenderer ResolveSourceRenderer() =>
+        sourceRenderer != null ? sourceRenderer :
+        GetComponent<SpriteRenderer>() ??
+        GetComponentInParent<Item>()?.Sprite ??
+        GetComponentInChildren<SpriteRenderer>(true);
+
+    private Transform ResolveEffectParent()
+    {
+        Item owner = cachedOwner != null ? cachedOwner : GetComponentInParent<Item>();
+        return WorldRenderingManager.ExistingInstance?.GetActorVisualParent(owner, transform) ?? transform;
     }
 
     private void OnEnable()
@@ -769,7 +781,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             return;
 
         GameObject effectObject = new GameObject($"StatusVisual_{visual.Sequence.BuffId}");
-        effectObject.transform.SetParent(transform, false);
+        effectObject.transform.SetParent(ResolveEffectParent(), false);
         effectObject.AddComponent<ActorRenderEffectExclude>();
 
         SpriteRenderer renderer = effectObject.AddComponent<SpriteRenderer>();
@@ -841,7 +853,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     /// <summary>让附着精灵覆盖当前角色主体，并随动态排序层/方向实时更新。</summary>
     private void UpdateVisualTransform(RuntimeStatusVisual visual)
     {
-        sourceRenderer ??= GetComponent<SpriteRenderer>();
+        sourceRenderer ??= ResolveSourceRenderer();
         if (sourceRenderer == null || sourceRenderer.sprite == null || visual.Renderer == null)
             return;
 
@@ -930,7 +942,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             return;
 
         GameObject effectObject = new GameObject($"StatusGlow_{visual.Glow.BuffId}");
-        effectObject.transform.SetParent(transform, false);
+        effectObject.transform.SetParent(ResolveEffectParent(), false);
         effectObject.AddComponent<ActorRenderEffectExclude>();
 
         SpriteRenderer renderer = effectObject.AddComponent<SpriteRenderer>();
@@ -966,7 +978,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     /// <summary>让光晕与角色当前 Sprite 的尺寸、方向和排序层保持同步。</summary>
     private void UpdateGlowTransform(RuntimeStatusGlowVisual visual)
     {
-        sourceRenderer ??= GetComponent<SpriteRenderer>();
+        sourceRenderer ??= ResolveSourceRenderer();
         if (sourceRenderer == null || sourceRenderer.sprite == null ||
             visual?.EffectObject == null || visual.Renderer == null || visual.Glow?.Sprite == null)
         {
@@ -1074,7 +1086,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
     /// <summary>根据角色主体 Sprite 计算血滴粒子中心位置，避免固定坐标脱离不同体型角色。</summary>
     private Vector3 GetParticleLocalPosition(StatusParticleEffect effect)
     {
-        sourceRenderer ??= GetComponent<SpriteRenderer>();
+        sourceRenderer ??= ResolveSourceRenderer();
         if (sourceRenderer == null || sourceRenderer.sprite == null || effect == null)
             return Vector3.zero;
 

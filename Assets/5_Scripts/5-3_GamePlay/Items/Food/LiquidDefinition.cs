@@ -98,7 +98,8 @@ public sealed class LiquidDefinition
         WorldLiquidSettings worldWater = null,
         LiquidSolidification solidification = null,
         IReadOnlyList<LiquidIngredientReaction> ingredientReactions = null,
-        float litersPerServing = .25f)
+        float litersPerServing = .25f,
+        WorldFireFuelProfile fireFuel = default)
     {
         Id = id;
         DisplayName = displayName;
@@ -116,8 +117,10 @@ public sealed class LiquidDefinition
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         WorldWater = worldWater;
         LitersPerServing = litersPerServing;
+        FireFuel = fireFuel;
     }
 
+    public WorldFireFuelProfile FireFuel { get; }
     public WorldLiquidSettings WorldWater { get; }
     public float LitersPerServing { get; } // 每份显示体积必须显式换算，不假定一份等于一升。
     public string Id { get; }
@@ -187,6 +190,8 @@ public sealed partial class LiquidDefinitionDto
 
     [JsonProperty("worldWater")]
     public WorldLiquidSettings WorldWater;
+
+    [JsonProperty("combustibility")] public WorldCombustibilityDefinitionDto Combustibility;
 
     [JsonProperty("drinkable")]
     public bool Drinkable;
@@ -397,7 +402,8 @@ public static class LiquidDefinitionFactory
             dto.WorldWater,
             solidification,
             ingredientReactions,
-            dto.LitersPerServing);
+            dto.LitersPerServing,
+            dto.Combustibility?.Compile() ?? default);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>

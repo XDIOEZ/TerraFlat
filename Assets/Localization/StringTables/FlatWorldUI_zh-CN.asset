@@ -8813,6 +8813,10 @@ MonoBehaviour:
     m_Localized: "无限供气（组分样本 {0:0.###} 标准 L）"
     m_Metadata:
       m_Items: []
+  - m_Id: 28103100000100001
+    m_Localized: "液网温度 {0:0.##}℃ · 总液量 {1:0.###} L"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

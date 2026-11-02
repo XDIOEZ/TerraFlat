@@ -14,6 +14,8 @@
 - `physics.mode` 是游戏代理模式 `WorldFixed/IndependentDynamic`：相对所属世界固定，或在所属世界内独立运动；合批是固定模式内部实现。普通 Item 与自然 Resource Entity 在正式生成/恢复时交所属 `WorldPhysicsService2D` 分配，不配置 Unity 刚体类型。`massSource: ItemStack` 唯一读取既有总重，形状默认复用 `visual.collider/health.collider/$collider2D`；`freezeRotation/linearDamping/angularDamping` 由模式内部应用。
 - Resource Entity 支持 `physics.regions`，保留数据后端和唯一受击模块，交互区域显式引用真实生长/作物/储量采集槽，不能用 GO 路径或重复健康能力冒充接收者。独立 `Trigger` 必须引用具有 `ResourceEntityCapability.PhysicsTrigger` 回调的具体扩展槽，原生 Enter/Stay/Exit 保留区域、模块、实体和另一 Collider，释放前清接收者。受击/交互形状仍是原生 Trigger Collider，用途与 Unity 的 isTrigger 分开。原生区域与玩法精筛共用准确形状，联合 Bounds 仅用于候选查询。数据机器保留固定格与管电网约束，明确拒绝 `IndependentDynamic` 和新多区域；组合能力建筑可用 `UseGameObjectBackend` 保留完整 Item。区域结构随新实例生效，F5 不重建活体层级。
 
+- 通用壳与模块的物理默认值保存在 `ItemPhysicsTemplate2D` 声明（`owningModule` 绑定模块专属形状），不预装原生 Collider/Rigidbody；装配只登记配置与区域锚点，所属世界在模块 Load 前统一领取组件并回绑。回池注销、停用并复用同节点组件，迁移保留实例和运动；冷编译与资源构建器读取声明，不重新给壳添加默认物理组件。
+
 ## 动画
 
 - Actor 单图初始化只读取 `RuntimeItemDefinition.Sprite`，必须配置可加载的 `visual.spriteAddress`；本体/F5 复用物品视觉队列预载，构建不可按 `isActor` 丢弃 Sprite，F5 按地址隔离失败且新候选只用本轮预载。不启用、Rebind 或采样旧 Animator，切回单图与重载同样按当前定义恢复首帧，姿态/翻面/颜色不变。Sprite 地址使用 Assets 路径及明确切片名，并同步 Addressables 主资源地址，兼顾编辑器预载与构建。
@@ -32,7 +34,8 @@
 
 - 原料 `Material.Tinder` 可被打火石接受，与成品 `Combustion.Tinder` 分开；棉花另有 100℃→FireSeed 的材料转化，钻木器和世界受热共用。`Item.TimedDespawn`/`Mod_TimedDespawn` 是非食物的自然消失能力，FireSeed 配 `LifetimeGameSeconds=1440`；以解析后的游戏时钟差推进整堆寿命，暂停不走、跳时补算，跨世界保留已用寿命但重绑时钟原点。二进制模块载荷保存进度，库存规则/完整物品/轻量掉落共用，只有权威端清除，不走燃烧灰烬或死亡掉落。取火器输出库存也必须调用正式库存更新；机器由 MachineLogic.Advance 统一驱动，不能重复推进。
 
-- ItemData.MatterState 存物态，定义 matter/reactions 管静态相变/反应；ItemMatterRuntime/MaterialThermalProcessor 按自身温度结算，热源仅供热。matter.transitions 的 inputAmount/remainderOutputItemId 支持整组/尾数多产物，扣料/全部产物同原子事务并传真温，不跨槽拼组。木 Wood 500℃起3→1炭、尾数每份1灰；炭1000℃起1→1灰。
+- ItemData.MatterState 存物态，定义 matter/reactions 管静态相变/反应；ItemMatterRuntime/MaterialThermalProcessor 按自身温度结算，热源仅供热。matter.transitions 的 inputAmount/remainderOutputItemId 支持整组/尾数多产物，扣料/全部产物同原子事务并传真温，不跨槽拼组。普通 Wood 500℃起3→1炭、尾数每份1灰；炭1000℃起1→1灰。
+- `requiresFuelExhaustion` 转化由通用材料规则按 `matter.ignitionTemperature` 点燃，每秒扣真实 `FuelData` 1点；达温前的升温时间不扣料，水接触/缺氧熄灭并保留余量。显式燃尽转化替代自动 Wood 炭化；Log 配500℃燃点、每件50燃值、耗尽等量 WoodAsh。炉内与两种场景掉落复用该入口，燃尽产物沿各自原子事务提交，输出满保留原物及零燃料待重试；有 Mod_Combustion 的完整物品由原模块扣料。冷热燃料引用归 Ex_ModData_MemoryPackable，外部载荷/模块重绑须更新引用，首次装配用配置、F5保余量。回归 `item_runtime/material_fuel_state`、`processing/material_fuel_burnout`。
 - 寿命状态由 `Ex_ModData_MemoryPackable.ReadRuntimeState/WriteRuntimeState` 持有强类型值；只在读取正式载荷作快照/保存时编码，替换载荷即失效。营养、燃烧和生存数值核接收纯值/Span，模块负责环境采样、权威与即时回调，跨对象不延后原有结果提交。
 - 高频转化扫描用索引遍历 IReadOnlyList<RuntimeItemMatterTransition>、首个匹配，避接口装箱。
 - Fuel 数据/Combustion 状态/FuelInteraction 交互/ICombustionStateReceiver 表现组合；flameScale/flameHeightRatio/flameEmissionMultiplier 控视觉，attachFlameToAnchor 跟燃点，followSourceRenderer/sourceRendererAnchorOffset 跟贴图。火把底图熄灭，熄火清粒子；氧气模块只管储量/缺氧，供给方判断真实环境并扣量。

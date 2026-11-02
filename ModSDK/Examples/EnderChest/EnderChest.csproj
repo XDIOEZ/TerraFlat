@@ -6,7 +6,7 @@
     <RootNamespace>Example.EnderChest</RootNamespace>
     <GameManagedDirectory Condition="'$(GameManagedDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\ScriptAssemblies</GameManagedDirectory>
     <GamePlayDllPath Condition="'$(GamePlayDllPath)' == ''">$(GameManagedDirectory)\GamePlay.dll</GamePlayDllPath>
-    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\Plugins\Harmony\0Harmony.dll</HarmonyDllPath>
+    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\StreamingAssets\ManagedModRuntime\0Harmony.dll</HarmonyDllPath>
     <UnityEngineCorePath Condition="'$(UnityEngineCorePath)' == '' and Exists('$(GameManagedDirectory)\UnityEngine.CoreModule.dll')">$(GameManagedDirectory)\UnityEngine.CoreModule.dll</UnityEngineCorePath>
     <UnityEngineCorePath Condition="'$(UnityEngineCorePath)' == ''">G:\UnityHub\UnityEditor\2022.3.62f3c1\Editor\Data\Managed\UnityEngine\UnityEngine.CoreModule.dll</UnityEngineCorePath>
     <UnityEngineAnimationPath Condition="'$(UnityEngineAnimationPath)' == ''">$([System.IO.Path]::GetDirectoryName('$(UnityEngineCorePath)'))\UnityEngine.AnimationModule.dll</UnityEngineAnimationPath>

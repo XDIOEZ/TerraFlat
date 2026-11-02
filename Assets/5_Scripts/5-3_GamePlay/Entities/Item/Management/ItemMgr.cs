@@ -72,6 +72,28 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
 
     #region 分级更新调度
 
+    private sealed class MachineSimulationSystem : IGameplayFixedStepSimulationSystem, IGameplayFixedStepSimulationReadiness
+    {
+        public bool CanAccumulateFixedStepTime => IsWorldItemRuntimeActive();
+        public void SimulateFixedStep(float deltaTime)
+        {
+            if (!IsWorldItemRuntimeActive()) return;
+            using (MachineTickMarker.Auto()) MachineWorld.Tick(deltaTime);
+        }
+    }
+
+    private sealed class WorldEntitySimulationSystem : IGameplayFixedStepSimulationSystem, IGameplayFixedStepSimulationReadiness
+    {
+        public bool CanAccumulateFixedStepTime => IsWorldItemRuntimeActive();
+        public void SimulateFixedStep(float deltaTime)
+        {
+            if (!IsWorldItemRuntimeActive()) return;
+            using (EntityTickMarker.Auto()) WorldEntityRuntime.Tick(deltaTime);
+        }
+    }
+
+    private readonly MachineSimulationSystem _machineSimulation = new();
+    private readonly WorldEntitySimulationSystem _worldEntitySimulation = new();
     private readonly WorldItemTickScheduler _tickScheduler = new();
     private Action<Item> _refreshRuntimeItemIndexesCallback;
     private readonly List<Transform> _simulationPlayers = new(4);
@@ -162,11 +184,20 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         Item.RuntimeStructureChanged += TrackWorldItemMatter;
         RuntimeItemRegistered += TrackWorldItemMatter;
         RuntimeItemUnregistered += ReleaseWorldItemMatter;
+        Item.RuntimeStructureChanged += TrackWorldItemCombustibility;
+        RuntimeItemRegistered += TrackWorldItemCombustibility;
+        RuntimeItemMoved += TrackWorldItemCombustibility;
+        RuntimeItemUnregistered += ReleaseWorldItemCombustibility;
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
 
     private void OnEnable()
     {
+        // 机器与世界实体分开登记，玩家物品及近身战斗仍保持每物理步推进。
+        GameplayFixedStepSimulation.Register(_machineSimulation, GameplayFixedStepSimulationPhase.Gameplay,
+            GameplayFixedStepTickRate.Hz20);
+        GameplayFixedStepSimulation.Register(_worldEntitySimulation, GameplayFixedStepSimulationPhase.Gameplay,
+            GameplayFixedStepTickRate.Hz30);
         GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.Gameplay);
         RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         RenderPipelineManager.beginContextRendering += PresentDroppedItemsAfterWorldProjection;
@@ -208,6 +239,11 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         RuntimeItemRegistered -= TrackWorldItemMatter;
         RuntimeItemUnregistered -= ReleaseWorldItemMatter;
         ClearWorldItemMatter();
+        Item.RuntimeStructureChanged -= TrackWorldItemCombustibility;
+        RuntimeItemRegistered -= TrackWorldItemCombustibility;
+        RuntimeItemMoved -= TrackWorldItemCombustibility;
+        RuntimeItemUnregistered -= ReleaseWorldItemCombustibility;
+        ClearWorldItemCombustibility();
         MachineWorld.ReleaseWorld(capture: false);
         WorldEntityRuntime.ReleaseAll();
         FlatWorld.NaturalEntities.NaturalEntityEcsService.ReleaseAll();
@@ -228,6 +264,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
     private void OnDisable()
     {
         GameplayFixedStepSimulation.Unregister(this);
+        GameplayFixedStepSimulation.Unregister(_machineSimulation);
+        GameplayFixedStepSimulation.Unregister(_worldEntitySimulation);
         RenderPipelineManager.beginContextRendering -= PresentDroppedItemsAfterWorldProjection;
         ClearWorldItemMatter();
         CompletePerceptionBatch(false);
@@ -256,11 +294,6 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
     public void SimulateFixedStep(float deltaTime)
     {
         if (!IsWorldItemRuntimeActive()) return;
-
-        using (MachineTickMarker.Auto())
-            MachineWorld.Tick(deltaTime);
-        using (EntityTickMarker.Auto())
-            WorldEntityRuntime.Tick(deltaTime);
 
         using (PerceptionCompleteMarker.Auto())
             CompletePerceptionBatch();

@@ -86,7 +86,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
         loaded = false;
         item.OnAct -= OnUse;
         bowl.Data.Event_OnDataChanged -= OnBowlChanged;
-        bowl.UnbindSlotDataEvents();
+        bowl.UnbindRuntimeDataEvents();
         if (panel != null)
         {
             panel.Close();

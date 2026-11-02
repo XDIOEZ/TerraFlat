@@ -79,7 +79,7 @@ public sealed class AnimalPerceivedThreatCapability : AnimalBehaviorTreeCapabili
         tags = AnimalLandTargetRules.Strings(config, "tags");
         includePlayers = AnimalLandTargetRules.Flag(config, "includePlayers", true);
         radius = AnimalLandTargetRules.Number(config, "radius", 36f);
-        if (context.Detector != null) context.Detector.DetectionRadius = Mathf.Max(context.Detector.DetectionRadius, radius);
+        context.RequireMinimumDetectionRadius(radius);
     }
     public override void Tick(float deltaTime)
     {

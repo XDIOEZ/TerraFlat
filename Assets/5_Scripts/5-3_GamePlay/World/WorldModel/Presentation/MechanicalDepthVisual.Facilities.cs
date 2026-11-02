@@ -101,8 +101,7 @@ public sealed partial class MechanicalDepthVisual
         }
 
         PartVisual body = parts[facilityBodyPart];
-        Transform sortingRoot = body.SubmittedRenderer?.GetPartSortingRoot(
-            ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id);
+        Transform sortingRoot = GetSubmittedPartSortingRoot(facilityBodyPart);
         if (sortingRoot == null)
         {
             facilityCombustion?.SetCombustionActive(false);

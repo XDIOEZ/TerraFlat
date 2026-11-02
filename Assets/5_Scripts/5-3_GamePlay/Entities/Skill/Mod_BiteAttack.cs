@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using FlatWorld.Networking;
 using MemoryPack;
-using Unity.Mathematics;
 
 /// <summary>通用撕咬技能按身体质量选择挂咬或拖行，伤害、减速和动作限制均由本来源独立释放。</summary>
 public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
@@ -19,6 +17,7 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     private AnimalSkillDefinition definition;
     private Mod_Mover mover, targetMover;
+    private Mod_TurnBack turnBody;
     private Mod_DamageReceiver health, targetHealth;
     private Mod_BuffManager sourceBuffs, targetBuffs;
     private Item target;
@@ -27,8 +26,6 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
     private IDisposable speedLease;
     private Mod_Mover.DrivenMotionLease draggingMotion;
     private Vector2 draggingDirection;
-    private readonly List<Item> candidates = new();
-    private readonly HashSet<Item> dedupe = new();
     private readonly BiteDamageSender sender = new();
     private float elapsed, nextTick, cooldown;
     private bool carrying;
@@ -58,6 +55,7 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
         if (item == null || !AnimalSkillCatalogService.TryGet(SkillId, out definition) ||
             !string.Equals(definition.Type, AnimalSkillDefinition.BiteAttackType, StringComparison.OrdinalIgnoreCase)) return false;
         mover = item.GetComponentInChildren<Mod_Mover>(true);
+        turnBody = item.GetComponentInChildren<Mod_TurnBack>(true);
         health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         sourceBuffs = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         return mover != null && health != null && sourceBuffs != null;
@@ -74,44 +72,30 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
 
     #region 目标与发动
     public static bool ShouldCarry(float casterBodyWeight, float targetBodyWeight) => targetBodyWeight < casterBodyWeight * .5f;
-    public bool CanStart(Item _)
+    public bool CanStart(Item requested)
     {
         if (!GameNetwork.HasStateAuthority || !Enabled || !isActiveAndEnabled || !IsRuntimeLoaded || IsActive || cooldown > 0f || !Resolve() ||
             health.Hp <= 0f || !mover.IsSurfaceMotionAvailable || mover.HasDrivenMotion || ActorActionConstraints.IsForcedFollowing(item)) return false;
-        return FindClosestTarget() != null;
+        return IsValidBiteTarget(requested);
     }
-    private Item FindClosestTarget()
+    private bool IsValidBiteTarget(Item candidate)
     {
-        ItemMgr manager = ItemMgr.GetInstance();
-        if (manager == null) return null;
+        if (candidate == null || candidate == item || candidate.itemData == null || item.itemData == null ||
+            candidate.DestructionHandled || candidate.gameObject.scene != item.gameObject.scene ||
+            !FactionRelationService.CanAttack(item, candidate)) return false;
+        Mod_DamageReceiver receiver = candidate.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        Mod_BuffManager buffs = candidate.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        Mod_Mover movement = candidate.GetComponentInChildren<Mod_Mover>(true);
+        if (receiver == null || receiver.Hp <= 0f || buffs == null || movement == null || buffs.HasBuff(CarryBuff)) return false;
+        if (ShouldCarry(item.itemData.Stack.Weight, candidate.itemData.Stack.Weight) &&
+            (movement.CarrierSource != null || (movement.HasDrivenMotion && !ActorActionConstraints.IsForcedFollowing(candidate)))) return false;
         float radius = TriggerDistance;
-        Vector2 origin = item.transform.position;
-        manager.QueryItemsInCircleNonAlloc(origin, radius, ~0, item, candidates, dedupe);
-        WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
-        Item closest = null; float nearest = float.PositiveInfinity;
-        foreach (Item candidate in candidates)
-        {
-            Mod_DamageReceiver receiver = candidate?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-            Mod_BuffManager buffs = candidate?.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
-            Mod_Mover movement = candidate?.GetComponentInChildren<Mod_Mover>(true);
-            if (receiver == null || buffs == null || movement == null || receiver.Hp <= 0f || candidate.DestructionHandled ||
-                candidate.gameObject.scene != item.gameObject.scene || !FactionRelationService.CanAttack(item, candidate) ||
-                buffs?.HasBuff(CarryBuff) == true) continue;
-            if (ShouldCarry(item.itemData.Stack.Weight, candidate.itemData.Stack.Weight) &&
-                (movement.CarrierSource != null || (movement.HasDrivenMotion && !ActorActionConstraints.IsForcedFollowing(candidate)))) continue;
-            Vector2 position = candidate.transform.position;
-            float distance = topology.SqrDistance(new float2(origin.x, origin.y), new float2(position.x, position.y));
-            if (distance > radius * radius || distance > nearest ||
-                (Mathf.Approximately(distance, nearest) && closest != null && candidate.itemData.Guid >= closest.itemData.Guid)) continue;
-            nearest = distance; closest = candidate;
-        }
-        return closest;
+        return WorldTopologyRuntime.SqrDistance(item.transform.position, candidate.transform.position) <= radius * radius;
     }
     public bool TryStart(Item requested)
     {
         if (!CanStart(requested)) return false;
-        Item selected = FindClosestTarget();
-        if (selected == null) return false;
+        Item selected = requested;
         targetMover = selected.GetComponentInChildren<Mod_Mover>(true);
         targetHealth = selected.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         targetBuffs = selected.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
@@ -124,6 +108,8 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
                 if (module is IAnimalCombatSkill skill && skill.IsActive) skill.Cancel();
         if (!ActorActionConstraints.TryFollow(carrying ? selected : item, carrying ? item : selected, out follow))
         { draggingMotion?.Dispose(); draggingMotion = null; return false; }
+        // 技能真正锁定目标后，立即把身体和头前方的攻击方向转向该目标。
+        turnBody?.FaceWorldPosition(selected.transform.position, true);
         draggingDirection = WorldTopologyRuntime.ShortestDelta(selected.transform.position, item.transform.position).normalized;
         if (draggingDirection.sqrMagnitude < .001f) draggingDirection = Vector2.left;
         target = selected; active = true; scene = item.gameObject.scene.handle; elapsed = 0f; nextTick = definition.TickIntervalSeconds;
@@ -156,6 +142,8 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
             item.gameObject.scene.handle != scene || target.gameObject.scene.handle != scene ||
             WorldTopologyRuntime.Distance(item.transform.position, target.transform.position) > Mathf.Max(8f, TriggerDistance * 4f))
         { Cancel(); return; }
+        // 挂咬/拖行期间持续面向被咬者，不沿用追逐时最后一次移动朝向。
+        turnBody?.FaceWorldPosition(target.transform.position, true);
         follow.Tick(seconds);
         if (carrying)
         {
@@ -163,7 +151,7 @@ public sealed class Mod_BiteAttack : Module, IAnimalCombatSkill
             draggingMotion.SetVelocity(draggingDirection * mover.WalkingSpeed);
         }
         elapsed += seconds;
-        // 包含第九秒的最后一次命中，多个来源不共享目标的普通攻击受击间隔。
+        // 包含持续时间终点的最后一次命中，多个来源不共享目标的普通攻击受击间隔。
         while (IsActive && nextTick <= definition.DurationSeconds + .0001f && elapsed + .0001f >= nextTick)
         {
             nextTick += definition.TickIntervalSeconds;

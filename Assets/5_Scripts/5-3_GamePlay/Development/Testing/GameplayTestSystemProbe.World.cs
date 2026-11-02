@@ -18,6 +18,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("terrain/grass_temperature_density", WorldGrassTemperatureDensity);
         operations.Add("terrain/environment_pointer", WorldEnvironmentPointer);
         operations.Add("ecology/generation", WorldEcology);
+        operations.Add("ecology/host_cell_occupancy", WorldEcologyHostCellOccupancy);
         operations.Add("ecology/shared_resources", WorldSharedNaturalResources);
         operations.Add("ecology/companion_bind_candidates", WorldEcologyCompanionBindCandidates);
         operations.Add("ecology/neighborhood_cache", WorldEcologyNeighborhoodCache);
@@ -45,6 +46,7 @@ public static partial class GameplayTestSystemProbe
         RegisterWeatherRecoveryOperations(operations);
         operations.Add("surface_fluids/liquid_layer", WorldLiquidLayer);
         operations.Add("surface_fluids/notification_dispatch", WorldLiquidNotificationDispatch);
+        operations.Add("surface_fluids/diffusion_batch", WorldLiquidDiffusionBatchProbe);
         operations.Add("surface_fluids/buoyancy", WorldLiquidBuoyancy);
         operations.Add("dimension/address", WorldDimensionAddress);
         operations.Add("dimension/world_instances", WorldIndependentDimensionInstances);
@@ -63,6 +65,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("agriculture/farmland_scope", WorldFarmlandScope);
         operations.Add("fishing/rig", WorldFishingRig);
         operations.Add("fishing/cast_supplies", WorldFishingCastSupplies);
+        operations.Add("fishing/hanging_hook", WorldFishingHangingHook);
         operations.Add("mechanical/load_allocation", WorldMechanicalLoads);
         operations.Add("mechanical/gear_conflict", WorldMechanicalGears);
         operations.Add("mechanical/ship_scope_identity", WorldMechanicalShipScopeIdentity);
@@ -155,7 +158,7 @@ public static partial class GameplayTestSystemProbe
         {
             selected.Clear();
             foreach (NaturalItemPlacement placement in placements)
-                ChunkNaturalItemRenderer.CollectInitialCompanion(placement, selected);
+                ChunkNaturalItemRuntime.CollectInitialCompanion(placement, selected);
         }
         Collect();
         bool ordered = selected.Count == expected.Count;
@@ -166,11 +169,11 @@ public static partial class GameplayTestSystemProbe
         // 全宿主与全伴生两种边界都按源列表过滤，不插入假候选或改变相对次序。
         selected.Clear();
         for (int i = 0; i < 16; i++)
-            ChunkNaturalItemRenderer.CollectInitialCompanion(
+            ChunkNaturalItemRuntime.CollectInitialCompanion(
                 new NaturalItemPlacement(1 + i, "probe:tree", i, 0, 0, 0, "tree"), selected);
         bool hostIgnored = selected.Count == 0;
         for (int i = 0; i < 16; i++)
-            ChunkNaturalItemRenderer.CollectInitialCompanion(
+            ChunkNaturalItemRuntime.CollectInitialCompanion(
                 new NaturalItemPlacement(101 + i, "probe:hive", i, 0, 0, 0, "hive", hostGuid: 1 + i), selected);
         bool companionAccepted = selected.Count == 16;
         for (int i = 0; companionAccepted && i < selected.Count; i++)
@@ -524,6 +527,93 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
+    // 使用正式批量补水写回器，在隔离地形中制造 64 对水格变化并检查只通知一次。
+    private static JObject WorldLiquidDiffusionBatchProbe(JObject args)
+    {
+        const int width = 128;
+        using var buffer = new ChunkTerrainBuffer(width, 1);
+        int water = buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < width; x++)
+            buffer.SetLiquid(x, 0, water, 100);
+        using ChunkTerrainData terrain = buffer.Seal();
+        for (int x = 1; x < width; x += 2)
+            terrain.SetLiquid(x, 0, 0, 0);
+
+        int singleNotifications = 0, batchNotifications = 0, changedCells = 0, visualCells = 0;
+        terrain.Changed += changed =>
+        {
+            if (changed.Kind == TerrainChangeKind.Liquid) singleNotifications++;
+        };
+        terrain.LiquidBatchChanged += changed =>
+        {
+            batchNotifications++;
+            changedCells += changed.CellIndices.Length;
+            visualCells += changed.VisualCellIndices.Length;
+        };
+        var batch = new WorldLiquidDiffusionBatch();
+        bool allTransferred = true;
+        for (int x = 0; x < width; x += 2)
+        {
+            RuntimeTerrainTileSample Sample(int index) => new(default, terrain,
+                new Vector2Int(index, 0), new Vector2Int(index, 0), terrain.GetCell(index, 0), 0);
+            allTransferred &= batch.TryBalance(Sample(x), Sample(x + 1));
+        }
+        int pendingLeft = batch.GetCurrentLevel(new RuntimeTerrainTileSample(default, terrain,
+            Vector2Int.zero, Vector2Int.zero, terrain.GetCell(0, 0), 0));
+        bool unchangedBeforeCommit = terrain.GetLiquidLevel(0, 0) == 100 &&
+                                     terrain.GetLiquidLevel(1, 0) == 0;
+        batch.Commit(recordSave: false);
+        int total = 0;
+        bool allBalanced = true, typesIntact = true;
+        for (int x = 0; x < width; x++)
+        {
+            int level = terrain.GetLiquidLevel(x, 0);
+            total += level;
+            allBalanced &= level == 50;
+            typesIntact &= terrain.GetLiquidTypeIndex(x, 0) == water;
+        }
+        // 三格共用中间水格时，后续转移必须读取本轮暂存值而非旧的地形值。
+        using var chainBuffer = new ChunkTerrainBuffer(3, 1);
+        int chainWater = chainBuffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
+        for (int x = 0; x < 3; x++)
+            chainBuffer.SetLiquid(x, 0, chainWater, 100);
+        using ChunkTerrainData chainTerrain = chainBuffer.Seal();
+        chainTerrain.SetLiquid(1, 0, 0, 0);
+        chainTerrain.SetLiquid(2, 0, 0, 0);
+        RuntimeTerrainTileSample ChainSample(int x) => new(default, chainTerrain,
+            new Vector2Int(x, 0), new Vector2Int(x, 0), chainTerrain.GetCell(x, 0), 0);
+        bool chainTransferred = batch.TryBalance(ChainSample(0), ChainSample(1)) &&
+                                batch.TryBalance(ChainSample(1), ChainSample(2));
+        bool chainStaged = chainTerrain.GetLiquidLevel(0, 0) == 100 &&
+                           chainTerrain.GetLiquidLevel(1, 0) == 0;
+        batch.Commit(recordSave: false);
+        bool chainBalanced = chainTerrain.GetLiquidLevel(0, 0) == 50 &&
+                             chainTerrain.GetLiquidLevel(1, 0) == 25 &&
+                             chainTerrain.GetLiquidLevel(2, 0) == 25;
+        bool batchReused = batch.TryBalance(ChainSample(0), ChainSample(1));
+        batch.Commit(recordSave: false);
+        batchReused &= chainTerrain.GetLiquidLevel(0, 0) == 38 &&
+                       chainTerrain.GetLiquidLevel(1, 0) == 37 &&
+                       chainTerrain.GetLiquidLevel(2, 0) == 25;
+        return new JObject
+        {
+            ["transferred"] = allTransferred,
+            ["pendingLeft"] = pendingLeft,
+            ["unchangedBeforeCommit"] = unchangedBeforeCommit,
+            ["allBalanced"] = allBalanced,
+            ["typesIntact"] = typesIntact,
+            ["total"] = total,
+            ["singleNotifications"] = singleNotifications,
+            ["batchNotifications"] = batchNotifications,
+            ["changedCells"] = changedCells,
+            ["visualCells"] = visualCells,
+            ["chainTransferred"] = chainTransferred,
+            ["chainStaged"] = chainStaged,
+            ["chainBalanced"] = chainBalanced,
+            ["batchReused"] = batchReused
+        };
+    }
+
     private static string WorldException(Action action)
     {
         try { action(); return string.Empty; }
@@ -869,6 +959,67 @@ public static partial class GameplayTestSystemProbe
             ["lowerBoundary"] = rule.Matches(1, .25d, 0d, 0d),
             ["upperBoundary"] = rule.Matches(1, .75d, 1d, 1d),
             ["wrongBiome"] = rule.Matches(2, .5d, .5d, .5d)
+        };
+    }
+
+    /// <summary>复用正式生成与宿主标签查询，验证独立自然物互斥且合法伴生物保留。</summary>
+    private static JObject WorldEcologyHostCellOccupancy(JObject args)
+    {
+        var tree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, 1d, 1d, 1 << 1,
+            0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+        var berry = new EcologySpawnRuleSnapshot("probe:berry", "probe-berry", 1, 1d, 1d, 1 << 1,
+            0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Berry" });
+        var companion = new EcologySpawnRuleSnapshot("probe:hive", "probe-hive", 1, 0d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, companionOnly: true, companionHostTag: "Tree",
+            companionSpawnChance: 1d, companionMinRadius: .5d, companionMaxRadius: .5d);
+        var halfTree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, .5d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+        var zeroTree = new EcologySpawnRuleSnapshot("probe:tree", "probe-tree", 1, 0d, 1d,
+            1 << 1, 0d, 1d, 0d, 1d, 0d, 1d, providedTags: new[] { "Tree" });
+
+        JObject Sample(params EcologySpawnRuleSnapshot[] rules)
+        {
+            var profile = new ChunkGenerationProfileSnapshot("probe:cell-occupancy", 1, 4, 4,
+                ecologyRules: rules);
+            var request = new ChunkGenerationRequest(1,
+                new FlatWorld.WorldModel.WorldAddress("probe-world", new Int2(0, 0)), 17413, 1, profile);
+            using var terrain = new ChunkTerrainBuffer(4, 4);
+            for (int y = 0; y < 4; y++)
+            for (int x = 0; x < 4; x++)
+            {
+                terrain.SetCell(x, y, new TerrainCell(1, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+                terrain.SetEnvironmentValue("temperature", x, y, .5f);
+                terrain.SetEnvironmentValue("precipitation", x, y, .5f);
+                terrain.SetEnvironmentValue("height", x, y, .5f);
+            }
+
+            var placements = new JArray();
+            foreach (NaturalItemPlacement placement in ChunkEcologyGenerator.Generate(request,
+                         terrain, 1d, rules, CancellationToken.None).Placements)
+                placements.Add(new JObject
+                {
+                    ["guid"] = placement.Guid, ["hostGuid"] = placement.HostGuid,
+                    ["x"] = placement.LocalX, ["y"] = placement.LocalY,
+                    ["itemId"] = placement.ItemId,
+                    ["offsetX"] = placement.OffsetX, ["offsetY"] = placement.OffsetY
+                });
+            return new JObject
+            {
+                ["placements"] = placements,
+                ["treeTag"] = ChunkEcologyGenerator.HasHostTagInChunk(request, terrain, 1d,
+                    rules, "Tree", CancellationToken.None),
+                ["berryTag"] = ChunkEcologyGenerator.HasHostTagInChunk(request, terrain, 1d,
+                    rules, "Berry", CancellationToken.None)
+            };
+        }
+
+        return new JObject
+        {
+            ["treeFirst"] = Sample(tree, berry, companion),
+            ["treeRepeated"] = Sample(tree, berry, companion),
+            ["berryFirst"] = Sample(berry, tree, companion),
+            ["treeMissing"] = Sample(zeroTree, berry, companion),
+            ["mixed"] = Sample(halfTree, berry, companion)
         };
     }
     #endregion
@@ -1757,6 +1908,46 @@ public static partial class GameplayTestSystemProbe
             };
         }
         finally { rig.UnbindRuntimeDataEvents(); invalid.UnbindRuntimeDataEvents(); }
+    }
+
+    private static JObject WorldFishingHangingHook(JObject args)
+    {
+        const float lineLength = 0.6f;
+        Vector2 anchor = Vector2.zero;
+        Vector2 hook = Vector2.down * lineLength, previous = hook;
+        Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 0f, ref hook, ref previous);
+        bool stationaryWhenPaused = hook == Vector2.down * lineLength;
+        anchor = Vector2.right * 0.3f;
+        Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 1f / 60f, ref hook, ref previous);
+        float swingLag = anchor.x - hook.x;
+        float lineLengthError = Mathf.Abs(Vector2.Distance(anchor, hook) - lineLength);
+        for (int frame = 0; frame < 240; frame++)
+            Mod_FishingRod.SimulateHangingHookStep(anchor, lineLength, 1f / 60f, ref hook, ref previous);
+        Bounds spriteBounds = new(Vector3.zero, Vector3.one);
+        Vector2 lineEye = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookLineEyeAnchor, false, false);
+        Vector2 flippedEye = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookLineEyeAnchor, true, true);
+        Vector2 baitTip = Mod_FishingRod.ResolveSpriteAttachmentLocalPoint(spriteBounds,
+            Mod_FishingRod.HookBaitTipAnchor, false, false);
+        Vector2 start = new(4f, 1f), end = new(-2f, 3f);
+        Vector2 reelStart = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 0f);
+        Vector2 reelMid = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 0.5f);
+        Vector2 reelEnd = Mod_FishingRod.EvaluateFishingReelPosition(start, end, 1f);
+        return new JObject
+        {
+            ["stationaryWhenPaused"] = stationaryWhenPaused,
+            ["swingLag"] = swingLag,
+            ["lineLengthError"] = lineLengthError,
+            ["settledOffset"] = Mathf.Abs(hook.x - anchor.x),
+            ["lineEyeX"] = lineEye.x, ["lineEyeY"] = lineEye.y,
+            ["eyeMirrorsOnFlip"] = (lineEye + flippedEye).sqrMagnitude < 0.000001f,
+            ["baitTipBelowEye"] = baitTip.y < lineEye.y && baitTip.x < lineEye.x,
+            ["reelStartPreserved"] = reelStart == start, ["reelEndReached"] = reelEnd == end,
+            ["reelMidDistance"] = Vector2.Distance(reelMid, end),
+            ["reelDuration"] = Mod_FishingRod.ResolveFishingReelDuration(4f, 8f),
+            ["shortReelDuration"] = Mod_FishingRod.ResolveFishingReelDuration(0.5f, 8f)
+        };
     }
     #endregion
 

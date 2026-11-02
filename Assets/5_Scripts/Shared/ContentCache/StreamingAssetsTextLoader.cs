@@ -55,16 +55,15 @@ public static class StreamingAssetsTextLoader
         string path,
         Action<string> onCompleted,
         Action<Exception> onFailed)
+        => !string.IsNullOrWhiteSpace(path) && !RequiresWebRequest(path)
+            ? BeginPureDataAsync(() => File.ReadAllText(path), onCompleted, onFailed)
+            : ReadPackagedTextAsync(path, onCompleted, onFailed);
+
+    private static IEnumerator ReadPackagedTextAsync(string path, Action<string> onCompleted, Action<Exception> onFailed)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
             onFailed?.Invoke(new ArgumentException("StreamingAssets 文件路径不能为空", nameof(path)));
-            yield break;
-        }
-
-        if (!RequiresWebRequest(path))
-        {
-            yield return RunPureDataAsync(() => File.ReadAllText(path), onCompleted, onFailed);
             yield break;
         }
 
@@ -94,14 +93,14 @@ public static class StreamingAssetsTextLoader
 
     /// <summary>缓存校验直接读取原始字节，命中时不解码或解析 JSON。</summary>
     public static IEnumerator ReadAllBytesAsync(string path, Action<byte[]> completed, Action<Exception> failed)
+        => !string.IsNullOrWhiteSpace(path) && !RequiresWebRequest(path)
+            ? BeginPureDataAsync(() => File.ReadAllBytes(path), completed, failed)
+            : ReadPackagedBytesAsync(path, completed, failed);
+
+    private static IEnumerator ReadPackagedBytesAsync(string path, Action<byte[]> completed, Action<Exception> failed)
     {
         if (string.IsNullOrWhiteSpace(path))
         { failed?.Invoke(new ArgumentException("StreamingAssets 文件路径不能为空", nameof(path))); yield break; }
-        if (!RequiresWebRequest(path))
-        {
-            yield return RunPureDataAsync(() => File.ReadAllBytes(path), completed, failed);
-            yield break;
-        }
         using UnityWebRequest request = UnityWebRequest.Get(path);
         yield return request.SendWebRequest();
         if (request.result != UnityWebRequest.Result.Success)
@@ -133,16 +132,43 @@ public static class StreamingAssetsTextLoader
 
     #region 后台纯数据处理
 
+    /// <summary>本地文本与纯解析共用一个任务，回调仍由主线程推进，解析器不能访问 Unity 对象。</summary>
+    public static IEnumerator ReadAndParsePrivateDataAsync<T>(string path, Func<string, T> parse,
+        Action<T> completed, Action<Exception> failed)
+    {
+        if (parse == null) throw new ArgumentNullException(nameof(parse));
+        if (!string.IsNullOrWhiteSpace(path) && !RequiresWebRequest(path))
+            return BeginPureDataAsync(() => parse(File.ReadAllText(path)), completed, failed);
+        return ReadPackaged();
+
+        IEnumerator ReadPackaged()
+        {
+            string text = null;
+            Exception error = null;
+            yield return ReadAllTextAsync(path, value => text = value, value => error = value);
+            if (error != null) { failed?.Invoke(error); yield break; }
+            yield return BeginPureDataAsync(() => parse(text), completed, failed);
+        }
+    }
+
     /// <summary>后台只处理私有字符串和 DTO，完成回调仍由资源协程在主线程执行。</summary>
     public static IEnumerator RunPureDataAsync<T>(Func<T> work, Action<T> completed, Action<Exception> failed)
     {
+        IEnumerator operation = BeginPureDataAsync(work, completed, failed);
+        try { while (operation.MoveNext()) yield return operation.Current; }
+        finally { (operation as IDisposable)?.Dispose(); }
+    }
+
+    /// <summary>立即发出私有数据任务，回调仍等调用方推进；避免预算耗尽后又空等一帧才启动读盘。</summary>
+    public static IEnumerator BeginPureDataAsync<T>(Func<T> work, Action<T> completed, Action<Exception> failed)
+    {
+        if (work == null) throw new ArgumentNullException(nameof(work));
         T result = default;
         Exception error = null;
 #if UNITY_WEBGL && !UNITY_EDITOR
         // WebGL 无托管工作线程，仍保持相同的回调与错误契约。
         try { result = work(); }
         catch (Exception exception) { error = exception; }
-        yield return null;
 #else
         Task task = Task.Run(() =>
         {
@@ -150,10 +176,19 @@ public static class StreamingAssetsTextLoader
             try { result = work(); }
             catch (Exception exception) { error = exception; }
         });
-        while (!task.IsCompleted) yield return null;
 #endif
-        if (error != null) failed?.Invoke(error);
-        else completed?.Invoke(result);
+        return Complete();
+
+        IEnumerator Complete()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            yield return null;
+#else
+            while (!task.IsCompleted) yield return null;
+#endif
+            if (error != null) failed?.Invoke(error);
+            else completed?.Invoke(result);
+        }
     }
 
     #endregion

@@ -90,7 +90,7 @@ public static partial class GameUIPrefabRebuilder
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
         { CombatStatusRoot + "UI_DamageReceiverStatus.prefab", new[] { "整体血量", "部位耐久列表", "部位耐久模板" } },
-        { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_血量", "DataText_体温" } },
+        { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "食物", "FoodTrack", "FoodSegments", "FoodLegend", "水", "维生素", "体温", "DataText_食物", "DataText_碳水", "DataText_脂肪", "DataText_蛋白质", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
 
@@ -647,11 +647,11 @@ public static partial class GameUIPrefabRebuilder
 
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 使用 1004×560 窗口和十列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 使用 1148×560 窗口、左侧分类栏和十列滚动布局，只清理旧彩色装饰并统一内容区层级。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
-        const float width = 1004f;
+        const float width = 1148f;
         const float height = 560f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
@@ -662,7 +662,7 @@ public static partial class GameUIPrefabRebuilder
         if (resizer != null)
         {
             resizer.minWidth = width;
-            resizer.minHeight = 288f;
+            resizer.minHeight = height;
         }
 
         // 背包只在安全区不足时缩小，拖边保留十列槽位与至少一行正文的空间。
@@ -717,7 +717,7 @@ public static partial class GameUIPrefabRebuilder
         {
             scroll.anchorMin = Vector2.zero;
             scroll.anchorMax = Vector2.one;
-            scroll.offsetMin = new Vector2(48f, 80f);
+            scroll.offsetMin = new Vector2(192f, 80f);
             scroll.offsetMax = new Vector2(-48f, -112f);
             Image scrollImage = scroll.GetComponent<Image>();
             if (scrollImage != null)
@@ -787,6 +787,8 @@ public static partial class GameUIPrefabRebuilder
                 label.color = Surface;
             }
         }
+
+        RuntimeUIPrefabBuilder.ConfigureInventoryCategoryFilter(root);
     }
 
     #endregion

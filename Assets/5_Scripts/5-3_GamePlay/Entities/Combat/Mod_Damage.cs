@@ -8,8 +8,7 @@ public enum WeaponHitboxRegion
     UpperRightQuadrant = 1
 }
 
-[RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemPhysicsComponentsReceiver2D
 {
     #region 伤害相关数据
 
@@ -34,8 +33,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     [Range(0f, 0.25f), Tooltip("视觉抖动最大世界距离，默认0.035米；不影响目标真实位置。")]
     public float HitShakeDistance = CombatHitFeedback.DefaultShakeDistance;
 
-    [Header("物理攻击")]
-    [Tooltip("物理攻击力只减一次目标防御，再应用匹配工具的两倍弱点。")]
+    [Header("分类伤害")]
+    [Tooltip("物理、火焰、辐射分别减对应防御；命中表现不影响破防。")]
     public CombatDamage DamageValues = new CombatDamage();
 
     [Header("定时伤害设置")]
@@ -319,21 +318,29 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     #endregion
 
     #region Unity 生命周期
+    // 模板碰撞体由物理管理器延迟租借，攻击模块在可用时统一绑定。
+    public void OnItemPhysicsComponentsAvailable() => BindDamageCollider();
+
+    private void BindDamageCollider()
+    {
+        if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
+        if (damageCollider == null) return;
+        if (!hasInitialDamageColliderState)
+        {
+            initialDamageColliderEnabled = damageCollider.enabled;
+            hasInitialDamageColliderState = true;
+        }
+        if (restoreDamageColliderAfterDeath)
+            damageCollider.enabled = initialDamageColliderEnabled;
+        restoreDamageColliderAfterDeath = false;
+        CombatPhysicsChannels.AssignDamageSender(damageCollider);
+        lastColliderEnabled = damageCollider.enabled;
+    }
+
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     protected override void OnLoad()
     {
-        if (damageCollider != null)
-        {
-            if (!hasInitialDamageColliderState)
-            {
-                initialDamageColliderEnabled = damageCollider.enabled;
-                hasInitialDamageColliderState = true;
-            }
-            // 新一轮生命恢复配置初态，不恢复上一轮死亡时可能尚未结束的攻击窗。
-            if (restoreDamageColliderAfterDeath)
-                damageCollider.enabled = initialDamageColliderEnabled;
-            restoreDamageColliderAfterDeath = false;
-        }
+        BindDamageCollider();
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = item?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (sourceHealth != null) sourceHealth.DeathStarted += HandleSourceDeath;
@@ -354,13 +361,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         ModifyDamageContext(ref contract);
         NormalizeDamageValues();
 
-        if (damageCollider == null)
+        if (damageCollider == null && !TryGetComponent<ItemPhysicsTemplate2D>(out _))
         {
-            Debug.LogError($"{name} 未配置伤害碰撞体引用，必须在 Prefab 中显式绑定 BoxCollider2D。", this);
-        }
-        else
-        {
-            CombatPhysicsChannels.AssignDamageSender(damageCollider);
+            Debug.LogError($"{name} 未领取伤害碰撞体。", this);
         }
 
         // 初始化定时伤害相关数据
@@ -895,21 +898,21 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         return new DamageTextEffectData(damage, style);
     }
 
-    /// <summary>获取已校正的四类伤害。</summary>
+    /// <summary>获取已校正的分类伤害。</summary>
     public CombatDamage ResolveDamageValues()
     {
         NormalizeDamageValues();
         return DamageValues;
     }
 
-    /// <summary>由数值工具显式写入四类伤害，并阻止零伤害配置回退到旧单值。</summary>
+    /// <summary>由数值工具显式写入分类伤害。</summary>
     public void SetDamageValues(CombatDamage values)
     {
         DamageValues = values ?? new CombatDamage();
         DamageValues.ClampNonNegative();
     }
 
-    /// <summary>确保四类伤害对象存在，并限制运行时数据不会出现负数。</summary>
+    /// <summary>确保分类伤害对象存在，并限制运行时数据不会出现负数。</summary>
     private void NormalizeDamageValues()
     {
         DamageValues ??= new CombatDamage();
@@ -1239,7 +1242,16 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (enabled && sourceHealth != null && sourceHealth.Hp <= 0f) enabled = false;
         if (damageCollider == null)
         {
-            Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
+            if (enabled) Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
+            else
+            {
+                if (lastColliderEnabled)
+                {
+                    lastColliderEnabled = false;
+                    item?.MarkModuleScheduleDirty();
+                }
+                EndDamageWindow();
+            }
             return;
         }
 

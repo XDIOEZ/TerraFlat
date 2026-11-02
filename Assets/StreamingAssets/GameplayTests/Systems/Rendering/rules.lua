@@ -1,5 +1,70 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
 do
+    local function sameCircles(first, second)
+        assert(#first == #second, "重新手持改变了咬痕数量")
+        for index, circle in ipairs(first) do
+            for channel = 1, 3 do
+                assert(math.abs(circle[channel] - second[index][channel]) < 0.00001,
+                    "同一食物进度的圆形咬痕未确定性还原")
+            end
+        end
+    end
+
+    test.system("rendering", "held_food_bites", { maximum = 1, steps = {
+        { progress = 0 }, { progress = 1 }, { progress = 0 }
+    } }, function(data)
+        local full, final, reset = data.samples[1], data.samples[2], data.samples[3]
+        assert(full.effectCount == 0 and full.texture == 0 and full.maskCount == 0,
+            "完整的一口食物仍创建咬痕资源")
+        assert(full.sortingLayer == data.heldLayer and full.sortingOrder == data.heldOrder,
+            "完整食物未保留手持排序配置")
+        assert(final.count == -1 and final.texture == 0, "最后一口没有直接隐藏或仍构造纹理")
+        assert(reset.count == 0 and reset.texture == 0, "新一份食物继承了旧咬痕")
+    end, "食物咬痕：一口食物零初始化分配、最终隐藏与新份复位")
+
+    test.system("rendering", "held_food_bites", { maximum = 3, steps = {
+        { progress = 0 }, { progress = 1 }, {}, { flipX = true }, { flipY = true },
+        { missingSprite = true }, {}, { progress = 2 }, { held = false }, { held = true },
+        { progress = 3 }, { progress = 0 }
+    } }, function(data)
+        local samples = data.samples
+        assert(samples[1].effectCount == 0 and samples[1].texture == 0, "完整食物仍初始化咬痕")
+        assert(samples[2].count == 1 and samples[2].textureWidth == 1 and samples[2].textureHeight == 1,
+            "一口咬痕未用单个圆参数代替像素遮罩")
+        assert(samples[2].texture == samples[3].texture, "未变的进度仍重建参数纹理")
+        assert(samples[4].flipX == -1 and samples[4].flipY == 1, "水平翻转未同步 Shader")
+        assert(samples[5].flipX == 1 and samples[5].flipY == -1, "垂直翻转未同步 Shader")
+        assert(samples[6].count == 0 and samples[6].texture == 0, "空 Sprite 仍读取几何或保留纹理")
+        sameCircles(samples[2].circles, samples[7].circles)
+        assert(samples[8].count == 2, "第二口没有增加独立圆形咬痕")
+        sameCircles(samples[2].circles, { samples[8].circles[1] })
+        assert(samples[9].count == 0 and samples[9].texture == 0 and samples[9].sortingOrder == 17 and
+            samples[9].sortingLayer == data.originalLayer,
+            "收起食物后 MPB、纹理或原排序未恢复")
+        sameCircles(samples[8].circles, samples[10].circles)
+        assert(samples[11].count == -1 and samples[11].texture == 0, "最终一口未全部裁剪")
+        assert(samples[12].count == 0 and samples[12].texture == 0, "复位后保留旧纹理")
+        for index, sample in ipairs(samples) do
+            local expectedMaterial = index == 9 and data.originalMaterial or data.masterMaterial
+            assert(sample.maskCount == 0 and sample.material == expectedMaterial,
+                "仍创建 SpriteMask、手持未继承角色Shader或卸手未恢复原材质")
+            assert(math.abs(sample.water - 0.37) < 0.00001, "咬痕覆盖了角色水态 MPB")
+        end
+    end, "食物咬痕：进度、确定性、翻转、空 Sprite、材质合成与回收")
+
+    test.system("rendering", "held_food_bites", { maximum = 1025, steps = { { progress = 40 } } }, function(data)
+        assert(data.samples[1].count == 40 and data.samples[1].textureWidth == 40,
+            "Shader 咬痕被固定向量数组长度截断")
+    end, "食物咬痕：高口数配置不受固定 Shader 数组限制")
+
+    test.system("rendering", "held_food_bites", { maximum = 1.2, steps = {
+        { progress = 1 }, { progress = 1.2 }
+    } }, function(data)
+        assert(data.samples[1].count == 1, "非整数进度被提前当成最后一口")
+        assert(data.samples[2].count == -1, "非整数最终进度未隐藏食物")
+    end, "食物咬痕：非整数进度和最终一口边界")
+end
+do
     local function near(actual, expected, label)
         assert(math.abs(actual - expected) < 0.0001, label)
     end
@@ -62,6 +127,44 @@ do
     test.system("rendering", "wind_streaks", { config = { width = 0 }, steps = { {} } }, function(data)
         assert(not data.validConfig and not data.samples[1].visible, "无效风纹尺寸没有关闭绘制")
     end, "风纹：拒绝无效尺寸")
+
+    -- 连续墙体的绕流只看真实墙格和主风向，不引入每条线独立的随机偏转。
+    test.system("rendering", "wind_streaks", {
+        windX = 1, windY = 0,
+        obstacleRows = {
+            ".............", ".............", ".............", ".............",
+            ".............", "......#......", "......#......", "......#......",
+            ".............", ".............", ".............", ".............", "............."
+        },
+        flowSamples = {
+            { x = 5, y = 4 }, { x = 5, y = 8 }, { x = 6, y = 6 },
+            { x = 12, y = 4 }, { x = 1, y = 1 }
+        }
+    }, function(data)
+        local flow = data.flowSamples
+        assert(flow[1].bend < -0.1 and flow[2].bend > 0.1,
+            "墙体上下两侧没有按最近的绕行方向分流")
+        assert(flow[3].blocked, "风线没有遮挡真实墙格")
+        assert(math.abs(flow[4].bend) < math.abs(flow[1].bend),
+            "墙后风线没有逐渐汇回主风流")
+        assert(math.abs(flow[5].bend) < 0.03 and not flow[5].blocked,
+            "远离墙体的主风流被错误改变")
+    end, "风纹：墙前两侧分流、遮挡墙格、墙后汇流及远场不扰动")
+
+    test.system("rendering", "wind_streaks", {
+        windX = 0, windY = 1,
+        obstacleRows = {
+            ".............", ".............", ".............", ".............",
+            ".....###.....", ".............", ".............", ".............",
+            ".............", ".............", ".............", ".............", "............."
+        },
+        flowSamples = { { x = 4, y = 3 }, { x = 8, y = 3 }, { x = 6, y = 4 } }
+    }, function(data)
+        local flow = data.flowSamples
+        assert(flow[1].bend > 0.1 and flow[2].bend < -0.1,
+            "风向旋转后没有相对风向重新选择两侧通道")
+        assert(flow[3].blocked, "横向墙体没有挡住风线")
+    end, "风纹：旋转风向后仍按障碍形状分流")
 end
 
 do
@@ -209,19 +312,6 @@ test.system("rendering", "terrain_shadow_surface_cache", {}, function(data)
 end, "地形阴影每轮复用表面样本并保持邻区边界")
 
 do
-    local function has(mask, index) return math.floor(mask / (2 ^ (index - 1))) % 2 == 1 end
-    local adjacent = { { 1, 3 }, { 2, 3 }, { 1, 4 }, { 2, 4 } }
-    for mask = 0, 255 do
-        test.system("rendering", "terrain_shadow_masks", { mask = mask }, function(data)
-            assert(data.visible == (mask ~= 0), "仅有斜对角高地时没有提交阴影格，或平地多画阴影")
-            for index = 1, 4 do
-                assert(data.edges[index] == (has(mask, index) and 1 or 0), "四向高差改变了原有直边")
-                local corner = has(mask, index + 4) and not has(mask, adjacent[index][1])
-                    and not has(mask, adjacent[index][2])
-                assert(data.corners[index] == (corner and 1 or 0), "圆角缺失、方向颠倒或重复补已覆盖的边")
-            end
-        end, "地形阴影八邻域全部组合：" .. mask)
-    end
     for index = 1, 4 do
         for _, row in ipairs({
             { args = { difference = 6 }, delta = 6, label = "多层高差仍补角" },
@@ -264,6 +354,9 @@ test.system("rendering", "cave_shadow_lazy_creation", {}, function(data)
         "洞穴仍在生成墙体遮黑效果，或池化阴影从地表泄漏到洞穴")
     assert(data.surfaceRecovered == 1 and data.surfaceCasterReused,
         "返回地表后未恢复正常墙体阴影，或重复创建阴影网格")
+    assert(data.sameChunkPolicyRestored == 1 and data.sameChunkPolicySuppressed == 0
+        and data.dimensionServicePreserved,
+        "同一区块切换阴影策略未重绑，或规则改动了全局维度管理器")
 end, "洞穴移除墙体视野遮黑，地表阴影仍按需创建并安全复用")
 
 for _, row in ipairs({
@@ -416,6 +509,15 @@ test.system("rendering", "shadow_footprint_matrix", {}, function(data)
         "缩小物品的阴影没有与可见底边重叠")
     assert(math.abs(data.explicitFootY + 0.4) < 0.00001,
         "默认贴地调整覆盖了物品显式配置的零重叠脚点")
+    assert(math.abs(data.normalContactWidth - 0.9) < 0.0001 and
+           math.abs(data.normalWidthCap - 2.5) < 0.0001,
+        "普通物品底影宽度或未放大时的默认上限发生回归")
+    assert(math.abs(data.giantContactWidth - 14.02 * 0.9) < 0.0001 and
+           math.abs(data.giantConfiguredWidth - 14.02 * 0.8) < 0.0001,
+        "巨型物品的自动/显式底影宽度没有跟随实际显示缩放")
+    assert(math.abs(data.giantMirroredWidth - data.giantContactWidth) < 0.0001 and
+           math.abs(data.giantRootedWidth - 12) < 0.0001 and data.disabledContactWidth == 0,
+        "负缩放、巨型植物或显式关闭底影的行为不正确")
 end, "接触与太阳阴影的四角投影数学等价：镜像、旋转、偏心与缩放")
 
 test.system("rendering", "contact_shadow_culling_indices", {}, function(data)
@@ -875,9 +977,11 @@ test.system("rendering", "ship_block_visual", {}, function(data)
         assert(row.sourceRestored and row.activeLeavesAfterRelease == 0, "回收未恢复主体或残留门叶")
     end
     assert(data.engineSize == 1 and data.gmEngineSize == 1, "普通或GM化学引擎仍被缩成非满格")
-    local expected = {0.85, 0.55, 0.32}
+    local expected = {0.85, 0.55, 0.85}
+    assert(#data.defaultBodySizes == 3 and #data.configuredBodySizes == 3, "缺少设备占地层尺寸采样")
     for i, value in ipairs(data.defaultBodySizes) do
         assert(math.abs(value - expected[i]) < 0.0001, "引擎满格改动改变了其它设备默认尺寸")
+        assert(math.abs(data.configuredBodySizes[i] - 0.32) < 0.0001, "显式机身尺寸被占地层默认值覆盖")
     end
     for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
 end, "化学引擎满格、四朝向双扇门世界滑动、反转恢复与回收")

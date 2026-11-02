@@ -1,10 +1,8 @@
 using System;
 using MemoryPack;
 using UnityEngine;
-using Newtonsoft.Json;
-using Sirenix.OdinInspector;
 
-/// <summary>命中表现与刃伤资格的稳定标识，不再代表四套伤害或防御。</summary>
+/// <summary>仅描述物理命中的表现与出血资格，不参与防御分类。</summary>
 public enum CombatDamageKind
 {
     None,
@@ -14,207 +12,114 @@ public enum CombatDamageKind
     Blunt
 }
 
-/// <summary>
-/// 单一物理攻击力；四个旧存档槽仅保留序列化兼容和命中表现标签。
-/// </summary>
+/// <summary>物理、火焰、辐射分别减对应防御；真实伤害不受防御影响。</summary>
 [Serializable]
 [MemoryPackable]
 public partial class CombatDamage
 {
-    [HideInInspector] public float Cutting;
-    [HideInInspector] public float Piercing;
-    [HideInInspector] public float Chopping;
-    [HideInInspector] public float Blunt;
+    [Min(0f)] public float Physical;
+    [Min(0f)] public float Fire;
+    [Min(0f)] public float Radiation;
+    [Min(0f)] public float True;
+    public CombatDamageKind ImpactKind = CombatDamageKind.Blunt;
 
-    #region 物理攻击配置与旧存档兼容
-    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("物理攻击力"), MinValue(0f)]
-    public float Physical
-    {
-        get => Mathf.Max(0f, Cutting) + Mathf.Max(0f, Piercing) + Mathf.Max(0f, Chopping) + Mathf.Max(0f, Blunt);
-        set => SetPhysical(value, DominantKind);
-    }
+    [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
+    public float TotalCombatPower => Mathf.Max(0f, Physical) + Mathf.Max(0f, Fire) +
+                                     Mathf.Max(0f, Radiation) + Mathf.Max(0f, True);
 
-    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("命中表现")]
-    public CombatDamageKind ImpactKind
-    {
-        get => DominantKind;
-        set => SetPhysical(Physical, value);
-    }
-
-    private void SetPhysical(float value, CombatDamageKind kind)
-    {
-        Cutting = Piercing = Chopping = Blunt = 0f;
-        value = Mathf.Max(0f, value);
-        switch (kind)
-        {
-            case CombatDamageKind.Cutting: Cutting = value; break;
-            case CombatDamageKind.Piercing: Piercing = value; break;
-            case CombatDamageKind.Chopping: Chopping = value; break;
-            default: Blunt = value; break;
-        }
-    }
-
-    public bool ShouldSerializeCutting() => false;
-    public bool ShouldSerializePiercing() => false;
-    public bool ShouldSerializeChopping() => false;
-    public bool ShouldSerializeBlunt() => false;
-    #endregion
-
-    [MemoryPackIgnore, JsonIgnore]
-    public float TotalCombatPower => Physical;
-
-    #region 表现分类
-
-    /// <summary>选择攻击数值占比最大的类型；并列依次优先切割、穿刺、劈砍、钝击。</summary>
-    [MemoryPackIgnore, JsonIgnore]
-    public CombatDamageKind DominantKind
-    {
-        get
-        {
-            float highest = 0f;
-            CombatDamageKind kind = CombatDamageKind.None;
-            if (Cutting > highest)
-            {
-                highest = Cutting;
-                kind = CombatDamageKind.Cutting;
-            }
-            if (Piercing > highest)
-            {
-                highest = Piercing;
-                kind = CombatDamageKind.Piercing;
-            }
-            if (Chopping > highest)
-            {
-                highest = Chopping;
-                kind = CombatDamageKind.Chopping;
-            }
-            if (Blunt > highest)
-                kind = CombatDamageKind.Blunt;
-
-            return kind;
-        }
-    }
-
-    #endregion
+    [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
+    public CombatDamageKind DominantKind => Physical > 0f
+        ? ImpactKind == CombatDamageKind.None ? CombatDamageKind.Blunt : ImpactKind
+        : CombatDamageKind.None;
 
     [MemoryPackConstructor]
-    public CombatDamage()
+    public CombatDamage() { }
+
+    public CombatDamage(float physical, float fire, float radiation, float trueDamage, CombatDamageKind impactKind = CombatDamageKind.Blunt)
     {
+        Physical = Mathf.Max(0f, physical);
+        Fire = Mathf.Max(0f, fire);
+        Radiation = Mathf.Max(0f, radiation);
+        True = Mathf.Max(0f, trueDamage);
+        ImpactKind = impactKind;
     }
 
-    public CombatDamage(float cutting, float piercing, float chopping, float blunt)
-    {
-        Cutting = Mathf.Max(0f, cutting);
-        Piercing = Mathf.Max(0f, piercing);
-        Chopping = Mathf.Max(0f, chopping);
-        Blunt = Mathf.Max(0f, blunt);
-    }
-
-    /// <summary>返回经过倍率缩放的新攻击数据，不修改原配置。</summary>
     public CombatDamage Scaled(float multiplier)
     {
-        float safeMultiplier = Mathf.Max(0f, multiplier);
-        return new CombatDamage(
-            Cutting * safeMultiplier,
-            Piercing * safeMultiplier,
-            Chopping * safeMultiplier,
-            Blunt * safeMultiplier);
+        float value = Mathf.Max(0f, multiplier);
+        return new CombatDamage(Physical * value, Fire * value, Radiation * value, True * value, ImpactKind);
     }
 
-    /// <summary>限制运行时或反序列化产生的负数。</summary>
     public void ClampNonNegative()
     {
-        Cutting = Mathf.Max(0f, Cutting);
-        Piercing = Mathf.Max(0f, Piercing);
-        Chopping = Mathf.Max(0f, Chopping);
-        Blunt = Mathf.Max(0f, Blunt);
+        Physical = Mathf.Max(0f, Physical);
+        Fire = Mathf.Max(0f, Fire);
+        Radiation = Mathf.Max(0f, Radiation);
+        True = Mathf.Max(0f, True);
     }
 
-    /// <summary>物理攻击只减一次物理防御。</summary>
-    public float CalculateAgainst(CombatDefense defense)
-    {
-        return ResolveAgainst(defense).TotalCombatPower;
-    }
+    public float CalculateAgainst(CombatDefense defense) => ResolveAgainst(defense).TotalCombatPower;
 
-    /// <summary>防御后保持命中表现比例，分槽不再影响破防资格。</summary>
     public CombatDamage ResolveAgainst(CombatDefense defense)
     {
         defense ??= CombatDefense.Zero;
-        float attack = Physical;
-        return attack > 0f ? Scaled(Mathf.Max(0f, attack - defense.Physical) / attack) : new CombatDamage();
+        return new CombatDamage(
+            Mathf.Max(0f, Physical - defense.Physical),
+            Mathf.Max(0f, Fire - defense.Fire),
+            Mathf.Max(0f, Radiation - defense.Radiation),
+            True, ImpactKind);
     }
 }
-/// <summary>
-/// 单一物理防御；旧四槽取最大值兼容，避免等值旧护甲被累加四次。
-/// </summary>
+
+/// <summary>防御与伤害类型一一对应，所有抗性使用固定数值减法。</summary>
 [Serializable]
 [MemoryPackable(GenerateType.VersionTolerant)]
 public partial class CombatDefense
 {
-    private static readonly CombatDefense Empty = new CombatDefense();
+    private static readonly CombatDefense Empty = new();
 
-    [HideInInspector, MemoryPackOrder(0)] public float Cutting;
-    [HideInInspector, MemoryPackOrder(1)] public float Piercing;
-    [HideInInspector, MemoryPackOrder(2)] public float Chopping;
-    [HideInInspector, MemoryPackOrder(3)] public float Blunt;
+    [MemoryPackOrder(0), Min(0f)] public float Physical;
+    [MemoryPackOrder(1), Min(0f)] public float Fire;
+    [MemoryPackOrder(2), Min(0f)] public float Radiation;
 
-    #region 物理防御配置与旧存档兼容
-    [MemoryPackIgnore, JsonProperty, ShowInInspector, LabelText("物理防御"), MinValue(0f)]
-    public float Physical
-    {
-        get => Mathf.Max(0f, Mathf.Max(Mathf.Max(Cutting, Piercing), Mathf.Max(Chopping, Blunt)));
-        set { Cutting = Piercing = Chopping = 0f; Blunt = Mathf.Max(0f, value); }
-    }
+    [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
+    public float TotalDefense => Physical + Fire + Radiation;
 
-    public bool ShouldSerializeCutting() => false;
-    public bool ShouldSerializePiercing() => false;
-    public bool ShouldSerializeChopping() => false;
-    public bool ShouldSerializeBlunt() => false;
-    #endregion
-
-    [MemoryPackIgnore, JsonIgnore]
-    public float TotalDefense => Physical;
-
-    [MemoryPackIgnore, JsonIgnore]
+    [MemoryPackIgnore, Newtonsoft.Json.JsonIgnore]
     public static CombatDefense Zero => Empty;
 
     [MemoryPackConstructor]
-    public CombatDefense()
+    public CombatDefense() { }
+
+    public CombatDefense(float physical, float fire, float radiation)
     {
+        Physical = Mathf.Max(0f, physical);
+        Fire = Mathf.Max(0f, fire);
+        Radiation = Mathf.Max(0f, radiation);
     }
 
-    public CombatDefense(float cutting, float piercing, float chopping, float blunt)
-    {
-        Cutting = Mathf.Max(0f, cutting);
-        Piercing = Mathf.Max(0f, piercing);
-        Chopping = Mathf.Max(0f, chopping);
-        Blunt = Mathf.Max(0f, blunt);
-    }
+    public CombatDefense Copy() => new(Physical, Fire, Radiation);
 
-    /// <summary>不同护甲来源的物理防御相加。</summary>
     public void Add(CombatDefense value)
     {
-        if (value == null)
-            return;
-
+        if (value == null) return;
         Physical += value.Physical;
+        Fire += value.Fire;
+        Radiation += value.Radiation;
     }
 
-    /// <summary>撤销一个护甲来源，物理防御不能低于零。</summary>
     public void Remove(CombatDefense value)
     {
-        if (value == null)
-            return;
-
-        Physical -= value.Physical;
+        if (value == null) return;
+        Physical = Mathf.Max(0f, Physical - value.Physical);
+        Fire = Mathf.Max(0f, Fire - value.Fire);
+        Radiation = Mathf.Max(0f, Radiation - value.Radiation);
     }
 
-    /// <summary>限制运行时或反序列化产生的负数。</summary>
     public void ClampNonNegative()
     {
-        Cutting = Mathf.Max(0f, Cutting);
-        Piercing = Mathf.Max(0f, Piercing);
-        Chopping = Mathf.Max(0f, Chopping);
-        Blunt = Mathf.Max(0f, Blunt);
+        Physical = Mathf.Max(0f, Physical);
+        Fire = Mathf.Max(0f, Fire);
+        Radiation = Mathf.Max(0f, Radiation);
     }
 }

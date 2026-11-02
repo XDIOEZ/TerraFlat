@@ -102,11 +102,11 @@ for _, weaponCase in ipairs({
         if case.id == "ChippedTool" then
             local tags = {}
             for _, tag in ipairs(data.heldTags) do tags[tag] = true end
-            assert(tags.Knife and tags.Modern and tags["InventoryCategory.Tool"],
-                "打制石器实例丢失原有刀具标签或工具分类")
+            assert(tags.Knife and tags.Stone and tags.StoneCraftingMaterial and tags.Modern
+                and tags["InventoryCategory.Tool"], "打制石器实例丢失刀具、石料或工具分类标签")
             assert(data.heldPrimaryCategory == "tool", "打制石器分类标签未优先于刀具语义")
             assert(data.heldMatchesKnifeIngredient and not data.heldMatchesSpearIngredient,
-                "打制石器实例未正确匹配刀具配方或错误匹配长矛配方")
+                "打制石器应保留刀具标签，但不能冒充长矛工具本体")
             referenceWeapon = data
         elseif case.id == "Obsidian" then
             assert(referenceWeapon ~= nil, "缺少打制石器的真实参考采样")

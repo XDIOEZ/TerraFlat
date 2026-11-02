@@ -124,10 +124,11 @@ namespace FlatWorld.NaturalEntities
                     if (Time.time - record.HitShakeStartedAt < record.HitShakeDuration) continue;
                     record.HitShakeDuration = 0f;
                 }
-                if (Time.time - record.HarvestShakeStartedAt < .24f)
+                if (!float.IsNegativeInfinity(record.HarvestShakeStartedAt))
                 {
+                    if (Time.time - record.HarvestShakeStartedAt < ManualHarvestWork.ShakeDuration) continue;
+                    record.HarvestShakeStartedAt = float.NegativeInfinity;
                     MarkPresentationDirty(record);
-                    continue;
                 }
                 if (record.FlashUntil > Time.time) continue;
                 flashPresentationScratch.Add(id);
@@ -268,8 +269,7 @@ namespace FlatWorld.NaturalEntities
             rendererScale = scale;
             bodyMatrix = BodyMatrix(body);
             matrix = bodyMatrix * Matrix4x4.TRS(visual?.RendererLocalPosition ?? Vector3.zero,
-                Quaternion.Euler((visual?.RendererLocalEulerAngles ?? Vector3.zero) +
-                    Vector3.forward * ManualHarvestWork.ShakeAngle(Time.time - record.HarvestShakeStartedAt)), scale);
+                Quaternion.Euler(visual?.RendererLocalEulerAngles ?? Vector3.zero), scale);
             if (record.Highlighted) tint = Color.Lerp(tint, Color.white, 0.6f);
             if (record.FlashUntil > Time.time) tint = new Color(1f, 0.08f, 0.08f, tint.a);
         }
@@ -295,25 +295,31 @@ namespace FlatWorld.NaturalEntities
             Vector3 hitOffset = CombatHitFeedback.EvaluateShake(Time.time - record.HitShakeStartedAt,
                 record.HitShakeDuration, record.HitShakeDistance, record.HitShakeDirection);
             Matrix4x4 projectedMatrix = Matrix4x4.Translate(record.RenderOffset + hitOffset) * matrix;
+            float harvestElapsed = Time.time - record.HarvestShakeStartedAt;
+            bool harvestActive = harvestElapsed >= 0f && harvestElapsed < ManualHarvestWork.ShakeDuration;
+            Vector3 shakeRoot = projectedMatrix.MultiplyPoint3x4(Vector3.zero);
+            Vector4 harvestMotion = harvestActive
+                ? new Vector4(ChunkDepthMeshRenderer.HarvestShakeMode, record.HarvestShakeStartedAt, shakeRoot.x, shakeRoot.y)
+                : Vector4.zero;
             int part = 0;
             // 主体和附属果实共用碰撞脚点行，贴图偏移及受击摇摆不改变排序。
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix, tint, localAnchor,
                 crop, Vector4.zero, Vector4.zero, playerOccluder: record.Profile.Definition.HasTag(Tag.Tree),
                 highlighted: record.Highlighted, sortingLayerId: record.Profile.SortingLayerId,
-                sortingOrder: record.Profile.SortingOrder);
+                sortingOrder: record.Profile.SortingOrder, animation: harvestMotion);
 
             Bounds visible = ShadowFootprintResolver.MeasureVisibleWorldBounds(sprite, matrix);
             Bounds renderBounds = visible;
             if (record.HitShakeDuration > 0f) renderBounds.Expand(record.HitShakeDistance * 2f);
+            if (harvestActive) renderBounds.Expand(visible.extents.magnitude * .26f + .1f);
             owner.IncludeNaturalEntityBounds(renderBounds, record.RenderOffset);
             var settings = record.Profile.Definition.Visual?.Shadows;
             Vector3 foot = ShadowFootprintResolver.ResolveFoot(matrix, visible, settings?.FootLocalPosition,
                 0f, settings?.FootOverlap);
             if (record.Profile.CropVisual != null) foot = anchor;
             record.ShadowFoot = foot;
-            var contact = WorldRenderingConfigCatalog.Default.shadows.contact;
-            float width = settings?.ContactWidth * Mathf.Abs(body.Scale.x) ?? visible.size.x * contact.widthRatio;
-            record.ShadowWidth = width <= 0f ? 0f : Mathf.Clamp(width, contact.minimumWidth, contact.maximumWidth);
+            record.ShadowWidth = ShadowFootprintResolver.ResolveContactShadowWidth(
+                settings?.ContactWidth, visible.size.x, matrix.MultiplyVector(Vector3.right).magnitude);
             Vector4 shadowCrop = crop; shadowCrop.z = 1f;
             owner.SetNaturalEntityPart(record.Handle.Id, part++, sprite, material, projectedMatrix,
                 new Color(1f, 1f, 1f, tint.a), localAnchor, shadowCrop, Vector4.zero,
@@ -331,7 +337,7 @@ namespace FlatWorld.NaturalEntities
                     owner.SetNaturalEntityPart(record.Handle.Id, part++, fruitDefinition.Sprite, fruitDefinition.Material,
                         fruitMatrix, Color.white, localAnchor,
                         Vector4.zero, Vector4.zero, Vector4.zero, sortingLayerId: record.Profile.SortingLayerId,
-                        sortingOrder: record.Profile.SortingOrder);
+                        sortingOrder: record.Profile.SortingOrder, animation: harvestMotion);
                 }
             }
             if (record.Profile.Canopy != null)
@@ -339,9 +345,11 @@ namespace FlatWorld.NaturalEntities
                 CanopyFruitState state = GetCanopy(record);
                 foreach (CanopyFruitRecord fruit in state.Fruits)
                     DrawCanopyFruit(record, fruit, CrownPosition(record, fruit.Slot) + (Vector2)hitOffset,
-                        Mathf.Lerp(record.Profile.Canopy.SmallScale, 1f, fruit.Growth01(state.Time)), sortingAnchor, ref part);
+                        Mathf.Lerp(record.Profile.Canopy.SmallScale, 1f, fruit.Growth01(state.Time)), sortingAnchor,
+                        harvestMotion, ref part);
                 foreach (CanopyFruitRecord fruit in state.Flights)
-                    DrawCanopyFruit(record, fruit, Mod_CanopyFruit.FlightPosition(fruit, state.Time), 1f, sortingAnchor, ref part);
+                    DrawCanopyFruit(record, fruit, Mod_CanopyFruit.FlightPosition(fruit, state.Time), 1f,
+                        sortingAnchor, Vector4.zero, ref part);
             }
             for (int old = part; old < record.RenderPartCount; old++) owner.ClearNaturalEntityPart(record.Handle.Id, old);
             record.RenderPartCount = part;
@@ -356,7 +364,7 @@ namespace FlatWorld.NaturalEntities
         }
 
         private static void DrawCanopyFruit(Record record, CanopyFruitRecord fruit, Vector2 position,
-            float growth, Vector3 anchor, ref int part)
+            float growth, Vector3 anchor, Vector4 harvestMotion, ref int part)
         {
             string itemId = fruit.Split ? record.Profile.Canopy.SplitItemId : record.Profile.Canopy.FruitItemId;
             if (!GameRes.ExistingInstance.TryGetItemDefinition(itemId, out var definition) || definition.Sprite == null)
@@ -365,7 +373,8 @@ namespace FlatWorld.NaturalEntities
             record.PresentationOwner.SetNaturalEntityPart(record.Handle.Id, part++, definition.Sprite, definition.Material,
                 Matrix4x4.TRS((Vector3)position + record.RenderOffset, Quaternion.identity, new Vector3(scale, scale, 1f)), Color.white,
                 anchor + record.RenderOffset, Vector4.zero, Vector4.zero, Vector4.zero,
-                sortingLayerId: record.Profile.SortingLayerId, sortingOrder: record.Profile.SortingOrder);
+                sortingLayerId: record.Profile.SortingLayerId, sortingOrder: record.Profile.SortingOrder,
+                animation: harvestMotion);
         }
 
         #endregion

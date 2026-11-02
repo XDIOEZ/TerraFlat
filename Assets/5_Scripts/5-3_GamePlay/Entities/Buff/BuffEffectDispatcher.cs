@@ -17,6 +17,8 @@ public static class BuffEffectTypeIds
     public const string StaminaChange = "core:stamina_change";
     public const string NutritionChange = "core:nutrition_change";
     public const string TrueDamage = "core:true_damage";
+    public const string FireDamage = "core:fire_damage";
+    public const string RadiationDamage = "core:radiation_damage";
     public const string MaxHealthPercentTrueDamage = "core:max_health_percent_true_damage";
 }
 
@@ -48,6 +50,8 @@ public static class BuffEffectDispatcher
         Register(BuffEffectTypeIds.StaminaChange, ApplyStaminaChange);
         Register(BuffEffectTypeIds.NutritionChange, ApplyNutritionChange);
         Register(BuffEffectTypeIds.TrueDamage, ApplyTrueDamage);
+        Register(BuffEffectTypeIds.FireDamage, ApplyFireDamage);
+        Register(BuffEffectTypeIds.RadiationDamage, ApplyRadiationDamage);
         Register(BuffEffectTypeIds.MaxHealthPercentTrueDamage, ApplyMaxHealthPercentTrueDamage);
     }
 
@@ -257,6 +261,22 @@ public static class BuffEffectDispatcher
         Mod_DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as Mod_DamageReceiver;
         if (effect.Value > 0f)
             damageReceiver?.ForceHurt(effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1), DeathCauseRecord.FromBuff(runtime));
+    }
+
+    private static void ApplyFireDamage(BuffEffectDefinition effect, BuffInstance runtime)
+        => ApplyProtectedDamage(effect, runtime, fire: true);
+
+    private static void ApplyRadiationDamage(BuffEffectDefinition effect, BuffInstance runtime)
+        => ApplyProtectedDamage(effect, runtime, fire: false);
+
+    /// <summary>周期元素伤害进入正式减防结算，Buff 来源与死亡归因原样保留。</summary>
+    private static void ApplyProtectedDamage(BuffEffectDefinition effect, BuffInstance runtime, bool fire)
+    {
+        float amount = effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1);
+        if (amount <= 0f) return;
+        var receiver = GetReceiver(runtime)?.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        receiver?.HurtStatusDamage(fire ? new CombatDamage { Fire = amount } : new CombatDamage { Radiation = amount },
+            DeathCauseRecord.FromBuff(runtime));
     }
 
     private static void ApplyMaxHealthPercentTrueDamage(BuffEffectDefinition effect, BuffInstance runtime)

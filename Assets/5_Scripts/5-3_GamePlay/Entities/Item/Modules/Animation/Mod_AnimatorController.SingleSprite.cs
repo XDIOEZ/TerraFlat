@@ -366,6 +366,7 @@ public partial class Mod_AnimatorController
     private bool PreparePresentation()
     {
         if (!isActiveAndEnabled || !IsSingleSpriteMode) return false;
+        WorldRenderingManager.ExistingInstance?.SynchronizeActorViewForPose(item);
         // 单图接管后不再消费旧 Animator 状态，切回时由当前运动源重建。
         _pendingBoolValues.Clear();
         if (!_sourcesCached || _presentationOwner != item) CachePresentationSources();
@@ -432,7 +433,8 @@ public partial class Mod_AnimatorController
 
     private bool IsVisualOnlyRoot(Transform root)
     {
-        if ((item != null && (root == item.transform || !root.IsChildOf(item.transform))) ||
+        bool detached = item != null && WorldRenderingManager.ExistingInstance?.OwnsActorVisual(item, root) == true;
+        if ((item != null && (root == item.transform || !root.IsChildOf(item.transform) && !detached)) ||
             root.GetComponentInChildren<Collider2D>(true) != null ||
             root.GetComponentInChildren<Rigidbody2D>(true) != null)
         {
@@ -440,8 +442,15 @@ public partial class Mod_AnimatorController
                 $"[{nameof(Mod_AnimatorController)}] 单图动作只能使用角色内部不含刚体或碰撞体的视觉节点。", this);
             return false;
         }
+        // 视觉根允许挂当前动画模块本身，但不能把其它业务模块一起移动。
+        using var scope = UnityEngine.Pool.ListPool<Module>.Get(out var modules);
+        root.GetComponentsInChildren(true, modules);
+        foreach (Module module in modules)
+            if (module != this || module.transform != root) return false;
         return true;
     }
+
+    internal void ReleaseSeparatedPresentation() => ReleasePresentation();
 
     private void ReleasePresentation()
     {

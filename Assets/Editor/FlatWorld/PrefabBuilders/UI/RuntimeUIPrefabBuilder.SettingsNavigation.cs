@@ -12,7 +12,7 @@ public static partial class RuntimeUIPrefabBuilder
 {
     #region 设置分页与会话导航
 
-    /// <summary>把顶部入口和世界子页固化为同一主面板内的分页。</summary>
+    /// <summary>把左侧入口和世界子页固化为同一主面板内的分页。</summary>
     private static void ConfigureSettingsActionListPages(GameObject root)
     {
         RectTransform scrollRect = FindTransform(root.transform, "Scroll View") as RectTransform;
@@ -21,7 +21,6 @@ public static partial class RuntimeUIPrefabBuilder
         if (content == null || scrollRect == null || scroll == null)
             throw new MissingReferenceException("UI_ActionList.prefab 缺少 Content 或 Scroll View。");
 
-        SetStretchWithMargins(scrollRect, 54f, 84f, 54f, 174f);
         ConfigureActionListScroll(scrollRect, content);
 
         Transform worldPage = EnsureActionListPage(
@@ -106,7 +105,13 @@ public static partial class RuntimeUIPrefabBuilder
             FindTransform(root.transform, SettingsActionListPagination.TabBarName),
             SettingsActionListPagination.GraphicsTabButtonName,
             "画质设置");
+        EnsureActionListTabButton(
+            root.transform,
+            FindTransform(root.transform, SettingsActionListPagination.TabBarName),
+            SettingsActionListPagination.LanguageTabButtonName,
+            "语言");
         ConfigureGroupedSettingsNavigation(root);
+        SettingsActionListPagination.EnsureSidebarLayout(root.transform);
     }
 
     /// <summary>主菜单和游戏内设置共用六档整体画质入口。</summary>
@@ -319,9 +324,10 @@ public static partial class RuntimeUIPrefabBuilder
         Transform close = FindTransform(root.transform, GameManager.MainMenuSettingsCloseButtonKey);
         close?.SetAsLastSibling();
         ConfigureGroupedSettingsNavigation(root);
+        SettingsActionListPagination.EnsureSidebarLayout(root.transform);
     }
 
-    /// <summary>相近设置通过页内入口访问，顶部只保留常用大类。</summary>
+    /// <summary>保留各页已有快捷入口，分类统一由左侧列表直接访问。</summary>
     private static void ConfigureGroupedSettingsNavigation(GameObject root)
     {
         BasePanel panel = root.GetComponent<BasePanel>();
@@ -329,11 +335,6 @@ public static partial class RuntimeUIPrefabBuilder
             panel.CanDrag = false;
         foreach (UI_Drag drag in root.GetComponentsInChildren<UI_Drag>(true))
             drag.enabled = false;
-
-        Transform tabs = FindTransform(root.transform, SettingsActionListPagination.TabBarName);
-        string[] hidden = { "显示设置", "镜头控制", "视觉特效", SettingsActionListPagination.LanguageTabButtonName };
-        foreach (string name in hidden)
-            FindTransform(tabs, name)?.gameObject.SetActive(false);
 
         Transform graphics = FindTransform(root.transform, SettingsActionListPagination.GraphicsPageName);
         MoveEntryToPage(root.transform, graphics, "打开视觉特效");
@@ -678,7 +679,7 @@ public static partial class RuntimeUIPrefabBuilder
         layer.SetActive(false);
     }
 
-    /// <summary>创建类似浏览器页签的顶部横向分页栏。</summary>
+    /// <summary>创建设置分类栏，最终交由共用侧栏布局转成纵向滚动列表。</summary>
     private static void EnsureActionListTabBar(Transform root)
     {
         Transform tabBar = FindTransform(root, SettingsActionListPagination.TabBarName);
@@ -688,23 +689,11 @@ public static partial class RuntimeUIPrefabBuilder
                 root,
                 typeof(Image)).transform;
 
-        RectTransform tabBarRect = tabBar as RectTransform;
-        SetTopStretch(tabBarRect, 54f, 54f, 90f, 68f);
-
         Image background = tabBar.GetComponent<Image>() ?? tabBar.gameObject.AddComponent<Image>();
         background.color = Surface;
-        background.raycastTarget = false;
+        background.raycastTarget = true;
         AddOutline(background, Border);
-
-        HorizontalLayoutGroup layout = tabBar.GetComponent<HorizontalLayoutGroup>() ??
-                                       tabBar.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(4, 4, 4, 4);
-        layout.spacing = 8f;
-        layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = true;
+        SettingsActionListPagination.EnsureSidebarLayout(root);
 
         Button audioTab = EnsureActionListTabButton(root, tabBar, "音量调节", "音量调节");
         Button uiTab = EnsureActionListTabButton(root, tabBar, "UI设置", "UI设置");
@@ -751,7 +740,7 @@ public static partial class RuntimeUIPrefabBuilder
         tabBar.SetAsLastSibling();
     }
 
-    /// <summary>复用或创建单个分页页签，并交给横向布局分配宽度。</summary>
+    /// <summary>复用或创建单个分类页签，并交给侧栏布局统一分配尺寸。</summary>
     private static Button EnsureActionListTabButton(
         Transform root,
         Transform tabBar,
@@ -759,12 +748,14 @@ public static partial class RuntimeUIPrefabBuilder
         string caption)
     {
         Button button = FindTransform(root, buttonName)?.GetComponent<Button>();
+        Transform tabList = FindDirectChild(tabBar, SettingsActionListPagination.TabListName);
+        Transform parent = tabList != null ? tabList : tabBar;
         if (button == null)
-            button = CreateButton(buttonName, tabBar, caption, 120f, 60f, false);
+            button = CreateButton(buttonName, parent, caption, 120f, 60f, false);
 
         button.gameObject.name = buttonName;
         button.gameObject.SetActive(true);
-        button.transform.SetParent(tabBar, false);
+        button.transform.SetParent(parent, false);
         ConfigureButtonVisual(button, false, caption);
         LayoutElement element = button.GetComponent<LayoutElement>() ??
                                 button.gameObject.AddComponent<LayoutElement>();

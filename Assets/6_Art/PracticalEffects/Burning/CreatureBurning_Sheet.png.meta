@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: 4a6dc12468324d7cac3f091ef7053ec3
+labels:
+- PreserveSourceSpriteSheetUV
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}

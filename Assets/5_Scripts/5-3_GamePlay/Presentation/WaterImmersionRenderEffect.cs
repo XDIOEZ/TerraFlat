@@ -112,6 +112,8 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     public float CurrentDepth => currentDepth;
     public float CurrentBlend => currentBlend;
+    public bool HasWorldWaterReference => hasWorldWaterReference;
+    public float CurrentWaterY => currentWaterY;
 
     #endregion
 
@@ -306,7 +308,9 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     private void CacheReferenceRenderer()
     {
         if (referenceSpriteRenderer == null)
-            referenceSpriteRenderer = GetComponent<SpriteRenderer>();
+            referenceSpriteRenderer = GetComponent<SpriteRenderer>() ??
+                GetComponentInParent<Item>()?.Sprite ??
+                GetComponentInChildren<SpriteRenderer>(true);
     }
 
     /// <summary>由角色主体计算统一的世界水平水面，旋转的手持物不会带着水线一起旋转。</summary>

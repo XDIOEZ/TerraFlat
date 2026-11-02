@@ -63,14 +63,25 @@ namespace FlatWorld.Localization
             if (loaded)
                 return;
 
-            TextAsset asset = Resources.Load<TextAsset>(ResourcePath);
-            if (asset == null)
-                throw new InvalidOperationException($"缺少物品 Tag 本地化目录：Resources/{ResourcePath}");
+            Dictionary<string, Dictionary<string, string>> loadedLabels = LoadAndValidateCatalog();
+            labelsByTag.Clear();
+            foreach (KeyValuePair<string, Dictionary<string, string>> pair in loadedLabels)
+                labelsByTag.Add(pair.Key, pair.Value);
+            loaded = true;
+        }
 
-            CatalogData catalog = JsonConfigurationCache.FromUnityJson<CatalogData>(asset.text);
-            if (catalog == null || catalog.schemaVersion != 1 || catalog.tags == null)
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration() => _ = LoadAndValidateCatalog();
+
+        private static Dictionary<string, Dictionary<string, string>> LoadAndValidateCatalog()
+        {
+            CatalogData catalog = BuiltInContentBinaryCatalog.ReadResource(ResourcePath, ParseResourceConfiguration);
+            if (catalog == null)
+                throw new InvalidOperationException($"缺少物品 Tag 本地化目录：Resources/{ResourcePath}");
+            if (catalog.schemaVersion != 1 || catalog.tags == null)
                 throw new InvalidOperationException($"物品 Tag 本地化目录格式无效：{EditorAssetPath}");
 
+            var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
             for (int index = 0; index < catalog.tags.Length; index++)
             {
                 TagEntryData entry = catalog.tags[index];
@@ -85,12 +96,16 @@ namespace FlatWorld.Localization
                     LocalizedLabelData label = entry.labels[labelIndex];
                     if (label == null || string.IsNullOrWhiteSpace(label.locale) || string.IsNullOrWhiteSpace(label.text))
                         throw new InvalidOperationException($"物品 Tag {entry.id} 包含空语言或空译文。");
-                    RegisterLocalizationInternal(entry.id.Trim(), label.locale.Trim(), label.text.Trim());
+                    RegisterLocalizationInternal(result, entry.id.Trim(), label.locale.Trim(), label.text.Trim());
                 }
             }
 
-            loaded = true;
+            return result;
         }
+
+        private static CatalogData ParseResourceConfiguration(string json)
+            => JsonConfigurationCache.FromUnityJson<CatalogData>(json)
+               ?? throw new InvalidOperationException($"物品 Tag 本地化目录格式无效：{EditorAssetPath}");
 
         #endregion
 
@@ -211,11 +226,18 @@ namespace FlatWorld.Localization
         }
 
         private static void RegisterLocalizationInternal(string tagId, string localeCode, string text)
+            => RegisterLocalizationInternal(labelsByTag, tagId, localeCode, text);
+
+        private static void RegisterLocalizationInternal(
+            Dictionary<string, Dictionary<string, string>> target,
+            string tagId,
+            string localeCode,
+            string text)
         {
-            if (!labelsByTag.TryGetValue(tagId, out Dictionary<string, string> labels))
+            if (!target.TryGetValue(tagId, out Dictionary<string, string> labels))
             {
                 labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                labelsByTag.Add(tagId, labels);
+                target.Add(tagId, labels);
             }
 
             if (labels.TryGetValue(localeCode, out string existing))

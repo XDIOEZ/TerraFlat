@@ -159,6 +159,8 @@ public class AnimalBehaviorTreeContext
     public Mod_ItemDetector Detector;
     public Mod_DamageReceiver Health;
     public AnimalCombatCapability Combat;
+    // 该夹具不验证检测半径。
+    public void RequireMinimumDetectionRadius(float radius) { }
     public bool TryGetCapability<T>(string key, out T value) where T : AnimalBehaviorTreeCapability
     { value = Combat as T; return value != null; }
 }

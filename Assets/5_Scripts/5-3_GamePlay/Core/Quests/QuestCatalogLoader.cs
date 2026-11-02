@@ -26,143 +26,70 @@ namespace FlatWorld.Gameplay.Quests
 
         public static int LoadBuiltIn()
         {
-            string questRoot = StreamingAssetsTextLoader.CombinePath(
-                Application.streamingAssetsPath,
-                RelativeQuestRoot);
-            string manifestPath = StreamingAssetsTextLoader.CombinePath(questRoot, ManifestFileName);
-            QuestManifestDto manifest = DeserializeManifest(
-                StreamingAssetsTextLoader.ReadAllText(manifestPath));
-            ValidateManifest(manifest);
-
-            List<QuestDefinition> definitions = LoadPackages(
-                questRoot,
-                manifest,
-                path => StreamingAssetsTextLoader.ReadAllText(path));
-            QuestCatalog.ReplaceBuiltIns(definitions);
-            QuestCatalog.FinalizeRegistration();
-            Debug.Log($"[QuestCatalog] 已加载 {definitions.Count} 条内建任务：{manifestPath}");
+            List<QuestDefinition> definitions = LoadBuiltInDefinitions();
+            PublishBuiltInDefinitions(definitions);
             return definitions.Count;
         }
 
-        public static IEnumerator LoadBuiltInAsync(
-            Action<int> onCompleted,
-            Action<Exception> onFailed)
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration() => LoadBuiltInDefinitions();
+
+        private static List<QuestDefinition> LoadBuiltInDefinitions()
         {
-            string questRoot;
-            string manifestPath;
-            try
-            {
-                questRoot = StreamingAssetsTextLoader.CombinePath(
-                    Application.streamingAssetsPath,
-                    RelativeQuestRoot);
-                manifestPath = StreamingAssetsTextLoader.CombinePath(questRoot, ManifestFileName);
-            }
-            catch (Exception exception)
-            {
-                onFailed?.Invoke(exception);
-                yield break;
-            }
-
-            string manifestJson = null;
-            Exception readError = null;
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                manifestPath,
-                text => manifestJson = text,
-                exception => readError = exception);
-            if (readError != null)
-            {
-                onFailed?.Invoke(readError);
-                yield break;
-            }
-
-            QuestManifestDto manifest;
-            try
-            {
-                manifest = DeserializeManifest(manifestJson);
-                ValidateManifest(manifest);
-            }
-            catch (Exception exception)
-            {
-                onFailed?.Invoke(exception);
-                yield break;
-            }
-
+            string root = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeQuestRoot);
+            string manifestPath = StreamingAssetsTextLoader.CombinePath(root, ManifestFileName);
+            QuestManifestDto manifest = BuiltInContentBinaryCatalog.ReadFile(manifestPath, DeserializeManifest);
+            ValidateManifest(manifest);
             var definitions = new List<QuestDefinition>();
-            var questIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (QuestPackageDto package in manifest.Packages.Where(value => value.Enabled))
-            {
-                string packagePath;
-                try
-                {
-                    packagePath = ResolvePackagePath(questRoot, package.Path);
-                }
-                catch (Exception exception)
-                {
-                    onFailed?.Invoke(exception);
-                    yield break;
-                }
-
-                string packageJson = null;
-                readError = null;
-                yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                    packagePath,
-                    text => packageJson = text,
-                    exception => readError = exception);
-                if (readError != null)
-                {
-                    onFailed?.Invoke(new IOException(
-                        $"任务分包 {package.Id} 读取失败：{packagePath}",
-                        readError));
-                    yield break;
-                }
-
-                try
-                {
-                    AppendPackageDefinitions(package, packageJson, questIds, definitions);
-                }
-                catch (Exception exception)
-                {
-                    onFailed?.Invoke(exception);
-                    yield break;
-                }
-            }
-
-            try
-            {
-                QuestCatalog.ReplaceBuiltIns(definitions);
-                QuestCatalog.FinalizeRegistration();
-                Debug.Log($"[QuestCatalog] 已加载 {definitions.Count} 条内建任务：{manifestPath}");
-                onCompleted?.Invoke(definitions.Count);
-            }
-            catch (Exception exception)
-            {
-                onFailed?.Invoke(exception);
-            }
+                AppendPackageDefinitions(package, BuiltInContentBinaryCatalog.ReadFile(
+                    ResolvePackagePath(root, package.Path), DeserializeCatalog), ids, definitions);
+            return definitions;
         }
 
-        private static List<QuestDefinition> LoadPackages(
-            string questRoot,
-            QuestManifestDto manifest,
-            Func<string, string> readText)
+        public static IEnumerator LoadBuiltInAsync(Action<int> onCompleted, Action<Exception> onFailed)
         {
+            string root = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeQuestRoot);
+            QuestManifestDto manifest = null;
+            Exception error = null;
+            yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+                StreamingAssetsTextLoader.CombinePath(root, ManifestFileName), DeserializeManifest,
+                value => manifest = value, value => error = value);
+            if (error != null) { onFailed?.Invoke(error); yield break; }
+            try { ValidateManifest(manifest); }
+            catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
             var definitions = new List<QuestDefinition>();
-            var questIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (QuestPackageDto package in manifest.Packages.Where(value => value.Enabled))
             {
-                string packagePath = ResolvePackagePath(questRoot, package.Path);
-                AppendPackageDefinitions(package, readText(packagePath), questIds, definitions);
+                string path;
+                try { path = ResolvePackagePath(root, package.Path); }
+                catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
+                QuestCatalogDto catalog = null;
+                yield return BuiltInContentBinaryCatalog.ReadFileAsync(path, DeserializeCatalog,
+                    value => catalog = value, value => error = value);
+                if (error != null) { onFailed?.Invoke(error); yield break; }
+                try { AppendPackageDefinitions(package, catalog, ids, definitions); }
+                catch (Exception exception) { onFailed?.Invoke(exception); yield break; }
             }
+            try { PublishBuiltInDefinitions(definitions); onCompleted?.Invoke(definitions.Count); }
+            catch (Exception exception) { onFailed?.Invoke(exception); }
+        }
 
-            return definitions;
+        private static void PublishBuiltInDefinitions(List<QuestDefinition> definitions)
+        {
+            QuestCatalog.ReplaceBuiltIns(definitions);
+            QuestCatalog.FinalizeRegistration();
+            Debug.Log($"[QuestCatalog] 已加载 {definitions.Count} 条内建任务。");
         }
 
         private static void AppendPackageDefinitions(
             QuestPackageDto package,
-            string json,
+            QuestCatalogDto catalog,
             ISet<string> questIds,
             ICollection<QuestDefinition> definitions)
         {
-            QuestCatalogDto catalog = DeserializeCatalog(json);
             if (catalog.SchemaVersion != QuestCatalog.SupportedSchemaVersion)
             {
                 throw new InvalidDataException(

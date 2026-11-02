@@ -76,6 +76,30 @@ test.system("ai", "wolf_combat_position", {}, function(data)
         "丢失视野后仍在攻击隐藏目标")
 end, "狼攻击优先于精确站位，到点保持、明显位移追击且冷却不中断")
 
+test.system("ai", "wolf_crowded_formation", {}, function(data)
+    assert(data.members == 12 and data.assigned == 5 and data.free == 7,
+        "同侧大量围攻者超过唯一站位容量后仍强制争抢编队位置")
+    assert(data.distinctPositions, "围攻槽位高度钳制后产生重叠位置")
+    assert(data.overflowWithoutSlot and data.overflowAttackState == "Attack",
+        "同侧超额的狼已经进入真实攻击范围，却仍被无站位状态挡住攻击")
+end, "十二狼同侧围攻只有唯一编队位，多余成员自由接敌")
+
+test.system("ai", "wolf_crowded_combat", {}, function(data)
+    assert(data.formationActive and data.attackState == "Attack" and data.attackStarted,
+        "拥挤场景没有建立真实的可出手攻击")
+    assert(data.occupiedState == "Attack" and data.occupiedStopped,
+        "队友占住目标站位时，已进入攻击范围的狼仍在持续抢位")
+    assert(data.freeState == "Attack" and data.freeResumed,
+        "拥挤解除后没有恢复原有的冷却期间重新站位")
+end, "围攻站位被占时守住有效攻击位置，腾空后再调整")
+
+test.system("ai", "ecs_crowded_attack_range", {}, function(data)
+    assert(data.slotCapacity == 8 and data.withinWithoutSlot and data.boundaryWithoutSlot,
+        "ECS 已进入实际攻击范围仍把第九名的槽位当作起手资格")
+    assert(not data.outsideWithoutSlot and data.invalidRangeRejected,
+        "移除接敌槽资格后，ECS 攻击错误越过真实距离限制")
+end, "ECS 第九名无槽仍可在实际范围起手，超出范围不可攻击")
+
 for _, case in ipairs({
     {name = "四狼互认并响应支援接口", args = {count = 4, callOnly = true}, members = 4, state = "Chase"},
     {name = "三狼主动追击", args = {count = 3}, members = 3, state = "Chase"},
@@ -142,6 +166,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     assert(#data.actors >= 12, "正式 Actor Manifest 缺少已有物种")
     local ghost, fish, bird, bee = false, false, false, false
     local snowLeopard, zombie = false, false
+    local checkedVisualPaths = 0
     for _, actor in ipairs(data.actors) do
         assert(actor.hasAnimatorModule and actor.hasControllerPrototype and actor.enabled and actor.visualMode == 1,
             "正式物种没有启用可装配的单图动画：" .. actor.id)
@@ -153,6 +178,10 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
         assert(compiled.missingRejected and compiled.nullRejected and compiled.absentAddressRejected
             and compiled.missingError ~= "" and compiled.inactive,
             "Actor 编译接纳了缺失、空引用或未配置的首帧，或规则意外加载了世界：" .. actor.id)
+        if actor.id == "Wolf" or actor.id == "Bear" or actor.id == "SnowLeopard" or actor.id == "Zombie" then
+            assert(actor.visualPathsBound, "生物外壳的贴图和动画路径未绑定同一视觉节点：" .. actor.id)
+            checkedVisualPaths = checkedVisualPaths + 1
+        end
         if actor.id == "SnowLeopard" then
             assert(actor.initialSpriteName == "MiniWolf_Idle_1", "雪豹没有绑定自己的静态首帧")
             snowLeopard = true
@@ -203,6 +232,7 @@ test.system("ai", "single_sprite_catalog", {}, function(data)
     end
     assert(ghost and fish and bird and bee, "单图动画目录缺少幽灵、小鱼、鸟或蜜蜂")
     assert(snowLeopard and zombie, "单图首帧回归缺少雪豹或共享狼外壳的僵尸")
+    assert(checkedVisualPaths == 4, "生物视觉路径回归缺少狼、熊、雪豹或僵尸")
 end, "正式全物种单图模式与幽灵小鱼纯控制器")
 
 -- ECS 与普通生物一样只选状态首图，动作由正式批量摇摆采样器合成。
@@ -579,6 +609,19 @@ test.system("ai", "perception_shape_batch", {}, function(data)
     assert(data.bounds and data.withoutOutput, "合并计算的粗筛包围盒与独立计算不一致")
     assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
 end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")
+
+test.system("ai", "perception_template_shapes", {}, function(data)
+    assert(data.coldWithoutNative and data.coldCount == 2 and data.coldX == 0.25 and data.coldY == -0.5 and
+        data.coldHalfWidth == 1 and data.coldHalfHeight == 2 and data.rootModuleRadius == 0.75,
+        "根节点模板默认形状或模块同节点形状丢失，或把子节点攻击框算入体型")
+    assert(data.overrideCount == 2 and data.overrideX == -2 and data.overrideY == 5 and
+        data.overrideHalfWidth == 3 and data.overrideHalfHeight == 4,
+        "JSON 覆盖未叠加到匹配的根模板")
+    assert(data.disabledCount == 1 and data.disabledRadius == 0.75 and data.unknownTypeRejected,
+        "根模板启用覆盖或不匹配形状的拒绝行为改变")
+    assert(data.rentedCount == 2 and data.rentedHalfWidth == 5 and data.rentedHalfHeight == 6,
+        "运行时已领取形状重复计入，或未读取实时碰撞尺寸")
+end, "Actor 感知冷编译支持根级物理模板和运行时领取")
 
 test.system("ai", "closest_target_batch", {}, function(data)
     assert(data.unwrappedNearest and data.wrappedTieFirst,

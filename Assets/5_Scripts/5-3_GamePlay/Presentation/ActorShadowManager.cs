@@ -297,10 +297,11 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                 sourceRenderer.transform);
         Vector3 footprintAnchor = ShadowFootprintResolver.ResolveFoot(item, footprint,
             binding.ShadowVisual?.FootLocalPosition, 0f, binding.ShadowVisual?.FootOverlap);
+        float visualHorizontalScale = sourceRenderer.transform.localToWorldMatrix.MultiplyVector(Vector3.right).magnitude;
         if (contactWidth > 0f)
         {
-            binding.ShadowWidth = Mathf.Clamp(contactWidth * Mathf.Abs(item.transform.lossyScale.x),
-                Defaults.minimumWidth, Defaults.maximumWidth);
+            binding.ShadowWidth = ShadowFootprintResolver.ResolveContactShadowWidth(
+                contactWidth, footprint.size.x, visualHorizontalScale);
         }
         else if (binding.IsRootedPlant)
         {
@@ -309,8 +310,8 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             footprintAnchor = rootAnchor;
             footprintAnchor.y = Mathf.Max(footprintAnchor.y,
                 ShadowFootprintResolver.ResolveFoot(item, footprint, null).y);
-            binding.ShadowWidth = Mathf.Clamp(rootedPlantWidth,
-                Defaults.minimumWidth, Defaults.maximumWidth);
+            binding.ShadowWidth = ShadowFootprintResolver.ClampScaledContactShadowWidth(
+                rootedPlantWidth, visualHorizontalScale);
         }
 
         // 角色锁定首次宽度避免动画抖动；植物则跟随成长尺寸更新。

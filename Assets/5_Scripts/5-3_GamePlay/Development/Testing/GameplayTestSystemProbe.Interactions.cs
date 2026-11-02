@@ -4,6 +4,7 @@ using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public static partial class GameplayTestSystemProbe
@@ -366,13 +367,18 @@ public static partial class GameplayTestSystemProbe
     // 源层级保持活动以遵守命中解析契约，禁用碰撞和行为，不登记到游戏世界。
     private static JObject InteractionPhysicsSource(JObject args)
     {
-        var originalRoot = new GameObject("GameplayTest Independent Collider Source") { hideFlags = HideFlags.HideAndDontSave };
-        var mirrorRoot = new GameObject("GameplayTest Independent Collider Image") { hideFlags = HideFlags.HideAndDontSave };
-        originalRoot.SetActive(false); mirrorRoot.SetActive(false);
-        GameItem owner = originalRoot.AddComponent<GameItem>();
-        owner.enabled = false;
+        Scene scene = default;
+        GameItem owner = null;
         try
         {
+            scene = CreateGameplayTestProbeScene("[InteractionPhysicsSource]");
+            var originalRoot = new GameObject("GameplayTest Independent Collider Source") { hideFlags = HideFlags.HideAndDontSave };
+            SceneManager.MoveGameObjectToScene(originalRoot, scene);
+            var mirrorRoot = new GameObject("GameplayTest Independent Collider Image") { hideFlags = HideFlags.HideAndDontSave };
+            SceneManager.MoveGameObjectToScene(mirrorRoot, scene);
+            originalRoot.SetActive(false); mirrorRoot.SetActive(false);
+            owner = originalRoot.AddComponent<GameItem>();
+            owner.enabled = false;
             var body = new GameObject("Body");
             body.transform.SetParent(originalRoot.transform, false);
             Collider2D original = body.AddComponent<BoxCollider2D>();
@@ -415,12 +421,8 @@ public static partial class GameplayTestSystemProbe
         }
         finally
         {
-            try { owner.PrepareForDespawn(saveData: false); }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(mirrorRoot);
-                UnityEngine.Object.DestroyImmediate(originalRoot);
-            }
+            try { if (owner != null) owner.PrepareForDespawn(saveData: false); }
+            finally { if (scene.IsValid()) CloseGameplayTestProbeScene(scene); }
         }
     }
 
@@ -461,7 +463,8 @@ public static partial class GameplayTestSystemProbe
             int layerCount = (int)Number(args, "layers", 1d);
             var rule = new GroundTileHarvestRule
             {
-                RequiredTool = ResourceToolKind.Pickaxe, ItemId = "test:harvest_product",
+                RequiredTool = tool.HarvestKind == ResourceToolKind.Shovel
+                    ? ResourceToolKind.Shovel : ResourceToolKind.Pickaxe, ItemId = "test:harvest_product",
                 ReplacementTileId = layerCount > 1 ? "test:harvest_tile" : "test:replacement_tile",
                 ExhaustedTileId = "test:exhausted_tile", NaturalLayerCount = layerCount,
                 BaseUsesPerTile = (int)Number(args, "baseUses", 6d),
@@ -481,8 +484,19 @@ public static partial class GameplayTestSystemProbe
             }
             catch (System.IO.InvalidDataException exception) { ruleValid = false; ruleError = exception.Message; }
             using var buffer = new ChunkTerrainBuffer(2, 2);
+            buffer.SetCell(0, 0, new TerrainCell(3, 0, 0, 1, 1, TerrainCellFlags.Walkable));
+            buffer.SetLiquid(0, 0, buffer.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId), 25);
             using ChunkTerrainData terrain = buffer.Seal();
             Vector2Int local = Vector2Int.zero;
+            var sample = new RuntimeTerrainTileSample(default, terrain, local, local, terrain.GetCell(0, 0), 0);
+            bool dryOnlyRejectsWater = !FarmlandSystem.IsOpen(sample);
+            bool shovelAllowsWater = FarmlandSystem.IsOpen(sample, allowSurfaceWater:
+                GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, sample.LiquidDepth, "water"));
+            terrain.SetLiquid(0, 0, 0, 0);
+            bool dryRemainsOpen = FarmlandSystem.IsOpen(sample);
+            terrain.SetLiquid(0, 0, terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.LavaId), 25);
+            bool lavaStillRejected = !FarmlandSystem.IsOpen(sample, allowSurfaceWater:
+                GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, sample.LiquidDepth, "molten"));
             int depth = (int)Number(args, "depth", 2d);
             GroundTileLayerSystem.WriteDepth(terrain, local, depth);
             terrain.SetGrass(0, 0, 4);
@@ -493,7 +507,6 @@ public static partial class GameplayTestSystemProbe
             bool invalidDepthRejected = false;
             try { GroundTileLayerSystem.Restore(terrain, new GroundLayerCellSaveData { LocalPosition = local, ExcavatedLayers = 101 }); }
             catch (InvalidOperationException) { invalidDepthRejected = true; }
-            var sample = new RuntimeTerrainTileSample(default, terrain, local, local, terrain.GetCell(0, 0), 0);
             terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, 0, 0, (float)Number(args, "progress", .4d));
             float progress = GroundTileHarvestSystem.ReadProgress(sample);
             terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, 0, 0, 5f);
@@ -504,6 +517,15 @@ public static partial class GameplayTestSystemProbe
             {
                 ["toolValid"] = toolValid, ["toolError"] = toolError, ["ruleValid"] = ruleValid, ["ruleError"] = ruleError,
                 ["requiredUses"] = toolValid && ruleValid ? GroundTileHarvestSystem.ResolveRequiredUses(tool, definition.GroundHarvest) : -1,
+                ["drySwingWork"] = toolValid && ruleValid ? GroundTileHarvestSystem.ResolveWorkPerSwing(tool, rule, 0f) : -1f,
+                ["wetSwingWork"] = toolValid && ruleValid ? GroundTileHarvestSystem.ResolveWorkPerSwing(tool, rule, .25f) : -1f,
+                ["dryOnlyRejectsWater"] = dryOnlyRejectsWater, ["shovelAllowsWater"] = shovelAllowsWater,
+                ["dryRemainsOpen"] = dryRemainsOpen, ["lavaStillRejected"] = lavaStillRejected,
+                ["shallowWaterAllowed"] = GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, .01f, "water"),
+                ["seaWaterAllowed"] = GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, 1f, "WATER"),
+                ["dryRejected"] = GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, 0f, "water"),
+                ["pickaxeRejected"] = GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Pickaxe, 1f, "water"),
+                ["oilRejected"] = GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, 1f, "petroleum"),
                 ["tier"] = tool.HarvestTier, ["efficiency"] = tool.HarvestEfficiency,
                 ["readOnlyParameterRejected"] = readOnlyParameterRejected,
                 ["interval"] = definition?.GroundHarvest.UseInterval, ["layers"] = definition?.GroundHarvest.NaturalLayerCount,

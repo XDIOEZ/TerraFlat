@@ -247,7 +247,8 @@ public class Inventory_Furnace : Inventory
     {
         float initialTemperature = GetInitialMaterialTemperature();
         FurnaceMaterialHeating.Process(InputInventory, OutputInventory, _Data.Temperature, seconds,
-            HeatingRatePercent / 100f, initialMaterialTemperature: initialTemperature);
+            HeatingRatePercent / 100f, initialMaterialTemperature: initialTemperature,
+            combustionSupported: HasCombustionAtmosphere());
     }
     #endregion
 

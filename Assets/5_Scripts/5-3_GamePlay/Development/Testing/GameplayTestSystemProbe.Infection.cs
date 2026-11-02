@@ -38,9 +38,9 @@ public static partial class GameplayTestSystemProbe
         result["two"] = first.Snapshot(infection);
         infection.SetStackCount(3);
         result["three"] = first.Snapshot(infection);
-        first.Weapon.SetDamageValues(new CombatDamage(.5f, .5f, .5f, .5f));
+        first.Weapon.SetDamageValues(new CombatDamage(0f, 0f, 0f, 0f, CombatDamageKind.Cutting));
         result["minimum"] = first.Snapshot(infection);
-        first.Weapon.SetDamageValues(new CombatDamage(1f, 2f, 3f, 4f));
+        first.Weapon.SetDamageValues(new CombatDamage(10f, 0f, 0f, 0f, CombatDamageKind.Cutting));
         infection.SetStackCount(2);
         result["downTwo"] = first.Snapshot(infection);
         infection.SetStackCount(1);
@@ -160,7 +160,7 @@ internal sealed class GameplayTestInfectionFixture : IDisposable
         weaponItem.Owner = carrier;
         Weapon = weaponRoot.AddComponent<Mod_Damage>();
         Weapon.item = weaponItem;
-        Weapon.SetDamageValues(new CombatDamage(1f, 2f, 3f, 4f));
+        Weapon.SetDamageValues(new CombatDamage(10f, 0f, 0f, 0f, CombatDamageKind.Cutting));
     }
 
     private static GameItem CreateItem(GameObject host, string id)

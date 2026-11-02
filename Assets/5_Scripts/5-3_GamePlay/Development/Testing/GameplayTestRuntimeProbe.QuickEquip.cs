@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -16,9 +17,9 @@ public static partial class GameplayTestRuntimeProbe
     private static void RegisterQuickEquipInputEditor() => RegisterQuickEquipInput();
 #endif
     private static void RegisterQuickEquipInput()
-        => Register("inventory", "held_equipment_shortcut", CaptureHeldEquipmentShortcut);
+        => RegisterAsync("inventory", "held_equipment_shortcut", CaptureHeldEquipmentShortcut);
 
-    private static JObject CaptureHeldEquipmentShortcut(Player player, JObject args)
+    private static IEnumerator CaptureHeldEquipmentShortcut(Player player, JObject args, Action<JObject> completed)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "left_shift");
         Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
@@ -44,9 +45,10 @@ public static partial class GameplayTestRuntimeProbe
         Mouse mouse = null;
         Item held = null;
         var lockOwner = new object();
-        int acts = 0, releases = 0;
+        int acts = 0, releases = 0, attacks = 0;
         void Act() => acts++;
         void Release() => releases++;
+        void Attack() => attacks++;
         var result = new JObject();
         try
         {
@@ -65,6 +67,7 @@ public static partial class GameplayTestRuntimeProbe
                 throw new InvalidOperationException("手持装备回归未获得本轮物品的正式手持实例。");
             held.OnAct += Act;
             controller.RightClickUp += Release;
+            controller.AttackStarted += Attack;
             keyboard = UnityInputSystem.AddDevice<Keyboard>();
             mouse = UnityInputSystem.AddDevice<Mouse>();
             UnityInputSystem.AddDeviceUsage(keyboard, Mod_GameController.ExternalGameplayInputDeviceUsage);
@@ -75,6 +78,33 @@ public static partial class GameplayTestRuntimeProbe
             UnityInputSystem.Update();
             if (controller.IsPointerOverUI())
                 throw new InvalidOperationException("手持装备回归的中央指针被现有 UI 遮挡。");
+            bool drawStarted = hotbar.IsDrawingHeldItem && controller.IsHeldItemDrawLocked;
+            Vector3 rootScaleBeforeDraw = held.transform.localScale;
+            Vector3 initialVisualScale = held.Sprite != null ? held.Sprite.transform.lossyScale : Vector3.zero;
+            UnityInputSystem.QueueStateEvent(mouse,
+                new MouseState { position = pointer }.WithButton(MouseButton.Right));
+            UnityInputSystem.Update();
+            bool blockedWhileDrawing = ReferenceEquals(hotbar.Data.itemSlots[sourceIndex].itemData, incoming) &&
+                ReferenceEquals(gear.Data.itemSlots[eyes].itemData, previous) && acts == 0 &&
+                !controller.IsRightClickHeld;
+            UnityInputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
+            UnityInputSystem.Update();
+            UnityInputSystem.QueueStateEvent(mouse,
+                new MouseState { position = pointer }.WithButton(MouseButton.Left));
+            UnityInputSystem.Update();
+            blockedWhileDrawing &= attacks == 0;
+            UnityInputSystem.QueueStateEvent(mouse, new MouseState { position = pointer });
+            UnityInputSystem.Update();
+            double deadline = Time.realtimeSinceStartupAsDouble + 1d;
+            while (hotbar.IsDrawingHeldItem && Time.realtimeSinceStartupAsDouble < deadline)
+                yield return null;
+            result["drawStarted"] = drawStarted;
+            result["blockedWhileDrawing"] = blockedWhileDrawing;
+            result["drawFinished"] = !hotbar.IsDrawingHeldItem && !controller.IsHeldItemDrawLocked;
+            result["visualScaleRestored"] = held.Sprite != null && held.Sprite.transform != held.transform &&
+                held.Sprite.transform.lossyScale.magnitude > initialVisualScale.magnitude * 3f &&
+                held.transform.localScale == rootScaleBeforeDraw;
+            result["sameSlotDoesNotReplay"] = hotbar.TrySelectSlot(sourceIndex) && !hotbar.IsDrawingHeldItem;
             if (mode == "locked") controller.AcquireGameplayInputLock(lockOwner);
             if (mode != "normal")
                 UnityInputSystem.QueueStateEvent(keyboard,
@@ -106,6 +136,7 @@ public static partial class GameplayTestRuntimeProbe
         {
             controller.ReleaseGameplayInputLock(lockOwner);
             controller.RightClickUp -= Release;
+            controller.AttackStarted -= Attack;
             if (held != null) held.OnAct -= Act;
             if (mouse != null) UnityInputSystem.RemoveDevice(mouse);
             if (keyboard != null) UnityInputSystem.RemoveDevice(keyboard);
@@ -121,7 +152,10 @@ public static partial class GameplayTestRuntimeProbe
         result["restored"] = ReferenceEquals(hotbar.Data.itemSlots[sourceIndex].itemData, originalSource) &&
             ReferenceEquals(gear.Data.itemSlots[head].itemData, originalHead) &&
             ReferenceEquals(gear.Data.itemSlots[eyes].itemData, originalEyes);
-        return result;
+        double restoreDeadline = Time.realtimeSinceStartupAsDouble + 1d;
+        while (hotbar.IsDrawingHeldItem && Time.realtimeSinceStartupAsDouble < restoreDeadline)
+            yield return null;
+        completed(result);
     }
 
     #endregion

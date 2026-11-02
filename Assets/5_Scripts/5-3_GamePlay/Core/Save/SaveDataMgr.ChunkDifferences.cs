@@ -663,7 +663,8 @@ public partial class SaveDataMgr
 
     private static ulong ComputeItemHash(ItemData itemData)
     {
-        return ComputeHash(MemoryPackSerializer.Serialize<ItemData>(itemData));
+        // 哈希只取稳定的实例快照，避免序列化运行态 ItemData 时重入共享缓冲区。
+        return ComputeHash(ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(itemData)));
     }
 
     private static ulong ComputeTileHash(List<TileData> tiles)
@@ -739,6 +740,7 @@ public partial class ChunkSaveRecord
     [MemoryPack.MemoryPackOrder(6)] public List<GroundLayerCellSaveData> GroundLayerCells = new(); // 追加伪 Z 轴差量，旧记录缺失时按未采挖处理。
     [MemoryPack.MemoryPackOrder(11)] public List<SnowCellSaveData> SnowCells = new(); // 独立保存天气雪与玩家编辑雪，不替换底层地形。
     [MemoryPack.MemoryPackOrder(15)] public List<FireCellSaveData> FireCells = new(); // 活火与表面燃烧进度的稀疏差量。
+    [MemoryPack.MemoryPackOrder(16)] public List<CombustibilityCellSaveData> CombustibilityCells = new(); // 保留烧尽格与可燃性基础编辑。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -753,7 +755,8 @@ public partial class ChunkSaveRecord
          (LiquidCells?.Count ?? 0) > 0 ||
          (GroundLayerCells?.Count ?? 0) > 0 ||
          (SnowCells?.Count ?? 0) > 0 ||
-         (FireCells?.Count ?? 0) > 0);
+         (FireCells?.Count ?? 0) > 0 ||
+         (CombustibilityCells?.Count ?? 0) > 0);
 }
 
 [MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]

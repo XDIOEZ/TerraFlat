@@ -13,7 +13,6 @@ using Random = UnityEngine.Random;
 /// GameObject 实体生命值与死亡的唯一权威：血量限制在 0 到 MaxHp，旧攻击和纯数据攻击共用结算与死亡收尾。
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
-[RequireComponent(typeof(BoxCollider2D))]
 public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder, IItemPoolLifecycle, IPlayerStateAuthorityModule
 {
     #region 可组合生命规则
@@ -325,7 +324,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     protected override void OnLoad()
     {
         ClearTemporaryCombatEffects();
-        CombatPhysicsChannels.AssignDamageReceiver(this);
+        // 预制体原生受击盒立即配置，模板碰撞体等物理管理器租借后再配置。
+        if (TryGetComponent<Collider2D>(out _)) CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearBodyPartPenalties();
         ClearHitSlowdown();
         damageTakenMultiplier = 1f;
@@ -731,7 +731,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
     /// <summary>新旧攻击共享间隔、物理伤害、战斗参数、归因和原有生命提交/反馈链。</summary>
-    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false)
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false, DeathCauseRecord deathCause = null)
     {
         if (IsTemporarilyInvulnerable) return -1f;
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
@@ -765,7 +765,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             }
         }
         return ResolveDamage(damage, legacySender,
-            GameplayCombatBridge.LegacyValues(values), context, preparedHits);
+            GameplayCombatBridge.LegacyValues(values, context.ImpactKind), context, preparedHits, deathCause);
     }
 
     #region 统一伤害结算
@@ -778,7 +778,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float ratio = saved.MaxHp > 0f ? Mathf.Clamp01(saved.Hp / saved.MaxHp) : 0f;
         saved.MaxHp = configured.MaxHp;
         saved.Hp = configured.MaxHp * ratio;
-        saved.DefenseValues = new CombatDefense { Physical = configured.DefenseValues?.Physical ?? 0f };
+        saved.DefenseValues = configured.DefenseValues?.Copy() ?? new CombatDefense();
         saved.CombatBalanceVersion = configured.CombatBalanceVersion;
     }
 

@@ -1,5 +1,10 @@
 # 渲染与光影
 
+- 从已有 Sprite 派生切片统一走 `SpriteTextureSliceFactory.CreateSourcePixelRectangleSprite`：输入原图像素矩形，内部换成实际 `textureRect` 并同步缩放 PPU，兼容图集打包/缩小且保持世界尺寸。管臂、罐体、指示灯、门扇、光纤和草变体共用；图集保持禁旋转/禁紧密打包。
+- `WorldPresentationProjection` 自建的网格、组件与节点统一按运行/编辑态销毁，释放和层级增删都适用；不销毁共享源资源。地形墙影可显式传入维度的 `SuppressTerrainWallShadows` 策略，同区块策略变化也须重绑。
+- 高炉烟雾偏移相对火焰锚点：下炉门 `-0.40625` 加烟雾 `0.78125`，顶部炉口为 Sprite 局部 Y `0.375`，再经主体缩放/偏移投影；回归读取实际 Transform。
+- 跨 Shader 派生合批材质用 `CopyMatchingPropertiesFromMaterial` 保留目标默认属性；按源表 UV 切帧的贴图标记 `PreserveSourceSpriteSheetUV`，图集计划会排除。火场现场同时断言未打包、材质默认状态和真实火焰像素，不能只查 Draw Calls 或 PNG 存在。
+
 ## 统一物品渲染入口
 
 - `WorldRenderingManager.Instance` 提供排序、阴影、水态、手动高亮与特效接口，partial 文件按功能拆分并复用原后端；启动由 GameManager 安装，清理只读 ExistingInstance。物品注册、结构刷新、回池/销毁与世界退出统一维护，正常显示不要求每帧重新注册。
@@ -22,12 +27,14 @@
 - `InteractionOutlineCommon` 用屏幕 UV 导数和渲染缩放补偿内侧白边，宽度来自 `InteractionOutlineSettings`；代理保持源尺寸，持续核对 Sprite/排序/裁剪，仅差异写入。局部变换仅创建时归零，重高亮/换材质重交裁剪。`PlayerOcclusionShaderGlobals` 提供本地主角坐标，树冠 `_PlayerOccluder` 在共享壳/回池明确写 1 或 0。
 - `ShipPieceView.AirSupply` 按实供功率重染原图左上 `(26,11,12,3)` 灯玻璃：通电保留原色、断电暗灰，故障红只由显式接口触发。`_DeviceIndicatorRect/_DeviceIndicatorTint` 共用光照/回退 Pass，Tint Alpha 默认 0，写 MPB 保留其它通道。
 - `WeatherMgr` 平滑发布 `_GlobalWindStrength/_GlobalWindDirection`（XY 吹去方向）；Sprite/BRG/行网格共用 `VegetationSway.hlsl`。树 `_GrassFollowWind=1`：≤0.5 原左右摆、0.5～0.6 过渡、≥0.6 用 65% 顺风倾斜+35% 回摆，不越上风侧。同树以树根相位、行网格以单株 `input.origin`，不可用整行/各顶点相位；最大位移仍为 `摆幅×3×(1+abs(次级摆动))`。Sprite 按 Pivot/PPU、Tilemap 按格锚点弯曲，各 Pass 一致；风向单独变化也刷新，退出清零。
+- 徒手采摘由 `ManualHarvestShake` 给物品主体和附属果实一次性设置 `_HarvestShake`（各自局部坐标对应公共根点，世界投影显示副本同步一次），`VegetationSway.hlsl` 在 GPU 摇摆 0.24 秒，结束清 MPB 和裁剪边界，不逐帧修改 Transform。原生自然物通过 `ChunkDepthMeshRenderer` 模式 11 共用行网格顶点流，开始/结束各更新一次；物理、排序脚点及脱落果实轨迹不受影响。回归 `agriculture/manual_harvest_shader`。
 
 ## 阴影与遮光
 
 - `ActorShadowManager` 按完整注册/注销与结构事件维护，旧 Item 椭圆用 `ContactShadowBatchRenderer`；根植植物从 Tree/Plant 或 IPlantableCrop 接入。`Shadow.prefab` 是 ShadowCaster2D，与可见脚底阴影独立；实际 SpaceScene 内两种阴影均隐藏，人工重力不恢复，返回地表复用绑定。
 - 接触/太阳共用 `IVisualGroundOffset`、晨昏透明度、`_WorldSunShadowColor/_WorldSunShadowBlur`，关闭太阳不关接触。脚点/宽度来自 `visual.shadows.contactWidth/footLocalPosition/footOverlap`；`ShadowFootprintResolver` 限于可见底边，AIECS 用待机帧固定 VisibleRect，不随攻击/跑步帧伸缩。
 - 默认脚点向主体内重叠高度的25%、最多0.25格，覆盖小物品导入轮廓的透明边距；显式 `footOverlap=0` 保留。`rendering/shadow_footprint_matrix` 同时检查普通/缩小物品与阴影贴合。
+- 接触阴影宽度统一按实际显示缩放计算；默认2.5格上限只约束未放大的物体，巨型自然资源、显式宽度物品及机械随视觉倍率放宽，不改变角色动画的固定宽度策略。
 - 接触阴影仍逐帧采样/裁剪，只与最近 GPU 提交的槽位/数量相同才跳过 SetData；空帧 count=0，可复用旧数据，收集中断/扩容强制上传。太阳代理按源帧/姿态/脚点差异提交，全局参数/裁剪盒仍逐帧更新，回池清缓存；能力查询复用 ItemMods.GetCapabilities，结构变化失效、属性实时读取。
 - 轮廓阴影用仿射中心/半轴算世界包围盒，保留翻面/负缩放/旋转/偏心脚点。`SunShadowSampling.hlsl` 共用当前帧 UV、世界 PPU、半埋裁剪；图集外沿透明，CPU 边界覆盖几何；太阳高度先 Clamp01 再幂运算，拒绝非有限投影。
 - `WorldShadowProjectionManager.ShadowProxy` 自行从 `SharedSpriteMeshCache` 读取源 Sprite 的柔化倍率，普通 Item 与机械方块不再各自传参；高 PPU 船件、机器共用同一网格外沿和柔化宽度，不修改主体纹理的 Point 过滤。
@@ -37,6 +44,8 @@
 - `Light2DSortingLayerUtility`：光源空列表保留 Prefab，建筑空列表接收全部，镜像同步；接收层不表示物理高度/逐灯 Owner 排除。`Mod_LightSource` 仅检测四元数 X/Y 倾斜后做欧拉 0.01° 修正；无自发光且无覆盖层时跳过 Sprite 检查。洞口采光由 DimensionTravelProgressStore.ReadCache/CaveExitAmbientLightCache 按入口/位置/拓扑变化更新，不轮询解析角色 JSON。
 
 ## 后处理与远景
+
+- 风纹避障由 `WindStreakObstacleField` 读取已加载地形及建筑/机械挡风格，按连通墙体和风向生成两侧绕流、墙后汇流的纹理；镜头跨格、挡风版本、地形 BlockingRevision 或风向明显改变才重算，Shader 每像素一次采样。Lua 仅验证纯格流场，不代表真实 GPU 画面。
 
 - 雾、云和风纹共用 `WeatherScreenRenderingContext` 查询本地玩家及最终相机栈；雾/云读取当前执行世界天气，风纹读取玩家场景天气，各自保留失效清理时机。共享查询不缓存世界或当前相机，效果原有身份记录仍用于重置。
 - `WindStreakRendererFeature/WindStreaks` 读取所属本机世界 `WeatherMgr.PresentedWind`，与植被共用平滑风向/强度；`windStreaks` 渲染 JSON 管阈值、速度、尺寸和透明度。只在本地主相机最终堆栈绘制一次，位于大雾后、加载边界云和宇宙远景前，不复制屏幕或建粒子；相位逐帧积分并补最短镜头位移，CPU/Shader 共用128格周期。无风/禁天气/换玩家或世界清理，暂停不推进；规则 `rendering/wind_streaks` 不代表 GPU 画面验收。

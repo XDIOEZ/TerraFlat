@@ -845,6 +845,7 @@ public partial class Inventory
                 SlotMaxVolume = Inventory_Data.DefaultSlotVolume
             });
         }
+        Data.NotifySlotsChanged();
 
         // 仅同步表现层；库存业务事件保持原有绑定。
         if (basePanel != null)

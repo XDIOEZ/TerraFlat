@@ -18,8 +18,8 @@
     {
       "id": "NaturalMineEntrance",
       "parent": "DimensionPortal_Base",
-      "gameName": "天然矿洞入口",
-      "description": "自然形成的地表矿洞入口；摧毁后会堵塞对应地下出口。",
+      "gameName": "山洞入口",
+      "description": "自然形成的地表山洞入口；摧毁后会堵塞对应地下出口。",
       "lootTableId": "MineEntrance_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -31,6 +31,9 @@
       "tags": ["InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "shadows": {
           "contactWidth": 1.55,
           "footOverlap": 0.0,
@@ -65,7 +68,7 @@
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
-          "isTrigger": false,
+          "isTrigger": true,
           "offset": {
             "x": 0.0,
             "y": 0.03
@@ -119,7 +122,7 @@
           "parameters": {
             "targetDimensionId": "cave",
             "requiresInstalledBuilding": false,
-            "blocksNavigation": true
+            "blocksNavigation": false
           }
         }
       },
@@ -163,6 +166,9 @@
       "tags": ["InventoryCategory.Functional"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "materialAddress": "Assets/9_Shaders/Material/Ground-Facility-Lit.mat",
         "shadows": {
           "footOverlap": 0.0,
           "footLocalPosition": {
@@ -196,7 +202,7 @@
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
-          "isTrigger": false,
+          "isTrigger": true,
           "offset": {
             "x": 0.0,
             "y": 0.03
@@ -221,7 +227,7 @@
           "parameters": {
             "targetDimensionId": "surface",
             "requiresInstalledBuilding": false,
-            "blocksNavigation": true
+            "blocksNavigation": false
           }
         }
       },

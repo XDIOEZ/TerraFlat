@@ -37,12 +37,13 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - `PlayerData_Dict` 用不可变角色 ID，`Name_User` 和存档名称仅显示；名称不参与磁盘路径。改名、复制、删除和时间读取统一用存档服务；UI 一次取得目录元数据，逐行不重扫整个目录。
 - 生态存档 ItemData 是生产者移交的独立快照，入世前复制；弱引用缓存按存档根/区块跨次复用记录。最终联合点仍重读成员、删除 GUID/恢复年份，仅补冻新增/替换快照和变化元数据；新增生态持久字段须同步 `EcologyFrozenChunkMetadata`。缓存不得用于活跃可变 ItemData；编解码器变更失效，公开角色策略单独捕获。
 - 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
-- 保存退出先在世界退出事件/输入解绑之前执行 `ItemMgr.SavePlayer`，世界事件结算后再写盘；`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 返回实际成功状态，退出回到菜单不能代替写盘成功。
-- 世界退出后写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。
+- 保存退出在停止联机、世界退出事件和场景解绑之前采集完整世界快照并成功写盘；失败保留当前游戏和重试入口。`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 的真实成功状态是退出门禁，回到菜单不能代替写盘成功。
+- 退出写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。运行时 AI 采集失败必须终止写盘。
 
 ## SQLite 事务与按需契约
 
 - 固定 `unity-sqlite-net 1.3.3`，每档一个 worker/连接：WAL、FULL、2MiB page cache、mmap=0、有界队列；直接打开真实数据库文件，不经资产接口载入整库。
+- 主菜单选档只解码 SQLite 并暂存 MOD 元数据；完整世界资源 Ready 后、场景激活和玩家创建前校验/恢复。入世前失败且 MOD runtime 卸载时保留重试；runtime 保留时清除，避免重复调用 `OnLoadSave`；切换 SaveData 根时清除。
 - 卸载脏记录先 Stage 到 session/revision，成功后才能撤掉解码数据。正式 Commit 只纳入冻结点之前的暂存，之后的修改留下一轮；未提交暂存不作为崩溃后的正式进度。保留当前/上一逻辑提交，共享未变行，无变化只更新时间；世界永久退役通过同修订的 scope removal 清理，失败不发布。
 - 生成与 chunk/weather 读取并行，全部就绪才 Commit Ready/恢复实体/申请表现；读取失败不能当作空差量。冷地表返回 Pending 时保留落地、爆炸和掉落的待结算预算。
 - 可逐出缓存只留冻结字节：Android 8MiB/256、Windows 32MiB/1024，任一触限逐出；活跃模型与系统租约另计。并发读取共享工作，各调用者独立取消；最后等待者离开才撤掉未完成读取，旧会话/旧 state 不得发布。
@@ -57,7 +58,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - 地表 WorldKey=PlanetId，维度为 PlanetId__dimension__DimensionId。RuntimeChunkBaseline 对同一 ChunkRuntime 只应用一次差量，新运行体重新建立基线。
 - RuntimeTileDeltas 保存完整 TerrainCell 与格墙损伤；ChangedItems 保存动态建筑及 AI；SupportCells 保存平台。Tile 栈由 Data_TileMap 读写，农业/支撑等独立列表均计入 HasChanges。
 - 普通建筑装船前经 RemoveRuntimeBuildingRecord 立即撤掉地面 ChangedItems 并记录移除身份，不能仅卸载表现；落地或回滚恢复走普通建筑记录，清同身份移除标记。机器归属通过作用域移交，只在当前所有者的 MachineArchive 保存。
-- AgricultureCells 仅保存水肥/真实作物，未完成锄地为会话状态。GroundLayerCells 保存采层/覆盖栈/草层；SnowCells 保存玩家厚度与天气基线，ContaminationCells 保存稳定污染 ID/数值；FireCells 仅稀疏保存活火强度与表面燃烧进度，卸载冻结、重载恢复且不补离开时长；天气批写按格合并并保留作物字段。
+- AgricultureCells 仅保存水肥/真实作物，未完成锄地为会话状态。GroundLayerCells 保存采层/覆盖栈/草层；SnowCells 保存玩家厚度与天气基线，ContaminationCells 保存稳定污染 ID/数值；FireCells 保存活火；CombustibilityCells（Order16）稀疏保存可燃性覆盖与已消耗秒数，烧尽零值也保留。SQLite chunk v2 将 v1 活火累计燃烧秒数迁入新层，旧编号不变；卸载冻结、重载恢复且不补离开时长，来源索引重建不补燃料；天气批写按格合并并保留作物字段。
 - 密集 AgricultureCells 运行态按局部格建立不序列化的索引，少于16格直接线性读取；追加、同数量替换和移除会使索引同步或失效，天气批量写与普通土壤提交共用 `GetOrAddAgricultureCell`，规则 `save/agriculture_cell_index`。
 - LiquidCells 只存局部坐标、稳定 LiquidId、深度；生成后覆盖、绑定前恢复，回到生成值删除差量。写液体不产生地形/农业差量，RecordLiquidBatch 先写权威内存再通知；缺失液体/污染定义明确拒绝恢复。
 - AI 休眠先写完整 ChangedItems 再卸载，跨帧保存冻结出生/睡醒迁移，合并活动快照保留休眠居民。宿主维护的临时 AI 由双向宿主/成员 GUID 保存，排除独立 AI 快照。

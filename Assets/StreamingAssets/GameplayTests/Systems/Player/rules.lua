@@ -23,7 +23,7 @@ test.system("player", "bicycle_carrier", {}, function(data)
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
     near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
     near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
-    assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射或完整外壳缺失")
+    assert(data.summonerBody == "Bicycle_Building" and data.prefabReady, "自行车放置映射、表现或按世界租借的物理声明缺失")
     local recipe = data.recipe
     assert(recipe.requiredStation == "workbench" and recipe.outputs[1].itemId == "Bicycle" and recipe.outputs[1].amount == 1,
         "自行车未接入工作台制作")
@@ -295,6 +295,23 @@ for _, case in ipairs({
     end, "翻滚方向：移动优先、静止朝准星、准星重合回退朝向、对角归一化")
 end
 
+-- 玩家根原点就是脚底，角色旋转中心、受击框和脚下实体碰撞各自对齐该基准。
+test.system("player", "collider_visual_alignment", {}, function(data)
+    local function near(a, b) return type(a) == "number" and math.abs(a - b) < .001 end
+    assert(data.hitTrigger and not data.bodyTrigger, "玩家受击与移动阻挡碰撞职责混淆")
+    assert(near(data.spriteBottom, 0) and math.abs(data.rollPivotY - data.spriteTop / 2) < .02,
+        "玩家锚点没有落在脚底，或翻滚旋转轴脱离角色中心")
+    assert(near(data.hitBottom, data.spriteBottom) and near(data.hitTop, data.spriteTop) and
+        near(data.hitWidth, data.spriteWidth), "受击框未跟随人物画布上下对齐")
+    assert(data.bodyBottom < 0 and data.bodyTop > 0 and
+        near(data.bodyCenter, -.07) and near(data.bodyWidth, .4), "玩家实体阻挡框不再跨脚底占地")
+    assert(near(data.heldAnchorY, .453125) and near(data.turnMirrorY, data.heldAnchorY),
+        "玩家手持挂点与转身目标未跟随脚底锚点调整")
+    assert(near(data.bubbleY - data.spriteTop, .017), "玩家头顶气泡未跟随新的脚底锚点")
+    assert(near(data.oxygenBarY, 1.067) and near(data.oxygenBarOffsetFromSpriteTop, -.433),
+        "玩家头顶氧气条未跟随立绘同步位移")
+end, "玩家脚底锚点：立绘、受击框、翻滚中心和脚下阻挡统一基准")
+
 test.system("player", "roll_input", {}, function(data)
     assert(data.path == "<Keyboard>/space" and data.actionType == "Button", "翻滚默认空格按钮没有接入输入资产")
     assert(data.editableCount == 1 and not data.initialStateCheck, "翻滚按键未进入重绑或会在启用时重复触发")
@@ -477,12 +494,16 @@ for _, case in ipairs({
 }) do
     test.system("player", "world_item_quick_pick", {mode = case.mode}, function(data)
         assert(data.accepted == case.accepted, "快速拿取成功或拒绝结果不符：" .. case.mode)
-        assert(data.amount == (case.mode == "partial" and 2 or 3) and data.durability == 13 and data.special == "preserved-state", "快速拿取损坏数量或实例状态")
+        assert(data.amount == (case.mode == "partial" and 2 or 3) and
+            data.durability == (case.mode == "partial" and 20 or 13) and data.special == "preserved-state",
+            "快速拿取损坏数量或实例状态")
         assert(data.binding == "<Mouse>/middleButton" and data.rebindable, "中键没有接入正式可重绑输入")
         if case.accepted then
             assert(data.selected == case.selected, "没有选择真实目标槽")
             if case.mode == "partial" then
-                assert(data.expectedGuid ~= 0 and data.expectedGuid ~= 601 and data.destinationAmount == 1 and data.destinationSpecial == "preserved-state" and data.bagIncoming, "部分搬运没有保留余量或拆分身份")
+                assert(data.expectedGuid ~= 0 and data.expectedGuid ~= 601 and data.destinationAmount == 1
+                    and data.destinationDurability == 13 and data.destinationSpecial == "preserved-state" and data.bagIncoming,
+                    "部分搬运没有带走当前件耐久、保留余量或拆分身份")
             else
                 assert(data.expectedGuid == 601 and data.destinationIncoming, "丢失原物品实例")
             end

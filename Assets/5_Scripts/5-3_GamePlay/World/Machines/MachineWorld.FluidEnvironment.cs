@@ -32,6 +32,18 @@ public static partial class MachineWorld
         return false;
     }
 
+    internal static bool TryGetFluidEnvironmentLiquidTemperature(string world, Vector2 position, out float temperature)
+    {
+        temperature = TemperatureMgr.DefaultAmbientTemperature;
+        if (GameplayWorldRegistry.TryGet(world, out _))
+        {
+            using var worldScope = GameplayWorldRegistry.UseWorld(world);
+            return TemperatureMgr.ExistingInstance != null &&
+                TemperatureMgr.ExistingInstance.TryGetAmbientTemperature(position, out temperature);
+        }
+        return WorldAddress.FromWorldKey(world).IsSurface && SpaceSurfaceQuery.TryGetAmbientTemperature(world, position, out temperature);
+    }
+
     internal static double GetFluidAmbientPressureKPa(MachineEntity node)
     {
         if (!TryGetLocalAtmosphereKey(node, out string atmosphereKey)) return AtmosphereService.PressureKPa(GetCurrentAtmosphere(node));

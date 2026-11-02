@@ -5,7 +5,7 @@
     <AssemblyName>Example.HarmonyMachines</AssemblyName>
     <RootNamespace>Example.HarmonyMachines</RootNamespace>
     <GameManagedDirectory Condition="'$(GameManagedDirectory)' == ''">$(MSBuildThisFileDirectory)..\..\..\Library\ScriptAssemblies</GameManagedDirectory>
-    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\Plugins\Harmony\0Harmony.dll</HarmonyDllPath>
+    <HarmonyDllPath Condition="'$(HarmonyDllPath)' == ''">$(MSBuildThisFileDirectory)..\..\..\Assets\StreamingAssets\ManagedModRuntime\0Harmony.dll</HarmonyDllPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="GamePlay"><HintPath>$(GameManagedDirectory)\GamePlay.dll</HintPath><Private>false</Private></Reference>

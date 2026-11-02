@@ -22,7 +22,7 @@ public enum SettingsPanelContext
 }
 
 /// <summary>
-/// 管理设置主面板的顶部入口与内嵌分页。
+/// 管理设置主面板的左侧分类导航与右侧内嵌分页。
 /// 游戏内使用完整页面；主菜单复用同一控制器，但只要求客户端本地设置页面存在。
 /// </summary>
 [DisallowMultipleComponent]
@@ -47,6 +47,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string GamePageName = "设置分页_游戏设置";
     public const string GameTabButtonName = "设置页签_游戏设置";
     public const string TabBarName = "设置分页栏";
+    public const string TabListName = "设置分页列表";
     public const string WorldTabButtonName = "设置页签_世界";
     public const string SessionTabButtonName = "设置页签_会话";
     public const string DebugTabButtonName = "设置页签_调试";
@@ -112,20 +113,22 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         0,
         1,
         2,
-        9,
-        2,
+        3,
+        4,
         5,
-        9,
+        6,
         8,
         0,
         0,
         0,
         0,
         9,
-        1,
+        10,
         7,
         11
     };
+
+    private static readonly int[] SidebarTabOrder = { 11, 0, 1, 2, 3, 4, 5, 6, 9, 10, 7, 8 };
 
     private static readonly string[] FirstSelectableNames =
     {
@@ -164,6 +167,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     private int currentPageIndex = -1;
     private bool currentLifecycleActive;
     private bool configured;
+    private float lastSidebarRootWidth = -1f;
     private SettingsPanelContext panelContext = SettingsPanelContext.InGame;
 
     #endregion
@@ -210,6 +214,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     {
         UnbindPanelLifecycle();
         basePanel = GetComponent<BasePanel>();
+        EnsureSidebarLayout(transform);
+        lastSidebarRootWidth = ((RectTransform)transform).rect.width;
         contentRect = ResolveOuterContent(transform);
         configured = basePanel != null && contentRect != null &&
                      FindTransform(transform, TabBarName) != null;
@@ -281,6 +287,173 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         ShowPage(initialPageIndex, false);
     }
 
+    #endregion
+
+    #region 左右设置布局
+
+    /// <summary>两种设置窗口共用左侧滚动分类与右侧内容的布局。</summary>
+    public static void EnsureSidebarLayout(Transform settingsRoot)
+    {
+        RectTransform rootRect = settingsRoot as RectTransform;
+        RectTransform sidebar = FindTransform(settingsRoot, TabBarName) as RectTransform;
+        RectTransform body = FindTransform(settingsRoot, "Scroll View") as RectTransform;
+        if (rootRect == null || sidebar == null || body == null)
+            return;
+
+        ApplySidebarBounds(rootRect, sidebar, body);
+        HorizontalLayoutGroup oldLayout = sidebar.GetComponent<HorizontalLayoutGroup>();
+        if (oldLayout != null)
+        {
+            oldLayout.enabled = false;
+            if (Application.isPlaying)
+                Destroy(oldLayout);
+            else
+                DestroyImmediate(oldLayout);
+        }
+
+        RectTransform tabList = FindDirectChild(sidebar, TabListName) as RectTransform;
+        bool createdList = tabList == null;
+        if (createdList)
+        {
+            GameObject listObject = new GameObject(TabListName, typeof(RectTransform));
+            listObject.layer = sidebar.gameObject.layer;
+            tabList = listObject.GetComponent<RectTransform>();
+            tabList.SetParent(sidebar, false);
+        }
+
+        tabList.anchorMin = new Vector2(0f, 1f);
+        tabList.anchorMax = Vector2.one;
+        tabList.pivot = new Vector2(0.5f, 1f);
+        tabList.anchoredPosition = Vector2.zero;
+        tabList.sizeDelta = Vector2.zero;
+
+        for (int index = sidebar.childCount - 1; index >= 0; index--)
+        {
+            Transform child = sidebar.GetChild(index);
+            if (child == tabList || child.GetComponent<Button>() == null)
+                continue;
+
+            child.SetParent(tabList, false);
+            child.SetAsFirstSibling();
+        }
+
+        // 旧版游戏内 Prefab 没有语言页签时，复用现有公共页签的视觉结构。
+        if (FindTransform(tabList, LanguageTabButtonName) == null)
+        {
+            Transform template = FindTransform(tabList, GraphicsTabButtonName);
+            if (template != null)
+            {
+                GameObject languageTab = Instantiate(template.gameObject, tabList);
+                languageTab.name = LanguageTabButtonName;
+                TextMeshProUGUI label = languageTab.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                    label.text = "语言";
+            }
+        }
+
+        int visibleIndex = 0;
+        for (int index = 0; index < SidebarTabOrder.Length; index++)
+        {
+            Transform tab = FindTransform(tabList, TabButtonNames[SidebarTabOrder[index]]);
+            if (tab == null)
+                continue;
+
+            tab.gameObject.SetActive(true);
+            tab.SetSiblingIndex(visibleIndex++);
+            LayoutElement element = tab.GetComponent<LayoutElement>();
+            if (element != null)
+            {
+                element.preferredHeight = 60f;
+                element.flexibleHeight = 0f;
+            }
+        }
+
+        VerticalLayoutGroup vertical = tabList.GetComponent<VerticalLayoutGroup>() ??
+                                       tabList.gameObject.AddComponent<VerticalLayoutGroup>();
+        vertical.padding = new RectOffset(8, 8, 8, 8);
+        vertical.spacing = 8f;
+        vertical.childAlignment = TextAnchor.UpperCenter;
+        vertical.childControlWidth = true;
+        vertical.childControlHeight = true;
+        vertical.childForceExpandWidth = true;
+        vertical.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = tabList.GetComponent<ContentSizeFitter>() ??
+                                   tabList.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        if (sidebar.GetComponent<RectMask2D>() == null)
+            sidebar.gameObject.AddComponent<RectMask2D>();
+        Image background = sidebar.GetComponent<Image>();
+        if (background != null)
+            background.raycastTarget = true;
+
+        ScrollRect navigation = sidebar.GetComponent<ScrollRect>() ??
+                                sidebar.gameObject.AddComponent<ScrollRect>();
+        navigation.viewport = sidebar;
+        navigation.content = tabList;
+        navigation.horizontal = false;
+        navigation.vertical = true;
+        navigation.movementType = ScrollRect.MovementType.Clamped;
+        navigation.inertia = true;
+        navigation.scrollSensitivity = 28f;
+        navigation.horizontalScrollbar = null;
+        navigation.verticalScrollbar = null;
+        if (createdList)
+            navigation.verticalNormalizedPosition = 1f;
+
+        Transform confirmation = FindTransform(settingsRoot, SettingsExitConfirmationController.LayerName);
+        if (confirmation != null && confirmation.parent == settingsRoot)
+            confirmation.SetAsLastSibling();
+    }
+
+    /// <summary>内容区随安全区宽度变化自适应，左栏宽度不挤占手机右侧操作空间。</summary>
+    private static void ApplySidebarBounds(
+        RectTransform rootRect,
+        RectTransform sidebar,
+        RectTransform body)
+    {
+        float width = rootRect.rect.width > 1f ? rootRect.rect.width : 1440f;
+        float margin = Mathf.Clamp(width * 0.035f, 24f, 54f);
+        float sidebarWidth = Mathf.Clamp(width * 0.22f, 160f, 284f);
+        float gap = Mathf.Clamp(width * 0.012f, 12f, 18f);
+
+        sidebar.anchorMin = Vector2.zero;
+        sidebar.anchorMax = Vector2.up;
+        sidebar.pivot = new Vector2(0f, 0.5f);
+        sidebar.offsetMin = new Vector2(margin, 84f);
+        sidebar.offsetMax = new Vector2(margin + sidebarWidth, -90f);
+
+        body.anchorMin = Vector2.zero;
+        body.anchorMax = Vector2.one;
+        body.pivot = new Vector2(0.5f, 0.5f);
+        body.offsetMin = new Vector2(margin + sidebarWidth + gap, 84f);
+        body.offsetMax = new Vector2(-margin, -90f);
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        if (!configured)
+            return;
+
+        RectTransform rootRect = transform as RectTransform;
+        if (rootRect == null || Mathf.Abs(rootRect.rect.width - lastSidebarRootWidth) < 0.5f)
+            return;
+
+        RectTransform sidebar = FindTransform(transform, TabBarName) as RectTransform;
+        RectTransform body = FindTransform(transform, "Scroll View") as RectTransform;
+        if (sidebar != null && body != null)
+        {
+            ApplySidebarBounds(rootRect, sidebar, body);
+            lastSidebarRootWidth = rootRect.rect.width;
+        }
+    }
+
+    #endregion
+
+    #region 分页初始化
+
     /// <summary>从主滚动区域自身取得 Content，避免命中下拉模板的同名节点。</summary>
     private static RectTransform ResolveOuterContent(Transform settingsRoot)
     {
@@ -291,7 +464,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         return scrollRect != null ? scrollRect.content : null;
     }
 
-    /// <summary>为顶部按钮绑定各自的主分页。</summary>
+    /// <summary>为左侧分类按钮绑定各自的主分页。</summary>
     private void BindTabButtons()
     {
         for (int index = 0; index < tabButtons.Length; index++)
@@ -442,7 +615,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         ShowPage(WorldPageIndex, true);
     }
 
-    /// <summary>按固定索引切换页面并同步顶部高亮、布局和手柄焦点。</summary>
+    /// <summary>按固定索引切换页面并同步左侧高亮、布局和手柄焦点。</summary>
     private void ShowPage(int pageIndex, bool focusFirstSelectable)
     {
         if (!configured || pageIndex < 0 || pageIndex >= pages.Length ||
@@ -472,7 +645,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             FocusCurrentPageFirstSelectable();
     }
 
-    /// <summary>刷新顶部页签的选中与未选中颜色。</summary>
+    /// <summary>刷新左侧页签的选中与未选中颜色。</summary>
     private void RefreshTabVisuals(int activeTabIndex)
     {
         for (int index = 0; index < tabButtons.Length; index++)
@@ -487,7 +660,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             ReusableUITabVisual sharedVisual = tabButtons[index].GetComponent<ReusableUITabVisual>();
             if (sharedVisual != null)
             {
-                sharedVisual.SetSelected(active);
+                // 设置侧栏统一未选中配色，不沿用公共页签 Prefab 的较亮底色。
+                sharedVisual.SetSelected(active, FlatWorldUITheme.TabInactive, FlatWorldUITheme.TabLabelInactive);
                 continue;
             }
             tabBackgrounds[index].color = active ? FlatWorldUITheme.TabActive : FlatWorldUITheme.TabInactive;
@@ -552,13 +726,11 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
     private bool IsTabIncluded(int tabIndex)
     {
-        if (tabIndex == 3 || tabIndex == 4 || tabIndex == 6 || tabIndex == 10)
-            return false;
         if (tabIndex == 11)
             return true;
 
         if (panelContext == SettingsPanelContext.InGame)
-            return tabIndex >= 0 && tabIndex <= 9;
+            return tabIndex >= 0 && tabIndex <= 10;
 
         return (tabIndex >= 1 && tabIndex <= 7) || tabIndex == 9 || tabIndex == 10;
     }

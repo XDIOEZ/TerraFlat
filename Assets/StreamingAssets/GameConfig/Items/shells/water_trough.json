@@ -33,7 +33,7 @@
       "tags": ["InventoryCategory.Functional"],
       "parent": "WoodenBarrel_Building",
       "gameName": "水槽-建筑",
-      "description": "放在地面的400升混合液体水槽，可接入液体泵或出气口；装拆时保留组分、温度、每口待输出批次和耐久。",
+      "description": "放在地面的400升混合液体水槽，可接入液体管网输送或接收液体；装拆时保留组分、温度、待输出批次和耐久。",
       "weight": 8,
       "volume": 16,
       "stackable": false,

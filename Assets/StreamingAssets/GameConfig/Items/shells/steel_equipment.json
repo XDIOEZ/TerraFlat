@@ -33,7 +33,7 @@
               {
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "钢头盔防护",
-                "DefenseBonus": { "Physical": 6 },
+                "DefenseBonus": { "Physical": 6, "Fire": 3, "Radiation": 2 },
                 "CoveredParts": ["Head"]
               }
             ]
@@ -72,7 +72,7 @@
               {
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "钢手套防护",
-                "DefenseBonus": { "Physical": 4 },
+                "DefenseBonus": { "Physical": 4, "Fire": 2, "Radiation": 1 },
                 "CoveredParts": ["LeftHand", "RightHand"]
               }
             ]
@@ -111,7 +111,7 @@
               {
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "钢腿甲防护",
-                "DefenseBonus": { "Physical": 6 },
+                "DefenseBonus": { "Physical": 6, "Fire": 3, "Radiation": 2 },
                 "CoveredParts": ["Pelvis", "LeftLeg", "RightLeg"]
               }
             ]
@@ -150,7 +150,7 @@
               {
                 "$concreteType": "EquipmentInstance_Defense",
                 "Name": "钢靴子防护",
-                "DefenseBonus": { "Physical": 3 },
+                "DefenseBonus": { "Physical": 3, "Fire": 2, "Radiation": 1 },
                 "CoveredParts": ["LeftLeg", "RightLeg"]
               }
             ]

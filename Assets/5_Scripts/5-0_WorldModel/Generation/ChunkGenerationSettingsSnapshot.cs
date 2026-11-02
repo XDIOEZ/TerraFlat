@@ -247,7 +247,7 @@ namespace FlatWorld.WorldModel
 
         /// <summary>把配置表里的原始参数整理成生成器可以直接使用的安全数值。</summary>
         internal ChunkGenerationSettingsSnapshot(IReadOnlyDictionary<string, double> numbers,
-            IReadOnlyDictionary<string, string> texts)
+            IReadOnlyDictionary<string, string> texts, bool usesPairedPortalExits)
         {
             ProbabilityTables = DiscreteProbabilityCatalog.FromGenerationParameters(numbers);
             // 所有默认值和数字范围都在这里一次处理好，后面生成每个格子时就不用反复检查。
@@ -685,7 +685,9 @@ namespace FlatWorld.WorldModel
                 "cave.resource.looseMinDistance", 5), 0, 128);
             CaveLooseResourceMaxDistance = Clamp(GetInt(numbers,
                 "cave.resource.looseMaxDistance", 12), CaveLooseResourceMinDistance, 128);
-            CavePortalItemId = GetText(texts, "cave.portal.itemId", "CaveExit");
+            // 无显式入口定义时沿用 Profile 已冻结的入口配对身份。
+            CavePortalItemId = GetText(texts, "cave.portal.itemId",
+                usesPairedPortalExits ? "CaveExit" : "NaturalMineEntrance");
             CavePortalTargetDimensionId = GetText(
                 texts,
                 "cave.portal.targetDimensionId",

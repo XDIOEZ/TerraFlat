@@ -52,7 +52,6 @@ MonoBehaviour:
     Type: 1
     BitData: 
   DefenseValues:
-    Cutting: 12
-    Piercing: 12
-    Chopping: 12
-    Blunt: 12
+    Physical: 12
+    Fire: 0
+    Radiation: 0

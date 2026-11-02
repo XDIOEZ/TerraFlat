@@ -35,11 +35,11 @@ public static class ContaminationCatalogLoader
             yield break;
         }
 
-        string manifestJson = null;
+        ContaminationManifestDto manifest = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-            BuiltInManifestPath,
-            text => manifestJson = text,
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+            BuiltInManifestPath, DeserializeManifest,
+            value => manifest = value,
             exception => readError = exception);
         if (readError != null)
         {
@@ -47,10 +47,8 @@ public static class ContaminationCatalogLoader
             yield break;
         }
 
-        ContaminationManifestDto manifest;
         try
         {
-            manifest = DeserializeManifest(manifestJson);
             ValidateManifest(manifest);
         }
         catch (Exception exception)
@@ -67,11 +65,11 @@ public static class ContaminationCatalogLoader
                 continue;
 
             string packagePath = ResolvePackagePath(package.Path);
-            string packageJson = null;
+            ContaminationCatalogDto catalog = null;
             readError = null;
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(
-                packagePath,
-                text => packageJson = text,
+            yield return BuiltInContentBinaryCatalog.ReadFileAsync(
+                packagePath, ContaminationDefinitionFactory.DeserializeCatalog,
+                value => catalog = value,
                 exception => readError = exception);
             if (readError != null)
             {
@@ -81,7 +79,6 @@ public static class ContaminationCatalogLoader
 
             try
             {
-                ContaminationCatalogDto catalog = ContaminationDefinitionFactory.DeserializeCatalog(packageJson);
                 foreach (ContaminationDefinition definition in ContaminationDefinitionFactory.BuildCatalog(catalog))
                 {
                     if (!ids.Add(definition.Id))
@@ -106,6 +103,22 @@ public static class ContaminationCatalogLoader
         catch (Exception exception)
         {
             onFailed?.Invoke(exception);
+        }
+    }
+
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+    {
+        ContaminationManifestDto manifest = BuiltInContentBinaryCatalog.ReadFile(BuiltInManifestPath, DeserializeManifest);
+        ValidateManifest(manifest);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (ContaminationPackageDto package in manifest.Packages)
+        {
+            if (!package.Enabled) continue;
+            ContaminationCatalogDto catalog = BuiltInContentBinaryCatalog.ReadFile(
+                ResolvePackagePath(package.Path), ContaminationDefinitionFactory.DeserializeCatalog);
+            foreach (ContaminationDefinition definition in ContaminationDefinitionFactory.BuildCatalog(catalog))
+                if (!ids.Add(definition.Id)) throw new InvalidDataException("跨污染分包存在重复 ID：" + definition.Id);
         }
     }
 

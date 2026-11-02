@@ -30,15 +30,20 @@ namespace FlatWorld.Dialogue
         /// <summary>独立加载反馈配置，错误配置直接报告，不悄悄替换为另一套阈值。</summary>
         public static TemperatureSpeechSettings LoadSettings()
         {
-            TextAsset asset = Resources.Load<TextAsset>(SettingsResourcePath);
-            if (asset == null)
-                throw new InvalidOperationException("缺少 Dialogue/TemperatureFeedback.json");
-            TemperatureSpeechSettings loaded = JsonConfigurationCache.Deserialize<TemperatureSpeechSettings>(asset.text);
+            TemperatureSpeechSettings loaded = BuiltInContentBinaryCatalog.ReadResource(
+                SettingsResourcePath, ParseResourceConfiguration);
             if (loaded == null)
-                throw new InvalidOperationException("体温反馈配置为空。");
+                throw new InvalidOperationException("缺少 Dialogue/TemperatureFeedback.json");
             loaded.Validate();
             return loaded;
         }
+
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration() => _ = LoadSettings();
+
+        private static TemperatureSpeechSettings ParseResourceConfiguration(string json)
+            => JsonConfigurationCache.Deserialize<TemperatureSpeechSettings>(json)
+               ?? throw new InvalidOperationException("体温反馈配置为空。");
 
         private static ICharacterSpeechContextContributor Create() =>
             new TemperatureSpeechContextContributor(LoadSettings());

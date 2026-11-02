@@ -498,6 +498,10 @@ do
     end
     test.system("space", "ship_collider_batch", {}, function(data)
         assert(data.operation == "ship_collider_batch" and data.scope == "production-domain", "缺少正式碰撞合批结果")
+        local floor = data.floorDataBuilding
+        assert(floor and floor.kind == "building" and floor.layer == 6 and floor.ports == "none" and
+            floor.logic == "" and not floor.blocksPassage and not floor.castsShadow,
+            "纯船地板应使用无运行逻辑、无阻挡体的数据建筑后端，不能逐格创建受击触发器")
         assert(data.full.inputPieces == 96 and data.overlapping.inputPieces == 97 and data.blockingOverlap.inputPieces == 98,
             "完整地板与同格设备输入样本不完整")
         local full = expected_rectangle(0, 0, 12, 8, false)

@@ -56,10 +56,11 @@ public static partial class FarmlandSystem
             Mathf.Max(0f, Mathf.Abs(offset.y) - 0.5f)).sqrMagnitude <= range * range;
     }
 
-    public static bool IsOpen(RuntimeTerrainTileSample sample, bool allowCoveringSupport = false) =>
+    public static bool IsOpen(RuntimeTerrainTileSample sample, bool allowCoveringSupport = false,
+        bool allowSurfaceWater = false) =>
         (allowCoveringSupport || TerrainSupportLayer.GetExposedTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0) &&
         sample.Cell.GroundTileId != 0 && sample.Cell.BackTileId == 0 && sample.Cell.BlockingTileId == 0 &&
-        sample.LiquidDepth <= 0f &&
+        (allowSurfaceWater || sample.LiquidDepth <= 0f) &&
         (sample.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
         (sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 ||
             allowCoveringSupport && TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 &&

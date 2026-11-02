@@ -101,6 +101,40 @@ internal static class SurvivalNumericBatch
 
     #endregion
 
+    #region 辐射危险与伤害计时
+
+    private const float RadiationDamageIntervalSeconds = 1f;
+
+    internal struct RadiationExposure
+    {
+        public float Radiation, SafeMinimum, SafeMaximum, DamageClock, Seconds;
+        public bool HasSample, IsDangerous;
+        public int DamageTicks;
+    }
+
+    internal static void Advance(ref RadiationExposure step)
+    {
+        step.DamageTicks = 0;
+        step.IsDangerous = step.HasSample &&
+            (step.Radiation < step.SafeMinimum || step.Radiation > step.SafeMaximum);
+        if (!step.IsDangerous)
+        {
+            step.DamageClock = 0f;
+            return;
+        }
+
+        step.DamageClock += Mathf.Max(0f, step.Seconds);
+        step.DamageTicks = Mathf.FloorToInt(step.DamageClock / RadiationDamageIntervalSeconds);
+        step.DamageClock -= step.DamageTicks * RadiationDamageIntervalSeconds;
+    }
+
+    internal static void Advance(Span<RadiationExposure> steps)
+    {
+        for (int i = 0; i < steps.Length; i++) Advance(ref steps[i]);
+    }
+
+    #endregion
+
     #region 体温传热与危险缓冲
 
     internal struct TemperatureWaterCooling

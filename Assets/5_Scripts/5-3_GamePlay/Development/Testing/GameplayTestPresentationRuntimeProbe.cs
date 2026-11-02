@@ -24,6 +24,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         GameplayTestRuntimeProbe.RegisterAsync("ui_settings", "settings_locale_open", CaptureSettings);
         GameplayTestRuntimeProbe.Register("ui_settings", "settings_locale_close", CloseSettings);
+        GameplayTestRuntimeProbe.Register("ui_settings", "new_game_window_close", CaptureNewGameWindowClose);
         GameplayTestRuntimeProbe.Register("ui_settings", "local_float_preference_persistence", CaptureLocalFloatPreferencePersistence);
         GameplayTestRuntimeProbe.Register("ui_settings", "status_hud_readability", CaptureStatusHudReadability);
         GameplayTestRuntimeProbe.RegisterAsync("audio", "voice_lifecycle", CaptureAudio);
@@ -37,13 +38,13 @@ public static partial class GameplayTestPresentationRuntimeProbe
     private static JObject CaptureStatusHudReadability(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
-        BasePanel panel = UnityEngine.Object.FindObjectsOfType<BasePanel>()
-            .FirstOrDefault(candidate => candidate != null &&
-                (candidate.name == "UI_Food" || candidate.name == "UI_Food(Clone)"));
+        Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+        food?.RefreshUI();
+        BasePanel panel = food?.panelUI;
         if (panel == null) throw new InvalidOperationException("没有找到本地玩家的生存状态面板。");
         UnityEngine.UI.Slider[] sliders = panel.GetComponentsInChildren<UnityEngine.UI.Slider>(true);
         var bars = new JArray();
-        foreach (string name in new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" })
+        foreach (string name in new[] { "血量", "水", "维生素", "体温" })
         {
             UnityEngine.UI.Slider slider = Array.Find(sliders, value => value != null && value.name == name);
             UnityEngine.UI.Graphic fill = slider != null && slider.fillRect != null ? slider.fillRect.GetComponent<UnityEngine.UI.Graphic>() : null;
@@ -55,7 +56,26 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["fill"] = new JArray(fillColor.r, fillColor.g, fillColor.b, fillColor.a),
                 ["text"] = new JArray(textColor.r, textColor.g, textColor.b, textColor.a) });
         }
-        return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars };
+        ThreeSegmentStatusBarGraphic segments = panel.GetComponentInChildren<ThreeSegmentStatusBarGraphic>(true);
+        panel.TryGetText("DataText_食物", out TextMeshProUGUI foodText);
+        if (segments == null || foodText == null)
+            throw new InvalidOperationException("食物状态条缺少三色填充或合计数值。");
+        Transform foodLegend = panel.transform.Find("Panel/食物/FoodLegend");
+        Color foodTextColor = foodText.color;
+        var colors = new JArray();
+        foreach (Color color in new[] { segments.FirstColor, segments.SecondColor, segments.ThirdColor })
+            colors.Add(new JArray(color.r, color.g, color.b, color.a));
+        bars.Add(new JObject { ["name"] = "食物", ["visible"] = segments.gameObject.activeInHierarchy,
+            ["fill"] = colors[0].DeepClone(), ["segmentColors"] = colors,
+            ["text"] = new JArray(foodTextColor.r, foodTextColor.g, foodTextColor.b, foodTextColor.a) });
+        Nutrition nutrition = food.Data.nutrition;
+        Vector3 targets = segments.TargetFractions;
+        return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars,
+            ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text,
+            ["legendVisible"] = foodLegend != null && foodLegend.gameObject.activeInHierarchy,
+            ["nutrition"] = new JArray(nutrition.Carbohydrates, nutrition.Fat, nutrition.Protein),
+            ["maxima"] = new JArray(nutrition.Max_Carbohydrates, nutrition.Max_Fat, nutrition.Max_Protein),
+            ["fractions"] = new JArray(targets.x, targets.y, targets.z) };
     }
     #endregion
 
@@ -353,11 +373,13 @@ public static partial class GameplayTestPresentationRuntimeProbe
             try { panel.Open(); panel.Open(); }
             finally { panel.Opened -= onOpen; panel.Closed -= onClose; }
             bool invalidLocale = FlatWorldLocalizationService.TrySetLocale("lua-probe-missing-locale");
+            JObject sidebarVisuals = CaptureSettingsSidebarTabVisuals(panel);
             var group = panel.GetComponent<CanvasGroup>();
             var result = new JObject
             {
                 ["formalWindow"] = panel.GetComponent<SettingsEditSessionController>() != null,
                 ["commonPageControllers"] = commonPageControllers,
+                ["sidebarVisuals"] = sidebarVisuals,
                 ["registered"] = fixture.Ui.GetAllPanelsOfType(GameManager.MainMenuSettingsPanelKey).Contains(panel),
                 ["open"] = panel.IsOpen(), ["blocking"] = panel.IsGameplayInputBlocking,
                 ["managerBlocking"] = fixture.Ui.HasOpenGameplayInputBlockingPanel(),
@@ -389,6 +411,52 @@ public static partial class GameplayTestPresentationRuntimeProbe
             complete(result);
         }
         finally { if (!retained) fixture.Dispose(); }
+    }
+
+    /// <summary>在正式设置窗口切到镜头页，采样所有左侧页签后恢复原始界面页。</summary>
+    private static JObject CaptureSettingsSidebarTabVisuals(BasePanel panel)
+    {
+        Transform tabList = panel.GetComponentsInChildren<Transform>(true)
+            .FirstOrDefault(node => node.name == SettingsActionListPagination.TabListName);
+        if (tabList == null)
+            throw new MissingReferenceException("正式设置窗口缺少左侧分页列表。");
+
+        Button[] buttons = tabList.GetComponentsInChildren<Button>(true);
+        Button camera = Array.Find(buttons, button => button.name == "镜头控制");
+        Button initial = Array.Find(buttons, button => button.name == "UI设置");
+        if (buttons.Length < 9 || camera == null || initial == null)
+            throw new MissingReferenceException("正式设置窗口左侧分页按钮不完整。");
+
+        JArray SampleColor(Color color) => new JArray(color.r, color.g, color.b, color.a);
+        var tabs = new JArray();
+        camera.onClick.Invoke();
+        try
+        {
+            foreach (Button button in buttons)
+            {
+                Image background = button.GetComponent<Image>();
+                TMP_Text caption = button.GetComponentInChildren<TMP_Text>(true);
+                if (background == null || caption == null)
+                    throw new MissingReferenceException("设置页签缺少背景或文字：" + button.name);
+
+                tabs.Add(new JObject
+                {
+                    ["name"] = button.name,
+                    ["background"] = SampleColor(background.color),
+                    ["caption"] = SampleColor(caption.color)
+                });
+            }
+        }
+        finally { initial.onClick.Invoke(); }
+
+        return new JObject
+        {
+            ["tabs"] = tabs,
+            ["activeBackground"] = SampleColor(FlatWorldUITheme.TabActive),
+            ["inactiveBackground"] = SampleColor(FlatWorldUITheme.TabInactive),
+            ["activeCaption"] = SampleColor(FlatWorldUITheme.TabLabelActive),
+            ["inactiveCaption"] = SampleColor(FlatWorldUITheme.TabLabelInactive)
+        };
     }
 
     // 从正式窗口采样共用页并再次装配，Lua 检查唯一组件、原实例和页面归属。
@@ -434,5 +502,115 @@ public static partial class GameplayTestPresentationRuntimeProbe
             ["fixtureReleased"] = activeSettings == null
         };
     }
+    #endregion
+
+    #region 新世界窗口关闭流程回归
+
+    /// <summary>通过正式新世界窗口验证世界页右上关闭只回到名称页，名称页右上仍关闭窗口。</summary>
+    private static JObject CaptureNewGameWindowClose(Player player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        UIManager ui = UIManager.ExistingInstance ?? throw new InvalidOperationException("正式 UIManager 尚未就绪。");
+        if (ui.TryGetPanel(GameManager.NewGamePanelKey, out _))
+            throw new InvalidOperationException("当前已有新世界窗口，拒绝借用或关闭其他来源的面板。");
+
+        GameManager manager = UnityEngine.Object.FindObjectOfType<GameManager>() ??
+            throw new InvalidOperationException("正式 GameManager 尚未就绪。");
+        PlanetData originalReadyPlanetData = manager.ReadyPlanetData;
+        manager.ReadyPlanetData = originalReadyPlanetData == null
+            ? new PlanetData()
+            : FastCloner.FastCloner.DeepClone(originalReadyPlanetData);
+        BasePanel panel = null;
+        JObject result = null;
+        try
+        {
+            manager.OpenNewGame();
+            if (!ui.TryGetPanel(GameManager.NewGamePanelKey, out panel) || panel == null)
+                throw new InvalidOperationException("正式新世界入口没有创建窗口。");
+
+            Button closeButton = panel.GetButton(GameManager.NewGameBackButtonKey);
+            Button worldSettingsButton = panel.GetButton(GameManager.NewGameWorldSettingsButtonKey);
+            Button difficultyButton = panel.GetButton(GameManager.NewGameDifficultyButtonKey);
+            Button bottomIdentityButton = panel.GetButton(GameManager.NewGameIdentityButtonKey);
+            TMP_Text closeLabel = panel.GetText(GameManager.NewGameBackButtonKey + "_文字");
+            TMP_InputField playerNameInput = panel.GetInputField(GameManager.NewGamePlayerInputKey);
+            Transform[] nodes = panel.GetComponentsInChildren<Transform>(true);
+            Transform identityPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameIdentityPageKey);
+            Transform worldPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameWorldPageKey);
+            Transform difficultyPage = Array.Find(nodes, node => node != null && node.name == GameManager.NewGameDifficultyPanelKey);
+            if (closeButton == null || worldSettingsButton == null || difficultyButton == null || closeLabel == null ||
+                playerNameInput == null || identityPage == null || worldPage == null)
+                throw new InvalidOperationException("正式新世界面板缺少关闭按钮、名称输入或分页。");
+
+            const string playerNameValue = "ui_close_probe_player";
+            const string worldSeedValue = "ui_close_probe_seed";
+            playerNameInput.SetTextWithoutNotify(playerNameValue);
+            difficultyButton.onClick.Invoke();
+            Button difficultyCloseButton = panel.GetButton(GameManager.NewGameDifficultyCloseButtonKey);
+            if (difficultyCloseButton == null || difficultyPage == null)
+                throw new InvalidOperationException("正式难度设置页没有创建关闭按钮或遮罩。");
+            difficultyCloseButton.onClick.Invoke();
+            bool difficultyCloseStayedInNewGame = panel.IsOpen() &&
+                identityPage.gameObject.activeSelf && !worldPage.gameObject.activeSelf &&
+                !difficultyPage.gameObject.activeSelf;
+
+            worldSettingsButton.onClick.Invoke();
+            TMP_InputField worldSeedInput = panel.GetInputField(GameManager.NewGameSeedInputKey);
+            if (worldSeedInput == null)
+                throw new InvalidOperationException("正式世界设置页缺少种子输入框。");
+            worldSeedInput.SetTextWithoutNotify(worldSeedValue);
+
+            bool worldPageOpened = worldPage.gameObject.activeSelf && !identityPage.gameObject.activeSelf;
+            bool bottomBackHiddenInWorld = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
+            string worldCloseText = closeLabel.text;
+            closeButton.onClick.Invoke();
+
+            bool worldCloseReturnedToIdentity = panel.IsOpen() &&
+                identityPage.gameObject.activeSelf && !worldPage.gameObject.activeSelf;
+            bool playerNameRetained = playerNameInput.text == playerNameValue;
+            bool worldSeedRetained = worldSeedInput.text == worldSeedValue;
+            bool bottomBackHiddenInIdentity = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
+            string identityBackText = closeLabel.text;
+            closeButton.onClick.Invoke();
+
+            result = new JObject
+            {
+                ["scope"] = "live-isolated-world",
+                ["difficultyCloseStayedInNewGame"] = difficultyCloseStayedInNewGame,
+                ["worldPageOpened"] = worldPageOpened,
+                ["worldCloseText"] = worldCloseText,
+                ["expectedWorldCloseText"] = FlatWorldLocalizationService.GetUiText("关闭"),
+                ["worldCloseReturnedToIdentity"] = worldCloseReturnedToIdentity,
+                ["playerNameRetained"] = playerNameRetained,
+                ["worldSeedRetained"] = worldSeedRetained,
+                ["bottomBackHiddenInWorld"] = bottomBackHiddenInWorld,
+                ["bottomBackHiddenInIdentity"] = bottomBackHiddenInIdentity,
+                ["identityBackText"] = identityBackText,
+                ["expectedIdentityBackText"] = FlatWorldLocalizationService.GetUiText("返回主界面"),
+                ["identityTopCloseClosesPanel"] = !panel.IsOpen()
+            };
+        }
+        finally
+        {
+            try
+            {
+                if (panel == null)
+                    ui.TryGetPanel(GameManager.NewGamePanelKey, out panel);
+                if (panel != null)
+                {
+                    panel.Close();
+                    ui.DestroyPanel(panel);
+                }
+            }
+            finally
+            {
+                manager.ReadyPlanetData = originalReadyPlanetData;
+            }
+        }
+
+        result["panelUnregistered"] = !ui.TryGetPanel(GameManager.NewGamePanelKey, out _);
+        return result;
+    }
+
     #endregion
 }

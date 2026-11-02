@@ -27,7 +27,8 @@ public sealed class RuntimeSceneObjectHierarchy : MonoBehaviour
     {
         if (!scenes.TryGetValue(scene.handle, out RuntimeSceneObjectHierarchy hierarchy) || hierarchy == null)
         {
-            var root = new GameObject("Runtime Objects") { hideFlags = HideFlags.DontSave };
+            // 分类根随所属场景销毁，避免 DontSave 让整棵对象树残留。
+            var root = new GameObject("Runtime Objects");
             SceneManager.MoveGameObjectToScene(root, scene);
             hierarchy = root.AddComponent<RuntimeSceneObjectHierarchy>();
             hierarchy.sceneHandle = scene.handle;

@@ -767,6 +767,7 @@ namespace FlatWorld.WorldModel
                 _fire = null;
             }
             ReleaseFireCellStorage();
+            ReleaseCombustibilityStorage();
             Changed = null;
             LiquidBatchChanged = null;
             ClearEnvironmentBatches();
@@ -851,7 +852,8 @@ namespace FlatWorld.WorldModel
         /// <summary>液体身份或深度改变，显示、导航和玩法应重新读取同一权威格。</summary>
         Liquid,
         /// <summary>世界格子火焰强度改变；实体自身燃烧状态不属于这里。</summary>
-        Fire
+        Fire,
+        Combustibility
     }
 
     /// <summary>一次“某个地形格子发生变化”的通知内容。</summary>

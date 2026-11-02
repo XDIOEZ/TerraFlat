@@ -3,21 +3,25 @@ using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 背包和容器共用的名称搜索与分类并集，只过滤显示，不改变真实库存及槽位索引。
+/// 背包和容器共用的名称搜索与单选分类，只过滤显示，不改变真实库存及槽位索引。
 /// </summary>
 public sealed class InventoryBagSearch : MonoBehaviour
 {
     #region 配置与状态
 
     private const string ClearButtonName = "清空搜索";
+    private const string CategoryTabsName = "FWUI_InventoryCategoryTabs";
+    private const string CategoryButtonPrefix = "FWUI_Category_";
 
     [SerializeField] private TMP_InputField searchInput; // 标题栏中的共用输入框。
 
     private readonly Dictionary<RuntimeItemDefinition, string> englishNames = new();
-    private UIMultiSelectDropdown categoryDropdown;
+    private readonly List<(string id, string label, Button button, UnityAction callback)> categoryButtons = new();
+    private string selectedCategoryId;
     private InventoryVirtualizedSlotGrid virtualizedGrid;
     private TMP_Text emptyLabel;
     private ScrollRect inventoryScroll;
@@ -31,7 +35,7 @@ public sealed class InventoryBagSearch : MonoBehaviour
 
     /// <summary>当前是否存在有效搜索词。</summary>
     public bool HasActiveQuery => query.Length > 0;
-    public bool HasActiveFilter => HasActiveQuery || (categoryDropdown != null && categoryDropdown.SelectedValues.Count > 0);
+    public bool HasActiveFilter => HasActiveQuery || !string.IsNullOrEmpty(selectedCategoryId);
 
     #endregion
 
@@ -41,16 +45,8 @@ public sealed class InventoryBagSearch : MonoBehaviour
     {
         if (searchInput == null) return;
         filterPredicate ??= MatchesFilter;
-        categoryDropdown = GetComponentInChildren<UIMultiSelectDropdown>(true);
         emptyLabel = transform.Find("FWUI_InventoryFilterEmpty")?.GetComponent<TMP_Text>();
-        if (categoryDropdown != null)
-        {
-            var options = new List<UIMultiSelectDropdown.Option>();
-            foreach (InventoryItemCategoryCatalog.Category category in InventoryCategoryFilter.Categories)
-                options.Add(new UIMultiSelectDropdown.Option(category.Id, category.Label));
-            categoryDropdown.SetOptions(options);
-            categoryDropdown.SelectionChanged += OnCategoriesChanged;
-        }
+        BindCategoryButtons();
         clearButton = searchInput.transform.Find(ClearButtonName)?.GetComponent<Button>();
         searchInput.onValueChanged.AddListener(OnSearchTextChanged);
         if (clearButton != null)
@@ -67,7 +63,9 @@ public sealed class InventoryBagSearch : MonoBehaviour
     private void OnDisable()
     {
         if (searchInput != null) searchInput.onValueChanged.RemoveListener(OnSearchTextChanged);
-        if (categoryDropdown != null) categoryDropdown.SelectionChanged -= OnCategoriesChanged;
+        foreach (var entry in categoryButtons)
+            if (entry.button != null) entry.button.onClick.RemoveListener(entry.callback);
+        categoryButtons.Clear();
         if (boundData != null) boundData.Event_RefreshUI -= OnSlotRefreshed;
         if (clearButton != null)
             clearButton.onClick.RemoveListener(ClearSearch);
@@ -109,6 +107,47 @@ public sealed class InventoryBagSearch : MonoBehaviour
 
     #region 搜索与显示
 
+    /// <summary>分类按钮单选，顶部“全部分类”恢复完整列表。</summary>
+    private void BindCategoryButtons()
+    {
+        Transform tabs = transform.Find(CategoryTabsName);
+        if (tabs == null) return;
+        RegisterCategoryButton(tabs, "all", "全部分类", null);
+        foreach (InventoryItemCategoryCatalog.Category category in InventoryCategoryFilter.Categories)
+            RegisterCategoryButton(tabs, category.Id, category.Label, category.Id);
+        UpdateCategoryButtons();
+    }
+
+    private void RegisterCategoryButton(Transform tabs, string key, string label, string id)
+    {
+        Transform child = tabs.Find(CategoryButtonPrefix + key);
+        if (child == null || !child.TryGetComponent(out Button button))
+            throw new MissingComponentException($"库存分类栏缺少按钮 {CategoryButtonPrefix + key}。");
+        UnityAction callback = () => SelectCategory(id);
+        button.onClick.AddListener(callback);
+        categoryButtons.Add((id, label, button, callback));
+    }
+
+    private void SelectCategory(string id)
+    {
+        if (string.Equals(selectedCategoryId, id, StringComparison.OrdinalIgnoreCase)) return;
+        selectedCategoryId = id;
+        UpdateCategoryButtons();
+        OnCategoriesChanged();
+    }
+
+    private void UpdateCategoryButtons()
+    {
+        foreach (var entry in categoryButtons)
+        {
+            if (entry.button == null) continue;
+            entry.button.GetComponent<ReusableUITabVisual>()?.SetSelected(
+                string.Equals(selectedCategoryId, entry.id, StringComparison.OrdinalIgnoreCase));
+            TMP_Text text = entry.button.GetComponentInChildren<TMP_Text>(true);
+            if (text != null) text.text = FlatWorldLocalizationService.GetUiText(entry.label);
+        }
+    }
+
     /// <summary>输入变化时重新比较所有现存槽位。</summary>
     private void OnSearchTextChanged(string value)
     {
@@ -145,6 +184,7 @@ public sealed class InventoryBagSearch : MonoBehaviour
     private void OnLanguageChanged(string _)
     {
         englishNames.Clear();
+        UpdateCategoryButtons();
         RefreshAllSlots();
     }
 
@@ -211,7 +251,7 @@ public sealed class InventoryBagSearch : MonoBehaviour
 
     public bool MatchesFilter(ItemData item)
     {
-        return item != null && InventoryCategoryFilter.MatchesAny(item.Tags, categoryDropdown?.SelectedValues)
+        return item != null && InventoryCategoryFilter.MatchesCategory(item.Tags, selectedCategoryId)
             && (!HasActiveQuery || Matches(item));
     }
 

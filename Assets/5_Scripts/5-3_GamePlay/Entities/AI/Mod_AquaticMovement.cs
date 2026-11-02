@@ -173,7 +173,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         temperatureSafetyRetreat = false;
         temperatureSafetyReached = false;
         ResetStrandedMotion();
-        threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
+        RefreshThreatDetectionRadiusContribution();
         habitatKnown = fleeingAction = false;
         waterDepth = 0f;
         loaded = true;
@@ -187,6 +187,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     protected override void OnUnload()
     {
         loaded = false;
+        if (threatDetector != null) threatDetector.RemoveMinimumDetectionRadiusForSource(this);
         if (health != null) health.OnDamageReceived -= HandleFishDamage;
         fishingRod = null;
         predatorCarrier = null;
@@ -212,6 +213,14 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         presentation?.Dispose();
         presentation = null;
     }
+
+    public override void OnResourcesReloaded()
+    {
+        if (loaded) RefreshThreatDetectionRadiusContribution();
+    }
+
+    private void RefreshThreatDetectionRadiusContribution()
+        => threatDetector.SetMinimumDetectionRadiusForSource(this, Mathf.Max(fleeTriggerDistance, fleeSafeDistance));
     #endregion
 
     #region 游动、觅食与干燥

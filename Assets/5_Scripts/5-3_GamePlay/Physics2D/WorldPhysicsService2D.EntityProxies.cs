@@ -88,7 +88,8 @@ public sealed partial class WorldPhysicsService2D
         Vector2 origin = logicalPosition ?? (Vector2)(snapshot?.transform?.position ?? Vector3.zero);
         Vector3 presentationPosition = WorldLocalPresentation.ProjectPosition(origin);
         EntityProxyShell shell = RentEntityProxyShell(definition.Mode, presentationPosition);
-        var proxy = new WorldPhysicsEntityProxy2D(this, entity, snapshot, definition, shell, applyPose, stateAuthority, logicalPosition: origin);
+        var proxy = new WorldPhysicsEntityProxy2D(this, entity, snapshot, definition, shell, applyPose, stateAuthority,
+            item: entity as Item, logicalPosition: origin);
         try
         {
             if (!shell.SharedFixedBody) ConfigureProxyBody(shell.Body, snapshot, definition, stateAuthority);
@@ -314,6 +315,8 @@ public sealed partial class WorldPhysicsService2D
         if (entityProxies.TryGetValue(proxy.Entity, out var current) && ReferenceEquals(current, proxy))
             entityProxies.Remove(proxy.Entity);
         EntityProxyShell shell = proxy.Shell;
+        if (shell.OwnsRoot && shell.Root != null)
+            shell.Root.GetComponent<WorldPhysicsItemContactRelay2D>()?.ClearBinding();
         ReleaseProxyBoundaryImages(shell);
         foreach (Collider2D collider in shell.ActiveColliders)
         {
@@ -509,7 +512,7 @@ public sealed partial class WorldPhysicsService2D
         foreach (WorldPhysicsEntityProxy2D proxy in entityProxies.Values)
         {
             if (!proxy.IsValid) continue;
-            if (proxy.Item != null)
+            if (proxy.Item != null && !proxy.Shell.OwnsRoot)
             {
                 for (int i = 0; i < proxy.Shell.FixedProjectionColliders.Count; i++)
                 {
@@ -518,6 +521,11 @@ public sealed partial class WorldPhysicsService2D
                     if (source != null && projectedCollider != null)
                         projectedCollider.transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
                 }
+                continue;
+            }
+            if (proxy.Item != null)
+            {
+                SynchronizeDetachedItemProxy(proxy.Item);
                 continue;
             }
             Vector2 projected = WorldLocalPresentation.ProjectPosition(proxy.Snapshot?.transform?.position ?? (Vector3)proxy.LogicalOrigin);

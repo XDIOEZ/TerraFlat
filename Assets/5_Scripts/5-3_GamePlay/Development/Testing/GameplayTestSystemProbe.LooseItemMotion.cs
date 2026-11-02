@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+#if !LOOSE_ITEM_MOTION_OFFLINE
 using FlatWorld.WorldModel;
+#endif
 using Newtonsoft.Json.Linq;
+#if !LOOSE_ITEM_MOTION_OFFLINE
 using Unity.Mathematics;
+#endif
 using UnityEngine;
 
 public static partial class GameplayTestSystemProbe
@@ -14,7 +18,9 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("mechanical/loose_item_motion", LooseItemMotionValues);
         operations.Add("mechanical/loose_item_sources", LooseItemSourceValues);
+#if !LOOSE_ITEM_MOTION_OFFLINE
         operations.Add("mechanical/loose_item_terrain_batch", LooseItemTerrainBatchValues);
+#endif
     }
 
     // 夹具只提供地形、墙、环绕与带形，时间积分与力合成直接调用正式生产内核。
@@ -113,6 +119,7 @@ public static partial class GameplayTestSystemProbe
         finally { self?.Dispose(); }
     }
 
+#if !LOOSE_ITEM_MOTION_OFFLINE
     // 自有世界只准备地形，水态、移动阻挡、环绕与生命周期均调用正式运动采样。
     private static JObject LooseItemTerrainBatchValues(JObject args)
     {
@@ -193,5 +200,6 @@ public static partial class GameplayTestSystemProbe
             ["reloadedX"] = reloaded.x, ["oldEpochX"] = oldEpoch.x
         };
     }
+#endif
     #endregion
 }

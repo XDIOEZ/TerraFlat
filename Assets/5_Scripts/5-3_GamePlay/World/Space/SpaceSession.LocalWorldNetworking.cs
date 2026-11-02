@@ -235,7 +235,7 @@ namespace FlatWorld.Spaceflight
             }
             item.transform.SetPositionAndRotation(data.transform.position, data.transform.rotation);
             item.transform.localScale = data.transform.scale;
-            Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
             if (body != null)
             {
                 body.position = data.transform.position;

@@ -22,6 +22,7 @@ namespace FlatWorld.Networking.Gameplay
             public ChunkRuntime Chunk;
             public readonly HashSet<int> Cells = new();
             public readonly HashSet<int> FireCells = new();
+            public readonly HashSet<int> LiquidCells = new();
             public long FireRevision;
         }
 
@@ -87,6 +88,7 @@ namespace FlatWorld.Networking.Gameplay
             persistedServerCancellation = new CancellationTokenSource();
             SaveDataMgr.AuthoritativeTerrainCellChanged += QueueTerrainCell;
             SaveDataMgr.AuthoritativeTerrainFireChanged += QueueTerrainFire;
+            SaveDataMgr.AuthoritativeLiquidCellsChanged += QueueTerrainLiquid;
         }
 
         private void StopTerrainServerBridge()
@@ -102,6 +104,7 @@ namespace FlatWorld.Networking.Gameplay
             persistedServerCancellation = null;
             SaveDataMgr.AuthoritativeTerrainCellChanged -= QueueTerrainCell;
             SaveDataMgr.AuthoritativeTerrainFireChanged -= QueueTerrainFire;
+            SaveDataMgr.AuthoritativeLiquidCellsChanged -= QueueTerrainLiquid;
             dirtyTerrain.Clear();
             terrainFlushBuffer.Clear();
         }
@@ -172,6 +175,18 @@ namespace FlatWorld.Networking.Gameplay
             if (changed.Revision > pending.FireRevision) pending.FireRevision = changed.Revision;
         }
 
+        private void QueueTerrainLiquid(string worldKey, ChunkRuntime chunk, ReadOnlySpan<int> indices)
+        {
+            ChunkTerrainData terrain = chunk?.Terrain;
+            if (!NetworkServer.active || !HasRemoteReadyClient() || string.IsNullOrWhiteSpace(worldKey) ||
+                terrain == null || terrain.IsDisposed || chunk.DataStatus != ChunkDataStatus.Ready) return;
+            var key = (worldKey, chunk.Address);
+            if (!dirtyTerrain.TryGetValue(key, out DirtyTerrainChunk pending) || !ReferenceEquals(pending.Chunk, chunk))
+                dirtyTerrain[key] = pending = new DirtyTerrainChunk { WorldKey = worldKey, Chunk = chunk };
+            foreach (int index in indices)
+                if ((uint)index < (uint)terrain.CellCount) pending.LiquidCells.Add(index);
+        }
+
         private bool PublishTerrainPlacement(TileBuildingCell cell)
         {
             ChunkTerrainData terrain = cell.RuntimeChunk?.Terrain;
@@ -217,8 +232,13 @@ namespace FlatWorld.Networking.Gameplay
                         WorldFireCellState state = terrain.GetFireState(cell % terrain.Width, cell / terrain.Width);
                         fireCells[index++] = new NetworkTerrainFireCellState { Index = cell, Intensity = state.Intensity };
                     }
-                    if (cells.Length > 0 || fireCells.Length > 0)
-                        SendTerrainCells(pending.WorldKey, pending.Chunk, cells, null, 0, fireCells, pending.FireRevision);
+                    var liquidCells = pending.LiquidCells.Count == 0
+                        ? Array.Empty<NetworkTerrainLiquidCellState>() : new NetworkTerrainLiquidCellState[pending.LiquidCells.Count];
+                    index = 0;
+                    foreach (int cell in pending.LiquidCells)
+                        liquidCells[index++] = NetworkTerrainLiquidCellState.Capture(terrain, cell);
+                    if (cells.Length > 0 || fireCells.Length > 0 || liquidCells.Length > 0)
+                        SendTerrainCells(pending.WorldKey, pending.Chunk, cells, null, 0, fireCells, pending.FireRevision, liquidCells);
                 }
                 catch (Exception exception) { Debug.LogException(exception); }
             }
@@ -243,48 +263,82 @@ namespace FlatWorld.Networking.Gameplay
             int cellCount = checked(terrain.Width * terrain.Height);
             var cells = new TerrainBuildingCellState[cellCount];
             var fireCells = new NetworkTerrainFireCellState[cellCount];
+            var liquidCells = new NetworkTerrainLiquidCellState[cellCount];
             for (int i = 0; i < cellCount; i++)
             {
                 cells[i] = TerrainBuildingCellState.Capture(terrain, i);
                 WorldFireCellState fire = terrain.GetFireState(i % terrain.Width, i / terrain.Width);
                 fireCells[i] = new NetworkTerrainFireCellState { Index = i, Intensity = fire.Intensity };
+                liquidCells[i] = NetworkTerrainLiquidCellState.Capture(terrain, i);
             }
-            SendTerrainCells(request.WorldKey, chunk, cells, connection, request.RequestToken, fireCells, terrain.Revision);
+            SendTerrainCells(request.WorldKey, chunk, cells, connection, request.RequestToken,
+                fireCells, terrain.Revision, liquidCells);
         }
 
         private void SendTerrainCells(string world, ChunkRuntime chunk, TerrainBuildingCellState[] cells,
             NetworkConnectionToClient target, uint requestToken, NetworkTerrainFireCellState[] fireCells = null,
-            long fireRevision = 0)
+            long fireRevision = 0, NetworkTerrainLiquidCellState[] liquidCells = null)
         {
             cells ??= Array.Empty<TerrainBuildingCellState>();
             fireCells ??= Array.Empty<NetworkTerrainFireCellState>();
-            if (requestToken != 0 && (cells.Length == 0 || cells.Length != fireCells.Length)) return;
-            int total = Math.Max(cells.Length, fireCells.Length);
-            if (total == 0) return;
+            liquidCells ??= Array.Empty<NetworkTerrainLiquidCellState>();
+            if (requestToken != 0 && (cells.Length == 0 || cells.Length != fireCells.Length ||
+                cells.Length != liquidCells.Length)) return;
+            if (cells.Length == 0 && fireCells.Length == 0 && liquidCells.Length == 0) return;
             int limit = Transport.active?.GetMaxPacketSize(Channels.Reliable) ?? 32 * 1024;
-            int batchSize = Math.Min(64, Math.Max(1, (limit - 1024) / 64));
-            long revision = ++nextTerrainRevision;
-            for (int offset = 0; offset < total; offset += batchSize)
+            var header = new NetworkTerrainChunkMessage
             {
-                int count = Math.Min(batchSize, total - offset);
-                int terrainCount = Math.Max(0, Math.Min(count, cells.Length - offset));
-                int fireCount = Math.Max(0, Math.Min(count, fireCells.Length - offset));
-                var terrainBatch = terrainCount == 0 ? Array.Empty<TerrainBuildingCellState>() : new TerrainBuildingCellState[terrainCount];
-                var fireBatch = fireCount == 0 ? Array.Empty<NetworkTerrainFireCellState>() : new NetworkTerrainFireCellState[fireCount];
-                if (terrainCount > 0) Array.Copy(cells, offset, terrainBatch, 0, terrainCount);
-                if (fireCount > 0) Array.Copy(fireCells, offset, fireBatch, 0, fireCount);
-                var message = new NetworkTerrainChunkMessage
-                {
-                    WorldKey = world, DimensionId = chunk.Address.DimensionId,
-                    ChunkX = chunk.Address.ChunkOrigin.X, ChunkY = chunk.Address.ChunkOrigin.Y,
-                    TotalCells = checked(chunk.Terrain.Width * chunk.Terrain.Height), Revision = revision,
-                    RequestToken = requestToken, Cells = terrainBatch,
-                    FireRevision = fireRevision, FireCells = fireBatch
-                };
+                WorldKey = world, DimensionId = chunk.Address.DimensionId,
+                ChunkX = chunk.Address.ChunkOrigin.X, ChunkY = chunk.Address.ChunkOrigin.Y,
+                TotalCells = checked(chunk.Terrain.Width * chunk.Terrain.Height), Revision = ++nextTerrainRevision,
+                RequestToken = requestToken, FireRevision = fireRevision
+            };
+            foreach (NetworkTerrainChunkMessage message in BuildTerrainCellBatches(header, cells, fireCells, liquidCells, limit))
+            {
                 if (target != null) SendTerrainToObserver(target, message);
                 else foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
                     SendTerrainToObserver(connection, message);
             }
+        }
+
+        // 按实际 Mirror 字节数分批，液体 MOD 身份较长时也不超过传输上限。
+        internal static IEnumerable<NetworkTerrainChunkMessage> BuildTerrainCellBatches(NetworkTerrainChunkMessage header,
+            TerrainBuildingCellState[] cells, NetworkTerrainFireCellState[] fireCells,
+            NetworkTerrainLiquidCellState[] liquidCells, int limit)
+        {
+            int total = Math.Max(cells.Length, Math.Max(fireCells.Length, liquidCells.Length));
+            for (int offset = 0; offset < total;)
+            {
+                int count = Math.Min(64, total - offset);
+                NetworkTerrainChunkMessage message;
+                while (true)
+                {
+                    int terrainCount = Math.Max(0, Math.Min(count, cells.Length - offset));
+                    int fireCount = Math.Max(0, Math.Min(count, fireCells.Length - offset));
+                    int liquidCount = Math.Max(0, Math.Min(count, liquidCells.Length - offset));
+                    message = header;
+                    message.Cells = terrainCount == 0 ? Array.Empty<TerrainBuildingCellState>() : new TerrainBuildingCellState[terrainCount];
+                    message.FireCells = fireCount == 0 ? Array.Empty<NetworkTerrainFireCellState>() : new NetworkTerrainFireCellState[fireCount];
+                    message.LiquidCells = liquidCount == 0 ? Array.Empty<NetworkTerrainLiquidCellState>() : new NetworkTerrainLiquidCellState[liquidCount];
+                    if (terrainCount > 0) Array.Copy(cells, offset, message.Cells, 0, terrainCount);
+                    if (fireCount > 0) Array.Copy(fireCells, offset, message.FireCells, 0, fireCount);
+                    if (liquidCount > 0) Array.Copy(liquidCells, offset, message.LiquidCells, 0, liquidCount);
+                    if (TerrainMessageFitsTransport(message, limit)) break;
+                    if (count == 1) throw new InvalidOperationException("单格地形液体消息超过传输上限。");
+                    count /= 2;
+                }
+                offset += count;
+                yield return message;
+            }
+        }
+
+        internal static bool TerrainMessageFitsTransport(NetworkTerrainChunkMessage message, int limit)
+        {
+            // 连接代际在发送时填写，以最大编码长度测量保证每个观察者都能接收。
+            message.RealmRevision = uint.MaxValue;
+            using NetworkWriterPooled writer = NetworkWriterPool.Get();
+            NetworkMessages.Pack(message, writer);
+            return writer.Position + Batcher.MaxMessageOverhead(writer.Position) <= limit;
         }
 
         private static void SendTerrainToObserver(NetworkConnectionToClient connection, NetworkTerrainChunkMessage message)
@@ -350,7 +404,7 @@ namespace FlatWorld.Networking.Gameplay
             try
             {
                 if (!cursor.Apply(message.Revision, message.RequestToken, message.TotalCells, message.Cells,
-                        message.FireRevision, message.FireCells))
+                        message.FireRevision, message.FireCells, message.LiquidCells))
                     cursor.RequireSnapshot();
                 else if (message.RequestToken != 0)
                     cursor.NextRequestTime = Time.unscaledTime + 2f;
@@ -856,7 +910,7 @@ namespace FlatWorld.Networking.Gameplay
             cursor.SetPersistenceBaseline(pending.Revision);
             foreach (NetworkTerrainChunkMessage delta in pending.Deltas)
                 if (delta.Revision > pending.Revision && !cursor.Apply(delta.Revision, 0, delta.TotalCells, delta.Cells,
-                        delta.FireRevision, delta.FireCells))
+                        delta.FireRevision, delta.FireCells, delta.LiquidCells))
                     pending.NeedsTerrainRefresh = true;
             if (pending.NeedsTerrainRefresh) cursor.RequireSnapshot();
             persistedChunks.Remove(key);

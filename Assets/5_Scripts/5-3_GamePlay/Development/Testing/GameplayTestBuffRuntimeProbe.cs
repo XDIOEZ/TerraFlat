@@ -169,21 +169,33 @@ public static class GameplayTestBuffRuntimeProbe
     }
     #endregion
 
-    #region 正式感染叠层与自然到期
+    #region 正式感染续期与自然到期
     private static JObject CaptureInfection(Player player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var scope = new GameplayTestInfectionFixture();
         Mod_BuffManager manager = scope.Manager;
         const string id = InfectionBuffIds.Infection;
-        var result = new JObject { ["baseline"] = scope.Snapshot(), ["added"] = manager.AddBuff(id) };
+        LiquidDefinition dirtyWater = GameRes.Instance?.GetLiquidDefinition("core:dirty_water")
+            ?? throw new InvalidOperationException("脏水定义未加载。");
+        var result = new JObject
+        {
+            ["baseline"] = scope.Snapshot(),
+            ["dirtyWaterChance"] = dirtyWater.DrinkEffects.Count == 1 &&
+                dirtyWater.DrinkEffects[0].BuffId == id &&
+                Mathf.Abs(dirtyWater.DrinkEffects[0].Chance - 0.2f) < 0.00001f,
+            ["added"] = LiquidDrinkEffectProcessor.Apply(scope.Actor, dirtyWater, () => 0f, showFeedback: false).AnyEffectTriggered
+        };
         if (!manager.TryGetBuff(id, out BuffInstance infection))
             throw new InvalidOperationException("正式感染目录未能创建独立宿主状态。");
         result["one"] = scope.Snapshot(infection);
         float beforeDamage = scope.Health.Hp;
         manager.Tick(7f);
         result["beforeStack"] = scope.Snapshot(infection);
-        result["secondAdded"] = manager.AddBuff(id);
+        float remainingBeforeMiss = infection.RemainingDurationSeconds;
+        result["missedDrinking"] = !LiquidDrinkEffectProcessor.Apply(scope.Actor, dirtyWater, () => 0.99f, showFeedback: false).AnyEffectTriggered &&
+            Mathf.Abs(infection.RemainingDurationSeconds - remainingBeforeMiss) < 0.00001f;
+        result["secondAdded"] = LiquidDrinkEffectProcessor.Apply(scope.Actor, dirtyWater, () => 0f, showFeedback: false).AnyEffectTriggered;
         result["sameInstance"] = manager.TryGetBuff(id, out BuffInstance same) && ReferenceEquals(infection, same);
         result["two"] = scope.Snapshot(infection);
         manager.Tick(3f);

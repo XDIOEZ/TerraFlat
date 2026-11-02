@@ -69,13 +69,18 @@ public static partial class GameplayTestPresentationRuntimeProbe
     {
         var fixture = new RenderingFixture(player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);
-        var floors = new System.Collections.Generic.List<Item>();
+        var floors = new System.Collections.Generic.List<int>();
+        string floorWorldKey = GameplayWorldRegistry.GetItemWorldKey(player);
         // 船板保留到案例结束截图后，再由隔离宿主统一回收。
         IEnumerator ReleaseFloorsAfterScreenshot()
         {
-            foreach (Item floor in floors)
-                if (floor != null && !floor.DestructionHandled) fixture.Items.DespawnItem(floor, false);
-            yield break;
+            foreach (int floorId in floors)
+            {
+                using var world = GameplayWorldRegistry.UseWorld(floorWorldKey);
+                if (MachineWorld.GetById(floorId) != null && !MachineWorld.DiscardPlacementCandidate(floorId))
+                    throw new InvalidOperationException("渲染夹具的自有船板未能释放。");
+            }
+            yield return null;
         }
         GameplayTestRuntimeProbe.RegisterAsyncCleanup(ReleaseFloorsAfterScreenshot);
         JObject result = null;
@@ -85,20 +90,37 @@ public static partial class GameplayTestPresentationRuntimeProbe
             var floorSorting = new JArray();
             foreach (string floorId in new[] { "ShipFloor_Iron", "ShipFloor_Refractory" })
             {
-                Item floor = fixture.Items.InstantiateItem(floorId, player.transform.position +
-                    (floorId == "ShipFloor_Iron" ? Vector3.down : Vector3.up) * .5f);
-                floors.Add(floor);
-                floor.Load();
+                using var world = GameplayWorldRegistry.UseWorld(floorWorldKey);
+                ItemData snapshot = GameRes.ExistingInstance.CreateItemData(floorId);
+                snapshot.transform.position = WorldLocalPresentation.ToLogical(player.transform.position) +
+                    (floorId == "ShipFloor_Iron" ? Vector3.down : Vector3.up) * 2f;
+                Mod_Building.SetInstalledDataState(snapshot);
+                floors.Add(snapshot.Guid);
+                MachineWorld.Place(snapshot);
             }
             yield return null;
             yield return null;
-            foreach (Item floor in floors)
+            foreach (int floorId in floors)
             {
-                WorldSortingManager.ReadExternalRendererKey(floor.Sprite, out int layer, out int order);
-                floorSorting.Add(new JObject { ["id"] = floor.itemData.IDName, ["loaded"] = floor.IsInitialized,
+                using var world = GameplayWorldRegistry.UseWorld(floorWorldKey);
+                MachineEntity floor = MachineWorld.GetById(floorId) ??
+                    throw new InvalidOperationException("渲染夹具的正式船板未保留到排序采样。");
+                Vector2 position = (Vector2)floor.Cell + Vector2.one * .5f;
+                ChunkMgr manager = ChunkMgr.ExistingInstance;
+                if (!manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample) ||
+                    !manager.TryGetRuntimeChunkView(sample.Address, out var view) || view == null)
+                    throw new InvalidOperationException("船板所在的真实区块表现未就绪。");
+                var owner = view.GetComponentInChildren<ChunkTilemapRenderer>(true);
+                Transform sortingRoot = owner.GetMechanicalDepthPartSortingRoot(
+                    new Vector3Int(sample.LocalCell.x, sample.LocalCell.y, floor.Definition.Layer), 0);
+                SortingGroup floorGroup = sortingRoot != null ? sortingRoot.GetComponent<SortingGroup>() : null;
+                if (floorGroup == null) throw new InvalidOperationException("船板没有提交正式地面绘制批次。");
+                int layer = floorGroup.sortingLayerID, order = floorGroup.sortingOrder;
+                floorSorting.Add(new JObject { ["id"] = floor.Definition.Id, ["worldKey"] = floor.ScopeKey,
+                    ["loaded"] = ReferenceEquals(MachineWorld.GetById(floor.Id), floor) && sortingRoot.gameObject.activeInHierarchy,
                     ["layer"] = SortingLayer.IDToName(layer), ["order"] = order,
                     ["layerValue"] = SortingLayer.GetLayerValueFromID(layer),
-                    ["projectedIntoDynamicBatch"] = BuildingDepthMeshBridge.IsProjected(floor.Sprite) });
+                    ["renderQueue"] = sortingRoot.GetComponentInChildren<MeshRenderer>().sharedMaterial.renderQueue });
             }
             WorldSortingManager.ReadExternalRendererKey(player.Sprite, out int playerLayer, out _);
             fixture.WorldItem = fixture.Items.InstantiateItem("Axe_Stone", player.transform.position + Vector3.right * 6f);
@@ -201,7 +223,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["realPlayerController"] = fixture.Controller.isActiveAndEnabled,
                 ["bodyVisible"] = body.gameObject.activeInHierarchy && body.enabled && body.color.a > 0f,
                 ["worldSortingMatches"] = sortingMatches, ["category"] = category,
-                ["floors"] = floorSorting, ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer),
+                ["floors"] = floorSorting, ["worldKey"] = floorWorldKey,
+                ["groundFacilityQueue"] = ChunkBatchRendererGroupService.GetLayerRenderQueue(
+                    ChunkBatchRendererGroupService.VisualLayer.GroundFacility),
+                ["playerLayerValue"] = SortingLayer.GetLayerValueFromID(playerLayer),
                 ["realWorldItemLoaded"] = realWorldItemLoaded, ["worldVisible"] = worldVisible,
                 ["worldGuid"] = worldGuid, ["worldItemReleased"] = worldItemReleased,
                 ["heldGuid"] = fixture.Item.itemData.Guid, ["heldInHand"] = fixture.Item.InHand,

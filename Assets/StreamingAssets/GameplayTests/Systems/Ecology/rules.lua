@@ -189,6 +189,62 @@ for _, seed in ipairs({17413, 8321}) do
     end, "生态稳定身份、气候筛选与阻挡：种子" .. value)
 end
 
+test.system("ecology", "host_cell_occupancy", {}, function(data)
+    local function validate(sample)
+        local cells, hosts, companions = {}, {}, {}
+        local trees, berries, roots = 0, 0, 0
+        for _, placement in ipairs(sample.placements) do
+            if placement.hostGuid == 0 then
+                local key = placement.x .. ":" .. placement.y
+                assert(not cells[key], "不同独立自然物生成在同一世界格：" .. key)
+                cells[key] = placement
+                hosts[placement.guid] = placement
+                roots = roots + 1
+                if placement.itemId == "probe-tree" then
+                    trees = trees + 1
+                elseif placement.itemId == "probe-berry" then
+                    berries = berries + 1
+                else
+                    error("未知的独立自然物类型")
+                end
+            else
+                table.insert(companions, placement)
+            end
+        end
+        assert(roots == 16, "有合格替补自然物的格子不应出现空缺")
+        for _, companion in ipairs(companions) do
+            local host = hosts[companion.hostGuid]
+            assert(host and host.itemId == "probe-tree" and
+                companion.itemId == "probe-hive" and companion.x == host.x and
+                companion.y == host.y,
+                "伴生蜂巢没有绑定到本格真实树木，或被独立占位规则拦截")
+        end
+        assert(#companions == trees, "蜂巢数量没有跟随真实生成的树木")
+        assert(sample.treeTag == (trees > 0) and sample.berryTag == (berries > 0),
+            "邻区宿主标签与实际抢到格子的自然物不一致")
+        return trees, berries
+    end
+
+    local treeCount, treeBerryCount = validate(data.treeFirst)
+    local berryTreeCount, berryCount = validate(data.berryFirst)
+    local missingTreeCount, missingBerryCount = validate(data.treeMissing)
+    local mixedTreeCount, mixedBerryCount = validate(data.mixed)
+    assert(treeCount == 16 and treeBerryCount == 0 and
+        berryTreeCount == 0 and berryCount == 16 and
+        missingTreeCount == 0 and missingBerryCount == 16,
+        "规则先后顺序或树木概率不成立时没有正确选择唯一自然物")
+    assert(mixedTreeCount > 0 and mixedBerryCount > 0,
+        "混合概率下树木与浆果没有各自生成在不同格子")
+    assert(#data.treeFirst.placements == #data.treeRepeated.placements,
+        "同一种子重复生成改变了自然物数量")
+    for index, first in ipairs(data.treeFirst.placements) do
+        local repeated = data.treeRepeated.placements[index]
+        for _, key in ipairs({"guid", "hostGuid", "x", "y", "itemId", "offsetX", "offsetY"}) do
+            assert(first[key] == repeated[key], "重复生成改变了独立物或伴生物的确定性数据：" .. key)
+        end
+    end
+end, "树木和浆果丛同格互斥，空位回退、伴生物及邻区标签仍然正确")
+
 -- 正式生成器的邻区标签查询由扩展输入计数，业务判断全部在 Lua。
 test.system("ecology", "neighborhood_cache", {scenario = "identity"}, function(data)
     local sample = data.samples

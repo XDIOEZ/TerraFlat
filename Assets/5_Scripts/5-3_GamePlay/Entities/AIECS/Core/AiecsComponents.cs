@@ -200,7 +200,8 @@ namespace FlatWorld.AIECS
         public float WanderRadius, WanderSeconds, IdleSeconds; // 游荡规则。
         public float MoveSpeed, AttackStartRange, HitRange, AttackArcCos; // 移动与起手/实际命中条件。
         public float Windup, Active, Recovery, Cooldown; // 攻击时间轴。
-        public float4 Damage; // 四类基础攻击。
+        public float4 Damage; // 物理、火焰、辐射、真实四通道。
+        public byte ImpactKind; // 锐器命中资格独立于伤害类型。
         public float SlowMultiplier, SlowDuration; // 命中减速。
         public FixedList512Bytes<CombatOnHitBuff> OnHitBuffs; // 与普通攻击组合的状态能力。
         public int CandidateBudget; // 一次感知最多检查的候选数，密集格不退化到平方工作量。
@@ -212,8 +213,9 @@ namespace FlatWorld.AIECS
     public struct AiecsBuffDefinition
     {
         public FixedString128Bytes Id; // 稳定 Buff ID。
-        public float Duration, Interval, TrueDamage, WaterDelta; // 生命周期与本轮支持的周期效果。
+        public float Duration, Interval, TrueDamage, FireDamage, RadiationDamage, WaterDelta; // 周期伤害按通道收集。
         public float TrueDamagePerStack; // 只放明确声明按层数缩放的伤害，避免放大其它效果。
+        public float FireDamagePerStack, RadiationDamagePerStack;
         public int MaxStacks; // 当前内容目录的层数上限。
         public int BleedingTier; // 零表示普通状态，正值参与互斥等级。
         public byte StackMode; // 与当前 Buff 配置枚举一致。

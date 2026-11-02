@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json.Linq;
 using FlatWorld.Diagnostics;
 using FlatWorld.NaturalEntities;
 using UnityEngine;
@@ -13,6 +14,52 @@ public sealed class ItemModulePrototypeCache
 
     private readonly Dictionary<GameObject, (Module[] Modules, bool ContainsItem)> prefabComponents = new();
     private readonly Dictionary<GameObject, Module[]> shellComponents = new();
+    private readonly Dictionary<(Module Prototype, string Json), ModuleJsonConfigurator.PreparedParameters> parameterTemplates = new();
+    private readonly Dictionary<ModuleData, Func<ModuleData>> moduleDefaultFactories = new(new ModuleDefaultSourceComparer());
+    private readonly bool requireBuiltInBakedParameters;
+    public ItemModulePrototypeCache(bool requireBuiltInBakedParameters = false)
+        => this.requireBuiltInBakedParameters = requireBuiltInBakedParameters;
+    internal int PreparedParameterTemplateCount => parameterTemplates.Count;
+    internal int PreparedParameterReuseCount { get; private set; }
+    internal int ModuleDefaultFactoryCount => moduleDefaultFactories.Count;
+    internal int ModuleDefaultReuseCount { get; private set; }
+
+    private sealed class ModuleDefaultSourceComparer : IEqualityComparer<ModuleData>
+    {
+        public bool Equals(ModuleData left, ModuleData right) => ReferenceEquals(left, right);
+        public int GetHashCode(ModuleData value) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value);
+    }
+
+    /// <summary>本轮只为每份原型默认数据准备一次复制工厂，各定义仍接收自己的可变状态。</summary>
+    internal ModuleData CreateModuleDefinitionDefaults(ModuleData source)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        if (!moduleDefaultFactories.TryGetValue(source, out Func<ModuleData> create))
+        {
+            create = ModuleRuntimeDataFactories.CompileDefinitionDefaults(source);
+            moduleDefaultFactories.Add(source, create);
+        }
+        else ModuleDefaultReuseCount++;
+        return create();
+    }
+
+    /// <summary>同一目录的同原型同参数只做一次字段编译，结构与模块自有约束仍逐定义复查。</summary>
+    internal ModuleJsonConfigurator.PreparedParameters PrepareModuleParameters(Module prototype,
+        string itemId, string moduleName, string moduleId, string json)
+    {
+        var key = (prototype, json);
+        if (!parameterTemplates.TryGetValue(key, out var template))
+        {
+            template = ModuleJsonConfigurator.Prepare(prototype, itemId, moduleName, moduleId, json, requireBuiltInBakedParameters);
+            parameterTemplates.Add(key, template);
+            return template;
+        }
+        var parameters = template.BindDefinitionIdentity(itemId, moduleName, moduleId);
+        parameters.ValidateTarget(prototype);
+        ModuleJsonConfigurator.RecordPreparedParameters(prototype, itemId, moduleName, moduleId, json, parameters);
+        PreparedParameterReuseCount++;
+        return parameters;
+    }
 
     internal void GetPrefabComponents(GameObject prefab, out Module[] modules, out bool containsItem)
     {
@@ -100,6 +147,11 @@ public sealed class RuntimeItemModuleAssemblyPlan
             throw new InvalidDataException($"物品 {itemId} 的模块 {StableName} 实现类型与编译计划不一致。");
         parameters?.ValidateTarget(prototype);
     }
+
+    /// <summary>普通模块借用已编译字段，数据能力保留原 JSON 读取与严格错误语义。</summary>
+    internal JObject CopyConfigurationFields(IReadOnlyList<string> names)
+        => parameters != null ? parameters.CopyRegularFields(names) :
+            string.IsNullOrWhiteSpace(Definition.ParametersJson) ? null : JObject.Parse(Definition.ParametersJson);
 
     public bool MatchesImplementation(Module module)
         => module != null && module.GetType() == ModuleType;
@@ -354,6 +406,9 @@ internal static class ItemModuleAssemblyCompiler
 
             ModuleJsonConfigurator.PreparedParameters parameters = string.IsNullOrWhiteSpace(definition.ParametersJson)
                 ? null
+                : prototypeCache != null
+                ? prototypeCache.PrepareModuleParameters(prototype, itemId, definition.StableName,
+                    definition.ModuleId, definition.ParametersJson)
                 : ModuleJsonConfigurator.Prepare(prototype, itemId, definition.StableName,
                     definition.ModuleId, definition.ParametersJson);
             result[index] = new RuntimeItemModuleAssemblyPlan(itemId, definition, prefab, prototype, embedded, shell, parameters);

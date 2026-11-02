@@ -44,11 +44,12 @@ public static partial class GameplayTestSystemProbe
         ChunkTilemapRenderer chunkView = chunkViewPrefab != null
             ? chunkViewPrefab.GetComponent<ChunkTilemapRenderer>() : null;
         var serializedChunkView = chunkView != null ? new SerializedObject(chunkView) : null;
-        Sprite fireSprite = serializedChunkView?.FindProperty("fireSprite")?.objectReferenceValue as Sprite;
+        Sprite fireSprite = SharedSpriteMeshCache.GetWorldEffectQuad();
         Material fireMaterial = serializedChunkView?.FindProperty("fireMaterial")?.objectReferenceValue as Material;
         Shader depthMeshShader = Resources.Load<Shader>("Shaders/ChunkDepthSpriteLit");
-        if (fireSprite == null || fireMaterial == null || depthMeshShader == null)
-            throw new InvalidOperationException("火场现场基准缺少 ChunkView 正式 Sprite、材质或深度 Shader。");
+        if (fireSprite == null || fireMaterial == null || fireMaterial.shader == null ||
+            fireMaterial.shader.name != ShaderFlameEffect.ShaderName || depthMeshShader == null)
+            throw new InvalidOperationException("火场现场基准缺少正式程序化火焰材质、共享 Quad 或深度 Shader。");
 
         int warmupFrames = ReadFireBenchmarkFrameCount(args, "warmupFrames", 12, 2, 120);
         int sampleFrames = ReadFireBenchmarkFrameCount(args, "sampleFrames", FireRenderBenchmarkSampleFrames, 10, 600);
@@ -71,9 +72,9 @@ public static partial class GameplayTestSystemProbe
                 fixture.SampleFrameTiming();
             }
 
-            fixture.StopCameraSampling();
             fixture.StopMetrics();
             fixture.CapturePreviewImage();
+            fixture.StopCameraSampling();
             completed(fixture.CreateResult(warmupFrames, sampleFrames));
         }
         finally
@@ -114,6 +115,7 @@ public static partial class GameplayTestSystemProbe
         private Material sourceMaterial;
         private Shader rendererShader;
         private string fireSpriteName;
+        private bool fireSpritePacked;
         private GameplayTestSystemProbe.FireMeshMetrics initialUploadMetrics;
         private GameplayTestSystemProbe.FireMeshMetrics finalUploadMetrics;
         private Bounds fireMeshBounds;
@@ -132,12 +134,15 @@ public static partial class GameplayTestSystemProbe
         private bool disposed;
         private string previewImagePath;
         private int previewImageBytes;
+        private int previewVisiblePixelCount;
+        private int previewFirePixelCount;
 
         internal void Build(Sprite fireSprite, Material fireMaterial, Shader depthMeshShader)
         {
             sourceMaterial = fireMaterial;
             rendererShader = depthMeshShader;
             fireSpriteName = fireSprite != null ? fireSprite.name : null;
+            fireSpritePacked = fireSprite.packed;
             scene = SceneManager.CreateScene("FireRenderBenchmark_" + Guid.NewGuid().ToString("N"));
             int chunkCountPerAxis = Mathf.CeilToInt((float)GameplayTestSystemProbe.FireBatchProbeCellCount /
                 GameplayTestSystemProbe.FireBatchProbeChunkSize);
@@ -310,6 +315,9 @@ public static partial class GameplayTestSystemProbe
                 ["assetsReady"] = sourceMaterial != null && rendererShader != null,
                 ["benchmarkScope"] = "isolated-scene-single-camera-render-texture",
                 ["fireSpriteName"] = fireSpriteName,
+                ["fireSpritePacked"] = fireSpritePacked,
+                ["fireQuadUsesWhiteTexture"] = root != null && sourceMaterial != null &&
+                    root.GetComponentInChildren<MeshRenderer>().sharedMaterial.mainTexture == Texture2D.whiteTexture,
                 ["fireMaterialShader"] = sourceMaterial != null && sourceMaterial.shader != null
                     ? sourceMaterial.shader.name : null,
                 ["depthMeshShaderName"] = rendererShader != null ? rendererShader.name : null,
@@ -343,6 +351,9 @@ public static partial class GameplayTestSystemProbe
                 ["actualSampleCameraRenderFrames"] = renderedCameraFrames - renderedCameraFramesAtSampleStart,
                 ["previewImagePath"] = previewImagePath,
                 ["previewImageBytes"] = previewImageBytes,
+                ["previewVisiblePixelCount"] = previewVisiblePixelCount,
+                ["previewFirePixelCount"] = previewFirePixelCount,
+                ["fireSurfaceMaterial"] = CaptureFireSurfaceMaterial(),
                 ["buildCpuMilliseconds"] = buildCpuMilliseconds,
                 ["initialFlushCpuMilliseconds"] = initialFlushCpuMilliseconds,
                 ["initialUploads"] = initialUploadMetrics.ToJson(actualMeshRendererCount, actualSortingGroupCount),
@@ -396,6 +407,12 @@ public static partial class GameplayTestSystemProbe
                 RenderTexture.active = renderTexture;
                 readback.ReadPixels(new Rect(0f, 0f, renderTexture.width, renderTexture.height), 0, 0, false);
                 readback.Apply(false, false);
+                // 统计真实读回画面，防止只有绘制计数和空白 PNG 也通过回归。
+                foreach (Color32 pixel in readback.GetPixels32())
+                {
+                    if (pixel.r > 8 || pixel.g > 8 || pixel.b > 8) previewVisiblePixelCount++;
+                    if (pixel.r > 32 && pixel.r > pixel.g && pixel.g > pixel.b) previewFirePixelCount++;
+                }
                 byte[] png = readback.EncodeToPNG();
                 if (png == null || png.Length == 0)
                     throw new InvalidOperationException("火场基准 RT 没有产生 PNG 数据。");
@@ -407,6 +424,17 @@ public static partial class GameplayTestSystemProbe
                 RenderTexture.active = previous;
                 DestroyOwnedObject(readback);
             }
+        }
+
+        private JObject CaptureFireSurfaceMaterial()
+        {
+            Material material = root.GetComponentInChildren<MeshRenderer>().sharedMaterial;
+            var result = new JObject { ["texture"] = material.mainTexture.name };
+            foreach (string property in new[] { "_SnowCoverage", "_ActorTintStrength", "_HitFlash",
+                "_DepthUnlit", "_DepthDissolveEnabled", "_DepthSrcBlend", "_DepthDstBlend",
+                "_PixelsPerUnit", "_AnimationFPS" })
+                result[property] = material.GetFloat(property);
+            return result;
         }
 
         private static Bounds CaptureRenderBounds(GameObject target)

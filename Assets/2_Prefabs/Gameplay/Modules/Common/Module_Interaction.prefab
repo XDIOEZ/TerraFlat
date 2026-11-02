@@ -55,48 +55,42 @@ MonoBehaviour:
   CurentInteractItem: {fileID: 0}
   FastTest:
     _PersistentCalls: []
---- !u!61 &4760340190715897003
-BoxCollider2D:
+--- !u!114 &4760340190715897003
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7141661056424059175}
   m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 1
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.022215366, y: -0.47096053}
-  m_SpriteTilingProperty:
-    border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0, y: 0}
-    oldSize: {x: 0, y: 0}
-    newSize: {x: 0, y: 0}
-    adaptiveTilingThreshold: 0
-    drawMode: 0
-    adaptiveTiling: 0
-  m_AutoTiling: 0
-  serializedVersion: 2
-  m_Size: {x: 1.7375422, y: 1.2043788}
-  m_EdgeRadius: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f796764398c4fcbb17854251930e950, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  owningModule: {fileID: 5391927010126263884}
+  colliderType: BoxCollider2D
+  colliderEnabled: 1
+  isTrigger: 1
+  offset: {x: 0.022215366, y: -0.47096053}
+  size: {x: 1.7375422, y: 1.2043788}
+  radius: 0.5
+  edgeRadius: 0
+  capsuleDirection: 0
+  points: []
+  density: 1
+  material: {fileID: 0}
+  usedByEffector: 0
+  usedByComposite: 0
+  hasBody: 0
+  bodyType: 0
+  bodySimulated: 1
+  bodyUseAutoMass: 0
+  bodyMass: 1
+  bodyLinearDrag: 0
+  bodyAngularDrag: 0.05
+  bodyGravityScale: 1
+  bodyConstraints: 0
+  bodyCollisionDetection: 0
+  bodyInterpolation: 0
+  bodySleepingMode: 1
+  bodyUseFullKinematicContacts: 0

@@ -1,7 +1,7 @@
 {
   "Version": 1,
   "Settings": {
-    "TickSeconds": 0.1,
+    "TickSeconds": 0.05,
     "ActivationChunks": 1,
     "DeactivationChunks": 2,
     "UnloadDelaySeconds": 5,
@@ -1184,6 +1184,22 @@
         "StartX": 0.25,
         "Y": 0
       }
+    },
+    {
+      "Id": "ShipFloor_Iron",
+      "Kind": "building",
+      "Ports": "none",
+      "PlacementLayer": 6,
+      "BlocksMovement": false,
+      "CastVisualShadows": false
+    },
+    {
+      "Id": "ShipFloor_Refractory",
+      "Kind": "building",
+      "Ports": "none",
+      "PlacementLayer": 6,
+      "BlocksMovement": false,
+      "CastVisualShadows": false
     },
     {
       "Id": "ShipConsole",

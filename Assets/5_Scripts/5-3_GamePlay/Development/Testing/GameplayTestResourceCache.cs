@@ -101,6 +101,10 @@ public static class GameplayTestResourceCache
     { if (Active && asset != null) Backend.RecordAsset(key, asset); }
 
     public static IEnumerator LoadItemInputs(Action<List<ItemDefinitionDto>> done, Action<Exception> failed, Action<float> progress)
+        => Active ? LoadCachedItemInputs(done, failed, progress) :
+            ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, failed, progress);
+
+    private static IEnumerator LoadCachedItemInputs(Action<List<ItemDefinitionDto>> done, Action<Exception> failed, Action<float> progress)
     {
         const string key = "resolved-item-inputs-v1";
         List<ItemDefinitionDto> cached = null;

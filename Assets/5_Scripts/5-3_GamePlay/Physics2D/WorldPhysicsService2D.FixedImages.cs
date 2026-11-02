@@ -60,7 +60,6 @@ public sealed partial class WorldPhysicsService2D
         image.transform.localScale = source.transform.localScale;
         image.gameObject.layer = source.gameObject.layer;
         image.offset = source.offset;
-        image.density = source.density;
         CopyColliderPhysicsSettings(source, image);
         switch (source)
         {

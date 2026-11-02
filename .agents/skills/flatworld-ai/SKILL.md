@@ -25,10 +25,12 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## JSON 行为树
 
+- 行为树、飞行、水生模块通过 Detector 的来源半径接口声明/撤销最小范围，不覆盖基础值；重载降低范围或来源释放时使旧异步查询失效。构建期只保存展开树，运行时重绑当前工厂、隔离节点与能力实例。
 - 所有正式生物的 `modules.ai` 使用 `Module_AnimalBehaviorTree` / 能力 ID `AI`；物种只配置 `behaviorTree.capabilities` 和根节点。Manifest 的 `behaviorSubtrees` 指向 `GameConfig/Actors/behavior-subtrees.json`，该文件只登记 `subtrees: { 稳定ID: 相对Actors根目录的JSON路径 }`；每棵树独立放在 `behavior-trees/subtrees`、`composites` 或 `profiles`，文件只写可选 `parameters` 与 `root`，空参数省略。不要复制物种 C# 主控或在通用能力里恢复物种优先级。
 - 树支持 `selector`、记忆式 `sequence`、`condition`、`action`、`inverter`、`subtree`、`service`。Selector 每 Tick 复核高优先守卫；Sequence 不重做已完成动作，但继续检查前置条件。旧分支退出后新分支才进入；节点返回 Success/Failure/Running，正常完成只 OnExit，中断再调用 OnAbort。
 - 子树参数用 `$名称` 引用，引用节点的 `parameters` 覆盖默认值并逐层传递；组合子树继续引用其他子树，例如群猎→群体残血撤退→残血逃跑，独行/领地捕猎共用捕猎与游荡。基础、组合和完整模板使用同一种树结构，新增行为优先组合现有子树。服务节点前面的子节点每 Tick 更新伴随事实，最后一个是主树，服务不改变主动作身份。未知节点、缺参数和子树循环在初始化编译时失败。
-- Actor 加载沿正式 StreamingAssets/BinaryContentCache 入口读取共享库并冷编译模板，Android 走异步读取，F5 候选隔离且保留逐定义回滚。模板共用，每只生物独立节点、黑板与能力状态；死亡同步 Abort、关闭本体攻击窗并取消所有组合技能，卸载解除订阅和目标占位。
+- Actor 加载沿正式 StreamingAssets/BinaryContentCache 入口读取共享库并冷编译模板；本地分包与子树批量读取、直接合并 JSON 树，Android 走异步读取，F5 候选隔离且保留逐定义回滚。模板共用，每只生物独立节点、黑板与能力状态；死亡同步 Abort、关闭本体攻击窗并取消所有组合技能，卸载解除订阅和目标占位。
+- 行为模板缓存键只序列化当前定义，不逐次序列化整个共享子树库；`SetSharedSubtrees` 替换本会话模板字典，查询子树返回独立快照，候选失败保留正式缓存。宿主 `BehaviorTree` 由 JSON 装配，自动属性后备字段标记 NonSerialized，避免 Unity 域重载递归展开节点。规则 `core_lifecycle/startup_behavior_tree_templates` 覆盖等价定义复用、共享库失效与候选隔离。
 - 子物种完整声明另一套 AI 时用通用模块标记 `inherit:false`，整体替换父 AI 参数，其他模块继续继承；该标记在 JObject 解析阶段消费，不进入持久 DTO。
 - ItemWiki 顶部「行为树」可只读查看生物、公共/局部子树、调用实参和引用生物；来源为正式 Actor Manifest 与共享库，刷新读取当前 JSON，不是运行态节点监视器。
 - 地面、飞行、水生、群落与光照能力只执行树选择的动作；温度模块向宿主记录避险事实，由公共温度子树执行，鱼的外部接管/未知水域/搁浅优先。群体、仇恨、反击、觅食、产物和追踪记忆各自持有状态；推进和技能范围仍经既有接口。
@@ -50,6 +52,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换表现快照，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
 
 - GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，加载模块前先脱离准备根并进入所属世界 Scene；完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
+- 生物外壳可只用 `ItemPhysicsTemplate2D` 声明刚体；模块 `OnLoad` 前预租物理组件，完整出生后才登记世界，失败回收预租组件；`ai/incremental_creature_creation` 检查无根刚体的小鱼。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 单图首帧必须配置 `visual.spriteAddress`，使用已注册 Addressables 的 `Assets/...png[切片名]`；摇摆初始化直接读取定义 Sprite，不启动旧 Animator、不依赖 Idle/Stand 状态。共享狼外壳的 Zombie 必须覆盖首帧。内容校验 `FWC-ACTORJSON-007/008` 检查模式与首帧；静态入口 `python Tools/Tests/ActorSway/verify.py`，正式规则 `ai/single_sprite_catalog`。
 - 生成条目 `probability` 是物种相对权重，`spawnChance` 是抽中物种且地点有效后的独立概率（默认 1）；独立判定落空消耗一次排队机会，不重抽其它物种、不扣生态预算或累计出生数。小鸡单独配置 0.5，野猪保留原权重和默认概率。

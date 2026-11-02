@@ -124,10 +124,10 @@ public sealed partial class AnimalSkillDefinition
     public const string ChargeAttackType = "chargeAttack";
     public const string BiteAttackType = "biteAttack";
 
-    [JsonProperty("durationSeconds")] public float DurationSeconds = 9f;
-    [JsonProperty("tickIntervalSeconds")] public float TickIntervalSeconds = 3f;
-    [JsonProperty("holdDamage")] public float HoldDamage = 5f;
-    [JsonProperty("carryDamage")] public float CarryDamage = 6f;
+    [JsonProperty("durationSeconds")] public float DurationSeconds = 3f;
+    [JsonProperty("tickIntervalSeconds")] public float TickIntervalSeconds = .5f;
+    [JsonProperty("holdDamage")] public float HoldDamage = 2f;
+    [JsonProperty("carryDamage")] public float CarryDamage = 2f;
     [JsonProperty("targetSlowFraction")] public float TargetSlowFraction = .25f;
     [JsonProperty("casterSlowFraction")] public float CasterSlowFraction = .5f;
 
@@ -202,6 +202,7 @@ public static class AnimalSkillCatalogLoader
         => BinaryContentCache.ForBuiltIn<AnimalSkillCatalog>("animal-skills", BuiltInRoot, BuiltInConfigPath, 1);
 
     /// <summary>同步读取目录，供编辑器迁移和静态检查使用。</summary>
+    [BuiltInContentBake]
     public static AnimalSkillCatalog LoadBuiltIn()
     {
         BinaryContentCache cache = CreateBinaryCache();
@@ -220,7 +221,27 @@ public static class AnimalSkillCatalogLoader
         Action<AnimalSkillCatalog> completed,
         Action<Exception> failed)
     {
+        string path = BuiltInConfigPath;
         BinaryContentCache cache = CreateBinaryCache();
+        if (StreamingAssetsTextLoader.RequiresWebRequest(path)) return LoadPackagedBuiltInAsync(cache, completed, failed);
+        return StreamingAssetsTextLoader.BeginPureDataAsync(() => LoadLocalCatalogInput(cache, path), value =>
+        {
+            cache.Report("动物技能", value.Skills.Count);
+            completed?.Invoke(value);
+        }, failed);
+    }
+
+    internal static AnimalSkillCatalog LoadLocalCatalogInput(BinaryContentCache cache, string path)
+    {
+        if (cache.TryRead(out AnimalSkillCatalog catalog)) { Validate(catalog); return catalog; }
+        catalog = DeserializeUncached(cache.ReadText(path));
+        cache.Store(catalog);
+        return catalog;
+    }
+
+    private static IEnumerator LoadPackagedBuiltInAsync(BinaryContentCache cache,
+        Action<AnimalSkillCatalog> completed, Action<Exception> failed)
+    {
         AnimalSkillCatalog catalog = null;
         yield return cache.TryReadAsync<AnimalSkillCatalog>(value => catalog = value);
         if (catalog != null)

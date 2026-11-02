@@ -1,6 +1,12 @@
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
+#region 离线序列化标记替身
+// 此测试不执行二进制序列化。
+namespace MemoryPack { public sealed class MemoryPackableAttribute : System.Attribute { } }
+public sealed class BinaryJsonObjectAttribute : System.Attribute { }
+#endregion
+
 // 替身提供实体、可见性和导航输入；目标规则、记忆、搜索动作及群体情报入口取自生产代码。
 internal static class Program
 {

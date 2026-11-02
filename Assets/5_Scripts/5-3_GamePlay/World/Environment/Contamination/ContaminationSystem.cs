@@ -11,7 +11,52 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public static class ContaminationSystem
 {
+    private readonly struct DynamicCellKey : IEquatable<DynamicCellKey>
+    {
+        public DynamicCellKey(string worldKey, Vector2Int worldCell, string contaminationId)
+        { WorldKey = worldKey; WorldCell = worldCell; ContaminationId = contaminationId; }
+
+        public string WorldKey { get; }
+        public Vector2Int WorldCell { get; }
+        public string ContaminationId { get; }
+
+        public bool Equals(DynamicCellKey other)
+            => string.Equals(WorldKey, other.WorldKey, StringComparison.Ordinal) && WorldCell == other.WorldCell &&
+               string.Equals(ContaminationId, other.ContaminationId, StringComparison.Ordinal);
+        public override bool Equals(object obj) => obj is DynamicCellKey other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(
+            StringComparer.Ordinal.GetHashCode(WorldKey ?? string.Empty), WorldCell,
+            StringComparer.Ordinal.GetHashCode(ContaminationId ?? string.Empty));
+    }
+
+    private sealed class DynamicSource
+    {
+        public string WorldKey;
+        public string ContaminationId;
+        public Vector2 Position;
+        public float Amount;
+        public float Radius;
+        public List<KeyValuePair<DynamicCellKey, double>> Contributions;
+    }
+
+    private sealed class DynamicCellValues
+    {
+        public readonly Dictionary<object, double> Contributions = new();
+        public double Total;
+    }
+
     public static event Action<ContaminationCellChanged> Changed;
+
+    private static readonly Dictionary<object, DynamicSource> dynamicSources = new();
+    private static readonly Dictionary<DynamicCellKey, DynamicCellValues> dynamicValues = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetDynamicSources()
+    {
+        dynamicSources.Clear();
+        dynamicValues.Clear();
+        Changed = null;
+    }
 
     /// <summary>查询已注册的污染定义。</summary>
     public static bool TryGetDefinition(string contaminationId, out ContaminationDefinition definition)
@@ -34,7 +79,7 @@ public static class ContaminationSystem
             return false;
         }
 
-        value = ReadValue(sample.Terrain, sample.LocalCell, definition);
+        value = ReadCombinedValue(sample, definition);
         return true;
     }
 
@@ -49,7 +94,11 @@ public static class ContaminationSystem
         if (resources == null || chunks == null ||
             !chunks.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
             return false;
-        load = ReadNormalizedLoad(sample.Terrain, sample.LocalCell, resources.ContaminationDefinitions);
+        foreach (ContaminationDefinition definition in resources.ContaminationDefinitions.Values)
+        {
+            load = Mathf.Max(load, definition.Normalize(ReadCombinedValue(sample, definition)));
+            if (load >= 1f) break;
+        }
         return true;
     }
 
@@ -86,6 +135,144 @@ public static class ContaminationSystem
             out float value)
             ? definition.Clamp(value)
             : definition.DefaultValue;
+    }
+
+    private static float ReadCombinedValue(RuntimeTerrainTileSample sample, ContaminationDefinition definition)
+    {
+        float value = ReadValue(sample.Terrain, sample.LocalCell, definition);
+        string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        var key = new DynamicCellKey(worldKey, sample.WorldCell, definition.Id);
+        if (!dynamicValues.TryGetValue(key, out DynamicCellValues dynamicCellValues))
+            return value;
+        double combined = value + dynamicCellValues.Total;
+        if (combined <= definition.MinimumValue) return definition.MinimumValue;
+        if (combined >= definition.MaximumValue) return definition.MaximumValue;
+        return (float)combined;
+    }
+
+    /// <summary>添加或更新不写入地块存档的动态污染来源。</summary>
+    public static bool SetDynamicSource(object owner, string worldKey, Vector2 position,
+        string contaminationId, float amount, float radius)
+    {
+        if (owner == null || string.IsNullOrWhiteSpace(worldKey) ||
+            !float.IsFinite(position.x) || !float.IsFinite(position.y) || !float.IsFinite(amount) ||
+            !float.IsFinite(radius) || radius <= 0f || radius > LocalTemperatureField.MaximumSourceRadius ||
+            !TryGetDefinition(contaminationId, out ContaminationDefinition definition))
+            return false;
+
+        worldKey = worldKey.Trim();
+        if (amount == 0f)
+        {
+            RemoveDynamicSource(owner);
+            return true;
+        }
+
+        if (dynamicSources.TryGetValue(owner, out DynamicSource previous) &&
+            string.Equals(previous.WorldKey, worldKey, StringComparison.Ordinal) &&
+            string.Equals(previous.ContaminationId, definition.Id, StringComparison.Ordinal) &&
+            previous.Position == position && previous.Amount == amount && previous.Radius == radius)
+            return true;
+
+        RemoveDynamicSource(owner);
+        var source = new DynamicSource
+        {
+            WorldKey = worldKey,
+            ContaminationId = definition.Id,
+            Position = position,
+            Amount = amount,
+            Radius = radius,
+            Contributions = new List<KeyValuePair<DynamicCellKey, double>>()
+        };
+        CaptureDynamicSourceContributions(source);
+        dynamicSources.Add(owner, source);
+        foreach (KeyValuePair<DynamicCellKey, double> contribution in source.Contributions)
+            AddDynamicValue(contribution.Key, owner, contribution.Value);
+        return true;
+    }
+
+    /// <summary>撤销指定物品来源并恢复读取到底层地块值。</summary>
+    public static void RemoveDynamicSource(object owner)
+    {
+        if (owner == null || !dynamicSources.Remove(owner, out DynamicSource source))
+            return;
+        foreach (KeyValuePair<DynamicCellKey, double> contribution in source.Contributions)
+            RemoveDynamicValue(contribution.Key, owner);
+    }
+
+    private static void CaptureDynamicSourceContributions(DynamicSource source)
+    {
+        GameSaveData save = SaveDataMgr.GetExistingInstance()?.SaveData;
+        PlanetData planet = null;
+        WorldTopologyBounds bounds = default;
+        bool hasPlanet = !GameplayWorldRegistry.UsesLocalCoordinates(source.WorldKey) &&
+            save?.PlanetData_Dict?.TryGetValue(source.WorldKey, out planet) == true;
+        bool hasBounds = hasPlanet && WorldTopologyBounds.TryCreate(planet, out bounds);
+        BuildDynamicSourceContributions(source, bounds, hasBounds);
+    }
+
+    private static void BuildDynamicSourceContributions(DynamicSource source,
+        WorldTopologyBounds bounds, bool hasBounds)
+    {
+        Vector2 center = hasBounds && bounds.IsWrapped
+            ? bounds.NormalizePosition(source.Position)
+            : source.Position;
+        float radiusSquared = source.Radius * source.Radius;
+        int minX = Mathf.FloorToInt(center.x - source.Radius);
+        int maxX = Mathf.FloorToInt(center.x + source.Radius);
+        int minY = Mathf.FloorToInt(center.y - source.Radius);
+        int maxY = Mathf.FloorToInt(center.y + source.Radius);
+        var weights = new Dictionary<DynamicCellKey, double>();
+
+        for (int y = minY; y <= maxY; y++)
+        for (int x = minX; x <= maxX; x++)
+        {
+            Vector2Int cell = new(x, y);
+            if (hasBounds && bounds.IsWrapped)
+                cell = bounds.NormalizeCell(cell);
+            Vector2 cellCenter = new(cell.x + 0.5f, cell.y + 0.5f);
+            Vector2 delta = hasBounds && bounds.IsWrapped
+                ? bounds.ShortestDelta(center, cellCenter)
+                : cellCenter - center;
+            float distanceSquared = delta.sqrMagnitude;
+            if (distanceSquared >= radiusSquared)
+                continue;
+
+            float falloff = 1f - distanceSquared / radiusSquared;
+            double value = source.Amount * (double)falloff * falloff;
+            var key = new DynamicCellKey(source.WorldKey, cell, source.ContaminationId);
+            if (!weights.TryGetValue(key, out double previous) || Math.Abs(value) > Math.Abs(previous))
+                weights[key] = value;
+        }
+
+        source.Contributions.AddRange(weights);
+    }
+
+    private static void AddDynamicValue(DynamicCellKey key, object owner, double contribution)
+    {
+        if (!dynamicValues.TryGetValue(key, out DynamicCellValues values))
+            dynamicValues.Add(key, values = new DynamicCellValues());
+        values.Contributions[owner] = contribution;
+        RecalculateDynamicValue(values);
+    }
+
+    private static void RemoveDynamicValue(DynamicCellKey key, object owner)
+    {
+        if (!dynamicValues.TryGetValue(key, out DynamicCellValues values) || !values.Contributions.Remove(owner))
+            return;
+        if (values.Contributions.Count == 0)
+        {
+            dynamicValues.Remove(key);
+            return;
+        }
+        RecalculateDynamicValue(values);
+    }
+
+    private static void RecalculateDynamicValue(DynamicCellValues values)
+    {
+        double total = 0d;
+        foreach (double contribution in values.Contributions.Values)
+            total += contribution;
+        values.Total = total;
     }
 
     /// <summary>设置一个世界地格的污染值；普通客户端不能改权威世界状态。</summary>

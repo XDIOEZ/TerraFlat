@@ -24,6 +24,17 @@ test.runtime("space", "ship_interior_world", {}, function(data)
     assert(data.floorProvidesOrdinarySurface and data.floorVisualNotDuplicated and
         data.ordinaryTileWallMirrored and data.ordinaryTileRemovalUpdatedStructure,
         "船内普通地板、支撑墙和拆除必须走真实地形/建造后端")
+    assert(data.floorDataBuildings and #data.floorDataBuildings == 2,
+        "两艘船都必须采样正式地板数据节点与原生碰撞数量")
+    for _, floor in ipairs(data.floorDataBuildings) do
+        assert(floor.floorCount > 8 and floor.dataBuildingCount == floor.floorCount and
+            floor.runtimeItemCount == 0 and floor.activeColliderCount == 0,
+            "连片纯地板不能退回逐格 Item 或常驻受击/阻挡 Collider")
+    end
+    local floor_hit = data.floorDamageBackend
+    assert(floor_hit and floor_hit.receiverColliderLayer == "data-query" and floor_hit.windowScanHit and
+        floor_hit.oneHit and floor_hit.duplicateRejected and floor_hit.pieceHealthUpdated,
+        "无常驻碰撞体的地板仍须被正式武器精确命中，按窗口去重并同步船体生命")
     assert(data.ordinaryGroundPlacementInfersFloor,
         "未声明船专用部件的普通 GroundPlacement 定义应自动推断为船内地板")
     assert(data.firstShipCollided and data.secondShipPassed and data.nativeQueryIsolated,

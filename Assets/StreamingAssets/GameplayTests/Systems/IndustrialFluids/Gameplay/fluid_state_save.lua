@@ -1,5 +1,23 @@
 test.check("world_ready")
 test.check("player_ready")
+test.runtime("industrial_fluids", "liquid_network_temperature", {}, function(d)
+    assert(math.abs(d.mixed - 83.3333333333) < .00001 and math.abs(d.pipe - d.mixed) < .00001,
+        "正式液网没有在无流动时统一罐和管道温度")
+    assert(math.abs(d.output - d.mixed) < .00001, "正式出液批次没有继承统一液网温度")
+    assert(math.abs(d.closedFirst - d.mixed) < .00001 and math.abs(d.closedSecond - d.mixed) < .00001,
+        "关闭阀门恢复了旧液温")
+    assert(math.abs(d.separateFirst - (100 * d.mixed + 10 * 10) / 110) < .00001
+        and math.abs(d.separateSecond - d.mixed) < .00001, "关阀后外部进液影响了另一子网")
+    assert(math.abs(d.rejoined - 78.75) < .00001 and math.abs(d.saved - d.rejoined) < .00001,
+        "重新接通或正式快照改变了混温结果")
+    assert(math.abs(d.immediatelyRejoined - d.rejoined) < .00001, "打开阀门后仍等待下一Tick才混温")
+    assert(math.abs(d.total - 160) < .00001 and d.empty and d.combinedShared
+        and math.abs(d.combinedLiters - 100) < .00001 and d.combinedCells == 2,
+        "总液量缓存、空网或组合罐的库存与覆盖格去重错误")
+    assert(d.filtered and d.independentChambers, "温度分组穿过物质过滤或独立腔体")
+    assert(d.gasUnaffected, "气相专用腔体被工业液温模拟接管")
+end, "真实液网开关阀、无流动同温、分网进液、快照与组合罐去重")
+
 test.fluid("core_serialization", "共用库存序列化")
 test.runtime("industrial_fluids", "ownership", {}, function(d)
     assert(d.shared and d.restoredShared and d.capacity == 200, "同类相邻罐没有共享库存与总容量")

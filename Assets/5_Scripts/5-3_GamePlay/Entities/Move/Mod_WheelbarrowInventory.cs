@@ -27,6 +27,7 @@ public sealed class Mod_WheelbarrowInventory : Module, IInventory
             var slots = new List<ItemSlot>(CargoSlots);
             for (int i = 0; i < CargoSlots; i++) slots.Add(new ItemSlot(i));
             Data.Data["Cargo"] = cargo = new Inventory_Data(slots, "Cargo");
+            Data.NotifyInventoryMapStructureChanged();
         }
         if (cargo.itemSlots == null || cargo.itemSlots.Count != CargoSlots)
             throw new InvalidOperationException("独轮车货仓布局与当前定义不一致。");

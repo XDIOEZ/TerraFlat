@@ -57,7 +57,7 @@ public static partial class GameplayTestSystemProbe
             }
 
             JObject initial = Capture();
-            temperature.SetSafeTemperatureRangeModifier(equipment, -10f, 10f);
+            temperature.SetSafeTemperatureRangeModifier(equipment, -10f, 20f);
             JObject equipped = Capture();
             temperature.RemoveSafeTemperatureRangeModifier(equipment);
             return new JObject { ["initial"] = initial, ["equipped"] = equipped, ["restored"] = Capture() };
@@ -116,6 +116,7 @@ public static partial class GameplayTestSystemProbe
             ["heatWarning"] = sample.HeatWarning,
             ["coldDanger"] = sample.ColdDanger,
             ["heatDanger"] = sample.HeatDanger,
+            ["barFill"] = sample.BarFill,
             ["signedWarning"] = sample.SignedWarning,
             ["signedDanger"] = sample.SignedDanger
         };

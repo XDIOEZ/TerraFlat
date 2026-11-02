@@ -1,6 +1,7 @@
 ﻿// AI-Context: 联机控制器的会话逻辑分部；UI 组合与动态界面构建位于同一控制器的 UI partial。
 
 using System;
+using System.Collections;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -17,6 +18,22 @@ namespace FlatWorld.Networking.Gameplay
         private INetworkSession subscribedSession;
         private bool initialized;
         private GameManager boundGameManager;
+        private Coroutine pendingClientJoinCoroutine;
+        private int clientJoinGeneration;
+
+        private readonly struct ClientJoinSnapshot
+        {
+            public readonly string Address;
+            public readonly ushort Port;
+            public readonly string PlayerName;
+
+            public ClientJoinSnapshot(string address, ushort port, string playerName)
+            {
+                Address = address;
+                Port = port;
+                PlayerName = playerName;
+            }
+        }
 
         #region 面板能力状态
 
@@ -64,6 +81,8 @@ namespace FlatWorld.Networking.Gameplay
         /// <summary>释放会话和场景监听，避免常驻联机对象引用旧场景事件。</summary>
         private void ReleaseSessionBindings()
         {
+            CancelPendingClientJoin("已取消加入。");
+
             if (networkManager != null)
                 networkManager.GameplayStatusChanged -= SetStatus;
 
@@ -136,16 +155,161 @@ namespace FlatWorld.Networking.Gameplay
 
         private void StartClient()
         {
-            if (GameManager.Instance.IsInGameWorld || GameManager.Instance.IsWorldEntryInProgress)
+            GameRes resources = GameRes.ExistingInstance;
+            INetworkSession session = GameNetwork.Session;
+            if (!CanBeginClientJoinFromMenu(
+                    resources != null && resources.IsStartupReady,
+                    session?.State ?? NetworkSessionState.Stopping,
+                    IsInWorld,
+                    GameManager.ExistingInstance?.IsWorldEntryInProgress == true,
+                    pendingClientJoinCoroutine != null))
                 return;
-            networkManager.PrepareLocalPlayer(playerNameInput.text);
-            NetworkStartResult result = GameNetwork.Session.StartClient(addressInput.text, ReadPort());
-            if (!result.Success)
-                SetStatus(result.Error);
+
+            if (resources == null || networkManager == null || session == null)
+                return;
+
+            int requestGeneration = ++clientJoinGeneration;
+            var request = new ClientJoinSnapshot(addressInput != null ? addressInput.text : string.Empty,
+                ReadPort(), playerNameInput != null ? playerNameInput.text : string.Empty);
+
+            if (!resources.RequestWorldResources())
+            {
+                SetStatus(resources.LastLoadError ?? $"世界资源尚不可用（{resources.LoadState}）。");
+                return;
+            }
+
+            if (resources.LoadState == ResourceLoadState.Ready)
+            {
+                StartClientAfterWorldResourcesReady(requestGeneration, resources, session, request);
+                return;
+            }
+
+            if (resources.LoadState != ResourceLoadState.Loading)
+            {
+                SetStatus(resources.LastLoadError ?? $"世界资源加载失败（{resources.LoadState}）。");
+                return;
+            }
+
+            SetStatus("正在加载世界资源…");
+            pendingClientJoinCoroutine = StartCoroutine(WaitForWorldResourcesThenStartClient(
+                requestGeneration, resources, session, request));
+            RefreshInteractableState();
         }
+
+        private IEnumerator WaitForWorldResourcesThenStartClient(
+            int requestGeneration,
+            GameRes resources,
+            INetworkSession session,
+            ClientJoinSnapshot request)
+        {
+            yield return null;
+            while (requestGeneration == clientJoinGeneration)
+            {
+                GameManager manager = GameManager.ExistingInstance;
+                if (resources.LoadState != ResourceLoadState.Loading ||
+                    GameRes.ExistingInstance != resources || GameNetwork.Session != session ||
+                    session.State != NetworkSessionState.Offline || manager == null ||
+                    manager.IsInGameWorld || manager.IsWorldEntryInProgress) break;
+                yield return null;
+            }
+
+            if (requestGeneration != clientJoinGeneration) yield break;
+            if (resources.LoadState == ResourceLoadState.Ready)
+                StartClientAfterWorldResourcesReady(requestGeneration, resources, session, request);
+            else
+            {
+                pendingClientJoinCoroutine = null;
+                SetStatus(resources.LoadState == ResourceLoadState.Loading
+                    ? "联机或世界状态已变化，已取消加入。"
+                    : resources.LastLoadError ?? $"世界资源加载失败（{resources.LoadState}）。");
+                RefreshInteractableState();
+            }
+        }
+
+        private void StartClientAfterWorldResourcesReady(
+            int requestGeneration,
+            GameRes resources,
+            INetworkSession session,
+            ClientJoinSnapshot request)
+        {
+            GameManager manager = GameManager.ExistingInstance;
+            if (GameRes.ExistingInstance != resources || GameNetwork.Session != session || manager == null ||
+                networkManager == null ||
+                !CanFinishClientJoinAfterResourcesReady(requestGeneration, clientJoinGeneration,
+                    resources.LoadState, session.State, manager.IsInGameWorld, manager.IsWorldEntryInProgress))
+            {
+                pendingClientJoinCoroutine = null;
+                SetStatus("联机或世界状态已变化，已取消加入。");
+                RefreshInteractableState();
+                return;
+            }
+
+            pendingClientJoinCoroutine = null;
+            try
+            {
+                networkManager.PrepareLocalPlayer(request.PlayerName);
+                NetworkStartResult result = session.StartClient(request.Address, request.Port);
+                if (!result.Success)
+                    SetStatus(result.Error);
+            }
+            catch (Exception exception)
+            {
+                SetStatus(exception.Message);
+                Debug.LogException(exception, this);
+            }
+            RefreshInteractableState();
+        }
+
+        private bool CancelPendingClientJoin(string status)
+        {
+            Coroutine waiting = pendingClientJoinCoroutine;
+            if (waiting == null)
+                return false;
+
+            clientJoinGeneration++;
+            pendingClientJoinCoroutine = null;
+            StopCoroutine(waiting);
+            if (!string.IsNullOrEmpty(status))
+                SetStatus(status);
+            return true;
+        }
+
+        internal static bool CanBeginClientJoinFromMenu(
+            bool startupReady,
+            NetworkSessionState sessionState,
+            bool isInWorld,
+            bool isWorldEntryInProgress,
+            bool joinAlreadyPending)
+            => startupReady && sessionState == NetworkSessionState.Offline && !isInWorld &&
+               !isWorldEntryInProgress && !joinAlreadyPending;
+
+        internal static bool CanFinishClientJoinAfterResourcesReady(
+            int requestGeneration,
+            int activeGeneration,
+            ResourceLoadState loadState,
+            NetworkSessionState sessionState,
+            bool isInWorld,
+            bool isWorldEntryInProgress)
+            => requestGeneration == activeGeneration && loadState == ResourceLoadState.Ready &&
+               sessionState == NetworkSessionState.Offline && !isInWorld && !isWorldEntryInProgress;
+
+        internal static bool CanEnableHostButton(
+            bool offline,
+            bool privateHost,
+            bool contentReady,
+            bool isInWorld,
+            bool hasLocalPlayer,
+            bool gameplayReady)
+            => (offline || privateHost) && contentReady && isInWorld && hasLocalPlayer && gameplayReady;
 
         private void StopSession()
         {
+            if (CancelPendingClientJoin("已取消加入。"))
+            {
+                RefreshInteractableState();
+                return;
+            }
+
             if (Mirror.NetworkServer.active && IsInWorld)
             {
                 networkManager.MakeSessionPrivate();
@@ -163,6 +327,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private void OnSessionStateChanged(NetworkSessionState state)
         {
+            if (state != NetworkSessionState.Offline)
+                CancelPendingClientJoin("联机会话状态已变化，已取消等待加入。");
+
             SetStatus(state switch
             {
                 NetworkSessionState.Starting => "正在建立联机会话",

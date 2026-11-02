@@ -248,7 +248,6 @@ public sealed class ChunkView : MonoBehaviour
     public void CaptureNaturalItemState()
     {
         GetComponent<ChunkAgricultureRenderer>().CaptureState();
-        naturalItemRenderer.CaptureState();
     }
 
     #region 池化资源
@@ -279,9 +278,6 @@ public sealed class ChunkView : MonoBehaviour
         if (budget.ShouldYield())
             yield return budget.WaitForNextSlice();
 
-        IEnumerator captureRoutine = naturalItemRenderer.CaptureStateCoroutine(budget);
-        while (captureRoutine.MoveNext())
-            yield return captureRoutine.Current;
     }
 
     private void OnDisable() => Unbind();

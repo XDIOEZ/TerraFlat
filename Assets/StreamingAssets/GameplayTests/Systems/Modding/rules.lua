@@ -27,6 +27,17 @@ for _, row in ipairs({ { path = "Scripts/main.lua", expected = true }, { path = 
     end, "MOD 包内路径：" .. row.path)
 end
 
+test.system("modding", "managed_runtime", {}, function(data)
+    if not data.supported then
+        assert(not data.isEditor and data.skipReason == "IL2CPP", "托管运行库只能在 IL2CPP 跳过")
+        return
+    end
+    assert(data.assemblyName == "0Harmony" and data.sameAssembly and data.noCompileReference,
+        "内置 Harmony 没有复用程序集，或 GamePlay 仍持有编译期引用")
+    assert(data.before == 17 and data.patched == 23 and data.restored == 17,
+        "Harmony 运行时补丁或按所有者恢复失败")
+end, "托管 MOD 按需加载与真实补丁清理")
+
 for _, fail in ipairs({ false, true }) do
     test.system("modding", "candidate_patch", { fail = fail }, function(data)
         assert(data.officialCount == 1 and data.other == 9, "候选补丁修改了旧目录或旁支")

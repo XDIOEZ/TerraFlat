@@ -56,6 +56,11 @@
         }
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "ai": {
           "prefab": "Module_AnimalBehaviorTree",
           "id": "AI",

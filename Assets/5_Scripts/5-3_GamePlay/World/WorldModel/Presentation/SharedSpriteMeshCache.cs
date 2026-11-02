@@ -16,6 +16,7 @@ public static class SharedSpriteMeshCache
     private static readonly Dictionary<Sprite, Geometry> geometries = new();
     private static readonly Dictionary<Sprite, SunShadowGeometry> sunShadowGeometries = new();
     private static Sprite terrainShadowCell;
+    private static Sprite worldEffectQuad;
     internal const float SunShadowPaddingPixels = 5f; // 覆盖最大四像素模糊半径与半像素线性过滤边界。
     private const float SunShadowReferencePixelsPerUnit = 16f; // 阴影柔化按世界像素密度归一，避免高分辨率 Sprite 变成硬边。
 
@@ -70,6 +71,18 @@ public static class SharedSpriteMeshCache
         terrainShadowCell.name = "TerrainHeightShadowCell";
         terrainShadowCell.hideFlags = HideFlags.HideAndDontSave;
         return terrainShadowCell;
+    }
+
+    /// <summary>程序化世界特效共用白色底部锚点四边形，不生成贴图帧或逐格对象。</summary>
+    internal static Sprite GetWorldEffectQuad()
+    {
+        if (worldEffectQuad != null) return worldEffectQuad;
+        Texture2D texture = Texture2D.whiteTexture;
+        worldEffectQuad = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height),
+            new Vector2(.5f, 0f), texture.width, 0, SpriteMeshType.FullRect);
+        worldEffectQuad.name = "WorldEffectShaderQuad";
+        worldEffectQuad.hideFlags = HideFlags.HideAndDontSave;
+        return worldEffectQuad;
     }
 
     /// <summary>命中时不读取 Sprite 数组；未预热的动态 Sprite 在此构造一次。</summary>
@@ -252,7 +265,17 @@ public static class SharedSpriteMeshCache
             catch (Exception exception) { Debug.LogException(exception); }
             finally
             {
+                try
+                {
+                    if (worldEffectQuad != null)
+                    {
+                        if (immediate || !Application.isPlaying) UnityEngine.Object.DestroyImmediate(worldEffectQuad);
+                        else UnityEngine.Object.Destroy(worldEffectQuad);
+                    }
+                }
+                catch (Exception exception) { Debug.LogException(exception); }
                 terrainShadowCell = null;
+                worldEffectQuad = null;
                 clearing = false;
             }
         }

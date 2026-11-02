@@ -23,6 +23,8 @@ public sealed class BinaryContentCache
     private readonly string entryPath;
     private readonly bool remote;
     private readonly byte[] documentHash;
+    private string builtInCatalogKey;
+    private int builtInCatalogVersion;
     private static int buildRevision;
     private bool buildStarted;
     private readonly Dictionary<string, BinaryContentSource> sources = new(StringComparer.Ordinal);
@@ -31,6 +33,7 @@ public sealed class BinaryContentCache
     public string CachePath { get; }
     public bool IsHit { get; private set; }
     public string Reason { get; private set; } = "首次加载";
+    public double ElapsedMilliseconds => timer.Elapsed.TotalMilliseconds;
     public static int BuildRevision => Volatile.Read(ref buildRevision);
 
     /// <summary>只记录真实的缓存重建，加载画面据此提示首次加载较慢。</summary>
@@ -77,7 +80,12 @@ public sealed class BinaryContentCache
         string scope = Hex(Hash(Encoding.UTF8.GetBytes(NormalizeRoot(root,
             StreamingAssetsTextLoader.RequiresWebRequest(root)) + "|" + Application.platform)));
         string path = Path.Combine(Application.persistentDataPath, "ContentCache", scope, id + ".fwbin");
-        return new BinaryContentCache(path, signature, root, manifest);
+        return new BinaryContentCache(path, signature, root, manifest)
+        {
+            builtInCatalogKey = BuiltInContentBinaryCatalog.GetStreamingAssetKey(manifest) is string sourceKey
+                ? "catalog:" + sourceKey : null,
+            builtInCatalogVersion = version
+        };
     }
 
     public string ReadText(string path)
@@ -88,13 +96,12 @@ public sealed class BinaryContentCache
     }
 
     public IEnumerator ReadTextAsync(string path, Action<string> completed, Action<Exception> failed)
+        => !remote ? StreamingAssetsTextLoader.BeginPureDataAsync(() => ReadText(path), completed, failed)
+            : ReadPackagedTextAsync(path, completed, failed);
+
+    private IEnumerator ReadPackagedTextAsync(string path, Action<string> completed, Action<Exception> failed)
     {
         BeginBuild();
-        if (!remote)
-        {
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(() => ReadText(path), completed, failed);
-            yield break;
-        }
         byte[] bytes = null;
         Exception error = null;
         yield return StreamingAssetsTextLoader.ReadAllBytesAsync(path, value => bytes = value, value => error = value);
@@ -112,9 +119,12 @@ public sealed class BinaryContentCache
     }
 
     public void Report(string label, int count)
+        => Report(label, count, ElapsedMilliseconds);
+
+    public void Report(string label, int count, double elapsedMilliseconds)
     {
         UnityEngine.Debug.Log($"[启动二进制缓存] {label}：{(IsHit ? "命中" : Reason)}，" +
-                              $"{count} 个定义，读取/解析 {timer.Elapsed.TotalMilliseconds:F1} ms");
+                              $"{count} 个定义，读取/解析 {elapsedMilliseconds:F1} ms");
     }
 
     #endregion
@@ -125,6 +135,14 @@ public sealed class BinaryContentCache
     {
         value = null;
         IsHit = false;
+        if (builtInCatalogKey != null && BuiltInContentBinaryCatalog.TryRead(builtInCatalogKey, builtInCatalogVersion, out value))
+        {
+            IsHit = true;
+            Reason = "构建期烘焙目录";
+            return true;
+        }
+        if (builtInCatalogKey != null && BuiltInContentBinaryCatalog.IsActive)
+            throw new InvalidDataException("构建期二进制目录缺少内容包：" + builtInCatalogKey);
         try
         {
             BinaryContentEnvelope envelope = ReadEnvelope();
@@ -136,15 +154,16 @@ public sealed class BinaryContentCache
     }
 
     public IEnumerator TryReadAsync<T>(Action<T> completed) where T : class
-    {
-        if (!remote)
-        {
-            yield return StreamingAssetsTextLoader.RunPureDataAsync(
+        => builtInCatalogKey != null && BuiltInContentBinaryCatalog.IsActive
+            ? StreamingAssetsTextLoader.BeginPureDataAsync(
                 () => TryRead<T>(out T value) ? value : null, completed,
-                error => { Reason = "缓存不可用：" + error.Message; completed(null); });
-            yield break;
-        }
+                error => throw new InvalidDataException("构建期二进制内容包读取失败：" + builtInCatalogKey, error))
+            : !remote ? StreamingAssetsTextLoader.BeginPureDataAsync(
+            () => TryRead<T>(out T value) ? value : null, completed,
+            error => { Reason = "缓存不可用：" + error.Message; completed(null); }) : TryReadPackagedAsync(completed);
 
+    private IEnumerator TryReadPackagedAsync<T>(Action<T> completed) where T : class
+    {
         BinaryContentEnvelope envelope = null;
         yield return StreamingAssetsTextLoader.RunPureDataAsync(() => ReadEnvelope(), value => envelope = value,
             error => Reason = "缓存不可用：" + error.Message);
@@ -191,6 +210,7 @@ public sealed class BinaryContentCache
     {
         T value = MemoryPackSerializer.Deserialize<T>(envelope.Payload);
         if (value == null) throw new InvalidDataException("缓存没有配置对象");
+        RecordBuiltInCatalog(value);
         IsHit = true;
         return value;
     }
@@ -239,6 +259,7 @@ public sealed class BinaryContentCache
 
     public bool Store<T>(T value) where T : class
     {
+        RecordBuiltInCatalog(value);
         try
         {
             BinaryContentSource[] inputs = SnapshotSources();
@@ -249,7 +270,18 @@ public sealed class BinaryContentCache
         catch (Exception error) { Reason = "缓存写入失败，使用 JSON 结果：" + error.Message; return false; }
     }
 
+    private void RecordBuiltInCatalog<T>(T value)
+    {
+        if (builtInCatalogKey != null)
+            BuiltInContentBinaryCatalog.Record(builtInCatalogKey, builtInCatalogVersion, value);
+    }
+
     public IEnumerator StoreAsync<T>(T value) where T : class
+        // 本地来源复核与原子写入共用一次后台任务，不为同一缓存往返主线程两次。
+        => !remote ? StreamingAssetsTextLoader.BeginPureDataAsync(() => Store(value), _ => { },
+            error => Reason = "缓存写入失败，使用 JSON 结果：" + error.Message) : StorePackagedAsync(value);
+
+    private IEnumerator StorePackagedAsync<T>(T value) where T : class
     {
         BinaryContentSource[] inputs = null;
         try { inputs = SnapshotSources(); }

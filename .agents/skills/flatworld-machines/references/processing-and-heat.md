@@ -7,6 +7,7 @@
 - `MachineCatalog.TryGetProcess` 在正式配方目录上维护按 (Station, Input) 的无分配复合键索引；持久化/热重载仍保留原字符串键，配置重载、注册配方、保留或清退旧档配方必须使索引失效。机械总工作分为 `MachineWorld.Logic.Nodes` 和 `MachineWorld.Logic.Facilities` Profiler Marker，以区分首次 JIT 和真实工作；回归 `mechanical/process_lookup_index`。
 - 手动砧共用 `ManualProcessingRuntime`，显式站点阻止混入普通手工配方，按每次有效工作消耗 `DurabilityPerClick`；最后一点可完成当前工作。铜/铁砧500/1000耐久、10铜/熟铁锭制作；耗尽按唯一精确配方固定返50%，先交付返料和内部库存再移除世界节点，船上走正式部件事务；放置/拆回保留基础耐久比例。回归为 `crafting/{metal_tools_catalog,needle_sewing,manual_station_wear}`。
 - 燃料炉共用 FurnaceLogic，只管燃料、炉温、点火、供热、副产物；燃料资格来自 Combustion.Fuel Tag，燃值由 Mod_Fuel 解析。MaterialThermalProcessor 按材料 transitions/reactions 原子转化，以材料自身 MatterState 温度换热；先已有 Output 后 Input，防止新产物同轮重复加热。
+- 材料 `requiresFuelExhaustion` 的点燃/燃尽由 ItemMatterRuntime 通用规则处理；FurnaceMaterialHeating 以燃点和剩余燃值切分供热步，燃尽后才原子交付产物，后续余时加热新产物。调用方传真实燃烧气氛，燃耗不借用炉体生产倍率；相关配置与场景边界见 item-module 定义参考。
 - 点火及持续燃烧经 MachineWorld.CanSustainCombustion，真实世界/舱气氧气占比至少5%；缺氧停火、清吸料进度、保留燃值，恢复后重新点火。助燃温度加成不能绕过门槛，熄火仍传余热。
 - 炉内材料、罐体、停火炉体用 ThermalRuntime.AdvanceAmbient：每游戏秒消除剩余温差1%，升降温至少0.5℃/秒，到目标即停，分步/累计跨速率下限一致。炉体先撤自身熄火热源；共享罐按启用成员真实平均罐温仅换热一次，回写内能再走相变。主动升温与双库存换热保留设备规则。
 - FurnaceMaterialHeating 共供燃料/电炉；heatingRatePercent 仅缩放材料升温，Smelter 50%、BlastFurnace/Bonfire 100%，不改炉体、干燥/加工计时和自然冷却。Input/Output、容器液体、坩埚材料同倍率；新载荷从真实环境/容器原温起步，活动地表用气候基温避开自身热源，已初始化温度不覆盖。

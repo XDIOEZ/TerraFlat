@@ -177,10 +177,10 @@ public static partial class GameplayTestSystemProbe
                     var parts = GameplayCombatBridge.Values(values);
                     row["damage"] = new JObject
                     {
-                        ["cutting"] = parts.x, ["piercing"] = parts.y, ["chopping"] = parts.z, ["blunt"] = parts.w,
-                        ["physical"] = values.TotalCombatPower,
-                        ["bleedingAt83"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .83f),
-                        ["bleedingAt85"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .85f)
+                        ["physical"] = parts.x, ["fire"] = parts.y, ["radiation"] = parts.z,
+                        ["impactKind"] = (int)values.DominantKind,
+                        ["bleedingAt87"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .87f, true),
+                        ["bleedingAt89"] = FlatWorld.Combat.CombatRules.BleedingTier(parts, true, true, .89f, true)
                     };
                 }
                 rows.Add(row);

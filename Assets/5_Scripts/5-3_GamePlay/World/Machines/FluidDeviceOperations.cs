@@ -157,6 +157,8 @@ public static class FluidDeviceOperations
             { state.Status = "累计十升抽水量"; StateChanged(node); return; }
 
             int reserve = sourceSelection == WorldLiquidPumpSourceSelection.Surplus ? 1 : 0;
+            double sourceTemperature = TryGetFluidEnvironmentLiquidTemperature(world, position, out float sourceCelsius)
+                ? sourceCelsius + 273.15d : FluidUnits.ReferenceTemperatureKelvin;
             if (!TryPumpFluidEnvironmentLiquid(world, position, 1, reserve, out string actualId, out int removed) || removed != 1)
             { ResetLiquidPumpBatchCredit(state, workspace); state.Status = "来源暂时不能提供十升"; return; }
             var buffer = GetFluidInventory(node);
@@ -164,7 +166,7 @@ public static class FluidDeviceOperations
             try
             {
                 if (actualId != liquid.Id || !buffer.TryAdd(FluidInventory.CreateBatch(fluid, 0m,
-                    FluidUnits.LiquidLitersToMol(fluid, (decimal)batchLiters), FluidUnits.ReferenceTemperatureKelvin),
+                    FluidUnits.LiquidLitersToMol(fluid, (decimal)batchLiters), sourceTemperature),
                     Math.Max(GetFluidVolumeLiters(node), batchLiters) + .001d, .001d, false, true) ||
                     IndustrialFluidTransfer.Transfer(buffer, target, FluidPhase.Liquid, batchLiters,
                         GetFluidGasCapacityStandardLiters(receiver.Node), GetFluidVolumeLiters(receiver.Node), fluid.Id) + 1e-9 < batchLiters)

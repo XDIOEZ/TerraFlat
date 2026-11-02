@@ -143,10 +143,13 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private WorldPresentationSortingDomain sortingDomain;
     private Matrix4x4 synchronizedProjection = Matrix4x4.identity;
     private Matrix4x4 synchronizedDisplayToSource = Matrix4x4.identity;
+    private Vector3 visualMotionOffset;
     private bool synchronizedVisible;
     private bool released;
     private Item sourceItem;
     private bool excludeNestedItems;
+    private bool visualHierarchyOnly;
+    private bool allowInactiveSourceRoot;
     private bool hierarchyDirty = true;
     public bool IsReleased => released;
     public WorldPresentationSortingDomain SortingDomain => sortingDomain;
@@ -160,13 +163,16 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     // 停用父节点和编辑态可先调用同步，不能把材质参数初始化只交给 Awake。
     private void EnsureProjectionPropertyBlock() => properties ??= new MaterialPropertyBlock();
 
-    public static WorldPresentationProjection Create(Transform source, Transform parent = null)
+    public static WorldPresentationProjection Create(Transform source, Transform parent = null,
+        bool visualHierarchyOnly = false, bool allowInactiveSourceRoot = false)
     {
         if (source == null) throw new ArgumentNullException(nameof(source));
         var root = new GameObject("WorldPresentationProjection") { hideFlags = HideFlags.DontSave };
         if (parent != null) root.transform.SetParent(parent, false);
         var projection = root.AddComponent<WorldPresentationProjection>();
         projection.sourceRoot = source;
+        projection.visualHierarchyOnly = visualHierarchyOnly;
+        projection.allowInactiveSourceRoot = allowInactiveSourceRoot;
         projection.originalParent = parent;
         projection.sourceItem = source.GetComponent<Item>();
         projection.excludeNestedItems = projection.sourceItem == null;
@@ -215,7 +221,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         foreach (NodeCopy node in nodes.Values)
         {
             if (node.Target == null || node.Target == transform || node.Target.parent != domainRoot) continue;
-            bool active = visible && node.Source != null && node.Source.gameObject.activeInHierarchy;
+            bool active = visible && node.Source != null && SourceActiveForProjection(node.Source);
             if (node.Target.gameObject.activeSelf != active) node.Target.gameObject.SetActive(active);
         }
     }
@@ -232,6 +238,24 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     {
         if (source != null && source.TryGetComponent(out WorldPresentationHierarchyWatcher watcher))
             watcher.Invalidate();
+    }
+
+    /// <summary>短暂视觉效果只在参数变化时同步显示副本，不触发层级重扫或逐帧重建。</summary>
+    public static void RefreshItemVisualProperties(Item item, IReadOnlyList<SpriteRenderer> sources)
+    {
+        if (item == null || sources == null || !itemProjectionOwners.TryGetValue(item, out var owners)) return;
+        foreach (WorldPresentationProjection owner in owners)
+        {
+            if (owner == null || owner.released) continue;
+            for (int i = 0; i < sources.Count; i++)
+            {
+                SpriteRenderer source = sources[i];
+                if (source == null || !owner.copies.TryGetValue(source, out RenderCopy copy) ||
+                    copy.Target == null || copy.Target is not SpriteRenderer display) continue;
+                owner.SynchronizeRenderer(copy);
+                display.localBounds = source.localBounds;
+            }
+        }
     }
 
     internal static bool IsSourceProjected(Renderer source)
@@ -290,6 +314,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
 
     private void SynchronizeProjectionRootPose(Matrix4x4 worldToDisplay, bool visible)
     {
+        visualMotionOffset = Vector3.zero;
         if (synchronizedProjection != worldToDisplay)
         {
             synchronizedProjection = worldToDisplay;
@@ -308,6 +333,20 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (transform.localPosition != position) transform.localPosition = position;
         if (transform.localRotation != rotation) transform.localRotation = rotation;
         if (transform.localScale != scale) transform.localScale = scale;
+    }
+
+    /// <summary>渲染后处理只平移绘制副本与排序节点，不触碰源 Transform。</summary>
+    internal void ApplyVisualMotionTranslation(Vector3 sourceWorldOffset)
+    {
+        if (released || !synchronizedVisible || sourceWorldOffset == Vector3.zero) return;
+        Vector3 displayOffset = synchronizedProjection.MultiplyVector(sourceWorldOffset);
+        transform.position += displayOffset;
+        if (sortingDomain != null && sortingDomain.Root != null)
+            foreach (NodeCopy node in nodes.Values)
+                if (node.Target != null && node.Target != transform && node.Target.parent == sortingDomain.Root)
+                    node.Target.position += displayOffset;
+        visualMotionOffset = displayOffset;
+        if (sortingDomain != null) SynchronizeLocalSortingUnits();
     }
 
     // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
@@ -346,7 +385,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                     if (node.Target.localRotation != node.Source.localRotation) node.Target.localRotation = node.Source.localRotation;
                     if (node.Target.localScale != node.Source.localScale) node.Target.localScale = node.Source.localScale;
                 }
-                bool active = escape ? node.Source.gameObject.activeInHierarchy : node.Source.gameObject.activeSelf;
+                bool active = escape ? SourceActiveForProjection(node.Source) : node.Source.gameObject.activeSelf;
                 if (node.Target.gameObject.activeSelf != active) node.Target.gameObject.SetActive(active);
             }
             SynchronizeSortingGroup(node);
@@ -380,6 +419,15 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         sourceRoot.GetComponentsInChildren(true, sourceRenderers);
         sourceRoot.GetComponentsInChildren(true, sourceLights);
         sourceRoot.GetComponentsInChildren(true, sourceShadows);
+        if (visualHierarchyOnly)
+        {
+            seenNodes.Add(sourceRoot);
+            foreach (Renderer renderer in sourceRenderers) IncludeVisualAncestors(renderer.transform);
+            foreach (Light2D light in sourceLights) IncludeVisualAncestors(light.transform);
+            foreach (ShadowCaster2D shadow in sourceShadows) IncludeVisualAncestors(shadow.transform);
+            sourceNodes.RemoveAll(node => !seenNodes.Contains(node));
+            seenNodes.Clear();
+        }
         foreach (Transform source in sourceNodes)
         {
             if (source == null) continue;
@@ -481,10 +529,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             RestoreSourceRenderer(copy);
             if (copy.Target != null)
             {
-                if (copy.ParticleMesh != null) Destroy(copy.Target.gameObject);
-                else Destroy(copy.Target);
+                if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.Target.gameObject);
+                else DestroyProjectionOwnedObject(copy.Target);
             }
-            if (copy.ParticleMesh != null) Destroy(copy.ParticleMesh);
+            if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.ParticleMesh);
             copies.Remove(source);
         }
         removedLights.Clear();
@@ -493,7 +541,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             LightCopy copy = lights[source];
             Light2DSortingLayerUtility.EndProjectedLight(copy.Source);
-            if (copy.Target != null) Destroy(copy.Target);
+            if (copy.Target != null) DestroyProjectionOwnedObject(copy.Target);
             lights.Remove(source);
         }
         removedShadows.Clear();
@@ -502,7 +550,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             ShadowCopy copy = shadows[source];
             Light2DSortingLayerUtility.EndProjectedShadow(copy.Source);
-            if (copy.Target != null) Destroy(copy.Target);
+            if (copy.Target != null) DestroyProjectionOwnedObject(copy.Target);
             shadows.Remove(source);
         }
         removedNodes.Clear();
@@ -512,7 +560,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             NodeCopy node = nodes[source];
             if (node.SortingRegistered) sortingDomain?.RemoveLocalSortingKey(node.TargetSorting);
             if (node.Watcher != null) node.Watcher.Remove(this);
-            if (node.Target != null && node.Target != transform) Destroy(node.Target.gameObject);
+            if (node.Target != null && node.Target != transform) DestroyProjectionOwnedObject(node.Target.gameObject);
             nodes.Remove(source);
         }
         foreach (NodeCopy node in nodes.Values) node.QueueSource = null;
@@ -545,10 +593,29 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         return result;
     }
 
+    // 只保留绘制所需的祖先变换，食物等纯逻辑模块不会在视图中复制空节点。
+    private void IncludeVisualAncestors(Transform source)
+    {
+        for (Transform current = source; current != null; current = current.parent)
+        {
+            seenNodes.Add(current);
+            if (current == sourceRoot) break;
+        }
+    }
+
+    // 远端世界关闭的是源视觉根；船内副本仍应读取其内部真实激活的绘制子节点。
+    private bool SourceActiveForProjection(Transform current)
+    {
+        if (!allowInactiveSourceRoot) return current.gameObject.activeInHierarchy;
+        for (; current != null && current != sourceRoot; current = current.parent)
+            if (!current.gameObject.activeSelf) return false;
+        return current == sourceRoot;
+    }
+
     private void SynchronizeRenderer(RenderCopy copy)
     {
         Renderer source = copy.Source, target = copy.Target;
-        bool draw = source.enabled && source.gameObject.activeInHierarchy && !copy.LogicalForceOff;
+        bool draw = source.enabled && SourceActiveForProjection(source.transform) && !copy.LogicalForceOff;
         if (source is SpriteRenderer sprite && BuildingDepthMeshBridge.IsProjected(sprite)) draw = false;
         if (copy.SourceParticles != null)
         {
@@ -625,7 +692,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             int queue = node.QueueSource != null && copies.TryGetValue(node.QueueSource, out RenderCopy queueCopy)
                 ? queueCopy.RenderQueue : 3000;
             // 从规范脚点只投影一次，避免不同显示层级的浮点误差拆开同格线路。
-            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y;
+            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y + visualMotionOffset.y;
             sortingDomain.ApplyLocalSortingGroupKey(target, source.sortingLayerID, source.sortingOrder,
                 queue, footY, sameFootOrder: node.QueueSource.sortingOrder);
             node.SortingRegistered = true;
@@ -645,7 +712,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             }
             Vector3 sourceFoot = copy.Source is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
                 ? copy.Source.transform.position : copy.Source.bounds.center;
-            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y;
+            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y + visualMotionOffset.y;
             sortingDomain.ApplyLocalRendererSortingKey(copy.Target, copy.Source.sortingLayerID, copy.Source.sortingOrder,
                 copy.RenderQueue, footY);
             copy.SortingRegistered = true;
@@ -717,11 +784,11 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     }
 
     // 源光保留运行状态，仅将接收层交给显示副本，避免本地原点出现第二盏灯。
-    private static void SynchronizeLight(LightCopy copy)
+    private void SynchronizeLight(LightCopy copy)
     {
         Light2DSortingLayerUtility.CopyLightLayers(copy.Source, copy.Target);
         Light2D source = copy.Source, target = copy.Target;
-        bool enabled = source.enabled && source.gameObject.activeInHierarchy;
+        bool enabled = source.enabled && SourceActiveForProjection(source.transform);
         if (target.enabled != enabled) target.enabled = enabled;
         if (target.color != source.color) target.color = source.color;
         if (target.intensity != source.intensity) target.intensity = source.intensity;
@@ -741,7 +808,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     }
 
     // 阴影体复制普通遮挡路径，物理世界仍保留自己的碰撞与逻辑层。
-    private static void SynchronizeShadow(ShadowCopy copy)
+    private void SynchronizeShadow(ShadowCopy copy)
     {
         object shape = ShadowShape.GetValue(copy.Source);
         int hash = (int)ShadowShapeHash.GetValue(copy.Source);
@@ -753,7 +820,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         }
         Light2DSortingLayerUtility.CopyShadowLayers(copy.Source, copy.Target);
         ShadowCaster2D source = copy.Source, target = copy.Target;
-        bool enabled = source.enabled && source.gameObject.activeInHierarchy;
+        bool enabled = source.enabled && SourceActiveForProjection(source.transform);
         if (target.enabled != enabled) target.enabled = enabled;
         if (target.castsShadows != source.castsShadows) target.castsShadows = source.castsShadows;
         if (target.selfShadows != source.selfShadows) target.selfShadows = source.selfShadows;
@@ -766,8 +833,14 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         if (released) return;
         ReleaseBindings();
         gameObject.SetActive(false);
-        if (Application.isPlaying) Destroy(gameObject);
-        else DestroyImmediate(gameObject);
+        DestroyProjectionOwnedObject(gameObject);
+    }
+
+    // 投影自建对象在编辑态立即释放，运行态保留帧末销毁契约。
+    private static void DestroyProjectionOwnedObject(UnityEngine.Object ownedObject)
+    {
+        if (Application.isPlaying) Destroy(ownedObject);
+        else DestroyImmediate(ownedObject);
     }
 
     private void OnDestroy() => ReleaseBindings();
@@ -790,7 +863,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         {
             ForgetProjectedSource(copy.Source);
             RestoreSourceRenderer(copy);
-            if (copy.ParticleMesh != null) Destroy(copy.ParticleMesh);
+            if (copy.ParticleMesh != null) DestroyProjectionOwnedObject(copy.ParticleMesh);
         }
         foreach (LightCopy copy in lights.Values) Light2DSortingLayerUtility.EndProjectedLight(copy.Source);
         foreach (ShadowCopy copy in shadows.Values) Light2DSortingLayerUtility.EndProjectedShadow(copy.Source);

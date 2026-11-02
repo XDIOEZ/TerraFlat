@@ -248,6 +248,8 @@ Shader "FlatWorld/2D/Chunk Mesh Water Lit"
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
+        // 仅标记真实水面像素，供生物倒影裁剪；不覆盖 SpriteMask 使用的低位。
+        Stencil { Ref 64 ReadMask 64 WriteMask 64 Comp Always Pass Replace }
 
         Pass
         {

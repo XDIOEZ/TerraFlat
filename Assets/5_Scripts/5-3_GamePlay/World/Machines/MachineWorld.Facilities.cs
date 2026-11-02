@@ -221,6 +221,7 @@ public static partial class MachineWorld
                     CaptureNode(entity);
                     DisposeProcessor(entity);
                     entity.State = null;
+                    ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(entity);
                 }
                 entity.Active = false;
                 continue;

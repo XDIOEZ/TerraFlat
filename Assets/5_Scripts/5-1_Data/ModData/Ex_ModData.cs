@@ -45,7 +45,7 @@ public partial class Ex_ModData_MemoryPackable : ModuleData
         public abstract byte[] Serialize();
     }
 
-    private sealed class RuntimeState<T> : RuntimeState where T : struct
+    private sealed class RuntimeState<T> : RuntimeState
     {
         public T Value;
         public override byte[] Serialize() => ModuleBinaryPayloadCodecs.Serialize(Value);
@@ -81,16 +81,16 @@ public partial class Ex_ModData_MemoryPackable : ModuleData
         }
     }
 
-    public T ReadRuntimeState<T>() where T : struct => GetOrCreateRuntimeState<T>().Value;
+    public T ReadRuntimeState<T>() => GetOrCreateRuntimeState<T>().Value;
 
-    public void WriteRuntimeState<T>(T value) where T : struct
+    public void WriteRuntimeState<T>(T value)
     {
         GetOrCreateRuntimeState<T>().Value = value;
         runtimeStateChanged = true;
         NotifyPayloadChanged();
     }
 
-    private RuntimeState<T> GetOrCreateRuntimeState<T>() where T : struct
+    private RuntimeState<T> GetOrCreateRuntimeState<T>()
     {
         if (runtimeState is RuntimeState<T> typed) return typed;
         byte[] payload = BitData;

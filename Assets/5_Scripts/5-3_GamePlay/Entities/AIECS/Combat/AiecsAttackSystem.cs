@@ -15,12 +15,11 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<FixedString128Bytes> Factions;
         [ReadOnly] public AiecsSpatialView Spatial;
         [ReadOnly] public AiecsLosView Los;
-        [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         [NativeDisableParallelForRestriction] public NativeArray<AiecsHitEvent> Hits;
         public CombatClock Clock;
 
         /// <summary>推进有限阶段并在真正生效时提交纯值事件；动画和 Bridge 不决定命中。</summary>
-        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
+        private void Execute([EntityIndexInQuery] int index, in AiecsIdentity identity, in AiecsVital vital,
             in AiecsFlowAgent actor, in AiecsBehaviorIntent intent, ref AiecsBody body, ref AiecsAttackState attack,
             ref AiecsWorkCounters counters)
         {
@@ -29,9 +28,12 @@ namespace FlatWorld.AIECS
             AiecsDefinition definition = Definitions[identity.Definition];
             if (attack.Phase == AiecsAttackPhase.Cooldown && Clock.Time >= attack.NextAttack) attack.Phase = AiecsAttackPhase.Ready;
             if (attack.Phase == AiecsAttackPhase.Ready && intent.Behavior == (int)AiecsBehavior.Attack && Clock.Time >= attack.NextAttack &&
-                (uint)index < (uint)EngagementSlots.Length &&
-                AiecsEngagementSlots.Matches(EngagementSlots[index], entity, intent.Target, intent.TargetKey) &&
-                Spatial.TryTarget(intent.Target, intent.TargetKey, out var startingTarget))
+                Spatial.TryTarget(intent.Target, intent.TargetKey, out var startingTarget) &&
+                identity.Key.World == startingTarget.Identity.Key.World &&
+                identity.Key.Dimension == startingTarget.Identity.Key.Dimension &&
+                Spatial.IsHostile(identity.Faction, startingTarget.Identity.Faction) &&
+                AiecsEngagementSlots.IsWithinAttackStartRange(
+                    math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, startingTarget.Position)), definition.AttackStartRange))
             {
                 attack.Target = intent.Target; attack.TargetKey = intent.TargetKey;
                 attack.Facing = math.normalizesafe(Spatial.Domain.ShortestDelta(actor.Position, startingTarget.Position), body.Facing);
@@ -52,7 +54,8 @@ namespace FlatWorld.AIECS
                         Context = new CombatDamageContext { Attack = new CombatAttackKey { Source = identity.Key,
                             Sequence = attack.Sequence, Window = 1, Pulse = attack.Pulse }, Credit = identity.Key,
                             SourceItemId = definition.Id, CreditItemId = definition.Id,
-                            Faction = Factions[identity.Faction], Damage = definition.Damage, Origin = actor.Position,
+                            Faction = Factions[identity.Faction], Damage = definition.Damage,
+                            ImpactKind = definition.ImpactKind, Origin = actor.Position,
                             HitPoint = target.Position, Clock = Clock, SourceIsPlayer = identity.Player,
                             SlowEnabled = (byte)(definition.SlowDuration > 0f ? 1 : 0), SlowMultiplier = definition.SlowMultiplier,
                             SlowDuration = definition.SlowDuration, BuildingMultiplier = 1f, OnHitBuffs = definition.OnHitBuffs } };

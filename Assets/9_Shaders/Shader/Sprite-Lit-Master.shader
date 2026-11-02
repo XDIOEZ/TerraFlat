@@ -19,6 +19,8 @@ Shader "Game/2D/Sprite-Lit-Master"
         _BodyMinV ("Body UV Bottom", Range(0,1)) = 0
         _BodyMaxV ("Body UV Top", Range(0,1)) = 1
         [HideInInspector] _SpriteLocalBounds("Sprite Local Center And Half Size", Vector) = (0,0,0.5,0.5)
+        [HideInInspector] _HeldFoodBites("Bite Count, Texture Step And Sprite Flip", Vector) = (0,0,1,1)
+        [HideInInspector] _HeldFoodBiteCircles("Bite Circle Parameters", 2D) = "black" {}
 
         // 通用角色水体表现：水下染色、透明度和水线
         _WaterEnabled ("Water Immersion Blend", Range(0,1)) = 0
@@ -41,6 +43,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _HitFlash ("Hit Flash", Range(0,1)) = 0
         _HitFlashColor ("Hit Flash Color", Color) = (1,0.08,0.08,1)
         [HideInInspector] _CombatHitOffset ("Combat Hit World Offset", Vector) = (0,0,0,0)
+        [HideInInspector] _HarvestShake ("Harvest Shake Local Pivot, Start And Enabled", Vector) = (0,0,0,0)
 
         _Dissolve ("Dissolve", Range(0,1)) = 0
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
@@ -86,12 +89,31 @@ Shader "Game/2D/Sprite-Lit-Master"
         ZWrite Off
 
         HLSLINCLUDE
+        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "ConveyorSurface.hlsl"
         #include "SpriteSnowCommon.hlsl"
+        TEXTURE2D(_HeldFoodBiteCircles);
+        SAMPLER(sampler_HeldFoodBiteCircles);
+        float4 _HeldFoodBites;
+
+        // 仅已咬过的手持食物读取圆参数，所有 Pass 使用相同的原图本地坐标裁剪。
+        void ClipHeldFoodBites(float2 localPosition)
+        {
+            if (_HeldFoodBites.x < 0.0) clip(-1.0);
+            localPosition *= _HeldFoodBites.zw;
+            [loop] for (int bite = 0; bite < (int)_HeldFoodBites.x; bite++)
+            {
+                float4 circle = SAMPLE_TEXTURE2D_LOD(_HeldFoodBiteCircles, sampler_HeldFoodBiteCircles,
+                    float2((bite + 0.5) * _HeldFoodBites.y, 0.5), 0);
+                float2 offset = localPosition - circle.xy;
+                clip(dot(offset, offset) - circle.z);
+            }
+        }
         float4 _SpriteLocalBounds;
         float4 _ConveyorAnimation, _ConveyorSurface, _ConveyorRegion;
         float4 _DeviceIndicatorRect, _DeviceIndicatorTint;
         float4 _CombatHitOffset;
+        float4 _HarvestShake;
 
         // 指示灯只在指定本地矩形内重染，透明度为零时保留原图绿蓝色。
         float4 ApplyDeviceIndicatorTint(float4 source, float2 localPosition)
@@ -142,6 +164,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             #pragma vertex CombinedShapeLightVertex
             #pragma fragment CombinedShapeLightFragment
+            #pragma target 3.0
 
 			// GPU Instancing
             #pragma multi_compile_instancing
@@ -244,6 +267,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(v.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;
@@ -267,6 +291,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             half4 CombinedShapeLightFragment(Varyings i) : SV_Target
             {
+                ClipHeldFoodBites(float2(i.uv.w, i.uv.z));
                 float2 conveyorUv = ConveyorSurfaceUv(i.uv.xy, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
                 half4 main = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
                 main = ApplyDeviceIndicatorTint(main, float2(i.uv.w, i.uv.z));
@@ -330,6 +355,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             #pragma vertex NormalsRenderingVertex
             #pragma fragment NormalsRenderingFragment
+            #pragma target 3.0
 
             // GPU Instancing
             #pragma multi_compile_instancing
@@ -398,6 +424,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 float3 hitPositionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(hitPositionWS);
                 o.uv = TRANSFORM_TEX(attributes.uv, _NormalMap);
@@ -419,6 +446,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             half4 NormalsRenderingFragment(Varyings i) : SV_Target
             {
+                ClipHeldFoodBites(float2(i.localX, i.localY));
                 float2 conveyorUv = ConveyorSurfaceUv(i.uv, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
                 half4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
                 const half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.uv));
@@ -466,6 +494,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
+            #pragma target 3.0
 
             // GPU Instancing
             #pragma multi_compile_instancing
@@ -535,6 +564,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 #if defined(FLATWORLD_VEGETATION_SWAY)
                 swayedPositionOS = ApplyGrassSway(attributes.positionOS);
                 #endif
+                swayedPositionOS = ApplyManualHarvestShakeSprite(swayedPositionOS, _HarvestShake);
                 o.positionWS = TransformObjectToWorld(swayedPositionOS) + _CombatHitOffset.xyz;
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.objectRootAndSnow.x = TransformObjectToWorld(float3(0, 0, 0)).y;
@@ -553,6 +583,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             float4 UnlitFragment(Varyings i) : SV_Target
             {
+                ClipHeldFoodBites(float2(i.localX, i.localY));
                 float2 conveyorUv = ConveyorSurfaceUv(i.uv, _ConveyorRegion, _ConveyorAnimation, _ConveyorSurface, _Time.y);
                 float4 mainTex = i.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, conveyorUv);
                 mainTex = ApplyDeviceIndicatorTint(mainTex, float2(i.localX, i.localY));

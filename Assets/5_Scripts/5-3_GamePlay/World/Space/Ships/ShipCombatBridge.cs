@@ -75,7 +75,7 @@ namespace FlatWorld.Spaceflight
             using var hitsLease = UnityEngine.Pool.ListPool<CombatColliderHit2D>.Get(out var hits);
             using var resolvedLease = UnityEngine.Pool.ListPool<(ShipState Ship, ShipPieceState Piece,
                 RuntimeItemDefinition Definition, Mod_DamageReceiver Receiver, SpaceOreAsteroidState Asteroid, CombatColliderHit2D Contact)>.Get(out var resolvedHits);
-            using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+            using (CombatColliderQuery2D physics = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
             {
                 foreach (ShipState ship in session.State.Ships)
                 {
@@ -285,8 +285,9 @@ namespace FlatWorld.Spaceflight
                 float weakness = hit.IsTrueDamage != 0 || target.Definition.Health == null ? 1f :
                     Mod_ResourceHarvest.ResolveAffinityMultiplier(target.Definition.Health.WeakTool, 1,
                         (ResourceToolKind)hit.ResourceToolKind, hit.ResourceToolTier, hit.ResourceToolEfficiency);
-                float damage = CombatRules.ResolvePhysical(math.csum(hit.Damage),
-                    hit.IsTrueDamage != 0 ? 0f : (float)target.Piece.PhysicalDefense, attackMultiplier, weakness);
+                float4 protection = hit.IsTrueDamage != 0 ? float4.zero :
+                    new float4((float)target.Piece.PhysicalDefense, 0f, 0f, 0f);
+                float damage = math.csum(CombatRules.Resolve(hit.Damage, protection, attackMultiplier, weakness));
                 weapon.PublishExternalDamage(hit, (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击"));
             }
         }

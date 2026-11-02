@@ -39,6 +39,9 @@ public class Mod_ItemDetector : Module
     private readonly HashSet<Item> _previousItemSet = new HashSet<Item>();
     private readonly List<Item> _emptyItems = new List<Item>(0);
     private readonly List<Item> _rangeFilteredItems = new();
+    private Dictionary<object, float> _minimumDetectionRadii;
+    private float _maximumRequestedDetectionRadius = float.NegativeInfinity;
+    private float _lastObservedDetectionRadius;
     private long _requestedVersion;
     private long _appliedVersion;
     private ulong _validatedOwnershipRevision = ulong.MaxValue;
@@ -80,11 +83,52 @@ public class Mod_ItemDetector : Module
 
     public float DetectionRadius // 检测半径属性
     {
-        get => detectionRadius;
-        set => detectionRadius = value;
+        get => Mathf.Max(detectionRadius, _maximumRequestedDetectionRadius);
+        set
+        {
+            detectionRadius = value;
+            RefreshDetectionRadiusAfterSourceChange();
+        }
     }
 
     public float MaximumDetectionRadius => item != null ? item.MaximumPerceptionRadius : float.PositiveInfinity;
+
+    /// <summary>来源声明自身需要的最小检测半径，重复声明会替换旧值。</summary>
+    public void SetMinimumDetectionRadiusForSource(object source, float radius)
+    {
+        _minimumDetectionRadii ??= new Dictionary<object, float>();
+        if (_minimumDetectionRadii.TryGetValue(source, out float previous) && previous == radius) return;
+        _minimumDetectionRadii[source] = radius;
+        RefreshRequestedDetectionRadius();
+    }
+
+    /// <summary>来源退出时只撤销自身需求，不覆盖其它来源与基础配置。</summary>
+    public void RemoveMinimumDetectionRadiusForSource(object source)
+    {
+        if (_minimumDetectionRadii == null || !_minimumDetectionRadii.ContainsKey(source)) return;
+        _minimumDetectionRadii.Remove(source);
+        RefreshRequestedDetectionRadius();
+    }
+
+    private void RefreshRequestedDetectionRadius()
+    {
+        _maximumRequestedDetectionRadius = float.NegativeInfinity;
+        foreach (float radius in _minimumDetectionRadii.Values)
+            _maximumRequestedDetectionRadius = Mathf.Max(_maximumRequestedDetectionRadius, radius);
+        RefreshDetectionRadiusAfterSourceChange();
+    }
+
+    private void RefreshDetectionRadiusAfterSourceChange()
+    {
+        float currentRadius = DetectionRadius;
+        float previousRadius = _lastObservedDetectionRadius;
+        _lastObservedDetectionRadius = currentRadius;
+        if (previousRadius == currentRadius) return;
+        // 新范围使旧的异步查询失效，运行中的检测器立即排入最新查询。
+        long version = ++_requestedVersion;
+        if (IsRuntimeLoaded && item != null && item.IsInitialized)
+            ItemMgr.GetExistingInstance()?.QueueDetectorQuery(this, version);
+    }
 
     /// <summary>按当前感知上限与墙体遮挡检查目标是否可见。</summary>
     public bool HasLineOfSight(Item target)
@@ -632,6 +676,7 @@ public class Mod_ItemDetector : Module
     /// </summary>
     protected override void OnLoad()
     {
+        _lastObservedDetectionRadius = DetectionRadius;
         if (item != null)
         {
             item.PerceptionRadiusLimitChanged -= HandlePerceptionRadiusLimitChanged;
@@ -649,6 +694,7 @@ public class Mod_ItemDetector : Module
 
     protected override void OnUnload()
     {
+        _requestedVersion++;
         if (item != null) item.PerceptionRadiusLimitChanged -= HandlePerceptionRadiusLimitChanged;
         currentItemsInArea.Clear();
         _currentItemSet.Clear();
@@ -659,10 +705,14 @@ public class Mod_ItemDetector : Module
         _lineOfSightQuery.Dispose();
     }
 
+    public override void OnResourcesReloaded()
+        => RefreshDetectionRadiusAfterSourceChange();
+
     private void OnValidate()
     {
         // 新增组件时数据尚未绑定，延后到模块装配设置能力身份。
         if (_Data != null) _Data.ID = ModText.Detector;
+        if (IsRuntimeLoaded) RefreshDetectionRadiusAfterSourceChange();
     }
     #endregion
 }

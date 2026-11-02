@@ -40,6 +40,9 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
     private const MeshUpdateFlags UploadFlags = MeshUpdateFlags.DontRecalculateBounds |
         MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontNotifyMeshUsers;
+    internal const string FrozenIceShaderKeyword = "FLATWORLD_FROZEN_ICE";
+    private const int FrozenIcePatternPeriod = 16384;
+    private static readonly int FrozenIcePatternOriginId = Shader.PropertyToID("_FrozenIcePatternOrigin");
     private readonly Transform parent;
     private readonly Material sourceMaterial;
     private readonly ChunkBatchRendererGroupService.VisualLayer layer;
@@ -49,25 +52,54 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     private readonly Dictionary<(Texture, Material, bool), Group> groups = new();
     private readonly Dictionary<Sprite, Quad> quads = new();
     private readonly Shader shader;
+    private readonly Vector2 frozenIcePatternOrigin;
     private bool bulkUpdating;
 
     public ChunkGroundMeshRenderer(Transform parent, int width, int height, Material sourceMaterial,
-        ChunkBatchRendererGroupService.VisualLayer layer)
+        ChunkBatchRendererGroupService.VisualLayer layer, Vector2Int frozenIceWorldOrigin = default)
     {
         this.parent = parent;
         this.width = width;
         this.height = height;
         this.sourceMaterial = sourceMaterial;
         this.layer = layer;
+        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ice)
+            frozenIcePatternOrigin = new Vector2(WrapFrozenIcePatternOrigin(frozenIceWorldOrigin.x),
+                WrapFrozenIcePatternOrigin(frozenIceWorldOrigin.y));
         shader = Shader.Find(layer == ChunkBatchRendererGroupService.VisualLayer.Water
             ? "FlatWorld/2D/Chunk Mesh Water Lit"
             : "FlatWorld/2D/Chunk Mesh Contact Lit");
         cellGroups = new Group[width * height];
     }
 
+    private static int WrapFrozenIcePatternOrigin(int coordinate)
+    {
+        int value = coordinate % FrozenIcePatternPeriod;
+        return value < 0 ? value + FrozenIcePatternPeriod : value;
+    }
+
     public bool IsAvailable => shader != null &&
         (sourceMaterial != null || layer == ChunkBatchRendererGroupService.VisualLayer.Water);
     public int ActiveCellCount { get; private set; }
+    public bool HasVisibleCell(int x, int y) => cellGroups[y * width + x] != null;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // 规则测试读取实际待上传的格子数据，不替代 GPU 画面验收。
+    internal bool TryCaptureCellForTests(int x, int y, out Texture texture, out Color tint,
+        out Vector2 uv, out int queue)
+    {
+        int index = y * width + x;
+        Group group = cellGroups[index];
+        if (group != null)
+        {
+            group.CaptureCellForTests(index, out texture, out tint, out uv, out queue);
+            return true;
+        }
+        texture = null; tint = default; uv = default; queue = 0;
+        return false;
+    }
+    internal int GroupCountForTests => groups.Count;
+#endif
 
     public void BeginBulkUpdate() => bulkUpdating = true;
 
@@ -101,7 +133,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         }
 
         int index = y * width + x;
-        bool singleQuad = layer == ChunkBatchRendererGroupService.VisualLayer.Ground &&
+        bool singleQuad = (layer == ChunkBatchRendererGroupService.VisualLayer.Ground ||
+                           layer == ChunkBatchRendererGroupService.VisualLayer.Ice) &&
                           SystemInfo.supportsComputeShaders && CanUseSingleQuad(quad, tileTransform);
         Group group = GetOrCreateGroup(sprite.texture, material, singleQuad);
         Group previous = cellGroups[index];
@@ -135,7 +168,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
     {
         var key = (texture, material, singleQuad);
         if (groups.TryGetValue(key, out Group existing)) return existing;
-        var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad);
+        var group = new Group(parent, width, height, shader, material, texture, layer, singleQuad,
+            frozenIcePatternOrigin);
         try { groups.Add(key, group); }
         catch
         {
@@ -253,12 +287,16 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         private readonly Mesh mesh;
         private readonly Vertex[] vertices;
         private readonly GroundCellData[] groundCells;
+        private readonly int[] activeColumns;
+        private readonly int[] activeRows;
         private readonly GraphicsBuffer groundCellBuffer;
         private readonly int width;
         private readonly int height;
         private readonly int cellCount;
         private readonly int vertexCount;
         private readonly bool singleQuad;
+        private int activeCellCount;
+        private int minActiveX, minActiveY, maxActiveX = -1, maxActiveY = -1;
         private bool geometryDirty;
         private bool disposed;
         public Material Material { get; }
@@ -266,12 +304,14 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
 
         public Group(Transform parent, int width, int height, Shader shader,
             Material sourceMaterial, Texture texture,
-            ChunkBatchRendererGroupService.VisualLayer layer, bool singleQuad)
+            ChunkBatchRendererGroupService.VisualLayer layer, bool singleQuad, Vector2 frozenIcePatternOrigin)
         {
             using var createScope = GroupCreateMarker.Auto();
             this.width = width;
             this.height = height;
             this.singleQuad = singleQuad;
+            minActiveX = width;
+            minActiveY = height;
             cellCount = checked(width * height);
             vertexCount = singleQuad ? 4 : checked(cellCount * 4);
             try
@@ -304,6 +344,10 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                         groundCells = ArrayPool<GroundCellData>.Shared.Rent(cellCount);
                         // 池内旧区块的 active/UV 不得泄漏给本次初绑和 GPU。
                         Array.Clear(groundCells, 0, cellCount);
+                        activeColumns = ArrayPool<int>.Shared.Rent(width);
+                        activeRows = ArrayPool<int>.Shared.Rent(height);
+                        Array.Clear(activeColumns, 0, width);
+                        Array.Clear(activeRows, 0, height);
                     }
                     using (GroupBufferMarker.Auto())
                         groundCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, cellCount,
@@ -359,8 +403,15 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 int renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(layer);
                 Material = new Material(shader) { name = $"Chunk_{layer}_{texture.name}",
                     hideFlags = HideFlags.HideAndDontSave, renderQueue = renderQueue };
-                Material.CopyPropertiesFromMaterial(sourceMaterial);
+                Material.CopyMatchingPropertiesFromMaterial(sourceMaterial);
                 Material.shaderKeywords = sourceMaterial.shaderKeywords;
+                if (layer == ChunkBatchRendererGroupService.VisualLayer.Ice)
+                {
+                    Material.EnableKeyword(FrozenIceShaderKeyword);
+                    Material.SetVector(FrozenIcePatternOriginId, frozenIcePatternOrigin);
+                }
+                else if (layer != ChunkBatchRendererGroupService.VisualLayer.Water)
+                    Material.DisableKeyword(FrozenIceShaderKeyword);
                 Material.SetTexture("_MainTex", texture);
                 Material.SetVector("_ChunkSize", new Vector4(width, height,
                     width > 0 ? 1f / width : 0f, height > 0 ? 1f / height : 0f));
@@ -444,7 +495,7 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 if (groundCells[index].Meta.y <= 0.5f)
                     return;
                 groundCells[index] = default;
-                geometryDirty = true;
+                RemoveActiveCell(index);
                 UploadSingleQuad(index, bulk);
                 return;
             }
@@ -471,6 +522,18 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             }
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void CaptureCellForTests(int index, out Texture texture, out Color tint,
+            out Vector2 uv, out int queue)
+        {
+            texture = Material.GetTexture("_MainTex");
+            tint = singleQuad ? (Color)groundCells[index].Tint : vertices[index * 4].Tint;
+            uv = singleQuad ? new Vector2(groundCells[index].Uv01.x, groundCells[index].Uv01.y)
+                : vertices[index * 4].Uv;
+            queue = Material.renderQueue;
+        }
+#endif
+
         private void WriteSingleQuad(int index, Quad quad, Color tint,
             Matrix4x4 transform, Vector4 contact, float elevation, Vector4 neighbours, bool bulk)
         {
@@ -490,8 +553,43 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 SpriteBounds = quad.SpriteBounds
             };
             if (!wasActive)
-                geometryDirty = true;
+                AddActiveCell(index);
             UploadSingleQuad(index, bulk);
+        }
+
+        // 行列计数只随格子启用状态改变，融冰时无需逐格扫描整个区块。
+        private void AddActiveCell(int index)
+        {
+            int x = index % width, y = index / width;
+            activeCellCount++;
+            activeColumns[x]++;
+            activeRows[y]++;
+            if (x < minActiveX) { minActiveX = x; geometryDirty = true; }
+            if (x > maxActiveX) { maxActiveX = x; geometryDirty = true; }
+            if (y < minActiveY) { minActiveY = y; geometryDirty = true; }
+            if (y > maxActiveY) { maxActiveY = y; geometryDirty = true; }
+        }
+
+        private void RemoveActiveCell(int index)
+        {
+            int x = index % width, y = index / width;
+            activeColumns[x]--;
+            activeRows[y]--;
+            if (--activeCellCount == 0)
+            {
+                minActiveX = width; minActiveY = height;
+                maxActiveX = maxActiveY = -1;
+                geometryDirty = true;
+                return;
+            }
+            if (x == minActiveX && activeColumns[x] == 0)
+            { while (activeColumns[minActiveX] == 0) minActiveX++; geometryDirty = true; }
+            if (x == maxActiveX && activeColumns[x] == 0)
+            { while (activeColumns[maxActiveX] == 0) maxActiveX--; geometryDirty = true; }
+            if (y == minActiveY && activeRows[y] == 0)
+            { while (activeRows[minActiveY] == 0) minActiveY++; geometryDirty = true; }
+            if (y == maxActiveY && activeRows[y] == 0)
+            { while (activeRows[maxActiveY] == 0) maxActiveY--; geometryDirty = true; }
         }
 
         private void UploadSingleQuad(int index, bool bulk)
@@ -509,34 +607,21 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
         /// <summary>Geometry 只包围当前纹理实际占用的格子，保持 2 三角形并减少透明 overdraw。</summary>
         private void UpdateSingleQuadGeometry()
         {
-            int minX = width, minY = height, maxX = -1, maxY = -1;
-            for (int index = 0; index < cellCount; index++)
-            {
-                if (groundCells[index].Meta.y <= 0.5f)
-                    continue;
-                int x = index % width;
-                int y = index / width;
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-            }
-
             geometryDirty = false;
-            if (maxX < minX || maxY < minY)
+            if (activeCellCount == 0)
             {
                 root.SetActive(false);
                 return;
             }
 
-            vertices[0].Position = new Vector3(minX, minY, 0f);
-            vertices[1].Position = new Vector3(maxX + 1f, minY, 0f);
-            vertices[2].Position = new Vector3(minX, maxY + 1f, 0f);
-            vertices[3].Position = new Vector3(maxX + 1f, maxY + 1f, 0f);
+            vertices[0].Position = new Vector3(minActiveX, minActiveY, 0f);
+            vertices[1].Position = new Vector3(maxActiveX + 1f, minActiveY, 0f);
+            vertices[2].Position = new Vector3(minActiveX, maxActiveY + 1f, 0f);
+            vertices[3].Position = new Vector3(maxActiveX + 1f, maxActiveY + 1f, 0f);
             mesh.SetVertexBufferData(vertices, 0, 0, 4, 0, UploadFlags);
             mesh.bounds = new Bounds(
-                new Vector3((minX + maxX + 1f) * 0.5f, (minY + maxY + 1f) * 0.5f, 0f),
-                new Vector3(maxX - minX + 1f, maxY - minY + 1f, 2f));
+                new Vector3((minActiveX + maxActiveX + 1f) * 0.5f, (minActiveY + maxActiveY + 1f) * 0.5f, 0f),
+                new Vector3(maxActiveX - minActiveX + 1f, maxActiveY - minActiveY + 1f, 2f));
             root.SetActive(true);
         }
 
@@ -553,9 +638,9 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
             {
                 using (GroupCellUploadMarker.Auto())
                     groundCellBuffer.SetData(groundCells, 0, 0, cellCount);
-                geometryDirty = true;
-                using (GroupGeometryMarker.Auto())
-                    UpdateSingleQuadGeometry();
+                if (geometryDirty)
+                    using (GroupGeometryMarker.Auto())
+                        UpdateSingleQuadGeometry();
             }
             else
             {
@@ -580,6 +665,8 @@ internal sealed class ChunkGroundMeshRenderer : IDisposable
                 {
                     // Unity 网格/Buffer 上传是同步的，释放后可安全归还缓冲池。
                     if (groundCells != null) ArrayPool<GroundCellData>.Shared.Return(groundCells);
+                    if (activeColumns != null) ArrayPool<int>.Shared.Return(activeColumns);
+                    if (activeRows != null) ArrayPool<int>.Shared.Return(activeRows);
                     if (vertices != null) ArrayPool<Vertex>.Shared.Return(vertices);
                     if (Application.isPlaying)
                     {

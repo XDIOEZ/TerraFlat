@@ -24,8 +24,8 @@ public partial class ItemMgr
         public bool Active;
         public Chunk ChunkOwner;
         public bool WasPersistedInChunk;
-        public ChunkNaturalItemRenderer TransientOwner;
-        public ChunkNaturalItemRenderer NaturalOwner;
+        public ChunkNaturalItemRuntime TransientOwner;
+        public ChunkNaturalItemRuntime NaturalOwner;
         public ItemInstanceSnapshot OriginalState;
         public bool SourceTouched;
         public bool SourceDetached;
@@ -78,7 +78,7 @@ public partial class ItemMgr
             transfer.WasPersistedInChunk = chunk.MapSave?.items != null &&
                 chunk.MapSave.items.TryGetValue(original.itemData.IDName, out var savedItems) && savedItems.Contains(original.itemData);
         }
-        transfer.TransientOwner = original.GetComponentInParent<ChunkNaturalItemRenderer>(true);
+        transfer.TransientOwner = original.NaturalRuntimeOwner;
         if (transfer.TransientOwner != null && transfer.TransientOwner.TryGetSpawnedItem(guid, out Item natural) &&
             ReferenceEquals(natural, original))
         {

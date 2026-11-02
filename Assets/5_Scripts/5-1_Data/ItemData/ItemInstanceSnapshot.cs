@@ -387,6 +387,7 @@ internal sealed partial class PlayerInstanceSnapshot
     [MemoryPackOrder(2)] public float HpValue;
     [MemoryPackOrder(3)] public float HpMaximum;
     [MemoryPackOrder(4)] public List<string> HpWeaknesses;
+    // SQLite v1 固定字段编号保留旧槽位以读取已存在的正式快照，游戏不再使用第二套防御值。
     [MemoryPackOrder(5)] public bool HasDefense;
     [MemoryPackOrder(6)] public float DefenseCutting;
     [MemoryPackOrder(7)] public float DefensePiercing;
@@ -415,9 +416,6 @@ internal sealed partial class PlayerInstanceSnapshot
             SceneName = data.CurrentSceneName,
             HasHp = data.hp != null, HpValue = data.hp?.Value ?? 0f, HpMaximum = data.hp?.maxValue ?? 0f,
             HpWeaknesses = data.hp?.Weaknesses == null ? null : new List<string>(data.hp.Weaknesses),
-            HasDefense = data.defense != null, DefenseCutting = data.defense?.Cutting ?? 0f,
-            DefensePiercing = data.defense?.Piercing ?? 0f, DefenseChopping = data.defense?.Chopping ?? 0f,
-            DefenseBlunt = data.defense?.Blunt ?? 0f,
             HasSpeed = data.Speed != null, SpeedBase = data.Speed?.BaseValue ?? 0f,
             SpeedBaseAdditive = data.Speed?.BaseAdditive ?? 0f, SpeedAdditiveModifier = data.Speed?.AdditiveModifier ?? 0f,
             SpeedMultiplicativeModifier = data.Speed?.MultiplicativeModifier ?? 1f,
@@ -440,14 +438,6 @@ internal sealed partial class PlayerInstanceSnapshot
         {
             target.hp.maxValue = state.HpMaximum;
             target.hp.Weaknesses = state.HpWeaknesses ?? new List<string>();
-        }
-        target.defense ??= new Defense();
-        if (state.HasDefense)
-        {
-            target.defense.Cutting = state.DefenseCutting;
-            target.defense.Piercing = state.DefensePiercing;
-            target.defense.Chopping = state.DefenseChopping;
-            target.defense.Blunt = state.DefenseBlunt;
         }
         target.Speed ??= new GameValue_float();
         if (state.HasSpeed)

@@ -32,6 +32,7 @@ namespace FlatWorld.Spaceflight
     {
         #region 星系配置读取
         public const string DefaultConfigPath = "GameConfig/Space/solar-system.json";
+        public const int BuiltInBinaryVersion = 2;
         private static SpaceCatalog current;
         internal static SpaceCatalog Current { get => current; set => current = value; }
         private readonly SpaceCatalogConfig config;
@@ -44,11 +45,16 @@ namespace FlatWorld.Spaceflight
         public IReadOnlyList<BodyState> Bodies => config.Bodies;
         public IReadOnlyList<SpaceSectorId> ConfiguredSectors => configuredSectors;
 
-        public SpaceCatalog(string json)
-        {
-            config = JsonConfigurationCache.Deserialize<SpaceCatalogConfig>(json,
+        public SpaceCatalog(string json) : this(ParseConfiguration(json)) { }
+
+        private static SpaceCatalogConfig ParseConfiguration(string json)
+            => JsonConfigurationCache.Deserialize<SpaceCatalogConfig>(json,
                 new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }) ??
                 throw new InvalidDataException("星系配置为空");
+
+        private SpaceCatalog(SpaceCatalogConfig source)
+        {
+            config = source;
             if (config.SchemaVersion != 2 || string.IsNullOrWhiteSpace(config.TemplateId) || config.Surfaces == null || config.SectorSystems == null)
                 throw new InvalidDataException("星系模板版本、身份或地表列表无效");
             foreach (SurfaceProfile surface in config.Surfaces)
@@ -105,17 +111,36 @@ namespace FlatWorld.Spaceflight
         {
             if (current != null) return current;
             string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, DefaultConfigPath);
-            return current = new SpaceCatalog(StreamingAssetsTextLoader.ReadAllText(path));
+            SpaceCatalogConfig config = BuiltInContentBinaryCatalog.ReadFile(
+                path, ParseConfiguration, BuiltInBinaryVersion);
+            return current = new SpaceCatalog(config);
+        }
+
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration()
+        {
+            string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, DefaultConfigPath);
+            SpaceCatalogConfig config = BuiltInContentBinaryCatalog.ReadFile(
+                path, ParseConfiguration, BuiltInBinaryVersion);
+            _ = new SpaceCatalog(config);
         }
 
         public static IEnumerator LoadDefaultAsync(Action<SpaceCatalog> completed, Action<Exception> failed)
+            => LoadDefaultPreparedAsync(completed, failed, null);
+
+        internal static IEnumerator LoadDefaultCatalogInputAsync(Action<SpaceCatalogConfig> completed, Action<Exception> failed)
+            => BuiltInContentBinaryCatalog.ReadFileAsync(
+                StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, DefaultConfigPath),
+                ParseConfiguration, completed, failed, BuiltInBinaryVersion);
+
+        internal static IEnumerator LoadDefaultPreparedAsync(Action<SpaceCatalog> completed,
+            Action<Exception> failed, SpaceCatalogConfig prepared)
         {
-            string json = null; Exception error = null;
-            string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, DefaultConfigPath);
-            yield return StreamingAssetsTextLoader.ReadAllTextAsync(path, value => json = value, value => error = value);
+            Exception error = null;
+            if (prepared == null) yield return LoadDefaultCatalogInputAsync(value => prepared = value, value => error = value);
             if (error != null) { failed?.Invoke(error); yield break; }
             SpaceCatalog loaded;
-            try { loaded = new SpaceCatalog(json); }
+            try { loaded = new SpaceCatalog(prepared); }
             catch (Exception exception) { failed?.Invoke(exception); yield break; }
             current = loaded;
             completed?.Invoke(loaded);

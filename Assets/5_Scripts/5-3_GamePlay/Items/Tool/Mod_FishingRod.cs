@@ -87,6 +87,9 @@ public sealed partial class Mod_FishingRod : Module
     private IFishingLineCatchTarget hookedTarget;
     private ItemData castBaitPayload;
     private bool hasCast, reeling;
+    private Sprite castHookSprite, castBaitSprite;
+    private Vector2 reelStartPosition;
+    private float reelElapsed, reelDuration;
     private bool pendingRodBreak;
     private bool castVisualApplied;
     private Sprite castSourceSprite;
@@ -120,15 +123,21 @@ public sealed partial class Mod_FishingRod : Module
 
     #region 手持钓具表现
     private static readonly Vector3 HookVisualPosition = new(0.58f, -0.14f, 0f);
-    private static readonly Vector3 BaitVisualPosition = new(0.61f, -0.28f, 0f);
     private const float HookVisualSize = 0.14f;
     private const float BaitVisualSize = 0.14f;
+    // 三种鱼钩共用的贴图位置：鱼线系在圆环中心，鱼饵挂在弯钩尖端。
+    internal static readonly Vector2 HookLineEyeAnchor = new(0.644f, 0.77f);
+    internal static readonly Vector2 HookBaitTipAnchor = new(0.385f, 0.35f);
+    private static readonly Vector2 BaitCenterAnchor = new(0.5f, 0.5f);
     private Transform rigVisualRoot;
     private SpriteRenderer hookVisualRenderer, baitVisualRenderer;
     private ActorRenderEffectController rigVisualEffects;
     private bool rigVisualPoseInitialized, rigVisualFlipX, rigVisualFlipY, rigVisualColorInitialized;
     private int rigVisualSortingLayerId = int.MinValue, rigVisualSortingOrder = int.MinValue;
     private Color rigVisualColor;
+    private Vector2 hangingHookPosition, previousHangingHookPosition, previousRodTipPosition;
+    private float hangingLineLength;
+    private bool hangingHookInitialized;
 
     private void RefreshRigVisuals()
     {
@@ -140,8 +149,10 @@ public sealed partial class Mod_FishingRod : Module
         }
 
         GameRes resources = GameRes.ExistingInstance;
-        Sprite hookSprite = ResolveRigSprite(resources, HookSlot.itemData);
-        Sprite baitSprite = ResolveRigSprite(resources, BaitSlot.itemData);
+        Sprite hookSprite = hasCast ? castHookSprite : ResolveRigSprite(resources, HookSlot.itemData);
+        Sprite baitSprite = hasCast
+            ? reeling && hookedTarget == null && BaitSlot.itemData != null ? castBaitSprite : null
+            : ResolveRigSprite(resources, BaitSlot.itemData);
         if (hookSprite == null && baitSprite == null)
         {
             HideRigVisuals();
@@ -152,6 +163,8 @@ public sealed partial class Mod_FishingRod : Module
         rigVisualRoot.gameObject.SetActive(true);
         SetRigVisualSprite(hookVisualRenderer, hookSprite, HookVisualSize);
         SetRigVisualSprite(baitVisualRenderer, baitSprite, BaitVisualSize);
+        if (!hangingHookInitialized || hasCast)
+            hookVisualRenderer.transform.localRotation = baitVisualRenderer.transform.localRotation = Quaternion.identity;
         rigVisualPoseInitialized = false;
         SynchronizeRigVisualPose();
     }
@@ -213,8 +226,8 @@ public sealed partial class Mod_FishingRod : Module
         bool flipX = rodRenderer.flipX, flipY = rodRenderer.flipY;
         if (!rigVisualPoseInitialized || flipX != rigVisualFlipX || flipY != rigVisualFlipY)
         {
-            hookVisualRenderer.transform.localPosition = ApplyRigFlip(HookVisualPosition, flipX, flipY);
-            baitVisualRenderer.transform.localPosition = ApplyRigFlip(BaitVisualPosition, flipX, flipY);
+            if (!hangingHookInitialized || hasCast)
+                hookVisualRenderer.transform.localPosition = ApplyRigFlip(HookVisualPosition, flipX, flipY);
             hookVisualRenderer.flipX = baitVisualRenderer.flipX = flipX;
             hookVisualRenderer.flipY = baitVisualRenderer.flipY = flipY;
             rigVisualFlipX = flipX;
@@ -243,6 +256,131 @@ public sealed partial class Mod_FishingRod : Module
         }
     }
 
+    private void UpdateHangingHookVisual(float deltaTime)
+    {
+        if (rigVisualRoot == null || !rigVisualRoot.gameObject.activeInHierarchy ||
+            hookVisualRenderer == null || !hookVisualRenderer.enabled ||
+            item == null || item.Owner == null || !item.InHand)
+        {
+            hangingHookInitialized = false;
+            if (fishingLine != null) fishingLine.enabled = false;
+            return;
+        }
+
+        Vector3 tip = GetRodTipWorldPosition();
+        Vector2 anchor = tip;
+        if (!hangingHookInitialized || (anchor - previousRodTipPosition).sqrMagnitude > 2.25f)
+        {
+            // 绳长只由竿梢到圆环挂线点决定，切换鱼钩不重置摆动。
+            hookVisualRenderer.transform.localPosition = ApplyRigFlip(HookVisualPosition, rigVisualFlipX, rigVisualFlipY);
+            hookVisualRenderer.transform.localRotation = Quaternion.identity;
+            hangingHookPosition = GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookLineEyeAnchor);
+            hangingLineLength = Mathf.Max(0.2f, Vector2.Distance(anchor, hangingHookPosition));
+            previousHangingHookPosition = hangingHookPosition;
+            hangingHookInitialized = true;
+        }
+        else
+        {
+            SimulateHangingHookStep(anchor, hangingLineLength, deltaTime,
+                ref hangingHookPosition, ref previousHangingHookPosition);
+        }
+        previousRodTipPosition = anchor;
+        Quaternion hookRotation = Quaternion.FromToRotation(Vector3.down, hangingHookPosition - anchor);
+        PoseHookAtLineEye(hangingHookPosition, hookRotation);
+        if (fishingLine != null)
+            ShowFishingLine(tip, hangingHookPosition);
+    }
+
+    internal static Vector2 ResolveSpriteAttachmentLocalPoint(Bounds spriteBounds, Vector2 normalizedPoint,
+        bool flipX, bool flipY)
+    {
+        if (flipX) normalizedPoint.x = 1f - normalizedPoint.x;
+        if (flipY) normalizedPoint.y = 1f - normalizedPoint.y;
+        return new Vector2(spriteBounds.min.x + spriteBounds.size.x * normalizedPoint.x,
+            spriteBounds.min.y + spriteBounds.size.y * normalizedPoint.y);
+    }
+
+    private static Vector3 GetRigSpriteAnchorWorldPosition(SpriteRenderer renderer, Vector2 normalizedPoint)
+    {
+        if (renderer == null || renderer.sprite == null) return renderer != null ? renderer.transform.position : Vector3.zero;
+        Vector2 local = ResolveSpriteAttachmentLocalPoint(renderer.sprite.bounds, normalizedPoint,
+            renderer.flipX, renderer.flipY);
+        return renderer.transform.TransformPoint(local);
+    }
+
+    private void PoseHookAtLineEye(Vector2 eye, Quaternion rotation)
+    {
+        Transform hook = hookVisualRenderer.transform;
+        hook.rotation = rotation;
+        Vector3 eyeOffset = GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookLineEyeAnchor) - hook.position;
+        Vector3 target = hook.position;
+        target.x = eye.x - eyeOffset.x;
+        target.y = eye.y - eyeOffset.y;
+        hook.position = target;
+        AttachBaitVisualToHookTip();
+    }
+
+    private Vector3 PoseCastHookAtBaitPosition(Vector2 baitPosition)
+    {
+        if (hookVisualRenderer == null || !hookVisualRenderer.enabled) return baitPosition;
+        Transform hook = hookVisualRenderer.transform;
+        hook.rotation = rigVisualRoot.rotation;
+        Vector3 tipOffset = GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookBaitTipAnchor) - hook.position;
+        Vector3 target = hook.position;
+        target.x = baitPosition.x - tipOffset.x;
+        target.y = baitPosition.y - tipOffset.y;
+        hook.position = target;
+        AttachBaitVisualToHookTip();
+        return GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookLineEyeAnchor);
+    }
+
+    private Vector2 GetRestingHookBaitWorldPosition()
+    {
+        if (hookVisualRenderer == null || hookVisualRenderer.sprite == null || rigVisualRoot == null)
+            return GetRodTipWorldPosition();
+        Vector2 localTip = ResolveSpriteAttachmentLocalPoint(hookVisualRenderer.sprite.bounds,
+            HookBaitTipAnchor, hookVisualRenderer.flipX, hookVisualRenderer.flipY);
+        Vector3 hookCenter = ApplyRigFlip(HookVisualPosition, rigVisualFlipX, rigVisualFlipY);
+        return rigVisualRoot.TransformPoint(hookCenter +
+            Vector3.Scale(localTip, hookVisualRenderer.transform.localScale));
+    }
+
+    private void AttachBaitVisualToHookTip()
+    {
+        if (baitVisualRenderer == null || !baitVisualRenderer.enabled) return;
+        Transform bait = baitVisualRenderer.transform;
+        bait.rotation = hookVisualRenderer.transform.rotation;
+        Vector3 tip = GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookBaitTipAnchor);
+        Vector3 baitOffset = GetRigSpriteAnchorWorldPosition(baitVisualRenderer, BaitCenterAnchor) - bait.position;
+        Vector3 target = bait.position;
+        target.x = tip.x - baitOffset.x;
+        target.y = tip.y - baitOffset.y;
+        bait.position = target;
+    }
+
+    // Verlet 惯性与定长绳约束，单步结果也供钓具规则测试检查。
+    internal static void SimulateHangingHookStep(Vector2 anchor, float lineLength, float deltaTime,
+        ref Vector2 hookPosition, ref Vector2 previousHookPosition)
+    {
+        float step = Mathf.Clamp(deltaTime, 0f, 0.05f);
+        if (step <= 0f) return;
+        Vector2 velocity = (hookPosition - previousHookPosition) * Mathf.Pow(0.985f, step * 60f);
+        Vector2 next = hookPosition + velocity + Vector2.down * (18f * step * step);
+        Vector2 direction = next - anchor;
+        if (direction.sqrMagnitude < 0.000001f) direction = Vector2.down;
+        previousHookPosition = hookPosition;
+        hookPosition = anchor + direction.normalized * lineLength;
+    }
+
+    private void ShowFishingLine(Vector3 start, Vector3 end)
+    {
+        linePoints[0] = start;
+        linePoints[1] = new Vector3(end.x, end.y, start.z);
+        fishingLine.positionCount = 2;
+        fishingLine.SetPositions(linePoints);
+        fishingLine.enabled = true;
+    }
+
     private static Vector3 ApplyRigFlip(Vector3 position, bool flipX, bool flipY)
     {
         if (flipX) position.x = -position.x;
@@ -252,6 +390,8 @@ public sealed partial class Mod_FishingRod : Module
 
     private void HideRigVisuals()
     {
+        hangingHookInitialized = false;
+        if (!hasCast && fishingLine != null) fishingLine.enabled = false;
         if (rigVisualRoot != null) rigVisualRoot.gameObject.SetActive(false);
         rigVisualEffects?.UnregisterExternalRenderers(rigVisualRoot);
         rigVisualEffects = null;
@@ -403,7 +543,7 @@ public sealed partial class Mod_FishingRod : Module
             }
             return;
         }
-        if (hasCast) { CancelLine(); return; }
+        if (hasCast) { BeginReelingCastBait(); return; }
         TryCast(controller.GetAimWorldPosition(maxCastDistance));
     }
     #endregion
@@ -429,6 +569,8 @@ public sealed partial class Mod_FishingRod : Module
         float duration = delta.magnitude / Mathf.Max(0.5f, castSpeed);
         ItemData returnBait = FastCloner.FastCloner.DeepClone(bait);
         returnBait.Stack.Amount = 1f;
+        Sprite hookSprite = ResolveRigSprite(GameRes.ExistingInstance, hook);
+        Sprite baitSprite = ResolveRigSprite(GameRes.ExistingInstance, bait);
         // 使用投石索共用的抛物线公式，但鱼饵不挂伤害模块，也不成为攻击投射物。
         var path = new Mod_Projectile.TrajectorySettings(castSpeed, castSpeed, duration, 12f, true);
         Vector2 midpoint = path.EvaluateVisibleTrajectoryPoint(origin, delta.normalized, 1f, 0.5f);
@@ -448,6 +590,8 @@ public sealed partial class Mod_FishingRod : Module
         if (!suppliesCommitted) return;
         castBait = spawned;
         castBaitPayload = returnBait;
+        castHookSprite = hookSprite;
+        castBaitSprite = baitSprite;
         castBaitLegacyGuid = spawned.Legacy != null ? spawned.Legacy.itemData.Guid : 0;
         castOrigin = origin;
         castDelta = delta;
@@ -459,6 +603,7 @@ public sealed partial class Mod_FishingRod : Module
         hasCast = true;
         reeling = false;
         ApplyCastSprite();
+        RefreshRigVisuals();
         activeRods.Add(this);
         if (item.itemData.Durability <= 1f)
         {
@@ -476,6 +621,41 @@ public sealed partial class Mod_FishingRod : Module
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         if (pendingRodBreak) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item.Owner);
         RaiseSound(FishingSoundAction.Cast);
+    }
+
+    private void BeginReelingCastBait()
+    {
+        if (!hasCast || reeling || hookedTarget != null) return;
+        if (DroppedItemService.TryGetPickablePosition(castBait, out Vector2 landedPosition))
+            castLastPosition = landedPosition;
+        reelStartPosition = castLastPosition;
+        Vector2 hangingTarget = WorldTopologyRuntime.NearestImagePosition(
+            reelStartPosition, GetRestingHookBaitWorldPosition());
+        reelDuration = ResolveFishingReelDuration(Vector2.Distance(reelStartPosition, hangingTarget), reelSpeed);
+        reelElapsed = 0f;
+        reeling = true;
+
+        // 收线开始时先收走世界鱼饵，动画使用同一份已归还库存的鱼饵贴图，不留下双份实体。
+        bool returnedBait = TryReturnCastBait();
+        castBait = default;
+        castBaitLegacyGuid = 0;
+        castBaitPayload = null;
+        RefreshRigVisuals();
+        if (returnedBait)
+        {
+            Save();
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        }
+        RaiseSound(FishingSoundAction.Reel);
+    }
+
+    internal static float ResolveFishingReelDuration(float distance, float speed)
+        => Mathf.Max(0.25f, Mathf.Max(0f, distance) / Mathf.Max(0.1f, speed));
+
+    internal static Vector2 EvaluateFishingReelPosition(Vector2 start, Vector2 end, float progress)
+    {
+        float remaining = 1f - Mathf.Clamp01(progress);
+        return Vector2.LerpUnclamped(start, end, 1f - remaining * remaining);
     }
 
     private static bool HasFoodPayload(ItemData data)
@@ -526,6 +706,15 @@ public sealed partial class Mod_FishingRod : Module
                 if (delta.magnitude <= 0.45f) { CancelLine(); return; }
             }
         }
+        else if (reeling)
+        {
+            reelElapsed += Mathf.Max(0f, deltaTime);
+            Vector2 rodTip = WorldTopologyRuntime.NearestImagePosition(
+                reelStartPosition, GetRestingHookBaitWorldPosition());
+            castLastPosition = WorldTopologyRuntime.NormalizePosition(EvaluateFishingReelPosition(
+                reelStartPosition, rodTip, reelElapsed / reelDuration));
+            if (reelElapsed >= reelDuration) CancelLine();
+        }
         else
         {
             if (!castBait.IsValid || (castBait.Legacy != null && castBait.Legacy.itemData?.Guid != castBaitLegacyGuid))
@@ -553,17 +742,15 @@ public sealed partial class Mod_FishingRod : Module
     {
         if (!loaded) return;
         SynchronizeRigVisualPose();
-        if (!hasCast || item.Owner == null || fishingLine == null) return;
+        if (!hasCast) { UpdateHangingHookVisual(deltaTime); return; }
+        if (item.Owner == null) return;
         Vector2 endpoint = castLastPosition;
         if (hookedTarget?.ActorItem != null) endpoint = hookedTarget.ActorItem.transform.position;
         else if (DroppedItemService.TryGetPickablePosition(castBait, out Vector2 baitPosition)) endpoint = baitPosition;
         Vector3 start = GetRodTipWorldPosition();
         Vector2 nearEnd = WorldTopologyRuntime.NearestImagePosition(start, endpoint);
-        linePoints[0] = start;
-        linePoints[1] = new Vector3(nearEnd.x, nearEnd.y, start.z);
-        fishingLine.positionCount = 2;
-        fishingLine.SetPositions(linePoints);
-        fishingLine.enabled = true;
+        Vector3 lineEye = PoseCastHookAtBaitPosition(nearEnd);
+        if (fishingLine != null) ShowFishingLine(start, lineEye);
     }
 
     private void CancelLine()
@@ -574,10 +761,14 @@ public sealed partial class Mod_FishingRod : Module
         castBait = default;
         castBaitLegacyGuid = 0;
         castBaitPayload = null;
+        castHookSprite = castBaitSprite = null;
         hasCast = reeling = false;
+        reelElapsed = reelDuration = 0f;
+        hangingHookInitialized = false;
         activeRods.Remove(this);
         if (fishingLine != null) fishingLine.enabled = false;
         RestoreCastSprite();
+        if (loaded) RefreshRigVisuals();
         if (returnedBait)
         {
             Save();
@@ -604,17 +795,10 @@ public sealed partial class Mod_FishingRod : Module
 
         ItemData returned = FastCloner.FastCloner.DeepClone(castBaitPayload);
         returned.Stack.Amount = 1f;
+        // 先成功归还库存再删除原掉落物；入槽失败保留原实体，避免丢饵。
+        if (!rig.Data.TrySetSlotItemAmount(BaitSlot, returned, 1f)) return false;
         DroppedItemService.Remove(castBait);
-        if (rig.Data.TrySetSlotItemAmount(BaitSlot, returned, 1f)) return true;
-
-        // 若槽位在回收事务中被占用，就把鱼饵放回钩点，避免复制或丢失。
-        try
-        {
-            DroppedItemService.Spawn(returned, castLastPosition, destination: castLastPosition,
-                duration: 0f, arcHeight: 0f, rotationSpeed: 0f, randomizeRotation: false);
-        }
-        catch (Exception exception) { Debug.LogException(exception); }
-        return false;
+        return true;
     }
 
     private bool TryHookTargetAlongCast(Vector2 from, Vector2 to, out IFishingLineCatchTarget hooked)
@@ -660,6 +844,7 @@ public sealed partial class Mod_FishingRod : Module
         castBait = default;
         castBaitLegacyGuid = 0;
         castBaitPayload = null;
+        RefreshRigVisuals();
         ShowFeedback(feedback);
         RaiseSound(FishingSoundAction.Hook);
     }
@@ -717,7 +902,8 @@ public sealed partial class Mod_FishingRod : Module
         for (int index = 0; index < attachedRenderers.Length; index++)
         {
             SpriteRenderer attachedRenderer = attachedRenderers[index];
-            if (attachedRenderer == null || attachedRenderer == rodRenderer) continue;
+            if (attachedRenderer == null || attachedRenderer == rodRenderer ||
+                attachedRenderer == hookVisualRenderer || attachedRenderer == baitVisualRenderer) continue;
             castHiddenRenderers.Add(attachedRenderer);
             castHiddenRendererStates.Add(attachedRenderer.enabled);
             attachedRenderer.enabled = false;

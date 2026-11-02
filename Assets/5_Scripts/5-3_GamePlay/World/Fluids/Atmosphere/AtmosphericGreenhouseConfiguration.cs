@@ -50,12 +50,27 @@ public static class AtmosphericGreenhouseConfigurationLoader
     private static readonly JsonSerializerSettings StrictSettings = new()
     { MissingMemberHandling = MissingMemberHandling.Error, DateParseHandling = DateParseHandling.None };
 
+    public const int SupportedSchemaVersion = 1;
+
+    [BuiltInContentBake]
+    public static AtmosphericGreenhouseConfiguration LoadBuiltIn() =>
+        BuildConfiguration(BuiltInContentBinaryCatalog.ReadFile(
+            StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath),
+            ParseConfiguration, SupportedSchemaVersion));
+
     public static AtmosphericGreenhouseConfiguration Deserialize(string json)
+        => BuildConfiguration(ParseConfiguration(json));
+
+    private static AtmosphericGreenhouseConfigurationDto ParseConfiguration(string json)
     {
         if (string.IsNullOrWhiteSpace(json) || json.Length > 16384)
             throw new InvalidDataException("温室配置为空或超过大小限制。");
-        AtmosphericGreenhouseConfigurationDto dto = JsonConfigurationCache.Deserialize<AtmosphericGreenhouseConfigurationDto>(json, StrictSettings);
-        if (dto == null || dto.SchemaVersion != 1)
+        return JsonConfigurationCache.Deserialize<AtmosphericGreenhouseConfigurationDto>(json, StrictSettings);
+    }
+
+    private static AtmosphericGreenhouseConfiguration BuildConfiguration(AtmosphericGreenhouseConfigurationDto dto)
+    {
+        if (dto == null || dto.SchemaVersion != SupportedSchemaVersion)
             throw new InvalidDataException("温室配置 schemaVersion 必须为 1。");
         return new AtmosphericGreenhouseConfiguration(dto.PressureScaleKPa, dto.CelsiusPerDoubling,
             dto.MinimumOffsetCelsius, dto.MaximumOffsetCelsius);
@@ -64,14 +79,14 @@ public static class AtmosphericGreenhouseConfigurationLoader
     public static IEnumerator LoadBuiltInAsync(Action<AtmosphericGreenhouseConfiguration> completed,
         Action<Exception> failed)
     {
-        string json = null;
+        AtmosphericGreenhouseConfigurationDto dto = null;
         Exception error = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
             StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath),
-            value => json = value, exception => error = exception);
+            ParseConfiguration, value => dto = value, exception => error = exception, SupportedSchemaVersion);
         if (error != null) { failed?.Invoke(error); yield break; }
         AtmosphericGreenhouseConfiguration config;
-        try { config = Deserialize(json); }
+        try { config = BuildConfiguration(dto); }
         catch (Exception exception) { failed?.Invoke(exception); yield break; }
         completed?.Invoke(config);
     }

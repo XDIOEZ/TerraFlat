@@ -18,6 +18,7 @@ public sealed partial class Mod_AnimalFlightMovement
     private void EnsureCarriedSeedPort()
     {
         if (carriedSeedPort != null && carriedSeedGeneration == RuntimeGeneration && carriedSeedPort.IsValid) return;
+        ReleaseCarriedSeedInventory();
         carriedSeedGeneration = RuntimeGeneration;
         var data = new Inventory_Data(new List<ItemSlot> { new ItemSlot(0) }, "bird-carried-seed");
         if (state.BackpackSeedSnapshot?.Length > 0)
@@ -27,12 +28,21 @@ public sealed partial class Mod_AnimalFlightMovement
         }
         carriedSeedInventory = new Inventory { Data = data, item = item };
         carriedSeedInventory.Data.SetUnlimitedSlots(false);
+        carriedSeedInventory.InitData();
         uint generation = RuntimeGeneration;
         carriedSeedPort = new InventoryItemTransferPort(carriedSeedInventory, item, new ContainerPortConfiguration
         { Id = "carried-seed", Type = "core:inventory", Direction = ContainerPortDirection.Input, Access = ContainerAccessKind.Animal,
           ItemTags = new[] { "Seed" }, Reach = backpackSeedReach }, () => IsRuntimeLoaded && RuntimeGeneration == generation && IsAlive,
           changed: CaptureCarriedSeed);
     }
+
+    private void ReleaseCarriedSeedInventory()
+    {
+        carriedSeedInventory?.UnbindRuntimeDataEvents();
+        carriedSeedInventory = null;
+        carriedSeedPort = null;
+    }
+
     private void CaptureCarriedSeed()
     {
         ItemData data = carriedSeedInventory?.Data?.itemSlots[0]?.itemData;
@@ -73,7 +83,7 @@ public sealed partial class Mod_AnimalFlightMovement
         DroppedItemHandle dropped = DroppedItemService.Spawn(data, body.position, duration: 0f);
         if (!dropped.IsValid) return;
         state.BackpackSeedSnapshot = null;
-        carriedSeedInventory = null; carriedSeedPort = null;
+        ReleaseCarriedSeedInventory();
         Save();
     }
     #endregion

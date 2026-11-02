@@ -383,6 +383,8 @@ public partial class Inventory_Data
     private void NotifyItemDataChanged(ItemSlot slot)
     {
         EnsureSpareSlot();
+        // 物品变更提交时统一重绑新补齐或追加的槽位。
+        SynchronizeRuntimeSlotBindings();
         Event_OnDataChanged.Invoke(slot);
     }
 

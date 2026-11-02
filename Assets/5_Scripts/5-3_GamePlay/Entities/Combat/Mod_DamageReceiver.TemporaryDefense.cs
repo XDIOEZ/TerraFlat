@@ -22,7 +22,11 @@ public partial class Mod_DamageReceiver
     }
 
     public CombatDefense GetEffectiveDefense() => new()
-    { Physical = (Defense?.Physical ?? 0f) + temporaryPhysicalDefense };
+    {
+        Physical = (Defense?.Physical ?? 0f) + temporaryPhysicalDefense,
+        Fire = Defense?.Fire ?? 0f,
+        Radiation = Defense?.Radiation ?? 0f
+    };
 
     private void ClearTemporaryDefense()
     {

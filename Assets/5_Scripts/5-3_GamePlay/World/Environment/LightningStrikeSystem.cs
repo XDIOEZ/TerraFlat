@@ -104,7 +104,7 @@ public static class LightningStrikeSystem
         CombatDamageContext context = new()
         {
             Attack = new CombatAttackKey { Source = source, Sequence = unchecked((uint)strike.Sequence), Pulse = 1 },
-            Credit = source, Damage = new float4(0f, 0f, 0f, peakDamage), Origin = center, HitPoint = center,
+            Credit = source, Damage = new float4(peakDamage, 0f, 0f, 0f), Origin = center, HitPoint = center,
             DeathCauseId = "lightning",
             ResourceToolEfficiency = 1f, BuildingMultiplier = 1f,
             Clock = new CombatClock { Tick = GameplayFixedStepSimulation.TickIndex, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime }

@@ -37,6 +37,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/behavior_memory", EntityAiBehaviorMemory);
         operations.Add("ai/perception_radius", EntityAiPerceptionRadius);
         operations.Add("ai/perception_shape_batch", EntityPerceptionShapeBatch);
+        operations.Add("ai/perception_template_shapes", EntityPerceptionTemplateShapes);
         operations.Add("ai/closest_target_batch", EntityClosestTargetBatch);
         operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
         operations.Add("ai/stale_perception_batch", EntityStalePerceptionBatch);
@@ -57,6 +58,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("item_runtime/single_sprite_shell_assembly", EntitySingleSpriteShellAssembly);
         operations.Add("item_runtime/module_assembly_identity", EntityModuleAssemblyIdentity);
         operations.Add("combat/physical", EntityPhysicalDamage);
+        operations.Add("combat/damage_types", EntityDamageTypes);
         operations.Add("combat/death_rule_override", EntityDeathRuleOverride);
         operations.Add("combat/loss_bleeding", EntityLossBleeding);
         operations.Add("combat/identity", EntityCombatIdentity);
@@ -84,6 +86,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("inventory/flick_gesture", EntityInventoryFlickGesture);
         operations.Add("inventory/flick_direction", EntityInventoryFlickDirection);
         operations.Add("crafting/allocation", EntityCraftingAllocation);
+        operations.Add("crafting/stone_material_substitution", EntityCraftingStoneMaterialSubstitution);
         operations.Add("crafting/transaction", EntityCraftingTransaction);
         operations.Add("processing/reaction_batch", EntityReactionBatch);
         operations.Add("crafting/plank_tool", EntityCraftingPlankTool);
@@ -505,6 +508,68 @@ public static partial class GameplayTestSystemProbe
         };
     }
 
+    // 直接采样作者模板、JSON 覆盖及领取后的正式感知编译结果。
+    private static JObject EntityPerceptionTemplateShapes(JObject args)
+    {
+        using var space = WorldPhysicsScene2D.CreateIsolated("Actor perception template probe");
+        using var physics = new WorldPhysicsService2D("probe:actor-perception:" + Guid.NewGuid().ToString("N"), space);
+        var root = new GameObject("Actor perception template probe");
+        root.SetActive(false);
+        SceneManager.MoveGameObjectToScene(root, space.Scene);
+        var item = root.AddComponent<GameItem>();
+        try
+        {
+            ItemPhysicsTemplate2D body = root.AddComponent<ItemPhysicsTemplate2D>();
+            body.colliderType = nameof(BoxCollider2D);
+            body.size = new Vector2(2f, 4f);
+            body.offset = new Vector2(0.25f, -0.5f);
+            var receiver = root.AddComponent<Mod_DamageReceiver>();
+            receiver.modData = new Ex_ModData();
+            ItemPhysicsTemplate2D rootModule = root.AddComponent<ItemPhysicsTemplate2D>();
+            rootModule.owningModule = receiver;
+            rootModule.colliderType = nameof(CircleCollider2D);
+            rootModule.radius = 0.75f;
+            var child = new GameObject("Child attack shape");
+            child.transform.SetParent(root.transform, false);
+            ItemPhysicsTemplate2D childShape = child.AddComponent<ItemPhysicsTemplate2D>();
+            childShape.colliderType = nameof(BoxCollider2D);
+            childShape.size = Vector2.one * 99f;
+
+            PerceptionShape2D[] cold = ActorPerceptionShapeCompiler.Compile(root);
+            bool coldWithoutNative = root.GetComponents<Collider2D>().Length == 0 && root.GetComponent<Rigidbody2D>() == null;
+            var definition = new ItemColliderDefinitionDto { Type = nameof(BoxCollider2D),
+                Offset = new Vector2(-2f, 5f), Size = new Vector2(6f, 8f), Enabled = true };
+            PerceptionShape2D[] overridden = ActorPerceptionShapeCompiler.Compile(root, definition);
+            definition.Enabled = false;
+            PerceptionShape2D[] disabled = ActorPerceptionShapeCompiler.Compile(root, definition);
+            bool unknownTypeRejected = false;
+            try { ActorPerceptionShapeCompiler.Compile(root, new ItemColliderDefinitionDto { Type = nameof(CapsuleCollider2D) }); }
+            catch (InvalidOperationException) { unknownTypeRejected = true; }
+
+            physics.RegisterItem(item);
+            root.GetComponent<BoxCollider2D>().size = new Vector2(10f, 12f);
+            PerceptionShape2D[] rented = ActorPerceptionShapeCompiler.Compile(root);
+            return new JObject
+            {
+                ["coldWithoutNative"] = coldWithoutNative, ["coldCount"] = cold.Length,
+                ["coldX"] = cold[0].Center.x, ["coldY"] = cold[0].Center.y,
+                ["coldHalfWidth"] = cold[0].Extents.x, ["coldHalfHeight"] = cold[0].Extents.y,
+                ["rootModuleRadius"] = cold[1].Radius,
+                ["overrideCount"] = overridden.Length, ["overrideX"] = overridden[0].Center.x,
+                ["overrideY"] = overridden[0].Center.y, ["overrideHalfWidth"] = overridden[0].Extents.x,
+                ["overrideHalfHeight"] = overridden[0].Extents.y,
+                ["disabledCount"] = disabled.Length, ["disabledRadius"] = disabled[0].Radius,
+                ["unknownTypeRejected"] = unknownTypeRejected, ["rentedCount"] = rented.Length,
+                ["rentedHalfWidth"] = rented[0].Extents.x, ["rentedHalfHeight"] = rented[0].Extents.y
+            };
+        }
+        finally
+        {
+            WorldPhysicsService2D.ReleaseItem(item);
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
     // 读取正式目录并调用正式概率与队列规则，测试不重新计算业务逻辑。
     private static JObject EntityEcologyConfig(JObject args)
     {
@@ -826,7 +891,7 @@ public static partial class GameplayTestSystemProbe
             bool sameWorldNear = index.ResolveTier(target) == SimulationRangeTier.Near;
             bool sameWorldIdentity = GameplayWorldRegistry.GetItemWorldIdentity(target) == GameplayWorldRegistry.GetItemWorldIdentity(observer);
             Scene initialScene = target.gameObject.scene;
-            Scene otherScene = WindShelterProbeScene("[LogicalWorldPerceptionProbe]");
+            Scene otherScene = CreateGameplayTestProbeScene("[LogicalWorldPerceptionProbe]");
             try
             {
                 SceneManager.MoveGameObjectToScene(target.gameObject, otherScene);
@@ -894,7 +959,7 @@ public static partial class GameplayTestSystemProbe
             {
                 if (target != null && initialScene.IsValid() && initialScene.isLoaded && target.gameObject.scene != initialScene)
                     SceneManager.MoveGameObjectToScene(target.gameObject, initialScene);
-                CloseWindShelterProbeScene(otherScene);
+                CloseGameplayTestProbeScene(otherScene);
             }
         }));
 
@@ -1287,8 +1352,8 @@ public static partial class GameplayTestSystemProbe
     {
         float attack = (float)Number(args, "attack", 10d), defense = (float)Number(args, "defense", 3d);
         float attackMultiplier = (float)Number(args, "attackMultiplier", 1d), received = (float)Number(args, "received", 1d);
-        var damage = new float4(attack * .5f, attack * .25f, attack * .25f, 0f);
-        float4 resolved = CombatRules.Resolve(damage, new float4(defense), attackMultiplier, received);
+        var damage = new float4(attack, 0f, 0f, 0f);
+        float4 resolved = CombatRules.Resolve(damage, new float4(defense, 0f, 0f, 0f), attackMultiplier, received);
         var tuning = new CombatTuning
         {
             PlayerAttack = (float)Number(args, "playerAttack", 2d),
@@ -1298,22 +1363,35 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["physical"] = CombatRules.ResolvePhysical(attack, defense, attackMultiplier, received),
-            ["resolvedTotal"] = math.csum(resolved), ["cut"] = resolved.x, ["pierce"] = resolved.y,
+            ["resolvedTotal"] = math.csum(resolved), ["physicalResolved"] = resolved.x,
             ["attackMultiplier"] = tuning.Resolve(Flag(args, "sourcePlayer", true), Flag(args, "targetPlayer", false))
         };
     }
 
+    private static JObject EntityDamageTypes(JObject args)
+    {
+        var raw = new float4((float)Number(args, "physical", 20), (float)Number(args, "fire", 10),
+            (float)Number(args, "radiation", 8), (float)Number(args, "true", 5));
+        var defense = new float4((float)Number(args, "physicalDefense", 5), (float)Number(args, "fireDefense", 4),
+            (float)Number(args, "radiationDefense", 3), 0f);
+        float4 resolved = CombatRules.Resolve(raw, defense,
+            (float)Number(args, "attackMultiplier", 1), (float)Number(args, "receivedMultiplier", 1));
+        return new JObject { ["physical"] = resolved.x, ["fire"] = resolved.y,
+            ["radiation"] = resolved.z, ["true"] = resolved.w, ["total"] = math.csum(resolved) };
+    }
+
     private static JObject EntityLossBleeding(JObject args)
     {
-        var resolved = new float4((float)Number(args, "cut", 8d), (float)Number(args, "pierce", 4d),
-            (float)Number(args, "chop", 4d), (float)Number(args, "blunt", 4d));
+        float sharp = (float)Number(args, "cut", 8d) + (float)Number(args, "pierce", 4d) +
+                      (float)Number(args, "chop", 4d);
+        float blunt = (float)Number(args, "blunt", 4d);
+        var resolved = new float4(sharp + blunt, 0f, 0f, 0f);
         float4 actual = CombatRules.ActualLoss(resolved, (float)Number(args, "loss", 10d));
         int bleeding = CombatRules.BleedingTier(actual, Flag(args, "blood", true), Flag(args, "alive", true),
-            (float)Number(args, "random", 0d));
+            (float)Number(args, "random", 0d), sharp > 0f);
         return new JObject
         {
-            ["actualTotal"] = math.csum(actual), ["cut"] = actual.x, ["pierce"] = actual.y,
-            ["blunt"] = actual.w, ["bleeding"] = bleeding
+            ["actualTotal"] = math.csum(actual), ["physical"] = actual.x, ["bleeding"] = bleeding
         };
     }
 
@@ -2083,6 +2161,94 @@ public static partial class GameplayTestSystemProbe
         {
             ["matched"] = matched, ["total"] = total, ["plan"] = allocations,
             ["oakAfter"] = slots[0].itemData.Stack.Amount, ["birchAfter"] = slots[1].itemData.Stack.Amount
+        };
+    }
+
+    // 使用正式物品标签、石器配方和制作事务，验证石头与打制石器可以混用且不误收其他石制品。
+    private static JObject EntityCraftingStoneMaterialSubstitution(JObject args)
+    {
+        string recipeRoot = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
+            RecipeCatalogLoader.RelativeRecipeRoot);
+        RecipeCatalogDto catalog = RecipeRuntimeFactory.Deserialize(StreamingAssetsTextLoader.ReadAllText(
+            RecipeCatalogLoader.ResolvePackagePath(recipeRoot, "crafting/tools.json")));
+        RuntimeRecipe chippedRecipe = RecipeRuntimeFactory.Build(
+            catalog.Recipes.Find(value => value.Id == "core:打制石器"), _ => true);
+        RuntimeRecipe axeRecipe = RecipeRuntimeFactory.Build(
+            catalog.Recipes.Find(value => value.Id == "core:石斧"), _ => true);
+
+        var sourceTags = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (string package in new[] { "ore_materials.json", "weapons.json", "mineral_materials.json" })
+        {
+            string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath,
+                "GameConfig/Items/shells/" + package);
+            JObject definitions = JObject.Parse(StreamingAssetsTextLoader.ReadAllText(path));
+            foreach (JObject item in (JArray)definitions["items"])
+            {
+                string id = (string)item["id"];
+                if (id is "Ore_Stone" or "ChippedTool" or "StoneSlab" or "Spear_Stone")
+                    sourceTags[id] = item["tags"]?.Values<string>().ToList() ?? new List<string>();
+            }
+        }
+
+        Data_GeneralItem Material(string id, float amount)
+        {
+            Data_GeneralItem data = EntityProbeData(id, amount);
+            data.Tags = id == "Rope" ? new List<string> { "Rope" } :
+                sourceTags.TryGetValue(id, out List<string> tags) ? new List<string>(tags) : new List<string>();
+            return data;
+        }
+
+        var cases = new (string Name, RuntimeRecipe Recipe, (string Id, float Amount)[] Inputs)[]
+        {
+            ("two_chipped", chippedRecipe, new[] { ("ChippedTool", 2f) }),
+            ("mixed_chipped", chippedRecipe, new[] { ("Ore_Stone", 1f), ("ChippedTool", 1f) }),
+            ("two_stones", chippedRecipe, new[] { ("Ore_Stone", 2f) }),
+            ("axe_mixed", axeRecipe, new[] { ("ChippedTool", 2f), ("Ore_Stone", 1f), ("Rope", 2f), ("Stick_Wood", 2f) }),
+            ("axe_chipped", axeRecipe, new[] { ("ChippedTool", 3f), ("Rope", 2f), ("Stick_Wood", 2f) }),
+            ("slab_rejected", chippedRecipe, new[] { ("StoneSlab", 2f) }),
+            ("spear_rejected", chippedRecipe, new[] { ("Spear_Stone", 2f) }),
+            ("insufficient", chippedRecipe, new[] { ("ChippedTool", 1f) })
+        };
+        var samples = new JArray();
+        foreach (var sample in cases)
+        {
+            var inputSlots = new List<ItemSlot>();
+            foreach (var entry in sample.Inputs)
+                inputSlots.Add(new ItemSlot(inputSlots.Count) { itemData = Material(entry.Id, entry.Amount) });
+            var input = new Inventory { Data = new Inventory_Data(inputSlots, "stone material probe input") };
+            var output = new Inventory { Data = new Inventory_Data(
+                new List<ItemSlot> { new(0) }, "stone material probe output") };
+            bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, sample.Recipe,
+                new CraftingCapabilities(), out CraftingRecipeMatch match);
+            bool prepared = false, committed = false;
+            if (matched)
+            {
+                var products = sample.Recipe.outputs.results
+                    .Select(result => (ItemData)EntityProbeData(result.ItemName, result.amount)).ToList();
+                prepared = CraftingTransaction.TryCreate(input, output, match, products, false,
+                    out CraftingTransaction transaction, out _);
+                if (prepared && transaction.Commit(out _))
+                {
+                    transaction.Complete();
+                    committed = true;
+                }
+            }
+            samples.Add(new JObject
+            {
+                ["name"] = sample.Name, ["recipeId"] = sample.Recipe.Id,
+                ["matched"] = matched, ["prepared"] = prepared, ["committed"] = committed,
+                ["remaining"] = new JArray(inputSlots.Select(slot => slot.itemData?.Stack?.Amount ?? 0f)),
+                ["outputId"] = output.Data.itemSlots[0].itemData?.IDName ?? string.Empty,
+                ["outputAmount"] = output.Data.itemSlots[0].itemData?.Stack?.Amount ?? 0f
+            });
+        }
+        return new JObject
+        {
+            ["cases"] = samples,
+            ["stoneTags"] = JArray.FromObject(sourceTags["Ore_Stone"]),
+            ["chippedTags"] = JArray.FromObject(sourceTags["ChippedTool"]),
+            ["slabTags"] = JArray.FromObject(sourceTags["StoneSlab"]),
+            ["spearTags"] = JArray.FromObject(sourceTags["Spear_Stone"])
         };
     }
 

@@ -151,8 +151,17 @@ public static class LootTableCatalogLoader
     public static IReadOnlyList<RuntimeLootTable> LoadBuiltIn()
     {
         DiscreteProbabilityConfiguration.Reload();
-        return DeserializeCatalog(StreamingAssetsTextLoader.ReadAllText(BuiltInCatalogPath));
+        return BuildCatalog(BuiltInContentBinaryCatalog.ReadFile(BuiltInCatalogPath, ParseCatalog));
     }
+
+#if UNITY_EDITOR
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+    {
+        using var probability = DiscreteProbabilityConfiguration.UseBuiltInConfigurationForBake();
+        LoadBuiltIn();
+    }
+#endif
 
     /// <summary>异步加载本体战利品库。</summary>
     public static IEnumerator LoadBuiltInAsync(
@@ -160,11 +169,12 @@ public static class LootTableCatalogLoader
         Action<Exception> failed)
     {
         DiscreteProbabilityConfiguration.Reload();
-        string json = null;
+        LootTableCatalogDto catalog = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
             BuiltInCatalogPath,
-            text => json = text,
+            ParseCatalog,
+            value => catalog = value,
             exception => readError = exception);
 
         if (readError != null)
@@ -175,7 +185,7 @@ public static class LootTableCatalogLoader
 
         try
         {
-            completed?.Invoke(DeserializeCatalog(json));
+            completed?.Invoke(BuildCatalog(catalog));
         }
         catch (Exception exception)
         {
@@ -185,6 +195,9 @@ public static class LootTableCatalogLoader
 
     /// <summary>解析并校验目录，任何无效配置都在资源初始化阶段直接失败。</summary>
     public static IReadOnlyList<RuntimeLootTable> DeserializeCatalog(string json)
+        => BuildCatalog(ParseCatalog(json));
+
+    private static LootTableCatalogDto ParseCatalog(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("战利品库为空");
@@ -198,6 +211,12 @@ public static class LootTableCatalogLoader
         {
             throw new InvalidDataException("战利品库 JSON 无法解析", exception);
         }
+
+        return catalog;
+    }
+
+    private static IReadOnlyList<RuntimeLootTable> BuildCatalog(LootTableCatalogDto catalog)
+    {
 
         if (catalog == null)
             throw new InvalidDataException("战利品库根对象为空");

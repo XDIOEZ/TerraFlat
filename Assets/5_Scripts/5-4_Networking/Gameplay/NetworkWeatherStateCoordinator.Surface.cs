@@ -339,6 +339,7 @@ namespace FlatWorld.Networking.Gameplay
                     previous.Edited = cell.Edited;
                     previous.Depth = cell.Depth;
                     previous.SeasonalDepth = cell.SeasonalDepth;
+                    previous.IceMeltProgress = cell.IceMeltProgress;
                 }
             }
             pending.Revision = revision;

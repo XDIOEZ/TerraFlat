@@ -57,6 +57,9 @@ public abstract class Item : MonoBehaviour
     // 独立世界容器负责保存所属表现对象，区块不再重复保存同一份库存。
     public object PersistenceOwner { get; set; }
 
+    // 生态所有权由运行时账本显式绑定，不能通过视觉父节点推断。
+    internal ChunkNaturalItemRuntime NaturalRuntimeOwner { get; set; }
+
     /// <summary>
     /// 被其他实体感知时的范围倍率。1 为标准感知体型，数值越大越容易在更远处被发现。
     /// 观察者的检测半径与该目标倍率共同决定最终感知范围。
@@ -302,9 +305,12 @@ public abstract class Item : MonoBehaviour
 
     private void OnEnable()
     {
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
         FlushPendingInitialAnimatorState();
         WorldRenderingManager.ExistingInstance?.RefreshItemRendering(this);
     }
+
+    private void OnDisable() => WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
 
     #endregion
 
@@ -460,6 +466,7 @@ public abstract class Item : MonoBehaviour
             modulesLoaded = true;
             foreach (Module module in snapshot)
                 if (module != null && itemMods.HasMod(module)) BindModuleDependencies(module);
+            WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
             foreach (Module module in snapshot)
             {
                 if (!modulesLoaded || destructionHandled || RuntimeGeneration != generation)
@@ -651,9 +658,11 @@ public abstract class Item : MonoBehaviour
 
     public void PrepareForPoolReuse()
     {
+        WorldRenderingManager.ExistingInstance?.ReleaseItemPresentation(this);
         ClearPendingInitialAnimatorState();
         VisualDefinition = null;
         PersistenceOwner = null;
+        NaturalRuntimeOwner = null;
         GameplayWorldRegistry.AssignItemToWorld(this, null);
         ModuleUnload();
         ClearPerceptionRadiusLimits();
@@ -943,6 +952,8 @@ public abstract class Item : MonoBehaviour
             moduleLayoutPrepared = true;
             yield break;
         }
+        WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
+        WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         uint generation = RuntimeGeneration;
         foreach (Module module in toInitialize)
         {
@@ -976,6 +987,8 @@ public abstract class Item : MonoBehaviour
     {
         moduleLayoutPrepared = false;
         modulesLoaded = true;
+        WorldPhysicsService2D.PreparePrefabCreaturePhysicsBeforeModuleLoad(this);
+        WorldRenderingManager.ExistingInstance?.RequestItemPresentation(this);
         using var scope = ListPool<Module>.Get(out var snapshot);
         CopyModulesTo(snapshot);
         uint generation = RuntimeGeneration;
@@ -1073,6 +1086,7 @@ public abstract class Item : MonoBehaviour
             modulesUnloading = false;
             ClearModuleSchedule();
             MarkModuleScheduleDirty();
+            WorldPhysicsService2D.ReturnUnownedItemPhysicsComponents(this);
         }
         if (errors.Count > 0)
             throw new AggregateException($"物品 {name} 的模块卸载发生错误。", errors);
@@ -1233,6 +1247,7 @@ public abstract class Item : MonoBehaviour
             return;
 
         itemData.inHand = inHand;
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(this);
         MarkModuleScheduleDirty();
         OnInHandChanged?.Invoke(inHand);
     }

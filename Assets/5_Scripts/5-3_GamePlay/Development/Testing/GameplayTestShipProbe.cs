@@ -196,8 +196,21 @@ public static class GameplayTestShipProbe
         bool destroyedByDamage = ShipStructureService.ApplyDamage(cached, door.PieceId, door.Health, "Lua 碰撞合批样本");
         JObject emptied = ColliderReading(cache, cache.Synchronize(cached));
 
+        TextAsset asset = Resources.Load<TextAsset>("Config/Mechanical/mechanical-catalog");
+        MachineDefinition floorDefinition = asset != null
+            ? JsonConvert.DeserializeObject<MachineCatalogDocument>(asset.text)?.Nodes.Find(value => value?.Id == "ShipFloor_Iron")
+            : null;
+        floorDefinition?.Validate();
+
         return new JObject
         {
+            ["floorDataBuilding"] = floorDefinition == null ? null : new JObject
+            {
+                ["kind"] = floorDefinition.Kind, ["layer"] = floorDefinition.Layer,
+                ["ports"] = floorDefinition.Ports, ["logic"] = floorDefinition.LogicId,
+                ["blocksPassage"] = floorDefinition.BlocksTraversal,
+                ["castsShadow"] = floorDefinition.ShouldCastVisualShadows()
+            },
             ["full"] = initial, ["overlapping"] = overlapping, ["blockingOverlap"] = blockingOverlap,
             ["hole"] = ColliderSample(hole), ["corner"] = ColliderSample(corner),
             ["islands"] = ColliderSample(islands), ["rotated"] = ColliderSample(rotated),

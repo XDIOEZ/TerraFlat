@@ -28,7 +28,7 @@ namespace FlatWorld.Spaceflight
                             item.PersistenceOwner != null || item.itemData == null ||
                             !RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item) && item.itemData.Stack?.CanBePickedUp != true ||
                             !select(item.transform.position)) continue;
-                        Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+                        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
                         var original = (Item: item, Position: item.transform.position, Rotation: item.transform.rotation,
                             Velocity: body != null ? body.velocity : Vector2.zero, Angular: body != null ? body.angularVelocity : 0f,
                             Resident: item.itemData.PhysicsState?.PersistentWorldResident == true, Children: new List<Item>());
@@ -80,7 +80,7 @@ namespace FlatWorld.Spaceflight
                 string originalWorld = GameplayWorldRegistry.GetItemWorldKey(item);
                 Vector3 originalPosition = item.transform.position;
                 Quaternion originalRotation = item.transform.rotation;
-                Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+                Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
                 Vector2 originalVelocity = body != null ? body.velocity : Vector2.zero;
                 float originalAngular = body != null ? body.angularVelocity : 0f;
                 try
@@ -112,7 +112,7 @@ namespace FlatWorld.Spaceflight
                 item.itemData.PhysicsState ??= new ItemPhysicsRuntimeState();
                 item.itemData.PhysicsState.Velocity = velocity;
                 item.itemData.PhysicsState.AngularVelocity = angularVelocity;
-                Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+                Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
                 if (body != null)
                 {
                     body.position = position;

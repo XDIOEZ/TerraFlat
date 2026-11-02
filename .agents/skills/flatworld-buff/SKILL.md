@@ -20,11 +20,11 @@ description: "FlatWorld Buff 定义、叠层、持续时间、周期效果、来
 - `ActorBuffLightController` 只在实际存在光耀时创建点光源，移除后关闭并复用；仅真实开关变化时刷新光照，普通动物出生和其它 Buff 变化不新建闲置光源。
 - `ActorSpeedBuffMovementTrail` 按 Buff 增删、续期事件缓存加速表现资格；存档替换 Buff 字典或数量变化时补同步，模块延后装配及挂点变化仍重新绑定。空闲粒子只清一次，同帧发射复用脚底位置，不调整速度或发射率。
 - ID 用于注册、内容和保存。`schemaVersion:1` 严格拒绝重复 ID、未知 typeId/字段、非法枚举/非有限值；新效果由稳定 typeId、Dispatcher、参数校验组成。Handler 构建时缓存。
-- 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照，真伤沿用统一扣血入口。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因，避免归给此前武器。
+- 伤害 Buff 通过 JSON `deathCauseId` 声明原因；`BuffInstance.DamageOrigin` 保存施加时的攻击者/物品快照。`core:true_damage` 直接扣血，`core:fire_damage` 和 `core:radiation_damage` 走统一分类减防（燃烧现为火焰伤害）；叠层周期伤害在 GO/原生 ECS 均支持。接受的续期/叠层采用本次来源，Ignore 保留原来源；岩浆显式接管燃烧来源并保留 lava 原因。
 - `durationSeconds:null` 永久，周期间隔为正，extend/refresh 用正持续时间；分包只是归档，语义由 category/effects 定义。
 - `add_stacks` 改单实例 StackCount 并续期，不重放 Start/Stop 或重置 Tick 相位；登记倍率仅一份，`scaleWithStacks` 显式按层。恢复层数归一到 `1..MaxStacks`，表现订 `BuffStacksChanged`。
 - `core:attack_flat_modifier` 按来源修正攻击总值（最低 0，武器/投射物沿 Owner 读取），`core:move_speed_reduction` 用 `1-value×层数` 登记独立移速倍率；二者用 start/stop 成对配置，支持 `scaleWithStacks`，层变只更新这些登记效果，不重放其它 Start。
-- 感染统一由目录控制 300 秒、最多 3 层，重新感染加层并刷新时长，到期整体结束；每层每 10 秒 1 点真伤、固定攻击 -1、移速 -25%。生肉仅判定并施加感染，不覆盖目录时长；玩家由 GO 管理器推进，Native 受体尚不支持登记型属性效果。
+- 感染统一由目录控制 300 秒、最多 1 层，重复感染只续期，到期整体结束；每 10 秒 1 点真伤、固定攻击 -1、移速 -25%。脏水饮用有 20% 概率触发感染，生肉只判定后施加；玩家由 GO 管理器推进，Native 受体尚不支持登记型属性效果。
 - 可清 Buff 表达潮湿/感染/中毒等角色状态；环境内被动能力/可执行动作由环境运行器负责。`ActiveBuffs` 是只读表现入口。
 - 正式重生在 `Mod_PlayerDeathState.CompleteRespawnState` 收口 `ClearAllBuffs`，同世界/跨维度一致。
 - `BodyTraumaBuffEffects` 在 Start/Stop 时按角色刷新攻速与混乱汇总；逐帧输入及武器读取只查角色索引，不扫描全体 Buff，最后一个来源移除时清掉该角色缓存。

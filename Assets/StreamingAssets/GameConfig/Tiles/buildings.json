@@ -21,8 +21,7 @@
         "requiredTool": 1,
         "impactMaterial": 4,
         "dropItemId": "Ore_Stone",
-        "dropAmount": 1,
-        "minimumWeaponDamage": 0
+        "dropAmount": 1
       }
     },
     {
@@ -41,7 +40,7 @@
         "defenseValues": {
           "physical": 8
         },
-        "requiredTool": 3, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Stone_Summoner", "dropAmount": 1
+        "requiredTool": 3, "impactMaterial": 4, "dropItemId": "Wall_Stone_Summoner", "dropAmount": 1
       }
     },
     {
@@ -60,7 +59,7 @@
         "defenseValues": {
           "physical": 3
         },
-        "requiredTool": 3, "minimumWeaponDamage": 0, "impactMaterial": 3, "dropItemId": "Wall_Wood_Summoner", "dropAmount": 1
+        "requiredTool": 3, "impactMaterial": 3, "dropItemId": "Wall_Wood_Summoner", "dropAmount": 1
       }
     },
     {
@@ -80,7 +79,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "WaterPlatform_Summoner" }
     },
@@ -100,7 +99,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Stone_Summoner" }
     },
@@ -120,7 +119,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Copper_Summoner" }
     },
@@ -140,7 +139,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Iron_Summoner" }
     },
@@ -160,7 +159,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "liquidRequirement": "Present", "refundItemId": "Platform_Bronze_Summoner" }
     },
@@ -180,7 +179,7 @@
         "defenseValues": {
           "physical": 5
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Copper_Summoner", "dropAmount": 1
+        "requiredTool": 0, "impactMaterial": 4, "dropItemId": "Wall_Copper_Summoner", "dropAmount": 1
       }
     },
     {
@@ -199,7 +198,7 @@
         "defenseValues": {
           "physical": 5
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Iron_Summoner", "dropAmount": 1
+        "requiredTool": 0, "impactMaterial": 4, "dropItemId": "Wall_Iron_Summoner", "dropAmount": 1
       }
     },
     {
@@ -218,7 +217,7 @@
         "defenseValues": {
           "physical": 5
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 4, "dropItemId": "Wall_Bronze_Summoner", "dropAmount": 1
+        "requiredTool": 0, "impactMaterial": 4, "dropItemId": "Wall_Bronze_Summoner", "dropAmount": 1
       }
     },
     {
@@ -241,8 +240,7 @@
         "requiredTool": 1,
         "impactMaterial": 1,
         "dropItemId": "Earth",
-        "dropAmount": 1,
-        "minimumWeaponDamage": 0
+        "dropAmount": 1
       }
     },
     {
@@ -262,7 +260,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 3, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 3, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Wood_Summoner" }
     },
@@ -282,7 +280,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Stone_Summoner" }
     },
@@ -302,7 +300,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Copper_Summoner" }
     },
@@ -322,7 +320,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Iron_Summoner" }
     },
@@ -342,7 +340,7 @@
         "defenseValues": {
           "physical": 0
         },
-        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+        "requiredTool": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
       },
       "groundPlacement": { "requiredSourceFlags": 1, "liquidRequirement": "Absent", "refundItemId": "Floor_Bronze_Summoner" }
     },
@@ -369,7 +367,6 @@
           "physical": 0
         },
         "requiredTool": 0,
-        "minimumWeaponDamage": 0,
         "impactMaterial": 1,
         "dropItemId": null,
         "dropAmount": 0

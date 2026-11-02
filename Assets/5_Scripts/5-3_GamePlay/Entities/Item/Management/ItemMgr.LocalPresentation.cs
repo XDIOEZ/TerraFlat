@@ -33,7 +33,7 @@ public partial class ItemMgr
                 continue;
             }
 
-            Rigidbody2D body = item.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
             if (body != null)
                 body.position = projected;
             item.transform.position = projected;

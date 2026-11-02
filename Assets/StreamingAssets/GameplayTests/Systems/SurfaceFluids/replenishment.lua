@@ -12,6 +12,18 @@ local cases = {
     { level = 100, supplied = { 50, 25, 12, 6 }, remaining = 7 }
 }
 
+test.system("surface_fluids", "diffusion_batch", {}, function(data)
+    assert(data.transferred and data.pendingLeft == 50 and data.unchangedBeforeCommit,
+        "天然水域转移没有先用内存最终值计算，或过早写入真实地形")
+    assert(data.allBalanced and data.typesIntact and data.total == 6400,
+        "批量补水破坏了整数水量守恒、50/50均衡或液体身份")
+    assert(data.singleNotifications == 0 and data.batchNotifications == 1
+        and data.changedCells == 128 and data.visualCells == 128,
+        "64次补水仍逐格刷新表现，或可视脏格没有按最终水位合并")
+    assert(data.chainTransferred and data.chainStaged and data.chainBalanced and data.batchReused,
+        "连续补水没有读取暂存水量，或下一轮继续使用了上一轮的缓存")
+end, "天然水域：64组补水按区块一次提交、守恒并去掉逐格刷新")
+
 test.system("surface_fluids", "diffusion_data_retention_lease", {}, function(data)
     assert(data.dormant and data.hidden, "只读地形和水量却唤醒了模拟或表现")
     assert(data.initial == 2 and data.protectedData and data.remaining == 1,

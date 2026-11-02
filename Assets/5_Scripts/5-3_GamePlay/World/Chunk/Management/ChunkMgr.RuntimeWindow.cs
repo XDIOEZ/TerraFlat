@@ -454,18 +454,6 @@ public partial class ChunkMgr
         return TryGetRuntimeChunkView(address, out view);
     }
 
-    /// <summary>查找新版区块的临时物品节点，供掉落物统一归属。</summary>
-    public bool TryGetRuntimeDropParent(Vector2 worldPosition,
-        out ChunkNaturalItemRenderer renderer)
-    {
-        renderer = null;
-        if (!TryGetRuntimeChunkView(worldPosition, out ChunkView view))
-            return false;
-
-        renderer = view.GetComponentInChildren<ChunkNaturalItemRenderer>(true);
-        return renderer != null && renderer.isActiveAndEnabled;
-    }
-
     /// <summary>当前位置的区块画面是否已完成绑定，可供本地实体安全显示。</summary>
     public bool IsRuntimeEntityPresentationReady(Vector2 worldPosition)
     {
@@ -1500,6 +1488,9 @@ public partial class ChunkMgr
             NotifyLiquidFlowChunkReady(chunk);
             binding.ObservedLiquidChunk = chunk;
         }
+
+        if (ReferenceEquals(binding.RestoredEntitiesChunk, chunk))
+            NaturalItemRuntimes.Ensure(chunk);
 
         return true;
     }

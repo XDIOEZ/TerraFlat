@@ -113,6 +113,18 @@ public static partial class GameplayTestSystemProbe
                     if (shape != null && shape.enabled && shape.GetComponent<ColliderSource2D>().ImageOffset == new Vector2(64, 0)) count++;
             return count;
         }
+        int mirrorWarningCount = 0;
+        void RefreshBoundaryImagesAndCountWarnings()
+        {
+            // 固定镜像首次领取与池化刷新都不能写入仅适用于动态自动质量的属性。
+            void CountWarning(string message, string stackTrace, LogType type)
+            {
+                if (type == LogType.Warning) mirrorWarningCount++;
+            }
+            Application.logMessageReceived += CountWarning;
+            try { physics.RefreshFixedProxyBoundaryImages(source.Proxy, topology); }
+            finally { Application.logMessageReceived -= CountWarning; }
+        }
         bool ValidImages(WorldPhysicsFixedRectangleSource2D group)
         {
             if (group.Proxy == null) return false;
@@ -132,10 +144,10 @@ public static partial class GameplayTestSystemProbe
         source.SetRectangle(2, new Vector2(1.5f, .5f), Vector2.one);
         result["unchangedChanges"] = physics.PendingGeometryUpdateCount;
         result["genericProxyRegistry"] = physics.TryGetEntityProxy(source.Identity, out var registered) && registered == source.Proxy;
-        physics.RefreshFixedProxyBoundaryImages(source.Proxy, topology);
+        RefreshBoundaryImagesAndCountWarnings();
         result["mirrorInitialCount"] = Images(source);
         Collider2D initialMirror = source.Proxy.Shell.ImageColliders[0];
-        physics.RefreshFixedProxyBoundaryImages(source.Proxy, topology);
+        RefreshBoundaryImagesAndCountWarnings();
         result["mirrorStableIdentity"] = initialMirror == source.Proxy.Shell.ImageColliders[0] && initial == source.Proxy.Colliders[0];
         bool valid = ValidImages(source);
         source.RemoveRectangle(2); physics.FlushPendingGeometry(); Physics2D.SyncTransforms();
@@ -143,8 +155,11 @@ public static partial class GameplayTestSystemProbe
         bool middleBlocked = false;
         foreach (Collider2D collider in source.Proxy.Colliders) middleBlocked |= collider.OverlapPoint(new Vector2(1.5f, .5f));
         result["middleStillBlocked"] = middleBlocked;
-        physics.RefreshFixedProxyBoundaryImages(source.Proxy, topology);
+        RefreshBoundaryImagesAndCountWarnings();
         result["mirrorSplitCount"] = Images(source); result["mirrorSourcesValid"] = valid && ValidImages(source);
+        result["mirrorWarningCount"] = mirrorWarningCount;
+        result["mirrorUsesFixedBody"] = initialMirror.attachedRigidbody == source.Proxy.Body &&
+            source.Proxy.Body.bodyType == RigidbodyType2D.Static && !source.Proxy.Body.useAutoMass;
 
         using var first = physics.CreateFixedRectangleSource(new object(), new Vector2(9, 0));
         using var second = physics.CreateFixedRectangleSource(new object(), new Vector2(10, 0));

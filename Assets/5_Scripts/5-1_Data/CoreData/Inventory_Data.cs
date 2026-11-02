@@ -256,6 +256,7 @@ public partial class Inventory_Data
         {
             SlotMaxVolume = Inventory_Data.DefaultSlotVolume
         };
+        hasObservedSlotVersion = false;
         Debug.LogError($"[Inventory_Data] 检测到空槽位引用，已在索引 {index} 处自动补齐 ItemSlot 实例");
         return itemSlots[index];
     }

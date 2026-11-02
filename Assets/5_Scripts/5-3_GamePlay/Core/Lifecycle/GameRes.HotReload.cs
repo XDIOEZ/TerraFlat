@@ -18,6 +18,7 @@ public partial class GameRes
 
     private bool preparingInPlaceReload;
     private bool resourceReloadInProgress;
+    private IDisposable inPlaceSourceConfigurationLease;
     private float resourceReloadProgress;
     private Action cancelInPlaceReload;
     private readonly List<Action> retiredResourceReleases = new();
@@ -41,7 +42,7 @@ public partial class GameRes
 
     #region 候选会话
 
-    private bool StartInPlaceResourceReload(GameManager manager)
+    private bool StartInPlaceResourceReload(GameManager manager, bool useSourceConfigurations)
     {
         if (resourceReloadInProgress || LoadState != ResourceLoadState.Ready || !manager.IsGameplayReady)
             return false;
@@ -57,13 +58,31 @@ public partial class GameRes
             manager.BackToHelloScene_Event_End += ReleaseRetiredWorldResources;
         }
         manager.BeginResourceReloadStatus();
-        Coroutine started = StartCoroutine(ReloadResourcesInPlace(manager));
+        Coroutine started = StartCoroutine(ReloadResourcesInPlace(manager, useSourceConfigurations));
         inGameReloadCoroutine = resourceReloadInProgress ? started : null;
         return true;
     }
 
     /// <summary>既有加载计划只负责构建与校验，事务负责隔离、兼容性检查和资源所有权转移。</summary>
-    private IEnumerator ReloadResourcesInPlace(GameManager manager)
+    private IEnumerator ReloadResourcesInPlace(GameManager manager, bool useSourceConfigurations)
+    {
+        try
+        {
+            if (useSourceConfigurations)
+                inPlaceSourceConfigurationLease = BuiltInContentBinaryCatalog.UseSourceConfigurations();
+            yield return ReloadResourcesInPlaceCore(manager, useSourceConfigurations);
+        }
+        finally { ReleaseInPlaceSourceConfigurationLease(); }
+    }
+
+    private void ReleaseInPlaceSourceConfigurationLease()
+    {
+        IDisposable lease = inPlaceSourceConfigurationLease;
+        inPlaceSourceConfigurationLease = null;
+        lease?.Dispose();
+    }
+
+    private IEnumerator ReloadResourcesInPlaceCore(GameManager manager, bool useSourceConfigurations)
     {
         var candidateAssets = new ResourceAssetScope();
         ResourceReloadContext context = null;
@@ -101,6 +120,7 @@ public partial class GameRes
             resourceReloadInProgress = false;
             if (!terminalFeedbackReported && manager != null)
                 manager.CancelResourceReloadStatus();
+            ReleaseInPlaceSourceConfigurationLease();
             inGameReloadCoroutine = null;
             cancelInPlaceReload = null;
         };
@@ -150,6 +170,9 @@ public partial class GameRes
                     Action previousModRelease = mods.CaptureResourceRelease();
                     context.Commit();
                     committed = true;
+                    configurationSourcePolicy = useSourceConfigurations
+                        ? ConfigurationSourcePolicy.SourceFiles
+                        : ConfigurationSourcePolicy.BuiltInBinary;
                     mods.PublishContainerPortFactories();
                     UpdateRetiredWorldItemDefinitions(retainedItemIds);
                     LoadState = ResourceLoadState.Ready;

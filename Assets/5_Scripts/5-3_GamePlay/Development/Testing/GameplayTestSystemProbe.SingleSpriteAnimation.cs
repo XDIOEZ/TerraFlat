@@ -21,6 +21,7 @@ public static partial class GameplayTestSystemProbe
         Mod_Damage damage = null;
         Mod_HotBar hotbar = null;
         Mod_FocusPoint heldFocus = null;
+        bool heldFocusCreatedWithIdentity = false;
         Transform handReference = null;
         Transform handAnchor = null;
         Transform heldTransform = null;
@@ -28,15 +29,21 @@ public static partial class GameplayTestSystemProbe
         Quaternion heldLocalRotation = Quaternion.Euler(0f, 0f, 23f);
         int deathStartedCount = 0;
         var sprites = new List<Sprite>();
+        GameplayTestAnimationPhysicsWorldScope physicsScope = null;
         try
         {
+            if (Flag(args, "withDamage", false))
+            {
+                physicsScope = new GameplayTestAnimationPhysicsWorldScope();
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, physicsScope.Scene);
+            }
             root.transform.position = new Vector3(11f, -7f, 0f);
             root.transform.localScale = new Vector3((Flag(args, "mirrored", false) ? -1f : 1f) *
                 (float)Number(args, "rootScaleX", 1d), (float)Number(args, "rootScaleY", 1d), 1f);
             Vector3 rootPosition = root.transform.position;
             Quaternion rootRotation = root.transform.rotation;
             Vector3 rootScale = root.transform.localScale;
-            GameItem item = root.AddComponent<GameItem>();
+            GameItem item = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<GameItem>());
             item.BindData(EntityProbeData("test:single_sprite_animation", 1f));
             Rigidbody2D body = root.AddComponent<Rigidbody2D>();
             body.simulated = false;
@@ -104,7 +111,7 @@ public static partial class GameplayTestSystemProbe
             float visualAngle = visual.transform.eulerAngles.z;
             int siblingIndex = visual.transform.GetSiblingIndex();
 
-            animation = root.AddComponent<Mod_AnimatorController>();
+            animation = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<Mod_AnimatorController>());
             animation.visualMode = Mod_AnimatorController.VisualMode.SingleSprite;
             animation.idleBreathAmount = 0f;
             animation.targetSpriteRenderer = renderer;
@@ -137,7 +144,7 @@ public static partial class GameplayTestSystemProbe
                 additionalSiblingIndex = additionalVisual.GetSiblingIndex();
                 animation.additionalVisualRoots = new[] { additionalVisual };
             }
-            animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
+            animation.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.AnimatorReceiver, Enabled = true });
             item.itemMods.AddMod(animation);
             if (Flag(args, "withHeldAttachment", false))
             {
@@ -162,6 +169,7 @@ public static partial class GameplayTestSystemProbe
                 if (Flag(args, "withHeldAim", false))
                 {
                     heldFocus = root.AddComponent<Mod_FocusPoint>();
+                    heldFocusCreatedWithIdentity = heldFocus._Data.ModuleId == ModText.FocusPoint;
                     heldFocus.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.FocusPoint, Enabled = true });
                     heldFocus.Data.RotationSpeed = 36000f;
                     heldFocus.AddRotationTarget(heldTransform, updateAfterPresentation: true);
@@ -297,7 +305,7 @@ public static partial class GameplayTestSystemProbe
                             motionSource.Available = false;
                             item.itemMods.AddMod(motionSource);
                         }
-                        animation.ModuleInit(item, new Ex_ModData_MemoryPackable { Enabled = true });
+                        animation.ModuleInit(item, new Ex_ModData_MemoryPackable { ID = ModText.AnimatorReceiver, Enabled = true });
                         item.itemMods.AddMod(animation);
                         if (damage != null)
                         {
@@ -383,6 +391,7 @@ public static partial class GameplayTestSystemProbe
             var result = new JObject
             {
                 ["samples"] = samples, ["baseBottomY"] = baseBottomY,
+                ["heldFocusCreatedWithIdentity"] = heldFocusCreatedWithIdentity,
                 ["deathDuration"] = animation.deathDuration, ["deathJumpHeight"] = animation.deathJumpHeight
             };
             string finalLifecycle = Text(args, "finalLifecycle", string.Empty);
@@ -454,7 +463,33 @@ public static partial class GameplayTestSystemProbe
             {
                 UnityEngine.Object.DestroyImmediate(root);
                 foreach (Sprite sprite in sprites) UnityEngine.Object.DestroyImmediate(sprite);
+                physicsScope?.Dispose();
             }
+        }
+    }
+
+    // 伤害窗口使用自有物理场景；测试上下文注入与正式查询、释放分别负责，结束后恢复旧上下文。
+    private sealed class GameplayTestAnimationPhysicsWorldScope : IDisposable
+    {
+        private static readonly System.Reflection.FieldInfo ExecutionField = typeof(GameplayWorldRegistry).GetField(
+            "execution", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        private static readonly System.Reflection.MethodInfo ReleasePhysics = typeof(GameplayWorldRegistry).GetMethod(
+            "ReleaseWorldPhysics", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        private readonly object previous;
+        internal UnityEngine.SceneManagement.Scene Scene { get; }
+
+        internal GameplayTestAnimationPhysicsWorldScope()
+        {
+            Scene = CreateGameplayTestProbeScene("AnimationPhysics_" + Guid.NewGuid().ToString("N"));
+            previous = ExecutionField.GetValue(null);
+            ExecutionField.SetValue(null, new GameplayWorldRuntime { WorldKey = Scene.name, Scene = Scene });
+        }
+
+        public void Dispose()
+        {
+            ExecutionField.SetValue(null, previous);
+            try { ReleasePhysics.Invoke(null, new object[] { Scene.name }); }
+            finally { CloseGameplayTestProbeScene(Scene); }
         }
     }
 
@@ -729,7 +764,7 @@ public static partial class GameplayTestSystemProbe
                 ["registeredSameInstance"] = registeredSameInstance,
                 ["resolvedSameInstance"] = ReferenceEquals(animation, assembly.ResolveEmbeddedModule(instance.transform)),
                 ["bodyAnimatorMatches"] = bodyAnimator != null && animation.animator == bodyAnimator,
-                ["bodyRendererMatches"] = renderer != null && renderer.GetComponent<Mod_AnimatorController>() == animation,
+                ["bodyRendererMatches"] = renderer != null && bodyAnimator != null && renderer.transform == bodyAnimator.transform,
                 ["controllerName"] = bodyAnimator != null && bodyAnimator.runtimeAnimatorController != null
                     ? bodyAnimator.runtimeAnimatorController.name : string.Empty,
                 ["animatorCount"] = animatorCount,

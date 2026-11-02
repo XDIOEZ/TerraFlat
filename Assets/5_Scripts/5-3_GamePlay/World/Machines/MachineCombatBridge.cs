@@ -68,7 +68,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         using var hitLease = ListPool<CombatColliderHit2D>.Get(out var colliderHits);
         using var orderedLease = ListPool<OrderedMachineHit>.Get(out var orderedHits);
         GameRes resources = GameRes.ExistingInstance;
-        using (CombatColliderQuery2D physics = CombatColliderQuery2D.Rent())
+        using (CombatColliderQuery2D physics = GameplayWorldRegistry.CurrentPhysics.RentCombatDamageQuery())
         {
             using (CandidateMarker.Auto())
             {
@@ -185,8 +185,9 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         }
         else throw new InvalidOperationException("机器受击范围只支持 BoxCollider2D 或 CircleCollider2D。");
         ItemDefenseDefinitionDto defense = health.Defense;
-        if (defense != null && !math.all(math.isfinite(new float4(
-                defense.Cutting, defense.Piercing, defense.Chopping, defense.Blunt))))
+        if (defense != null && (!math.all(math.isfinite(new float3(
+                defense.Physical, defense.Fire, defense.Radiation))) ||
+                defense.Physical < 0f || defense.Fire < 0f || defense.Radiation < 0f))
             throw new InvalidOperationException("机器防御必须是有限数值。");
     }
 
@@ -218,15 +219,16 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         return PerceptionShape2D.Aabb(center, new float2(size.x, size.y) * .5f);
     }
 
-    /// <summary>防御后才应用建筑倍率，机器与普通实体共用四类伤害规则。</summary>
+    /// <summary>机器和实体共用分类减防，建筑克制仍在防御后计算。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static float CalculateDamage(ItemHealthDefinitionDto health, CombatDamageContext context, float attackMultiplier)
     {
         ItemDefenseDefinitionDto defense = health.Defense;
         float weakness = context.IsTrueDamage != 0 ? 1f : Mod_ResourceHarvest.ResolveAffinityMultiplier(
             health.WeakTool, 1, (ResourceToolKind)context.ResourceToolKind, context.ResourceToolTier, context.ResourceToolEfficiency);
-        return CombatRules.ResolvePhysical(math.csum(context.Damage),
-            context.IsTrueDamage != 0 ? 0f : defense?.Physical ?? 0f, attackMultiplier, weakness);
+        float4 protection = context.IsTrueDamage != 0 ? float4.zero :
+            new float4(defense?.Physical ?? 0f, defense?.Fire ?? 0f, defense?.Radiation ?? 0f, 0f);
+        return math.csum(CombatRules.Resolve(context.Damage, protection, attackMultiplier, weakness));
     }
     #endregion
 }

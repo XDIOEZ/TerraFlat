@@ -57,31 +57,46 @@ public static class FlatWorldUIThemeConfigCatalog
         if (loaded)
             return;
 
-        TextAsset asset = Resources.Load<TextAsset>(ResourcePath);
-        if (asset == null)
-            throw new InvalidOperationException($"缺少 UI 配色配置：Resources/{ResourcePath}.json");
+        Dictionary<string, Color> colors = LoadValidatedColors();
+        Colors.Clear();
+        foreach (KeyValuePair<string, Color> pair in colors)
+            Colors.Add(pair.Key, pair.Value);
+        loaded = true;
+    }
 
-        FlatWorldUIThemeConfig config = JsonConfigurationCache.FromUnityJson<FlatWorldUIThemeConfig>(asset.text);
-        if (config == null || config.schemaVersion != SupportedSchemaVersion || config.colors == null || config.colors.Length == 0)
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration() => _ = LoadValidatedColors();
+
+    private static Dictionary<string, Color> LoadValidatedColors()
+    {
+        FlatWorldUIThemeConfig config = BuiltInContentBinaryCatalog.ReadResource(
+            ResourcePath, ParseResourceConfiguration);
+        if (config == null)
+            throw new InvalidOperationException($"缺少 UI 配色配置：Resources/{ResourcePath}.json");
+        if (config.schemaVersion != SupportedSchemaVersion || config.colors == null || config.colors.Length == 0)
             throw new InvalidOperationException($"UI 配色配置结构无效：Resources/{ResourcePath}.json");
 
-        Colors.Clear();
+        var colors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
         foreach (FlatWorldUIThemeSwatch swatch in config.colors)
         {
             if (swatch == null || string.IsNullOrWhiteSpace(swatch.id) || string.IsNullOrWhiteSpace(swatch.hex))
                 throw new InvalidOperationException("UI 配色存在空的 id 或 hex。");
-            if (Colors.ContainsKey(swatch.id))
+            if (colors.ContainsKey(swatch.id))
                 throw new InvalidOperationException($"UI 配色色块重复：{swatch.id}");
 
             string value = swatch.hex.StartsWith("#", StringComparison.Ordinal) ? swatch.hex : $"#{swatch.hex}";
             if (!ColorUtility.TryParseHtmlString(value, out Color color))
                 throw new InvalidOperationException($"UI 配色色值无效：{swatch.id} = {swatch.hex}");
 
-            Colors.Add(swatch.id, color);
+            colors.Add(swatch.id, color);
         }
 
-        loaded = true;
+        return colors;
     }
+
+    private static FlatWorldUIThemeConfig ParseResourceConfiguration(string json)
+        => JsonConfigurationCache.FromUnityJson<FlatWorldUIThemeConfig>(json)
+           ?? throw new InvalidOperationException($"UI 配色配置结构无效：Resources/{ResourcePath}.json");
 
     #endregion
 }

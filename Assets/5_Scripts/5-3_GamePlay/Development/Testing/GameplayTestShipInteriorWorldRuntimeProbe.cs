@@ -249,11 +249,15 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 secondDoorModule.Data.IsOpen == false;
 
         }
-        JObject weaponHit = ApplyOrdinaryShipDoorWeaponHit(player, rightDoor, firstWorld,
+        JObject weaponHit = ApplyOrdinaryShipBuildingWeaponHit(player, rightDoor, firstWorld,
             session, rightDoorPiece.PieceId);
         result["healthApplied"] = weaponHit.Value<bool>("oneHit") && weaponHit.Value<bool>("pieceHealthUpdated");
         result["ordinaryDamageWindowRejectedDuplicate"] = weaponHit.Value<bool>("duplicateRejected");
         result["ordinaryDamageBackend"] = weaponHit;
+        ShipPieceState hitFloor = FindFloor(firstShip, PlanetData.DefaultChunkDimension + 1);
+        MachineEntity hitFloorNode = FindMachine(firstShip, hitFloor);
+        result["floorDamageBackend"] = ApplyOrdinaryShipBuildingWeaponHit(player, null, firstWorld,
+            session, hitFloor.PieceId, hitFloorNode);
 
         bool zeroGravityRetained = false;
         bool zeroGravityNativeVelocity = false;
@@ -331,6 +335,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         sortingDomains["passengerSwitchedToSecondDomain"] = passengerSwitchedToSecondDomain;
         sortingDomains["passengerReturnedToFirstDomain"] = passengerReturnedToFirstDomain;
         result["sortingDomains"] = sortingDomains;
+        result["floorDataBuildings"] = new JArray(CaptureShipFloorDataBuildingPhysics(firstShip, firstWorld),
+            CaptureShipFloorDataBuildingPhysics(secondShip, secondWorld));
 
         session.ReleaseAllShipInteriorPresentations();
         JObject presentationCache = session.ShipViewCacheSnapshot();
@@ -885,9 +891,35 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         return false;
     }
 
+    // 纯地板只保留数据节点，正式视图就绪后核对没有逐格物品或常驻碰撞体。
+    private static JObject CaptureShipFloorDataBuildingPhysics(ShipState ship, ShipInteriorWorldRuntime world)
+    {
+        using var scope = GameplayWorldRegistry.UseWorld(world.WorldKey);
+        var floorIds = new HashSet<int>();
+        int dataBuildings = 0, runtimeItems = 0, activeColliders = 0;
+        foreach (ShipPieceState piece in ship.Pieces)
+        {
+            if (!piece.IsAlive || piece.ItemId != "ShipFloor_Iron") continue;
+            int id = int.Parse(piece.PieceId, CultureInfo.InvariantCulture);
+            floorIds.Add(id);
+            MachineEntity node = MachineWorld.GetById(id);
+            if (node != null && node.ScopeKey == world.WorldKey && MachineWorld.Contains(node)) dataBuildings++;
+            if (ItemMgr.Instance.WorldRunTimeItems.TryGetValue(id, out Item item) && item != null) runtimeItems++;
+        }
+        foreach (GameObject root in world.Scene.GetRootGameObjects())
+        foreach (Collider2D collider in root.GetComponentsInChildren<Collider2D>(true))
+            if (collider.enabled && collider.gameObject.activeInHierarchy &&
+                WorldPhysicsService2D.TryResolveCollider(collider, out var binding) &&
+                (binding.Item?.itemData != null && floorIds.Contains(binding.Item.itemData.Guid) ||
+                 binding.Entity is MachineEntity node && floorIds.Contains(node.Id))) activeColliders++;
+        return new JObject { ["worldKey"] = world.WorldKey, ["floorCount"] = floorIds.Count,
+            ["dataBuildingCount"] = dataBuildings, ["runtimeItemCount"] = runtimeItems,
+            ["activeColliderCount"] = activeColliders };
+    }
+
     // 正式伤害窗口扫描和显式碰撞都走同一真实武器结算。
-    private static JObject ApplyOrdinaryShipDoorWeaponHit(Player attacker, Item target, ShipInteriorWorldRuntime world,
-        SpaceSession session, string targetPieceId)
+    private static JObject ApplyOrdinaryShipBuildingWeaponHit(Player attacker, Item target, ShipInteriorWorldRuntime world,
+        SpaceSession session, string targetPieceId, MachineEntity dataTarget = null)
     {
         Item weapon = null;
         Mod_Damage damage = null;
@@ -903,33 +935,39 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             damage = weapon.GetComponentInChildren<Mod_Damage>(true);
             Mod_DamageReceiver receiver = target?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             Collider2D receiverCollider = receiver != null ? receiver.GetComponent<Collider2D>() : null;
-            if (damage == null || receiver == null || receiverCollider == null || damage.DamageCollider == null ||
-                !CombatPhysicsChannels.IsDamageReceiverCollider(receiverCollider) ||
+            if (dataTarget != null) MachineWorld.WakeForInteraction(dataTarget);
+            if (damage == null || damage.DamageCollider == null ||
+                (dataTarget != null ? dataTarget.State == null || dataTarget.ScopeKey != world.WorldKey :
+                    receiver == null || !CombatPhysicsChannels.IsDamageReceiverCollider(receiverCollider)) ||
                 !ReferenceEquals(weapon.Owner, attacker) || !weapon.InHand ||
                 GameplayWorldRegistry.GetItemWorldKey(weapon) != world.WorldKey)
                 throw new InvalidOperationException("真实青铜斧或船内目标没有进入标准伤害通道。");
 
             damage.BindToWeaponRenderer(weapon.Sprite);
-            weapon.transform.position += receiverCollider.bounds.center - damage.DamageCollider.bounds.center;
+            Vector3 targetCenter = dataTarget != null ? dataTarget.Snapshot.transform.position : receiverCollider.bounds.center;
+            weapon.transform.position += targetCenter - damage.DamageCollider.bounds.center;
             Physics2D.SyncTransforms();
-            float before = receiver.Hp;
+            if (dataTarget != null) damage.MaxAttackTargets = 1;
+            float before = dataTarget != null ? dataTarget.State.Hp : receiver.Hp;
             damage.StartAttack();
-            float afterWindowScan = receiver.Hp;
-            if (afterWindowScan >= before)
+            float afterWindowScan = dataTarget != null ? dataTarget.State.Hp : receiver.Hp;
+            if (dataTarget == null && afterWindowScan >= before)
                 damage.ProcessExplicitColliderHit(receiverCollider, damage.DamageOrigin, receiverCollider.bounds.center);
-            float afterFirstHit = receiver.Hp;
-            damage.ProcessExplicitColliderHit(receiverCollider, damage.DamageOrigin, receiverCollider.bounds.center);
-            float afterDuplicate = receiver.Hp;
+            float afterFirstHit = dataTarget != null ? dataTarget.State.Hp : receiver.Hp;
+            if (dataTarget != null) damage.QueryProjectilePhysicsSweep(Vector2.zero, Vector2.zero);
+            else damage.ProcessExplicitColliderHit(receiverCollider, damage.DamageOrigin, receiverCollider.bounds.center);
+            float afterDuplicate = dataTarget != null ? dataTarget.State.Hp : receiver.Hp;
             damage.StopAttack();
             session.FindPiece(targetPieceId, out _, out ShipPieceState piece);
             result["weapon"] = weapon.itemData.IDName;
-            result["receiverColliderLayer"] = LayerMask.LayerToName(receiverCollider.gameObject.layer);
+            result["receiverColliderLayer"] = receiverCollider != null ? LayerMask.LayerToName(receiverCollider.gameObject.layer) : "data-query";
             result["beforeHp"] = before;
             result["afterHp"] = afterFirstHit;
             result["afterDuplicateHp"] = afterDuplicate;
             result["oneHit"] = afterFirstHit < before && Mathf.Approximately(afterDuplicate, afterFirstHit);
             result["duplicateRejected"] = afterFirstHit < before && Mathf.Approximately(afterDuplicate, afterFirstHit);
-            result["pieceHealthUpdated"] = piece != null && piece.Health < before;
+            result["pieceHealthUpdated"] = piece != null && piece.Health < before &&
+                Mathf.Approximately((float)piece.Health, afterFirstHit);
             result["windowScanHit"] = afterWindowScan < before;
             return result;
         }

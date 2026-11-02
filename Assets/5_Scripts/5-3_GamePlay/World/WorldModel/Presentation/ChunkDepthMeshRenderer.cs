@@ -12,6 +12,7 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
     internal const int MachineDomain = 1;
     internal const int BuildingDomain = 2;
     internal const int FireDomain = 3;
+    internal const int HarvestShakeMode = 11;
     private readonly Transform parent;
     private readonly int defaultSortingLayerId;
     private readonly int defaultSortingOrder;
@@ -47,8 +48,17 @@ internal sealed partial class ChunkDepthMeshRenderer : IDisposable
             else if (mode == 4) motion = Matrix4x4.Scale(new Vector3(1f, 1f - (1f - Mathf.Cos(phase)) * .5f * Mathf.Clamp01(visual.Animation.w), 1f));
             else if (mode >= MachineArticulatedVisual.SliderMode && mode <= MachineArticulatedVisual.NeedleMode)
                 motion = MachineArticulatedVisual.ResolveMotion(mode, visual.Animation, visual.Conveyor, Time.time);
+            else if (mode == HarvestShakeMode)
+            {
+                Vector3 pivot = entry.Group.Row.Root.InverseTransformPoint(new Vector3(visual.Animation.z,
+                    visual.Animation.w, entry.Group.Row.Root.position.z));
+                motion = Matrix4x4.Translate(pivot) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, 0f,
+                        ManualHarvestWork.ShakeAngle(Time.time - visual.Animation.y))) * Matrix4x4.Translate(-pivot);
+            }
             Matrix4x4 row = worldToDisplay * entry.Group.Row.Root.localToWorldMatrix;
-            destination.Add(new WorldVisualSnapshot(visual.Sprite, row * visual.Matrix * motion, visual.Tint,
+            Matrix4x4 animatedMatrix = mode == HarvestShakeMode ? motion * visual.Matrix : visual.Matrix * motion;
+            destination.Add(new WorldVisualSnapshot(visual.Sprite, row * animatedMatrix, visual.Tint,
                 SortingLayer.GetLayerValueFromID(entry.Group.Row.Layer), entry.Group.Row.Key.Order, row.m13,
                 entry.Group.Row.Root.GetInstanceID(), entry.Group.Key.Order));
         }

@@ -278,6 +278,10 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     public void InitData()
     {
         ValidateInventoryConfig();
+        inputInventory.item = item;
+        outputInventory.item = item;
+        inputInventory.InitData();
+        outputInventory.InitData();
         inputInventory.Data.SetUnlimitedSlots(false);
         outputInventory.Data.SetUnlimitedSlots(false);
         InitializeInventoryData(inputInventory, nameof(inputInventory));

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>管道独立覆盖层只负责端口连通及由来源到出气口的路由，压力不参与流向。</summary>
-public sealed class FluidNetworkGraph
+public sealed partial class FluidNetworkGraph
 {
     #region 端口拓扑
     public sealed class Edge
@@ -196,6 +196,7 @@ public sealed class FluidNetworkGraph
         }
         BuildComponents(sorted);
         BuildLiquidComponents();
+        ResetLiquidTemperatureComponents(sorted);
     }
 
     public IReadOnlyList<SupplyNode> GetLiquidComponent(MachineEntity node, string chamber)

@@ -83,7 +83,8 @@ public sealed partial class WorldPhysicsService2D
             body.MovePosition(target);
             return true;
         }
-        body.velocity = Vector2.zero;
+        // 静态刚体只允许更新位置，不设置无效速度。
+        if (body.bodyType != RigidbodyType2D.Static) body.velocity = Vector2.zero;
         body.position = target;
         item.transform.position = new Vector3(target.x, target.y, item.transform.position.z);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
@@ -126,7 +127,8 @@ public sealed partial class WorldPhysicsService2D
 
     internal static bool ConfigureItemBodyForIndependentMotion(Item item, Rigidbody2D body, bool refreshRegistration = true)
     {
-        if (item == null || body == null || body.gameObject != item.gameObject || !CanItemUseIndependentMotion(item))
+        if (item == null || body == null || (body.gameObject != item.gameObject &&
+                (!TryGetRegisteredItemProxy(item, out var owned) || owned.Body != body)) || !CanItemUseIndependentMotion(item))
             return false;
         ItemPhysicsDefinitionDto definition = GetConfiguredItemPhysics(item);
         body.bodyType = GameNetwork.HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
@@ -197,8 +199,7 @@ public sealed partial class WorldPhysicsService2D
         sensor.enabled = false;
         try
         {
-            Rigidbody2D body = sensor.GetComponent<Rigidbody2D>();
-            if (body == null) body = sensor.gameObject.AddComponent<Rigidbody2D>();
+            Rigidbody2D body = owner.RentItemRigidbody(item, sensor.transform);
             body.simulated = false;
             body.bodyType = RigidbodyType2D.Kinematic;
             body.gravityScale = 0f;
@@ -287,8 +288,11 @@ public sealed partial class WorldPhysicsService2D
         body.bodyType = GetConfiguredItemPhysics(item)?.Mode == WorldPhysicsProxyMode2D.WorldFixed
             ? RigidbodyType2D.Static : RigidbodyType2D.Kinematic;
         body.simulated = simulated;
-        body.velocity = Vector2.zero;
-        body.angularVelocity = 0f;
+        if (body.bodyType != RigidbodyType2D.Static)
+        {
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0f;
+        }
     }
 
     internal static void RestoreItemBodyRepresentation(Item item, Rigidbody2D body,
@@ -296,7 +300,8 @@ public sealed partial class WorldPhysicsService2D
     {
         if (body == null) return;
         RestoreItemBodyRepresentationType(item, body, state);
-        if (clearVelocity) { body.velocity = Vector2.zero; body.angularVelocity = 0f; }
+        if (clearVelocity && body.bodyType != RigidbodyType2D.Static)
+        { body.velocity = Vector2.zero; body.angularVelocity = 0f; }
         body.simulated = state.Simulated;
     }
 

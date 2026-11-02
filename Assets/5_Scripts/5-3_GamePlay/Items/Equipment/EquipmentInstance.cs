@@ -11,6 +11,7 @@ using MemoryPack;
 [MemoryPackUnion(5, typeof(EquipmentInstance_ThermalInsulation))]
 [MemoryPackUnion(6, typeof(EquipmentInstance_PressureProtection))]
 [MemoryPackUnion(7, typeof(EquipmentInstance_SpacesuitSupport))]
+[MemoryPackUnion(8, typeof(EquipmentInstance_RadiationProtection))]
 public abstract partial class EquipmentInstance
 {
     [MemoryPackOrder(0)] public string Name;

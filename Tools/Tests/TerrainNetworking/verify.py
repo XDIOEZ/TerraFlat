@@ -68,6 +68,7 @@ def main() -> None:
         ET.SubElement(props, key).text = value
     group = ET.SubElement(project, "ItemGroup")
     sources = [Path(__file__).with_name("Program.cs"),
+               ROOT / "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkTerrainCellState.cs",
                ROOT / "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkTerrainChunkCursor.cs",
                ROOT / "Assets/5_Scripts/5-4_Networking/Gameplay/Testing/GameplayTestNetworkTerrainRules.cs"]
     for source in sources:

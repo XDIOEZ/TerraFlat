@@ -238,6 +238,15 @@ public static partial class GameplayTestSystemProbe
 #endif
             Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(shell, controllerPrefab,
                 string.IsNullOrWhiteSpace(configured.Id) ? configured.Prefab : configured.Id);
+            Transform rendererNode = shell != null && !string.IsNullOrWhiteSpace(definition.Visual?.RendererPath)
+                ? shell.transform.Find(definition.Visual.RendererPath) : null;
+            Transform animatorNode = shell != null && !string.IsNullOrWhiteSpace(definition.Visual?.AnimatorPath)
+                ? shell.transform.Find(definition.Visual.AnimatorPath) : null;
+            SpriteRenderer configuredRenderer = rendererNode != null ? rendererNode.GetComponent<SpriteRenderer>() : null;
+            Animator configuredAnimator = animatorNode != null ? animatorNode.GetComponent<Animator>() : null;
+            sample["visualPathsBound"] = configuredRenderer != null && configuredAnimator != null &&
+                configuredRenderer.transform == configuredAnimator.transform &&
+                prototype is Mod_AnimatorController actorAnimator && actorAnimator.animator == configuredAnimator;
             sample["hasControllerPrototype"] = prototype is Mod_AnimatorController;
             sample["enabled"] = configured.Enabled.HasValue ? new JValue(configured.Enabled.Value) : JValue.CreateNull();
             sample["bodyRendererCount"] = shell != null ? shell.GetComponentsInChildren<SpriteRenderer>(true).Length : -1;

@@ -154,9 +154,10 @@ public static class AnimalLandBehaviorNodes
         return () =>
         {
             AnimalLandTargetSnapshot current = target();
+            // 站位和侧翼只影响接近路线，不决定是否有资格在真实攻击范围内起手。
             return current.Item != null && current.Visible &&
                 (combat.IsAttackLocked || (!requireCooldown || combat.IsCooldownDone) &&
-                 chase.IsInsideRange(current.Position, combat.AttackRange) && chase.HasReachedSide(current.Item, combat.AttackRange));
+                 chase.IsInsideRange(current.Position, combat.AttackRange));
         };
     }
     #endregion
@@ -170,7 +171,9 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
     private readonly AnimalPackCapability pack;
     private Vector3 target;
     private bool hasTarget;
+    private bool returningToLand;
     private float pause;
+    private float waterExitRetryRemaining;
     public AnimalWanderAction(AnimalBehaviorTreeContext context, JObject p)
     {
         this.context = context;
@@ -181,17 +184,44 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
     {
         pack?.ClearAfterCombat();
         hasTarget = false;
+        returningToLand = false;
+        waterExitRetryRemaining = 0f;
         pause = UnityEngine.Random.Range(AnimalLandTargetRules.Number(config, "idleMin", .8f), AnimalLandTargetRules.Number(config, "idleMax", 2.2f));
     }
     protected override AnimalBehaviorTreeStatus OnTick(float deltaTime)
     {
         if (!AnimalLandTargetRules.Flag(config, "enabled", true))
         { context.BeginAction("idle", "Idle", AIStateAnimationRole.Stopped); context.Mod_Mover.StopMovement(); return AnimalBehaviorTreeStatus.Running; }
+        WorldNavigationGrid grid = WorldNavigationManager.ExistingInstance?.Grid;
+        bool inWater = AI_WanderUtility.IsInNavigableWater(grid, context.Position);
+        if (hasTarget && inWater && !returningToLand)
+            hasTarget = false;
         if (hasTarget && (WorldTopologyRuntime.Distance(context.Position, target) <= AnimalLandTargetRules.Number(config, "stopDistance", .4f) ||
             context.Mod_Mover.HasReachedTarget || context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed))
         {
+            if (returningToLand && context.Mod_Mover.DestinationResult == WorldNavigationDestinationResult.Failed)
+                waterExitRetryRemaining = 1f;
             hasTarget = false;
+            returningToLand = false;
             pause = UnityEngine.Random.Range(AnimalLandTargetRules.Number(config, "pauseMin", .8f), AnimalLandTargetRules.Number(config, "pauseMax", 2.5f));
+        }
+        if (!hasTarget && inWater)
+        {
+            waterExitRetryRemaining = Mathf.Max(0f, waterExitRetryRemaining - deltaTime);
+            if (waterExitRetryRemaining <= 0f &&
+                AI_WanderUtility.TryFindNearestNavigableWaterExit(grid, context.Position, 16, out Vector2 dryLand))
+            {
+                target = new Vector3(dryLand.x, dryLand.y, context.Position.z);
+                hasTarget = true;
+                returningToLand = true;
+            }
+            else
+            {
+                if (waterExitRetryRemaining <= 0f) waterExitRetryRemaining = 2f;
+                context.BeginAction("idle", "Idle", AIStateAnimationRole.Stopped);
+                context.Mod_Mover.StopMovement();
+                return AnimalBehaviorTreeStatus.Running;
+            }
         }
         if (!hasTarget)
         {
@@ -211,10 +241,13 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
             hasTarget = true;
         }
         context.BeginAction("wander", "Move", AIStateAnimationRole.Moving);
-        context.Mod_Mover.SetDestination(target);
+        if (returningToLand)
+            context.Mod_Mover.SetInteractionDestination(target, .2f);
+        else
+            context.Mod_Mover.SetDestination(target);
         return AnimalBehaviorTreeStatus.Running;
     }
-    protected override void OnExit() { hasTarget = false; context.Mod_Mover.StopMovement(); }
+    protected override void OnExit() { hasTarget = false; returningToLand = false; context.Mod_Mover.StopMovement(); }
     #endregion
 }
 
@@ -421,8 +454,7 @@ internal sealed class AnimalAttackAction : AnimalBehaviorTreeNode
         { combat.StopAttack(false); context.Mod_Mover.StopMovement(); return AnimalBehaviorTreeStatus.Running; }
         context.FaceTarget(current.Position, true);
         if (combat.IsAttackLocked) context.Mod_Mover.StopMovement();
-        else if (combat.IsCooldownDone && chase.IsInsideRange(current.Position, combat.AttackRange) &&
-                 chase.HasReachedSide(current.Item, combat.AttackRange))
+        else if (combat.IsCooldownDone && chase.IsInsideRange(current.Position, combat.AttackRange))
         {
             context.Mod_Mover.StopMovement();
             combat.StartAttack(current.Position);
@@ -481,6 +513,14 @@ internal sealed class AnimalSearchAction : AnimalBehaviorTreeNode
         context.BeginAction("search", "Move", AIStateAnimationRole.Moving);
         memory.TickSearch(deltaTime);
         if (!memory.IsSearching) return AnimalBehaviorTreeStatus.Success;
+        if (memory.WaitingAtLastPosition &&
+            AI_WanderUtility.IsInNavigableWater(WorldNavigationManager.ExistingInstance?.Grid, context.Position))
+        {
+            // 丢失目标后不在水中原地警戒，转交游荡行为选择最近可达陆地。
+            memory.Forget();
+            context.Mod_Mover.StopMovement();
+            return AnimalBehaviorTreeStatus.Failure;
+        }
         if (memory.WaitingAtLastPosition) return AnimalBehaviorTreeStatus.Running;
         WorldNavigationDestinationResult result = context.Mod_Mover.SetInteractionDestination(memory.LastKnownPosition,
             memory.ArrivalDistance, pathCostLimit);

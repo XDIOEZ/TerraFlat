@@ -32,6 +32,11 @@
         "flipX": false
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "health": {
           "parameters": {
             "Data": {
@@ -184,6 +189,11 @@
         "flipX": false
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "parameters": {
             "visualMode": 1
@@ -264,12 +274,8 @@
         "damage": {
           "parameters": {
             "DamageValues": {
-              "Physical": 0.0,
-              "ImpactKind": 0,
-              "Cutting": 10.0,
-              "Piercing": 10.0,
-              "Chopping": 1.0,
-              "Blunt": 1.0
+              "Physical": 22.0,
+              "ImpactKind": 1
             }
           }
         },

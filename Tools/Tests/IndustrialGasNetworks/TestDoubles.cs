@@ -103,6 +103,7 @@ public static partial class MachineWorld
     private sealed class Outlet : FluidDeviceBehavior { public override bool EmitsToEnvironment => true; }
     private static readonly FluidDeviceBehavior device = new Device(), outlet = new Outlet();
     public static FluidMachineState GetFluidState(MachineEntity node) => node.State;
+    public static FluidInventory GetFluidInventory(MachineEntity node, string chamber = "main") => node.Local;
     public static FluidDeviceBehavior GetFluidDeviceBehavior(MachineEntity node)
         => node.Definition.Fluid.Kind == "device" ? device : node.Definition.Fluid.Kind == "outlet" ? outlet : transit;
 }

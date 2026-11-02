@@ -396,7 +396,7 @@
       "id": "CoconutMeat",
       "parent": "BasicFood_Base",
       "gameName": "椰肉",
-      "description": "椰肉",
+      "description": "从椰子中取出的白色果肉，可以直接食用并补充营养。",
       "weight": 0.3,
       "volume": 0.4,
       "tags": [

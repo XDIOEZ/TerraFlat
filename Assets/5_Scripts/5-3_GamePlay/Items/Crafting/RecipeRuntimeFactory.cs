@@ -270,10 +270,17 @@ public static class RecipeRuntimeFactory
     #endregion
 
     public static RecipeCatalogDto Deserialize(string json)
+        => DeserializeCatalog(json, true);
+
+    internal static RecipeCatalogDto DeserializeWithoutDocumentCache(string json)
+        => DeserializeCatalog(json, false);
+
+    private static RecipeCatalogDto DeserializeCatalog(string json, bool useDocumentCache)
     {
         if (string.IsNullOrWhiteSpace(json))
             throw new InvalidDataException("配方 JSON 为空");
-        return JsonConfigurationCache.Deserialize<RecipeCatalogDto>(json)
+        return (useDocumentCache ? JsonConfigurationCache.Deserialize<RecipeCatalogDto>(json)
+            : JsonConvert.DeserializeObject<RecipeCatalogDto>(json))
             ?? throw new InvalidDataException("配方 JSON 无法反序列化");
     }
 

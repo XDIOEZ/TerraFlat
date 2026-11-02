@@ -178,7 +178,7 @@
       "entityRuntime": "resource",
       "parent": "WorldResource_Base",
       "gameName": "苹果树",
-      "description": "一颗可以生产苹果的树",
+      "description": "能结出苹果的果树，果实成熟后可以采摘，也可以从种子培育。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

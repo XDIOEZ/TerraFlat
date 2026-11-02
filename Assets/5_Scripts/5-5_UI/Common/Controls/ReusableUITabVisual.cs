@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 页签的业务选中状态表现。普通状态取自 Prefab 图形本身，选中颜色统一读取全局 JSON 配色；
+/// 页签的业务选中状态表现。普通状态默认取自 Prefab，也允许使用方指定未选中配色，选中颜色统一读取全局 JSON；
 /// 不依赖设置页控制器，不与鼠标/手柄的 Selectable 焦点状态混用。
 /// </summary>
 [DisallowMultipleComponent]
@@ -25,8 +25,8 @@ public sealed class ReusableUITabVisual : MonoBehaviour
         captured = false;
     }
 
-    /// <summary>状态变化时刷新一次，不轮询、不改写公共资产。</summary>
-    public void SetSelected(bool selected)
+    /// <summary>状态变化时刷新一次，未指定普通色时沿用 Prefab 原始配色。</summary>
+    public void SetSelected(bool selected, Color? inactiveSurface = null, Color? inactiveCaption = null)
     {
         if (surface == null || caption == null)
             return;
@@ -36,8 +36,8 @@ public sealed class ReusableUITabVisual : MonoBehaviour
             normalCaption = caption.color;
             captured = true;
         }
-        surface.color = selected ? FlatWorldUITheme.TabActive : normalSurface;
-        caption.color = selected ? FlatWorldUITheme.TabLabelActive : normalCaption;
+        surface.color = selected ? FlatWorldUITheme.TabActive : (inactiveSurface ?? normalSurface);
+        caption.color = selected ? FlatWorldUITheme.TabLabelActive : (inactiveCaption ?? normalCaption);
     }
 
     #endregion

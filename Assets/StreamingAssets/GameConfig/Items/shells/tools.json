@@ -334,6 +334,12 @@
     {
       "id": "Log",
       "parent": "WoodTool_Base",
+      "matter": {
+        "ignitionTemperature": 500,
+        "transitions": [
+          { "id": "combustion.ash", "requiresFuelExhaustion": true, "outputItemId": "WoodAsh" }
+        ]
+      },
       "gameName": "原木",
       "description": "砍伐树木获得的轻便小原木，可加工为木板或作为燃料，能漂浮在水面。",
       "durability": 30,

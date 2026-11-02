@@ -67,10 +67,25 @@ public static class FluidCatalogLoader
 {
     #region 本体目录加载
     public const string RelativePath = "GameConfig/Fluids/fluids.json";
+    public const int BuiltInBinaryVersion = 1;
+
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+    {
+        FluidContentCatalogDto source = ReadBuiltInConfiguration();
+        FluidCatalog catalog = BuildCatalog(source, null, out _);
+        new AtmosphereCatalog().Register(source.Atmospheres, catalog);
+    }
+
+    private static FluidContentCatalogDto ReadBuiltInConfiguration() =>
+        BuiltInContentBinaryCatalog.ReadFile(
+            StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativePath),
+            Deserialize, BuiltInBinaryVersion);
+
     public static FluidContentCatalogDto Deserialize(string json)
     {
         var result = JsonConfigurationCache.Deserialize<FluidContentCatalogDto>(json, Settings);
-        if (result == null || result.SchemaVersion != 1 || result.Fluids == null)
+        if (result == null || result.SchemaVersion != BuiltInBinaryVersion || result.Fluids == null)
             throw new InvalidDataException("流体目录 schemaVersion 必须为 1 且具有 fluids 数组");
         return result;
     }
@@ -79,17 +94,25 @@ public static class FluidCatalogLoader
     public static FluidDefinitionDto DeserializeDefinition(JToken token) =>
         token?.ToObject<FluidDefinitionDto>(JsonSerializer.Create(Settings)) ?? throw new InvalidDataException("流体定义不能为空");
     public static IEnumerator LoadBuiltInAsync(GameRes resources, Action<int> completed, Action<Exception> failed)
+        => LoadBuiltInPreparedAsync(resources, completed, failed, null);
+
+    internal static IEnumerator LoadBuiltInCatalogInputAsync(Action<FluidContentCatalogDto> completed, Action<Exception> failed)
+        => BuiltInContentBinaryCatalog.ReadFileAsync(
+            StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativePath),
+            Deserialize, completed, failed, BuiltInBinaryVersion);
+
+    internal static IEnumerator LoadBuiltInPreparedAsync(GameRes resources, Action<int> completed,
+        Action<Exception> failed, FluidContentCatalogDto prepared)
     {
-        string json = null; Exception error = null;
+        Exception error = null;
         string path = StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativePath);
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(path, value => json = value, value => error = value);
+        if (prepared == null) yield return LoadBuiltInCatalogInputAsync(value => prepared = value, value => error = value);
         if (error != null) { failed?.Invoke(new IOException($"流体目录读取失败：{path}", error)); yield break; }
         try
         {
-            FluidContentCatalogDto source = Deserialize(json);
-            var catalog = new FluidCatalog(); var values = new List<FluidDefinition>();
-            foreach (var dto in source.Fluids) values.Add(new FluidDefinition(dto));
-            catalog.Register(values, null, id => resources != null && resources.TryGetLiquidDefinition(id, out _));
+            FluidContentCatalogDto source = prepared;
+            FluidCatalog catalog = BuildCatalog(source,
+                id => resources != null && resources.TryGetLiquidDefinition(id, out _), out List<FluidDefinition> values);
             foreach (var value in values)
                 if (value.LiquidId != null && resources.TryGetLiquidDefinition(value.LiquidId, out var liquid) &&
                     value.LitersPerServing != (decimal)liquid.LitersPerServing)
@@ -100,6 +123,18 @@ public static class FluidCatalogLoader
             completed?.Invoke(values.Count);
         }
         catch (Exception exception) { failed?.Invoke(exception); }
+    }
+
+    private static FluidCatalog BuildCatalog(FluidContentCatalogDto source,
+        Func<string, bool> liquidExists, out List<FluidDefinition> definitions)
+    {
+        if (source == null || source.SchemaVersion != BuiltInBinaryVersion || source.Fluids == null)
+            throw new InvalidDataException("流体目录 schemaVersion 必须为 1 且具有 fluids 数组");
+        var catalog = new FluidCatalog();
+        definitions = new List<FluidDefinition>();
+        foreach (FluidDefinitionDto dto in source.Fluids) definitions.Add(new FluidDefinition(dto));
+        catalog.Register(definitions, null, liquidExists);
+        return catalog;
     }
     #endregion
 }

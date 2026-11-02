@@ -38,7 +38,7 @@ def main():
     print(output)
     if result.returncode:
         raise SystemExit(result.returncode)
-    renderer = (ROOT / 'Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkNaturalItemRenderer.cs').read_text(encoding='utf-8-sig')
+    renderer = (ROOT / 'Assets/5_Scripts/5-3_GamePlay/World/WorldModel/ChunkNaturalItemRuntime.cs').read_text(encoding='utf-8-sig')
     natural = (ROOT / 'Assets/5_Scripts/5-3_GamePlay/Entities/NaturalECS/NaturalEntityEcsService.Physics.cs').read_text(encoding='utf-8-sig')
     assert renderer.count('ItemInstanceDataFactory.CloneRuntime(item.itemData)') == 2
     assert 'FastCloner.FastCloner.DeepClone(item.itemData)' not in renderer

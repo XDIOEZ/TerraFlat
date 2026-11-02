@@ -67,7 +67,7 @@ internal static class ItemWorldPlacement
             itemObject.scene, item is Player ? RuntimeSceneObjectCategory.Players : RuntimeSceneObjectCategory.Items), true);
 
     /// <summary>
-    /// 将一个运行时散落物绑定到新版 ChunkView 临时物品节点。
+    /// 将一个运行时散落物绑定到世界逻辑区块的临时物品账本。
     /// 不访问旧 Chunk 字典，也不请求旧区块加载。
     /// </summary>
     internal static bool TryAttachWorldModelTransientItem(Item item, Vector2 position)
@@ -80,13 +80,13 @@ internal static class ItemWorldPlacement
             return true;
         }
 
-        ChunkNaturalItemRenderer existingOwner =
-            item.GetComponentInParent<ChunkNaturalItemRenderer>(true);
+        ChunkNaturalItemRuntime existingOwner =
+            item.NaturalRuntimeOwner;
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
         if (chunkMgr == null || !chunkMgr.IsWorldModelRuntimeActive)
             return existingOwner != null;
 
-        if (!chunkMgr.TryGetRuntimeDropParent(position, out ChunkNaturalItemRenderer owner))
+        if (!chunkMgr.TryGetNaturalItemRuntime(position, out ChunkNaturalItemRuntime owner))
         {
             existingOwner?.RegisterTransientItem(item);
             return existingOwner != null;
@@ -94,10 +94,16 @@ internal static class ItemWorldPlacement
 
         if (existingOwner != owner)
         {
+            if (existingOwner != null && existingOwner.TryGetSpawnedItem(item.itemData.Guid, out Item natural) && natural == item)
+            {
+                ItemMgr.Instance.SetRuntimeWorldResidentPersistence(item, true);
+                return true;
+            }
             existingOwner?.UnregisterTransientItem(item);
-            item.transform.SetParent(owner.transform, true);
+            item.transform.SetParent(owner.GetOrCreateLogicalItemRoot(), true);
         }
-        owner.RegisterTransientItem(item);
+        if (!owner.TryGetSpawnedItem(item.itemData.Guid, out Item spawned) || spawned != item)
+            owner.RegisterTransientItem(item);
         return true;
     }
 
@@ -109,6 +115,8 @@ internal static class ItemWorldPlacement
     {
         if (item == null || itemObject == null)
             return;
+
+        item.NaturalRuntimeOwner?.ReleaseItemToWorldResident(item);
 
         Chunk legacyOwner = item.GetComponentInParent<Chunk>();
         legacyOwner?.RemoveItem(item);

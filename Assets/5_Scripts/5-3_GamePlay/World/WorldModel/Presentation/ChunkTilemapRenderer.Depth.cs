@@ -73,7 +73,7 @@ public sealed partial class ChunkTilemapRenderer
     {
         ChunkBatchRendererGroupService.CollectVisualSnapshots(this, destination);
         depthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
-        fireDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
+        // 起飞过渡只消费静态Sprite，程序化火焰不能把白色Quad误当火焰快照。
         mechanicalConnectorDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         groundBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);
         submergedBuildingDepthMesh?.CollectVisualSnapshots(worldToDisplay, destination);

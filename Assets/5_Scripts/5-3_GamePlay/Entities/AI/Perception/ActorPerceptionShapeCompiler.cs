@@ -10,23 +10,53 @@ using UnityEngine;
 /// </summary>
 public static class ActorPerceptionShapeCompiler
 {
+    #region 根级感知定义编译
     /// <summary>在内容加载边界编译根级几何，叠加当前 JSON 对根 Collider 的声明式覆盖。</summary>
     public static PerceptionShape2D[] Compile(GameObject shell, ItemColliderDefinitionDto declaration = null)
     {
         var shapes = new List<PerceptionShape2D>();
         bool rootOverride = declaration != null && string.IsNullOrWhiteSpace(declaration.Path);
         bool applied = false;
-        foreach (Collider2D collider in shell.GetComponents<Collider2D>())
+        foreach (Component component in shell.GetComponents<Component>())
         {
-            bool matches = rootOverride && !applied && (string.IsNullOrWhiteSpace(declaration.Type) || collider.GetType().Name == declaration.Type);
-            ItemColliderDefinitionDto config = matches ? declaration : null;
-            applied |= matches;
-            if (!(config?.Enabled ?? collider.enabled)) continue;
-            shapes.Add(CompileShape(collider, config));
+            if (component is Collider2D collider)
+            {
+                bool matches = rootOverride && !applied && (string.IsNullOrWhiteSpace(declaration.Type) || collider.GetType().Name == declaration.Type);
+                ItemColliderDefinitionDto config = matches ? declaration : null;
+                applied |= matches;
+                if (config?.Enabled ?? collider.enabled) shapes.Add(CompileShape(collider, config));
+            }
+            else if (component is ItemPhysicsTemplate2D template && !string.IsNullOrWhiteSpace(template.colliderType) &&
+                !WorldPhysicsService2D.HasRentedItemTemplateCollider(template))
+            {
+                bool matches = rootOverride && !applied &&
+                    (string.IsNullOrWhiteSpace(declaration.Type) || template.colliderType == declaration.Type);
+                ItemColliderDefinitionDto config = CreateTemplateShapeDefinition(template, matches ? declaration : null);
+                applied |= matches;
+                if (config.Enabled != false) shapes.Add(CompileShape(null, config));
+            }
         }
         if (rootOverride && !applied)
             throw new InvalidOperationException($"Actor 根级感知声明找不到作者碰撞体 {declaration.Type}，请先修复外壳或配置。");
         return shapes.ToArray();
+    }
+
+    private static ItemColliderDefinitionDto CreateTemplateShapeDefinition(ItemPhysicsTemplate2D template,
+        ItemColliderDefinitionDto declaration)
+    {
+        // 仅把作者默认值和显式覆盖合成纯数据，不在冷加载时创建物理组件。
+        return new ItemColliderDefinitionDto
+        {
+            Type = string.IsNullOrWhiteSpace(declaration?.Type) ? template.colliderType : declaration.Type,
+            Enabled = declaration?.Enabled ?? template.colliderEnabled,
+            IsTrigger = declaration?.IsTrigger ?? template.isTrigger,
+            Offset = declaration?.Offset ?? template.offset,
+            Size = declaration?.Size ?? template.size,
+            Radius = declaration?.Radius ?? template.radius,
+            EdgeRadius = declaration?.EdgeRadius ?? template.edgeRadius,
+            Direction = declaration?.Direction ?? template.capsuleDirection,
+            Points = declaration?.Points ?? template.points
+        };
     }
 
     /// <summary>从本地尺寸生成圆形或 AABB；复杂形状保持显式包围盒语义。</summary>
@@ -87,4 +117,5 @@ public static class ActorPerceptionShapeCompiler
         }
         return PerceptionShape2D.Aabb((min + max) * 0.5f + new float2(offset.x, offset.y), (max - min) * 0.5f + edge);
     }
+    #endregion
 }

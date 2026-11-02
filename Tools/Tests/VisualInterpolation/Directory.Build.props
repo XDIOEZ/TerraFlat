@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <BaseOutputPath>../../../Temp/VisualInterpolation/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>../../../Temp/VisualInterpolation/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

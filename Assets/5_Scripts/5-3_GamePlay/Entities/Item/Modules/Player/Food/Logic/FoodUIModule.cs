@@ -39,9 +39,9 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private readonly List<StatusBarTransition> statusBarTransitions = new List<StatusBarTransition>(8);
     private Coroutine statusBarTransitionCoroutine;
     private BasePanel boundPanel;
-    private Slider carbohydratesSlider;
-    private Slider fatSlider;
-    private Slider proteinSlider;
+    private ThreeSegmentStatusBarGraphic foodFillGraphic;
+    private TMPro.TextMeshProUGUI foodText;
+    private DisplayedRange foodDisplay;
     private Slider waterSlider;
     private Slider vitaminsSlider;
     private Slider healthSlider;
@@ -49,9 +49,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private Graphic temperatureFillGraphic;
     private Color temperatureNormalColor;
     private float temperatureColorSeverity;
-    private TMPro.TextMeshProUGUI carbohydratesText;
-    private TMPro.TextMeshProUGUI fatText;
-    private TMPro.TextMeshProUGUI proteinText;
     private TMPro.TextMeshProUGUI waterText;
     private TMPro.TextMeshProUGUI vitaminsText;
     private TMPro.TextMeshProUGUI healthText;
@@ -59,9 +56,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private Mod_Temperature temperatureModule;
     private uint temperatureModuleStructureVersion;
     private uint temperatureModuleGeneration;
-    private DisplayedRange carbohydratesDisplay;
-    private DisplayedRange fatDisplay;
-    private DisplayedRange proteinDisplay;
     private DisplayedRange waterDisplay;
     private DisplayedRange vitaminsDisplay;
     private DisplayedRange healthDisplay;
@@ -119,12 +113,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         if (context.Data?.nutrition != null)
         {
-            UpdateNutrition(carbohydratesSlider, carbohydratesText, ref carbohydratesDisplay,
-                context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
-            UpdateNutrition(fatSlider, fatText, ref fatDisplay,
-                context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
-            UpdateNutrition(proteinSlider, proteinText, ref proteinDisplay,
-                context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
+            UpdateCombinedFoodUI(context.Data.nutrition);
             UpdateNutrition(waterSlider, waterText, ref waterDisplay,
                 context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
             UpdateNutrition(vitaminsSlider, vitaminsText, ref vitaminsDisplay,
@@ -256,9 +245,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         ClearPanelBindings();
         boundPanel = panel;
-        carbohydratesSlider = panel.GetSlider("碳水");
-        fatSlider = panel.GetSlider("脂肪");
-        proteinSlider = panel.GetSlider("蛋白质");
+        foodFillGraphic = panel.GetComponentInChildren<ThreeSegmentStatusBarGraphic>(true);
+        panel.TryGetText("DataText_食物", out foodText);
         waterSlider = panel.GetSlider("水");
         vitaminsSlider = panel.GetSlider("维生素");
         healthSlider = FindSliderOnce(panel, "血量");
@@ -269,9 +257,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             if (temperatureFillGraphic != null)
                 temperatureNormalColor = temperatureFillGraphic.color;
         }
-        panel.TryGetText("DataText_碳水", out carbohydratesText);
-        panel.TryGetText("DataText_脂肪", out fatText);
-        panel.TryGetText("DataText_蛋白质", out proteinText);
         panel.TryGetText("DataText_水", out waterText);
         panel.TryGetText("DataText_维生素", out vitaminsText);
         panel.TryGetText("DataText_血量", out healthText);
@@ -305,16 +290,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         StopStatusBarTransitions();
         ResetTemperatureWarningColor();
         boundPanel = null;
-        carbohydratesSlider = null;
-        fatSlider = null;
-        proteinSlider = null;
+        foodFillGraphic = null;
+        foodText = null;
+        foodDisplay = default;
         waterSlider = null;
         vitaminsSlider = null;
         healthSlider = null;
         temperatureSlider = null;
-        carbohydratesText = null;
-        fatText = null;
-        proteinText = null;
         waterText = null;
         vitaminsText = null;
         healthText = null;
@@ -322,9 +304,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         temperatureModule = null;
         temperatureModuleStructureVersion = 0;
         temperatureModuleGeneration = 0;
-        carbohydratesDisplay = default;
-        fatDisplay = default;
-        proteinDisplay = default;
         waterDisplay = default;
         vitaminsDisplay = default;
         healthDisplay = default;
@@ -367,6 +346,23 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             graphic.raycastTarget = false;
     }
 
+    #region 食物合并显示
+
+    // 只调换三段显示顺序，保留各营养原有的进食、消耗与存档规则。
+    private void UpdateCombinedFoodUI(Nutrition nutrition)
+    {
+        float carbohydrates = Mathf.Clamp(nutrition.Carbohydrates, 0f, Mathf.Max(0f, nutrition.Max_Carbohydrates));
+        float fat = Mathf.Clamp(nutrition.Fat, 0f, Mathf.Max(0f, nutrition.Max_Fat));
+        float protein = Mathf.Clamp(nutrition.Protein, 0f, Mathf.Max(0f, nutrition.Max_Protein));
+        float maximum = Mathf.Max(0f, nutrition.Max_Carbohydrates) +
+            Mathf.Max(0f, nutrition.Max_Fat) + Mathf.Max(0f, nutrition.Max_Protein);
+        if (foodFillGraphic != null)
+            foodFillGraphic.SetSegmentValues(new Vector3(protein, fat, carbohydrates), maximum, StatusBarTransitionDuration);
+        UpdateRangeText(foodText, ref foodDisplay, carbohydrates + fat + protein, maximum);
+    }
+
+    #endregion
+
     private void UpdateNutrition(
         Slider slider,
         TMPro.TextMeshProUGUI text,
@@ -385,7 +381,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         TMPro.TextMeshProUGUI text,
         ref DisplayedRange displayed,
         float currentValue,
-        float maxValue)
+        float maxValue,
+        bool showMaximum = true)
     {
         if (text == null)
             return;
@@ -398,7 +395,10 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         displayed.Current = current;
         displayed.Maximum = maximum;
         displayed.Initialized = true;
-        text.SetText("{0:0}/{1:0}", current, maximum);
+        if (showMaximum)
+            text.SetText("{0:0}/{1:0}", current, maximum);
+        else
+            text.SetText("{0:0}", current);
     }
 
     /// <summary>把本地玩家的权威生命值同步到常驻参数面板。</summary>
@@ -462,15 +462,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             return;
         }
 
-        temperature.GetSafeTemperatureRange(out float coldStart, out float safeMaximum);
-        float hotStart = Mathf.Max(coldStart + 1f, safeMaximum);
-        float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
         if (slider != null)
-            SetStatusBarValue(
-                slider,
-                coldStart - buffer,
-                hotStart + buffer,
-                temperature.Data.CurrentTemperature);
+        {
+            temperature.GetSafeTemperatureRange(out float minimum, out float maximum);
+            TemperatureWarningPresentationSample sample = TemperatureWarningPresentationRules.Evaluate(
+                temperature.Data.CurrentTemperature, minimum, maximum);
+            SetStatusBarValue(slider, 0f, 1f, sample.BarFill);
+        }
 
         if (dataText != null)
         {
@@ -640,6 +638,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         while (owner != null && boundPanel == owner)
         {
             AdvanceStatusBarTransitions(Time.unscaledDeltaTime);
+            if (foodFillGraphic != null)
+                foodFillGraphic.AdvanceTransition(Time.unscaledDeltaTime);
             AdvanceTemperatureWarningColor(Time.unscaledDeltaTime);
             yield return null;
         }

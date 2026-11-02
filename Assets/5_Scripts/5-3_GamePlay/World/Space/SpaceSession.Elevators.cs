@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using MemoryPack;
 using FlatWorld.Networking;
 using FlatWorld.Structures;
 using FlatWorld.Localization;
@@ -220,13 +221,19 @@ namespace FlatWorld.Spaceflight
                 elevator = new SpaceElevatorState { GroundTerminalId = terminalId, StationTerminalId = top.PieceId,
                     GroundWorldKey = world, GroundX = ground.x, GroundY = ground.y, StationShipId = station.ShipId };
                 State.Elevators.Add(elevator);
+                GetSpaceElevatorWarehouse(elevator.ElevatorId, SpaceElevatorEndpoint.Ground);
                 GetSpaceElevatorCargo(elevator.ElevatorId);
                 CommitPiece(station, top);
                 reason = "地面电梯已连接可扩建的空间站。"; return true;
             }
             catch (Exception error)
             {
-                if (elevator != null) { State.Elevators.Remove(elevator); elevatorCargo.Remove(elevator.ElevatorId); }
+                if (elevator != null)
+                {
+                    State.Elevators.Remove(elevator);
+                    RemoveElevatorGroundWarehouseWorldInfluenceHost(elevator.ElevatorId);
+                    elevatorCargo.Remove(elevator.ElevatorId);
+                }
                 if (station != null)
                 {
                     for (int i = station.Pieces.Count - 1; i >= 0; i--) RollbackPiece(station, station.Pieces[i]);
@@ -299,12 +306,72 @@ namespace FlatWorld.Spaceflight
                 endpoint == SpaceElevatorEndpoint.Ground ? "电梯地面仓库" : "电梯太空仓库");
             Action<ItemSlot> listener = _ =>
             {
+                if (endpoint == SpaceElevatorEndpoint.Ground)
+                    RefreshElevatorGroundWarehouseWorldInfluenceHost(elevator, inventory);
                 if (elevator.DeliveryPending && elevator.CargoDestination == endpoint) elevatorDeliveryDirty.Add(elevatorId);
             };
             inventory.Event_OnDataChanged += listener;
             elevatorWarehouseListeners.Add(inventory, listener);
             elevatorWarehouses.Add(key, inventory);
+            if (endpoint == SpaceElevatorEndpoint.Ground)
+                RefreshElevatorGroundWarehouseWorldInfluenceHost(elevator, inventory);
             return inventory;
+        }
+
+        private void RefreshElevatorGroundWarehouseWorldInfluenceHosts()
+        {
+            if (State?.Elevators == null) return;
+            foreach (SpaceElevatorState elevator in State.Elevators)
+                RefreshElevatorGroundWarehouseWorldInfluenceHost(elevator);
+        }
+
+        private void RefreshElevatorGroundWarehouseWorldInfluenceHost(
+            SpaceElevatorState elevator, Inventory_Data inventory = null)
+        {
+            string hostId = GetElevatorGroundWarehouseWorldInfluenceHostId(elevator?.ElevatorId);
+            if (elevator == null || string.IsNullOrWhiteSpace(elevator.GroundWorldKey))
+            {
+                ItemSlotWorldInfluenceSystem.RemoveHost(hostId);
+                return;
+            }
+
+            var bindings = new List<ItemSlotWorldBinding>();
+            if (inventory?.itemSlots != null)
+            {
+                for (int index = 0; index < inventory.itemSlots.Count; index++)
+                {
+                    ItemData itemData = inventory.itemSlots[index]?.itemData;
+                    if (itemData != null)
+                        bindings.Add(new ItemSlotWorldBinding(index.ToString(CultureInfo.InvariantCulture), itemData));
+                }
+            }
+            else if (elevator.GroundWarehouseSnapshots != null)
+            {
+                for (int index = 0; index < elevator.GroundWarehouseSnapshots.Count; index++)
+                {
+                    string encoded = elevator.GroundWarehouseSnapshots[index];
+                    if (string.IsNullOrWhiteSpace(encoded)) continue;
+                    ItemInstanceSnapshot snapshot = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(
+                        Convert.FromBase64String(encoded));
+                    if (snapshot != null)
+                        bindings.Add(new ItemSlotWorldBinding(index.ToString(CultureInfo.InvariantCulture),
+                            snapshot));
+                }
+            }
+
+            ItemSlotWorldInfluenceSystem.ReplaceHost(hostId, elevator.GroundWorldKey,
+                new Vector2((float)elevator.GroundX, (float)elevator.GroundY), 0, bindings);
+        }
+
+        private static string GetElevatorGroundWarehouseWorldInfluenceHostId(string elevatorId)
+            => "space-elevator:" + elevatorId + "/ground-warehouse";
+
+        private void RemoveElevatorGroundWarehouseWorldInfluenceHost(string elevatorId)
+        {
+            ItemSlotWorldInfluenceSystem.RemoveHost(GetElevatorGroundWarehouseWorldInfluenceHostId(elevatorId));
+            if (elevatorWarehouses.Remove((elevatorId, SpaceElevatorEndpoint.Ground), out Inventory_Data inventory) &&
+                elevatorWarehouseListeners.Remove(inventory, out Action<ItemSlot> listener))
+                inventory.Event_OnDataChanged -= listener;
         }
 
         private static Inventory_Data CreateElevatorInventory(List<string> snapshots, string name)
@@ -365,6 +432,10 @@ namespace FlatWorld.Spaceflight
 
         private void ResetElevatorRuntime()
         {
+            if (State?.Elevators != null)
+                foreach (SpaceElevatorState elevator in State.Elevators)
+                    ItemSlotWorldInfluenceSystem.RemoveHost(
+                        GetElevatorGroundWarehouseWorldInfluenceHostId(elevator?.ElevatorId));
             foreach (var listener in elevatorWarehouseListeners) listener.Key.Event_OnDataChanged -= listener.Value;
             elevatorWarehouseListeners.Clear(); elevatorWarehouses.Clear(); elevatorDeliveryDirty.Clear(); elevatorStationBounds.Clear();
             elevatorCargo.Clear(); elevatorReceipts.Clear();

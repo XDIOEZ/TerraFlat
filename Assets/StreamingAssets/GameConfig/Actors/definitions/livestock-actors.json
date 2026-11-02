@@ -35,6 +35,11 @@
         "flipX": true
       },
       "modules": {
+        "radiation": {
+          "prefab": "Module_Radiation",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
         "animator": {
           "parameters": {
             "visualMode": 1

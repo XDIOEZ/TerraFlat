@@ -8,7 +8,7 @@ EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWit
 MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
 ATTRIBUTES = {"core:attack_flat_modifier", "core:move_speed_reduction"}
-TYPES = MULTIPLIERS | TRAUMA | ATTRIBUTES | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
+TYPES = MULTIPLIERS | TRAUMA | ATTRIBUTES | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "fire_damage", "radiation_damage", "max_health_percent_true_damage", "body_durability_restore")}
 BODY_PARTS = {"Head", "Chest", "Abdomen", "Pelvis", "LeftHand", "RightHand", "LeftLeg", "RightLeg"}
 
 
@@ -100,8 +100,8 @@ def validate_definition(source):
         target = text(effect.get("targetId"), "targetId", optional=True)
         text(effect.get("requiredTag"), "requiredTag", optional=True)
         scaled = effect.get("scaleWithStacks", False)
-        if type(scaled) is not bool or scaled and not (phase == "tick" and kind == "core:true_damage" or kind in ATTRIBUTES and phase != "tick"):
-            raise ValueError("scaleWithStacks 只支持周期真实伤害或登记型属性修饰，且必须是布尔值")
+        if type(scaled) is not bool or scaled and not (phase == "tick" and kind in {"core:true_damage", "core:fire_damage", "core:radiation_damage"} or kind in ATTRIBUTES and phase != "tick"):
+            raise ValueError("scaleWithStacks 只支持周期分类伤害或登记型属性修饰，且必须是布尔值")
         if kind in ATTRIBUTES and phase == "tick":
             raise ValueError("登记型属性修饰只支持 start/stop")
         if kind == "core:move_speed_reduction" and not 0 <= value * (maximum if scaled else 1) < 1:

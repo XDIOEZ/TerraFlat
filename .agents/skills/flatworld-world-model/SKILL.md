@@ -36,7 +36,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `SetEnvironmentBatch` 按层接受唯一递增格索引，各层先写后 `PublishEnvironmentBatches`，每个真实变化层只发一次 `Changed`；消费者先筛层，再用 `GetCellIndices(width)` 兼容单格/批量。只读层和通知索引只借用于同步阶段；同层待发或回调中禁止写入，发布失败保留未发层供重试，土壤层不改变液体版本。
 - `WorldTopologyDomain` 是 noEngine 的纯坐标真源，Jobs 使用主线程冻结副本；`WorldTopologyRuntime` 仍读取存档，仅主线程。`ChunkRuntime.Address/ChunkOrigin` 永远是规范坐标，View Transform 由 `WorldLocalPresentation` 选本地镜像；HUD 经 `ToLogical` 还原。连续曲线用 double 和显式半周期符号策略。
 - 活动世界 `WorldTopologyRuntime.TryGetActiveBounds` 复用星球半径/区块尺寸/拓扑模式计算结果，每次仍读当前存档与场景；换星球、同实例修改几何、无效配置和运行重置立即失效。规则 `navigation/topology_bounds_cache`。
-- `ChunkMgr` 常驻 DDOL；View/自然物挂当前世界 Scene 的 `Runtime Objects/Chunks` 分类下，不挂管理器。Prefab 直接装配并引用 NaturalItems/LightOccluders 表现组件。
+- `ChunkMgr` 常驻 DDOL；View 挂当前世界 Scene 的 `Runtime Objects/Chunks`，完整自然物逻辑宿主挂 `Entities`，可见副本挂 `Rendering`，不挂管理器。Prefab 直接装配 NaturalItems/LightOccluders 表现组件。
 - 居民、ECS 掉落和 MachineWorld 独立于 View；解绑只撤显示。自然散落点成功生成 ECS 掉落后才移除基线 GUID，失败回滚；树/矿点/建筑不是散落点。机器连通组全量恢复后 Tick、全量快照后休眠。
 
 ## 流送与生成
@@ -44,7 +44,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `DeterministicChunkGenerator` 主文件只组织流水线；`SurfaceTerrain/TerrainStages` 管地表、洞穴与结构，`HydrologySampling` 管纯采样，`HydrologyRegions` 独占区域缓存/纪元取消/预热与定位借用。热缓存命中不创建 Lazy；结构先于地形扩展，扩展后再编译生态，规则 `terrain/generation_stage_ownership`。
 
 - 多格静态资源通过 `EcologySpawnRuleSnapshot.SharedRadius/FootprintWidth/FootprintHeight` 声明：`EcologyGeneration.Shared` 用稀疏周期网格和负 GUID 独立复算所有覆盖区块，`DeterministicChunkGenerator.SharedResources` 验证完整占地及入口安全区并过滤内部普通生态。`SharedAnchor` 始终是规范坐标，代理 `LocalX/Y` 可以在当前区块之外，禁止直接拿它索引地形。
-- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRenderer.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。每个资源只向 `WorldPhysicsService2D` 领取一个完整物理代理，不再按区块裁剪复制阻挡，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
+- `ChunkMgr.SharedNaturalEntities` 的会话注册表只创建一个 Resource Entity；各 `ChunkNaturalItemRuntime.Shared` 持有引用，唯一表现宿主可交接，最后引用释放才捕获/移除。状态和删除标记只写锚点所属区块，死亡不再捕获，退出世界清理注册表。每个资源只向 `WorldPhysicsService2D` 领取一个完整物理代理，不再按区块裁剪复制阻挡，寻路使用完整 `worldGridOccupancy`，不得为每块重建独立生命。
 - 大矿山示例为 `Mine_Stone_Large`，覆盖半径包含贴图和受击范围而非仅阻挡框；资源目录校验器验证三者一致。纯规则 `ecology/shared_resources`；编辑器外回归 `python Tools/Tests/SharedNaturalResources/verify.py`，只在 Temp 中移除原生 Profiler 初始化，不能替代真实 Unity 碰撞/保存回归。
 
 - 单人和联机多观察者共用 `ChunkMgr.RefreshRuntimeWindows`，观察者请求经纯模型 `RefreshWindows` 合并模拟/表现/保留需求；本机蒙版、就绪等待与导航仍只跟随本机角色。
@@ -71,12 +71,14 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 表现与资源会话
 
+- 受击碰撞集合统一由 `WorldPhysicsService2D.RentCombatDamageQuery` 发放；地板、机器、自然物和可选 AIECS 共用世界池，释放租约清候选，关闭世界撤销全部投影。通用 Item/Actor 壳只留 `ItemPhysicsTemplate2D` 默认配置，由所属世界在模块加载前领取原生组件；回收禁用，重租复用，迁移不重置运动。
+
 - Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，视觉层不保留物理 Tilemap；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。
 - `ChunkGroundMeshRenderer` 的 Vertex/GPU Cell 托管数组按纹理批次从 ArrayPool 借用并在 Dispose 归还；每次租借清空本次有效范围。**索引格式、GPU 上传和包围盒扫描必须使用真实 `vertexCount/cellCount`，不得使用池数组的 `Length`**。构造或字典登记失败要释放已创建 Mesh/Buffer/材质和数组，单组释放异常不得阻断其它组回收；复测对比 `FlatWorld.ChunkStreaming.Bind.MeshGroup.Create.{CellArray,VertexArray}` 的耗时与 GC。
 - 玩家/GO AI 用 SpriteRenderer 与行网格同 Player Layer/Order；行中心排序有半格近似，真实脚点仍用于几何/遮挡。草/花/阴影 BRG 只能在自身排序域排序。
 - 草/花共用 ChunkTilemapRenderer Owner，以 VisualLayer/单格槽隔离；提交确认后登记缓存，解绑清自身整个图层并合并删除。`IRecoverableChunkViewRenderer` 从资源失效待办核对权威数据和真实实例，暂不可用时跨帧重试；Owner 重建读取权威数据，不用旧可见缓存。`sorting.batchProfiles` 是排序配置真源，草图集 Sprite 跨 Chunk 共享。花初绑一次扫 Placements，避免逐点全表查询。
 - 世界 Fire 是独立玩法层，表现走 Y 行网格/GPU 图集翻帧；实体燃烧不写火格。地面积雪走地形光照 Mesh，墙冠用独立 Y 行网格，二者低于 Player。
-- `ChunkNaturalItemRenderer` 从所属 View 找 Owner，GUID/部件号标主体，太阳阴影用独立负槽；共用 `WorldEntityRuntime`。解绑先保存并撤表现/导航，最后释放世界。
+- `WorldNaturalItemRuntimeManager` 按数据区块持有 `ChunkNaturalItemRuntime`，负责初始化、模块、更新和快照；`ChunkNaturalItemRenderer` 仅借用表现，View 解绑不回收逻辑。真正数据逐出前经 `ChunkEvicting` 捕获并释放，世界退出也显式清理；每次推进借所属世界作用域，不跨 yield。共享资源的逻辑主引用与可见宿主分开选择，GUID/部件号仍标主体，太阳阴影仍用独立负槽。
 - 墙裂读权威 `flatworld.tileBuilding.damage`；自身与邻块共享边/角变化增量刷新，Bind 重建、Unbind 退订。水面顶点含高度、四角水深与 Flow；河流为下游速度、海洋为当地风向，湖面 Flow 为零。
 - `TerrainSurfaceHeightLayer` 从原 `height` 档位、`terrain.surface.excavatedLevels/coverLevels` 推导表面高低；非 Surface 忽略生成海拔，支撑面回到基准面，液面低一档，Blocking 顶部高一档。`TerrainHeightShadowManager` 统一查询/提交低侧阴影，只借用已有维度服务，不为只读查询创建管理器；四向直边与斜邻圆角共用 BRG，未知邻格不制造边或角。订阅八邻区 Commit/Evict，变化按3×3邻域裁剪合并脏格，随 Owner 镜像、重建和解绑维护表现。
 - 高低阴影在单次刷新内复用一格 halo 表面采样，下一轮重新读取地形/液体/配置；脏格与邻区集合随壳复用。规则 `rendering/terrain_shadow_surface_cache`，离线 `Tools/Tests/TerrainHeightShadows/`。
@@ -92,3 +94,5 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - F5 保留 Runtime/Chunk/租约/BRG，用权威 Tile/Liquid 刷新视觉，运行中的液体身份集合/索引不变。PlayMode 的 `AutomaticAssetRefresher` 锁程序集重载，退出编辑后应用 C# 改动。
 - 默认关闭的实验流动分为纯 `LiquidFlowSolver` 与 `WorldLiquidFlowExperiment` 生命周期；恢复差量/建筑后才算，在显式开放区域内传播，四邻共用松弛预算并限总流入/出。结束/异常/换世界归还租约，关闭不撤已存液深。
 - 正式 `WorldLiquidBodySystem` 保留变化唤醒的邻格守恒扩散；`PumpSearch` 为当前流送世界按真实湿格/同种液体/阻挡划分连通摘要，水域共享候选、边界进度与数据请求。泵优先直接扣大于一级的真实供水格并保留一级；仅搜索完成且无候选才抽入口末级，未知边界、预算满或读取失败均不能判为耗尽。数量变化增量维护候选，干湿/类型/阻挡变化使相关组失效；轻量摘要可跨数据卸载保留，不持有完整地形。`DiffusionStreaming` 在未知边界暂封流量，按需单请求准备邻区，仅恢复地形/液体/地形阻挡；`DataRetention` 租约不激活模拟或表现。最多24个额外数据块、64个排队请求，满额保留边界等待，停稳后释放并安全回收窗口外无租约块；退出/切换实验器取消请求。仍使用0～10整数水量，一级差停稳，未实现细分尾水或真实水面高度。离线 `Tools/Tests/ConnectedLiquidPumping/`；Lua `surface_fluids/diffusion_data_retention_lease` 与 `industrial_fluids/connected_surface_pump`、`shared_surface_pump_search`。
+
+- 普通非 Actor 的根碰撞声明可直接领取 `Physics` 下独立代理，不在逻辑/视觉外壳创建 Collider/Rigidbody；统一通过 `WorldPhysicsService2D.GetItemRigidbody/GetItemRootCollider` 访问。模块局部碰撞、动画形状、已有原生组件等暂保留原宿主路径，禁止据此宣称全部物品已纯数据化。规则 `world_streaming/detached_item_projection` 与现场 `natural_item_decoupling_gameplay`。

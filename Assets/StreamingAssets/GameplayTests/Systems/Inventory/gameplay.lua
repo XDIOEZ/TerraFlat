@@ -43,8 +43,9 @@ for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_ch
             assert(data.touchShownElapsed >= .5 and data.touchShownElapsed <= 1,
                 "空手长按没有在0.5秒后显示物品介绍")
             if mode == "inspect" then
-                assert(data.hoverEarlyHidden and data.hoverOpened and data.hoverShownElapsed >= .3 and data.hoverShownElapsed <= 1,
-                    "鼠标悬浮未等待0.3秒或未及时显示")
+                assert(data.hoverImmediate,
+                    "鼠标移入后没有立刻显示物品介绍")
+                assert(data.columnsAligned, "物品属性没有分为左名称和右数值两列")
             end
             assert(data.dismissedByOutsidePress, "再次点击其他位置没有关闭物品介绍")
             assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0,
@@ -74,10 +75,11 @@ for _, panel in ipairs({
         test.runtime("inventory", "touch_tooltip", {
             mode = "closed_after_show", panelPrefab = panel.prefab, slotName = slotName
         }, function(data)
-            assert(data.hoverOpened and data.tooltipAbovePanel and data.tooltipInputTransparent,
+            assert(data.hoverImmediate and data.tooltipAbovePanel and data.tooltipInputTransparent,
                 "正式面板的悬浮介绍未显示、被窗口遮挡或拦截输入")
-            assert(data.hoverEarlyHidden and data.hoverShownElapsed >= .3 and data.hoverShownElapsed <= 1,
-                "正式面板悬浮介绍未等待0.3秒或未及时显示")
+            assert(data.hoverImmediate,
+                "正式面板的物品介绍鼠标移入后没有立即显示")
+            assert(data.columnsAligned, "正式面板的属性名称与右对齐数值没有分列")
             assert(data.hoverClosedWithPanel, "关闭正式面板后鼠标悬浮介绍仍残留")
             assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
                 "正式槽位未显示同一介绍窗，或松手后没有保留")
@@ -450,6 +452,9 @@ for _, mode in ipairs({"left_shift", "right_shift", "empty", "blocked", "normal"
     test.runtime("inventory", "held_equipment_shortcut", {mode = mode}, function(data)
         local equipped = mode == "left_shift" or mode == "right_shift" or mode == "empty"
         local ordinary = mode == "normal" or mode == "plain_item"
+        assert(data.drawStarted and data.blockedWhileDrawing and data.drawFinished and data.visualScaleRestored
+            and data.sameSlotDoesNotReplay,
+            "掏出物品期间未锁定使用，或0.25秒动画结束后没有恢复视觉尺寸和输入")
         if equipped then
             assert(data.sourceIsPrevious and data.eyesIsIncoming,
                 "Shift加右键没有穿戴到眼部，或旧装备没有返回当前手持槽")

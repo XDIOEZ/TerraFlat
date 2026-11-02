@@ -192,14 +192,16 @@ public class WorldLiquidBehaviour
     #region Visual State
 
     /// <summary>角色水体遮罩使用玩法有效淹没高度；深水有体力漂浮时保持 0.3，体力耗尽后随下沉进度升高。</summary>
-    private static void SetWaterVisualState(Item item, float immersionLevel, bool inWater)
+    private void SetWaterVisualState(Item item, float immersionLevel, bool inWater)
     {
         WaterImmersionRenderEffect effect = item.GetComponentInChildren<WaterImmersionRenderEffect>(true);
         if (effect != null)
             effect.SetActorImmersionState(immersionLevel, inWater);
 
         // 水下看不到脚底阴影，阴影状态与水体视觉状态保持同一入口更新。
-        WorldRenderingManager.ExistingInstance?.SetItemInWater(item, inWater);
+        WorldRenderingManager manager = WorldRenderingManager.ExistingInstance;
+        manager?.SetItemInWater(item, inWater);
+        manager?.SetActorWaterReflection(item, inWater && waterContact);
     }
 
     #endregion

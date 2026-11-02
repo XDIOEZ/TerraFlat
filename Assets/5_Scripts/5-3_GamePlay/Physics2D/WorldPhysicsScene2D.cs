@@ -42,8 +42,6 @@ public sealed partial class WorldPhysicsScene2D : IDisposable
         return new WorldPhysicsScene2D(scene, false);
     }
 
-    partial void DisposeTransientQueries();
-
     #region 原生物理唯一推进入口
     public bool Simulate(float seconds)
     {
@@ -56,7 +54,6 @@ public sealed partial class WorldPhysicsScene2D : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        DisposeTransientQueries();
         if (!ownsScene || !Scene.IsValid() || !Scene.isLoaded) return;
 #if UNITY_EDITOR
         if (!Application.isPlaying)

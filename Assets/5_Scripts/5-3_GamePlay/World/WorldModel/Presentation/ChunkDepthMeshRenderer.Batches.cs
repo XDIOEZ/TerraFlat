@@ -231,6 +231,16 @@ internal sealed partial class ChunkDepthMeshRenderer
                 foreach (Vector3 vertex in entry.Geometry.Vertices)
                     bounds.Encapsulate(matrix.MultiplyPoint3x4(new Vector3(vertex.x, vertex.y * compressed, vertex.z)));
             }
+            else if (mode == HarvestShakeMode)
+            {
+                // 旋转在 GPU 执行，CPU 包围盒仍覆盖绕植株公共根点的最大七度偏移。
+                Vector3 pivot = Row.Root.InverseTransformPoint(new Vector3(visual.Animation.z,
+                    visual.Animation.w, Row.Root.position.z));
+                float dx = Mathf.Max(Mathf.Abs(bounds.min.x - pivot.x), Mathf.Abs(bounds.max.x - pivot.x));
+                float dy = Mathf.Max(Mathf.Abs(bounds.min.y - pivot.y), Mathf.Abs(bounds.max.y - pivot.y));
+                float padding = new Vector2(dx, dy).magnitude * .13f;
+                bounds.Expand(new Vector3(padding * 2f, padding * 2f, 0f));
+            }
             float matrixScale = Mathf.Max(new Vector2(matrix.m00, matrix.m10).magnitude,
                 new Vector2(matrix.m01, matrix.m11).magnitude);
             bounds.Expand(new Vector3(material.SwayMargin * matrixScale * 2f + .05f,
@@ -275,17 +285,19 @@ internal sealed partial class ChunkDepthMeshRenderer
         private void Refresh()
         {
             Material source = key.Item1;
-            Material.CopyPropertiesFromMaterial(source);
+            // 跨 Shader 仅复制共有属性，保留合批 Shader 自有属性的默认值。
+            Material.CopyMatchingPropertiesFromMaterial(source);
             Material.renderQueue = key.Item4;
             Material.SetTexture("_MainTex", key.Item2);
             Material.SetTexture("_AlphaTex", key.Item3 != null ? key.Item3 : Texture2D.whiteTexture);
             Material.SetFloat("_EnableExternalAlpha", key.Item3 != null ? 1f : 0f);
             Material.SetFloat("_DepthDissolveEnabled", source.IsKeywordEnabled("DISSOLVE_ON") ? 1f : 0f);
             bool emissive = source.shader.name == "Game/2D/Emissive-Sprite-Overlay";
-            Material.SetFloat("_DepthUnlit", emissive || source.shader.name == "Sprites/Default" ||
+            bool proceduralFlame = source.shader.name == "Game/Effects/ShaderFlame";
+            Material.SetFloat("_DepthUnlit", emissive || proceduralFlame || source.shader.name == "Sprites/Default" ||
                 source.shader.name.IndexOf("Unlit", StringComparison.OrdinalIgnoreCase) >= 0 ? 1f : 0f);
             Material.SetFloat("_DepthEmissive", emissive ? 1f : 0f);
-            Material.SetFloat("_DepthSrcBlend", (float)(emissive ? BlendMode.One : BlendMode.SrcAlpha));
+            Material.SetFloat("_DepthSrcBlend", (float)(emissive || proceduralFlame ? BlendMode.One : BlendMode.SrcAlpha));
             Material.SetFloat("_DepthDstBlend", (float)(emissive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             Material.SetFloat("_DepthSrcBlendAlpha", (float)BlendMode.One);
             Material.SetFloat("_DepthDstBlendAlpha", (float)(emissive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));

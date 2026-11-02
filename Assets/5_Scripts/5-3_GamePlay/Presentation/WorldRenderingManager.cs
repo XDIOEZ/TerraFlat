@@ -56,6 +56,11 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemUnregistered += UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
         Item.RuntimeStructureChanged += RefreshItemRendering;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentNaturalItemViews;
+        RegisterVisualInterpolationRendering();
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering += PresentActorWaterReflections;
         RegisterRuntimeItems();
     }
 
@@ -83,6 +88,9 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         ItemMgr.RuntimeItemRegistered -= HandleRuntimeItemRegistered;
         ItemMgr.RuntimeItemUnregistered -= UnregisterItemRendering;
         Item.RuntimeStructureChanged -= RefreshItemRendering;
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentNaturalItemViews;
+        UnregisterVisualInterpolationRendering();
+        UnityEngine.Rendering.RenderPipelineManager.beginContextRendering -= PresentActorWaterReflections;
         try { ClearItemRenderingRegistrations(); }
         finally
         {
@@ -137,15 +145,23 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
     public void RefreshItemRendering(Item item)
     {
         if (!IsItemRenderingRegistered(item)) return;
+        RequestItemPresentation(item);
         RegisterItemSorting(item);
         ApplyItemShadowRegistration(item, itemRenderingRegistrations[item], true);
         RefreshItemRenderingFeatures(item);
+        RefreshHeldFoodPresentation(item);
+        RefreshActorWaterReflection(item);
     }
 
     /// <summary>死亡、回池和世界退出共用回收入口，不查找或创建新的管理器。</summary>
     public void UnregisterItemRendering(Item item)
     {
         if (ReferenceEquals(item, null)) return;
+        ReleaseActorWaterReflection(item);
+        ClearHeldFoodPresentation(item);
+        ReleaseNaturalItemView(item);
+        ReleaseItemPresentation(item);
+        ForgetItemVisualInterpolation(item);
         itemRenderingRegistrations.Remove(item);
         item.OnItemDestroy -= UnregisterItemRendering;
         try { UnregisterItemShadows(item); }
@@ -156,7 +172,11 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         }
     }
 
-    private void HandleRuntimeItemRegistered(Item item) => RegisterItemRendering(item);
+    private void HandleRuntimeItemRegistered(Item item)
+    {
+        RegisterItemRendering(item);
+        RequestItemPresentation(item);
+    }
 
     private void RegisterRuntimeItems()
     {
@@ -166,12 +186,21 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         foreach (Item item in itemManager.WorldRunTimeItems.Values)
         {
             if (IsItemRenderingRegistered(item)) RefreshItemRendering(item);
-            else RegisterItemRendering(item);
+            else
+            {
+                RegisterItemRendering(item);
+                RequestItemPresentation(item);
+            }
         }
     }
 
     private void ClearItemRenderingRegistrations()
     {
+        ClearHeldFoodPresentations();
+        ClearNaturalItemViews();
+        ClearItemViews();
+        ClearActorViews();
+        ClearVisualInterpolationHistory();
         using var scope = UnityEngine.Pool.ListPool<Item>.Get(out var items);
         using var errorScope = UnityEngine.Pool.ListPool<Exception>.Get(out var errors);
         items.AddRange(itemRenderingRegistrations.Keys);
@@ -183,6 +212,8 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
         try { contactShadowRenderingBackend?.ClearWorldRendering(); }
         catch (Exception error) { errors.Add(error); }
         try { sunShadowRenderingBackend?.ClearWorldRendering(); }
+        catch (Exception error) { errors.Add(error); }
+        try { ClearActorWaterReflections(); }
         catch (Exception error) { errors.Add(error); }
         if (errors.Count > 0)
             throw new AggregateException("世界渲染清理出现错误，其余物品仍已完成回收。", errors);

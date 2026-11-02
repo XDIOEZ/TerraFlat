@@ -8,6 +8,8 @@ namespace FlatWorld.Spaceflight
     [Serializable]
     public sealed partial class SpaceGameplaySettings
     {
+        private const string ResourcePath = "Config/Space/space-gameplay";
+
         #region 可调整的飞行与地表移动参数
         public double EarthGravity = 9.81d;
         public double MinimumGravityForWalking = .25d;
@@ -60,44 +62,61 @@ namespace FlatWorld.Spaceflight
             get
             {
                 if (current != null) return current;
-                TextAsset source = Resources.Load<TextAsset>("Config/Space/space-gameplay");
-                current = source == null ? new SpaceGameplaySettings() : JsonConfigurationCache.Deserialize<SpaceGameplaySettings>(source.text);
-                if (current == null || current.EarthGravity <= 0d || current.MinimumGravityForWalking <= 0d ||
-                    current.MinimumWalkSpeedMultiplier <= 0d || current.MaximumWalkSpeedMultiplier < current.MinimumWalkSpeedMultiplier ||
-                    current.ImpactJoulesPerDurability <= 0d || current.LandingChoiceRadiusMeters <= 0d ||
-                    current.ImpactForcePerDurability <= 0d || current.ImpactStoppingSeconds <= 0d || current.SurfaceEntryHeightMeters <= 0d ||
-                    !SpaceVector2.Finite(current.TakeoffSpeedMetersPerSecond) || current.TakeoffSpeedMetersPerSecond <= 0d ||
-                    current.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.TakeoffDurationSeconds) || current.TakeoffDurationSeconds <= 0d ||
-                    !SpaceVector2.Finite(current.LandingDurationSeconds) || current.LandingDurationSeconds <= 0d ||
-                    !SpaceVector2.Finite(current.SpaceEntryClearanceMeters) || current.SpaceEntryClearanceMeters < 0d ||
-                    !SpaceVector2.Finite(current.MaximumSafeLandingSpeedMetersPerSecond) || current.MaximumSafeLandingSpeedMetersPerSecond <= 0d ||
-                    current.CruiseMaxSpeedMetersPerSecond <= 0d || current.CruiseAccelerationMetersPerSecondSquared <= 0d ||
-                    current.CruiseBrakingMetersPerSecondSquared <= 0d ||
-                    !SpaceVector2.Finite(current.CruiseTurnDegreesPerSecond) || current.CruiseTurnDegreesPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.NavigationArrivalDistanceMeters) || current.NavigationArrivalDistanceMeters <= 0d ||
-                    !SpaceVector2.Finite(current.NavigationArrivalSpeedMetersPerSecond) || current.NavigationArrivalSpeedMetersPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.FreeFloatMaxSpeedMetersPerSecond) || current.FreeFloatMaxSpeedMetersPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.FreeFloatAccelerationMultiplier) || current.FreeFloatAccelerationMultiplier <= 0f ||
-                    !SpaceVector2.Finite(current.DrivingCameraSize) || current.DrivingCameraSize <= 0f ||
-                    !SpaceVector2.Finite(current.DrivingCameraMaxSize) || current.DrivingCameraMaxSize < current.DrivingCameraSize ||
-                    !SpaceVector2.Finite(current.DrivingCameraZoomMultiplier) || current.DrivingCameraZoomMultiplier <= 1f ||
-                    !SpaceVector2.Finite(current.GravityReferenceRadiusMeters) || current.GravityReferenceRadiusMeters <= 0d ||
-                    !SpaceVector2.Finite(current.GravityCaptureMarginMeters) || current.GravityCaptureMarginMeters <= 0d ||
-                    !SpaceVector2.Finite(current.GravityReferenceCenterSpeedMetersPerSecond) || current.GravityReferenceCenterSpeedMetersPerSecond <= 0d ||
-                    !SpaceVector2.Finite(current.AtmosphereDampingPerSecond) || current.AtmosphereDampingPerSecond < 0d ||
-                    !SpaceVector2.Finite(current.MaximumGravityDampingRatio) || current.MaximumGravityDampingRatio <= 0d || current.MaximumGravityDampingRatio >= 1d ||
-                    !SpaceVector2.Finite(current.GravityRestDistanceMeters) || current.GravityRestDistanceMeters <= 0d ||
-                    !SpaceVector2.Finite(current.GravityRestSpeedMetersPerSecond) || current.GravityRestSpeedMetersPerSecond <= 0d ||
-                    current.SpacePhysicsSubsteps < 1 || current.SpacePhysicsSubsteps > 32 ||
-                    !SpaceVector2.Finite(current.SpacePhysicsIslandDistanceMeters) || current.SpacePhysicsIslandDistanceMeters <= 0d ||
-                    !double.IsFinite(current.ElevatorTravelSeconds) || current.ElevatorTravelSeconds <= 0d ||
-                    current.ElevatorCargoSlots < 1 || current.ElevatorCargoSlots > 256 ||
-                    !float.IsFinite(current.ElevatorCargoMaxWeightKg) || current.ElevatorCargoMaxWeightKg <= 0f ||
-                    !float.IsFinite(current.ElevatorCargoMaxVolumeLiters) || current.ElevatorCargoMaxVolumeLiters <= 0f)
-                    throw new InvalidOperationException("太空移动与冲击配置无效。");
-                return current;
+                return current = LoadValidatedConfiguration();
             }
+        }
+
+        [BuiltInContentBake]
+        public static void BakeBuiltInConfiguration() => _ = LoadValidatedConfiguration();
+
+        private static SpaceGameplaySettings LoadValidatedConfiguration()
+        {
+            SpaceGameplaySettings settings = BuiltInContentBinaryCatalog.ReadResource(
+                ResourcePath, ParseResourceConfiguration) ?? new SpaceGameplaySettings();
+            ValidateConfiguration(settings);
+            return settings;
+        }
+
+        private static SpaceGameplaySettings ParseResourceConfiguration(string json)
+            => JsonConfigurationCache.Deserialize<SpaceGameplaySettings>(json)
+               ?? throw new NullReferenceException();
+
+        private static void ValidateConfiguration(SpaceGameplaySettings settings)
+        {
+            if (settings.EarthGravity <= 0d || settings.MinimumGravityForWalking <= 0d ||
+                settings.MinimumWalkSpeedMultiplier <= 0d || settings.MaximumWalkSpeedMultiplier < settings.MinimumWalkSpeedMultiplier ||
+                settings.ImpactJoulesPerDurability <= 0d || settings.LandingChoiceRadiusMeters <= 0d ||
+                settings.ImpactForcePerDurability <= 0d || settings.ImpactStoppingSeconds <= 0d || settings.SurfaceEntryHeightMeters <= 0d ||
+                !SpaceVector2.Finite(settings.TakeoffSpeedMetersPerSecond) || settings.TakeoffSpeedMetersPerSecond <= 0d ||
+                settings.MinimumSpaceExitSpeedMetersPerSecond <= 0d ||
+                !SpaceVector2.Finite(settings.TakeoffDurationSeconds) || settings.TakeoffDurationSeconds <= 0d ||
+                !SpaceVector2.Finite(settings.LandingDurationSeconds) || settings.LandingDurationSeconds <= 0d ||
+                !SpaceVector2.Finite(settings.SpaceEntryClearanceMeters) || settings.SpaceEntryClearanceMeters < 0d ||
+                !SpaceVector2.Finite(settings.MaximumSafeLandingSpeedMetersPerSecond) || settings.MaximumSafeLandingSpeedMetersPerSecond <= 0d ||
+                settings.CruiseMaxSpeedMetersPerSecond <= 0d || settings.CruiseAccelerationMetersPerSecondSquared <= 0d ||
+                settings.CruiseBrakingMetersPerSecondSquared <= 0d ||
+                !SpaceVector2.Finite(settings.CruiseTurnDegreesPerSecond) || settings.CruiseTurnDegreesPerSecond <= 0d ||
+                !SpaceVector2.Finite(settings.NavigationArrivalDistanceMeters) || settings.NavigationArrivalDistanceMeters <= 0d ||
+                !SpaceVector2.Finite(settings.NavigationArrivalSpeedMetersPerSecond) || settings.NavigationArrivalSpeedMetersPerSecond <= 0d ||
+                !SpaceVector2.Finite(settings.FreeFloatMaxSpeedMetersPerSecond) || settings.FreeFloatMaxSpeedMetersPerSecond <= 0d ||
+                !SpaceVector2.Finite(settings.FreeFloatAccelerationMultiplier) || settings.FreeFloatAccelerationMultiplier <= 0f ||
+                !SpaceVector2.Finite(settings.DrivingCameraSize) || settings.DrivingCameraSize <= 0f ||
+                !SpaceVector2.Finite(settings.DrivingCameraMaxSize) || settings.DrivingCameraMaxSize < settings.DrivingCameraSize ||
+                !SpaceVector2.Finite(settings.DrivingCameraZoomMultiplier) || settings.DrivingCameraZoomMultiplier <= 1f ||
+                !SpaceVector2.Finite(settings.GravityReferenceRadiusMeters) || settings.GravityReferenceRadiusMeters <= 0d ||
+                !SpaceVector2.Finite(settings.GravityCaptureMarginMeters) || settings.GravityCaptureMarginMeters <= 0d ||
+                !SpaceVector2.Finite(settings.GravityReferenceCenterSpeedMetersPerSecond) || settings.GravityReferenceCenterSpeedMetersPerSecond <= 0d ||
+                !SpaceVector2.Finite(settings.AtmosphereDampingPerSecond) || settings.AtmosphereDampingPerSecond < 0d ||
+                !SpaceVector2.Finite(settings.MaximumGravityDampingRatio) || settings.MaximumGravityDampingRatio <= 0d || settings.MaximumGravityDampingRatio >= 1d ||
+                !SpaceVector2.Finite(settings.GravityRestDistanceMeters) || settings.GravityRestDistanceMeters <= 0d ||
+                !SpaceVector2.Finite(settings.GravityRestSpeedMetersPerSecond) || settings.GravityRestSpeedMetersPerSecond <= 0d ||
+                settings.SpacePhysicsSubsteps < 1 || settings.SpacePhysicsSubsteps > 32 ||
+                !SpaceVector2.Finite(settings.SpacePhysicsIslandDistanceMeters) || settings.SpacePhysicsIslandDistanceMeters <= 0d ||
+                !double.IsFinite(settings.ElevatorTravelSeconds) || settings.ElevatorTravelSeconds <= 0d ||
+                settings.ElevatorCargoSlots < 1 || settings.ElevatorCargoSlots > 256 ||
+                !float.IsFinite(settings.ElevatorCargoMaxWeightKg) || settings.ElevatorCargoMaxWeightKg <= 0f ||
+                !float.IsFinite(settings.ElevatorCargoMaxVolumeLiters) || settings.ElevatorCargoMaxVolumeLiters <= 0f)
+                throw new InvalidOperationException("太空移动与冲击配置无效。");
         }
         public double WalkingMultiplier(double gravity)
             => Math.Clamp(Math.Pow(EarthGravity / Math.Max(MinimumGravityForWalking, gravity), GravityWalkExponent),

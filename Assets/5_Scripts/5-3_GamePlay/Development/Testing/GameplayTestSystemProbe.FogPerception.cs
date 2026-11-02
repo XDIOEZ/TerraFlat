@@ -8,8 +8,8 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject EnvironmentFogPerception(JObject args)
     {
-        if (Application.isPlaying || ItemMgr.GetExistingInstance() != null)
-            throw new InvalidOperationException("雾天感知规则只允许在未加载世界的编辑态执行。");
+        if (Application.isPlaying)
+            throw new InvalidOperationException("雾天感知规则只允许在编辑态执行。");
         return WithEntityProbeItem(creature => EntityWithQuestPlayer(target =>
         {
             creature.BindData(EntityProbeData("test:fog_creature", 1));

@@ -12,6 +12,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);LOOSE_ITEM_MOTION_OFFLINE</DefineConstants>
     <OutputPath>$(RepoRoot)Temp/Tests/LooseItemMotion/bin/</OutputPath>
   </PropertyGroup>
   <ItemGroup>

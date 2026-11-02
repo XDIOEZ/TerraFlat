@@ -30,9 +30,9 @@
         { "fact": "tutorial.stage", "operator": "Equal", "value": "GatherSurvivalMaterials" }
       ],
       "lines": [
-        "三根木棍、三块原木，再找一片树叶……这些应该够我把火生起来。"
+        "先准备木棍、原木和树叶，还得找藤蔓或纤维搓根绳子。"
       ],
-      "localizedLines": { "en": ["Three sticks, three logs, and a leaf... That should be enough to get a fire going."] },
+      "localizedLines": { "en": ["I'll need sticks, logs, a leaf, and some vine or fiber to make a rope."] },
       "duration": 5.2,
       "cooldown": 45,
       "once": true,
@@ -49,9 +49,9 @@
         { "fact": "tutorial.stage", "operator": "Equal", "value": "CraftSparkMaker" }
       ],
       "lines": [
-        "木棍和原木能做个钻木取火器，先把它合成出来。"
+        "两根木棍、一根绳子和一块原木，正好能做个钻木取火器。"
       ],
-      "localizedLines": { "en": ["I can make a fire drill from sticks and logs. I'll craft one first."] },
+      "localizedLines": { "en": ["Two sticks, one rope, and one log make a fire drill. I'll craft one first."] },
       "duration": 4.5,
       "cooldown": 45,
       "once": true,

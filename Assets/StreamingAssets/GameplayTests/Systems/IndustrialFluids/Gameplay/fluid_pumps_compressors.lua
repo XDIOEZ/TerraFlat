@@ -31,6 +31,8 @@ test.runtime("industrial_fluids", "surface_pump", {}, function(d)
     assert(d.restartedLevel == 100, "断电重启沿用了断电前抽水额度")
     assert(d.firstBatchLevel == 99 and math.abs(d.firstBatchLiters - 10) < .000001,
         "累计额度后没有一次抽一份地表并交付十升")
+    assert(math.abs(d.firstBatchTemperature - d.inputTemperature) < .0001,
+        "水泵没有携带实际供水格动态温度")
     assert(d.blockedStable and d.reopenedLevel == 99, "目标不足十升空位仍抽水，或解除阻塞后积债爆发")
     assert(d.level == 98 and math.abs(d.targetLiters - 20) < .000001, "低速连续两批未按每批十升执行")
     assert(math.abs((d.initialLevel-d.level)*d.servingLiters-d.sourceLiters-d.targetLiters)<.000001, "地表水与泵尾量不守恒")

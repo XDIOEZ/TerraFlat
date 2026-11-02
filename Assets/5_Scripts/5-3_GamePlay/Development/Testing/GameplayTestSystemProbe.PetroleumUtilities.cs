@@ -73,7 +73,12 @@ public static partial class GameplayTestSystemProbe
         int missing = (int)Number(args, "missing", -1);
         foreach (RuntimeRecipeIngredient ingredient in recipe.inputs.RowItems_List)
         {
-            string id = ingredient.matchMode == MatchMode.ByTag ? ingredient.Tag == "Tool" ? "Axe_Stone" : "Rope" : ingredient.ItemName;
+            string id = ingredient.ItemName;
+            if (ingredient.matchMode == MatchMode.ByTag)
+                id = ingredient.Tag == "Tool" ? "Axe_Stone" : ingredient.Tag == "Rope" ? "Rope" :
+                    definitions.Values.FirstOrDefault(value => value.Tags?.Any(tag =>
+                        string.Equals(tag, ingredient.Tag, StringComparison.OrdinalIgnoreCase)) == true)?.Id
+                    ?? throw new InvalidOperationException("测试找不到标签材料：" + ingredient.Tag);
             float amount = ingredient.amount - (slots.Count == missing ? 1 : 0);
             ItemData material = EntityCraftingDefinitionData(definitions[id], amount);
             material.Guid = 9700 + slots.Count;

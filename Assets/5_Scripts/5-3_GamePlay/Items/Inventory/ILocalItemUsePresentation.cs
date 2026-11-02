@@ -15,3 +15,12 @@ public interface ILocalItemUseRequestHandler
     void HandleLocalUse();
     #endregion
 }
+
+/// <summary>需右键持续工作的工具显式实现此能力；返回 false 时结束本次长按工作。</summary>
+public interface IContinuousHeldItemUse
+{
+    #region 长按使用
+    bool SupportsHeldUseContinuation { get; }
+    bool ContinueHeldUse();
+    #endregion
+}

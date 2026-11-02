@@ -29,9 +29,16 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("quests/catalog_package_path", ServiceCatalogPackagePath);
         operations.Add("core_lifecycle/resource_plan", ServiceResourcePlan);
+        operations.Add("core_lifecycle/resource_prefetch", ServiceResourcePrefetch);
+        operations.Add("core_lifecycle/resource_prefetch_fairness", ServiceResourcePrefetchFairness);
+        operations.Add("core_lifecycle/resource_prefetch_candidate", ServiceResourcePrefetchCandidate);
+        operations.Add("core_lifecycle/world_liquid_resource_plan", ServiceWorldLiquidResourcePlan);
+        operations.Add("core_lifecycle/actor_catalog_inputs", ServiceActorCatalogInputs);
+        operations.Add("core_lifecycle/catalog_package_deserialization", ServiceCatalogPackageDeserialization);
         operations.Add("core_lifecycle/scene_object_hierarchy", ServiceSceneObjectHierarchy);
         operations.Add("core_lifecycle/persistent_object_hierarchy", ServicePersistentObjectHierarchy);
         operations.Add("core_lifecycle/resource_queue", ServiceResourceQueue);
+        operations.Add("core_lifecycle/item_sprite_compilation_pipeline", ServiceItemSpriteCompilationPipeline);
         operations.Add("core_lifecycle/editor_asset_loading", ServiceEditorAssetLoading);
         operations.Add("core_lifecycle/resource_loading_priority", ServiceStartupResourceLoadingPriority);
         operations.Add("item_runtime/compiled_module_parameters", ServiceCompiledModuleParameters);
@@ -59,6 +66,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("modding/patch", ServiceModPatch);
         operations.Add("modding/package_path", ServiceModPath);
         operations.Add("modding/candidate_patch", ServiceModCandidatePatch);
+        operations.Add("modding/managed_runtime", ProbeManagedRuntime);
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/frame_rate", ServiceFrameRate);
         operations.Add("ui_settings/water_visual_provider", ServiceWaterVisualProvider);
@@ -666,6 +674,19 @@ public static partial class GameplayTestSystemProbe
     private static JObject ServiceSnapshotMemory(JObject args)
     {
         Data_GeneralItem source = ServiceItem(args);
+        // 覆盖保存退出时木棍、原木的冷快照复制与独立缓冲区往返。
+        bool CanCaptureRuntimeResident(string definitionId)
+        {
+            var resident = new Data_GeneralItem { IDName = definitionId, Guid = 143, Stack = new ItemStack { Amount = 3f } };
+            ItemData cold = ItemSnapshotSerialization.Capture(resident).CreateColdData();
+            byte[] residentBytes = ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(cold));
+            ItemData restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(residentBytes).CreateColdData();
+            cold.Stack.Amount = 99f;
+            return restored.IDName == definitionId && restored.Guid == 143 && restored.Stack.Amount == 3f &&
+                   !ReferenceEquals(restored, cold) && !ReferenceEquals(cold, resident);
+        }
+        bool stickRoundTrip = CanCaptureRuntimeResident("Stick_Wood");
+        bool logRoundTrip = CanCaptureRuntimeResident("Log");
         ItemInstanceSnapshot snapshot = ItemInstanceSnapshot.Capture(source);
         byte[] payload = ItemSnapshotSerialization.SerializePayload(snapshot);
         snapshot = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(payload);
@@ -682,7 +703,8 @@ public static partial class GameplayTestSystemProbe
             ["amount"] = capturedAmount, ["maximumDurability"] = target.MaxDurability, ["durability"] = target.Durability,
             ["sourceAmount"] = source.Stack.Amount, ["sourceStock"] = ((CollectableModuleData)source.ModuleDataDic["stock"]).CurrentStock,
             ["targetStock"] = ((CollectableModuleData)target.ModuleDataDic["stock"]).CurrentStock,
-            ["specialData"] = target.ItemSpecialData
+            ["specialData"] = target.ItemSpecialData,
+            ["stickRoundTrip"] = stickRoundTrip, ["logRoundTrip"] = logRoundTrip
         };
     }
 

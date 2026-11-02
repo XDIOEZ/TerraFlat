@@ -33,7 +33,7 @@ namespace FlatWorld.NaturalEntities
                 {
                     Attack = new CombatAttackKey { Source = source, Sequence = (uint)eventId, Pulse = 1 }, Credit = source,
                     DeathCauseId = causeId,
-                    Damage = new float4(0, 0, 0, peak * (1f - distance / radius)), Origin = center,
+                    Damage = new float4(peak * (1f - distance / radius), 0, 0, 0), Origin = center,
                     HitPoint = (Vector2)record.Snapshot.transform.position, ResourceToolEfficiency = 1f, BuildingMultiplier = 1f,
                     Clock = new CombatClock { Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime }
                 };

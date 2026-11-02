@@ -76,6 +76,12 @@ public static partial class MachineWorld
         public readonly Dictionary<int, double> GasNodeBudget = new(), LiquidNodeBudget = new();
         public readonly Dictionary<MachineEntity, double> MechanicalPower = new();
         public readonly Dictionary<int, int> Appearance = new();
+        public readonly HashSet<FluidNetworkGraph.LiquidTemperatureComponent> LiquidTemperatureComponents = new();
+        public readonly Dictionary<Vector2Int, (double Sum, int Count)> LiquidTemperatureTargets = new();
+        public readonly Dictionary<Vector2Int, float> LiquidTemperaturePublishedTargets = new();
+        public readonly Dictionary<(int Node, string Chamber), (ulong Sequence, double Kelvin)> RemoteLiquidTemperatures = new();
+        public ulong RemoteLiquidTemperatureSequence;
+        public bool SynchronizingLiquidTemperature, RemoteLiquidTemperatureDirty;
     }
 
     private static ScopeState scope = new();
@@ -335,6 +341,8 @@ public static partial class MachineWorld
                     }
                     else if (interactions.Remove(node.Id, out MachineInteractionTarget target)) target.Dispose();
                     RemoveView(node);
+                    ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
+                    RemoveMachineCombustibility(node);
                     nodes.Remove(node.Id); dirty = true;
                     candidate.Detached = true;
                     if (node.Processor != null) processorOwners.Remove(node.Processor);
@@ -373,6 +381,16 @@ public static partial class MachineWorld
                         fluidStates[node.Id] = candidate.Fluid;
                     }
                     EnsureProcessor(node);
+                    node.Logic?.RefreshItemSlotWorldInfluenceHostIds();
+                    if (node.Processor != null)
+                    {
+                        node.Processor.Input.SetItemSlotWorldInfluenceHostId(
+                            ItemSlotWorldInfluenceSystem.CreateMachineHostId(node.ScopeKey, node.Id, "core-input"));
+                        node.Processor.Output.SetItemSlotWorldInfluenceHostId(
+                            ItemSlotWorldInfluenceSystem.CreateMachineHostId(node.ScopeKey, node.Id, "core-output"));
+                    }
+                    ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
+                    PublishMachineCombustibility(node);
                 }
             }
             finally { destination.TopologyMutationDepth--; }
@@ -393,6 +411,8 @@ public static partial class MachineWorld
                     catch (Exception error) { Debug.LogException(error); }
                     candidate.Fluid = DetachFluidNodeForScopeTransfer(node);
                 }
+                ItemSlotWorldInfluenceSystem.RemoveMachineSnapshot(node.ScopeKey, node.Id);
+                RemoveMachineCombustibility(node);
                 nodes.Remove(node.Id);
                 if (node.Processor != null) processorOwners.Remove(node.Processor);
                 dirty = true;

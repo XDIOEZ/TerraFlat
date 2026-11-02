@@ -211,6 +211,9 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     }
     private void DescribeInventory(StringBuilder text, string chamber)
     {
+        if (MachineWorld.TryGetLiquidNetworkTemperatureCelsius(Entity, out float temperature, chamber))
+            text.Append("\n").Append(FlatWorldLocalizationService.GetUiFormat("液网温度 {0:0.##}℃ · 总液量 {1:0.###} L",
+                temperature, MachineWorld.GetLiquidNetworkContainedLiters(Entity, chamber)));
         if (Definition.Kind is "pipe" or "valve" or "selector" or "outlet" or "filler" or "liquid-filler") return;
         FluidInventory inventory = MachineWorld.GetFluidInventory(Entity, chamber);
         bool gas = Array.Exists(Definition.Ports, port => port.Phase == "gas");

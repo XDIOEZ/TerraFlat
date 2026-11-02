@@ -23,10 +23,20 @@ public static class TextLibraryCatalogLoader
     public static string BuiltInConfigPath =>
         StreamingAssetsTextLoader.CombinePath(Application.streamingAssetsPath, RelativeConfigPath);
 
+    /// <summary>烘焙纯文字库 DTO；运行时服务不进入构建载荷。</summary>
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration()
+    {
+        TextLibraryCatalogDto catalog = ReadBuiltInConfiguration();
+        Validate(catalog);
+    }
+
     /// <summary>同步加载内建文字库。</summary>
     public static TextLibraryService LoadBuiltIn()
     {
-        return Deserialize(StreamingAssetsTextLoader.ReadAllText(BuiltInConfigPath));
+        TextLibraryCatalogDto catalog = ReadBuiltInConfiguration();
+        Validate(catalog);
+        return BuildService(catalog);
     }
 
     /// <summary>跨平台协程加载内建文字库。</summary>
@@ -34,12 +44,14 @@ public static class TextLibraryCatalogLoader
         Action<TextLibraryService> onCompleted,
         Action<Exception> onFailed)
     {
-        string json = null;
+        TextLibraryCatalogDto catalog = null;
         Exception readError = null;
-        yield return StreamingAssetsTextLoader.ReadAllTextAsync(
+        yield return BuiltInContentBinaryCatalog.ReadFileAsync(
             BuiltInConfigPath,
-            text => json = text,
-            exception => readError = exception);
+            ParseConfiguration,
+            value => catalog = value,
+            exception => readError = exception,
+            SupportedSchemaVersion);
 
         if (readError != null)
         {
@@ -49,7 +61,8 @@ public static class TextLibraryCatalogLoader
 
         try
         {
-            onCompleted?.Invoke(Deserialize(json));
+            Validate(catalog);
+            onCompleted?.Invoke(BuildService(catalog));
         }
         catch (Exception exception)
         {
@@ -60,14 +73,19 @@ public static class TextLibraryCatalogLoader
     /// <summary>反序列化并严格校验文字库配置。</summary>
     public static TextLibraryService Deserialize(string json)
     {
-        if (string.IsNullOrWhiteSpace(json))
-            throw new InvalidDataException("文字库 JSON 为空");
-
-        TextLibraryCatalogDto catalog = JsonConfigurationCache.Deserialize<TextLibraryCatalogDto>(
-            json,
-            StrictJsonSettings);
+        TextLibraryCatalogDto catalog = ParseConfiguration(json);
         Validate(catalog);
         return BuildService(catalog);
+    }
+
+    private static TextLibraryCatalogDto ReadBuiltInConfiguration() =>
+        BuiltInContentBinaryCatalog.ReadFile(BuiltInConfigPath, ParseConfiguration, SupportedSchemaVersion);
+
+    private static TextLibraryCatalogDto ParseConfiguration(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            throw new InvalidDataException("文字库 JSON 为空");
+        return JsonConfigurationCache.Deserialize<TextLibraryCatalogDto>(json, StrictJsonSettings);
     }
 
     /// <summary>校验 schema、分类、生成器引用和空内容。</summary>

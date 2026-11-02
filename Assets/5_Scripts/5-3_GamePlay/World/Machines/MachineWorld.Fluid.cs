@@ -228,10 +228,11 @@ public static partial class MachineWorld
 
     private static void ForgetFluidNodeInventoryCaches(int id)
     {
+        fluidGraph?.InvalidateLiquidTemperatureInventories();
         var remove = new List<(int NodeId, string Chamber)>();
         foreach (var key in fluidInventories.Keys) if (key.NodeId == id) remove.Add(key);
         foreach (var key in remove)
-        { fluidStockCache.Remove(fluidInventories[key]); fluidInventories.Remove(key); }
+        { fluidStockCache.Remove(fluidInventories[key]); fluidInventories.Remove(key); scope.RemoteLiquidTemperatures.Remove(key); }
     }
 
 
@@ -239,6 +240,9 @@ public static partial class MachineWorld
 
     private static void ResetFluidRuntime()
     {
+        TemperatureMgr.ExistingInstance?.RemoveDynamicGridTemperatureExchangeTargets(scope);
+        scope.LiquidTemperatureComponents.Clear(); scope.LiquidTemperatureTargets.Clear(); scope.LiquidTemperaturePublishedTargets.Clear();
+        scope.RemoteLiquidTemperatures.Clear(); scope.RemoteLiquidTemperatureSequence = 0; scope.RemoteLiquidTemperatureDirty = false;
         fluidGraph = null; scope.FluidTopologyKey = null; scope.FluidTopologyCatalog = null;
         scope.FluidTopologyDirty = false;
         ResetGasBudgets(true);
@@ -260,6 +264,7 @@ public static partial class MachineWorld
         InvalidateCombinedFluidTankRemoteMember(node);
         fluidStates[node.Id] = incoming;
         ForgetFluidNodeInventoryCaches(node.Id);
+        RememberRemoteLiquidNetworkTemperatures(node, incoming);
         // 设备/液体更新只替换本节点；其他节点的气网快照、热量和库存不受消息到达顺序影响。
         if (fluidTankOwners.TryGetValue(node.Id, out FluidTankGroup group) && group.OwnerId == node.Id &&
             incoming.Chambers.ContainsKey("main"))
@@ -275,6 +280,7 @@ public static partial class MachineWorld
         if (fluidGraph == null) return;
         foreach (MachineEntity node in nodes.Values)
             if (node.Definition.Fluid != null) FluidDeviceOperations.ReleaseReservations(node);
+        AdvanceLiquidNetworkTemperatureExchange(false);
         foreach (FluidNetworkGraph.Component component in fluidGraph.Components)
         {
             // 船内流体网随船持续模拟，不用地表玩家区块判断休眠。
@@ -297,7 +303,13 @@ public static partial class MachineWorld
                 }
                 else if (node.Definition.HasMechanicalPorts != true)
                 {
-                    if (node.State != null) { CaptureNode(node); DisposeProcessor(node); node.State = null; }
+                    if (node.State != null)
+                    {
+                        CaptureNode(node);
+                        DisposeProcessor(node);
+                        node.State = null;
+                        ItemSlotWorldInfluenceSystem.RefreshMachineSnapshot(node);
+                    }
                     node.Active = false;
                 }
             }
@@ -357,6 +369,7 @@ public static partial class MachineWorld
     private static void CompleteFluidStep(float seconds)
     {
         if (fluidGraph == null) return;
+        AdvanceLiquidNetworkTemperatureExchange(true);
         using (fluidTransportMarker.Auto()) AdvanceIndustrialOutlets(seconds);
         using (fluidAppearanceMarker.Auto())
         foreach (MachineEntity node in nodes.Values)

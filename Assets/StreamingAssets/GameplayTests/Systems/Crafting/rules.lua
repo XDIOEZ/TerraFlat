@@ -94,6 +94,49 @@ local cases = {
     {name = "零消耗工具不扣数量", args = {tool = true, toolPresent = true}, matched = true, total = 2},
     {name = "只要求工具身份", args = {tool = true, toolPresent = true, tagDemand = 0, exactDemand = 0}, matched = true, total = 0}
 }
+
+-- 打制石器作为石头材料可自合成、混用并制作石斧；普通石器制品不能冒充原料。
+test.system("crafting", "stone_material_substitution", {}, function(data)
+    local function tagged(tags, name)
+        for _, tag in ipairs(tags) do if tag == name then return true end end
+        return false
+    end
+    assert(tagged(data.stoneTags, "StoneCraftingMaterial")
+        and tagged(data.chippedTags, "StoneCraftingMaterial")
+        and tagged(data.chippedTags, "Stone")
+        and tagged(data.chippedTags, "Knife")
+        and tagged(data.chippedTags, "InventoryCategory.Tool"), "石头与打制石器缺少共用材料标签或丢失工具能力")
+    assert(tagged(data.slabTags, "Stone") and not tagged(data.slabTags, "StoneCraftingMaterial")
+        and tagged(data.spearTags, "Stone") and not tagged(data.spearTags, "StoneCraftingMaterial"),
+        "已经加工完成的石板或石矛不应被当作原石投入合成")
+    local success = {
+        two_chipped = {output = "ChippedTool", input = {0}},
+        mixed_chipped = {output = "ChippedTool", input = {0, 0}},
+        two_stones = {output = "ChippedTool", input = {0}},
+        axe_mixed = {output = "Axe_Stone", input = {0, 0, 0, 0}},
+        axe_chipped = {output = "Axe_Stone", input = {0, 0, 0}}
+    }
+    local failed = {slab_rejected = {2}, spear_rejected = {2}, insufficient = {1}}
+    local count = 0
+    for _, sample in ipairs(data.cases) do
+        count = count + 1
+        local expected = success[sample.name]
+        local remaining = expected and expected.input or failed[sample.name]
+        assert(remaining and #remaining == #sample.remaining, "出现未知石器合成案例：" .. sample.name)
+        assert(sample.matched == (expected ~= nil)
+            and sample.prepared == (expected ~= nil) and sample.committed == (expected ~= nil),
+            "石器合成匹配或库存事务错误：" .. sample.name)
+        for i, amount in ipairs(remaining) do
+            assert(sample.remaining[i] == amount, "合成消耗错误：" .. sample.name)
+        end
+        assert(sample.outputId == (expected and expected.output or "")
+            and sample.outputAmount == (expected and 1 or 0), "合成产物错误：" .. sample.name)
+        success[sample.name] = nil
+        failed[sample.name] = nil
+    end
+    assert(count == 8 and next(success) == nil and next(failed) == nil, "石器合成回归覆盖不完整")
+end, "石料复用：两块打制石器、自合成混搭、石斧、非原石拒绝与原子扣料")
+
 for _, case in ipairs(cases) do
     test.system("crafting", "allocation", case.args, function(data)
         assert(data.matched == case.matched and math.abs(data.total - case.total) < .00001, "全局扣料计划错误")

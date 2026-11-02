@@ -14,9 +14,25 @@ public enum GameplayFixedStepSimulationPhase
     AfterPhysics
 }
 
+/// <summary>逻辑系统的目标频率；Unity 物理和游戏时钟始终保持 60 Hz。</summary>
+public enum GameplayFixedStepTickRate
+{
+    Hz60 = 60,
+    Hz30 = 30,
+    Hz20 = 20,
+    Hz10 = 10,
+    Hz5 = 5
+}
+
 public interface IGameplayFixedStepSimulationSystem
 {
     void SimulateFixedStep(float deltaTime);
+}
+
+/// <summary>跨世界、暂停或加载期禁止积累低频 Tick 的旧会话时间。</summary>
+public interface IGameplayFixedStepSimulationReadiness
+{
+    bool CanAccumulateFixedStepTime { get; }
 }
 
 /// <summary>只编排一次固定步的系统顺序，补步与倍速统一交给 Unity。</summary>
@@ -28,6 +44,8 @@ public sealed class GameplayFixedStepSimulationScheduler
     {
         public IGameplayFixedStepSimulationSystem System;
         public LinkedListNode<Registration> Node;
+        public GameplayFixedStepTickRate Rate;
+        public double AccumulatedSeconds;
         public bool Active = true;
     }
 
@@ -37,11 +55,19 @@ public sealed class GameplayFixedStepSimulationScheduler
     public ulong TickIndex { get; private set; }
     public int RegisteredSystemCount => systems.Count;
 
-    public void Register(IGameplayFixedStepSimulationSystem system, GameplayFixedStepSimulationPhase phase)
+    public void Register(IGameplayFixedStepSimulationSystem system, GameplayFixedStepSimulationPhase phase,
+        GameplayFixedStepTickRate rate = GameplayFixedStepTickRate.Hz60)
     {
         if (system == null) throw new ArgumentNullException(nameof(system));
+        if (rate is not (GameplayFixedStepTickRate.Hz60 or GameplayFixedStepTickRate.Hz30 or
+            GameplayFixedStepTickRate.Hz20 or GameplayFixedStepTickRate.Hz10 or GameplayFixedStepTickRate.Hz5))
+            throw new ArgumentOutOfRangeException(nameof(rate));
+        if ((phase is GameplayFixedStepSimulationPhase.WorldTime or GameplayFixedStepSimulationPhase.PhysicsPreparation or
+            GameplayFixedStepSimulationPhase.SpaceSimulation or GameplayFixedStepSimulationPhase.Physics or
+            GameplayFixedStepSimulationPhase.AfterPhysics) && rate != GameplayFixedStepTickRate.Hz60)
+            throw new ArgumentException("时间与物理阶段必须每个固定步执行。", nameof(rate));
         if (systems.ContainsKey(system)) return;
-        var registration = new Registration { System = system };
+        var registration = new Registration { System = system, Rate = rate };
         LinkedList<Registration> phaseSystems = phases[(int)phase] ??= new LinkedList<Registration>();
         registration.Node = phaseSystems.AddLast(registration);
         systems.Add(system, registration);
@@ -57,6 +83,8 @@ public sealed class GameplayFixedStepSimulationScheduler
 
     public void SimulateFixedStep(float deltaTime)
     {
+        if (deltaTime < 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+            throw new ArgumentOutOfRangeException(nameof(deltaTime));
         TickIndex++;
         dispatch.Clear();
         foreach (LinkedList<Registration> phase in phases)
@@ -64,10 +92,29 @@ public sealed class GameplayFixedStepSimulationScheduler
         foreach (Registration registration in dispatch)
         {
             if (!registration.Active) continue;
-            if (registration.System is Behaviour behaviour && (behaviour == null || !behaviour.isActiveAndEnabled)) continue;
+            if (registration.System is Behaviour behaviour && (behaviour == null || !behaviour.isActiveAndEnabled))
+            {
+                registration.AccumulatedSeconds = 0d;
+                continue;
+            }
+            if (registration.System is IGameplayFixedStepSimulationReadiness readiness &&
+                !readiness.CanAccumulateFixedStepTime)
+            {
+                registration.AccumulatedSeconds = 0d;
+                continue;
+            }
+            float elapsed = deltaTime;
+            if (registration.Rate != GameplayFixedStepTickRate.Hz60)
+            {
+                // 低频系统一次只消费真实累计时间，绝不在单个物理步内循环追债。
+                registration.AccumulatedSeconds += deltaTime;
+                if (registration.AccumulatedSeconds + 0.00000001d < 1d / (int)registration.Rate) continue;
+                elapsed = (float)registration.AccumulatedSeconds;
+                registration.AccumulatedSeconds = 0d;
+            }
             try
             {
-                registration.System.SimulateFixedStep(deltaTime);
+                registration.System.SimulateFixedStep(elapsed);
             }
             catch (Exception exception)
             {
@@ -94,8 +141,9 @@ public static class GameplayFixedStepSimulation
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeSystems() => scheduler = new GameplayFixedStepSimulationScheduler();
 
-    public static void Register(IGameplayFixedStepSimulationSystem system, GameplayFixedStepSimulationPhase phase)
-        => scheduler.Register(system, phase);
+    public static void Register(IGameplayFixedStepSimulationSystem system, GameplayFixedStepSimulationPhase phase,
+        GameplayFixedStepTickRate rate = GameplayFixedStepTickRate.Hz60)
+        => scheduler.Register(system, phase, rate);
 
     public static void Unregister(IGameplayFixedStepSimulationSystem system) => scheduler.Unregister(system);
 

@@ -10,7 +10,8 @@ public sealed class FallingFruitDamage : IDamageSender, IPreferredBodyPartDamage
     public string DeathCauseId => "falling_object";
 
     /// <summary>创建临时伤害请求。</summary>
-    public FallingFruitDamage(float bluntDamage) => DamageValues = new CombatDamage { Blunt = bluntDamage };
+    public FallingFruitDamage(float bluntDamage) => DamageValues = new CombatDamage
+    { Physical = bluntDamage, ImpactKind = CombatDamageKind.Blunt };
     #endregion
 
     #region 一次性命中

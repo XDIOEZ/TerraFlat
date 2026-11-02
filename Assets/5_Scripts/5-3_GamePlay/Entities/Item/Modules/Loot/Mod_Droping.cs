@@ -108,7 +108,7 @@ public class Mod_Droping : Module
 
         // 区块画面可能正在分帧绑定；新版掉落在动画期间重试归属，
         // 仍只访问 WorldModel，不触发旧 Chunk 加载。
-        if (drop.item.GetComponentInParent<ChunkNaturalItemRenderer>(true) == null)
+        if (drop.item.NaturalRuntimeOwner == null)
         {
             ItemWorldPlacement.TryAttachWorldModelTransientItem(drop.item, ownershipPos);
         }
@@ -116,6 +116,7 @@ public class Mod_Droping : Module
         Vector2 pos = EvaluateProjectedDropTrajectoryPosition(drop, t, arcHeight);
         drop.item.transform.position = new Vector3(pos.x, pos.y, 0f);
         drop.item.transform.Rotate(Vector3.forward * drop.rotationSpeed * deltaTime);
+        WorldPhysicsService2D.SynchronizeDetachedItemProxy(drop.item);
 
         if (t < 1f)
             return;

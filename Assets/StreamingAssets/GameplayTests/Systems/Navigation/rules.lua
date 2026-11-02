@@ -31,6 +31,15 @@ test.system("navigation", "corner", {}, function(data)
     assert(not data.farTraversal and not data.sameTraversal, "非法相邻移动被接受")
 end, "导航斜角防穿与相邻边保护")
 
+test.system("navigation", "animal_water_exit", {}, function(data)
+    assert(data.expensiveWater and data.nearestReachable,
+        "地面生物脱水未越过昂贵水域找到最近可到达的陆地")
+    assert(data.radiusRespected and data.dynamicBlocker,
+        "脱水寻路忽略搜索范围或没有避开动态障碍")
+    assert(data.dryIgnored and data.cornerBlocked and data.unloadedBlocked,
+        "脱水寻路改变陆地待机，或者允许穿过阻挡斜角、未知格")
+end, "陆地生物追击结束后从高代价水域沿可走路线返回安全陆地")
+
 test.system("navigation", "canonical_batch", {}, function(data)
     assert(data.cells and data.notifications and data.revisions,
         "规范坐标批量写入改变了地格、变更通知或路径失效版本")

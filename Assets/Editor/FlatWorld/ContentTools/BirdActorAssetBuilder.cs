@@ -61,8 +61,10 @@ public static class BirdActorAssetBuilder
             root.name = species;
             Item actor = root.GetComponent<Item>();
             Animator animator = root.GetComponentInChildren<Animator>(true);
+            Mod_AnimatorController animation = animator != null
+                ? animator.GetComponentInParent<Mod_AnimatorController>(true) : null;
             Mod_DamageReceiver receiver = root.GetComponentInChildren<Mod_DamageReceiver>(true);
-            if (actor == null || animator == null || receiver == null ||
+            if (actor == null || animator == null || animation == null || receiver == null ||
                 animator.transform == root.transform || receiver.transform == root.transform)
                 throw new InvalidDataException("动物源外壳必须含独立动画与受击子节点。");
 
@@ -71,7 +73,7 @@ public static class BirdActorAssetBuilder
 
             Transform lift = new GameObject("BirdLift").transform;
             lift.SetParent(root.transform, false);
-            animator.transform.SetParent(lift, false);
+            animation.transform.SetParent(lift, false);
             if (!receiver.transform.IsChildOf(lift))
                 receiver.transform.SetParent(lift, false);
             animator.runtimeAnimatorController = controller;
@@ -79,12 +81,10 @@ public static class BirdActorAssetBuilder
             foreach (SpriteRenderer renderer in root.GetComponentsInChildren<SpriteRenderer>(true))
                 renderer.sprite = groundSprite;
             actor.Sprite = animator.GetComponent<SpriteRenderer>();
-            if (actor.Sprite == null || actor.Sprite.transform.name != "Module_Animator_AI")
-                throw new InvalidDataException("鸟 JSON 约定动画与主 Sprite 同在 Module_Animator_AI 节点。");
+            if (actor.Sprite == null || actor.Sprite.transform.name != "ActorVisual")
+                throw new InvalidDataException("鸟 JSON 约定主 Sprite 在独立的 ActorVisual 节点。");
 
             // 构建时绑定各状态的首帧，单图模式无需重新启用身体 Animator。
-            Mod_AnimatorController animation = animator.GetComponent<Mod_AnimatorController>();
-            if (animation == null) throw new InvalidDataException("鸟外壳缺少通用动画模块。");
             animation.singleSpriteStates = States.Select(state => new Mod_AnimatorController.SingleSpriteState
             {
                 stateName = state, sprite = frames[state][0]

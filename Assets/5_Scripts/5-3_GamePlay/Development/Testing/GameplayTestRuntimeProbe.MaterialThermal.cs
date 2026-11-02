@@ -14,6 +14,8 @@ public static partial class GameplayTestRuntimeProbe
     {
         Register("processing", "material_transition", CaptureMaterialTransition);
         Register("processing", "material_transition_atomic", CaptureMaterialTransitionAtomic);
+        Register("processing", "material_fuel_burnout", CaptureMaterialFuelBurnout);
+        Register("processing", "world_fuel_burnout_backends", CaptureWorldFuelBurnoutBackends);
         Register("processing", "meat_heat_and_dry", CaptureMeatHeatAndDry);
         Register("processing", "material_reaction", CaptureMaterialReaction);
         Register("processing", "material_alloy_atomic", CaptureMaterialAlloyAtomic);
@@ -51,7 +53,7 @@ public static partial class GameplayTestRuntimeProbe
 
     private static JObject CaptureMaterialTransition(Player _, JObject args)
     {
-        string id = GameplayTestSystemProbe.Text(args, "id", "Log");
+        string id = GameplayTestSystemProbe.Text(args, "id", "Plank");
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 500d);
         JArray amounts = args["amounts"] as JArray
             ?? new JArray((float)GameplayTestSystemProbe.Number(args, "amount", 1d));
@@ -60,6 +62,126 @@ public static partial class GameplayTestRuntimeProbe
         Inventory output = CreateDragInventory("lua.thermal.output", new ItemData[4]);
         MaterialThermalProcessor.Process(input, output);
         return new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
+    }
+
+    // 同一材料分别走炉内供热和世界环境入口，燃尽产物沿正式事务提交。
+    private static JObject CaptureMaterialFuelBurnout(Player player, JObject args)
+    {
+        float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 500d);
+        float seconds = (float)GameplayTestSystemProbe.Number(args, "seconds", 50d);
+        float target = (float)GameplayTestSystemProbe.Number(args, "target", temperature);
+        float amount = (float)GameplayTestSystemProbe.Number(args, "amount", 3d);
+        bool world = GameplayTestSystemProbe.Text(args, "path", "furnace") == "world";
+        bool supported = GameplayTestSystemProbe.Flag(args, "oxygen", true);
+        bool full = GameplayTestSystemProbe.Flag(args, "full", false);
+        ItemData material = ThermalMaterial("Log", amount, temperature);
+        Inventory input = CreateDragInventory("lua.fuel-burnout.input", material);
+        Inventory output = CreateDragInventory("lua.fuel-burnout.output", full
+            ? new[] { ThermalMaterial("StoneSlab", 1f, 20f) } : new ItemData[4]);
+        int segments = Math.Max(1, (int)GameplayTestSystemProbe.Number(args, "segments", 1d));
+        for (int index = 0; index < segments; index++)
+        {
+            if (world)
+            {
+                WorldLiquidSettings water = GameplayTestSystemProbe.Flag(args, "water", false)
+                    ? new WorldLiquidSettings { WaterContact = true } : null;
+                WorldItemMatterRules.Advance(material, target, seconds / segments, water, out _,
+                    fireIntensity: (float)GameplayTestSystemProbe.Number(args, "fire", 0d), combustionSupported: supported);
+                ItemMatterRuntime.AdvanceCombustion(material, seconds / segments, water != null, supported, out _);
+            }
+            else FurnaceMaterialHeating.Process(input, output, target, seconds / segments, combustionSupported: supported);
+        }
+        Mod_Fuel.TryResolveItemData(material, out FuelData fuel);
+        var result = new JObject { ["fuel"] = fuel.Fuel.x, ["burning"] = material.MatterState.IsBurning,
+            ["amount"] = material.Stack.Amount, ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
+        if (world && WorldItemMatterRules.TryCreateTransitionOutputs(material, out var products))
+            result["worldOutputs"] = new JArray(products.Select(product => new JObject
+                { ["id"] = product.IDName, ["amount"] = product.Stack.Amount }));
+        else result["worldOutputs"] = new JArray();
+        ItemInstanceSnapshot snapshot = MemoryPack.MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(
+            ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(material)));
+        ItemData restored = GameRes.ExistingInstance.CreateItemData(snapshot.DefinitionId);
+        snapshot.RestoreTo(restored);
+        Mod_Fuel.TryResolveItemData(restored, out FuelData restoredFuel);
+        result["savedFuel"] = restoredFuel.Fuel.x;
+        if (!full) return result;
+        input.Data.SetOne_ItemData(0, restored);
+        foreach (ItemSlot slot in output.Data.itemSlots) slot.itemData = null;
+        FurnaceMaterialHeating.Process(input, output, target, .1f, combustionSupported: supported);
+        result["resumedInput"] = ThermalSlots(input);
+        result["resumedOutput"] = ThermalSlots(output);
+        result["duplicateSuccess"] = ItemMatterRuntime.TransformSolidSlot(input, output, 0, "lua.fuel-burnout.duplicate").Success;
+        return result;
+    }
+
+    private sealed class FuelBurnoutProbeEnvironmentSource : IItemEnvironmentSource
+    {
+        public string WorldKey;
+        public Vector2 Position;
+        public bool TrySample(Item item, out ItemEnvironmentSample sample) { sample = default; return false; }
+        public float SupplyAmbientOxygen(Item item, float maximumAmount) => 0f;
+        public bool TrySampleCombustion(string worldKey, Vector2 position, out bool canBurn)
+        { canBurn = true; return worldKey == WorldKey && (position - Position).sqrMagnitude < .01f; }
+    }
+
+    // 完整物品调用正式替换入口，轻量后端在明确干燥有氧输入下推进物态事务。
+    private static JObject CaptureWorldFuelBurnoutBackends(Player player, JObject args)
+    {
+        string worldKey = GameplayWorldRegistry.GetItemWorldKey(player);
+        using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
+        var manager = ItemMgr.Instance;
+        var root = new GameObject("Lua 燃尽后端采样");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
+        Vector3 position = player.transform.position + Vector3.right * 3f;
+        var environment = new FuelBurnoutProbeEnvironmentSource { WorldKey = worldKey, Position = position };
+        Item original = null, replacement = null;
+        ItemEnvironmentSources.Register(environment);
+        try
+        {
+            RuntimeItemDefinition ash = GameRes.ExistingInstance.ItemDefinitions["WoodAsh"];
+            if (ash.Physics != null || !ash.UsesLightweightWorldDrop)
+                throw new InvalidOperationException("轻量燃尽夹具需要草木灰保持轻量后端定义。");
+            ItemData FuelMaterial()
+            {
+                ItemData source = ThermalMaterial("Log", 3f, 500f);
+                Mod_Fuel.ConsumeItemDataFuel(source, 49f);
+                return source;
+            }
+            original = manager.InstantiateItem(FuelMaterial(), position, parent: root);
+            int guid = original.itemData.Guid;
+            WorldItemMatterRules.Advance(original.itemData, 20f, 1f, null, out _);
+            bool planned = WorldItemMatterRules.TryCreateTransitionOutputs(original.itemData, out var outputs);
+            replacement = planned ? manager.ReplaceRuntimeItem(original, outputs[0]) : original;
+            var result = new JObject { ["fullId"] = replacement.itemData.IDName,
+                ["fullAmount"] = replacement.itemData.Stack.Amount, ["fullSameGuid"] = replacement.itemData.Guid == guid,
+                ["fullRegistered"] = ReferenceEquals(manager.GetItemByGuid(guid), replacement) &&
+                    !manager.IsRuntimeItemRegistered(original),
+                ["fullDuplicate"] = WorldItemMatterRules.TryCreateTransitionOutputs(replacement.itemData, out _) };
+            using var runtime = new DroppedItemRuntime(worldKey, null);
+            ItemData lightweight = FuelMaterial();
+            lightweight.Guid = System.Guid.NewGuid().GetHashCode() | 1;
+            runtime.Add(lightweight, new FlatWorld.DroppedItems.LightweightDroppedBody
+            {
+                Id = lightweight.Guid, Amount = 3f, Position = new Unity.Mathematics.float2(position.x, position.y),
+                Scale = Vector2.one, Pickable = 1
+            });
+            runtime.AdvanceMatterForGameplayFuelBurnoutProbe(1f);
+            float AshAmount() => runtime.Capture().Where(record => record.Data.IDName == "WoodAsh")
+                .Sum(record => record.Data.Stack.Amount);
+            result["lightweightAsh"] = AshAmount();
+            result["lightweightLog"] = runtime.Capture().Where(record => record.Data.IDName == "Log")
+                .Sum(record => record.Data.Stack.Amount);
+            runtime.AdvanceMatterForGameplayFuelBurnoutProbe(1f);
+            result["lightweightAshAfterRetry"] = AshAmount();
+            return result;
+        }
+        finally
+        {
+            ItemEnvironmentSources.Unregister(environment);
+            if (replacement != null && manager.IsRuntimeItemRegistered(replacement)) manager.DespawnItem(replacement, saveData: false);
+            if (original != null && manager.IsRuntimeItemRegistered(original)) manager.DespawnItem(original, saveData: false);
+            UnityEngine.Object.Destroy(root);
+        }
     }
 
     // 加工能力从正式物品定义解析，预览和产出共用生产制作事务。
@@ -127,7 +249,7 @@ public static partial class GameplayTestRuntimeProbe
 
     private static JObject CaptureMaterialTransitionAtomic(Player _, JObject args)
     {
-        ItemData source = ThermalMaterial("Log", 4f, 500f);
+        ItemData source = ThermalMaterial("Plank", 4f, 500f);
         Inventory input = CreateDragInventory("lua.thermal.atomic.source", source);
         Inventory output = CreateDragInventory("lua.thermal.atomic.output", new ItemData[1]);
         CraftingResult blocked = ItemMatterRuntime.TransformSolidSlot(input, output, 0, "lua.thermal.atomic");
@@ -316,6 +438,14 @@ public static partial class GameplayTestRuntimeProbe
     #endregion
 }
 
+internal sealed partial class DroppedItemRuntime
+{
+    #region 燃尽物态夹具入口
+    // 输入明确为干燥，实际燃烧和替换仍走正式物态队列。
+    internal void AdvanceMatterForGameplayFuelBurnoutProbe(float seconds) => TickMatter(seconds);
+    #endregion
+}
+
 public static partial class MachineWorld
 {
     #region 全部炉型供热入口采样
@@ -354,6 +484,11 @@ public static partial class MachineWorld
                 ["heatingRatePercent"] = furnace.HeatingRatePercent, ["temperatureUpSpeed"] = configuredSpeed,
                 ["panel"] = panel, ["inputSlots"] = furnace.Input.Data.itemSlots.Count,
                 ["outputSlots"] = furnace.Output.Data.itemSlots.Count };
+            Mod_Fuel.TryResolveItemData(furnace.Input.Data.itemSlots[0].itemData, out FuelData woodFuel);
+            row["woodFuel"] = woodFuel.Fuel.x;
+            furnace.HeatMaterials(49f);
+            row["burnoutWoodLeft"] = Amount(furnace.Input, "Log");
+            row["burnoutAsh"] = Amount(furnace.Output, "WoodAsh");
             foreach (ItemSlot slot in furnace.Input.Data.itemSlots) slot.itemData = null;
             foreach (ItemSlot slot in furnace.Output.Data.itemSlots) slot.itemData = null;
             furnace.Data.Temperature = furnace.Data.MaxTemperature = furnace.Data.MaxTemperatureLimit = 1000f;

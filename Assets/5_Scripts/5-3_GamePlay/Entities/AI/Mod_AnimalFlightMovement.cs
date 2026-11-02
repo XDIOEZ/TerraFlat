@@ -179,7 +179,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         }
         state.Stamina = Mathf.Clamp(state.Stamina, 0f, flightStaminaMax);
         if (state.Stamina <= 0f) state.MustRecoverStamina = true;
-        threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
+        RefreshThreatDetectionRadiusContribution();
         loaded = true;
         animationFlightDisplacement = Vector2.zero;
         animationFlightSeconds = 0f;
@@ -213,6 +213,8 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
     protected override void OnUnload()
     {
         loaded = false;
+        ReleaseCarriedSeedInventory();
+        if (threatDetector != null) threatDetector.RemoveMinimumDetectionRadiusForSource(this);
         fishingRod = null;
         animationFlightDisplacement = Vector2.zero;
         animationFlightSeconds = 0f;
@@ -235,6 +237,14 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
             body.velocity = Vector2.zero;
         staminaDisplay?.SetVisible(false);
     }
+
+    public override void OnResourcesReloaded()
+    {
+        if (loaded) RefreshThreatDetectionRadiusContribution();
+    }
+
+    private void RefreshThreatDetectionRadiusContribution()
+        => threatDetector.SetMinimumDetectionRadiusForSource(this, Mathf.Max(fleeTriggerDistance, fleeSafeDistance));
     #endregion
 
     #region 阶段推进

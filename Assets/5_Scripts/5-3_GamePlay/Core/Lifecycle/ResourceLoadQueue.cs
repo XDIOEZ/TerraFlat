@@ -9,7 +9,8 @@ internal static class ResourceLoadQueue
 
     public static IEnumerator Run<TRequest>(int count, Func<int, TRequest> begin,
         Func<TRequest, bool> isDone, Action<int, TRequest> complete,
-        Func<bool> shouldYield, Action<int> progress = null, int maxInFlight = 4)
+        Func<bool> shouldYield, Action<int> progress = null, int maxInFlight = 4,
+        Func<bool> availableWork = null)
     {
         if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
         if (maxInFlight <= 0) throw new ArgumentOutOfRangeException(nameof(maxInFlight));
@@ -38,6 +39,8 @@ internal static class ResourceLoadQueue
                 complete(request.Index, request.Request);
                 pending.RemoveAt(i);
                 completed++;
+                // 资源刚完成时先使用剩余预算，避免后续请求始终抢占就绪工作。
+                if (availableWork != null && shouldYield?.Invoke() != true) availableWork();
                 progress?.Invoke(completed);
                 advanced = true;
                 if (shouldYield?.Invoke() == true) yield return null;

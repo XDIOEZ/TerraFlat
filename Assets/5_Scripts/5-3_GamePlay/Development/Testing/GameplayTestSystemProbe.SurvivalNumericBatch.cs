@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -13,7 +14,109 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterSurvivalNumericBatchRules()
     {
         Register("survival", "numeric_batch", CaptureSurvivalNumericBatch);
+        Register("survival", "radiation_tolerance", CaptureRadiationTolerance);
+        Register("survival", "radiation_equipment_serialization", CaptureRadiationEquipmentSerialization);
+        Register("survival", "radiation_damage", CaptureRadiationDamage);
         Register("survival", "oxygen_callback_order", CaptureOxygenSupplyDuringConsumptionCallback);
+    }
+
+    private static JObject CaptureRadiationTolerance(JObject args)
+    {
+        return WithEntityProbeItem(item =>
+        {
+            item.BindData(EntityProbeData("probe:radiation-tolerance", 1f));
+            var radiation = item.gameObject.AddComponent<Mod_Radiation>();
+            radiation.ModuleInit(item, radiation.modData);
+            item.itemMods.AddMod(radiation);
+            var coldGear = new EquipmentInstance_RadiationProtection
+            {
+                LowRadiationToleranceIncrease = .1f,
+                HighRadiationToleranceIncrease = .2f
+            };
+            var hotGear = new EquipmentInstance_RadiationProtection
+            {
+                LowRadiationToleranceIncrease = .05f,
+                HighRadiationToleranceIncrease = .1f
+            };
+            radiation.SafeRadiationMin = .2f;
+            radiation.SafeRadiationMax = .4f;
+            JObject Capture()
+            {
+                radiation.GetSafeRadiationRange(out float minimum, out float maximum);
+                return new JObject { ["minimum"] = minimum, ["maximum"] = maximum };
+            }
+
+            JObject initial = Capture();
+            coldGear.Equip(item);
+            hotGear.Equip(item);
+            JObject equipped = Capture();
+            coldGear.UnEquip(item);
+            JObject oneRemoved = Capture();
+            hotGear.UnEquip(item);
+            return new JObject { ["initial"] = initial, ["equipped"] = equipped, ["oneRemoved"] = oneRemoved, ["restored"] = Capture() };
+        });
+    }
+
+    private static JObject CaptureRadiationEquipmentSerialization(JObject args)
+    {
+        const string equipmentJson =
+            "{\"equipmentInstances\":[{\"$concreteType\":\"EquipmentInstance_RadiationProtection\",\"LowRadiationToleranceIncrease\":0.15,\"HighRadiationToleranceIncrease\":0.3}]}";
+        var instances = ModuleJsonConfigurator.ReadEquipmentInstances(
+            "probe:radiation-gear", ModText.Equipment_Store, ModText.Equipment_Store, equipmentJson);
+        var protection = instances.Count == 1 ? instances[0] as EquipmentInstance_RadiationProtection : null;
+        var restored = protection == null ? null :
+            MemoryPack.MemoryPackSerializer.Deserialize<EquipmentInstance>(
+                MemoryPack.MemoryPackSerializer.Serialize<EquipmentInstance>(protection)) as EquipmentInstance_RadiationProtection;
+        var oldThermalInstance = new EquipmentInstance_ThermalInsulation
+            { Name = "旧存档隔热", ColdToleranceIncrease = .4f };
+        var legacyInstances = new List<EquipmentInstance> { oldThermalInstance };
+        Mod_Equipment.EnsureRadiationProtectionDefinitionInstance(legacyInstances, instances);
+        var legacyProtection = legacyInstances.Count > 1
+            ? legacyInstances[1] as EquipmentInstance_RadiationProtection
+            : null;
+        var adjustedProtection = new EquipmentInstance_RadiationProtection
+            { Name = "已调整防护", HighRadiationToleranceIncrease = .45f };
+        var adjustedInstances = new List<EquipmentInstance> { adjustedProtection };
+        Mod_Equipment.EnsureRadiationProtectionDefinitionInstance(adjustedInstances, instances);
+        return new JObject
+        {
+            ["jsonType"] = protection != null,
+            ["jsonLow"] = protection?.LowRadiationToleranceIncrease ?? -1f,
+            ["jsonHigh"] = protection?.HighRadiationToleranceIncrease ?? -1f,
+            ["memoryPackType"] = restored != null,
+            ["memoryPackLow"] = restored?.LowRadiationToleranceIncrease ?? -1f,
+            ["memoryPackHigh"] = restored?.HighRadiationToleranceIncrease ?? -1f,
+            ["legacyProtectionAdded"] = legacyProtection != null,
+            ["legacyThermalPreserved"] = ReferenceEquals(legacyInstances[0], oldThermalInstance),
+            ["legacyProtectionHigh"] = legacyProtection?.HighRadiationToleranceIncrease ?? -1f,
+            ["adjustedProtectionCount"] = adjustedInstances.Count,
+            ["adjustedProtectionHigh"] = adjustedProtection.HighRadiationToleranceIncrease
+        };
+    }
+
+    private static JObject CaptureRadiationDamage(JObject args)
+    {
+        object ruleSource = new();
+        GameRuleConfiguration.SetModifier(ruleSource, values =>
+        {
+            values.CreatureAttackMultiplier = 1f;
+            values.CreatureHealthMultiplier = 1f;
+        });
+        try
+        {
+            using var fixture = new GameplayTestInvulnerabilityFixture();
+            fixture.Health.Data.DefenseValues.Radiation = 100f;
+            var damage = new CombatDamage { Radiation = 1f };
+            float armored = fixture.Health.HurtEnvironmentalDamage(1, Vector2.zero, damage, "radiation");
+            float bypassed = fixture.Health.HurtEnvironmentalDamage(2, Vector2.zero, damage, "radiation", isTrueDamage: true);
+            float damageScale = GameplayCombatBridge.Tuning().Resolve(false, false) *
+                GameRuleConfiguration.Current.CreatureCombat.ResolveReceivedDamageMultiplier(false, false, true);
+            return new JObject { ["armored"] = armored, ["bypassed"] = bypassed, ["damageScale"] = damageScale };
+        }
+        finally
+        {
+            GameRuleConfiguration.RemoveModifier(ruleSource);
+        }
     }
 
     // 夹具只调用正式批计算入口，数值、顺序和边界由 Lua 断言。
@@ -66,6 +169,15 @@ public static partial class GameplayTestSystemProbe
             new SurvivalNumericBatch.TemperatureSafety { Temperature = 5f, SafeMinimum = 5f, SafeMaximum = 50f, Buffer = .5f, BufferMaximum = 60f, RecoveryPerSecond = 1f, Seconds = .25f },
             new SurvivalNumericBatch.TemperatureSafety { Temperature = 50f, SafeMinimum = 5f, SafeMaximum = 50f, Buffer = 60f, BufferMaximum = 60f, RecoveryPerSecond = 1f, Seconds = .25f }
         };
+        var radiation = new[]
+        {
+            new SurvivalNumericBatch.RadiationExposure { Radiation = 0f, SafeMinimum = 0f, SafeMaximum = 0f, DamageClock = .75f, Seconds = .5f, HasSample = true },
+            new SurvivalNumericBatch.RadiationExposure { Radiation = .5f, SafeMinimum = 0f, SafeMaximum = .5f, DamageClock = .6f, Seconds = .25f, HasSample = true },
+            new SurvivalNumericBatch.RadiationExposure { Radiation = .5001f, SafeMinimum = 0f, SafeMaximum = .5f, Seconds = .4f, HasSample = true },
+            new SurvivalNumericBatch.RadiationExposure { Radiation = .75f, SafeMinimum = 0f, SafeMaximum = .5f, DamageClock = .4f, Seconds = .7f, HasSample = true },
+            new SurvivalNumericBatch.RadiationExposure { Radiation = .1f, SafeMinimum = .2f, SafeMaximum = 1f, DamageClock = .25f, Seconds = 2.5f, HasSample = true },
+            new SurvivalNumericBatch.RadiationExposure { Radiation = 1f, SafeMinimum = 0f, SafeMaximum = .5f, DamageClock = .8f, Seconds = .25f }
+        };
         SurvivalNumericBatch.Advance(consumption.AsSpan());
         SurvivalNumericBatch.Advance(breathing.AsSpan());
         SurvivalNumericBatch.Advance(hypoxia.AsSpan());
@@ -73,6 +185,7 @@ public static partial class GameplayTestSystemProbe
         SurvivalNumericBatch.Advance(cooling.AsSpan());
         SurvivalNumericBatch.Advance(ambient.AsSpan());
         SurvivalNumericBatch.Advance(safety.AsSpan());
+        SurvivalNumericBatch.Advance(radiation.AsSpan());
 
         var oxygenResults = new JArray();
         foreach (var step in consumption) oxygenResults.Add(new JObject { ["next"] = step.Next, ["finite"] = step.HasFiniteChange });
@@ -94,11 +207,14 @@ public static partial class GameplayTestSystemProbe
         var safetyResults = new JArray();
         foreach (var step in safety) safetyResults.Add(new JObject
             { ["buffer"] = step.Buffer, ["cold"] = step.TooCold, ["hot"] = step.TooHot });
+        var radiationResults = new JArray();
+        foreach (var step in radiation) radiationResults.Add(new JObject
+            { ["danger"] = step.IsDangerous, ["clock"] = step.DamageClock, ["ticks"] = step.DamageTicks });
         return new JObject
         {
             ["oxygen"] = oxygenResults, ["breathing"] = breathResults, ["hypoxia"] = hypoxiaResults,
             ["pressure"] = pressureResults, ["cooling"] = coolingResults,
-            ["ambient"] = ambientResults, ["safety"] = safetyResults
+            ["ambient"] = ambientResults, ["safety"] = safetyResults, ["radiation"] = radiationResults
         };
     }
 

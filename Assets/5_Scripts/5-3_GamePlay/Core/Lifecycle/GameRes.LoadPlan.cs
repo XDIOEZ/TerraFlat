@@ -13,7 +13,8 @@ public partial class GameRes
 
     /// <summary>权重表示阶段工作占比，只有最后的引用校验结束后才发布目录。</summary>
     private ResourceLoadPipeline CreateResourceLoadPlan(
-        ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null)
+        ActorDefinitionCatalogLoader.ReloadSnapshot actorSnapshot = null,
+        bool startupOnly = false)
     {
         var plan = new ResourceLoadPipeline((title, progress) =>
         {
@@ -27,47 +28,76 @@ public partial class GameRes
             loadingText = title;
             loadingProgress = Mathf.Max(loadingProgress, Mathf.Clamp(progress, 0, 0.99f));
         }, () => preparingInPlaceReload || ShouldKeepCurrentResourceLoadingInBackground,
-            () => GameplayTestResourceCache.Active ? 8d : (double?)null);
+            () => ResolveResourceWorkBudget(completingInitialResourceLoad, preparingInPlaceReload,
+                GameplayTestResourceCache.Active, ShouldKeepCurrentResourceLoadingInBackground),
+            concurrentStages: !preparingInPlaceReload && (completingInitialResourceLoad || !startupOnly));
         List<ItemDefinitionDto> itemSources = null;
+        ResourceLoadPipeline.PrefetchedResourceData<List<ItemDefinitionDto>> itemInputs = null;
+#if !UNITY_WEBGL || UNITY_EDITOR
+        if (!startupOnly && CanPrefetchPureConfigurationInputs)
+        {
+            // 本地纯配置与菜单资源并行准备，实际目录仍按依赖顺序发布。
+            itemInputs = plan.Prefetch<List<ItemDefinitionDto>>(
+                (done, fail) => GameplayTestResourceCache.LoadItemInputs(done, fail, null));
+        }
+#endif
         // 音库独立发出异步请求，目录构建期间持续接入，最终校验前再统一等待。
         plan.Add("audio-request", "异步预加载音库", 0.5f,
             () => RunAction(FlatWorld.Audio.AudioService.BeginStartupResourcePreload));
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
         plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
         plan.Add("players", "加载玩家创建配置", 1,
-            () => LoadCatalog<PlayerCreationTemplateCatalogConfig>(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
-                PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupPlayerCreationConfig,
+                PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
+                PlayerCreationTemplateCatalogService.ReplaceBuiltIn,
+                value => startupPlayerCreationConfig = value));
         plan.Add("time", "加载时间系统配置", 1,
-            () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupTimeSystemConfig,
+                TimeSystemConfigLoader.LoadBuiltInAsync,
+                TimeSystemConfigService.ReplaceCatalog,
+                value => startupTimeSystemConfig = value));
         plan.Add("greenhouse", "加载大气温室效应配置", 1,
-            () => LoadCatalog<AtmosphericGreenhouseConfiguration>(AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
-                AtmosphericGreenhouseConfigurationService.ReplaceConfiguration));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupGreenhouseConfiguration,
+                AtmosphericGreenhouseConfigurationLoader.LoadBuiltInAsync,
+                AtmosphericGreenhouseConfigurationService.ReplaceConfiguration,
+                value => startupGreenhouseConfiguration = value));
         plan.Add("water-current", "加载水流推动配置", 1,
-            () => LoadCatalog<WaterCurrentPushCatalog>(WaterCurrentPushConfigLoader.LoadBuiltInAsync,
-                WaterCurrentPushConfigService.ReplaceCatalog));
+            PrepareMenuSharedConfiguration(plan, startupOnly, preparingInPlaceReload, startupWaterCurrentCatalog,
+                WaterCurrentPushConfigLoader.LoadBuiltInAsync,
+                WaterCurrentPushConfigService.ReplaceCatalog,
+                value => startupWaterCurrentCatalog = value));
+        plan.Add("audio", "等待启动音库就绪", 2, CompleteStartupAudioResourcePreload, "audio-request");
         plan.Add("startup-ready", "准备主菜单", 0.5f,
-            PublishStartupReadyStage, "startup-ui", "players", "time", "water-current");
+            PublishStartupReadyStage, "startup-ui", "players", "time", "greenhouse", "water-current", "audio");
+        if (startupOnly)
+            return plan;
         plan.Add("item-manifest", "解析物品清单", 3,
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
-                GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report), value => itemSources = value), "addressables");
+                itemInputs != null ? itemInputs.Wait(done) : GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report),
+                value => itemSources = value), "addressables");
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
-        plan.Add("prefabs", "加载运行时预制体", 20, () => LoadPrefabCatalog(itemSources), "item-manifest");
+        plan.Add("prefabs", "加载运行时预制体", 20, () => LoadPrefabCatalog(itemSources), "item-manifest", "startup-ui");
         plan.Add("tiles", "加载地形图块", 3, () => LoadAssetGroup<TileBase>("TileBase", tileBaseDict, tile => tile.name, true), "addressables");
         plan.Add("tile-blocks", "加载地块 JSON 定义", 3,
-            () => LoadCatalog<int>((done, fail) => TileDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "tiles");
+            PrepareCatalogWithDeferredBinding<TileDefinitionCatalogLoader.TileCatalogPreparation>(plan,
+                TileDefinitionCatalogLoader.LoadBuiltInCatalogInputAsync,
+                input => LoadCatalog<int>((done, fail) => TileDefinitionCatalogLoader.LoadBuiltInPreparedAsync(this, done, fail, input), _ => { })), "tiles");
         // 本体初始库存已由玩家 JSON 配置，内容包提供的库存模板允许为空。
         plan.Add("inventory", "加载初始库存", 2, () => LoadAssetGroup<Inventoryinit>("InventoryInit", InventoryInitDict, asset => asset.name, false), "addressables");
         plan.Add("skills", "加载技能资源", 2, () => LoadAssetGroup<BaseSkill>("Skill", SkillDict, asset => asset.name, true), "addressables");
         plan.Add("items", "构建物品定义", 25,
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
-            "prefabs", "loot", "tile-blocks");
+            "prefabs", "loot", "tile-blocks", "skills");
         plan.Add("actors", "构建生物定义", 15,
-            () => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
-                this, done, fail, plan.Report, actorSnapshot), _ => { }), "items");
+            PrepareCatalogWithDeferredBinding<ActorDefinitionCatalogLoader.ActorCatalogPreparation>(plan,
+                (done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInCatalogInputAsync(done, fail, actorSnapshot != null),
+                input => LoadCatalog<int>((done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInAsync(
+                    this, done, fail, plan.Report, actorSnapshot, input), _ => { })), "items");
         plan.Add("animal-skills", "加载动物技能", 1,
-            () => LoadCatalog<AnimalSkillCatalog>(AnimalSkillCatalogLoader.LoadBuiltInAsync, AnimalSkillCatalogService.Replace), "actors");
+            PrepareConfigurationCatalog<AnimalSkillCatalog>(plan, AnimalSkillCatalogLoader.LoadBuiltInAsync,
+                AnimalSkillCatalogService.Replace), "actors");
         plan.Add("spawners", "加载生物生成配置", 1,
             () => LoadCatalog<SpawnerConfigCatalog>(SpawnerConfigCatalogLoader.LoadBuiltInAsync, SpawnerConfigCatalogService.ReplaceCatalog), "actors", "water-current");
         plan.Add("natural-items", "加载自然物生成规则", 2,
@@ -77,24 +107,32 @@ public partial class GameRes
             () => LoadCatalog<RiverGenerationConfigCatalog>(RiverGenerationConfigLoader.LoadBuiltInAsync,
                 RiverGenerationConfigService.ReplaceCatalog));
         plan.Add("recipes", "加载制作配方", 3,
-            () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            PrepareCatalogWithDeferredBinding<RecipeCatalogLoader.RecipeCatalogPreparation>(plan,
+                RecipeCatalogLoader.LoadBuiltInCatalogInputAsync,
+                input => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail, input), _ => { })), "items", "actors");
         plan.Add("buffs", "加载状态效果", 2,
-            () => LoadCatalog<int>((done, fail) => BuffCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            PrepareCatalogWithDeferredBinding<BuffCatalogLoader.BuffCatalogPreparation>(plan,
+                BuffCatalogLoader.LoadBuiltInCatalogInputAsync,
+                input => LoadCatalog<int>((done, fail) => BuffCatalogLoader.LoadBuiltInAsync(this, done, fail, input), _ => { })), "addressables");
         plan.Add("liquids", "加载液体定义", 1,
-            () => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+            PrepareCatalogWithDeferredBinding<LiquidCatalogDto>(plan, LiquidCatalogLoader.LoadBuiltInCatalogInputAsync,
+                input => LoadCatalog<int>((done, fail) => LiquidCatalogLoader.LoadBuiltInPreparedAsync(this, done, fail, input), _ => { })), "items", "actors", "buffs");
         plan.Add("fluids", "加载工业流体与星球大气", 1,
-            () => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "liquids");
+            PrepareCatalogWithDeferredBinding<FluidContentCatalogDto>(plan, FluidCatalogLoader.LoadBuiltInCatalogInputAsync,
+                input => LoadCatalog<int>((done, fail) => FluidCatalogLoader.LoadBuiltInPreparedAsync(this, done, fail, input), _ => { })), "liquids");
         plan.Add("space", "构建 JSON 星球模板与独立地表", 1,
-            () => LoadCatalog<FlatWorld.Spaceflight.SpaceCatalog>(FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultAsync,
-                BuildPlanetRuntimeTemplates), "fluids", "items", "prefabs");
+            PrepareCatalogWithDeferredBinding<FlatWorld.Spaceflight.SpaceCatalogConfig>(plan,
+                FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultCatalogInputAsync,
+                input => LoadCatalog<FlatWorld.Spaceflight.SpaceCatalog>((done, fail) =>
+                    FlatWorld.Spaceflight.SpaceCatalog.LoadDefaultPreparedAsync(done, fail, input),
+                    BuildPlanetRuntimeTemplates)), "fluids", "items", "prefabs");
         plan.Add("contamination", "加载污染层定义", 1,
             () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,
-            () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items");
+            () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items", "actors");
         plan.Add("texts", "加载文字库", 1,
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("world-authoring", "加载世界生成资源", 1, LoadWorldAuthoringResources, "texts");
-        plan.Add("audio", "等待音库与声源池就绪", 2, CompleteStartupAudioResourcePreload, "audio-request");
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             ValidateBuiltInResourceCatalog,
             "audio", "players", "time", "greenhouse", "water-current", "items", "actors", "animal-skills", "spawners", "natural-items", "river-generation", "recipes", "buffs", "liquids", "fluids", "space", "contamination", "quests", "texts", "inventory", "skills", "world-authoring");
@@ -109,6 +147,33 @@ public partial class GameRes
         plan.Add("machine-prewarm", "预备机器快照与炉体缓存", 2,
             PrewarmMachineResources, "combat-prewarm");
         return plan;
+    }
+
+    /// <summary>完整入世直接复用菜单纯配置，只有启动或原位更新才重新读取来源。</summary>
+    internal static Func<IEnumerator> PrepareMenuSharedConfiguration<T>(ResourceLoadPipeline plan, bool startupOnly,
+        bool inPlaceReload, T startupSnapshot, Func<Action<T>, Action<Exception>, IEnumerator> load,
+        Action<T> publish, Action<T> preserveStartup) where T : class
+    {
+        if (!startupOnly && !inPlaceReload)
+            return () => RunAction(() =>
+            {
+                if (startupSnapshot == null)
+                    throw new InvalidDataException($"菜单必要配置快照缺失：{typeof(T).Name}");
+                publish(startupSnapshot);
+            });
+
+        return PrepareConfigurationCatalog<T>(plan, load, value =>
+        {
+            publish(value);
+            if (startupOnly) preserveStartup(value);
+        });
+    }
+
+    /// <summary>诊断读取正式阶段依赖副本，不启动资源请求或修改当前目录。</summary>
+    internal IReadOnlyDictionary<string, string[]> CaptureResourceStageDependencies()
+    {
+        using ResourceLoadPipeline plan = CreateResourceLoadPlan();
+        return plan.CaptureDependencies();
     }
 
     private IEnumerator ValidateFinalResourceCatalog()
@@ -132,6 +197,31 @@ public partial class GameRes
 
     #region 目录加载契约
 
+    /// <summary>私有输入提前读取，Unity 绑定和引用校验仍由原依赖阶段独占执行。</summary>
+    internal static Func<IEnumerator> PrepareCatalogWithDeferredBinding<T>(ResourceLoadPipeline plan,
+        Func<Action<T>, Action<Exception>, IEnumerator> readInput, Func<T, IEnumerator> bind)
+    {
+        var preparation = CanPrefetchPureConfigurationInputs ? plan.Prefetch(readInput) : null;
+        return Bind;
+        IEnumerator Bind()
+        {
+            T input = default;
+            yield return LoadCatalog<T>((done, fail) => preparation != null
+                ? preparation.Wait(done) : readInput(done, fail), value => input = value);
+            yield return bind(input);
+        }
+    }
+
+    /// <summary>独立配置与资源目录初始化重叠读取，只有原阶段执行时才校验结果并发布。</summary>
+    internal static Func<IEnumerator> PrepareConfigurationCatalog<T>(ResourceLoadPipeline plan,
+        Func<Action<T>, Action<Exception>, IEnumerator> load, Action<T> register)
+    {
+        if (!CanPrefetchPureConfigurationInputs)
+            return () => LoadCatalog(load, register);
+        ResourceLoadPipeline.PrefetchedResourceData<T> preparation = plan.Prefetch(load);
+        return () => LoadCatalog<T>((done, _) => preparation.Wait(done), register);
+    }
+
     /// <summary>将目录加载器的回调转换为统一异常语义；漏报完成与返回空目录都属于错误。</summary>
     private static IEnumerator LoadCatalog<T>(Func<Action<T>, Action<Exception>, IEnumerator> load, Action<T> register)
     {
@@ -146,6 +236,19 @@ public partial class GameRes
 
     /// <summary>轻量同步行动仍纳入资源阶段的错误和超时管理。</summary>
     private static IEnumerator RunAction(Action action) { action(); yield break; }
+
+    private static bool CanPrefetchPureConfigurationInputs
+    {
+        get
+        {
+            if (!StreamingAssetsTextLoader.RequiresWebRequest(Application.streamingAssetsPath)) return true;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return false;
+#else
+            return BuiltInContentBinaryCatalog.IsActive;
+#endif
+        }
+    }
 
     /// <summary>扩展在本体通过校验后接入，扩展完成后还要校验最终目录。</summary>
     private IEnumerator LoadModCatalog(ResourceLoadPipeline plan)

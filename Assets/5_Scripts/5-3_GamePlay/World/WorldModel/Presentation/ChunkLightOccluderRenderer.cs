@@ -122,12 +122,21 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     /// <summary>绑定区块地形，并按阻挡地块生成光照遮挡矩形。</summary>
     public void Bind(ChunkRuntime chunk)
     {
+        DimensionManager dimensions = DimensionManager.ExistingInstance;
+        Bind(chunk, dimensions != null &&
+            dimensions.TryGetDefinition(chunk?.Address.DimensionId, out DimensionDefinition definition) &&
+            definition.SuppressTerrainWallShadows);
+    }
+
+    // 显式维度策略可供独立世界绑定，表现层不必启动全局维度管理器。
+    public void Bind(ChunkRuntime chunk, bool suppressTerrainWallShadows)
+    {
         if (chunk == null)
             throw new ArgumentNullException(nameof(chunk));
         if (chunk.Terrain == null)
             throw new InvalidOperationException(
                 "Cannot bind light occluders before terrain is ready.");
-        if (ReferenceEquals(boundChunk, chunk))
+        if (ReferenceEquals(boundChunk, chunk) && caveOcclusionSuppressed == suppressTerrainWallShadows)
             return;
 
         if (boundChunk != null)
@@ -136,10 +145,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         rebuildRequested = false;
         CancelPendingTrim();
         boundChunk = chunk;
-        DimensionManager dimensions = DimensionManager.ExistingInstance;
-        caveOcclusionSuppressed = dimensions != null &&
-            dimensions.TryGetDefinition(chunk.Address.DimensionId, out DimensionDefinition definition) &&
-            definition.SuppressTerrainWallShadows;
+        caveOcclusionSuppressed = suppressTerrainWallShadows;
         if (caveOcclusionSuppressed)
         {
             // 洞穴不再使用墙体阴影充当视野遮罩，保留地形、碰撞和正常光照。

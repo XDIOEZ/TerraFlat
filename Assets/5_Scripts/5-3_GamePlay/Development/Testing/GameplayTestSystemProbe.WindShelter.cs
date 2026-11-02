@@ -110,26 +110,6 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
-    private static Scene WindShelterProbeScene(string name)
-    {
-#if UNITY_EDITOR
-        Scene scene = UnityEditor.SceneManagement.EditorSceneManager.NewPreviewScene();
-        scene.name = name;
-        return scene;
-#else
-        return SceneManager.CreateScene(name);
-#endif
-    }
-
-    private static void CloseWindShelterProbeScene(Scene scene)
-    {
-#if UNITY_EDITOR
-        UnityEditor.SceneManagement.EditorSceneManager.ClosePreviewScene(scene);
-#else
-        SceneManager.UnloadSceneAsync(scene);
-#endif
-    }
-
     private static Mod_Building WindShelterProbeBuilding(Scene scene, bool blocksWind)
     {
         var root = new GameObject("[WindShelterProbe]") { hideFlags = HideFlags.HideAndDontSave };
@@ -151,8 +131,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject WindShelterBuildingSamples()
     {
         string key = "wind_shelter_probe_" + Guid.NewGuid().ToString("N");
-        Scene firstScene = WindShelterProbeScene(key);
-        Scene secondScene = WindShelterProbeScene(key + "_other");
+        Scene firstScene = CreateGameplayTestProbeScene(key);
+        Scene secondScene = CreateGameplayTestProbeScene(key + "_other");
         var buildings = new List<Mod_Building>();
         try
         {
@@ -218,8 +198,8 @@ public static partial class GameplayTestSystemProbe
             }
             BuildingOccupancyRegistry.ReleaseWorld(firstScene.name);
             BuildingOccupancyRegistry.ReleaseWorld(secondScene.name);
-            CloseWindShelterProbeScene(secondScene);
-            CloseWindShelterProbeScene(firstScene);
+            CloseGameplayTestProbeScene(secondScene);
+            CloseGameplayTestProbeScene(firstScene);
         }
     }
 

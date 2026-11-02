@@ -553,6 +553,20 @@
       ]
     },
     {
+      "causeId": "radiation",
+      "requires": [],
+      "variants": [
+        {
+          "zhCN": "辐射耗尽了{victim}最后的生命。",
+          "en": "Radiation drained the life from {victim}."
+        },
+        {
+          "zhCN": "{victim}没能承受强烈辐射。",
+          "en": "{victim} succumbed to intense radiation."
+        }
+      ]
+    },
+    {
       "causeId": "fusion",
       "requires": [],
       "variants": [

@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
     {
         #region 持久缓存元数据
         private const string CacheRelativePath = "Library/FlatWorldGameplayTests/GameResCache/cache.asset";
-        private const int CurrentSchema = 2;
+        private const int CurrentSchema = 3;
 
         [Serializable]
         private sealed class AssetEntry

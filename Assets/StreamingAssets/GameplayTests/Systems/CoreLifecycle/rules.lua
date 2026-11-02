@@ -41,10 +41,46 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
     near(two.elapsed, 1, "双步分组的模拟时长")
     assert(one.startFrame == one.endFrame and two.startFrame == two.endFrame,
         "独立规则采样意外依赖真实渲染帧")
+
+    local rates = {60, 30, 20, 10, 5}
+    local function check_tiered(sample, multiplier, label)
+        assert(sample.ticks == 60 * multiplier and sample.uniqueRegistrations == 5,
+            label .. "重复注册、物理步次数或时间倍率错误")
+        assert(#sample.tiers == #rates, label .. "缺少分类 TPS 档位")
+        for i, rate in ipairs(rates) do
+            local tier = sample.tiers[i]
+            assert(tier.rate == rate and tier.calls == rate * multiplier,
+                label .. "的 " .. rate .. " TPS 执行次数错误")
+            near(tier.seconds, multiplier, label .. "的 " .. rate .. " TPS 累计时间")
+            near(tier.largestStep, 1 / rate, label .. "的 " .. rate .. " TPS 步长")
+        end
+    end
+    check_tiered(data.tiered60Fps, 1, "60FPS")
+    check_tiered(data.tiered30Fps, 1, "30FPS 每帧双步")
+    check_tiered(data.tiered15Fps, 1, "15FPS 每帧四步")
+    check_tiered(data.tieredDoubleSpeed, 2, "2 倍速")
+    check_tiered(data.tieredPaused, 1, "暂停恢复")
+    local before = data.tieredPaused.beforeResume
+    assert(before.ticks == 30, "暂停前固定步计数错误")
+    for i, count in ipairs({30, 15, 10, 5, 2}) do
+        assert(before.tiers[i].calls == count, "暂停前分级执行次数错误")
+        near(before.tiers[i].seconds, count / rates[i], "暂停前各档时间")
+    end
+    assert(data.tieredHitch.callsAfterHitch == 1 and data.tieredHitch.callsAfterNextStep == 1 and
+        data.tieredHitch.registered == 1 and data.tieredHitch.physicsRejectsLowRate,
+        "卡顿后出现同帧重复补算、重复登记或物理误降频")
+    near(data.tieredHitch.deliveredSeconds, .35, "卡顿累计时间")
+    assert(data.tieredDisabled.beforeDue == 0 and data.tieredDisabled.calls == 1,
+        "禁用期间累计了欠债，或恢复后提前执行")
+    near(data.tieredDisabled.seconds, .05, "重新启用后低频时间")
+    assert(data.tieredReadiness.prematureCalls == 0 and data.tieredReadiness.calls == 1,
+        "世界未就绪期间的旧会话时间混入了新会话")
+    near(data.tieredReadiness.seconds, .05, "世界重新就绪后的累计时间")
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)
     assert(data.available, "场景分类规则需要编辑器现场")
+    assert(data.rootHideFlags == 0, "场景分类根使用了会脱离场景并阻止卸载的 HideFlags")
     assert(data.reused and data.sharedRoot and data.oneSceneRoot, "同场景分类重复创建或没有共用根节点")
     assert(data.sceneIsolation and data.otherSceneSurvives, "不同场景的分类互相干扰")
     assert(data.identityTransform and data.posePreserved and data.migrationPosePreserved, "分类改变了物品位置、旋转或缩放")
@@ -64,6 +100,7 @@ test.system("core_lifecycle", "editor_asset_loading", {}, function(data)
     assert(data.customPreserved and data.bundlePreserved, "编辑器入口接管了自定义 Provider 或 Bundle 资源")
     assert(data.completedImmediately and data.loadedExpectedPrefab and data.immediateRequestReleased,
         "编辑器已准备资源仍额外排队等待、加载错误 Prefab，或释放后遗留请求")
+    assert(data.directSpriteMatches and data.slicedSpriteMatches, "编辑器普通 Sprite 或子图资源身份错误")
 end, "编辑器默认资源请求路由、缓存隔离和依赖保留")
 
 for _, row in ipairs({
@@ -81,8 +118,8 @@ test.system("core_lifecycle", "binary_content_cache", {}, function(data)
     assert(data.coldMiss and data.stored and data.warmHit and data.count == 2, "首次解析没有生成可跨会话恢复的二进制对象")
     near(data.inheritedWeight, 3, "跨文件继承结果")
     assert(data.parametersEqual and data.actorSourcesEqual and data.actorDefinitions == 2, "扩展参数树或 Actor 继承来源丢失")
-    for index, value in ipairs(data.defense) do near(value, index, "四种独立防御值") end
-    assert(#data.defense == 4 and data.gridX == -2 and data.nullGridCell, "防御或占地空值往返丢失")
+    for index, value in ipairs(data.defense) do near(value, ({4, 2, 1})[index], "分类防御值") end
+    assert(#data.defense == 3 and data.gridX == -2 and data.nullGridCell, "防御或占地空值往返丢失")
     near(data.scaleZ, 4, "Unity 向量值")
     near(data.surfaceWidth, .3, "液面矩形")
     near(data.transitionTemperature, 100, "物质变化配置")
@@ -289,6 +326,99 @@ test.system("core_lifecycle", "resource_plan", { mode = "throw" }, function(data
     assert(data.failure == "InvalidOperationException" and data.stage == "content", "没有保留失败阶段和异常")
     assert(#data.order == 2 and data.finished == 2, "异常阶段没有执行 finally 清理")
 end, "资源阶段异常与清理")
+
+for _, mode in ipairs({ "complete", "busy", "busy_interactive", "failed", "cancel", "nested_throw", "nested_cancel", "consume_twice" }) do
+    test.system("core_lifecycle", "resource_prefetch", { mode = mode }, function(data)
+        if mode ~= "busy_interactive" then
+            assert(data.startedBeforeStartupFinished, "配置预取没有与启动阶段重叠")
+        end
+        assert(data.disposed == 1, "预取结束、失败或取消后没有释放迭代器")
+        if mode == "complete" or mode == "busy" then
+            assert(data.value == 42 and data.failure == nil and data.prefetchFinishedBeforeContent,
+                "完成的预取没有被依赖阶段正确接收")
+        elseif mode == "busy_interactive" then
+            assert(not data.startedBeforeStartupFinished and data.value == 42 and data.failure == nil,
+                "交互期间的预取超过后台预算或未正确完成")
+        elseif mode == "failed" or mode == "nested_throw" then
+            assert(data.failure == "InvalidOperationException" and data.stage == "content" and data.value == 0,
+                "预取失败没有在依赖阶段终止资源会话")
+        elseif mode == "consume_twice" then
+            assert(data.failure == "InvalidOperationException" and data.value == 42, "预取结果被重复交接")
+        else
+            assert(data.value == 0 and not data.published, "取消后仍发布了预取结果")
+        end
+        if mode == "nested_throw" or mode == "nested_cancel" then
+            assert(data.nestedDisposed == 1, "嵌套预取异常或取消后没有释放内部迭代器")
+        end
+    end, "资源配置预取、错误与取消：" .. mode)
+end
+
+test.system("core_lifecycle", "resource_prefetch_fairness", {}, function(data)
+    assert(data.foregroundSteps == 5, "预取消耗预算阻塞了当前加载阶段")
+    assert(data.secondStartedBeforeFirstFinished, "预取没有轮流获得执行机会")
+    assert(not data.repeatedSameFrame and data.firstValue == 7 and data.secondValue == 9,
+        "预取同帧重复推进或结果错误")
+    assert(data.disposed == 2 and data.failure == nil, "并行预取没有完整收尾")
+end, "资源预取与前台阶段的帧预算和公平性")
+
+for _, mode in ipairs({ "complete", "failed", "cancel" }) do
+    test.system("core_lifecycle", "resource_prefetch_candidate", { mode = mode }, function(data)
+        assert(data.candidateContext and data.officialBetweenFrames and data.disposed == 1,
+            "候选预取污染正式目录或没有释放")
+        if mode == "complete" then
+            assert(data.committed and data.result == 24 and data.officialProgressPreserved,
+                "候选预取没有正确发布或覆盖了正式运行状态")
+        else
+            assert(not data.committed and data.officialProgressPreserved,
+                "失败或取消的候选预取改变了正式目录")
+            if mode == "failed" then
+                assert(data.failure == "InvalidOperationException" and data.stage == "content", "候选预取失败阶段错误")
+            end
+        end
+    end, "候选资源预取的隔离、失败与取消：" .. mode)
+end
+
+test.system("core_lifecycle", "world_liquid_resource_plan", {}, function(data)
+    assert(data.spriteCount == 2 and data.materialCount == 1, "重复液体外观地址没有合并")
+    assert(data.sharedSpriteOwner == "first" and data.sharedMaterialOwner == "first", "共享资源诊断丢失首个来源")
+    assert(data.invalidRejected, "缺少世界外观的液体未被拒绝")
+end, "世界液体外观按资源类型与地址合并")
+
+test.system("core_lifecycle", "actor_catalog_inputs", {}, function(data)
+    assert(data.count == 2 and data.childWeight == 5 and data.inheritedPrefab == "Module_Example",
+        "Actor 分包合并或跨文件继承结果不正确")
+    assert(data.invalidRejected, "错误的 Actor 分包没有被拒绝")
+end, "Actor 分包保留跨文件继承和格式校验")
+
+test.system("core_lifecycle", "catalog_package_deserialization", {}, function(data)
+    assert(data.recipeId == "recipe:test" and data.buffId == "buff:test", "本体分包解析结果错误")
+    assert(data.noNestedCacheBuild and data.strictBuffRejected, "分包重复写缓存或丢失 Buff 严格解析")
+end, "整包缓存内的配方和 Buff 分包直接解析")
+
+for _, mode in ipairs({ "complete", "busy", "completion", "budget", "failed", "cancel" }) do
+    test.system("core_lifecycle", "item_sprite_compilation_pipeline", { mode = mode }, function(data)
+        assert(data.started == 2 and data.disposed == 1, "图片请求未并行发出或未释放")
+        assert(#data.addresses == 2 and data.addresses[1] == "A" and data.addresses[2] == "B",
+            "图片请求没有按首次出现顺序去重，或包含抽象定义")
+        assert(data.readinessCaseSensitive, "就绪依赖索引错误合并了大小写不同的地址")
+        assert(not data.builtWithoutDependencies, "物品在所需主图或状态图就绪前编译")
+        if mode == "complete" or mode == "busy" or mode == "completion" or mode == "budget" then
+            assert(data.beforeAllSprites >= 2 and not data.pendingSprites,
+                "图片等待期间没有编译可用定义，或共享图片依赖未完成")
+            assert(#data.order == 4 and data.order[1] == 0 and data.order[2] == 2
+                and data.order[3] == 1 and data.order[4] == 3,
+                "无图片、共享图片或状态图的编译顺序不符合就绪顺序")
+            assert(#data.published == 4 and data.published[1] == 0 and data.published[2] == 1
+                and data.published[3] == 2 and data.published[4] == 3,
+                "编译乱序后没有按原定义顺序发布")
+            if mode == "budget" then assert(data.maxWorkPerFrame == 1, "图片等待时超出帧预算") end
+            if mode == "completion" then assert(data.compiledInQueue > 0, "图片完成时没有及时推进就绪编译") end
+        else
+            assert(#data.published == 0 and data.pendingSprites, "失败或取消时发布了不完整定义")
+            assert((mode == "failed") == data.failed, "流水失败状态不正确")
+        end
+    end, "图片加载与物品编译流水：" .. mode)
+end
 
 for _, mode in ipairs({ "slow", "instant", "budget", "empty", "failed_start", "failed_complete", "cancel", "optional_missing" }) do
     test.system("core_lifecycle", "resource_queue", { mode = mode }, function(data)

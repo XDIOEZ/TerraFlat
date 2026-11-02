@@ -158,6 +158,7 @@ public partial class SaveDataMgr
     /// <param name="loadSavePath">存档路径</param>
     public bool LoadSaveByDisk(string loadSavePath)
     {
+        LastArchiveError = null;
         SaveData = null;
         CloseSqliteArchive();
         ResetChunkDifferenceState();
@@ -167,7 +168,11 @@ public partial class SaveDataMgr
             string path = NormalizeSavePath(loadSavePath);
             if (path.EndsWith(".bytes", StringComparison.OrdinalIgnoreCase))
                 throw new SaveVersionIncompatibleException("开发期 .bytes 存档不支持导入，请创建 SQLite 新世界；原文件已保留。");
-            if (!File.Exists(path)) return false;
+            if (!File.Exists(path))
+            {
+                LastArchiveError = "存档文件不存在。";
+                return false;
+            }
             return LoadSqliteArchive(path);
         }
         catch (Exception exception)

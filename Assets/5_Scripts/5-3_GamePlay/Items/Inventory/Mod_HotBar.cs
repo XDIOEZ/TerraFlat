@@ -112,6 +112,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         [System.NonSerialized]
         public Mod_HotBar Owner;
 
+        public override int ItemSlotWorldInfluencePriority => 100;
+
         public override void OnValidate()
         {
             base.OnValidate();
@@ -259,6 +261,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private InputAction _directHotbarAction;
     private InputAction _previousHotbarAction;
     private InputAction _nextHotbarAction;
+    private Item continuousUseItem;
+    private IContinuousHeldItemUse continuousUseModule;
 
     public Inventory_Data Data => RuntimeInventory?.Data;
     public List<ItemSlot_UI> itemSlot_UI => RuntimeInventory?.itemSlot_UI;
@@ -289,6 +293,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     protected override void OnLoad()
     {
+        StopHeldItemDrawAnimation();
         ResetSavedInventoryCache();
         runtimeUnloading = false;
         heldItemSyncPending = true;
@@ -504,6 +509,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     public override void ModUpdate(float deltaTime)
     {
         RuntimeInventory?.ModUpdate(deltaTime);
+        ContinueHeldItemUse();
     }
 
 #endregion
@@ -653,9 +659,11 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             throw new System.InvalidOperationException("[Mod_HotBar] Data 为空，无法初始化快捷栏槽位");
         }
 
+        bool layoutChanged = false;
         if (Data.itemSlots == null)
         {
             Data.itemSlots = new List<ItemSlot>();
+            layoutChanged = true;
         }
 
         int targetCount = Mathf.Max(HotBarMaxVolume, 1);
@@ -665,14 +673,17 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             if (i >= Data.itemSlots.Count)
             {
                 Data.itemSlots.Add(new ItemSlot(i));
+                layoutChanged = true;
             }
             else if (Data.itemSlots[i] == null)
             {
                 Data.itemSlots[i] = new ItemSlot(i);
+                layoutChanged = true;
             }
 
             Data.itemSlots[i].Index = i;
         }
+        if (layoutChanged) Data.NotifySlotsChanged();
     }
 
     private void EnsureHotBarUIOnLoad()
@@ -797,6 +808,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void UnbindHotbarInput()
     {
+        ClearContinuousUse();
         if (_inputController != null)
         {
             _inputController.RightClick -= OnRightClickPerformed;
@@ -830,10 +842,11 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnRightClickPerformed()
     {
+        ClearContinuousUse();
         // 本机库存尚未确认时先保留当前物品，避免使用消耗被旧快照覆盖。
         if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
-        if (IsGameplayInputLocked())
+        if (IsGameplayInputLocked() || IsDrawingHeldItem)
         {
             return;
         }
@@ -843,6 +856,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
 
         SyncCurrentHeldItemWithSlot();
+
+        if (IsDrawingHeldItem) return;
 
         Item heldItem = CurentSelectItem;
         // 使用只发给当前槽位中真正由本玩家持有的实例。
@@ -878,6 +893,54 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
         heldItem.Act();
+        if (_inputController?.IsRightClickHeld != true || heldItem == null ||
+            !ReferenceEquals(heldItem, CurentSelectItem) || !heldItem.InHand)
+            return;
+
+        // 仅允许显式声明持续使用的工具续做，界面、消耗品及建筑仍只响应一次按下。
+        foreach (Module module in heldItem.itemMods.Mods.Values)
+        {
+            if (module is not IContinuousHeldItemUse { SupportsHeldUseContinuation: true } continuous ||
+                !module.IsRuntimeLoaded ||
+                !module.isActiveAndEnabled)
+                continue;
+            if (continuousUseModule != null)
+                throw new InvalidOperationException($"手持物品 {heldItem.name} 存在多个长按使用模块。");
+            continuousUseItem = heldItem;
+            continuousUseModule = continuous;
+        }
+    }
+
+    /// <summary>只在同一次右键、同一手持物且仍有玩法资格时延续工作。</summary>
+    private void ContinueHeldItemUse()
+    {
+        if (continuousUseModule == null)
+            return;
+
+        if (IsDrawingHeldItem || continuousUseItem == null || _inputController == null ||
+            !_inputController.IsRightClickHeld || _inputController.IsGameplayInputLocked ||
+            (!_inputController.IsUsingMobile && IsPointerOverUI()) ||
+            !ReferenceEquals(CurentSelectItem, continuousUseItem) ||
+            !ReferenceEquals(continuousUseItem.itemData, CurrentSelectItemSlot?.itemData) ||
+            !continuousUseItem.InHand || continuousUseItem.Owner != item ||
+            continuousUseItem.DestructionHandled ||
+            continuousUseModule is not Module module || module == null || !module.IsRuntimeLoaded ||
+            !module.isActiveAndEnabled || module.item != continuousUseItem ||
+            (item is Player { IsLocalProfile: true } &&
+             ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()))
+        {
+            ClearContinuousUse();
+            return;
+        }
+
+        if (!continuousUseModule.ContinueHeldUse())
+            ClearContinuousUse();
+    }
+
+    private void ClearContinuousUse()
+    {
+        continuousUseItem = null;
+        continuousUseModule = null;
     }
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
@@ -989,6 +1052,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition)
     {
+        if (IsDrawingHeldItem) return false;
         Mod_DiscardItem discardModule = item?.GetComponentInChildren<Mod_DiscardItem>(true);
         return discardModule?.TryDropHeldItemAtScreenPosition(screenPosition) == true;
     }
@@ -1012,6 +1076,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         targetIndex = NormalizeIndex(targetIndex);
         bool selectionChanged = targetIndex != CurrentIndex;
+        if (selectionChanged)
+            ClearContinuousUse();
         CurrentIndex = targetIndex;
         if (animateSelection)
             MoveSelectBox(targetIndex);
@@ -1051,6 +1117,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         catch
         {
             // 配置失败只回收外壳，不能保存半初始化模块覆盖真实库存。
+            StopHeldItemDrawAnimation();
             itemInstance.OnUIRefresh -= RefreshUI;
             itemInstance.OnItemDestroy -= OnDestroyCurrentObject;
             actorRenderEffects?.UnregisterExternalRenderers(itemInstance.transform);
@@ -1070,6 +1137,9 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     private void UnloadCurrentItem()
     {
         Item previous = CurentSelectItem;
+        StopHeldItemDrawAnimation();
+        if (previous != null)
+            _inputController?.CancelHeldItemActions();
         // 先撤销绑定再触发模块事件，旧物品的回调不能卸下刚切换的新物品。
         CurentSelectItem = null;
         currentObject = null;
@@ -1143,6 +1213,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         faceMouse?.AddRotationTarget(tf, updateAfterPresentation: true);
         UpdateHeldItemPosition();
+        BeginHeldItemDrawAnimation(itemInstance);
 
         HeldItemChanged?.Invoke(data);
 

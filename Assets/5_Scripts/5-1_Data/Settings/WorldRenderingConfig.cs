@@ -357,14 +357,16 @@ public static class WorldRenderingConfigCatalog
 
     public static WorldRenderingConfig Default => cached ?? (cached = Load());
 
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration() => _ = Load();
+
     private static WorldRenderingConfig Load()
     {
-        TextAsset asset = Resources.Load<TextAsset>(ResourcePath);
-        if (asset == null)
+        WorldRenderingConfig config = BuiltInContentBinaryCatalog.ReadResource(ResourcePath, ParseResourceConfiguration);
+        if (config == null)
             throw new InvalidOperationException($"缺少世界渲染配置：Resources/{ResourcePath}.json");
 
-        WorldRenderingConfig config = JsonConfigurationCache.FromUnityJson<WorldRenderingConfig>(asset.text);
-        if (config == null || config.schemaVersion != 2 || config.preferences == null ||
+        if (config.schemaVersion != 2 || config.preferences == null ||
             config.shadows == null || config.shadows.contact == null || config.shadows.ecsContact == null ||
             config.shadows.groundElevation == null || config.occlusion == null || config.interactionOutline == null ||
             config.denseFog == null || config.zoomClouds == null || config.windStreaks == null || config.universeView == null ||
@@ -438,4 +440,8 @@ public static class WorldRenderingConfigCatalog
         }
         return config;
     }
+
+    private static WorldRenderingConfig ParseResourceConfiguration(string json)
+        => JsonConfigurationCache.FromUnityJson<WorldRenderingConfig>(json)
+           ?? throw new InvalidOperationException($"世界渲染配置结构无效：Resources/{ResourcePath}.json");
 }

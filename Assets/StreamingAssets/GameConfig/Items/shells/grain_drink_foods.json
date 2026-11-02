@@ -177,7 +177,7 @@
       "id": "Tea",
       "parent": "BasicFood_Base",
       "gameName": "茶",
-      "description": "泡茶喝",
+      "description": "以茶叶泡制的饮品，饮用后可补充水分。",
       "weight": 0.08,
       "volume": 0.2,
       "tags": [

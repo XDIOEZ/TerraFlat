@@ -48,6 +48,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
     private readonly Dictionary<RuntimeWorldAddress, ChunkState> observed = new();
     private readonly Queue<Vector2Int> pending = new();
     private readonly HashSet<Vector2Int> pendingSet = new();
+    private readonly WorldLiquidDiffusionBatch diffusionBatch = new();
     private long topologyVersion = 1;
     private bool applying;
     private bool disposed;
@@ -247,6 +248,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         observed.Clear();
         pending.Clear();
         pendingSet.Clear();
+        diffusionBatch.Reset();
     }
     #endregion
 
@@ -562,19 +564,18 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
                         continue;
                     }
                     if (!TryGetDiffusionTerrainSample(next, out RuntimeTerrainTileSample sample)) continue;
-                    int a = current.Terrain.GetLiquidLevel(current.LocalCell.x, current.LocalCell.y);
-                    int b = sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y);
-                    if (Math.Abs(a - b) < 2) continue;
-                    RuntimeTerrainTileSample donor = a > b ? current : sample;
-                    RuntimeTerrainTileSample receiver = a > b ? sample : current;
-                    if (!CanDiffuseIntoTerrainSample(donor, receiver) ||
-                        !WorldLiquidReplenishment.TryTransfer(donor, receiver, true)) continue;
+                    if (!diffusionBatch.TryBalance(current, sample)) continue;
                     WakeCross(position);
                     WakeCross(next);
                 }
             }
+            diffusionBatch.Commit();
         }
-        finally { applying = false; }
+        finally
+        {
+            diffusionBatch.Reset();
+            applying = false;
+        }
     }
 
     private bool TryGetDiffusionTerrainSample(Vector2Int cell, out RuntimeTerrainTileSample sample)
@@ -588,17 +589,5 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         return true;
     }
 
-    private static bool CanDiffuseIntoTerrainSample(RuntimeTerrainTileSample donor, RuntimeTerrainTileSample receiver)
-    {
-        string id = donor.Terrain.GetLiquidId(donor.LocalCell.x, donor.LocalCell.y);
-        if (string.IsNullOrEmpty(id)) return false;
-        int receiverLevel = receiver.Terrain.GetLiquidLevel(receiver.LocalCell.x, receiver.LocalCell.y);
-        if (receiverLevel > 0)
-            return string.Equals(id, receiver.Terrain.GetLiquidId(receiver.LocalCell.x, receiver.LocalCell.y),
-                StringComparison.OrdinalIgnoreCase);
-        LiquidCellValue baseline = receiver.Terrain.GetLiquidBaseline(receiver.LocalCell.x, receiver.LocalCell.y);
-        return baseline.LiquidLevel == 0 || string.Equals(id,
-            receiver.Terrain.LiquidTypes.GetId(baseline.LiquidTypeIndex), StringComparison.OrdinalIgnoreCase);
-    }
     #endregion
 }

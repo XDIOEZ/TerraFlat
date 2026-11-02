@@ -108,6 +108,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         {
             Name "Universal2D"
             Tags { "LightMode" = "Universal2D" }
+            Stencil { Ref 64 ReadMask 64 WriteMask 64 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma vertex WaterVertex
@@ -213,6 +214,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         {
             Name "UniversalForward"
             Tags { "LightMode" = "UniversalForward" }
+            Stencil { Ref 64 ReadMask 64 WriteMask 64 Comp Always Pass Replace }
 
             HLSLPROGRAM
             #pragma vertex UnlitVertex

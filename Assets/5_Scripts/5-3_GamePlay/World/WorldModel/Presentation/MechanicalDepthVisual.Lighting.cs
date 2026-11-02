@@ -42,8 +42,7 @@ public sealed partial class MechanicalDepthVisual
         MachineLightPresentation.ConfigureLight(facilityLight, lighting, power);
 
         PartVisual body = parts[facilityBodyPart];
-        Transform sortingRoot = body != null ? body.SubmittedRenderer?.GetPartSortingRoot(
-            ChunkDepthMeshRenderer.MachineDomain, entityId, body.Id) : null;
+        Transform sortingRoot = GetSubmittedPartSortingRoot(facilityBodyPart);
         if (!lighting.EmissiveSprite || sortingRoot == null)
         {
             if (poweredEmission != null) poweredEmission.enabled = false;

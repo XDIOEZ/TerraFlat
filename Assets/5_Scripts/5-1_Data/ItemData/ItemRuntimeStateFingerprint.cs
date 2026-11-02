@@ -101,15 +101,6 @@ public static class ItemRuntimeStateFingerprint
             hash.Add(player.hp.maxValue);
             AppendStrings(ref hash, player.hp.Weaknesses);
         }
-        hash.Add(player.defense != null);
-        if (player.defense != null)
-        {
-            if (player.defense.GetType() != typeof(Defense)) return false;
-            hash.Add(player.defense.Cutting);
-            hash.Add(player.defense.Piercing);
-            hash.Add(player.defense.Chopping);
-            hash.Add(player.defense.Blunt);
-        }
         hash.Add(player.Speed != null);
         if (player.Speed != null)
         {

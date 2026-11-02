@@ -86,6 +86,9 @@ public class Mod_HandMade : Module,IInventory
     protected override void OnUnload()
     {
         CleanupEventListeners();
+        if (inventoryRefDic != null)
+            foreach (Inventory inventory in inventoryRefDic.Values)
+                inventory?.UnbindRuntimeDataEvents();
     }
 
     #endregion
@@ -187,6 +190,7 @@ public class Mod_HandMade : Module,IInventory
         {
             inventoryModuleData.Data[inputInventory.Data.Name] = inputInventory.Data;
             inventoryModuleData.Data[outputInventory.Data.Name] = outputInventory.Data;
+            inventoryModuleData.NotifyInventoryMapStructureChanged();
         }
         else
     {

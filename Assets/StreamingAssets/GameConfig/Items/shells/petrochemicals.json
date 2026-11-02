@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "CrudeOil",
+      "combustibility": { "ignitionProbability": 0.001, "fuelSeconds": 1000 },
       "parent": "BasicItem_Base",
       "gameName": "石油",
       "description": "每份为1升石油原料。石油湖液体盛装后加热至100℃提取；4份在350℃蒸馏得到2份燃油、1份石脑油和1份沥青。",
@@ -212,6 +213,7 @@
     },
     {
       "id": "FuelOil",
+      "combustibility": { "ignitionProbability": 0.001, "fuelSeconds": 1000 },
       "parent": "BasicItem_Base",
       "gameName": "燃油",
       "description": "石油蒸馏取得的液体燃料，每份1升。投入温度不低于20℃的坩埚后变为液体燃油，可经储罐和管道供给燃油发动机。",

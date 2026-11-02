@@ -83,14 +83,15 @@ public static class GameplayCombatBridge
             CreatureAttack = values.AttackMultiplier, CreatureHealth = values.MaxHealthMultiplier };
     }
 
-    /// <summary>冷/旧路径把托管四类数值转换为 Native 可用值。</summary>
-    public static float4 Values(CombatDamage damage) => damage == null ? float4.zero : new float4(damage.Cutting, damage.Piercing, damage.Chopping, damage.Blunt);
+    /// <summary>托管伤害配置转换成物理、火焰、辐射、真实四通道。</summary>
+    public static float4 Values(CombatDamage damage) => damage == null ? float4.zero : new float4(damage.Physical, damage.Fire, damage.Radiation, damage.True);
 
-    /// <summary>旧接收器仍使用现有序列化防御对象，只在结算入口转换。</summary>
-    public static float4 Values(CombatDefense defense) => new float4(0f, 0f, 0f, defense?.Physical ?? 0f);
+    /// <summary>防御只存在于三种可防护伤害通道。</summary>
+    public static float4 Values(CombatDefense defense) => new float4(defense?.Physical ?? 0f, defense?.Fire ?? 0f, defense?.Radiation ?? 0f, 0f);
 
-    /// <summary>把结算分量转换成旧反馈事件所需类型，托管分配不进入 ECS 热路径。</summary>
-    public static CombatDamage LegacyValues(float4 values) => new CombatDamage(values.x, values.y, values.z, values.w);
+    /// <summary>从纯数值结算恢复对应的命中反馈类型。</summary>
+    public static CombatDamage LegacyValues(float4 values, byte impactKind = 0) =>
+        new(values.x, values.y, values.z, values.w, (CombatDamageKind)impactKind);
 
     /// <summary>真实 Item 发送端适配为纯上下文；武器身份与持有者击杀归因分开保存。</summary>
     public static CombatDamageContext Context(IDamageSender sender, CombatClock clock)
@@ -105,7 +106,8 @@ public static class GameplayCombatBridge
             CreditItemId = NarrativeItemId(credit?.itemData?.IDName),
             WeaponItemId = NarrativeItemId(item != credit ? item?.itemData?.IDName : null),
             DeathCauseId = sender is IDeathCauseSource reason ? NarrativeCauseId(reason.DeathCauseId) : default,
-            Faction = FactionRelationService.GetFactionId(item), Damage = Values(sender.DamageValues), Clock = clock,
+            Faction = FactionRelationService.GetFactionId(item), Damage = Values(sender.DamageValues),
+            ImpactKind = (byte)(sender.DamageValues?.DominantKind ?? CombatDamageKind.None), Clock = clock,
             Origin = sender is Mod_Damage weapon ? (float2)weapon.DamageOrigin : item != null ? (float2)(Vector2)item.transform.position : float2.zero,
             SourceIsPlayer = (byte)(ActorIdentity.IsPlayer(item) ? 1 : 0),
             SlowEnabled = (byte)(slow != null && slow.HitSlowdownEnabled ? 1 : 0),

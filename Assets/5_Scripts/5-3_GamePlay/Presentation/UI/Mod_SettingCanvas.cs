@@ -294,7 +294,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             GameManager.Instance.StartCoroutine(
                 GameManager.Instance.BackToHelloScene_Coroutine(
                     item,
-                    saveCurrentGame: saveBeforeExit));
+                    saveCurrentGame: saveBeforeExit,
+                    onSaveFailed: () => exitConfirmation.TryClose()));
             return;
         }
 
@@ -302,7 +303,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             GameManager.Instance.BackToHelloScene_Coroutine(
                 item,
                 onComplete: QuitApplication,
-                saveCurrentGame: saveBeforeExit));
+                saveCurrentGame: saveBeforeExit,
+                onSaveFailed: () => exitConfirmation.TryClose()));
     }
 
     /// <summary>退出游戏构建；编辑器中对应停止播放。</summary>

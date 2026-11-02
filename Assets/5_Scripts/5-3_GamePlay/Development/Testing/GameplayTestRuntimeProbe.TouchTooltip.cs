@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Newtonsoft.Json.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -63,28 +64,22 @@ public static partial class GameplayTestRuntimeProbe
             panel.Open();
             yield return null;
             var mouse = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .4f, Screen.height * .6f) };
-            double hoverStarted = Time.unscaledTimeAsDouble;
             scope.Slot.OnPointerEnter(mouse);
             InventoryItemTooltip tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
             Canvas tooltipCanvas = tooltip != null ? tooltip.GetComponent<Canvas>() : null;
             CanvasGroup tooltipGroup = tooltip != null ? tooltip.GetComponent<CanvasGroup>() : null;
             Canvas sourceCanvas = scope.Slot.GetComponentInParent<Canvas>();
-            bool hoverEarlyHidden = tooltipGroup != null && tooltipGroup.alpha <= .001f;
-            double hoverShownElapsed = -1d;
-            if (tooltipGroup != null && (!string.IsNullOrEmpty(panelPrefab) || mode == "inspect"))
-            {
-                // 逐帧采样正式悬停延迟，超时仍保留失败结果。
-                while (Time.unscaledTimeAsDouble - hoverStarted <= 1.15d)
-                {
-                    if (tooltipGroup.alpha > .99f)
-                    {
-                        hoverShownElapsed = Time.unscaledTimeAsDouble - hoverStarted;
-                        break;
-                    }
-                    yield return null;
-                }
-            }
-            bool hoverOpened = tooltipGroup != null && tooltipGroup.alpha > .99f;
+            // 鼠标进入事件结束就必须显示，不再跨帧等待。
+            bool hoverImmediate = tooltipGroup != null && tooltipGroup.alpha > .99f;
+            TMP_Text labels = tooltip?.transform.Find("ParameterLabels")?.GetComponent<TMP_Text>();
+            TMP_Text values = tooltip?.transform.Find("ParameterValues")?.GetComponent<TMP_Text>();
+            bool columnsAligned = labels != null && values != null &&
+                labels.alignment == TextAlignmentOptions.TopLeft &&
+                values.alignment == TextAlignmentOptions.TopRight &&
+                !string.IsNullOrEmpty(labels.text) && !string.IsNullOrEmpty(values.text) &&
+                Mathf.Abs(labels.rectTransform.anchoredPosition.y - values.rectTransform.anchoredPosition.y) < .1f &&
+                labels.rectTransform.anchoredPosition.x + labels.rectTransform.rect.width <=
+                values.rectTransform.anchoredPosition.x + .1f;
             bool tooltipAbovePanel = tooltipCanvas != null && tooltipCanvas.overrideSorting &&
                 tooltipCanvas.sortingLayerID == sourceCanvas.sortingLayerID && tooltipCanvas.sortingOrder > sourceCanvas.sortingOrder;
             bool tooltipInputTransparent = tooltip != null && !tooltip.GetComponent<CanvasGroup>().blocksRaycasts &&
@@ -135,8 +130,8 @@ public static partial class GameplayTestRuntimeProbe
             bool closedWithPanel = !InventoryItemTooltip.IsTouchPinned(scope.Slot);
             InventoryItemTooltip.DismissTouchAt(new Vector2(-1000f, -1000f));
             result = new JObject { ["visibleEarly"] = visibleEarly, ["opened"] = opened,
-                ["hoverEarlyHidden"] = hoverEarlyHidden, ["hoverShownElapsed"] = hoverShownElapsed,
-                ["hoverOpened"] = hoverOpened, ["hoverClosedWithPanel"] = hoverClosedWithPanel,
+                ["hoverImmediate"] = hoverImmediate, ["columnsAligned"] = columnsAligned,
+                ["hoverClosedWithPanel"] = hoverClosedWithPanel,
                 ["touchShownElapsed"] = touchShownElapsed,
                 ["tooltipAbovePanel"] = tooltipAbovePanel, ["tooltipInputTransparent"] = tooltipInputTransparent,
                 ["persistedAfterRelease"] = persisted, ["dismissedByOutsidePress"] = !InventoryItemTooltip.IsTouchPinned(scope.Slot),

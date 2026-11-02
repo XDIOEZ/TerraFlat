@@ -8,6 +8,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 public static partial class GameplayTestSystemProbe
 {
@@ -30,9 +31,11 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterUnifiedRenderingOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("rendering/unified_manager", CaptureUnifiedItemRenderingManager);
+        operations.Add("rendering/held_food_bites", CaptureHeldFoodShaderBites);
         operations.Add("rendering/item_sorting_configuration", CaptureItemConfiguredWorldSorting);
         operations.Add("rendering/presentation_sorting_domain", CapturePresentationSortingDomain);
         operations.Add("rendering/cold_projection_initialization", CaptureColdProjectionResourceInitialization);
+        operations.Add("rendering/visual_motion_interpolation", CaptureVisualMotionInterpolation);
         operations.Add("rendering/water_surface_palette", CaptureSharedWaterSurfaceMaterialPalette);
     }
 
@@ -383,6 +386,7 @@ public static partial class GameplayTestSystemProbe
         bool fixedFloorBelowActor = false, sourceGroupRemainsAtomic = false, hideKeepsRank = false;
         bool moveRestoresRawRank = false, destinationAndReentryRerank = false, removeRestoresRawRank = false;
         bool releaseRestoresRawRank = false, domainDisposeRestoresRawRank = false;
+        Mesh projectedParticleMesh = null;
         var rankProbeSources = new List<GameObject>();
         var rankProbeProjections = new List<WorldPresentationProjection>();
         var detachedRankTargets = new List<GameObject>();
@@ -419,6 +423,7 @@ public static partial class GameplayTestSystemProbe
             SpriteRenderer projectedGroupedSprite = escapedNestedRoot.Find("GroupedSprite").GetComponent<SpriteRenderer>();
             MeshRenderer projectedMesh = projectionA.transform.Find("MeshSource").GetComponent<MeshRenderer>();
             MeshRenderer projectedParticles = projectionA.transform.Find("ParticleSource/ProjectedParticles").GetComponent<MeshRenderer>();
+            projectedParticleMesh = projectedParticles.GetComponent<MeshFilter>().sharedMesh;
             SpriteRenderer projectedSecondSprite = projectionB.GetComponent<SpriteRenderer>();
             Renderer[] projectedRenderersA = projectionA.GetComponentsInChildren<Renderer>(true);
             copiedRendererCount = projectedRenderersA.Length + (projectedGroupedSprite != null ? 1 : 0) +
@@ -704,6 +709,7 @@ public static partial class GameplayTestSystemProbe
             ["sharedSourceHeldUntilLastProjection"] = sharedSourceHeldUntilLastProjection,
             ["sharedSourceRestoredAfterLastProjection"] = sharedSourceRestoredAfterLastProjection,
             ["sourceRestored"] = sourceRestored,
+            ["ownedParticleMeshReleased"] = !ReferenceEquals(projectedParticleMesh, null) && projectedParticleMesh == null,
             ["registryReleased"] = registryReleased,
             ["domainsDisposed"] = domainsDisposed,
             ["sameRawYRankedAndSwapped"] = sameRawYRankedAndSwapped,
@@ -770,10 +776,9 @@ public static partial class GameplayTestSystemProbe
         var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<AiecsAnimationCatalog>(
             "Assets/6_Art/Generated/Actors/AIECS/生物动画目录.asset") ??
             throw new InvalidOperationException("AIECS 排序采样缺少正式动画目录。");
-        var cameraObject = new GameObject("[LuaAiecsSortingCamera]") { hideFlags = HideFlags.HideAndDontSave };
-        var scene = cameraObject.scene;
-        Camera camera = cameraObject.AddComponent<Camera>();
-        camera.orthographic = true; camera.orthographicSize = 10f; camera.aspect = 1f;
+        GameObject cameraObject = null;
+        Scene scene = default;
+        Scene originalActiveScene = SceneManager.GetActiveScene();
         var actorIds = new[] { "Wolf", "Chicken" };
         WorldSortingManager.ResolveItemVisualSortingKey(new ItemVisualDefinitionDto { SortingLayerName = "Default", SortingOrder = 37 },
             playerLayer, playerOrder, out int customLayer, out int customOrder);
@@ -789,8 +794,15 @@ public static partial class GameplayTestSystemProbe
         bool domainHiddenRanksRestored = false, domainProjectionReentered = false, domainReentryRanked = false;
         int projectedDomainBatchCount = 0;
         var records = new NativeArray<AiecsDisplayRecord>(4, Allocator.Temp);
+        JObject result;
         try
         {
+            scene = CreateGameplayTestProbeScene("[LuaAiecsSorting]");
+            cameraObject = new GameObject("[LuaAiecsSortingCamera]") { hideFlags = HideFlags.HideAndDontSave };
+            SceneManager.MoveGameObjectToScene(cameraObject, scene);
+            Camera camera = cameraObject.AddComponent<Camera>();
+            camera.enabled = false;
+            camera.orthographic = true; camera.orthographicSize = 10f; camera.aspect = 1f;
             display = new AiecsWorldRenderer(catalog, actorIds, scene, new AiecsWorldSortingKeys(keys, shadowLayer, shadowOrder));
             display.ShadowsEnabled = false;
             for (int i = 0; i < records.Length; i++)
@@ -981,7 +993,7 @@ public static partial class GameplayTestSystemProbe
             display.DrawRecords(records, null, default);
             bool hidden = display.BatchCount == 0;
             foreach (MeshRenderer value in refreshed) hidden &= !value.enabled;
-            return new JObject { ["batches"] = initialBatches, ["uploadedBytes"] = initialBytes, ["sharedYBatch"] = sharedYBatch,
+            result = new JObject { ["batches"] = initialBatches, ["uploadedBytes"] = initialBytes, ["sharedYBatch"] = sharedYBatch,
                 ["otherYBatch"] = otherYBatch, ["customBatch"] = customBatch,
                 ["updated"] = updated, ["reused"] = reused, ["culledBatches"] = culledBatches,
                 ["activeAfterCull"] = activeAfterCull, ["hidden"] = hidden,
@@ -995,7 +1007,8 @@ public static partial class GameplayTestSystemProbe
                 ["domainDifferentSourceYMerged"] = domainDifferentSourceYMerged,
                 ["domainSameSourceYSeparated"] = domainSameSourceYSeparated,
                 ["domainWaterLineUsesSourceCoordinates"] = domainWaterLineUsesSourceCoordinates,
-                ["projectedDomainBatchCount"] = projectedDomainBatchCount };
+                ["projectedDomainBatchCount"] = projectedDomainBatchCount,
+                ["probeSceneIsolated"] = cameraObject.scene == scene && display.PresentationRoot.gameObject.scene == scene };
         }
         finally
         {
@@ -1006,7 +1019,11 @@ public static partial class GameplayTestSystemProbe
             display?.Dispose();
             records.Dispose();
             UnityEngine.Object.DestroyImmediate(cameraObject);
+            if (scene.IsValid()) CloseGameplayTestProbeScene(scene);
         }
+        result["probeSceneReleased"] = !scene.IsValid();
+        result["activeSceneUnchanged"] = SceneManager.GetActiveScene() == originalActiveScene;
+        return result;
 #else
         throw new InvalidOperationException("AIECS 配置规则采样需要 Unity Editor 中的动画目录。");
 #endif

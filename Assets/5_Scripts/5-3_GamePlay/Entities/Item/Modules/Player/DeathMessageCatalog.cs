@@ -32,21 +32,27 @@ public sealed partial class DeathMessageCatalog
     private static DeathMessageCatalog LoadBuiltIn()
     {
         using var marker = CatalogLoadMarker.Auto();
-        TextAsset asset = Resources.Load<TextAsset>(ResourcePath);
-        if (asset == null)
+        CatalogData loaded = BuiltInContentBinaryCatalog.ReadResource(ResourcePath, ParseConfiguration);
+        if (loaded == null)
             throw new InvalidDataException($"死亡描述目录缺失：{ResourcePath}.json");
-        return Parse(asset.text);
+        return new DeathMessageCatalog(loaded);
     }
+
+    [BuiltInContentBake]
+    public static void BakeBuiltInConfiguration() => LoadBuiltIn();
 
     /// <summary>显式解析入口方便静态诊断，非法模板在加载时报告。</summary>
     public static DeathMessageCatalog Parse(string json)
     {
-        CatalogData loaded = JsonConfigurationCache.Deserialize<CatalogData>(json,
-            new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error });
+        CatalogData loaded = ParseConfiguration(json);
         if (loaded == null)
             throw new InvalidDataException("死亡描述目录为空。");
         return new DeathMessageCatalog(loaded);
     }
+
+    private static CatalogData ParseConfiguration(string json)
+        => JsonConfigurationCache.Deserialize<CatalogData>(json,
+            new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error });
 
     private void Validate()
     {

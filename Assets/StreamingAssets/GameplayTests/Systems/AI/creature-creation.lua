@@ -13,6 +13,8 @@ test.runtime("ai", "incremental_creature_creation", {}, function(data)
         "取消分帧创建后仍交付生物，或未执行一次回滚")
     assert(data.invalidCommitRejected and data.invalidCommitNotPublished and data.cleanupComplete,
         "失效落点仍发布了生物，或失败候选未清理")
+    assert(data.fishColdShellWithoutBody and data.fishBornWithMotionBody and data.fishCleaned,
+        "小鱼无预置刚体的外壳未能分帧完成物理租借、加载或出生回收")
     assert(data.hasLightController and data.noUnusedLight and data.radianceAdded and data.lightCreatedOnDemand,
         "普通动物预建了闲置光源，或获得光耀后未按需创建光源")
     assert(data.lightDisabled and data.lightReused, "光耀移除未关灯，或再次获得时重复创建光源")

@@ -34,12 +34,47 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
     local function luminance(color)
         return .2126 * linear(color[1]) + .7152 * linear(color[2]) + .0722 * linear(color[3])
     end
-    assert(data.panelVisible and #data.bars == 7, "本地玩家的生存状态条不完整")
+    assert(data.panelVisible and #data.bars == 5 and data.sliderCount == 4, "生存状态条未合并为五项，或仍有旧营养滑条")
+    assert(data.legendVisible == false, "食物营养图例行仍然显示")
     for _, bar in ipairs(data.bars) do
         local fill, text = luminance(bar.fill), luminance(bar.text)
         local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)
         assert(bar.visible and bar.fill[4] > .99 and bar.text[4] > .99 and contrast >= 4,
             bar.name .. "状态条的填充遮住数值文字")
+        if bar.name == "血量" then
+            assert(bar.fill[1] > bar.fill[2] and bar.fill[1] > bar.fill[3], "血量条没有使用红色")
+        elseif bar.name == "水" then
+            assert(bar.fill[3] > bar.fill[2] and bar.fill[2] > bar.fill[1], "水量条没有使用蓝色")
+        end
+        if bar.name == "食物" then
+            assert(#bar.segmentColors == 3, "食物条缺少三种营养颜色")
+            for index, color in ipairs(bar.segmentColors) do
+                assert((text + .05) / (luminance(color) + .05) >= 4 and color[4] > .99,
+                    "食物分段遮住总量文字")
+                local nextColor = bar.segmentColors[index % 3 + 1]
+                assert(math.abs(color[1] - nextColor[1]) + math.abs(color[2] - nextColor[2]) +
+                    math.abs(color[3] - nextColor[3]) > .2, "食物三段颜色无法区分")
+            end
+            local protein, fat, carbohydrates = bar.segmentColors[1], bar.segmentColors[2], bar.segmentColors[3]
+            assert(protein[3] > protein[1] and protein[1] > protein[2], "蛋白质颜色未排在食物条最左侧")
+            assert(fat[3] > fat[2] and fat[2] > fat[1], "脂肪颜色未留在食物条中间")
+            assert(carbohydrates[1] > carbohydrates[2] and carbohydrates[2] > carbohydrates[3],
+                "碳水颜色未排在食物条最右侧")
+        end
+    end
+    local total, maximum = 0, 0
+    for index = 1, 3 do
+        total = total + data.nutrition[index]
+        maximum = maximum + data.maxima[index]
+    end
+    local shownTotal, shownMaximum = string.match(data.foodText, "^(%d+)/(%d+)$")
+    assert(shownTotal and math.abs(tonumber(shownTotal) - total) <= .501 and
+        math.abs(tonumber(shownMaximum) - maximum) <= .501, "食物总量不是三项加算")
+    for index = 1, 3 do
+        local nutrientIndex = 4 - index
+        local expected = maximum > 0 and data.nutrition[nutrientIndex] / maximum or 0
+        assert(math.abs(data.fractions[index] - expected) < .0001,
+            "食物段未按蛋白质、脂肪、碳水顺序显示总容量比例")
     end
 end, "真实生存状态条文字与填充可读性")
 
@@ -56,6 +91,24 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
         expectedPages[page.controller] = nil
     end
     assert(next(expectedPages) == nil, "共用设置页漏装配")
+    local sidebar = data.sidebarVisuals
+    assert(sidebar and #sidebar.tabs >= 9, "设置左侧分页列表缺少按钮")
+    local requiredTabs = { ["镜头控制"] = true, ["设置页签_画质"] = true,
+        ["设置页签_语言"] = true, ["设置页签_调试"] = true }
+    local selectedCount = 0
+    for _, tab in ipairs(sidebar.tabs) do
+        local selected = tab.name == "镜头控制"
+        if selected then selectedCount = selectedCount + 1 end
+        requiredTabs[tab.name] = nil
+        local expectedBackground = selected and sidebar.activeBackground or sidebar.inactiveBackground
+        local expectedCaption = selected and sidebar.activeCaption or sidebar.inactiveCaption
+        for channel = 1, 4 do
+            assert(math.abs(tab.background[channel] - expectedBackground[channel]) < 0.002
+                and math.abs(tab.caption[channel] - expectedCaption[channel]) < 0.002,
+                "设置左侧页签选中与未选中颜色不统一：" .. tab.name)
+        end
+    end
+    assert(selectedCount == 1 and next(requiredTabs) == nil, "设置侧栏必须只有镜头页高亮，且包含画质、语言、调试页")
     assert(data.blocking and data.managerBlocking and data.navigationPrepared and data.interactive, "打开设置后没有接管玩法交互或可取消导航")
     assert(data.debugWorldLabelsSuppressed, "打开正常设置窗口时，头顶 AI 调试标签仍会覆盖可交互控件")
     assert(data.expectedChinese == "保存" and data.observedChinese == data.expectedChinese, "正式中文字符串表或 TMP Binder 没有刷新")
@@ -78,6 +131,20 @@ test.runtime("ui_settings", "settings_locale_close", {}, function(data)
     assert(data.inputBlockingRestored, "窗口关闭后残留玩法输入阻断")
     assert(data.localeRestored and data.volumeRestored and data.preferencesRestored, "测试改变的语言、音量或 PlayerPrefs 原值未恢复")
 end, "真实窗口清理和原语言、音量、偏好恢复")
+
+test.runtime("ui_settings", "new_game_window_close", {}, function(data)
+    assert(data.difficultyCloseStayedInNewGame, "关闭难度窗口误关新世界窗口，或没有回到名称页")
+    assert(data.scope == "live-isolated-world" and data.worldPageOpened, "正式新世界面板没有进入世界设置页")
+    assert(data.worldCloseText == data.expectedWorldCloseText and data.expectedWorldCloseText ~= "",
+        "世界设置页右上按钮没有显示本地化的关闭")
+    assert(data.worldCloseReturnedToIdentity and data.playerNameRetained and data.worldSeedRetained,
+        "世界设置页右上关闭没有回到名称页、保留窗口或保留输入值")
+    assert(data.bottomBackHiddenInWorld and data.bottomBackHiddenInIdentity,
+        "底部返回名称设置按钮仍然显示")
+    assert(data.identityBackText == data.expectedIdentityBackText and data.identityTopCloseClosesPanel,
+        "名称页右上按钮文案错误，或点击后没有关闭新世界窗口")
+    assert(data.panelUnregistered, "新世界关闭流程测试没有清理自有窗口")
+end, "关闭难度浮层仍留在名称页；世界页右上关闭回名称页并保留参数，名称页右上关闭窗口")
 
 test.runtime("ui_settings", "flick_settings_controls", {}, function(data)
     assert(data.active and data.scrollContainsOptions and data.wholeNumbers

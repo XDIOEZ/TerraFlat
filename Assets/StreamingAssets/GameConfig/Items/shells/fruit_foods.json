@@ -5,7 +5,7 @@
       "id": "Apple",
       "parent": "BasicFood_Base",
       "gameName": "苹果",
-      "description": "一天一苹果,医生远离我",
+      "description": "从苹果树上采摘的鲜甜果实，可直接食用，补充水分和营养。",
       "weight": 0.2,
       "volume": 0.25,
       "tags": [

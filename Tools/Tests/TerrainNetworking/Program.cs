@@ -24,3 +24,15 @@ foreach (var entry in expected)
     Console.WriteLine($"PASS {entry.Key}: {actual}");
 }
 Console.WriteLine($"PASS {expected.Count} terrain networking assertions (production state/cursor, no Unity session)");
+
+var liquid = GameplayTestNetworkTerrainRules.CaptureLiquidReplication();
+foreach (string key in new[] { "thawAccepted", "thawed", "snapshotAccepted", "snapshotKeptNewer",
+             "snapshotComplete", "batchAccepted", "clearedAndFresh", "oneBatch", "independent",
+             "unknownRejected", "duplicateRejected", "badLevelRejected", "atomic", "baselineKept", "reloadedUpdate" })
+{
+    if (!liquid.TryGetValue(key, out object actual) || !Equals(actual, true))
+        throw new InvalidOperationException($"FAIL {key}: actual={actual}");
+    Console.WriteLine($"PASS {key}: {actual}");
+}
+if (Convert.ToInt32(liquid["thawBatches"]) != 1) throw new InvalidOperationException("FAIL thawBatches");
+Console.WriteLine("PASS liquid replication assertions (production state/cursor, no Unity session)");

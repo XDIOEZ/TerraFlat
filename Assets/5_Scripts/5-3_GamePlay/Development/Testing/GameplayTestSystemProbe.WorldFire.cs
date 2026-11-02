@@ -13,32 +13,36 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject CaptureWorldFireRules(JObject args)
     {
-        WorldFireSimulationKernel.Parameters settings = WorldFireSimulationKernel.Parameters.Default;
-        var input = new WorldFireSimulationKernel.Input[6];
+        var input = new WorldFireSimulationKernel.Input[5];
         for (int i = 0; i < input.Length; i++) input[i] = new WorldFireSimulationKernel.Input
         {
-            State = new WorldFireCellState { CellIndex = i, Intensity = .25f }, HasFuel = 1, HasGrass = 1,
-            SurfaceFuelDurationSeconds = settings.GrassBurnDurationSeconds, SupportsCombustion = 1, RandomSeed = 1
+            State = new WorldFireCellState { CellIndex = i, Intensity = 1f },
+            Combustibility = new WorldCombustibilityValue(.5f, 100f), HasBurningNeighbour = 1, RandomSeed = 1
         };
-        input[1].HasFuel = 0;
-        input[2].Rain = 1f;
-        input[3].WaterContact = 1;
-        input[4].SupportsCombustion = 0;
-        input[5].State.Intensity = 0f; input[5].IgnitionPressure = 1000000f;
+        input[1].Combustibility = new WorldCombustibilityValue(1f, .5f);
+        input[2].State.Intensity = 0f; input[2].Combustibility = new WorldCombustibilityValue(0f, 100f);
+        input[3].State.Intensity = 0f; input[3].Combustibility = new WorldCombustibilityValue(1f, 100f);
+        input[4].State.Intensity = 0f; input[4].HasBurningNeighbour = 0;
         var output = new WorldFireSimulationKernel.Output[input.Length];
-        WorldFireSimulationKernel.Advance(settings, input, output, 1f);
+        WorldFireSimulationKernel.Advance(input, output, 1f);
         var data = new JObject
         {
-            ["growth"] = output[0].State.Intensity, ["decay"] = output[1].State.Intensity,
-            ["rain"] = output[2].State.Intensity, ["water"] = output[3].State.Intensity,
-            ["oxygen"] = output[4].State.Intensity, ["newFire"] = output[5].State.Intensity,
-            ["newExposure"] = output[5].ExposureSeconds, ["waterExposure"] = output[3].ExposureSeconds
+            ["steadyFire"] = output[0].State.Intensity, ["consumedSeconds"] = output[0].ConsumedFuelSeconds,
+            ["exhaustedFire"] = output[1].State.Intensity, ["exhaustedConsumption"] = output[1].ConsumedFuelSeconds,
+            ["zeroProbability"] = output[2].State.Intensity, ["certainProbability"] = output[3].State.Intensity,
+            ["newConsumption"] = output[3].ConsumedFuelSeconds, ["noNeighbour"] = output[4].State.Intensity
         };
-        input[0].State.SurfaceFuelBurnSeconds = 9.9f;
-        input[1] = input[0]; input[1].State.SurfaceFuelBurnSeconds = 59.9f; input[1].SurfaceFuelDurationSeconds = 60f;
-        WorldFireSimulationKernel.Advance(settings, input, output, 1f);
-        data["grassConsumed"] = output[0].ConsumedSurfaceFuel;
-        data["floorConsumed"] = output[1].ConsumedSurfaceFuel;
+        WorldFireSimulationKernel.Advance(input, output, 100f);
+        data["hundredSecondsFire"] = output[0].State.Intensity;
+        data["hundredSecondsConsumed"] = output[0].ConsumedFuelSeconds;
+        var one = new[] { new WorldFireSimulationKernel.Input
+        { Combustibility = new WorldCombustibilityValue(.5f, 100f), HasBurningNeighbour = 1, RandomSeed = 1 } };
+        var oneOutput = new WorldFireSimulationKernel.Output[1];
+        WorldFireSimulationKernel.Advance(one, oneOutput, 1f / 60f);
+        float originalCycle = oneOutput[0].State.Intensity;
+        WorldFireSimulationKernel.Advance(one, oneOutput, .1f);
+        float environmentCycle = oneOutput[0].State.Intensity;
+        data["probabilityTimeScaled"] = originalCycle == 0f && environmentCycle == 1f;
 
         using var world = new WorldRuntime("fire_rules", 1);
         var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
@@ -74,16 +78,164 @@ public static partial class GameplayTestSystemProbe
         var stressInput = new WorldFireSimulationKernel.Input[10000];
         var stressOutput = new WorldFireSimulationKernel.Output[10000];
         for (int i = 0; i < stressInput.Length; i++) stressInput[i] = new WorldFireSimulationKernel.Input
-        { State = states[i], HasFuel = 1, SupportsCombustion = 1, SurfaceFuelDurationSeconds = 10f };
-        WorldFireSimulationKernel.Advance(settings, stressInput, stressOutput, 1f / 60f);
+        { State = states[i], Combustibility = new WorldCombustibilityValue(.1f, 100f) };
+        WorldFireSimulationKernel.Advance( stressInput, stressOutput, 1f / 60f);
         long allocations = GC.GetAllocatedBytesForCurrentThread();
         long started = Stopwatch.GetTimestamp();
-        for (int i = 0; i < 60; i++) WorldFireSimulationKernel.Advance(settings, stressInput, stressOutput, 1f / 60f);
+        for (int i = 0; i < 60; i++) WorldFireSimulationKernel.Advance( stressInput, stressOutput, 1f / 60f);
         data["kernelAllocatedBytes"] = GC.GetAllocatedBytesForCurrentThread() - allocations;
         data["kernelMeanMilliseconds"] = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency / 60d;
         data["kernelCells"] = stressOutput.Length;
+        CaptureCombustibilityLayerRules(data);
+        CaptureWorldFireSimulationPipelineRules(data);
+        CaptureWorldFireDirtyFrontierRules(data);
         CaptureWorldFireCrossChunkHeatRules(data);
         return data;
+    }
+
+    private static void CaptureCombustibilityLayerRules(JObject data)
+    {
+        using var buffer = new ChunkTerrainBuffer(2, 1);
+        using var terrain = buffer.Seal();
+        terrain.CacheCombustibilityBase(0, new WorldCombustibilityValue(.1f, 100f));
+        terrain.ConsumeCombustibilityFuel(0, 40f);
+        data["remainingFuel"] = terrain.GetCombustibility(0, 0).FuelSeconds;
+        var field = new WorldCombustibilitySourceField();
+        field.Changed += (cell, value) => terrain.SetCombustibilitySourceContribution(cell.X, value);
+        object first = new(), second = new();
+        var cells = new[] { new Int2(0, 0) };
+        field.ReplaceSource(first, cells, new WorldCombustibilityValue(.4f, 50f));
+        field.ReplaceSource(second, cells, new WorldCombustibilityValue(.2f, 20f));
+        data["combinedProbability"] = terrain.GetCombustibility(0, 0).IgnitionProbability;
+        data["combinedFuel"] = terrain.GetCombustibility(0, 0).FuelSeconds;
+        field.ReplaceSource(first, cells, new WorldCombustibilityValue(.4f, 50f));
+        data["repeatedSourceFuel"] = terrain.GetCombustibility(0, 0).FuelSeconds;
+        field.RemoveSource(first);
+        data["removedSourceFuel"] = terrain.GetCombustibility(0, 0).FuelSeconds;
+        terrain.SetCombustibility(1, 0, new WorldCombustibilityValue(.001f, 1000f));
+        data["editedProbability"] = terrain.GetCombustibility(1, 0).IgnitionProbability;
+        data["editedFuel"] = terrain.GetCombustibility(1, 0).FuelSeconds;
+        terrain.ConsumeCombustibilityFuel(1, 1000f);
+        var saved = terrain.CopyCombustibilityChanges();
+        using var restoredBuffer = new ChunkTerrainBuffer(2, 1);
+        using var restored = restoredBuffer.Seal();
+        restored.RestoreCombustibilityChanges(saved);
+        data["exhaustedSavedFuel"] = restored.GetCombustibility(1, 0).FuelSeconds;
+        data["exhaustedSavedCells"] = saved.Length;
+        var encoded = MemoryPack.MemoryPackSerializer.Serialize(CombustibilityCellSaveData.Capture(saved[1]));
+        data["fuelSaveRoundTrip"] = MemoryPack.MemoryPackSerializer.Deserialize<CombustibilityCellSaveData>(encoded).ConsumedFuelSeconds;
+        var legacy = new ChunkSaveRecord();
+        legacy.FireCells.Add(new FireCellSaveData { CellIndex = 0, Intensity = 1f, SurfaceFuelBurnSeconds = 42f });
+        var envelope = new SqliteChunkSnapshot { Terrain = MemoryPack.MemoryPackSerializer.Serialize(legacy) };
+        var upgraded = SaveDataMgr.ArchiveSchemas.MigrateRecord(new FlatWorld.Persistence.SaveArchiveRecord(
+            "chunk", "rules", "chunk:0,0", 0, 0, "flatworld.chunk", 1, MemoryPack.MemoryPackSerializer.Serialize(envelope)));
+        var migrated = MemoryPack.MemoryPackSerializer.Deserialize<ChunkSaveRecord>(
+            MemoryPack.MemoryPackSerializer.Deserialize<SqliteChunkSnapshot>(upgraded.Payload).Terrain);
+        data["migratedConsumedFuel"] = migrated.CombustibilityCells[0].ConsumedFuelSeconds;
+        data["migratedChunkSchema"] = upgraded.SchemaVersion;
+        using var oilBuffer = new ChunkTerrainBuffer(1, 1);
+        using var oil = oilBuffer.Seal();
+        oil.CacheCombustibilityBase(0, new WorldCombustibilityValue(.001f, 1000f), 17);
+        oil.ConsumeCombustibilityFuel(0, 100f);
+        oil.CacheCombustibilityBase(0, new WorldCombustibilityValue(.001f, 900f), 17);
+        data["sameMaterialRemainingFuel"] = oil.GetCombustibility(0, 0).FuelSeconds;
+        int changes = 0;
+        oil.Changed += change => { if (change.Kind == TerrainChangeKind.Combustibility) changes++; };
+        oil.CacheCombustibilityBase(0, new WorldCombustibilityValue(.1f, 60f), 18);
+        data["newMaterialRemainingFuel"] = oil.GetCombustibility(0, 0).FuelSeconds;
+        data["newMaterialConsumptionNotifications"] = changes;
+        using var sourceBuffer = new ChunkTerrainBuffer(1, 1);
+        using var sourceTerrain = sourceBuffer.Seal();
+        sourceTerrain.SetCombustibilitySourceContribution(0, new WorldCombustibilityValue(.1f, 100f));
+        sourceTerrain.ConsumeCombustibilityFuel(0, 40f);
+        sourceTerrain.SetCombustibilitySourceContribution(0, default, preserveFuelConsumption: true);
+        sourceTerrain.SetCombustibilitySourceContribution(0, new WorldCombustibilityValue(.1f, 100f));
+        data["rehydratedSourceFuel"] = sourceTerrain.GetCombustibility(0, 0).FuelSeconds;
+        sourceTerrain.SetCombustibility(0, 0, new WorldCombustibilityValue(0f, 10f));
+        data["absoluteEditedFuel"] = sourceTerrain.GetCombustibility(0, 0).FuelSeconds;
+        data["absoluteEditedProbability"] = sourceTerrain.GetCombustibility(0, 0).IgnitionProbability;
+    }
+
+    private static void CaptureWorldFireSimulationPipelineRules(JObject data)
+    {
+        string key = "__lua_fire_pipeline_" + Guid.NewGuid().ToString("N");
+        WorldRuntime world = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 1);
+        try
+        {
+            var address = new FlatWorld.WorldModel.WorldAddress("surface", new Int2(0, 0));
+            var profile = new ChunkGenerationProfileSnapshot("fire_pipeline", 1, 100, 100);
+            var request = world.BeginChunkGeneration(address, 1, profile);
+            using var buffer = new ChunkTerrainBuffer(100, 100);
+            using var generation = new ChunkGenerationResult(request, buffer);
+            if (!world.TryCommit(generation, out string reason) || !world.TryGetChunk(address, out var chunk))
+                throw new InvalidOperationException(reason);
+            var fires = new WorldFireCellState[10000];
+            for (int i = 0; i < fires.Length; i++)
+            {
+                chunk.Terrain.SetCombustibility(i % 100, i / 100, new WorldCombustibilityValue(.1f, 100f));
+                fires[i] = new WorldFireCellState { CellIndex = i, Intensity = 1f };
+            }
+            chunk.Terrain.SetFireStatesBatch(fires);
+            var simulation = new WorldFireSimulationContext(world, 1);
+            simulation.Simulate(1f / 60f, sampleWorldClock: false);
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            long started = Stopwatch.GetTimestamp();
+            for (int i = 0; i < 10; i++) simulation.Simulate(1f / 60f, sampleWorldClock: false);
+            data["pipelineAllocatedBytes"] = GC.GetAllocatedBytesForCurrentThread() - allocated;
+            data["pipelineMeanMilliseconds"] = (Stopwatch.GetTimestamp() - started) * 1000d / Stopwatch.Frequency / 10d;
+            data["pipelineCells"] = simulation.ActiveFireCount;
+            data["pipelineRemainingFuel"] = chunk.Terrain.GetCombustibility(50, 50).FuelSeconds;
+        }
+        finally { GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world); }
+    }
+
+    private static void CaptureWorldFireDirtyFrontierRules(JObject data)
+    {
+        string key = "__lua_fire_frontier_" + Guid.NewGuid().ToString("N");
+        WorldRuntime world = GameplayWorldRegistry.GetOrCreateOwnedWorldModel(key, 1);
+        try
+        {
+            var left = CreateWorldFireHeatRuleChunk(world, Vector2Int.zero);
+            var right = CreateWorldFireHeatRuleChunk(world, new Vector2Int(16, 0));
+            left.Terrain.SetCombustibility(15, 5, new WorldCombustibilityValue(1f, 10f));
+            right.Terrain.SetCombustibility(0, 5, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetFire(15, 5, 255);
+            var simulation = new WorldFireSimulationContext(world, 1);
+            ulong startingTopology = left.Terrain.ActiveFireTopologyRevision;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierCrossChunkIgnited"] = right.Terrain.GetFireState(0, 5).Intensity;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierCrossChunkFuel"] = right.Terrain.GetCombustibility(0, 5).FuelSeconds;
+            data["frontierStableBurningTopology"] = left.Terrain.ActiveFireTopologyRevision == startingTopology;
+
+            // 外部把燃料清零后，缓存邻居不能继续点燃新火。
+            left.Terrain.SetCombustibility(15, 5, new WorldCombustibilityValue(1f, 0f));
+            right.Terrain.SetFire(0, 5, 0);
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierExhaustedSource"] = left.Terrain.GetFireState(15, 5).Intensity;
+            data["frontierNoIgnitionWithoutFuel"] = right.Terrain.GetFireState(0, 5).Intensity;
+
+            left.Terrain.SetCombustibility(2, 2, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetCombustibility(10, 9, new WorldCombustibilityValue(1f, 10f));
+            left.Terrain.SetFire(2, 2, 255);
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            ulong beforeSwap = left.Terrain.ActiveFireTopologyRevision;
+            left.Terrain.SetFireStatesBatch(new[]
+            {
+                new WorldFireCellState { CellIndex = 2 + 2 * 16 },
+                new WorldFireCellState { CellIndex = 10 + 9 * 16, Intensity = 1f }
+            });
+            data["frontierSwapSameCount"] = left.Terrain.ActiveFireCellIndices.Count;
+            data["frontierSwapTopologyChanged"] = left.Terrain.ActiveFireTopologyRevision > beforeSwap;
+            simulation.Simulate(.1f, sampleWorldClock: false);
+            data["frontierSwapNewFuel"] = left.Terrain.GetCombustibility(10, 9).FuelSeconds;
+            data["frontierSwapOldFuel"] = left.Terrain.GetCombustibility(2, 2).FuelSeconds;
+            ulong afterSimulation = left.Terrain.ActiveFireTopologyRevision;
+            int noChanges = left.Terrain.SetFireStatesBatch(new[] { left.Terrain.GetFireState(10, 9) });
+            data["frontierNoopTopologyStable"] = noChanges == 0 &&
+                left.Terrain.ActiveFireTopologyRevision == afterSimulation;
+        }
+        finally { GameplayWorldRegistry.ReleaseOwnedWorldModel(key, world); }
     }
 
     private static void CaptureWorldFireCrossChunkHeatRules(JObject data)

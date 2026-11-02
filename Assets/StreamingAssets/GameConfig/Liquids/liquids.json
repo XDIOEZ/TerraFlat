@@ -312,6 +312,7 @@
     },
     {
       "id": "core:crude_oil",
+      "combustibility": { "ignitionProbability": 0.001, "fuelSeconds": 1000 },
       "displayName": "石油",
       "description": "天然石油，可盛装或泵送。在容器中加热至100℃后，每1升提取为一份石油原料，再进行蒸馏。",
       "category": "petroleum",
@@ -347,6 +348,7 @@
     },
     {
       "id": "core:fuel_oil",
+      "combustibility": { "ignitionProbability": 0.001, "fuelSeconds": 1000 },
       "displayName": "燃油",
       "description": "蒸馏得到的液体燃料，可通过液体管道供给燃油发动机。",
       "category": "petroleum",

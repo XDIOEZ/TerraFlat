@@ -170,6 +170,12 @@
       "enabled": true
     },
     {
+      "id": "item_slot_world_influence_gameplay",
+      "name": "嵌套槽位温度、辐射和污染来源",
+      "luaPath": "GameplayTests/Systems/Environment/item-slot-world-influence-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "dimension_cave_roundtrip",
       "name": "真实矿洞入口配对、完整迁移与返回地表",
       "luaPath": "GameplayTests/Systems/Dimension/gameplay.lua",
@@ -428,6 +434,12 @@
       "id": "testing_resource_cache_gameplay",
       "name": "Lua专用GameRes跨编译缓存与正式目录",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
+      "enabled": true
+    },
+    {
+      "id": "natural_item_decoupling_gameplay",
+      "name": "真实自然物的逻辑物理视觉分离",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/natural-decoupling-gameplay.lua",
       "enabled": true
     }
   ]

@@ -47,8 +47,8 @@ public sealed class RuntimeTileDefinition
         TileDataTemplate = template;
         Behaviours = behaviours.AsReadOnly();
         DamageProfile = dto.DamageProfile;
-        FireFuel = dto.DamageProfile?.ImpactMaterial == CombatImpactMaterial.Wood
-            ? new WorldFireFuelProfile(1f) : default;
+        FireFuel = dto.Combustibility?.Compile() ?? (dto.DamageProfile?.ImpactMaterial == CombatImpactMaterial.Wood
+            ? new WorldFireFuelProfile(.1f) : default);
         GroundPlacement = dto.GroundPlacement;
         GroundHarvest = dto.GroundHarvest;
         this.source = (JObject)source.DeepClone();

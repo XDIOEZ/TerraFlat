@@ -175,7 +175,7 @@ public sealed class AnimalTerritorialHatredCapability : AnimalBehaviorTreeCapabi
             AnimalLandTargetRules.Number(config, "decayPerSecond", 1f),
             AnimalLandTargetRules.Number(config, "hatredPerHit", 30f));
         eligiblePredicate = IsEligibleVisibleTarget;
-        if (context.Detector != null) context.Detector.DetectionRadius = Mathf.Max(context.Detector.DetectionRadius, presenceRadius, chaseDistance);
+        context.RequireMinimumDetectionRadius(Mathf.Max(presenceRadius, chaseDistance));
         if (context.Health != null) context.Health.OnHitReceived += HandleConfirmedHit;
     }
 

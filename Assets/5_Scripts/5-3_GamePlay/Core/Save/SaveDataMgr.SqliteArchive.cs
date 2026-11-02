@@ -13,6 +13,8 @@ public partial class SaveDataMgr
     #region SQLite 会话与独立记录
     private ISaveArchiveStore archiveStore;
     private string archivePath, archiveSession;
+    private ModSaveMetadata pendingModSaveMetadata;
+    private bool hasPendingModSaveMetadata;
     private CancellationTokenSource archiveReadCancellation = new();
     private long archiveRecordRevision;
     private readonly Dictionary<string, PersistedChunkRead> persistedChunkReads = new();
@@ -53,6 +55,8 @@ public partial class SaveDataMgr
         networkWeatherRevisions.Clear();
         retiredArchiveWorlds.Clear();
         archiveRecordRevision = 0;
+        pendingModSaveMetadata = null;
+        hasPendingModSaveMetadata = false;
     }
 
     private void OpenSqliteArchive(string path, bool create)
@@ -102,7 +106,7 @@ public partial class SaveDataMgr
         }
         foreach (var player in players)
             records.Add(ArchiveRecord("global", "", "player:" + player.Key,
-                MemoryPackSerializer.Serialize(ItemInstanceSnapshot.Capture(player.Value))));
+                ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(player.Value))));
         ModRuntimeManager mods = ModRuntimeManager.Instance;
         if (mods == null || !mods.IsReady) throw new InvalidOperationException("MOD 框架尚未就绪。");
         records.Add(ArchiveRecord("global", "", "mods", MemoryPackSerializer.Serialize(mods.CaptureSaveMetadata())));
@@ -142,7 +146,8 @@ public partial class SaveDataMgr
             frozen = new FrozenEcologyChunkSaveRecord { WorldKey = world, ChunkData = MemoryPackSerializer.Serialize(metadata) };
             foreach (var item in ecology.ChangedItems ?? new List<ItemData>()) frozen.ChangedItems.Add(ItemSnapshotSerialization.SerializePayload(item == null ? null : ItemSnapshotSerialization.Capture(item)));
         }
-        return new SqliteChunkSnapshot { Terrain = terrain?.HasChanges == true ? MemoryPackSerializer.Serialize(terrain) : null, Ecology = frozen };
+        // 地形差量包含 ItemData，独立缓冲区避免嵌套实例写入重入复用缓冲区。
+        return new SqliteChunkSnapshot { Terrain = terrain?.HasChanges == true ? ItemSnapshotSerialization.SerializePayload(terrain) : null, Ecology = frozen };
     }
 
     private SaveArchiveRecord FreezeSqliteChunk(string world, Vector2Int origin, GameSaveData source = null)
@@ -257,9 +262,24 @@ public partial class SaveDataMgr
         OpenSqliteArchive(path, false);
         GameSaveData candidate = ReadSqliteArchiveCandidate(archiveStore, out ModSaveMetadata modMetadata);
         SaveData = candidate;
-        ValidateAndRestoreModMetadata(modMetadata);
+        pendingModSaveMetadata = modMetadata;
+        hasPendingModSaveMetadata = true;
         ResetChunkDifferenceState();
         return true;
+    }
+
+    internal void RestorePendingModSaveMetadataAfterWorldResourcesReady()
+    {
+        if (!hasPendingModSaveMetadata) return;
+
+        ModSaveMetadata metadata = pendingModSaveMetadata;
+        ValidateAndRestoreModMetadata(metadata);
+    }
+
+    internal void ClearPendingModSaveMetadataAfterRuntimeRestore()
+    {
+        pendingModSaveMetadata = null;
+        hasPendingModSaveMetadata = false;
     }
 
     private static GameSaveData ReadSqliteArchiveCandidate(ISaveArchiveStore store, out ModSaveMetadata modMetadata)
@@ -317,9 +337,6 @@ public partial class SaveDataMgr
         if (!string.IsNullOrWhiteSpace(candidate.SpaceStateJson)) _ = DeserializeSpaceState(candidate.SpaceStateJson);
         if (machines.Metadata != null) MachineWorld.RestoreArchive(candidate, MemoryPackSerializer.Serialize(machines));
         DroppedItemService.RestoreArchive(candidate, MemoryPackSerializer.Serialize(drops));
-        ModRuntimeManager mods = ModRuntimeManager.Instance;
-        if (mods == null || !mods.IsReady || !mods.ValidateSaveMetadata(modMetadata, out string error))
-            throw new InvalidDataException("存档 MOD 环境不兼容。");
         return candidate;
     }
 
@@ -329,7 +346,8 @@ public partial class SaveDataMgr
     {
         var registry = new SaveArchiveSchemaRegistry();
         foreach (string id in new[] { "core", "planet", "player", "mods", "space", "chunk", "weather", "machine-metadata", "machine", "drop" })
-            registry.RegisterSchema("flatworld." + id, 1);
+            registry.RegisterSchema("flatworld." + id, id == "chunk" ? 2 : 1);
+        registry.RegisterMigration(new WorldCombustibilitySaveMigration());
         return registry;
     }
 

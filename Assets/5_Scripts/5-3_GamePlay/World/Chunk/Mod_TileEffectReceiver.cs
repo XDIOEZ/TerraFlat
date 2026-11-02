@@ -198,7 +198,20 @@ public partial class Mod_TileEffectReceiver : Module, IWorldTerrainContactState
         if (!hasRealWater)
             TickDryWaterSurvival(deltaTime);
 
+        RefreshWorldFireContact();
         UpdateCurrentTile(deltaTime);
+    }
+
+    // 生物接触火格自行维护燃烧 Buff，传播层不搜索或管理生物。
+    private void RefreshWorldFireContact()
+    {
+        if (!FlatWorld.Networking.GameNetwork.HasStateAuthority || LiquidFloating || !WorldFireSystem.TryGetWorldFireIntensity(GameplayWorldRegistry.GetItemWorldKey(item),
+                WorldLocalPresentation.ToLogical(item.transform.position), out _)) return;
+        var buffs = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
+        if (buffs == null) return;
+        int current = buffs.GetBuffStacks(BurningBuffIds.Burning);
+        if (current < 10) buffs.AddBuff(BurningBuffIds.Burning, 10 - current);
+        else buffs.TrySetBuffDuration(BurningBuffIds.Burning, 5f);
     }
 
     #endregion

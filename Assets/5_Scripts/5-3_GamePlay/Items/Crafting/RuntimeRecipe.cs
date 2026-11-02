@@ -5,7 +5,8 @@ using System.Linq;
 /// <summary>
 /// 校验后的运行时配方，不持有 ScriptableObject、Prefab 或其他 Unity 对象引用。
 /// </summary>
-public sealed class RuntimeRecipe
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipe
 {
     public string Id;
     public string DisplayName;
@@ -20,10 +21,12 @@ public sealed class RuntimeRecipe
     public int ManualWorkSteps = 1;
     public RuntimeLiquidOutput LiquidOutput;
 
+    [MemoryPack.MemoryPackIgnore]
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
 }
 
-public sealed class RuntimeRecipeInput
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipeInput
 {
     public List<RuntimeRecipeIngredient> RowItems_List = new List<RuntimeRecipeIngredient>();
     public RecipeType recipeType = RecipeType.Crafting;
@@ -55,7 +58,8 @@ public sealed class RuntimeRecipeInput
     }
 }
 
-public sealed class RuntimeRecipeIngredient
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipeIngredient
 {
     public float? MinTemperature;
     public string ExcludeTag;
@@ -84,12 +88,14 @@ public sealed class RuntimeRecipeIngredient
     }
 }
 
-public sealed class RuntimeRecipeOutput
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipeOutput
 {
     public List<RuntimeRecipeResult> results = new List<RuntimeRecipeResult>();
 }
 
-public sealed class RuntimeLiquidOutput
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeLiquidOutput
 {
     public string LiquidId = string.Empty;
     public float Amount = 1f;
@@ -113,7 +119,8 @@ public sealed partial class RuntimeRecipeResult
     public float durabilityMultiplier = CraftedDurabilityQuality.DefaultMultiplier;
 }
 
-public sealed class RuntimeRecipeAction
+[MemoryPack.MemoryPackable]
+public sealed partial class RuntimeRecipeAction
 {
     public string Type;
     public string TargetRole;
