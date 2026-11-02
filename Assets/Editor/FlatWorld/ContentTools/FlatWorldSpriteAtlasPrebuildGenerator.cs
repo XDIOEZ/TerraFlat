@@ -460,6 +460,20 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
         standalone.maxTextureSize = MaximumAtlasTextureSize;
         importer.SetPlatformSettings(standalone);
 
+        // Android 显式使用 ETC2 RGBA，避免图集以未压缩 RGBA32 写入 APK。
+        TextureImporterPlatformSettings android = importer.GetPlatformSettings("Android");
+        changed |= !android.overridden || android.maxTextureSize != MaximumAtlasTextureSize ||
+                   android.format != TextureImporterFormat.ETC2_RGBA8 ||
+                   android.textureCompression != TextureImporterCompression.Compressed ||
+                   android.crunchedCompression;
+        android.name = "Android";
+        android.overridden = true;
+        android.maxTextureSize = MaximumAtlasTextureSize;
+        android.format = TextureImporterFormat.ETC2_RGBA8;
+        android.textureCompression = TextureImporterCompression.Compressed;
+        android.crunchedCompression = false;
+        importer.SetPlatformSettings(android);
+
         string fingerprintValue = AtlasFingerprintPrefix + fingerprint;
         changed |= !string.Equals(importer.userData, fingerprintValue, StringComparison.Ordinal);
         importer.userData = fingerprintValue;
