@@ -109,7 +109,22 @@ test.system("core_lifecycle", "startup_production_dependencies", {}, function(da
     assert(requires("liquids", "items") and requires("liquids", "buffs") and requires("liquids", "actors"),
         "液体饮用效果或物品引用没有等待完整依赖")
     assert(requires("buffs", "addressables"), "Buff 图标没有等待资源地址目录")
+    assert(requires("actor-code-prewarm", "machine-prewarm"), "完整资源 Ready 前没有等待生物出生代码预热")
 end, "正式启动图中的菜单去重、物品身份与液体 Buff 依赖")
+
+test.system("core_lifecycle", "startup_actor_code_prewarm", {}, function(data)
+    assert(data.productionRoots and data.capabilitiesAndNodes, "出生、行为工厂或可扩展能力节点没有进入代码预热")
+    assert(data.capabilityFactoryHelpers and data.closedCapabilityFactory and data.closedCapabilityClosure,
+        "陆地能力工厂或其泛型闭包仍留到首只动物出生时编译")
+    assert(data.invalidCapabilityRejected, "非具体能力类型错误地进入泛型工厂预热")
+    assert(data.unique and data.constructorsAndClosures, "代码预热重复收集或遗漏构造函数和闭包")
+    assert(data.noStaticConstructors and data.openGenericRejected and data.abstractRejected,
+        "预热包含静态初始化、开放泛型或抽象方法")
+    assert(data.discoveryDoesNotExecute and data.preparationDoesNotExecute, "预编译执行了构造函数、静态初始化或玩法方法")
+    if data.available then
+        assert(data.prepared and data.reused, "托管方法未完成代码预备或同一方法重复预热")
+    end
+end, "生物首次创建代码预热：真实入口、闭包、构造、去重及不执行玩法")
 
 test.system("core_lifecycle", "startup_eager_data_request", {}, function(data)
     assert(data.startedImmediately and data.unpublishedBeforeAdvance, "后台请求没有立即发出或提前发布了结果")

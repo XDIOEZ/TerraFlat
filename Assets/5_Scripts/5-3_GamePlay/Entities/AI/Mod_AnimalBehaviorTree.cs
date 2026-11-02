@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.Localization;
+using FlatWorld.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -55,25 +56,36 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     #endregion
 
     #region 生命周期与能力绑定
+    private static readonly PerformanceDebugPoint ResolveTemplateMarker = new("FlatWorld.AnimalBehaviorTree.ResolveTemplate");
+    private static readonly PerformanceDebugPoint BindContextMarker = new("FlatWorld.AnimalBehaviorTree.BindContext");
+    private static readonly PerformanceDebugPoint CreateNodesMarker = new("FlatWorld.AnimalBehaviorTree.CreateNodes");
+
     protected override void OnLoad() => BuildRuntime(ReadSave());
 
     private void BuildRuntime(SaveData saved)
     {
-        AnimalBehaviorTreeTemplate template = AnimalBehaviorTreeNodeCatalog.Compile(BehaviorTree);
+        AnimalBehaviorTreeTemplate template;
+        using (ResolveTemplateMarker.Measure())
+            template = AnimalBehaviorTreeNodeCatalog.Compile(BehaviorTree);
         Mod_Mover_AI mover = item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover_AI)
             ?? item.itemMods.GetMod_ByID<Mod_Mover_AI>(ModText.Mod_Mover);
         try
         {
-            Context = new AnimalBehaviorTreeContext(item, mover,
-                item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector),
-                item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp),
-                item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food),
-                item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver),
-                DamageThreatMemoryDuration, DetectorRefreshInterval,
-                saved?.Timers, 0f, saved?.RecentDamageRemaining ?? 0f,
-                saved == null ? default : new Vector3(saved.RecentDamageOriginX, saved.RecentDamageOriginY, saved.RecentDamageOriginZ));
-            Context.ConfigureCapabilities(template.Capabilities, saved?.Capabilities);
-            runtime = template.CreateRuntime(Context);
+            // 分开记录模板、上下文与节点装配，便于区分首次编译和实际出生开销。
+            using (BindContextMarker.Measure())
+            {
+                Context = new AnimalBehaviorTreeContext(item, mover,
+                    item.itemMods.GetMod_ByID<Mod_ItemDetector>(ModText.Detector),
+                    item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp),
+                    item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food),
+                    item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver),
+                    DamageThreatMemoryDuration, DetectorRefreshInterval,
+                    saved?.Timers, 0f, saved?.RecentDamageRemaining ?? 0f,
+                    saved == null ? default : new Vector3(saved.RecentDamageOriginX, saved.RecentDamageOriginY, saved.RecentDamageOriginZ));
+                Context.ConfigureCapabilities(template.Capabilities, saved?.Capabilities);
+            }
+            using (CreateNodesMarker.Measure())
+                runtime = template.CreateRuntime(Context);
             runtime.ActionChanged += HandleActionChanged;
             bodyDamageSources.Clear();
             item.GetComponentsInChildren(true, bodyDamageSources);

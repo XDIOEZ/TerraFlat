@@ -146,6 +146,8 @@ public partial class GameRes
             PrewarmCombatResources, "brg-sprite-mesh-prewarm");
         plan.Add("machine-prewarm", "预备机器快照与炉体缓存", 2,
             PrewarmMachineResources, "combat-prewarm");
+        plan.Add("actor-code-prewarm", "预备生物行为与出生代码", 2,
+            PrewarmActorRuntimeCode, "machine-prewarm");
         return plan;
     }
 

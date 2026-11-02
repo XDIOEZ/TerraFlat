@@ -25,6 +25,7 @@ public static partial class GameplayTestSystemProbe
         target.Add("core_lifecycle/startup_configuration_publication", StartupConfigurationPublication);
         target.Add("core_lifecycle/startup_local_item_catalog", StartupLocalItemCatalog);
         target.Add("core_lifecycle/startup_behavior_tree_templates", StartupBehaviorTreeTemplates);
+        target.Add("core_lifecycle/startup_actor_code_prewarm", StartupActorCodePrewarm);
         target.Add("core_lifecycle/startup_module_parameter_templates", StartupModuleParameterTemplates);
         target.Add("core_lifecycle/startup_concurrent_stages", StartupConcurrentStages);
         target.Add("core_lifecycle/startup_eager_data_request", StartupEagerDataRequest);
@@ -604,7 +605,7 @@ public static partial class GameplayTestSystemProbe
             var resources = root.AddComponent<GameRes>();
             var dependencies = resources.CaptureResourceStageDependencies();
             var result = new JObject();
-            foreach (string stage in new[] { "prefabs", "items", "recipes", "buffs", "liquids", "quests" })
+            foreach (string stage in new[] { "prefabs", "items", "recipes", "buffs", "liquids", "quests", "actor-code-prewarm" })
                 result[stage] = new JArray(dependencies[stage]);
             result["noSessionStarted"] = resources.LoadState == ResourceLoadState.NotStarted;
             return result;
