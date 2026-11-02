@@ -1,4 +1,13 @@
 -- 固定二级页签与每页独立滚动，窄内容区也不能把导航挤出边界。
+test.system("ui_settings", "scroll_wheel_step", {}, function(data)
+    assert(data.scrollCount > 0 and data.nativeScrollCount == 0,
+        "自有UI仍有未接入通用滚轮规则的滚动列表")
+    assert(math.abs(data.rowStep - 51) < 0.01,
+        "大型操作选项分组被误认为滚动一行，未按44像素行高和7像素间距滚动")
+    assert(data.groupOnlyStep > 0 and data.groupOnlyStep <= 48,
+        "只有大型分组时，单次滚轮不得跨越整页")
+end, "通用滚轮步长与按键绑定长分组")
+
 local function scroll_near(actual, expected, message)
     assert(type(actual) == "number" and math.abs(actual - expected) < 0.001, message)
 end

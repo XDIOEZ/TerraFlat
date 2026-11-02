@@ -28,10 +28,63 @@ public static partial class GameplayTestSystemProbe
 #if UNITY_EDITOR
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
         Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
+        Register("ui_settings", "scroll_wheel_step", CaptureScrollWheelStep);
 #endif
     }
 
 #if UNITY_EDITOR
+    /// <summary>验证自有 UI 列表都使用公共滚轮规则，且大型分组不会冒充一行。</summary>
+    private static JObject CaptureScrollWheelStep(JObject _)
+    {
+        int scrollCount = 0, nativeScrollCount = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[]
+            { "Assets/2_Prefabs/2-1_UI", "Assets/Plugins/Fungus/Resources/Prefabs" }))
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+            if (prefab == null) continue;
+            foreach (ScrollRect scroll in prefab.GetComponentsInChildren<ScrollRect>(true))
+            {
+                scrollCount++;
+                if (!(scroll is ItemStepScrollRect)) nativeScrollCount++;
+            }
+        }
+
+        GameObject root = new GameObject("[LuaScrollWheelStep]", typeof(RectTransform), typeof(ItemStepScrollRect));
+        try
+        {
+            RectTransform viewport = root.GetComponent<RectTransform>();
+            viewport.sizeDelta = new Vector2(300f, 400f);
+            RectTransform content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup))
+                .GetComponent<RectTransform>();
+            content.SetParent(viewport, false);
+            content.sizeDelta = new Vector2(300f, 1000f);
+            content.GetComponent<VerticalLayoutGroup>().spacing = 7f;
+            RectTransform group = new GameObject("大型操作选项分组", typeof(RectTransform)).GetComponent<RectTransform>();
+            group.SetParent(content, false);
+            group.sizeDelta = new Vector2(300f, 700f);
+            RectTransform row = new GameObject("绑定行", typeof(RectTransform)).GetComponent<RectTransform>();
+            row.SetParent(content, false);
+            row.sizeDelta = new Vector2(300f, 44f);
+            ItemStepScrollRect scroll = root.GetComponent<ItemStepScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = content;
+            var method = typeof(ItemStepScrollRect).GetMethod("ResolveItemStep",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (method == null) throw new System.MissingMethodException("ItemStepScrollRect.ResolveItemStep");
+            float rowStep = (float)method.Invoke(scroll, new object[] { 1, viewport.rect.height });
+            row.gameObject.SetActive(false);
+            float groupOnlyStep = (float)method.Invoke(scroll, new object[] { 1, viewport.rect.height });
+            return new JObject
+            {
+                ["scrollCount"] = scrollCount,
+                ["nativeScrollCount"] = nativeScrollCount,
+                ["rowStep"] = rowStep,
+                ["groupOnlyStep"] = groupOnlyStep
+            };
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
     /// <summary>读取四个正式主菜单面板的基准卡片，用真实安全区组件验证用户倍率。</summary>
     private static JObject CaptureMainMenuModalScaleLayout(JObject args)
     {

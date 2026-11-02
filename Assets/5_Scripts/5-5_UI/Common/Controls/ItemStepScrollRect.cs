@@ -76,9 +76,9 @@ public sealed class ItemStepScrollRect : ScrollRect
             return;
         }
         if (horizontal && hidden.x > 0.01f)
-            targetPosition.x = Mathf.Clamp01(targetPosition.x + normalizedDelta.x * ResolveItemStep(0) * rowsPerWheelTick * Mathf.Abs(content.localScale.x) / hidden.x);
+            targetPosition.x = Mathf.Clamp01(targetPosition.x + normalizedDelta.x * ResolveItemStep(0, view.rect.width) * rowsPerWheelTick * Mathf.Abs(content.localScale.x) / hidden.x);
         if (vertical && hidden.y > 0.01f)
-            targetPosition.y = Mathf.Clamp01(targetPosition.y + normalizedDelta.y * ResolveItemStep(1) * rowsPerWheelTick * Mathf.Abs(content.localScale.y) / hidden.y);
+            targetPosition.y = Mathf.Clamp01(targetPosition.y + normalizedDelta.y * ResolveItemStep(1, view.rect.height) * rowsPerWheelTick * Mathf.Abs(content.localScale.y) / hidden.y);
         StopMovement();
         wheelActive = true;
         data.Use();
@@ -144,21 +144,24 @@ public sealed class ItemStepScrollRect : ScrollRect
     #region 布局步长
 
     /// <summary>网格按一行/列，普通布局按一个活动条目；隐藏模板和忽略布局节点不参与。</summary>
-    private float ResolveItemStep(int axis)
+    private float ResolveItemStep(int axis, float viewportSize)
     {
         if (fixedWheelStep > 0f) return fixedWheelStep;
         if (content.TryGetComponent(out GridLayoutGroup grid))
             return Mathf.Max(1f, grid.cellSize[axis] + grid.spacing[axis]);
         float spacing = content.TryGetComponent(out HorizontalOrVerticalLayoutGroup layout) ? layout.spacing : 0f;
+        float maximumStep = Mathf.Max(1f, viewportSize * 0.45f);
         for (int i = 0; i < content.childCount; i++)
         {
             if (!(content.GetChild(i) is RectTransform child) || !child.gameObject.activeSelf) continue;
             if (child.TryGetComponent(out LayoutElement element) && element.ignoreLayout) continue;
             float size = child.rect.size[axis];
             if (size <= 0f) size = axis == 0 ? LayoutUtility.GetPreferredWidth(child) : LayoutUtility.GetPreferredHeight(child);
-            if (size > 0f) return Mathf.Max(1f, size * Mathf.Abs(child.localScale[axis]) + spacing);
+            float step = size * Mathf.Abs(child.localScale[axis]) + spacing;
+            // 跳过超过半屏的大型分组，继续寻找真正的行，避免按键绑定等列表一滚跳多页。
+            if (size > 0f && step <= maximumStep) return Mathf.Max(1f, step);
         }
-        return fallbackItemSize;
+        return Mathf.Min(fallbackItemSize, maximumStep);
     }
 
     #endregion
