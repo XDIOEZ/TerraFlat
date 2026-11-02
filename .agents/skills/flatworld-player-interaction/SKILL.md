@@ -28,7 +28,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 
 `Input System → Mod_GameController → 玩家模块`；控制器位于玩家根，模块 ID 为 `ModText.Controller`。
 
-- 键位源为 `.inputactions`，包装器由生成器同步；Action 名是内部身份，物理键来自 binding `effectivePath`。覆盖按 binding GUID 保存，加载过滤不存在的 GUID；冲突检测将 Shift/Ctrl/Alt 与其左右键统一为物理修饰语义。
+- 键位源为 `.inputactions`，包装器由生成器同步；Action 名是内部身份，物理键来自 binding `effectivePath`。覆盖按 binding GUID 保存，加载只过滤不存在的 GUID；不同行为可共用同一按键，互不覆盖。
 - 控制偏好手动保存为键鼠/手柄/手机，只影响 HUD 与指针；玩法/UI ActionMap 接受并行设备输入。设备变化仅更新 UI/指针，手机触摸由自身生命周期清理；鼠标/Touchscreen 点击退出手柄 UI 模式，Shift 等修饰键不切设备。
 - 文本焦点由 `EventSystemGuard.IsTextInputFocused` 与 `IsGameplayInputAllowed` 拦截键盘玩法，移动返回零；鼠标仍经 UI 射线仲裁。鼠标位置缓存响应 performed/canceled，按键读取当前坐标；切回键鼠清理非文本选择焦点。
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
@@ -39,6 +39,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 交互
 
 - `IInteractable` 的交互键通道为 Start→按住 Update→松开 End，取消/目标失效为 Cancel；鼠标与外部单次调用为 Start→End。`CanPointerInteract=false` 仅禁鼠标点选。
+- `IWorldHoldInteraction` 由 `Mod_InteractSender` 统一按真实时间计时、圆形进度及完成回调；载具与矿洞入口共用默认 0.55 秒，短按不触发完成，取消/超距/输入锁立即清理。
 - 发送器 `OnDisable` 解绑输入并取消交互；已加载模块的 `OnEnable` 必须幂等重绑，场景迁移或临时停用不会重新执行 `OnLoad`。回归 `player/interaction_input_reenable` 检查真实按下/松开及多次恢复不重复订阅。
 - 交互发送器正式 `OnUnload` 同样解绑输入并取消目标/环境会话，不依赖 GameObject 随后停用；`player/interaction_input_unload` 检查对象保持激活时的卸载拒绝输入与三轮重载。
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。

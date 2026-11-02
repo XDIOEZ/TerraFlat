@@ -926,6 +926,15 @@ for _, existing in ipairs({ false, true }) do
     end
 end
 
+test.system("ui_settings", "input_binding_shared_key", {}, function(data)
+    assert(data.editWasDirty and data.savedOnce and data.reloadKeptOverrides,
+        "同键共享的覆盖没有经过正常会话保存，或重新加载时被错误清理")
+    assert(data.keyboardShared and data.gamepadShared,
+        "键鼠或手柄的不同行为无法保留相同的绑定键位")
+    assert(data.clearIndependent and data.resetIndependent,
+        "清空或重置一个行为时意外影响了共用按键的其他行为")
+end, "多个行为共用按键：保存、重载和独立修改")
+
 for _, row in ipairs({
     { kind = "button", root = "ProbePanel", excluded = false },
     { kind = "scrollbar", root = "ProbePanel", excluded = true },
