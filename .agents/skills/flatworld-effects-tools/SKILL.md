@@ -25,6 +25,7 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - 角色 Shader 参数统一经 MPB 控制器合成。静态模块设 `RequiresContinuousRendering=false`，变化时 `MarkRenderStateDirty`；换图、重绑、启停仍刷新。外部 Renderer 创建后注册、销毁前注销；描边代理标 `ActorRenderEffectExclude`，不让角色合成覆盖独立通道。
 - `RequiresSpriteBodyRange` 默认开启；仅写独立通道的模块可关闭，水线仍跟踪换图。代理同步源贴图、分离 Alpha、UV/裁剪与 MPB，Universal2D、NormalsRendering、回退 Pass 使用同一坐标/阈值；SpriteRenderer 与 MeshRenderer 分节点、共用生命周期根。
 - URP 2D Lit 必须实际采样 Shape Light；全局 Shader 参数放全局声明，避免材质 Properties 默认值遮蔽。HLSL 避开 `point/line/triangle` 等保留字；共享代码改动覆盖全部包装 Pass。
+- `DefualtURP2D_Renderer` 只保留 Light Blend Style 0（Multiply），所有光源与编辑器测试使用索引 0；打包时 `FlatWorldSingleLightBlendStyleShaderVariantStripper` 剔除 `USE_SHAPE_LIGHT_TYPE_1/2/3`，但保留无灯和 0 号变体。新增混合模式须同步调整 Renderer、引用和构建过滤规则。
 - 池取出重置 Transform、Animator、颜色与寿命，回收清订阅。一次性粒子在源销毁前脱离；需要角色 OnDisable 回收的特效用独立根，Owner 与父级分离。睡眠只释放可见实例，状态请求仍归角色。
 - 完整 GameRes 的 `combat-prewarm` 按正式武器引用去重，每个命中 GameEffect 分帧准备 3 个空闲实例；`PrepareForPool` 不播放、不消费随机数。完整资源会话/世界释放旧代前清池，原位更新候选不预热。延迟回收队列保留未到期任务，提前回收取消旧任务，新租用不能继承旧截止时间。
 - `SharedSpriteMeshCache.IsSessionEnding` 时停止区块提交、分帧推进与 Owner 恢复；活跃期登记/恢复失败保留异常。BRG 禁用/域重载幂等 Dispose：先释放组，再 finally 释放自有缓冲/Mesh/材质，按需重建。

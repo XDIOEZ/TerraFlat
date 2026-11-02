@@ -137,23 +137,15 @@ public static partial class GameplayTestSystemProbe
             for (int i = 1; i < chunkRoots.Count; i++) chunkRoots[i].SetActive(false);
             root.SetActive(true);
 
-            // 预览灯使用空闲乘法通道，避免与编辑器已有全局灯冲突。
-            bool style0Used = false, style2Used = false;
-            foreach (Light2D existing in Resources.FindObjectsOfTypeAll<Light2D>())
-            {
-                if (!existing.gameObject.scene.IsValid() || !existing.isActiveAndEnabled ||
-                    existing.lightType != Light2D.LightType.Global) continue;
-                style0Used |= existing.blendStyleIndex == 0;
-                style2Used |= existing.blendStyleIndex == 2;
-            }
-            if (style0Used && style2Used)
-                throw new InvalidOperationException("冰面预览没有空闲的乘法光照通道。");
+            // 使用大范围点光源走唯一的 0 号混合通道，避免与编辑器其它场景的全局灯冲突。
             lightRoot = new GameObject("Frozen ice visual light") { layer = Layer, hideFlags = HideFlags.HideAndDontSave };
             SceneManager.MoveGameObjectToScene(lightRoot, scene);
             lightRoot.transform.position = new Vector3(Origin + 32f, Origin + 32f, -1f);
             var light = lightRoot.AddComponent<Light2D>();
-            light.blendStyleIndex = style0Used ? 2 : 0;
-            light.lightType = Light2D.LightType.Global;
+            light.blendStyleIndex = 0;
+            light.lightType = Light2D.LightType.Point;
+            light.pointLightInnerRadius = 128f;
+            light.pointLightOuterRadius = 256f;
             light.intensity = 1f;
 
             var cameraRoot = new GameObject("Frozen ice visual camera") { layer = Layer, hideFlags = HideFlags.HideAndDontSave };
