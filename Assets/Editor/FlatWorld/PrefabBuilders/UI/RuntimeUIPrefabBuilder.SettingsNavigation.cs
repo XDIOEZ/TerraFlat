@@ -36,6 +36,8 @@ public static partial class RuntimeUIPrefabBuilder
         MoveEntryToPage(root.transform, worldPage, "联机设置");
 
         ConfigureSettingsSessionActions(root.transform, sessionPage);
+        EnsureActionListPageHeader(worldPage, "世界");
+        EnsureActionListPageHeader(sessionPage, "保存与退出");
 
         Transform interfacePage = EnsureEmbeddedActionListPage(
             content,
@@ -141,6 +143,19 @@ public static partial class RuntimeUIPrefabBuilder
             Muted);
         languageStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
         return languagePage;
+    }
+
+    /// <summary>入口型分页与滑块分页共用标题栏，保留已有按钮及其绑定。</summary>
+    private static void EnsureActionListPageHeader(Transform page, string title)
+    {
+        Transform header = FindDirectChild(page, "标题");
+        if (header == null)
+        {
+            CreateSettingsHeader(page, title);
+            header = FindDirectChild(page, "标题");
+        }
+
+        header.SetAsFirstSibling();
     }
 
     /// <summary>
@@ -451,8 +466,9 @@ public static partial class RuntimeUIPrefabBuilder
         VerticalLayoutGroup layout = page.GetComponent<VerticalLayoutGroup>();
         if (layout == null)
             layout = page.gameObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(0, 0, 0, 0);
-        layout.spacing = 16f;
+        // 普通入口页与内嵌设置页共用 20/18 留白、10 行距。
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.spacing = 10f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
