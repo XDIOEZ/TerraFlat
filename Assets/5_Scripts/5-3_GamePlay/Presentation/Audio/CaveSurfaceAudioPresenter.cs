@@ -202,7 +202,7 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
         sampledWind = 0f;
         if (surfaceWeather == null || !GameplayWorldRegistry.TryGet(surfaceWorldKey, out _)) return;
         using var scope = GameplayWorldRegistry.UseWorld(surfaceWorldKey);
-        hasRainSample = surfaceWeather.TryGetPrecipitationAt(entrance, out sampledRain, out _);
+        hasRainSample = surfaceWeather.TryGetRemoteRainAudioAt(entrance, out sampledRain);
         if (surfaceWeather.TryGetWindBlendAt(entrance, out var blend))
             sampledWind = Mathf.Clamp01(Unity.Mathematics.math.length(blend.Wind));
     }
