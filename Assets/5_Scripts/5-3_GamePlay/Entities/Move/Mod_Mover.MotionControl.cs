@@ -24,7 +24,7 @@ public partial class Mod_Mover
     }
 
     public float WalkingSpeed => GetWalkingSpeedValue() *
-        ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
+        ResolveSurfaceTraversalSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
 
     /// <summary>临时动作复用正式刚体与环境速度，只替换当前主动速度。</summary>
     public bool TryAcquireDrivenMotion(Vector2 velocity, out DrivenMotionLease lease)

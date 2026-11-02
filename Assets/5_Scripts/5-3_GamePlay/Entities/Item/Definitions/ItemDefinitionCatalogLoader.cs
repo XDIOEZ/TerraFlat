@@ -1339,7 +1339,8 @@ public static class ItemDefinitionCatalogLoader
             prototypeCache,
             dto.Physics,
             dto.Combustibility,
-            ResolveWorldLayerInfluences(dto.WorldLayerInfluences, id));
+            ResolveWorldLayerInfluences(dto.WorldLayerInfluences, id),
+            dto.TraversalSpeedMultiplier ?? 1f);
     }
 
     /// <summary>运行时和构建期共用模块默认数据、战利品注入与自动生命模块的唯一装配规则。</summary>

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UltEvents;
 using FlatWorld.Spaceflight;
+using FlatWorld.NaturalEntities;
 
 /// <summary>
 /// Mod_Mover —— 处理游戏对象的移动逻辑
@@ -531,7 +532,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
 
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
         double gravity = ResolveSurfaceGravity();
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() *
+        float moveSpeed = Speed.Value * ResolveSurfaceTraversalSpeedMultiplier() *
             (float)SpaceGameplaySettings.Current.WalkingMultiplier(gravity);
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
@@ -560,7 +561,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
         RequestedMoveInput = clampedInput;
         double gravity = ResolveSurfaceGravity();
-        float moveSpeed = Speed.Value * ResolveBuildingMoveSpeedMultiplier() *
+        float moveSpeed = Speed.Value * ResolveSurfaceTraversalSpeedMultiplier() *
             (float)SpaceGameplaySettings.Current.WalkingMultiplier(gravity);
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
             ? clampedInput * moveSpeed
@@ -611,12 +612,15 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             : Vector2.zero;
     }
 
-    /// <summary>玩家站在可通行建筑格时读取地块惩罚；动物和其它 Mod_Mover 不受玩家铺线规则影响。</summary>
-    private float ResolveBuildingMoveSpeedMultiplier()
+    /// <summary>资源占格对所有步行角色生效；玩家额外遵循可通行建筑的地格减速。</summary>
+    protected float ResolveSurfaceTraversalSpeedMultiplier()
     {
-        return item is Player && rb != null
-            ? BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier(rb.position)
-            : 1f;
+        if (item == null || rb == null) return 1f;
+        Vector2Int cell = new(Mathf.FloorToInt(rb.position.x), Mathf.FloorToInt(rb.position.y));
+        float multiplier = NaturalEntityEcsService.GetTraversalSpeedMultiplierAtCell(cell);
+        return item is Player
+            ? Mathf.Min(multiplier, BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier(rb.position))
+            : multiplier;
     }
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>

@@ -103,6 +103,28 @@ namespace FlatWorld.NaturalEntities
             return false;
         }
 
+        /// <summary>按自然资源真实占格取最强行走减速；无资源或其它维度的资源不影响当前世界。</summary>
+        public static float GetTraversalSpeedMultiplierAtCell(Vector2Int cell)
+        {
+            if (simulation == null) return 1f;
+            cell = WorldTopologyRuntime.NormalizeCell(cell);
+            if (!spatialCells.TryGetValue(cell, out var bucket)) return 1f;
+            float multiplier = 1f;
+            foreach (int id in bucket)
+            {
+                if (!records.TryGetValue(id, out Record record) ||
+                    record.DimensionId != WorldEntityRuntime.DimensionId ||
+                    record.Profile.Definition.TraversalSpeedMultiplier >= multiplier || !record.IsValid)
+                    continue;
+                NaturalEntityBody body = simulation.GetBody(id);
+                Vector2Int root = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+                    Mathf.FloorToInt(body.Position.x), Mathf.FloorToInt(body.Position.y)));
+                if (OccupiesCell(record, root, cell))
+                    multiplier = record.Profile.Definition.TraversalSpeedMultiplier;
+            }
+            return multiplier;
+        }
+
         /// <summary>按生成身份和位置读取实时生命，不写回存档快照。</summary>
         public static bool TryGetHealthAtPosition(int guid, Vector2 position, out Vector2 health)
         {

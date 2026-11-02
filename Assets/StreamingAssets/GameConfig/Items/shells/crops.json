@@ -503,6 +503,7 @@
     {
       "id": "BerryCrop",
       "parent": "WildCrop_Base",
+      "traversalSpeedMultiplier": 0.5,
       "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
       "gameName": "浆果丛-农作物",
       "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",

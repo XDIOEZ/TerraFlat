@@ -125,6 +125,10 @@ public sealed partial class ItemDefinitionDto
     [JsonProperty("entityRuntime", NullValueHandling = NullValueHandling.Ignore)]
     public string EntityRuntime;
 
+    /// <summary>实体占据的地格对行走速度的倍率；未配置时为 1。</summary>
+    [JsonProperty("traversalSpeedMultiplier", NullValueHandling = NullValueHandling.Ignore)]
+    public float? TraversalSpeedMultiplier;
+
     /// <summary>passive 使用轻量掉落物；interactive 在地面仍保留完整 Item 与模块交互。</summary>
     [JsonProperty("worldDropBehavior", NullValueHandling = NullValueHandling.Ignore)]
     public string WorldDropBehavior;
@@ -630,6 +634,7 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
     public float UnitWeight => templateData?.Stack?.Weight ?? 0f;
     public string EntityRuntime { get; }
     public bool UsesResourceEntities => string.Equals(EntityRuntime, "resource", StringComparison.Ordinal);
+    public float TraversalSpeedMultiplier { get; }
     public WorldDropBehavior DropBehavior { get; }
     public bool UsesLightweightWorldDrop => !IsActor && DropBehavior == WorldDropBehavior.Passive;
 
@@ -702,8 +707,11 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
         ItemModulePrototypeCache modulePrototypeCache = null,
         ItemPhysicsDefinitionDto physics = null,
         WorldCombustibilityDefinitionDto combustibility = null,
-        IReadOnlyList<ItemWorldLayerInfluence> worldLayerInfluences = null)
+        IReadOnlyList<ItemWorldLayerInfluence> worldLayerInfluences = null,
+        float traversalSpeedMultiplier = 1f)
     {
+        if (!float.IsFinite(traversalSpeedMultiplier) || traversalSpeedMultiplier <= 0f || traversalSpeedMultiplier > 1f)
+            throw new InvalidDataException($"物品 {id} 的 traversalSpeedMultiplier 必须在 (0, 1] 内。");
         Id = id;
         var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (string alias in formerIds ?? Array.Empty<string>())
@@ -711,6 +719,7 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
                 !aliases.Add(alias.Trim())) throw new InvalidDataException("物品旧身份无效：" + id);
         FormerIds = Array.AsReadOnly(new List<string>(aliases).ToArray());
         EntityRuntime = entityRuntime;
+        TraversalSpeedMultiplier = traversalSpeedMultiplier;
         DropBehavior = worldDropBehavior;
         ShellPrefabId = shellPrefabId;
         ShellPrefab = shellPrefab;
