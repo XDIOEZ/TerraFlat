@@ -25,6 +25,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 ## 生命周期与输入
 
 - `CreatePanelFromGameObject` 归当前 `SceneUI/SafeAreaRoot`；玩家HUD/库存/设置/死亡页显式用 `CreatePersistentPanelFromGameObject`。共享库存按对象分流，弹窗/键盘用 `GetPanelRootFor` 继承；全屏只提排序。
+- `Mod_SettingCanvas` 开启设置时按 `GameNetwork.CanPauseLocalWorld` 判断：离线/无远端的本机 Host 暂停世界，远端连接中或多人模式不停；设置开着期间实时切换，关闭或卸载恢复原倍率。音频世界总线跟随 `Time.timeScale`，UI 音效继续播放。
 - 左上角 `PlayerWorldCoordinateHUD` 的 FPS 开关同时显示实际 FPS/TPS；共用0.5秒真实时间窗口，TPS 取统一固定步序号差，暂停后归零。
 - UI_Food 将碳水/脂肪/蛋白质及其容量加算为食物条，显示顺序为蛋白质/脂肪/碳水，隐藏营养图例且不改营养消耗顺序；血量红、水量蓝。ThreeSegmentStatusBarGraphic 按总容量绘制并复用 HUD 过渡时钟，食物条专用子树用 UIVisualOwner 保语义色，Prefab/构建器同步；回归 food_segmented_bar/status_hud_readability。
 - 同根靠兄弟顺序置顶，sortingOrder 只管独立 Canvas；模态持玩法锁/顶层手柄焦点，关闭/失败释放，HUD仅按钮接射线。

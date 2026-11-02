@@ -355,12 +355,24 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
     #region 单机设置暂停
 
-    /// <summary>单机打开世界设置时暂停时间；联机设置不修改全局时间流速。</summary>
+    // 设置打开期间持续检查人数，玩家中途加入要立即恢复世界，最后一人离开则重新暂停。
+    private void Update()
+    {
+        if (basePanel == null || !basePanel.IsOpen())
+            return;
+
+        if (GameNetwork.CanPauseLocalWorld)
+            AcquireSettingsPause();
+        else
+            ReleaseSettingsPause();
+    }
+
+    /// <summary>没有远端玩家时打开设置暂停时间；联网客户端与多人 Host 不暂停。</summary>
     private void AcquireSettingsPause()
     {
         GameManager gameManager = GameManager.Instance;
         if (settingsPauseActive ||
-            GameNetwork.IsOnline ||
+            !GameNetwork.CanPauseLocalWorld ||
             gameManager == null ||
             !gameManager.IsInGameWorld)
         {

@@ -13,6 +13,7 @@ namespace FlatWorld.Networking
         bool IsOnline { get; }
         bool IsServer { get; }
         bool IsClient { get; }
+        bool HasRemoteConnections { get; }
 
         event Action<NetworkSessionState> StateChanged;
         event Action<string> Error;
