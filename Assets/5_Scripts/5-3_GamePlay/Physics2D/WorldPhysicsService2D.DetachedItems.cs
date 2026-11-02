@@ -41,8 +41,8 @@ public sealed partial class WorldPhysicsService2D
                 RestoreItemBodyRepresentation(item, proxy.Body, previousRepresentation.Value);
             WorldPhysicsItemContactRelay2D relay = proxy.Shell.Root.GetComponent<WorldPhysicsItemContactRelay2D>();
             if (relay == null) relay = proxy.Shell.Root.gameObject.AddComponent<WorldPhysicsItemContactRelay2D>();
-            relay.Bind(item);
             ItemPhysicsProjection2D.Ensure(item);
+            relay.Bind(item.GetComponent<ItemPhysicsProjection2D>());
             NotifyItemPhysicsComponentsAvailable(item);
             SynchronizeDetachedItemProxy(item);
             ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);

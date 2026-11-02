@@ -24,7 +24,7 @@ public sealed class ItemPhysicsRegion2D : MonoBehaviour
     {
         if (collider == null || collider.GetComponent<ItemPhysicsRegion2D>() != null) return false;
         if ((Purpose & WorldPhysicsPurpose2D.Blocking) != 0 && !collider.isTrigger) return true;
-        if ((Purpose & WorldPhysicsPurpose2D.Damage) != 0 && Receiver is Mod_DamageReceiver &&
+        if ((Purpose & WorldPhysicsPurpose2D.Damage) != 0 && Receiver != null &&
             collider.gameObject == Receiver.gameObject) return true;
         if ((Purpose & WorldPhysicsPurpose2D.Trigger) != 0 && Receiver is Module &&
             collider.isTrigger && collider.gameObject == Receiver.gameObject) return true;
@@ -34,21 +34,34 @@ public sealed class ItemPhysicsRegion2D : MonoBehaviour
     #endregion
 
     #region 物理消息转发
-    private void OnTriggerEnter2D(Collider2D other) => ForwardContact(nameof(OnTriggerEnter2D), other);
-    private void OnTriggerStay2D(Collider2D other) => ForwardContact(nameof(OnTriggerStay2D), other);
-    private void OnTriggerExit2D(Collider2D other) => ForwardContact(nameof(OnTriggerExit2D), other);
-    private void OnCollisionEnter2D(Collision2D collision) => ForwardContact(nameof(OnCollisionEnter2D), collision);
-    private void OnCollisionStay2D(Collision2D collision) => ForwardContact(nameof(OnCollisionStay2D), collision);
-    private void OnCollisionExit2D(Collision2D collision) => ForwardContact(nameof(OnCollisionExit2D), collision);
+    private void OnTriggerEnter2D(Collider2D other) => ForwardTrigger(other, WorldPhysicsTriggerPhase2D.Enter);
+    private void OnTriggerStay2D(Collider2D other) => ForwardTrigger(other, WorldPhysicsTriggerPhase2D.Stay);
+    private void OnTriggerExit2D(Collider2D other) => ForwardTrigger(other, WorldPhysicsTriggerPhase2D.Exit);
+    private void OnCollisionEnter2D(Collision2D collision) => ForwardCollision(collision, WorldPhysicsTriggerPhase2D.Enter);
+    private void OnCollisionStay2D(Collision2D collision) => ForwardCollision(collision, WorldPhysicsTriggerPhase2D.Stay);
+    private void OnCollisionExit2D(Collision2D collision) => ForwardCollision(collision, WorldPhysicsTriggerPhase2D.Exit);
 
-    private void ForwardContact(string message, object contact)
+    private bool CanForwardContact()
     {
         if (ImmutableWorldFixedBlocking || Receiver == null || Receiver.gameObject == gameObject ||
-            Receiver is Module module && !module.IsRuntimeLoaded) return;
+            Receiver is Module module && !module.IsRuntimeLoaded) return false;
         if (shape == null) shape = GetComponent<Collider2D>();
         if (shape != null && shape.attachedRigidbody != null &&
-            shape.attachedRigidbody.gameObject == Receiver.gameObject) return;
-        Receiver.gameObject.SendMessage(message, contact, SendMessageOptions.DontRequireReceiver);
+            shape.attachedRigidbody.gameObject == Receiver.gameObject) return false;
+        return true;
+    }
+
+    internal void ForwardTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase)
+    {
+        // 只投递给该区域绑定的接收者，不广播给同节点的其它玩法模块。
+        if (CanForwardContact() && Receiver is IWorldPhysicsTriggerReceiver2D receiver)
+            receiver.ReceivePhysicsTrigger(other, phase);
+    }
+
+    private void ForwardCollision(Collision2D contact, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (CanForwardContact() && Receiver is IWorldPhysicsCollisionReceiver2D receiver)
+            receiver.ReceivePhysicsCollision(contact, phase);
     }
     #endregion
 }

@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 /// <summary>
 /// 物品拾取器组件，用于自动收集可拾取物品
 /// </summary>
-public partial class Mod_ItemPicker : Module
+public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D
 {
     #region 拾取性能诊断
     // 数量快照与事务次数分开记录，整堆入包不等于逐件创建。
@@ -208,6 +208,13 @@ public partial class Mod_ItemPicker : Module
 
 
     #region 物品交互
+
+    public void ReceivePhysicsTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase == WorldPhysicsTriggerPhase2D.Enter) OnTriggerEnter2D(other);
+        else if (phase == WorldPhysicsTriggerPhase2D.Stay) OnTriggerStay2D(other);
+        else if (phase == WorldPhysicsTriggerPhase2D.Exit) OnTriggerExit2D(other);
+    }
 
     /// <summary>
     /// 当有物体进入触发器时尝试拾取物品

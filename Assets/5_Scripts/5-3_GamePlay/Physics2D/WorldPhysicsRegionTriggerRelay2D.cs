@@ -2,6 +2,16 @@ using UnityEngine;
 
 public enum WorldPhysicsTriggerPhase2D : byte { Enter, Stay, Exit }
 
+public interface IWorldPhysicsTriggerReceiver2D
+{
+    void ReceivePhysicsTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase);
+}
+
+public interface IWorldPhysicsCollisionReceiver2D
+{
+    void ReceivePhysicsCollision(Collision2D contact, WorldPhysicsTriggerPhase2D phase);
+}
+
 public interface IWorldPhysicsEntityRegionTriggerReceiver2D
 {
     void ReceivePhysicsRegionTrigger(string regionId, string receiverModule, WorldPhysicsPurpose2D purpose,

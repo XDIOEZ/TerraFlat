@@ -71,6 +71,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 
 ## 表现与资源会话
 
+- 物理区域只登记身份、用途与显式接收接口，不引用具体伤害模块或广播 `SendMessage`；模块通过 `IItemPhysicsColliderOwner2D` 声明配置。武器受击框走 `GameplayCombatBridge.ResolvePhysicsDamageReceiver`，身体接触走 `ResolvePhysicsBodyDamageReceiver`，不能混用；伤害预约按逻辑身份去重，飘字由独立表现层唯一发布。规则 `combat/physics_hit_ownership、physics_region_delivery、attack_window_order、damage_number_ownership`。
+
 - 受击碰撞集合统一由 `WorldPhysicsService2D.RentCombatDamageQuery` 发放；地板、机器、自然物和可选 AIECS 共用世界池，释放租约清候选，关闭世界撤销全部投影。通用 Item/Actor 壳只留 `ItemPhysicsTemplate2D` 默认配置，由所属世界在模块加载前领取原生组件；回收禁用，重租复用，迁移不重置运动。
 
 - Ground/Water/Back/Blocking 由 `ChunkGroundMeshRenderer` 批绘，视觉层不保留物理 Tilemap；安全单格 Sprite 用 Quad/GPU Cell，外扩 Sprite 保留顶点。树/资源/建筑/机械主体经 `ChunkDepthMeshRenderer` 按本地 Y 整行排序。

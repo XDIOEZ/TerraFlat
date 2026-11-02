@@ -1,5 +1,7 @@
 # 战斗与技能测试
 
+- 2026-11-03：`external-rules.lua` 新增 `hit_window_identity、attack_window_order、physics_hit_ownership、physics_region_delivery、damage_number_ownership`，覆盖重复接触统一预约、开窗与重绑顺序、明确受击区域/身体主生命的分离、镜像与代理回收、原生阻挡命中、定向消息及数字显示权交接。`Tools/Tests/CombatPhysics` 已执行正式窗口逻辑的1,214条独立断言及25份物理源码的依赖边界检查；GamePlay/联机依赖链外部编译0错误、39条警告。本轮没有强制刷新Unity或运行Lua/实际挥砍，不能据此当作场景、联机与视觉验收通过。
+
 - 2026-11-03：生物世界血条使用独立横向进度条 Prefab，`world_health_panel_lifecycle` 额外核对初始血量比例与受伤后的填充比例；通用资源血量面板继续显示数字。
 - 2026-11-02：近战动画武器按物理伤害、重量重平衡挥击体力（3.5～16 点），高伤害材质子物品明确覆盖父级费用；弓弩、吹箭、投石索同步提高蓄力体力成本。held_weapon_action 校验打制石器、黑曜石、木锤、石锤并比较实际扣费；archery_cycle 校验高伤反曲弓/弩比木弓更费体力，以及投石索费用。真实 PlayMode 和手感仍需验收。
 

@@ -660,7 +660,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
                 _ignoredFlightColliders.Contains(other) || Physics2D.GetIgnoreCollision(_solidCollider, other))
                 continue;
 
-            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
+            Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsBodyDamageReceiver(other);
             Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
             Vector2 impactPosition = _body.position + displacement * Mathf.Clamp01(hit.distance / distance);
             if (receiverCollider != null)
@@ -878,7 +878,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
                 contactNormal = -contactNormal;
         }
 
-        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(otherCollider);
+        Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsBodyDamageReceiver(otherCollider);
         Collider2D receiverCollider = ResolveDamageReceiverCollider(receiver);
         if (receiverCollider == null)
         {

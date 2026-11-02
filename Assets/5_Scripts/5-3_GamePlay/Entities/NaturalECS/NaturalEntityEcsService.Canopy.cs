@@ -143,7 +143,7 @@ namespace FlatWorld.NaturalEntities
             var damage = new FallingFruitDamage(record.Profile.Canopy.BluntDamage);
             foreach (RaycastHit2D hit in canopyHits)
             {
-                Mod_DamageReceiver target = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(hit.collider);
+                Mod_DamageReceiver target = GameplayCombatBridge.ResolvePhysicsDamageReceiver(hit.collider);
                 if (target == null || !canopyReceivers.Add(target)) continue;
                 double hitTime = Math.Min(record.CanopyStepTo, fruit.LandAt - 0.000001d);
                 if (FallingFruitDamage.TryHit(fruit, hitTime, () => target.Hurt(damage),

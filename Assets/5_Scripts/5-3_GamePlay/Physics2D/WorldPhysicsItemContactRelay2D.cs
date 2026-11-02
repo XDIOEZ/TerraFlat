@@ -4,14 +4,12 @@ using UnityEngine;
 internal sealed class WorldPhysicsItemContactRelay2D : MonoBehaviour
 {
     #region 接触事实转发
-    private Item owner;
-    internal void Bind(Item item) => owner = item;
-    internal void ClearBinding() => owner = null;
-    private void OnCollisionEnter2D(Collision2D collision) => Forward(collision);
-    private void OnCollisionStay2D(Collision2D collision) => Forward(collision);
-    private void Forward(Collision2D collision)
-    {
-        if (owner != null) owner.GetComponent<ItemPhysicsProjection2D>()?.RecordContact(collision);
-    }
+    private IWorldPhysicsCollisionReceiver2D receiver;
+    internal void Bind(IWorldPhysicsCollisionReceiver2D target) => receiver = target;
+    internal void ClearBinding() => receiver = null;
+    private void OnCollisionEnter2D(Collision2D collision)
+        => receiver?.ReceivePhysicsCollision(collision, WorldPhysicsTriggerPhase2D.Enter);
+    private void OnCollisionStay2D(Collision2D collision)
+        => receiver?.ReceivePhysicsCollision(collision, WorldPhysicsTriggerPhase2D.Stay);
     #endregion
 }

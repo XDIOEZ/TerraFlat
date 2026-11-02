@@ -73,7 +73,7 @@ public sealed partial class WorldPhysicsService2D
 
     internal WorldPhysicsEntityProxy2D AllocateEntityProxy(object entity, ItemData snapshot,
         ItemPhysicsDefinitionDto definition, IReadOnlyList<WorldPhysicsEntityRegion2D> regions,
-        Action<WorldPhysicsEntityPose2D> applyPose, IGameplayPhysicsDamageTarget damageTarget = null,
+        Action<WorldPhysicsEntityPose2D> applyPose,
         bool stateAuthority = true, Vector2? logicalPosition = null)
     {
         if (disposed) throw new ObjectDisposedException(nameof(WorldPhysicsService2D));
@@ -104,7 +104,6 @@ public sealed partial class WorldPhysicsService2D
                     if (region.Collider?.Enabled == false) continue;
                     Collider2D shape = RentEntityRegionCollider(shell, region);
                     RegisterCollider(shape, regionId: region.Id, purpose: region.Purpose, entity: entity,
-                        damageTarget: (region.Purpose & WorldPhysicsPurpose2D.Damage) != 0 ? damageTarget : null,
                         receiverModule: region.ReceiverModule);
                     WorldPhysicsRegionTriggerRelay2D relay = shape.GetComponent<WorldPhysicsRegionTriggerRelay2D>();
                     if ((region.Purpose & WorldPhysicsPurpose2D.Trigger) != 0 && stateAuthority &&
@@ -222,7 +221,7 @@ public sealed partial class WorldPhysicsService2D
         collider.transform.SetLocalPositionAndRotation(region.LocalPosition, region.LocalRotation);
         collider.transform.localScale = region.LocalScale;
         collider.gameObject.layer = (region.Purpose & WorldPhysicsPurpose2D.Damage) != 0
-            ? CombatPhysicsChannels.DamageReceiverLayer : 0;
+            ? WorldPhysicsChannels2D.DamageReceiverLayer : 0;
         collider.GetComponent<ColliderSource2D>()?.ClearBinding();
         ResetColliderPhysicsSettings(collider);
         collider.offset = Vector2.zero;
@@ -432,7 +431,7 @@ public sealed partial class WorldPhysicsService2D
                     projected.offset = source.offset; projected.size = box.size; projected.edgeRadius = box.edgeRadius;
                     projected.isTrigger = false; projected.enabled = true;
                     RegisterCollider(projected, item, binding.Receiver, binding.RegionId, binding.Purpose,
-                        binding.Entity, binding.DamageTarget, binding.ReceiverModule);
+                        binding.Entity, binding.ReceiverModule);
                     source.enabled = false;
                     shell.DisabledSourceColliders.Add(source);
                 }

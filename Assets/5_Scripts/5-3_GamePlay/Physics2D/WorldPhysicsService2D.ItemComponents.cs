@@ -33,6 +33,23 @@ public sealed partial class WorldPhysicsService2D
 
     private static readonly ConditionalWeakTable<Item, ItemPhysicsComponentCache> itemComponentCaches = new();
 
+    private static Component ResolveItemColliderReceiver(Item item, Collider2D collider)
+    {
+        if (itemComponentCaches.TryGetValue(item, out var cache))
+        {
+            foreach (var entry in cache.Declared)
+                if (entry.Value == collider && entry.Key is Module) return entry.Key;
+            foreach (var entry in cache.Templates)
+                if (entry.Value == collider && entry.Key != null && entry.Key.owningModule != null)
+                    return entry.Key.owningModule;
+        }
+        // 未模板化的区域只认本节点归属，子触发器可显式转交父模块的接触接口。
+        Module local = collider.GetComponent<Module>();
+        if (local != null) return local;
+        Module parent = collider.GetComponentInParent<Module>(true);
+        return parent is IWorldPhysicsTriggerReceiver2D || parent is IWorldPhysicsCollisionReceiver2D ? parent : null;
+    }
+
     internal static bool HasRentedItemTemplateCollider(ItemPhysicsTemplate2D template)
     {
         Item item = template != null ? template.GetComponentInParent<Item>(true) : null;
@@ -83,7 +100,8 @@ public sealed partial class WorldPhysicsService2D
                     shape = CreateOwnedItemCollider(cache, template.gameObject, type);
                     cache.Templates[template] = shape;
                     hadShape = false;
-                    if (!item.IsInitialized && template.GetComponent<Mod_Damage>() != null)
+                    if (!item.IsInitialized && template.owningModule is IItemPhysicsColliderOwner2D owner &&
+                        owner.RequiresInitialPhysicsAnimationRebind)
                     {
                         Animator animator = template.GetComponentInParent<Animator>(true);
                         if (animator != null) animatorsToRebind.Add(animator);
@@ -122,7 +140,8 @@ public sealed partial class WorldPhysicsService2D
                     }
                 }
                 Collider2D shape = RentDeclaredItemCollider(cache, entry.Key, entry.Value, out bool created);
-                if (created && !item.IsInitialized && entry.Key is Mod_Damage)
+                if (created && !item.IsInitialized && entry.Key is IItemPhysicsColliderOwner2D owner &&
+                    owner.RequiresInitialPhysicsAnimationRebind)
                 {
                     Animator animator = entry.Key.GetComponentInParent<Animator>(true);
                     if (animator != null) animatorsToRebind.Add(animator);
@@ -246,7 +265,8 @@ public sealed partial class WorldPhysicsService2D
         owner.RegisterItemColliderBinding(item, collider);
         if (owner.itemColliders.TryGetValue(item, out var registered) && !registered.Contains(collider))
             registered.Add(collider);
-        if (created && !item.IsInitialized && target is Mod_Damage)
+        if (created && !item.IsInitialized && target is IItemPhysicsColliderOwner2D colliderOwner &&
+            colliderOwner.RequiresInitialPhysicsAnimationRebind)
         {
             Animator animator = target.GetComponentInParent<Animator>(true);
             if (animator != null) RebindInitialItemAnimatorAfterPhysicsLease(animator);

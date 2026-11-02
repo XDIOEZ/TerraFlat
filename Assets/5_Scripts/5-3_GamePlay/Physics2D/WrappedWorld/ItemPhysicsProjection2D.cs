@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>把实体质量交给 Physics2D，并只回写允许的运行时物理结果。</summary>
 [DisallowMultipleComponent]
-public sealed class ItemPhysicsProjection2D : MonoBehaviour
+public sealed class ItemPhysicsProjection2D : MonoBehaviour, IWorldPhysicsCollisionReceiver2D
 {
     #region 数据与刚体同步
 
@@ -114,6 +114,11 @@ public sealed class ItemPhysicsProjection2D : MonoBehaviour
     #endregion
 
     #region 接触事实
+
+    public void ReceivePhysicsCollision(Collision2D contact, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase != WorldPhysicsTriggerPhase2D.Exit) RecordContact(contact);
+    }
 
     private void OnCollisionEnter2D(Collision2D collision) => RecordContact(collision);
     private void OnCollisionStay2D(Collision2D collision) => RecordContact(collision);

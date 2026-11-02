@@ -24,14 +24,13 @@ public readonly struct WorldPhysicsColliderBinding2D
     public readonly WorldPhysicsPurpose2D Purpose;
     public readonly object Entity;
     public readonly string ReceiverModule;
-    internal readonly IGameplayPhysicsDamageTarget DamageTarget;
 
     internal WorldPhysicsColliderBinding2D(WorldPhysicsService2D world, Item item, Component receiver,
-        string regionId, WorldPhysicsPurpose2D purpose, object entity, IGameplayPhysicsDamageTarget damageTarget,
+        string regionId, WorldPhysicsPurpose2D purpose, object entity,
         string receiverModule = null)
     {
         World = world; Item = item; Receiver = receiver; RegionId = regionId;
-        Purpose = purpose; Entity = entity; DamageTarget = damageTarget;
+        Purpose = purpose; Entity = entity;
         ReceiverModule = receiverModule;
     }
     #endregion
@@ -75,17 +74,17 @@ public sealed partial class WorldPhysicsService2D : IDisposable
 
     internal bool RegisterCollider(Collider2D collider, Item item = null, Component receiver = null,
         string regionId = null, WorldPhysicsPurpose2D purpose = WorldPhysicsPurpose2D.Blocking,
-        object entity = null, IGameplayPhysicsDamageTarget damageTarget = null, string receiverModule = null)
+        object entity = null, string receiverModule = null)
     {
         if (collider == null || disposed) return false;
         if (collider.gameObject.scene.GetPhysicsScene2D() != PrimarySpace.PhysicsScene)
             throw new InvalidOperationException($"碰撞体 {collider.name} 尚未进入世界 {WorldKey} 的物理空间。");
         if (colliderOwners.TryGetValue(collider, out var previous) && previous != this)
             previous.UnregisterCollider(collider);
-        var binding = new WorldPhysicsColliderBinding2D(this, item, receiver, regionId, purpose, entity, damageTarget, receiverModule);
+        var binding = new WorldPhysicsColliderBinding2D(this, item, receiver, regionId, purpose, entity, receiverModule);
         if (colliders.TryGetValue(collider, out var current) && current.Item == item && current.Receiver == receiver &&
             current.RegionId == regionId && current.Purpose == purpose && ReferenceEquals(current.Entity, entity) &&
-            ReferenceEquals(current.DamageTarget, damageTarget) && current.ReceiverModule == receiverModule) return false;
+            current.ReceiverModule == receiverModule) return false;
         colliders[collider] = binding;
         colliderOwners[collider] = this;
         return true;
@@ -297,13 +296,19 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     private void RegisterItemColliderBinding(Item item, Collider2D collider)
     {
         ItemPhysicsRegion2D region = collider.GetComponent<ItemPhysicsRegion2D>();
-        Module module = collider.GetComponentInParent<Module>(true);
-        if (region == null && module is Mod_DamageReceiver receiver && collider.transform == receiver.transform)
-            CombatPhysicsChannels.AssignDamageReceiver(receiver);
+        Component module = ResolveItemColliderReceiver(item, collider);
         WorldPhysicsPurpose2D purpose = region != null ? region.Purpose : collider.isTrigger
             ? WorldPhysicsPurpose2D.Trigger : WorldPhysicsPurpose2D.Blocking;
-        if (region == null && CombatPhysicsChannels.IsDamageReceiverCollider(collider))
-            purpose |= WorldPhysicsPurpose2D.Damage;
+        if (region == null)
+        {
+            if (module is IItemPhysicsColliderOwner2D owner && collider.transform == module.transform)
+            {
+                owner.ConfigureOwnedPhysicsCollider(collider);
+                purpose = owner.PhysicsColliderPurpose;
+            }
+            else if (WorldPhysicsChannels2D.IsDamageReceiverCollider(collider))
+                purpose |= WorldPhysicsPurpose2D.Damage;
+        }
         RegisterCollider(collider, item, region != null ? region.Receiver : module,
             region != null ? region.RegionId : null, purpose);
     }

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS0436</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/5_Scripts/Shared/Combat/CombatHitWindow.cs" />
+    <Reference Include="FlatWorld.Combat.Core">
+      <HintPath>../../../Library/ScriptAssemblies/FlatWorld.Combat.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>../../../Library/ScriptAssemblies/Unity.Mathematics.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

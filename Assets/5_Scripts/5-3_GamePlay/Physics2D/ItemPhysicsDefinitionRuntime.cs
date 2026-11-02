@@ -137,7 +137,7 @@ public static class ItemPhysicsDefinitionRuntime
                 if (!definition.TryGetModuleAssembly(region.Module, out RuntimeItemModuleAssemblyPlan assembly))
                     throw new InvalidDataException($"物品 {definition.Id} 的区域 {region.Id} 引用了不存在的模块槽：{region.Module}");
                 if ((region.Purposes & WorldPhysicsPurpose2D.Damage) != 0 &&
-                    (assembly.ModuleType == null || !typeof(Mod_DamageReceiver).IsAssignableFrom(assembly.ModuleType)) ||
+                    (assembly.ModuleType == null || !typeof(IItemPhysicsDamageReceiver2D).IsAssignableFrom(assembly.ModuleType)) ||
                     (region.Purposes & WorldPhysicsPurpose2D.Interaction) != 0 &&
                     (assembly.ModuleType == null || !typeof(IInteractable).IsAssignableFrom(assembly.ModuleType)))
                     throw new InvalidDataException($"物品 {definition.Id} 的区域 {region.Id} 接收模块没有声明的受击/交互能力。");
@@ -183,14 +183,14 @@ public static class ItemPhysicsDefinitionRuntime
             Component target = receiver;
             if (target == null)
             {
-                if ((region.Purposes & WorldPhysicsPurpose2D.Damage) != 0) target = anchor.GetComponent<Mod_DamageReceiver>();
+                if ((region.Purposes & WorldPhysicsPurpose2D.Damage) != 0) target = anchor.GetComponent<IItemPhysicsDamageReceiver2D>() as Component;
                 else if ((region.Purposes & WorldPhysicsPurpose2D.Interaction) != 0) target = anchor.GetComponent<IInteractable>() as Component;
-                else if ((region.Purposes & WorldPhysicsPurpose2D.Trigger) != 0) target = anchor.GetComponent<Module>();
+                else if ((region.Purposes & WorldPhysicsPurpose2D.Trigger) != 0) target = anchor.GetComponent<IWorldPhysicsTriggerReceiver2D>() as Component;
             }
-            if ((region.Purposes & WorldPhysicsPurpose2D.Damage) != 0 && target is not Mod_DamageReceiver)
+            if ((region.Purposes & WorldPhysicsPurpose2D.Damage) != 0 && target is not IItemPhysicsDamageReceiver2D)
                 throw new MissingComponentException($"物品 {item.name} 的受击区域 {region.Id} 没有明确生命接收模块。");
             if ((region.Purposes & WorldPhysicsPurpose2D.Interaction) != 0 && target is not IInteractable ||
-                (region.Purposes & WorldPhysicsPurpose2D.Trigger) != 0 && target == null)
+                (region.Purposes & WorldPhysicsPurpose2D.Trigger) != 0 && target is not IWorldPhysicsTriggerReceiver2D)
                 throw new MissingComponentException($"物品 {item.name} 的区域 {region.Id} 没有明确交互/触发接收组件。");
             target ??= item;
             ItemPhysicsRegion2D marker = existing.Find(candidate => candidate.GetComponentInParent<Item>(true) == item && candidate.RegionId == region.Id);
@@ -204,7 +204,7 @@ public static class ItemPhysicsDefinitionRuntime
             marker.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             marker.transform.localScale = Vector3.one;
             marker.gameObject.layer = (region.Purposes & WorldPhysicsPurpose2D.Damage) != 0
-                ? CombatPhysicsChannels.DamageReceiverLayer : (region.Purposes & WorldPhysicsPurpose2D.Blocking) != 0
+                ? WorldPhysicsChannels2D.DamageReceiverLayer : (region.Purposes & WorldPhysicsPurpose2D.Blocking) != 0
                     ? item.gameObject.layer : anchor.gameObject.layer;
             marker.BindRegion(region.Id, region.Purposes, target, region.Immutable);
             configured.Add(marker);

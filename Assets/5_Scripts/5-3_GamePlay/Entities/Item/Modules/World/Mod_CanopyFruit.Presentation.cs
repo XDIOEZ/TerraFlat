@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -31,7 +31,7 @@ public sealed partial class Mod_CanopyFruit
         {
             foreach (RaycastHit2D hit in sweepHits)
             {
-                Mod_DamageReceiver target = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(hit.collider);
+                Mod_DamageReceiver target = GameplayCombatBridge.ResolvePhysicsDamageReceiver(hit.collider);
                 if (target == null || target.item == item || !hitReceivers.Add(target)) continue;
                 hitTarget = target;
                 double hitTime = Math.Min(stepTo, fruit.LandAt - 0.000001);

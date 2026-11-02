@@ -8,7 +8,7 @@ public enum WeaponHitboxRegion
     UpperRightQuadrant = 1
 }
 
-public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemPhysicsComponentsReceiver2D
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemPhysicsComponentsReceiver2D, IWorldPhysicsTriggerReceiver2D, IItemPhysicsColliderOwner2D
 {
     #region 伤害相关数据
 
@@ -106,9 +106,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private List<Mod_DamageReceiver> insideReceivers = new List<Mod_DamageReceiver>();
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
     private readonly HashSet<Mod_DamageReceiver> windowScanHitReceivers = new HashSet<Mod_DamageReceiver>();
-    private readonly HashSet<Mod_DamageReceiver> attackWindowHitReceivers = new HashSet<Mod_DamageReceiver>();
-    private readonly HashSet<FlatWorld.Combat.CombatIdentity> externalWindowTargets = new HashSet<FlatWorld.Combat.CombatIdentity>(); // 与旧目标共享窗口预算。
-    private uint attackSequence, attackPulse; // 每个真实窗口的新序列与实际 Pulse。
+    private readonly FlatWorld.Combat.CombatHitWindow hitWindow = new();
+    private uint attackSequence => hitWindow.Sequence;
+    private uint attackPulse; // 物理接触与数据查询共用一个逻辑窗口。
     private double nextDataPulseTime; // 周期查询时钟，不依赖是否命中旧 Collider。
     private readonly List<ICombatDamageContextModifier> contextModifiers = new List<ICombatDamageContextModifier>(); // 装配时缓存的能力。
     private bool windowOverlapScanEnabled;
@@ -199,15 +199,18 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>独立返回建筑克制倍率，避免把工具门槛与建筑伤害倍率隐式绑定。</summary>
     public float BuildingDamageMultiplier => Mathf.Max(0f, buildingDamageMultiplier);
     public Collider2D DamageCollider => damageCollider;
+    WorldPhysicsPurpose2D IItemPhysicsColliderOwner2D.PhysicsColliderPurpose => WorldPhysicsPurpose2D.Trigger;
+    bool IItemPhysicsColliderOwner2D.RequiresInitialPhysicsAnimationRebind => true;
+    void IItemPhysicsColliderOwner2D.ConfigureOwnedPhysicsCollider(Collider2D collider)
+        => CombatPhysicsChannels.AssignDamageSender(collider);
 
     /// <summary>两个后端共用的剩余名额；先预约再结算，与旧对象窗口语义一致。</summary>
-    public int RemainingAttackTargets => Mathf.Max(0, Mathf.Max(1, MaxAttackTargets) - attackWindowHitReceivers.Count - externalWindowTargets.Count);
+    public int RemainingAttackTargets => hitWindow.Remaining(MaxAttackTargets);
 
     /// <summary>同一窗口内同一外部身份只预约一次，不能绕过旧对象已经消耗的名额。</summary>
     public bool TryReserveExternalTarget(FlatWorld.Combat.CombatIdentity target)
     {
-        if (!target.IsValid || RemainingAttackTargets == 0 || externalWindowTargets.Contains(target)) return false;
-        externalWindowTargets.Add(target); return true;
+        return hitWindow.TryReserve(target, MaxAttackTargets);
     }
 
     /// <summary>发送端组合器只遍历本武器的少量能力，禁止每帧扫描场景或每个 ECS 实体。</summary>
@@ -238,6 +241,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>由投射物真实运动入口提交上一姿态到当前姿态的扫掠。</summary>
     public void QueryProjectileSweep(Vector2 displacement, float maximumFraction = 1f)
     {
+        UpdateDamageWindowState();
         float fraction = Mathf.Clamp01(maximumFraction);
         EmitDataShape(displacement * fraction, -displacement * (1f - fraction));
     }
@@ -245,13 +249,15 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>物理接触前从当前伤害盒向接触位置扫掠，位置修正只用于对齐刚体与插值表现。</summary>
     internal void QueryProjectilePhysicsSweep(Vector2 displacement, Vector2 positionOffset)
     {
+        UpdateDamageWindowState();
         EmitDataShape(displacement, positionOffset + displacement);
     }
 
     /// <summary>直接转交 Unity 已确认的碰撞目标和世界接触点，已映射目标不再进行附近范围查询。</summary>
     internal bool ProcessPhysicsDataColliderHit(Collider2D other, Vector2 sourceOrigin, Vector2 hitPoint)
     {
-        if (!GameplayCombatBridge.TryGetPhysicsDamageTarget(other, out var target)) return false;
+        if (!GameplayCombatBridge.TryGetPhysicsContactDamageTarget(other, out var target)) return false;
+        UpdateDamageWindowState();
         if (damageCollider == null || !damageCollider.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0)
             return true;
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
@@ -292,10 +298,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _);
 
     /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
-    public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage)
+    public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage,
+        bool damageNumberOwnedByReceiver = false)
     {
         if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
-        if (damage >= 0f) SpawnEffect(context.HitPoint, damage);
+        if (damage >= 0f) SpawnEffect(context.HitPoint, damage,
+            !(damageNumberOwnedByReceiver && damage > 0f));
         OnExternalDamageResolved?.Invoke(context, damage);
         OnDamageApplied?.Invoke(damage);
     }
@@ -336,7 +344,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             damageCollider.enabled = initialDamageColliderEnabled;
         restoreDamageColliderAfterDeath = false;
         CombatPhysicsChannels.AssignDamageSender(damageCollider);
-        lastColliderEnabled = damageCollider.enabled;
     }
 
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
@@ -373,10 +380,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         insideReceivers.Clear();
         overlapColliders.Clear();
         windowScanHitReceivers.Clear();
-        attackWindowHitReceivers.Clear();
-        externalWindowTargets.Clear(); attackSequence = 0; attackPulse = 0; nextDataPulseTime = 0;
+        hitWindow.Reset(); attackPulse = 0; nextDataPulseTime = 0;
         windowOverlapScanEnabled = false;
-        lastColliderEnabled = damageCollider != null && damageCollider.enabled;
+        lastColliderEnabled = false;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
         if (sourceHealth != null && sourceHealth.Hp <= 0f) HandleSourceDeath(sourceHealth);
@@ -427,11 +433,12 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
         }
 
+        // 先建立逻辑窗口再采样，不能命中后才清空预约导致同一步重复扣血。
+        if (UpdateDamageWindowState()) return;
         // 窗口内按固定步检测新目标，预约集仍保证每目标只受击一次。
         if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
             damageCollider != null && damageCollider.enabled)
             EmitDataPulse();
-        UpdateDamageWindowState();
 
         // TilemapCollider2D 的整层只会产生一个 Collider 回调；主动查询当前攻击触发器，
         // 才能在连续墙面内移动时仍准确选中当前格，并保证一次攻击窗只伤一格。
@@ -452,7 +459,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>登记真实碰撞体的窗口开关，返回本次是否已完成开启时的即时查询。</summary>
-    private bool UpdateDamageWindowState()
+    internal bool UpdateDamageWindowState()
     {
         if (damageCollider != null)
         {
@@ -480,20 +487,28 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     #endregion
 
     #region 伤害处理
+    public void ReceivePhysicsTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase == WorldPhysicsTriggerPhase2D.Enter) OnTriggerEnter2D(other);
+        else if (phase == WorldPhysicsTriggerPhase2D.Exit) OnTriggerExit2D(other);
+    }
+
     public void OnTriggerEnter2D(Collider2D other)
     {
         // 连续投射物统一按扫掠距离排序，不能让物理回调先击中更远的 GO 而跳过近处 ECS。
-        if (!explicitProjectileSweep) ProcessDamageColliderHit(other);
+        if (explicitProjectileSweep) return;
+        UpdateDamageWindowState();
+        ProcessDamageColliderHit(other);
     }
 
     /// <summary>只读候选资格，供连续扫掠确定最近的实体边界；不会消耗命中次数。</summary>
     public bool CanHitColliderTarget(Collider2D collider)
     {
         if (!CombatPhysicsChannels.IsDamageReceiverCollider(collider)) return false;
-        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(collider);
+        Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(collider);
         return receiver != null && !IsDamageSourceReceiver(receiver) && CanDealDamageNow() &&
             AllowsTargetDelivery(receiver) && FactionRelationService.CanAttack(item, receiver.item) &&
-            !attackWindowHitReceivers.Contains(receiver);
+            !hitWindow.Contains(GameplayCombatBridge.Identity(receiver.item));
     }
 
     /// <summary>供高速投射物的射线/碰撞体扫掠复用同一套命中结算，避免绕过 Mod_Damage。</summary>
@@ -504,7 +519,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         impactOrigin = sourceOrigin.GetValueOrDefault();
         hasExplicitImpactPoint = hitPoint.HasValue;
         explicitImpactPoint = hitPoint.GetValueOrDefault();
-        try { ProcessDamageColliderHit(other); }
+        try { UpdateDamageWindowState(); ProcessDamageColliderHit(other); }
         finally { hasImpactOrigin = false; hasExplicitImpactPoint = false; }
     }
 
@@ -519,9 +534,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
         }
 
-        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
+        Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(other);
         if (receiver == null)
         {
+            // 已登记的原生目标交给数据后端，不能再被当成无生命物体播放零伤反馈。
+            if (GameplayCombatBridge.TryGetPhysicsDamageTarget(other, out _)) return;
             TryPlayNonDamageableImpact(other);
             return;
         }
@@ -570,7 +587,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
 
         // 从内部接收器列表中移除
-        Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other);
+        Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(other);
         if (receiver != null)
         {
             insideReceivers.Remove(receiver);
@@ -607,13 +624,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             return;
         }
 
-        if (attackWindowHitReceivers.Contains(receiver) ||
-            attackWindowHitReceivers.Count + externalWindowTargets.Count >= Mathf.Max(1, MaxAttackTargets))
-        {
-            return;
-        }
-
-        attackWindowHitReceivers.Add(receiver);
+        if (!hitWindow.TryReserve(GameplayCombatBridge.Identity(receiver.item), MaxAttackTargets)) return;
 
         // 碰撞只代表攻击范围接触；角色之间还要经过武器、状态和目标体积共同决定的逻辑命中。
         if (!TryResolveLogicalHit(receiver, out float logicalHitChance))
@@ -626,13 +637,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         // 命中判定通过后先磨损武器，再由目标裁定伤害或格挡。
         ConsumeWeaponDurabilityForHit();
+        bool receiverOwnsNumber = CombatDamageNumberOwnership.HasPresenter(receiver);
         float acDamage = receiver.Hurt(this);
 
         // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
         if (acDamage >= 0f)
         {
             Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
-            SpawnEffect(hitPoint, acDamage);
+            SpawnEffect(hitPoint, acDamage, !(receiverOwnsNumber && acDamage > 0f));
         }
 
         if (CombatHitFeedback.HasImpact(acDamage) && receiver != null && receiver.item != null)
@@ -769,7 +781,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         Vector2 origin = damageCollider != null
             ? damageCollider.bounds.center
             : transform.position;
-        SpawnEffect(hitCollider.ClosestPoint(origin), 0f);
+        SpawnEffect(hitCollider.ClosestPoint(origin), 0f, includeDamageNumber: false);
         nonDamageableImpactAppliedThisWindow = true;
     }
 
@@ -807,13 +819,13 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         // 攻击窗口可能由动画曲线在本帧开启，先同步实际武器姿态再做主动重叠扫描。
         SyncBoundWeaponHitbox();
+        lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
         windowScanHitReceivers.Clear();
-        attackWindowHitReceivers.Clear();
-        externalWindowTargets.Clear();
-        attackSequence++; if (attackSequence == 0) attackSequence = 1;
+        hitWindow.Begin();
         attackPulse = 0;
+        if (explicitProjectileSweep) return;
         bool shouldQueryData = EnableOnTriggerEnterDamage && IsDamageIntervalReady();
         ScanCurrentOverlapsAndApplyDamageForWindow();
         if (shouldQueryData) EmitDataPulse();
@@ -825,8 +837,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         insideReceivers.Clear();
         windowScanHitReceivers.Clear();
-        attackWindowHitReceivers.Clear();
-        externalWindowTargets.Clear();
+        hitWindow.Clear();
         windowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
@@ -858,46 +869,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>有效命中播放一个主伤害类型特效，再播放独立的数字等通用反馈。</summary>
-    private void SpawnEffect(Vector2 hitPoint, float damage)
+    private void SpawnEffect(Vector2 hitPoint, float damage, bool includeDamageNumber = true)
     {
         using var marker = HitEffectsMarker.Auto();
-        WorldRenderingManager effectManager = WorldRenderingManager.Instance;
-        CombatDamageKind kind = ResolveDamageValues().DominantKind;
-        if (impactEffectSet != null)
-            PlayHitEffect(impactEffectSet.GetPrefab(kind), effectManager, hitPoint, damage, kind);
-
-        if (AttackEffects == null)
-            return;
-
-        foreach (GameEffect effectPrefab in AttackEffects)
-            PlayHitEffect(effectPrefab, effectManager, hitPoint, damage, kind);
-    }
-
-    /// <summary>从现有对象池播放命中特效，类型动画与数字共用相同的命中坐标。</summary>
-    private void PlayHitEffect(GameEffect prefab, WorldRenderingManager manager, Vector2 hitPoint,
-        float damage, CombatDamageKind kind)
-    {
-        if (prefab == null)
-            return;
-
-        GameEffect effect = manager != null ? manager.GetGameEffectFromPool(prefab) : Instantiate(prefab);
-        effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
-        object effectData = effect is DamageTextEffect ? BuildDamageTextData(damage, kind) : damage;
-        effect.Effect(transform, effectData);
-    }
-
-    /// <summary>数字与命中动画共用同一个主伤害类型，劈砍继续使用刃器数字样式。</summary>
-    private static DamageTextEffectData BuildDamageTextData(float damage, CombatDamageKind kind)
-    {
-        DamageTextStyle style = kind switch
-        {
-            CombatDamageKind.Cutting => DamageTextStyle.Cutting,
-            CombatDamageKind.Chopping => DamageTextStyle.Cutting,
-            CombatDamageKind.Piercing => DamageTextStyle.Piercing,
-            CombatDamageKind.Blunt => DamageTextStyle.Blunt,
-            _ => DamageTextStyle.Normal
-        };
-        return new DamageTextEffectData(damage, style);
+        CombatImpactPresentation.Play(transform, impactEffectSet, AttackEffects, hitPoint, damage,
+            ResolveDamageValues().DominantKind, includeDamageNumber);
     }
 
     /// <summary>获取已校正的分类伤害。</summary>
@@ -1217,7 +1193,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         for (int i = 0; i < overlapColliders.Count; i++)
         {
             Collider2D overlap = overlapColliders[i];
-            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(overlap);
+            Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(overlap);
             if (receiver == null || IsDamageSourceReceiver(receiver) || !windowScanHitReceivers.Add(receiver))
                 continue;
 
@@ -1258,6 +1234,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         }
 
         bool wasEnabled = damageCollider.enabled;
+        bool wasWindowOpen = lastColliderEnabled;
         if (damageCollider.enabled != enabled)
         {
            damageCollider.enabled = enabled; // 先切换状态以确保触发器事件正确调用，从而维护内部接收器列表的准确性
@@ -1265,7 +1242,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         lastColliderEnabled = damageCollider.enabled;
         if (wasEnabled != enabled) item?.MarkModuleScheduleDirty();
-        if (enabled && !wasEnabled)
+        if (enabled && (!wasEnabled || !wasWindowOpen))
         {
             BeginTileDamageWindow();
             CombatAudioRouter.PlayWeaponAttack(this);
@@ -1291,7 +1268,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         if (sourceHealth != null && sourceHealth.Hp <= 0f) return;
         // 碰撞体可能持续启用，开始新的动作时仍需重新计算本次可命中的目标数。
-        attackWindowHitReceivers.Clear();
         if (damageCollider != null && damageCollider.enabled)
         {
             BeginTileDamageWindow();
@@ -1342,13 +1318,13 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 /// </summary>
 public static class CombatPhysicsChannels
 {
-    public const string DamageReceiverLayerName = "DamageReciver";
-    public const string DamageSenderLayerName = "DamageSender";
+    public const string DamageReceiverLayerName = WorldPhysicsChannels2D.DamageReceiverLayerName;
+    public const string DamageSenderLayerName = WorldPhysicsChannels2D.DamageSenderLayerName;
 
     private static bool collisionMatrixConfigured;
 
-    public static int DamageReceiverLayer => LayerMask.NameToLayer(DamageReceiverLayerName);
-    public static int DamageSenderLayer => LayerMask.NameToLayer(DamageSenderLayerName);
+    public static int DamageReceiverLayer => WorldPhysicsChannels2D.DamageReceiverLayer;
+    public static int DamageSenderLayer => WorldPhysicsChannels2D.DamageSenderLayer;
 
     public static LayerMask DamageReceiverMask
     {
@@ -1421,8 +1397,17 @@ public static class CombatPhysicsChannels
         }
     }
 
+    public static void AssignDamageReceiverCollider(Collider2D collider)
+    {
+        EnsureConfigured();
+        int layer = DamageReceiverLayer;
+        if (collider == null || layer < 0) return;
+        collider.isTrigger = true;
+        collider.gameObject.layer = layer;
+    }
+
     public static bool IsDamageReceiverCollider(Collider2D collider)
     {
-        return collider != null && collider.gameObject.layer == DamageReceiverLayer;
+        return WorldPhysicsChannels2D.IsDamageReceiverCollider(collider);
     }
 }
