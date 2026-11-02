@@ -62,6 +62,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 区块回复按 WorldEpoch、RealmRevision、RequestToken 和快照版本验收；地形增量等待基线后重放，缺口重新请求。服务器临时持有并恢复请求块后捕获实体；窗口内机器按块重置并补齐，离窗副本回收。下落选址由连接乘员的目标星体和范围授权，只返回异步预览网格。
 - Item 使用 FWI1 实例快照；捕获不改活跃 ItemData、库存或位姿。公开世界捕获上下文为线程局部作用域，不能跨 await。
 - 地表/太空拾取由 `NetworkItemStateCoordinator.Pickup` 统一预留：客户端只读计划，服务器真实入包后按实际原份数扣同一来源；余量保留，Host 不重复入包。回执按连接引用、请求号和租约令牌去重，客户端成功合并库存才确认；确认前拒绝旧全量库存包，满包预检不申请租约，非库存生存状态继续复制。未提交超时/断线释放来源，已结算只重发回执，不重新入包。门禁经通用网络库存事务查询桥进入原生操作，测试夹具只单向调用正式消息。
+- 拾取请求桥返回明确状态：未连接才允许本地结算；网络未就绪、攻击/库存忙碌或基线未就绪返回 `Deferred`，不能吞掉后续接触重试；容量不足返回 `CapacityRejected` 复用拾取提示，实际在途请求返回 `Pending` 去重。
 - 热快照按当前配置合并状态，不迁移模块布局；未变模块保留，非重载/远程白名单通过 `BindSnapshotData` 绑定。`CaptureRuntimeStateBaseline` 在合并前捕获基线，`ApplyMergedRuntimeStates` 只刷新原代际中改变的模块；回调回收或换代后停止旧实例处理。嵌套库存仅为新冷数据补配置。
 - `ItemNetworkCaptureCache` 在 ModuleSave 后计算状态指纹，按实例代际、数据引用和捕获上下文隔离；`Data_Player` 与 `PlayerInstanceSnapshot` 逐字段对应，公开和私有库存按正式快照边界区分。未变模块复用冻结快照，未知派生类型/codec 完整捕获；MOD 可实现 `IModuleInstanceStateFingerprintProvider`，公共 Capture 返回独立缓冲。热栏保存仍先调用手持 ModuleSave，仅在完整库存指纹、源/模块/代际和现有字节内容均未变时复用二进制载荷，加载/卸载或 codec 变更失效。
 - 状态与位姿分别复制：普通世界状态包不带位姿，`NetworkItemPoseMessage` 独立递增版本；出生/完整包带当前姿态版本，客户端拒绝旧位姿。DTO 协议号由 `NetworkGameplayProtocol` 管理。

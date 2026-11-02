@@ -1,3 +1,18 @@
+test.system("inventory", "pickup_lifecycle", {}, function(data)
+    assert(data.missingBeforeLease and data.readyAfterLease and data.registeredContactResolvesItem,
+        "拾取器先加载、物理后租借时未补齐范围或接触来源")
+    assert(data.deferredContactRetries and data.resumedWithoutLeaving and data.pendingNotRepeated,
+        "忙碌时吞掉拾取重试，或已发送的请求被持续接触重复提交")
+    assert(data.permissionBlocked and data.permissionRestored,
+        "临时禁止拾取没有生效，或恢复权限后必须离开再靠近")
+    assert(data.fullCapacityNotRepeated and data.capacityChangeRetries and data.requestsDoNotMoveInventory,
+        "满包持续刷请求、腾空间不重试，或未获授权就改了库存和地面数量")
+    assert(data.sameCapacityDoesNotRetry and data.unlimitedCapacityRetries and data.clearedCapacityRetries
+        and data.capacityDoesNotChangeMass, "容量实变未通知重试、相同配置反复重试，或容量设置污染实际质量版本")
+    assert(data.unloadedRangeRejected and data.returnedLeaseRejected and data.rerentedRangeRestored,
+        "卸载仍保留拾取范围，或物理回池重租后范围没有恢复")
+end, "拾取生命周期：晚到物理、忙碌恢复、请求去重与回池重载")
+
 local durability_cases = {
     {name = "碎掉当前木棍并换下一根", args = {}, accepted = true, broke = true, amount = 4, durability = 20},
     {name = "普通磨损不减数量", args = {durability = 7}, accepted = true, broke = false, amount = 5, durability = 6},
@@ -433,7 +448,7 @@ for _, case in ipairs(capacities) do
         assert(data.allowed == case.allowed and data.weightLimit == case.weight, "重量体积容量策略错误")
         assert(data.sameIdentity == case.same and data.canStack == case.stack, "堆叠身份错误")
         assert(data.wholeLarge == 2147483647 and data.wholeNegative == 0, "数量转整数边界错误")
-        if case.args.playerBag then assert(data.slots == 18, "生存背包基础格数错误") end
+        if case.args.playerBag then assert(data.slots == 20, "生存背包基础格数错误") end
     end, "库存容量与身份：" .. case.name)
 end
 
