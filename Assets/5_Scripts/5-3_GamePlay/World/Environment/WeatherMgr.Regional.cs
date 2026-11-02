@@ -171,6 +171,7 @@ public partial class WeatherMgr
 
     public float GetTemperatureOffsetAt(Vector2 position) =>
         _weatherRuntimeAllowed && regionalEngine != null &&
+        DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true &&
         float.IsFinite(position.x) && float.IsFinite(position.y)
             ? regionalEngine.SampleCoolingOffsetAt(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)))
             : 0f;

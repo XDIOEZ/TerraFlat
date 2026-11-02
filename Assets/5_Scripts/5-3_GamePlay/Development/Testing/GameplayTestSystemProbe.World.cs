@@ -1277,8 +1277,14 @@ public static partial class GameplayTestSystemProbe
         engine.ForcePrecipitation(origin, 0d, .8f, 10f);
         bool firstReady = engine.TryGetSnapshot(new Int2(1, 1), out RegionalWeatherSnapshot first);
         bool secondReady = engine.TryGetSnapshot(new Int2(100, 1), out RegionalWeatherSnapshot second);
+        float firstCooling = engine.SampleCoolingOffsetAt(new Int2(1, 1));
+        float secondCooling = engine.SampleCoolingOffsetAt(new Int2(100, 1));
+        var replica = new RegionalWeatherEngine(settings, 17413, default, 16, 16);
+        replica.ApplyReplicatedSnapshot(first);
+        float replicaCooling = replica.SampleCoolingOffsetAt(new Int2(1, 1));
         bool frozenReady = engine.TryGetProfile(origin, out ChunkWeatherProfile frozen);
         RegionalWeatherAdvanceResult ended = engine.Advance(origin, 10d, false);
+        float endedCooling = engine.SampleCoolingOffsetAt(new Int2(1, 1));
         Int2 negative = engine.ResolveRegion(new Int2(-1, -1));
         float heldRainTarget = .8f;
         float heldSnowTarget = .2f;
@@ -1301,6 +1307,9 @@ public static partial class GameplayTestSystemProbe
             ["firstReady"] = firstReady, ["secondReady"] = secondReady,
             ["firstRain"] = first.RainIntensity, ["secondRain"] = second.RainIntensity,
             ["firstSnow"] = first.SnowIntensity,
+            ["rainCooling"] = firstCooling, ["neighborCooling"] = secondCooling,
+            ["replicaCooling"] = replicaCooling, ["snapshotCooling"] = first.CoolingOffsetCelsius,
+            ["endedCooling"] = endedCooling, ["endedSnapshotCooling"] = ended.Snapshot.CoolingOffsetCelsius,
             ["firstRegionX"] = first.Region.X, ["secondRegionX"] = second.Region.X,
             ["frozenReady"] = frozenReady, ["frozenTemperature"] = frozen?.Climate.TemperatureCelsius,
             ["endedPrecipitation"] = ended.Snapshot.PrecipitationIntensity,

@@ -9,6 +9,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 #region 字段
 
     public const float DefaultAmbientTemperature = 20f; // 默认环境温度
+    private const float RainCoolingMinimumTemperature = 10f;
     public bool EnableDebugLog = false; // 是否输出温度处理调试日志
 
 #endregion
@@ -72,6 +73,12 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         return ThermalRuntime.AdvanceAmbient(currentTemperature, data.AmbientTemperature, deltaTime);
     }
 
+    // 降雨最多降低十度，但不会让原本低于十度的环境被雨水额外降温。
+    internal static float ApplyWeatherTemperatureOffset(float temperature, float weatherOffset)
+        => weatherOffset < 0f
+            ? Mathf.Min(temperature, Mathf.Max(RainCoolingMinimumTemperature, temperature + weatherOffset))
+            : temperature + weatherOffset;
+
     public float GetGlobalAmbientTemperature()
     {
         PlanetData planetData = SaveDataMgr.Instance != null ? SaveDataMgr.Instance.Active_PlanetData : null;
@@ -83,8 +90,8 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         float weatherOffset = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather == true
             ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planetData);
         float climateTemperature = planetData.GlobalTemperature + planetData.AtmosphericGreenhouseTemperatureOffset;
-        return climateTemperature + weatherOffset +
-               DayTimeSystem.GetSeasonTemperatureOffset(1f, climateTemperature);
+        return ApplyWeatherTemperatureOffset(climateTemperature +
+            DayTimeSystem.GetSeasonTemperatureOffset(1f, climateTemperature), weatherOffset);
     }
 
     public void SetGlobalAmbientTemperature(float value)

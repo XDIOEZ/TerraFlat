@@ -522,7 +522,21 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
-        public float SampleCoolingOffsetAt(Int2 cell) => 0f;
+        // 降水固定降温十度，十度保底由环境温度合成层统一处理。
+        private const float RainCoolingOffsetCelsius = -10f;
+
+        private static float ResolveRainCoolingOffset(float precipitationIntensity)
+            => precipitationIntensity > 0.001f ? RainCoolingOffsetCelsius : 0f;
+
+        public float SampleCoolingOffsetAt(Int2 cell)
+        {
+            Int2 region = ResolveRegion(cell);
+            if (replicaMode)
+                return replicas.TryGetValue(region, out RegionalWeatherSnapshot snapshot)
+                    ? snapshot.CoolingOffsetCelsius : 0f;
+            return states.TryGetValue(region, out RegionalWeatherState state)
+                ? ResolveRainCoolingOffset(ActiveIntensity(state, WeatherElementIds.Rain)) : 0f;
+        }
 
         public RegionalWeatherAdvanceResult SampleExposureAt(Int2 cell,
             IReadOnlyDictionary<Int2, RegionalWeatherAdvanceResult> exposures)
@@ -567,7 +581,8 @@ namespace FlatWorld.WorldModel
             return new RegionalWeatherSnapshot
             {
                 Region = state.Region, SampleTime = state.LastStepTime,
-                AirHumidity = climate.AirHumidity, HumidityDeficit = 0f, CoolingOffsetCelsius = 0f,
+                AirHumidity = climate.AirHumidity, HumidityDeficit = 0f,
+                CoolingOffsetCelsius = ResolveRainCoolingOffset(precipitation),
                 RainIntensity = snow ? 0f : precipitation, SnowIntensity = snow ? precipitation : 0f,
                 PrecipitationIntensity = precipitation,
                 WindX = wind.x, WindY = wind.y, WindStrength = wind.z,
@@ -782,7 +797,8 @@ namespace FlatWorld.WorldModel
 
         private static bool ValidSnapshot(RegionalWeatherSnapshot value)
             => value.Revision >= 0 && value.LightningSequence >= 0 &&
-               Unit(value.AirHumidity) && value.HumidityDeficit == 0f && value.CoolingOffsetCelsius == 0f &&
+               Unit(value.AirHumidity) && value.HumidityDeficit == 0f &&
+               value.CoolingOffsetCelsius == ResolveRainCoolingOffset(value.PrecipitationIntensity) &&
                Unit(value.RainIntensity) && Unit(value.SnowIntensity) && Unit(value.PrecipitationIntensity) &&
                Finite(value.WindX) && Finite(value.WindY) && Math.Abs(value.WindX) <= 1f &&
                Math.Abs(value.WindY) <= 1f && Unit(value.WindStrength) &&
