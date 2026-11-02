@@ -23,6 +23,10 @@ public sealed partial class RuntimeRecipe
 
     [MemoryPack.MemoryPackIgnore]
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
+
+    /// <summary>普通合成以制作站基础点击数与配方指定次数中较高者为准。</summary>
+    public int GetRequiredCraftingClickCount(int stationBaseClickCount)
+        => Math.Max(1, Math.Max(stationBaseClickCount, ManualWorkSteps));
 }
 
 [MemoryPack.MemoryPackable]

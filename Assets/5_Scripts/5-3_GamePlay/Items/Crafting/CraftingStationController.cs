@@ -65,9 +65,12 @@ public sealed class CraftingStationController : IDisposable
     public RuntimeRecipe SelectedRecipe => selectedRecipe;
     public string AuthoritativeRecipeId => authoritativeProcessor?.State.RecipeId;
     public bool UsesAuthoritativeProcessor => authoritativeProcessor != null;
-    public float RequiredWork => authoritativeProcessor?.RequiredWork ?? Mathf.Max(1, requiredClickCount());
+    public float RequiredWork => authoritativeProcessor?.RequiredWork ?? GetRequiredClickCountForRecipe(selectedRecipe);
     public float CompletedWork => authoritativeProcessor?.State.Progress ?? currentClickProgress;
     public bool IsDisposed => disposed;
+
+    private int GetRequiredClickCountForRecipe(RuntimeRecipe recipe)
+        => recipe?.GetRequiredCraftingClickCount(requiredClickCount()) ?? Mathf.Max(1, requiredClickCount());
 
     public CraftingResult Preview(RuntimeRecipe recipe)
         => authoritativeProcessor != null && authoritativeProcessor.Recipe?.Id == recipe?.Id
@@ -240,7 +243,7 @@ public sealed class CraftingStationController : IDisposable
         }
 
         if (!CraftingRecipeMatcher.TryMatchRecipe(inputInventory, recipe, capabilities, out CraftingRecipeMatch match)) return;
-        int requiredClicks = Mathf.Max(1, requiredClickCount());
+        int requiredClicks = GetRequiredClickCountForRecipe(recipe);
         int nextProgress = Mathf.Min(currentClickProgress + 1, requiredClicks);
         applyingWorkClick = true;
         try
@@ -418,7 +421,7 @@ public sealed class CraftingStationController : IDisposable
         CraftingResult description = CraftingService.DescribeRecipe(selectedRecipe, inputInventory, capabilities.ApplyOutputMultiplier);
         if (description.Success)
         {
-            int requiredClicks = Mathf.Max(1, requiredClickCount());
+            int requiredClicks = GetRequiredClickCountForRecipe(selectedRecipe);
             RefreshOutputPreviews(description.Outputs, authoritativeProcessor != null
                 ? authoritativeProcessor.Progress01 : currentClickProgress / (float)requiredClicks);
         }

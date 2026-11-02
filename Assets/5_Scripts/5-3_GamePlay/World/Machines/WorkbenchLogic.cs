@@ -74,7 +74,7 @@ public class WorkbenchLogic : MachineLogic
                 else Processor.ResumeAfterWorkingToolReplacement();
             }
             else if (next == null && Candidates.Count > 0) next = Candidates[0].Recipe;
-            Processor.SelectRecipe(next, RequiredClicks);
+            Processor.SelectRecipe(next, GetRequiredClickCountForRecipe(next));
         }
         finally { refreshing = false; }
     }
@@ -86,9 +86,12 @@ public class WorkbenchLogic : MachineLogic
         RefreshRecipes();
         foreach (CraftingRecipeMatch match in Candidates)
             if (match.Recipe.Id == recipeId)
-            { Processor.SelectRecipe(match.Recipe, RequiredClicks); NotifyChanged(); return true; }
+            { Processor.SelectRecipe(match.Recipe, GetRequiredClickCountForRecipe(match.Recipe)); NotifyChanged(); return true; }
         return false;
     }
+
+    private int GetRequiredClickCountForRecipe(RuntimeRecipe recipe)
+        => recipe?.GetRequiredCraftingClickCount(RequiredClicks) ?? RequiredClicks;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     public bool PerformWork(float amount, Player actor, bool manual = false)
