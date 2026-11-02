@@ -1,6 +1,6 @@
 using UnityEngine;
 
-/// <summary>侧视车架保持直立，车轮和独立曲柄只随真实位移转动，座位随翻面镜像。</summary>
+/// <summary>侧视车架按骑手光标左右翻面，车轮和独立曲柄只随真实位移转动，座位随翻面镜像。</summary>
 [DefaultExecutionOrder(-100)]
 public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffsetResolver, IShadowFootprintBoundsProvider
 {
@@ -17,12 +17,17 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     private Vector2 previousPosition;
     private Vector3 rearOffset, frontOffset, crankOffset;
     private SpriteRenderer rearWheelSprite, frontWheelSprite;
+    private Mod_Carrier carrier;
     private bool offsetsCaptured;
     private bool facesLeft;
     #endregion
 
     #region 位移驱动与生命周期
-    private void OnEnable() => ResetWheelPresentationMotionBaseline();
+    private void OnEnable()
+    {
+        carrier = GetComponentInChildren<Mod_Carrier>(true);
+        ResetWheelPresentationMotionBaseline();
+    }
 
     public void ResetWheelPresentationMotionBaseline()
     {
@@ -45,6 +50,7 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     {
         if (FrameRenderer != null && FrameSprite != null && FrameRenderer.sprite != FrameSprite)
             FrameRenderer.sprite = FrameSprite;
+        RefreshFacingFromRiderPointer();
         Vector2 position = transform.position;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(previousPosition, position);
         previousPosition = position;
@@ -56,10 +62,30 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     public void AdvanceWheelRotationByDisplacement(Vector2 displacement)
     {
         if (!offsetsCaptured || WheelRadius <= 0f || displacement.sqrMagnitude <= .00000001f) return;
-        if (Mathf.Abs(displacement.x) > .0001f) facesLeft = displacement.x < 0f;
-        float wheelDelta = CalculateWheelRotationDegrees(displacement.magnitude, WheelRadius, facesLeft);
+        bool movingLeft = Mathf.Abs(displacement.x) > .0001f ? displacement.x < 0f : facesLeft;
+        float wheelDelta = CalculateWheelRotationDegrees(displacement.magnitude, WheelRadius, movingLeft);
         WheelAngle = Mathf.Repeat(WheelAngle + wheelDelta, 360f);
         PedalAngle = Mathf.Repeat(PedalAngle + wheelDelta * PedalTurnsPerWheelTurn, 360f);
+        ApplyWheelPose();
+    }
+
+    /// <summary>只在有本地骑手时读取统一光标；空车保持最后朝向，不随惯性或推动翻面。</summary>
+    private void RefreshFacingFromRiderPointer()
+    {
+        if (carrier == null) carrier = GetComponentInChildren<Mod_Carrier>(true);
+        if (carrier == null || carrier.Rider?.item is not Player rider || !rider.IsLocalProfile) return;
+        Mod_GameController controller = rider.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        if (controller != null && controller.TryGetMouseWorldPosition(out Vector3 pointerWorld))
+            SetFacingFromPointerDirection(WorldTopologyRuntime.ShortestDelta(transform.position, pointerWorld));
+    }
+
+    /// <summary>光标在车体左右侧时立即翻面，光标与车头水平重合时保持上一次朝向。</summary>
+    public void SetFacingFromPointerDirection(Vector2 pointerDirection)
+    {
+        if (Mathf.Abs(pointerDirection.x) <= .001f) return;
+        bool shouldFaceLeft = pointerDirection.x < 0f;
+        if (facesLeft == shouldFaceLeft) return;
+        facesLeft = shouldFaceLeft;
         ApplyWheelPose();
     }
 

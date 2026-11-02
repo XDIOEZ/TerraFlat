@@ -83,10 +83,20 @@ public static partial class GameplayTestSystemProbe
             wheels.AdvanceWheelRotationByDisplacement(Vector2.zero);
             bool still = wheels.WheelAngle == rightAngle;
             bool pedalStill = wheels.PedalAngle == rightPedal && wheels.PedalCrank.localRotation == rightPedalRotation;
+            wheels.SetFacingFromPointerDirection(Vector2.left);
+            bool pointerLeftWhileStill = frame.flipX && wheels.WheelAngle == rightAngle;
+            wheels.AdvanceWheelRotationByDisplacement(Vector2.right * .1f);
+            bool movingRightKeepsLeft = frame.flipX;
+            wheels.SetFacingFromPointerDirection(Vector2.right);
+            bool pointerRightWhileStill = !frame.flipX;
             wheels.AdvanceWheelRotationByDisplacement(Vector2.left * .1f);
+            bool movingLeftKeepsRight = !frame.flipX;
+            wheels.SetFacingFromPointerDirection(Vector2.left);
             samples["wheels"] = new JObject
             {
                 ["rightAngle"] = rightAngle, ["still"] = still, ["mirrored"] = frame.flipX,
+                ["pointerLeftWhileStill"] = pointerLeftWhileStill, ["pointerRightWhileStill"] = pointerRightWhileStill,
+                ["movingRightKeepsLeft"] = movingRightKeepsLeft, ["movingLeftKeepsRight"] = movingLeftKeepsRight,
                 ["rearMirrored"] = wheels.RearWheel.localPosition.x > 0f,
                 ["pedalTurned"] = Mathf.Abs(Mathf.DeltaAngle(0f, rightPedal)) > .1f,
                 ["pedalStill"] = pedalStill, ["pedalMirrored"] = wheels.PedalCrank.localPosition.x > 0f,

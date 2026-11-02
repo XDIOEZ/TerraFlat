@@ -25,6 +25,9 @@ test.system("player", "bicycle_carrier", {}, function(data)
     near(boat.freeRollingDeceleration, 0, "木筏不应继承自行车的空车滚动阻力")
     assert(boat.wake and boat.rotateFrame and not boat.riderExposed, "木筏尾流、转向或乘员环境隔绝被改变")
     assert(data.wheels.rightAngle > 0 and data.wheels.still, "移动不转轮或静止仍转轮")
+    assert(data.wheels.pointerLeftWhileStill and data.wheels.pointerRightWhileStill and
+        data.wheels.movingRightKeepsLeft and data.wheels.movingLeftKeepsRight,
+        "自行车车头没有跟随光标，或被实际位移方向覆盖")
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
     assert(data.wheels.pedalTurned and data.wheels.pedalStill and data.wheels.pedalMirrored,
         "曲柄没有随车轮转动、静止时仍在转动或左右翻面没有同步")
