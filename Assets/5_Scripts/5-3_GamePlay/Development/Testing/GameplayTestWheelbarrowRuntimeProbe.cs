@@ -27,6 +27,8 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     private static void Register()
     {
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_setup", Setup);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_hold_board", HoldBoard);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_hold_leave", HoldLeave);
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_prepare", Prepare);
         GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_sample", Sample);
         GameplayTestRuntimeProbe.RegisterAsync("player", "wheelbarrow_carrier_occupancy_lifecycle", CarrierOccupancyLifecycle);
@@ -73,6 +75,67 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["exactCapacity"] = exact, ["overweight"] = heavy, ["overvolume"] = volume,
             ["twelveAccepted"] = twelve, ["thirteenthAccepted"] = thirteenth
         };
+    }
+
+    /// <summary>通过正式交互发送器验证短按开仓、长按接管与松键不误下车。</summary>
+    private static IEnumerator HoldBoard(Player player, JObject args, Action<JObject> completed)
+    {
+        Fixture fixture = Require(player);
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
+            ?? throw new InvalidOperationException("独轮车长按回归缺少交互发送器。");
+        bool tapped = sender.TryInteractTarget(fixture.Carrier);
+        bool cargoOpened = fixture.Driver.CargoInventory.basePanel?.IsOpen() == true;
+        bool tapKeptWalking = fixture.Mover.CarrierSource == null && fixture.Carrier.Rider == null;
+        fixture.Driver.CargoInventory.basePanel?.Close();
+        yield return null;
+
+        bool held = sender.TryBeginHeldInteraction(fixture.Carrier);
+        float deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .15f;
+        while (Time.unscaledTime < deadline) yield return null;
+        bool mounted = fixture.Carrier.Rider == fixture.Mover &&
+                       ReferenceEquals(fixture.Mover.CarrierSource, fixture.Carrier);
+        bool behindCart = Vector2.Dot(
+            WorldTopologyRuntime.ShortestDelta(player.transform.position, fixture.Carrier.Body.position).normalized,
+            fixture.Driver.ForwardDirection) > .7f;
+        bool playerBodyDisabled = !fixture.Mover.rb.simulated;
+        sender.EndHeldInteraction();
+        bool releaseKeptMounted = fixture.Carrier.Rider == fixture.Mover;
+        bool tappedWhileMounted = sender.TryInteractTarget(fixture.Carrier);
+        bool mountedTapKeptMounted = fixture.Carrier.Rider == fixture.Mover;
+        completed(new JObject
+        {
+            ["tapped"] = tapped, ["cargoOpened"] = cargoOpened, ["tapKeptWalking"] = tapKeptWalking,
+            ["held"] = held, ["mounted"] = mounted, ["behindCart"] = behindCart,
+            ["playerBodyDisabled"] = playerBodyDisabled, ["releaseKeptMounted"] = releaseKeptMounted,
+            ["tappedWhileMounted"] = tappedWhileMounted, ["mountedTapKeptMounted"] = mountedTapKeptMounted
+        });
+    }
+
+    /// <summary>人力推行后再次长按下车，取消中的长按不能残留驾驶命令。</summary>
+    private static IEnumerator HoldLeave(Player player, JObject args, Action<JObject> completed)
+    {
+        Fixture fixture = Require(player);
+        Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
+            ?? throw new InvalidOperationException("独轮车下车回归缺少交互发送器。");
+        float movedDistance = WorldTopologyRuntime.Distance(fixture.Site, fixture.Carrier.Body.position);
+        bool mountedBefore = fixture.Carrier.Rider == fixture.Mover;
+        bool held = sender.TryBeginHeldInteraction(fixture.Carrier);
+        float deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .15f;
+        while (Time.unscaledTime < deadline) yield return null;
+        sender.EndHeldInteraction();
+        bool dismounted = fixture.Carrier.Rider == null && fixture.Mover.CarrierSource == null &&
+                          fixture.Mover.rb.simulated;
+        bool canceledHold = sender.TryBeginHeldInteraction(fixture.Carrier);
+        sender.CancelCurrentInteraction();
+        deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .1f;
+        while (Time.unscaledTime < deadline) yield return null;
+        bool canceledKeptWalking = fixture.Carrier.Rider == null && fixture.Mover.CarrierSource == null;
+        completed(new JObject
+        {
+            ["mountedBefore"] = mountedBefore, ["held"] = held, ["movedDistance"] = movedDistance,
+            ["dismounted"] = dismounted, ["canceledHold"] = canceledHold,
+            ["canceledKeptWalking"] = canceledKeptWalking
+        });
     }
 
     private static JObject Prepare(Player player, JObject args)
