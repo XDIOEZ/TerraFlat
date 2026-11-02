@@ -23,6 +23,7 @@ public static class SharedSpriteMeshCache
     internal sealed class SunShadowGeometry
     {
         internal Mesh Mesh;
+        internal Geometry Geometry;
         internal Vector4 UvBounds;
         internal Vector3 UvToLocalY;
         internal float TexelScale;
@@ -58,6 +59,8 @@ public static class SharedSpriteMeshCache
     internal static void ReleaseTemporarySpriteGeometryForTests(Sprite sprite)
     {
         if (ReferenceEquals(sprite, null)) return;
+        if (sunShadowGeometries.Remove(sprite, out SunShadowGeometry shadow))
+            DestroyMesh(shadow.Mesh, false);
         geometries.Remove(sprite);
         if (meshes.Remove(sprite, out Mesh mesh)) DestroyMesh(mesh, false);
     }
@@ -187,15 +190,17 @@ public static class SharedSpriteMeshCache
             vertices[corner] = point;
             uv[corner] = origin + uvX * point.x + uvY * point.y;
         }
+        int[] triangles = { 0, 1, 2, 0, 2, 3 };
         var mesh = new Mesh { name = $"SunShadow_{sprite.name}", hideFlags = HideFlags.HideAndDontSave };
         try
         {
             mesh.vertices = vertices;
             mesh.uv = uv;
             mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
-            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.triangles = triangles;
             mesh.RecalculateBounds();
-            existing = new SunShadowGeometry { Mesh = mesh, UvBounds = source.UvRect,
+            existing = new SunShadowGeometry { Mesh = mesh, Geometry = new Geometry(vertices, uv, triangles, mesh.bounds),
+                UvBounds = source.UvRect,
                 UvToLocalY = new Vector3(uvToY.x, uvToY.y, -Vector2.Dot(uvToY, origin)),
                 TexelScale = texelScale };
             sunShadowGeometries.Add(sprite, existing);

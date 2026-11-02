@@ -115,7 +115,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         if (ownerRenderer != null)
             ownerRenderer.BatchPresentationRebuilt -= HandleOwnerPresentationRebuilt;
         if (!ReferenceEquals(ownerRenderer, null))
-            ChunkGrassMeshBatchService.ClearGrass(ownerRenderer);
+            ChunkSharedSpriteMeshBatchService.ClearGrass(ownerRenderer);
 
         visibleCells.Clear();
         sharedSprites = null;
@@ -168,7 +168,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
             if (present) expected++;
             matches &= present == visibleCells.Contains(index);
         }
-        int submitted = ChunkGrassMeshBatchService.GetOwnerVisualCount(ownerRenderer);
+        int submitted = ChunkSharedSpriteMeshBatchService.GetOwnerVisualCount(ownerRenderer);
         if (matches && submitted == expected)
             return true;
 
@@ -176,12 +176,12 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
             Debug.LogWarning($"[ChunkRenderDebug] RepairGrass chunk={chunk.Address} " +
                              $"expected={expected} cached={visibleCells.Count} submitted={submitted}。");
         RebuildGrassPresentation();
-        return ChunkGrassMeshBatchService.GetOwnerVisualCount(ownerRenderer) == expected;
+        return ChunkSharedSpriteMeshBatchService.GetOwnerVisualCount(ownerRenderer) == expected;
     }
 
     private void RebuildGrassPresentation()
     {
-        ChunkGrassMeshBatchService.ClearGrass(ownerRenderer);
+        ChunkSharedSpriteMeshBatchService.ClearGrass(ownerRenderer);
         visibleCells.Clear();
         sharedSprites = GrassSpriteVariantCache.Get(spriteVariants, pixelsPerUnit);
         RenderRange(boundChunk.Terrain, 0, boundChunk.Terrain.CellCount);
@@ -231,7 +231,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
                                  Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity,
                                      new Vector3(scale * flipX, scale, 1f));
 
-        ChunkGrassMeshBatchService.Set(ownerRenderer, y * boundChunk.Terrain.Width + x,
+        ChunkSharedSpriteMeshBatchService.Set(ownerRenderer, y * boundChunk.Terrain.Width + x,
             sprite, grassMaterial, localToWorld, new Color(tint, tint, tint, 1f));
         visibleCells.Add(y * boundChunk.Terrain.Width + x);
     }
@@ -242,7 +242,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IIncrementalChunkViewRen
         int index = y * boundChunk.Terrain.Width + x;
         if (!visibleCells.Remove(index))
             return;
-        ChunkGrassMeshBatchService.Clear(ownerRenderer, index);
+        ChunkSharedSpriteMeshBatchService.Clear(ownerRenderer, index);
     }
 
     #endregion

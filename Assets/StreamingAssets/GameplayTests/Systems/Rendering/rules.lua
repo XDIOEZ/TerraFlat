@@ -1,4 +1,17 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+test.system("rendering", "natural_shadow_mesh_batch", {}, function(data)
+    assert(data.mergedBatches == 1 and data.mergedPages == 1 and data.mergedVertices == 12,
+        "自然物太阳阴影没有把跨区块同纹理的不同Sprite合并成一个Mesh")
+    assert(data.resourceShader and data.differentUvs and data.shadowParams,
+        "阴影网格丢失资源Shader、图集UV、柔边或半埋裁剪参数")
+    assert(data.grassSeparate and data.grassClearKeepsShadow,
+        "同纹理草层与太阳阴影被错误地合成相同材质批次或互相清理")
+    assert(data.removedVertices == 8 and data.shiftedBatches == 2 and data.returnedBatches == 1,
+        "太阳阴影单实例删除或区域迁移没有正确更新Mesh")
+    assert(data.projectedBatches == 2 and data.restoredBatches == 1 and data.clearedBatches == 0,
+        "太阳阴影外部投影或退出区块后残留批次")
+end, "自然物太阳阴影：共纹理网格、参数完整性、投影与回收")
+
 test.system("rendering", "grass_mesh_batch", {}, function(data)
     assert(data.mergedBatches == 1 and data.mergedPages == 1 and
         data.mergedVertices == 12 and data.ownerVisuals == 2,
@@ -190,6 +203,14 @@ do
     test.system("rendering", "wind_streaks", { config = { width = 0 }, steps = { {} } }, function(data)
         assert(not data.validConfig and not data.samples[1].visible, "无效风纹尺寸没有关闭绘制")
     end, "风纹：拒绝无效尺寸")
+
+    test.system("rendering", "wind_streaks", {}, function(data)
+        local cache = data.cacheCoverage
+        assert(cache.initial and cache.moveEightRight and cache.moveEightLeft and cache.negativeCoordinates,
+            "镜头仍位于缓存网格时不应重新采样挡风纹理")
+        assert(not cache.moveNineRight and not cache.zoomBeyondCache and not cache.emptyCache,
+            "镜头越过缓存边界或放大可视范围时必须重建挡风纹理")
+    end, "风纹：空间缓存覆盖、移动边界、缩放与负坐标")
 
     -- 连续墙体的绕流只看真实墙格和主风向，不引入每条线独立的随机偏转。
     test.system("rendering", "wind_streaks", {

@@ -5,8 +5,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-/// <summary>草按显示区域和实际纹理合并网格；不同 Sprite 只改变顶点 UV，不再占用单独 BRG 批次。</summary>
-internal static class ChunkGrassMeshBatchService
+/// <summary>草与自然物太阳阴影按纹理/区域合并网格，Sprite 差异由独立顶点 UV 与实例参数表达。</summary>
+internal static class ChunkSharedSpriteMeshBatchService
 {
     #region 全局网格批次
 
@@ -46,6 +46,7 @@ internal static class ChunkGrassMeshBatchService
     {
         internal readonly ChunkTilemapRenderer Renderer;
         internal readonly Dictionary<int, Entry> Entries = new();
+        internal readonly Dictionary<int, Entry> Shadows = new();
         internal Vector3 Offset;
         internal int RegionX, RegionY;
         internal bool External;
@@ -67,9 +68,11 @@ internal static class ChunkGrassMeshBatchService
         internal Owner Owner;
         internal Sprite Sprite;
         internal SharedSpriteMeshCache.Geometry Geometry;
+        internal bool SunShadow;
         internal Material Source;
         internal Matrix4x4 Matrix;
         internal Color Tint;
+        internal ChunkBatchRendererGroupService.InstanceData Data;
         internal Batch Batch;
     }
 
@@ -78,6 +81,7 @@ internal static class ChunkGrassMeshBatchService
         internal readonly int Scene, X, Y;
         internal readonly Material Source;
         internal readonly Texture2D Texture;
+        internal readonly ChunkBatchRendererGroupService.VisualLayer Layer;
         internal readonly ChunkTilemapRenderer ProjectedOwner;
 
         internal BatchKey(Owner owner, Entry entry)
@@ -85,18 +89,21 @@ internal static class ChunkGrassMeshBatchService
             Scene = owner.Renderer.gameObject.scene.handle;
             Source = entry.Source;
             Texture = entry.Sprite.texture;
+            Layer = entry.SunShadow ? ChunkBatchRendererGroupService.VisualLayer.NaturalShadow :
+                ChunkBatchRendererGroupService.VisualLayer.Grass;
             ProjectedOwner = owner.External ? owner.Renderer : null;
             X = owner.External ? 0 : owner.RegionX;
             Y = owner.External ? 0 : owner.RegionY;
         }
 
         public bool Equals(BatchKey other) => Scene == other.Scene && X == other.X && Y == other.Y &&
-            Source == other.Source && Texture == other.Texture && ProjectedOwner == other.ProjectedOwner;
+            Source == other.Source && Texture == other.Texture && Layer == other.Layer &&
+            ProjectedOwner == other.ProjectedOwner;
         public override bool Equals(object other) => other is BatchKey key && Equals(key);
-        public override int GetHashCode() => HashCode.Combine(Scene, X, Y, Source, Texture, ProjectedOwner);
+        public override int GetHashCode() => HashCode.Combine(Scene, X, Y, Source, Texture, Layer, ProjectedOwner);
     }
 
-    static ChunkGrassMeshBatchService()
+    static ChunkSharedSpriteMeshBatchService()
     {
         SharedSpriteMeshCache.Clearing += ReleaseAll;
     }
@@ -149,6 +156,7 @@ internal static class ChunkGrassMeshBatchService
         entry.Source = material;
         entry.Matrix = worldMatrix;
         entry.Tint = tint;
+        entry.Data = ChunkBatchRendererGroupService.InstanceData.Create(worldMatrix, Vector4.zero, Vector4.zero, tint);
         BatchKey key = new(owner, entry);
         if (previous == null || !previous.Key.Equals(key))
         {
@@ -170,6 +178,54 @@ internal static class ChunkGrassMeshBatchService
         DisposeEmptyBatch(batch);
     }
 
+    /// <summary>太阳阴影保留原有半埋裁剪、图集 UV 边界与日照投影参数，只将 Sprite 几何合入同纹理网格。</summary>
+    internal static void SetNaturalShadow(ChunkTilemapRenderer renderer, int slot, Sprite sprite,
+        Material material, ChunkBatchRendererGroupService.InstanceData data)
+    {
+        if (SharedSpriteMeshCache.IsSessionEnding || renderer == null || sprite == null || material == null)
+            throw new InvalidOperationException("自然物太阳阴影提交时资源会话或 Sprite/材质无效。");
+
+        SharedSpriteMeshCache.SunShadowGeometry geometry = SharedSpriteMeshCache.GetSunShadowGeometry(sprite);
+        Owner owner = GetOwner(renderer);
+        if (!owner.Shadows.TryGetValue(slot, out Entry entry))
+        {
+            entry = new Entry { Owner = owner, SunShadow = true };
+            owner.Shadows.Add(slot, entry);
+        }
+        if (entry.Sprite == sprite && entry.Source == material &&
+            entry.Data.Transform0.Equals(data.Transform0) && entry.Data.Transform1.Equals(data.Transform1) &&
+            entry.Data.Data0.Equals(data.Data0) && entry.Data.Data1.Equals(data.Data1) &&
+            entry.Data.Tint.Equals(data.Tint) && entry.Data.FlowX.Equals(data.FlowX) &&
+            entry.Data.FlowY.Equals(data.FlowY) && entry.Batch != null)
+            return;
+
+        Batch previous = entry.Batch;
+        entry.Sprite = sprite;
+        entry.Geometry = geometry.Geometry;
+        entry.Source = material;
+        entry.Data = data;
+        BatchKey key = new(owner, entry);
+        if (previous == null || !previous.Key.Equals(key))
+        {
+            Batch next = GetBatch(owner, key);
+            previous?.Remove(entry);
+            entry.Batch = next;
+            entry.Batch.Add(entry);
+            DisposeEmptyBatch(previous);
+        }
+        else
+            previous.Dirty = true;
+    }
+
+    internal static void ClearNaturalShadow(ChunkTilemapRenderer renderer, int slot)
+    {
+        if (ReferenceEquals(renderer, null) || !owners.TryGetValue(renderer, out Owner owner) ||
+            !owner.Shadows.Remove(slot, out Entry entry)) return;
+        Batch previous = entry.Batch;
+        previous?.Remove(entry);
+        DisposeEmptyBatch(previous);
+    }
+
     /// <summary>草取消绑定时清显示数据但保留飞船投影状态；基础 Owner 注销才完全移除。</summary>
     internal static void ClearGrass(ChunkTilemapRenderer renderer)
     {
@@ -183,6 +239,12 @@ internal static class ChunkGrassMeshBatchService
     internal static void UnregisterOwner(ChunkTilemapRenderer renderer)
     {
         ClearGrass(renderer);
+        if (!ReferenceEquals(renderer, null) && owners.TryGetValue(renderer, out Owner owner))
+        {
+            foreach (Entry entry in owner.Shadows.Values) entry.Batch?.Remove(entry);
+            owner.Shadows.Clear();
+            DisposeEmptyBatches();
+        }
         if (!ReferenceEquals(renderer, null)) owners.Remove(renderer);
     }
 
@@ -213,6 +275,8 @@ internal static class ChunkGrassMeshBatchService
         // 一块草可以有上千条目，但投影矩阵每个纹理批次只需设置一次。
         projectionBatches.Clear();
         foreach (Entry entry in owner.Entries.Values)
+            if (entry.Batch != null) projectionBatches.Add(entry.Batch);
+        foreach (Entry entry in owner.Shadows.Values)
             if (entry.Batch != null) projectionBatches.Add(entry.Batch);
         foreach (Batch batch in projectionBatches) batch.UpdateProjection();
         projectionBatches.Clear();
@@ -245,24 +309,32 @@ internal static class ChunkGrassMeshBatchService
             if (owner.External) matrix = owner.Projection * matrix;
             output.Add(new WorldVisualSnapshot(entry.Sprite, matrix, entry.Tint, layer, 2, matrix.m13));
         }
+        // 太阳阴影不参与静态 Sprite 起飞快照，避免阴影贴图作为实体重复绘制。
     }
 
     private static void Regroup(Owner owner, bool offsetChanged = true)
     {
         foreach (Entry entry in owner.Entries.Values)
+            RegroupEntry(owner, entry, offsetChanged);
+        foreach (Entry entry in owner.Shadows.Values)
+            RegroupEntry(owner, entry, offsetChanged);
+    }
+
+    private static void RegroupEntry(Owner owner, Entry entry, bool offsetChanged)
+    {
+        Batch old = entry.Batch;
+        BatchKey key = new(owner, entry);
+        if (old != null && old.Key.Equals(key))
         {
-            Batch old = entry.Batch;
-            BatchKey key = new(owner, entry);
-            if (old != null && old.Key.Equals(key))
-            {
-                if (offsetChanged) old.Dirty = true;
-                continue;
-            }
-            old?.Remove(entry);
-            entry.Batch = GetBatch(owner, key);
-            entry.Batch.Add(entry);
-            DisposeEmptyBatch(old);
+            // 自然物阴影本身已携带显示坐标；只在草的位置偏移改变时上传新顶点。
+            if (offsetChanged && !entry.SunShadow) old.Dirty = true;
+            return;
         }
+            Batch next = GetBatch(owner, key);
+            old?.Remove(entry);
+            entry.Batch = next;
+        entry.Batch.Add(entry);
+        DisposeEmptyBatch(old);
     }
 
     private static Batch GetBatch(Owner owner, BatchKey key)
@@ -302,16 +374,19 @@ internal static class ChunkGrassMeshBatchService
             if (batch.Dirty) batch.Flush();
     }
 
-    internal static (int Batches, int Pages, int Vertices, int NativeMaterials) GetStatsForTests()
+    internal static (int Batches, int Pages, int Vertices, int NativeMaterials) GetStatsForTests(
+        ChunkBatchRendererGroupService.VisualLayer layer = ChunkBatchRendererGroupService.VisualLayer.Grass)
     {
-        int pages = 0, vertices = 0, nativeMaterials = 0;
+        int count = 0, pages = 0, vertices = 0, nativeMaterials = 0;
         foreach (Batch batch in batches.Values)
         {
+            if (batch.Key.Layer != layer) continue;
+            count++;
             pages += batch.VisiblePageCount;
             vertices += batch.VertexCount;
             if (batch.NativeMaterialReady) nativeMaterials++;
         }
-        return (batches.Count, pages, vertices, nativeMaterials);
+        return (count, pages, vertices, nativeMaterials);
     }
 #endif
 
@@ -375,6 +450,15 @@ internal static class ChunkGrassMeshBatchService
         internal int SortingLayerId => SortingLayer.NameToID(
             WorldRenderingConfigCatalog.Default.sorting.terrainSortingLayer);
         internal int RenderQueue => material.renderQueue;
+        internal int SortingPriority
+        {
+            get
+            {
+                foreach (WorldRenderingConfig.BatchSortingProfile profile in WorldRenderingConfigCatalog.Default.sorting.batchProfiles)
+                    if (profile != null && profile.visualLayer == Key.Layer.ToString()) return profile.batchOrder;
+                throw new InvalidOperationException("草/阴影共享网格缺少图层排序配置：" + Key.Layer);
+            }
+        }
 
         internal Batch(BatchKey key, Scene scene, int unityLayer)
         {
@@ -384,10 +468,10 @@ internal static class ChunkGrassMeshBatchService
                 throw new InvalidOperationException("缺少草网格共用的 ChunkBRG-Sprite-Lit 材质模板。");
             material = new Material(template)
             {
-                name = "GrassMesh_" + key.Source.name + "_" + key.Texture.name,
+                name = key.Layer + "Mesh_" + key.Source.name + "_" + key.Texture.name,
                 hideFlags = HideFlags.HideAndDontSave,
                 renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(
-                    ChunkBatchRendererGroupService.VisualLayer.Grass)
+                    key.Layer)
             };
             try
             {
@@ -396,13 +480,19 @@ internal static class ChunkGrassMeshBatchService
                 material.SetTexture("_MainTex", key.Texture);
                 material.EnableKeyword("_CHUNK_NATIVE_BATCH");
                 material.DisableKeyword("DOTS_INSTANCING_ON");
-                if (key.Source.HasProperty("_GrassSwayEnabled") && key.Source.GetFloat("_GrassSwayEnabled") > .5f)
+                if (key.Layer == ChunkBatchRendererGroupService.VisualLayer.NaturalShadow)
+                    material.EnableKeyword("_CHUNK_RESOURCE");
+                else
+                    material.DisableKeyword("_CHUNK_RESOURCE");
+                material.DisableKeyword("_CHUNK_MECHANICAL");
+                if (key.Layer == ChunkBatchRendererGroupService.VisualLayer.Grass &&
+                    key.Source.HasProperty("_GrassSwayEnabled") && key.Source.GetFloat("_GrassSwayEnabled") > .5f)
                     material.EnableKeyword("_CHUNK_GRASS_SWAY");
                 else
                     material.DisableKeyword("_CHUNK_GRASS_SWAY");
                 material.renderQueue = ChunkBatchRendererGroupService.GetLayerRenderQueue(
-                    ChunkBatchRendererGroupService.VisualLayer.Grass);
-                root = new GameObject("GrassMeshRegion_" + key.X + "_" + key.Y)
+                    key.Layer);
+                root = new GameObject(key.Layer + "MeshRegion_" + key.X + "_" + key.Y)
                 {
                     hideFlags = HideFlags.DontSave, layer = unityLayer
                 };
@@ -441,7 +531,7 @@ internal static class ChunkGrassMeshBatchService
             {
                 attachedDomain?.RemoveLocalSortingKey(page.Renderer);
                 if (domain != null) domain.ApplyLocalRendererSortingKey(page.Renderer,
-                    SortingLayerId, 0, RenderQueue, domain.Root.position.y, 2);
+                    SortingLayerId, 0, RenderQueue, domain.Root.position.y, SortingPriority);
             }
             attachedDomain = domain;
         }
@@ -466,12 +556,13 @@ internal static class ChunkGrassMeshBatchService
                 }
 
                 int start = vertices.Count;
-                Matrix4x4 matrix = entry.Matrix;
-                matrix.m03 += entry.Owner.Offset.x;
-                matrix.m13 += entry.Owner.Offset.y;
-                matrix.m23 += entry.Owner.Offset.z;
-                Vector4 transform0 = new(matrix.m00, matrix.m01, matrix.m03, 0f);
-                Vector4 transform1 = new(matrix.m10, matrix.m11, matrix.m13, matrix.m23);
+                ChunkBatchRendererGroupService.InstanceData data = entry.Data;
+                if (!entry.SunShadow)
+                {
+                    data.Transform0.z += entry.Owner.Offset.x;
+                    data.Transform1.z += entry.Owner.Offset.y;
+                    data.Transform1.w += entry.Owner.Offset.z;
+                }
                 for (int i = 0; i < geometry.Vertices.Length; i++)
                 {
                     Vector3 local = geometry.Vertices[i];
@@ -480,11 +571,18 @@ internal static class ChunkGrassMeshBatchService
                         Position = local,
                         Color = new Color32(255, 255, 255, 255),
                         Uv = geometry.Uv[i],
-                        Transform0 = transform0,
-                        Transform1 = transform1,
-                        Tint = entry.Tint
+                        Transform0 = data.Transform0,
+                        Transform1 = data.Transform1,
+                        Data0 = data.Data0,
+                        Data1 = data.Data1,
+                        Tint = data.Tint,
+                        FlowX = data.FlowX,
+                        FlowY = data.FlowY
                     });
-                    Vector3 world = matrix.MultiplyPoint3x4(local);
+                    Vector3 world = new(
+                        data.Transform0.x * local.x + data.Transform0.y * local.y + data.Transform0.z,
+                        data.Transform1.x * local.x + data.Transform1.y * local.y + data.Transform1.z,
+                        data.Transform1.w + local.z);
                     if (!hasBounds) { bounds = new Bounds(world, Vector3.zero); hasBounds = true; }
                     else bounds.Encapsulate(world);
                 }
@@ -498,12 +596,17 @@ internal static class ChunkGrassMeshBatchService
         private void Upload(int index, Bounds bounds)
         {
             if (index == pages.Count)
-                pages.Add(new Page(root.transform, material, SortingLayerId, attachedDomain));
-            float amplitude = material.HasProperty("_GrassSwayAmplitude")
-                ? Mathf.Abs(material.GetFloat("_GrassSwayAmplitude")) : 0f;
-            float secondary = material.HasProperty("_GrassSecondaryStrength")
-                ? Mathf.Abs(material.GetFloat("_GrassSecondaryStrength")) : 0f;
-            bounds.Expand(new Vector3(1f, 1f, 0f) * (amplitude * 6f * (1f + secondary) + .1f));
+                pages.Add(new Page(root.transform, material, SortingLayerId, SortingPriority, attachedDomain));
+            if (Key.Layer == ChunkBatchRendererGroupService.VisualLayer.NaturalShadow)
+                bounds.Expand(WorldRenderingConfigCatalog.Default.shadows.maximumDistance * 2f);
+            else
+            {
+                float amplitude = material.HasProperty("_GrassSwayAmplitude")
+                    ? Mathf.Abs(material.GetFloat("_GrassSwayAmplitude")) : 0f;
+                float secondary = material.HasProperty("_GrassSecondaryStrength")
+                    ? Mathf.Abs(material.GetFloat("_GrassSecondaryStrength")) : 0f;
+                bounds.Expand(new Vector3(1f, 1f, 0f) * (amplitude * 6f * (1f + secondary) + .1f));
+            }
             pages[index].Upload(vertices, indices, bounds);
         }
 
@@ -529,12 +632,12 @@ internal static class ChunkGrassMeshBatchService
             internal readonly MeshRenderer Renderer;
             internal int VertexCount => mesh.vertexCount;
 
-            internal Page(Transform parent, Material material, int sortingLayer,
+            internal Page(Transform parent, Material material, int sortingLayer, int sortingPriority,
                 WorldPresentationSortingDomain domain)
             {
-                node = new GameObject("GrassMeshPage") { hideFlags = HideFlags.DontSave, layer = parent.gameObject.layer };
+                node = new GameObject("SharedSpriteMeshPage") { hideFlags = HideFlags.DontSave, layer = parent.gameObject.layer };
                 node.transform.SetParent(parent, false);
-                mesh = new Mesh { name = "GrassMergedSprites", hideFlags = HideFlags.HideAndDontSave };
+                mesh = new Mesh { name = "SharedMergedSprites", hideFlags = HideFlags.HideAndDontSave };
                 mesh.MarkDynamic();
                 node.AddComponent<MeshFilter>().sharedMesh = mesh;
                 Renderer = node.AddComponent<MeshRenderer>();
@@ -547,7 +650,7 @@ internal static class ChunkGrassMeshBatchService
                 Renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
                 if (domain != null)
                     domain.ApplyLocalRendererSortingKey(Renderer, sortingLayer, 0,
-                        material.renderQueue, domain.Root.position.y, 2);
+                        material.renderQueue, domain.Root.position.y, sortingPriority);
             }
 
             internal void Upload(List<Vertex> verts, List<int> tris, Bounds bounds)
