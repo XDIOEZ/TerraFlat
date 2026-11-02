@@ -29,6 +29,7 @@ public static partial class GameUIPrefabRebuilder
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string ScreensRoot = PrefabRoot + "Gameplay/Screens/";
     private const string PlayerStatusRoot = PrefabRoot + "Gameplay/Status/Player/";
+    private const string CreatureStatusRoot = PrefabRoot + "Gameplay/Status/Creatures/";
     private const string CombatStatusRoot = PrefabRoot + "Gameplay/Status/Combat/";
     private const string BagPrefabPath = InventoryPanelsRoot + "UI_Bag.prefab";
     private const string SlotPrefabPath = InventoryComponentsRoot + "UI_Slot.prefab";
@@ -89,6 +90,7 @@ public static partial class GameUIPrefabRebuilder
         },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
+        { CreatureStatusRoot + "UI_CreatureHealth.prefab", new[] { "血量模块_世界面板", "背景", "血条底槽", "血量" } },
         { CombatStatusRoot + "UI_DamageReceiverStatus.prefab", new[] { "整体血量", "部位耐久列表", "部位耐久模板" } },
         { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "食物", "FoodTrack", "FoodSegments", "FoodLegend", "水", "维生素", "体温", "DataText_食物", "DataText_碳水", "DataText_脂肪", "DataText_蛋白质", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
@@ -140,6 +142,7 @@ public static partial class GameUIPrefabRebuilder
             new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Health.prefab", BuildHealthWorldPanel),
+            new BuildTarget(CreatureStatusRoot + "UI_CreatureHealth.prefab", BuildCreatureHealthWorldPanel),
             new BuildTarget(CombatStatusRoot + "UI_DamageReceiverStatus.prefab", BuildDamageReceiverStatusPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud),
             new BuildTarget(PlayerStatusRoot + "UI_Sleep.prefab", BuildSleepHud),

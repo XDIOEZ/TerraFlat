@@ -133,6 +133,16 @@ public static partial class GameUIPrefabRebuilder
 
     private static void BuildHealthWorldPanel(GameObject root)
     {
+        ConfigureWorldHealthPanel(root, false);
+    }
+
+    private static void BuildCreatureHealthWorldPanel(GameObject root)
+    {
+        ConfigureWorldHealthPanel(root, true);
+    }
+
+    private static void ConfigureWorldHealthPanel(GameObject root, bool useProgressBar)
+    {
         Transform panel = FindTransform(root.transform, "血量模块_世界面板");
         if (panel == null)
             return;
@@ -150,7 +160,12 @@ public static partial class GameUIPrefabRebuilder
                 AddOutline(image, new Color(0.83f, 0.49f, 0.23f, 0.30f));
             }
 
-            Image accent = CreateImage("FWUI_Chrome", background, Amber);
+            RectTransform accentRect = FindRect(background, "FWUI_Chrome");
+            Image accent = accentRect != null ? accentRect.GetComponent<Image>() : null;
+            if (accent == null)
+                accent = CreateImage("FWUI_Chrome", background, Amber);
+            accent.color = Amber;
+            accent.raycastTarget = false;
             accent.rectTransform.anchorMin = new Vector2(0f, 0f);
             accent.rectTransform.anchorMax = new Vector2(0f, 1f);
             accent.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -162,19 +177,50 @@ public static partial class GameUIPrefabRebuilder
         RectTransform healthText = FindRect(panel, "血量");
         if (healthText != null)
         {
-            healthText.anchorMin = new Vector2(0.5f, 0.5f);
-            healthText.anchorMax = new Vector2(0.5f, 0.5f);
-            healthText.pivot = new Vector2(0.5f, 0.5f);
-            healthText.anchoredPosition = Vector2.zero;
-            healthText.sizeDelta = new Vector2(208f, 40f);
             TMP_Text text = healthText.GetComponent<TMP_Text>();
-            if (text != null)
+            if (useProgressBar)
             {
-                text.font = font;
-                text.fontSize = 18f;
-                text.fontStyle = FontStyles.Bold;
-                text.color = Cream;
-                text.alignment = TextAlignmentOptions.Center;
+                if (text != null)
+                    UnityEngine.Object.DestroyImmediate(text);
+
+                Image track = background != null
+                    ? FindRect(background, "血条底槽")?.GetComponent<Image>()
+                    : null;
+                if (track == null && background != null)
+                    track = CreateImage("血条底槽", background, new Color(0.12f, 0.035f, 0.052f, 1f));
+                if (track != null)
+                {
+                    SetCentered(track.rectTransform, Vector2.zero, new Vector2(208f, 24f));
+                    track.sprite = null;
+                    track.type = Image.Type.Simple;
+                    track.color = new Color(0.12f, 0.035f, 0.052f, 1f);
+                    track.raycastTarget = false;
+                }
+
+                // 纯色 Image 以左侧为轴缩放，血量减少时只收缩右边缘。
+                Image fill = healthText.GetComponent<Image>() ?? healthText.gameObject.AddComponent<Image>();
+                fill.sprite = null;
+                fill.type = Image.Type.Simple;
+                fill.color = new Color(0.92f, 0.25f, 0.21f, 1f);
+                fill.raycastTarget = false;
+                healthText.anchorMin = healthText.anchorMax = new Vector2(0.5f, 0.5f);
+                healthText.pivot = new Vector2(0f, 0.5f);
+                healthText.anchoredPosition = new Vector2(-104f, 0f);
+                healthText.sizeDelta = new Vector2(208f, 24f);
+                healthText.localScale = Vector3.one;
+                healthText.SetAsLastSibling();
+            }
+            else
+            {
+                SetCentered(healthText, Vector2.zero, new Vector2(208f, 40f));
+                if (text != null)
+                {
+                    text.font = font;
+                    text.fontSize = 18f;
+                    text.fontStyle = FontStyles.Bold;
+                    text.color = Cream;
+                    text.alignment = TextAlignmentOptions.Center;
+                }
             }
         }
     }

@@ -418,7 +418,14 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     public void RefreshUI()
     {
         if (!IsPanelVisible() || UIValues == null) return;
-        UIValues.GetText("血量").text = $"{Hp:F1}";  // F1 表示保留 1 位小数
+        if (UIValues.TryGetText("血量", out var healthText))
+        {
+            healthText.text = $"{Hp:F1}";
+            return;
+        }
+
+        float healthRatio = MaxHp > 0f ? Mathf.Clamp01(Hp / MaxHp) : 0f;
+        UIValues.GetImage("血量").rectTransform.localScale = new Vector3(healthRatio, 1f, 1f);
     }
 
 

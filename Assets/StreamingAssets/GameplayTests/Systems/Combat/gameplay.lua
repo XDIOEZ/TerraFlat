@@ -144,6 +144,7 @@ end, "石头投射与丢弃伤害的休眠来源和飞行调度")
 
 test.runtime("combat", "world_health_panel_lifecycle", {}, function(data)
     assert(data.initiallyVisible, "正式动物血条未显示")
+    assert(data.initialFillMatchesHealth and data.fillTracksDamageRatio, "生物血条进度没有匹配当前生命比例")
     assert(data.hiddenInactive and data.reusedAcrossTwentyCycles, "反复显隐重新创建血条或隐藏后仍然显示")
     assert(data.ownerDisableHidPanel and data.ownerReactivationReusedInstance, "实体停用后血条未隐藏或重启后未复用")
     assert(data.damageApplied and data.didNotHideBeforeLastDamageDelay and data.automaticallyHidden, "真实生存伤害或末次受伤后自动隐藏失效")

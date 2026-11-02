@@ -208,6 +208,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4778519347457968648}
     m_Modifications:
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: PanelPrefab
+      value:
+      objectReference: {fileID: 7613977154932231161, guid: 1ff260614e534a39aa46ec9f064d6e73, type: 3}
     - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_Name
       value: Module_DamageReciver
