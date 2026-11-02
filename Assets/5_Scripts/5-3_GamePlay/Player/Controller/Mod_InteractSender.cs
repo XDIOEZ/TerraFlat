@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -27,6 +27,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private Component previewReceiverComponent;
     private InteractionTargetOutline previewOutline;
     private IInteractable heldReceiver; // 仅记录当前由交互键按住产生的持续交互目标。
+    private float heldInteractionStartedAt; // 只负责光标进度，载具动作仍由目标自身决定。
+    private bool showsHeldInteractionCursor;
     public bool HasHeldInteraction => IsInteractionReceiverAlive(heldReceiver) && currentReceiver == heldReceiver; // 只读诊断：当前是否正在持续世界交互。
     public string CurrentInteractionType => IsInteractionReceiverAlive(currentReceiver) ? currentReceiver.GetType().Name : string.Empty; // 只读诊断：当前交互目标类型。
     public string HeldInteractionType => IsInteractionReceiverAlive(heldReceiver) ? heldReceiver.GetType().Name : string.Empty; // 只读诊断：按住交互目标类型。
@@ -96,10 +98,12 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         PruneDestroyedInteractionTargets();
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
         {
+            ClearHeldInteractionCursor();
             ClearInteractionPreview();
             return;
         }
         RefreshInteractionPreview();
+        RefreshHeldInteractionCursor();
     }
     #endregion
 
@@ -186,6 +190,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             ? CanInteractTarget(receiver) && StartInteraction(receiver)
             : TryStartInteractionAtCurrentPosition();
         heldReceiver = interacted && IsInteractionReceiverAlive(currentReceiver) ? currentReceiver : null;
+        heldInteractionStartedAt = Time.unscaledTime;
+        RefreshHeldInteractionCursor();
         return interacted;
     }
 
@@ -194,8 +200,34 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         IInteractable releasedReceiver = heldReceiver;
         heldReceiver = null;
+        ClearHeldInteractionCursor();
         if (IsInteractionReceiverAlive(releasedReceiver) && releasedReceiver == currentReceiver)
             releasedReceiver.OnInteractEnd(item);
+    }
+
+    /// <summary>载具长按共用交互键时间阈值，进度仅是视图，不决定上下车。</summary>
+    private void RefreshHeldInteractionCursor()
+    {
+        using var worldScope = UseActorInteractionWorld();
+        if (heldReceiver is not Mod_Carrier carrier || currentReceiver != heldReceiver ||
+            gameController == null || !IsLocalInteractionOwner() || IsGameplayInputLocked() ||
+            !carrier.CanInteract(item))
+        {
+            ClearHeldInteractionCursor();
+            return;
+        }
+
+        showsHeldInteractionCursor = true;
+        float elapsed = Time.unscaledTime - heldInteractionStartedAt;
+        EventSystemGuard.SetWorldInteractionHoldCursor(
+            Mathf.Clamp01(elapsed / Mod_Carrier.HoldToDriveSeconds), gameController.GetPointerScreenPosition());
+    }
+
+    private void ClearHeldInteractionCursor()
+    {
+        if (!showsHeldInteractionCursor) return;
+        showsHeldInteractionCursor = false;
+        EventSystemGuard.ClearWorldInteractionHoldCursor();
     }
 
     /// <summary>复用正式交互发送器的全部准入规则，供结构化观察和非物理输入源判断目标当前是否可交互。</summary>
@@ -671,6 +703,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnDestroy()
     {
         UnbindInput();
+        ClearHeldInteractionCursor();
         ClearInteractionPreview();
     }
     #endregion
@@ -716,7 +749,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return false;
 
         if (heldReceiver == receiver)
+        {
             heldReceiver = null;
+            ClearHeldInteractionCursor();
+        }
         currentReceiver = null;
         currentReceiverComponent = null;
         receiversInRange.Remove(receiver);
@@ -739,7 +775,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         IInteractable stoppedReceiver = currentReceiver;
         if (heldReceiver == stoppedReceiver)
+        {
             heldReceiver = null;
+            ClearHeldInteractionCursor();
+        }
         currentReceiver = null;
         currentReceiverComponent = null;
         if (IsInteractionReceiverAlive(stoppedReceiver))

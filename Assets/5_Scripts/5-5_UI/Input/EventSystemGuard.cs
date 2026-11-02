@@ -454,6 +454,18 @@ public static class EventSystemGuard
         EnsureRuntimeController(EventSystem.current)?.SetMobileAimCursorVisible(visible);
     }
 
+    /// <summary>玩法交互发送器把长按进度交给现有光标绘制层。</summary>
+    public static void SetWorldInteractionHoldCursor(float progress01, Vector2 screenPosition)
+    {
+        EnsureRuntimeController(EventSystem.current)?.SetWorldInteractionHoldCursor(progress01, screenPosition);
+    }
+
+    public static void ClearWorldInteractionHoldCursor()
+    {
+        if (runtimeController != null)
+            runtimeController.ClearWorldInteractionHoldCursor();
+    }
+
     public static bool TryHandleGamepadVirtualCursorClick()
     {
         return EnsureRuntimeController(EventSystem.current)?.TryClickVirtualCursor() == true;

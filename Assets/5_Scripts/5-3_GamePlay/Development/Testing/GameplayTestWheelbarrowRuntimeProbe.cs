@@ -7,6 +7,7 @@ using FlatWorld.WorldModel;
 using MemoryPack;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityInputSystem = UnityEngine.InputSystem.InputSystem;
@@ -90,8 +91,18 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         yield return null;
 
         bool held = sender.TryBeginHeldInteraction(fixture.Carrier);
+        GamepadUIRuntimeController cursor = EventSystem.current?.GetComponent<GamepadUIRuntimeController>();
+        bool progressStarted = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                               cursor.WorldInteractionHoldProgress01 < .2f;
+        float halfway = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds * .5f;
+        while (Time.unscaledTime < halfway) yield return null;
+        bool progressAdvanced = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                                cursor.WorldInteractionHoldProgress01 > .2f &&
+                                cursor.WorldInteractionHoldProgress01 < 1f;
         float deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .15f;
         while (Time.unscaledTime < deadline) yield return null;
+        bool progressFilled = cursor != null && cursor.IsWorldInteractionHoldCursorVisible &&
+                              cursor.WorldInteractionHoldProgress01 >= .99f;
         bool mounted = fixture.Carrier.Rider == fixture.Mover &&
                        ReferenceEquals(fixture.Mover.CarrierSource, fixture.Carrier);
         bool behindCart = Vector2.Dot(
@@ -99,6 +110,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             fixture.Driver.ForwardDirection) > .7f;
         bool playerBodyDisabled = !fixture.Mover.rb.simulated;
         sender.EndHeldInteraction();
+        bool progressCleared = cursor != null && !cursor.IsWorldInteractionHoldCursorVisible;
         bool releaseKeptMounted = fixture.Carrier.Rider == fixture.Mover;
         bool tappedWhileMounted = sender.TryInteractTarget(fixture.Carrier);
         bool mountedTapKeptMounted = fixture.Carrier.Rider == fixture.Mover;
@@ -106,6 +118,8 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         {
             ["tapped"] = tapped, ["cargoOpened"] = cargoOpened, ["tapKeptWalking"] = tapKeptWalking,
             ["held"] = held, ["mounted"] = mounted, ["behindCart"] = behindCart,
+            ["progressStarted"] = progressStarted, ["progressAdvanced"] = progressAdvanced,
+            ["progressFilled"] = progressFilled, ["progressCleared"] = progressCleared,
             ["playerBodyDisabled"] = playerBodyDisabled, ["releaseKeptMounted"] = releaseKeptMounted,
             ["tappedWhileMounted"] = tappedWhileMounted, ["mountedTapKeptMounted"] = mountedTapKeptMounted
         });
@@ -127,6 +141,8 @@ public static class GameplayTestWheelbarrowRuntimeProbe
                           fixture.Mover.rb.simulated;
         bool canceledHold = sender.TryBeginHeldInteraction(fixture.Carrier);
         sender.CancelCurrentInteraction();
+        bool canceledCursorCleared = EventSystem.current?.GetComponent<GamepadUIRuntimeController>()
+            ?.IsWorldInteractionHoldCursorVisible != true;
         deadline = Time.unscaledTime + Mod_Carrier.HoldToDriveSeconds + .1f;
         while (Time.unscaledTime < deadline) yield return null;
         bool canceledKeptWalking = fixture.Carrier.Rider == null && fixture.Mover.CarrierSource == null;
@@ -134,7 +150,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         {
             ["mountedBefore"] = mountedBefore, ["held"] = held, ["movedDistance"] = movedDistance,
             ["dismounted"] = dismounted, ["canceledHold"] = canceledHold,
-            ["canceledKeptWalking"] = canceledKeptWalking
+            ["canceledKeptWalking"] = canceledKeptWalking, ["canceledCursorCleared"] = canceledCursorCleared
         });
     }
 
