@@ -152,11 +152,41 @@ def main():
                      "一键恢复原导入设置，并继续保留高清备份")
         assert_check(restore()["changedCount"] == 0, "重复恢复没有额外写入")
 
-        image.resize((1672, 941), Image.Resampling.NEAREST).save(source)
+        for dimensions, expected_size in [((1672, 941), (512, 288)), ((941, 1672), (288, 512))]:
+            image.resize(dimensions, Image.Resampling.NEAREST).save(source)
+            evaluate(f"CS.UnityEditor.AssetDatabase.ImportAsset({path_json},CS.UnityEditor.ImportAssetOptions.ForceUpdate|CS.UnityEditor.ImportAssetOptions.ForceSynchronousImport);return {{imported:true}};", "imported")
+            odd_original, odd_meta = source.read_bytes(), meta.read_bytes()
+            odd = evaluate(preview_code)
+            assert_check(odd["acceptedCount"] == 1 and not odd["errors"],
+                         f"非整比例 {dimensions} 接受取整缩小，不再整除失败就跳过")
+            odd_applied = apply(odd)
+            assert_check(odd_applied["changedCount"] == 1 and not odd_applied["errors"] and Image.open(source).size == expected_size,
+                         f"横竖图 {dimensions} 均按长边同步 PPU，实际输出 {expected_size}")
+            geometry = evaluate(
+                f"const sprites=CS.UnityEditor.AssetDatabase.LoadAllAssetsAtPath({path_json});let s=null;"
+                "for(let i=0;i<sprites.Length;i++){const o=sprites.GetValue(i);if(o.GetType().Name==='Sprite')s=o;}"
+                "return {geometry:true,width:s.rect.width/s.pixelsPerUnit,height:s.rect.height/s.pixelsPerUnit,"
+                "ppu:s.pixelsPerUnit,pivotX:s.pivot.x/s.rect.width,pivotY:s.pivot.y/s.rect.height};", "geometry")
+            tolerance = .5001 / geometry["ppu"] + .00002
+            assert_check(abs(geometry["width"] - dimensions[0] / 1024) <= tolerance and
+                         abs(geometry["height"] - dimensions[1] / 1024) <= tolerance and
+                         abs(geometry["pivotX"] - .37) < .00001 and abs(geometry["pivotY"] - .21) < .00001,
+                         f"{dimensions} 世界尺寸误差不超过半个目标像素，归一化握柄锚点不变")
+            assert_check(restore()["changedCount"] == 1 and source.read_bytes() == odd_original and meta.read_bytes() == odd_meta,
+                         f"{dimensions} 原图及原导入设置可完整恢复")
+
+        stripes = Image.new("RGBA", (2048, 2048), (0, 0, 0, 255))
+        stripe_draw = ImageDraw.Draw(stripes)
+        for x in range(2, 2048, 4):
+            stripe_draw.rectangle((x, 0, x + 1, 2047), fill=(255, 255, 255, 255))
+        stripes.save(source)
         evaluate(f"CS.UnityEditor.AssetDatabase.ImportAsset({path_json},CS.UnityEditor.ImportAssetOptions.ForceUpdate|CS.UnityEditor.ImportAssetOptions.ForceSynchronousImport);return {{imported:true}};", "imported")
-        odd = evaluate(preview_code)
-        assert_check(odd["acceptedCount"] == 0 and any("长宽比" in entry["status"] for entry in odd["entries"]),
-                     "非整比例尺寸安全跳过，不拉伸贴图或改变世界尺寸")
+        detail = evaluate(preview_code)
+        assert_check(detail["acceptedCount"] == 1 and detail["entries"][0]["width"] == 1024,
+                     "小档画质不通过时从原图尝试高一档，而非直接保留超大图")
+        assert_check(apply(detail)["changedCount"] == 1 and evaluate(preview_code)["acceptedCount"] == 0,
+                     "回退高一档的工作图也不会再次缩水或覆盖原图备份")
+        assert_check(restore()["changedCount"] == 1, "高一档结果可恢复原图")
         generator = (ROOT / "Assets/Editor/FlatWorld/ContentTools/FlatWorldSpriteAtlasPrebuildGenerator.cs").read_text(encoding="utf-8-sig")
         assert_check("FlatWorldPixelArtTextureOptimizer." not in generator, "构建链不再自动调用贴图优化器")
         summary = {"passed": len(checks), "checks": checks}

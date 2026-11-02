@@ -27,6 +27,7 @@ public static partial class FlatWorldPixelArtTextureOptimizer
         public int width;
         public int height;
         public float pixelsPerUnit;
+        public Vector2 normalizedPivot;
         public float colorError;
         public float silhouetteError;
         public long originalBytes;
@@ -159,8 +160,8 @@ public static partial class FlatWorldPixelArtTextureOptimizer
 
         var entry = new Entry { path = path, originalWidth = width, originalHeight = height,
             pixelsPerUnit = importer.spritePixelsPerUnit, originalBytes = new FileInfo(path).Length };
-        if (!TryGetExactSize(width, height, cap, out entry.width, out entry.height))
-        { entry.status = "跳过：目标尺寸无法保持精确长宽比"; return entry; }
+        if (!TryGetTargetSize(width, height, cap, out entry.width, out entry.height))
+        { entry.status = "跳过：目标尺寸过小，无法保留有效像素"; return entry; }
         string meta = File.ReadAllText(path + ".meta");
         if (Regex.IsMatch(meta, @"(?m)^    (?:outline|physicsShape|bones|vertices|edges|weights|secondaryTextures):[ \t]*\r?\n[ \t]*-"))
         { entry.status = "跳过：包含自定义轮廓、骨骼或辅助贴图"; return entry; }
@@ -168,17 +169,33 @@ public static partial class FlatWorldPixelArtTextureOptimizer
         if (sprite == null || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sprite, out entry.guid, out entry.spriteLocalId) ||
             entry.pixelsPerUnit <= 0 || float.IsNaN(entry.pixelsPerUnit) || float.IsInfinity(entry.pixelsPerUnit))
         { entry.status = "跳过：Sprite 标识或像素单位无效"; return entry; }
+        entry.normalizedPivot = new Vector2(sprite.pivot.x / sprite.rect.width, sprite.pivot.y / sprite.rect.height);
 
         byte[] bytes = File.ReadAllBytes(path);
         entry.sourceHash = Hash(bytes);
         entry.metaHash = Hash(File.ReadAllBytes(path + ".meta"));
+        if (IsOptimizedWorkingCopy(entry.guid, entry.sourceHash))
+        {
+            entry.width = width; entry.height = height;
+            entry.status = "已优化：保留当前工作图，不重复缩图";
+            return entry;
+        }
         Texture2D source = Decode(bytes);
         try
         {
             if (source.width != width || source.height != height)
                 throw new InvalidOperationException("源图尺寸与导入缓存不同，请先正常刷新资源再扫描。");
-            CheckQuality(source.GetPixels32(), entry);
-            entry.status = entry.accepted ? "可缩小" : "保留：颜色或轮廓变化超过保护阈值";
+            Color32[] pixels = source.GetPixels32();
+            // 小档损失细节时从同一高清原图尝试下一档，不对低清结果继续采样。
+            for (int candidate = cap; candidate <= cap * 2 && Math.Max(width, height) >= candidate * 3 / 2; candidate *= 2)
+            {
+                if (!TryGetTargetSize(width, height, candidate, out entry.width, out entry.height)) continue;
+                CheckQuality(pixels, entry);
+                if (entry.accepted) break;
+            }
+            entry.status = entry.accepted
+                ? (Math.Max(entry.width, entry.height) > cap ? "可缩小：使用较高一档保留细节" : "可缩小")
+                : "保留：各候选尺寸的颜色或轮廓变化仍超过保护阈值";
         }
         finally { UnityEngine.Object.DestroyImmediate(source); }
         return entry;
@@ -213,7 +230,7 @@ public static partial class FlatWorldPixelArtTextureOptimizer
         {
             AtomicWrite(entry.path, optimized);
             var importer = (TextureImporter)AssetImporter.GetAtPath(entry.path);
-            importer.spritePixelsPerUnit = entry.pixelsPerUnit * entry.width / entry.originalWidth;
+            importer.spritePixelsPerUnit = entry.pixelsPerUnit * GetResizeScale(entry);
             int limit = Mathf.NextPowerOfTwo(Math.Max(entry.width, entry.height));
             importer.maxTextureSize = limit;
             // 只统一尺寸上限，不在此处额外改变平台编码或像素颜色。
@@ -258,10 +275,26 @@ public static partial class FlatWorldPixelArtTextureOptimizer
         if (width != entry.width || height != entry.height || sprite == null ||
             !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(sprite, out string guid, out long localId) ||
             guid != entry.guid || localId != entry.spriteLocalId ||
-            Mathf.Abs(sprite.rect.width / sprite.pixelsPerUnit - entry.originalWidth / entry.pixelsPerUnit) > 0.001f ||
-            Mathf.Abs(sprite.rect.height / sprite.pixelsPerUnit - entry.originalHeight / entry.pixelsPerUnit) > 0.001f)
+            !IsImportedGeometryValid(sprite, entry))
             throw new InvalidOperationException("重新导入后的尺寸、世界单位或 Sprite 引用检查失败，已请求恢复原图。");
     }
+
+    private static bool IsImportedGeometryValid(Sprite sprite, Entry entry)
+    {
+        float expectedPpu = entry.pixelsPerUnit * GetResizeScale(entry);
+        Vector2 expectedSize = new(entry.originalWidth / entry.pixelsPerUnit, entry.originalHeight / entry.pixelsPerUnit);
+        Vector2 actualSize = sprite.rect.size / sprite.pixelsPerUnit;
+        Vector2 pivot = new(sprite.pivot.x / sprite.rect.width, sprite.pivot.y / sprite.rect.height);
+        // 像素尺寸只能取整数，短边最多容许半个目标像素的量化误差，长边和握柄锚点不重设。
+        float tolerance = 0.5001f / expectedPpu + 0.00001f * Mathf.Max(1, expectedSize.x, expectedSize.y);
+        return Mathf.Abs(sprite.pixelsPerUnit - expectedPpu) <= expectedPpu * 0.0001f &&
+               Mathf.Abs(actualSize.x - expectedSize.x) <= tolerance &&
+               Mathf.Abs(actualSize.y - expectedSize.y) <= tolerance &&
+               (pivot - entry.normalizedPivot).sqrMagnitude <= 0.00000001f;
+    }
+
+    private static float GetResizeScale(Entry entry) =>
+        (float)Math.Max(entry.width, entry.height) / Math.Max(entry.originalWidth, entry.originalHeight);
 
     private static void WriteReport(Report report) =>
         AtomicWrite(ReportPath, System.Text.Encoding.UTF8.GetBytes(JsonUtility.ToJson(report, true)));
@@ -270,17 +303,14 @@ public static partial class FlatWorldPixelArtTextureOptimizer
 
     #region 最近邻与画质保护
 
-    internal static bool TryGetExactSize(int width, int height, int cap, out int outputWidth, out int outputHeight)
+    internal static bool TryGetTargetSize(int width, int height, int cap, out int outputWidth, out int outputHeight)
     {
         outputWidth = width; outputHeight = height;
         if (width <= 0 || height <= 0 || cap <= 0 || Math.Max(width, height) <= cap) return false;
-        int a = width, b = height;
-        while (b != 0) { int remainder = a % b; a = b; b = remainder; }
-        int units = cap / Math.Max(width / a, height / a);
-        if (units <= 0) return false;
-        outputWidth = width / a * units;
-        outputHeight = height / a * units;
-        return outputWidth < width && outputHeight < height;
+        double scale = (double)cap / Math.Max(width, height);
+        outputWidth = (int)Math.Round(width * scale, MidpointRounding.AwayFromZero);
+        outputHeight = (int)Math.Round(height * scale, MidpointRounding.AwayFromZero);
+        return outputWidth > 0 && outputHeight > 0 && Math.Max(outputWidth, outputHeight) < Math.Max(width, height);
     }
 
     internal static Color32[] ResizeNearest(Color32[] source, int width, int height, int targetWidth, int targetHeight)

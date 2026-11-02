@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "createdUtc": "2026-11-02T18:44:04.6549044Z",
+    "directory": "ArtSourceBackups/PixelArtTextures/e37aab2082da4b45a44d077addc66e88/20261102T184404654_f5c7f3b8a6444352b7d01d1799ab944c",
+    "sourcePath": "Assets/6_Art/Generated/Buff/StatusIcons/HealthRecovery.png",
+    "guid": "e37aab2082da4b45a44d077addc66e88",
+    "sourceHash": "0c81ac44fdaeaac0937af253d09ddfe6c7422ed075cc60e22b8c2917e57e2d41",
+    "sourceMetaHash": "570356eb223d601564480899904a2cc1897e98aaee23ea9221ef34470cf4561c",
+    "optimizedHash": "d19494c9d6f2cd4a13ebd234d7ebdf0141713e96352066b3cead6b7fb56ca700",
+    "optimizedMetaHash": "43b7403dea48728947a3a45183b758de0d56ee9b4142453b81117cfd4857c472",
+    "state": "applied"
+}

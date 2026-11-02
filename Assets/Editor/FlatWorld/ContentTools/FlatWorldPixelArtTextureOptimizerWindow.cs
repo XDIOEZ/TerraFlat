@@ -20,7 +20,7 @@ public sealed class FlatWorldPixelArtTextureOptimizerWindow : EditorWindow
     {
         EditorGUILayout.LabelField("工作图缩小，高清原图留存", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox("编辑器、游戏和打包共用 Assets 中的低分辨率图。仅手动执行一次，不挂构建回调，不持续运行。\n" +
-            "最近邻保留像素颜色；同步调整 PPU，保留 GUID 和世界尺寸。物品图标上限 256，其他单图上限 512；风险图跳过。\n" +
+            "最近邻保留像素颜色；同步 PPU 并保留 GUID、归一化锚点，短边取整误差最多半个目标像素。图标优先 256、其他单图优先 512；画质不通过时尝试较高一档。\n" +
             "原图和原 .meta 保存在项目根目录 ArtSourceBackups（不进入 Unity 资源与包体），不要删除此目录。", MessageType.Info);
         bool busy = EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling || BuildPipeline.isBuildingPlayer;
         if (busy) EditorGUILayout.HelpBox("当前正在运行、编译或打包：这里只查看，不中断 Unity。", MessageType.Warning);
@@ -31,7 +31,7 @@ public sealed class FlatWorldPixelArtTextureOptimizerWindow : EditorWindow
                 if (GUILayout.Button("1. 只读扫描")) Run(() => FlatWorldPixelArtTextureOptimizer.Preview());
                 using (new EditorGUI.DisabledScope(report == null || report.operation != "preview" || report.cancelled || report.acceptedCount == 0))
                     if (GUILayout.Button("2. 备份并压缩一次") && EditorUtility.DisplayDialog("生成低分辨率工作图",
-                            $"处理通过检查的 {report.acceptedCount} 张贴图。先逐张备份高清原图与导入设置，再替换工作图。\n备份失败不会缩图；不会改游戏内大小和引用。", "开始", "取消"))
+                            $"处理通过检查的 {report.acceptedCount} 张贴图。先逐张备份高清原图与导入设置，再替换工作图。\n备份失败不会缩图；保留引用，世界尺寸仅容许像素取整误差。", "开始", "取消"))
                         Run(() => FlatWorldPixelArtTextureOptimizer.Apply(report));
             }
             using (new EditorGUILayout.HorizontalScope())

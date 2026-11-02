@@ -57,6 +57,17 @@ public static partial class FlatWorldPixelArtTextureOptimizer
     private static void SaveBackupRecord(BackupRecord record) =>
         AtomicWrite(record.directory + "/record.json", Encoding.UTF8.GetBytes(JsonUtility.ToJson(record, true)));
 
+    private static bool IsOptimizedWorkingCopy(string guid, string sourceHash)
+    {
+        string root = BackupRoot + "/" + guid;
+        if (!Directory.Exists(root)) return false;
+        BackupRecord latest = Directory.EnumerateFiles(root, "record.json", SearchOption.AllDirectories)
+            .Select(path => JsonUtility.FromJson<BackupRecord>(File.ReadAllText(path)))
+            .Where(record => record != null && record.guid == guid)
+            .OrderByDescending(record => record.createdUtc, StringComparer.Ordinal).FirstOrDefault();
+        return latest?.state == "applied" && latest.optimizedHash == sourceHash;
+    }
+
     private static string Hash(byte[] bytes)
     {
         using SHA256 algorithm = SHA256.Create();
