@@ -107,8 +107,11 @@ public class WorkbenchLogic : MachineLogic
     {
         if (operation == "select") return SelectRecipe(argument);
         if (operation != "work") return false;
-        PerformWork(1f, actor, true);
-        return true;
+        if (!GameNetwork.HasStateAuthority) return false;
+        RefreshRecipes();
+        Processor.AdvanceManually(1f, actor, out bool worked);
+        RefreshRecipes();
+        return worked;
     }
 
     public override void Tick(float seconds)

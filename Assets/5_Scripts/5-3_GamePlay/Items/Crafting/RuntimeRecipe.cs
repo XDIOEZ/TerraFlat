@@ -19,6 +19,7 @@ public sealed partial class RuntimeRecipe
     public float Temperature_Max = 2000f;
     public float ProcessingSeconds;
     public int ManualWorkSteps = 1;
+    public string ManualWorkCueId;
     public RuntimeLiquidOutput LiquidOutput;
 
     [MemoryPack.MemoryPackIgnore]

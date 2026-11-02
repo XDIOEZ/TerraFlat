@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Audio;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
 using TMPro;
@@ -51,7 +52,7 @@ public sealed class CraftingStationController : IDisposable
     private RuntimeRecipe pausedForWorkingTool;
     private readonly RecipeProcessor authoritativeProcessor;
     private readonly Action<string> selectAuthoritativeRecipe;
-    private readonly Action performAuthoritativeWork;
+    private readonly Func<bool> performAuthoritativeWork;
     private bool disposed;
 
     #endregion
@@ -107,7 +108,7 @@ public sealed class CraftingStationController : IDisposable
         Action<string> log = null,
         RecipeProcessor authoritativeProcessor = null,
         Action<string> selectRecipe = null,
-        Action performWork = null)
+        Func<bool> performWork = null)
     {
         this.panel = panel ?? throw new ArgumentNullException(nameof(panel));
         this.inputInventory = inputInventory ?? throw new ArgumentNullException(nameof(inputInventory));
@@ -221,7 +222,12 @@ public sealed class CraftingStationController : IDisposable
         if (disposed) return;
         if (authoritativeProcessor != null)
         {
-            performAuthoritativeWork?.Invoke();
+            RuntimeRecipe recipe = selectedRecipe;
+            bool canStrike = recipe != null && !authoritativeProcessor.PausedForWorkingTool &&
+                !MachineInventory.IsBeingDragged(inputInventory) &&
+                !MachineInventory.IsBeingDragged(outputInventory) && Preview(recipe).Success;
+            bool accepted = performAuthoritativeWork?.Invoke() == true;
+            if (canStrike && accepted) PlayManualWorkCue(recipe);
             RefreshCandidates();
             return;
         }
@@ -253,6 +259,7 @@ public sealed class CraftingStationController : IDisposable
                 CraftingResult result = CraftingService.CraftRecipe(inputInventory, outputInventory, capabilities, recipe, resolveActor(), match);
                 if (!result.Success) { ReportFailure(result); ResetProgress(); return; }
                 if (match.WorkingToolSlots.Count > 0) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(resolveActor());
+                PlayManualWorkCue(recipe);
                 PlaySuccess();
                 pausedForWorkingTool = null;
                 ResetProgress();
@@ -262,6 +269,7 @@ public sealed class CraftingStationController : IDisposable
                 if (!match.TryConsumeWorkingToolDurability(inputInventory)) return;
                 if (match.WorkingToolSlots.Count > 0) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(resolveActor());
                 currentClickProgress = nextProgress;
+                PlayManualWorkCue(recipe);
                 if (!CraftingRecipeMatcher.TryMatchRecipe(inputInventory, recipe, capabilities, out _))
                     pausedForWorkingTool = recipe;
             }
@@ -271,6 +279,15 @@ public sealed class CraftingStationController : IDisposable
             applyingWorkClick = false;
             RefreshCandidates();
         }
+    }
+
+    /// <summary>只对本地玩家的有效操作播放配方自己的敲击音效。</summary>
+    private void PlayManualWorkCue(RuntimeRecipe recipe)
+    {
+        if (string.IsNullOrWhiteSpace(recipe?.ManualWorkCueId)) return;
+        Player actor = resolveActor();
+        if (actor != null && actor.IsLocalProfile)
+            AudioService.Instance.PlayAt(recipe.ManualWorkCueId, actor.transform.position, 0.75f);
     }
 
     #endregion

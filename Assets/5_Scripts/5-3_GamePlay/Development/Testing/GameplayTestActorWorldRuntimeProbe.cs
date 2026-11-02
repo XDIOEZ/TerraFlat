@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.Audio;
 using FlatWorld.NaturalEntities;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
@@ -491,6 +492,10 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             table.inputInventory.Data.TryAddItem(resources.CreateItemData("Ore_Stone"));
         RuntimeRecipe mortarRecipe = resources.GetRecipe("core:stone_mortar")
             ?? throw new InvalidOperationException("正式配方目录缺少石臼配方。");
+        result["mortarWorkCueId"] = mortarRecipe.ManualWorkCueId;
+        bool foundMortarCue = AudioService.Instance.TryGetCue(mortarRecipe.ManualWorkCueId, out AudioCue mortarCue);
+        result["mortarWorkCueReady"] = foundMortarCue && mortarCue.PlaybackEnabled &&
+            mortarCue.Clips.Count == 3 && mortarCue.Cooldown == 0f && mortarCue.MaxInstances >= 8;
         CraftingStationController mortarController = table.basePanel.GetComponent<CraftingStationView>()?.Controller;
         mortarController?.FindRecipeButton(mortarRecipe.Id)?.onClick.Invoke();
         result["mortarRecipeSelected"] = mortarController?.SelectedRecipe?.Id == mortarRecipe.Id;

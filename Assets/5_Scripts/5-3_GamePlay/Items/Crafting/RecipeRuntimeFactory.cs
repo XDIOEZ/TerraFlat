@@ -63,6 +63,7 @@ public static class RecipeRuntimeFactory
             Temperature_Max = dto.MaxTemperature,
             ProcessingSeconds = dto.ProcessingSeconds,
             ManualWorkSteps = dto.ManualWorkSteps,
+            ManualWorkCueId = dto.ManualWorkCueId?.Trim(),
             inputs = inputs
         };
 

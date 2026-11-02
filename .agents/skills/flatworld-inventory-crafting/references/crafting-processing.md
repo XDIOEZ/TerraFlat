@@ -11,6 +11,7 @@
 - 多产物全部放下才提交，失败不扣料/部分产出；非堆叠逐件占槽。合法定义来自 GameRes.ItemDefinitions；旧recipeDict仅留未迁移熔炼单值索引，普通候选用CraftingRecipeCatalog。被动无配方只清预览。
 - processing不继承parent，ItemProcessingResolver转RuntimeRecipe；capability/level由设备给，minLevel/maxLevel闭区间。handcraft/workbench互认，手工台4/2、工作台5/2输入输出；落地台手势为手工70%，四舍五入至少1次。
 - 普通合成有效点击数取制作站基础次数与配方 `manualWorkSteps` 中的较大值；石板加原石制作石臼需要50次。
+- 配方可用 `manualWorkCueId` 声明每次有效手工点击的音效；石臼共50击复用石头碰撞声的独立 Cue `craft.stone_mortar.hit`，不触发无效操作或机械自动生产音效。
 - 石臼grind按材料work算手势，MortarState存配方/进度，切配方清零、满输出保留完成进度；固定库存默认6格，手持/落地/未物化热加工共用数据。
 - 手钻/手动设备复用RecipeProcessor.AdvanceManually与CraftingService，SharedModuleIds转库存/进度。固定转换不加难度增产；CraftingOutputRules共用预检/提交，防腐寿命取真实扣料计划最差余量，品质存CraftedDurabilityMultiplier，手钻读矿锭DrillDurability Tag。
 - 强化材料支持minTemperature/excludeTag，copyInputTag/reinforceWithAdhesive复制真实扣料工具；拒未初始化/非有限温度，提交重匹配。热树脂≥200℃或Adhesive各扣一份，先max×1.3再修复新缺损50%；实例AdhesiveReinforced防重复，保留品质/GUID/标签，按定义基线恢复倍率，工坊草稿保留全部字段。
