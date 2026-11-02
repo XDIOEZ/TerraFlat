@@ -3,6 +3,7 @@
   "tiles": [
     {
       "id": "Tile_MoonRegolith",
+      "footstepCueId": "player.footstep.sand",
       "runtimeTileId": 32,
       "displayName": "月壤",
       "loadCapacity": 10,
@@ -20,6 +21,7 @@
     },
     {
       "id": "Tile_MarsDust",
+      "footstepCueId": "player.footstep.sand",
       "runtimeTileId": 33,
       "displayName": "火星尘土",
       "loadCapacity": 10,
@@ -37,6 +39,7 @@
     },
     {
       "id": "Tile_NuclearFusion",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 34,
       "displayName": "核聚变中",
       "loadCapacity": 10,

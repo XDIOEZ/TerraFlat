@@ -123,11 +123,12 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
     local movementCueKinds = {
         ["player.footstep.dirt"] = "footstep", ["player.footstep.grass"] = "footstep",
         ["player.footstep.sand"] = "footstep", ["player.footstep.stone"] = "footstep",
+        ["player.footstep.metal"] = "footstep",
         ["player.footstep.wood"] = "footstep", ["player.footstep.snow"] = "footstep",
         ["player.footstep.water"] = "footstep", ["fishing.cast"] = "fishing",
         ["fishing.hook"] = "fishing", ["fishing.reel"] = "fishing"
     }
-    assert(#data.movementCues == 10, "未读取七种脚步和三种钓鱼反馈 Cue")
+    assert(#data.movementCues == 11, "未读取八种脚步和三种钓鱼反馈 Cue")
     for _, cue in ipairs(data.movementCues) do
         local kind = movementCueKinds[cue.id]
         assert(kind ~= nil, "脚步或钓鱼 Cue 重复或出现未知 ID：" .. tostring(cue.id))

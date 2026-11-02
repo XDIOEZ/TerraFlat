@@ -1,0 +1,81 @@
+{
+  "sourcePage": "https://opengameart.org/content/metal-footsteps-on-concrete",
+  "license": "CC0-1.0",
+  "archiveSha256": "3df6f81f669dd2f5bf83b8dab46cd0942bd86e7d33cc4409f1ba8470a9df488d",
+  "sampleRate": 48000,
+  "channels": 1,
+  "clips": [
+    {
+      "cue": "player.footstep.metal",
+      "variant": 1,
+      "source": "metal_steps_01.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__01.wav",
+      "guid": "de81fe7f99aa4dfca381fe90aa2e4ef5",
+      "seconds": 0.12783333333333333,
+      "sha256": "b92bb5cba5719335689c083de22351006c2accfb90757fc2f65f168391b01ec5"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 2,
+      "source": "metal_steps_04.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__02.wav",
+      "guid": "57120876992e42a088f4106357e3a8eb",
+      "seconds": 0.136125,
+      "sha256": "29ec6e7fcd39480cd2f5f38c2f88236a3e04e985e110735b849363858bedfe52"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 3,
+      "source": "metal_steps_07.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__03.wav",
+      "guid": "e2f1ca78740345009ccd6374825bc7d6",
+      "seconds": 0.10335416666666666,
+      "sha256": "21900744fe298ca0e0a495b5f4ac010f852d0e44d8c9937f779a23327fd5f9f6"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 4,
+      "source": "metal_steps_10.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__04.wav",
+      "guid": "e5bc3628ad1f486eaffd98481602652e",
+      "seconds": 0.14427083333333332,
+      "sha256": "c5b73ab49e7496e9fd483d4f52c6cdf048970da2f2a2efb434ebe3d11c9309f0"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 5,
+      "source": "metal_steps_13.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__05.wav",
+      "guid": "6bcf241432234886b6088fc2c9eacc3d",
+      "seconds": 0.1001875,
+      "sha256": "bdc981b96bada6613f8b210d591ec758828e8f87ba5e348ba101dc04d62191e5"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 6,
+      "source": "metal_steps_16.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__06.wav",
+      "guid": "972a696042d74420a7cde72d6ec63843",
+      "seconds": 0.13308333333333333,
+      "sha256": "b12f59d04b89b3bbabad9a366a279d997a28cd4f0b7962d7f2b60194414a9b0d"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 7,
+      "source": "metal_steps_19.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__07.wav",
+      "guid": "7af99d842a0a4234887229c6eb9d9bc3",
+      "seconds": 0.1014375,
+      "sha256": "443d9d82f9ebfa0037fd44a20080481fecd69dd57aaaeb82da96de9fd4a45052"
+    },
+    {
+      "cue": "player.footstep.metal",
+      "variant": 8,
+      "source": "metal_steps_22.wav",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.metal__08.wav",
+      "guid": "86e34be142ff4c6c89edf99b27be9072",
+      "seconds": 0.14175,
+      "sha256": "63aeae54a91d94e8d6c163ec3de96adef150bc28dee498e2bf738f8f83a74c61"
+    }
+  ]
+}

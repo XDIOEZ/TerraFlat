@@ -160,6 +160,9 @@ public partial class Mod_Mover
             return AudioEventIds.FootstepWater;
         if (snowDepth > .05f)
             return AudioEventIds.FootstepSnow;
+        // 真实草被盖在泥土地面时优先踩草，石地与人工地板仍按硬质底材发声。
+        if (!hasSupport && grass == ChunkTerrainData.GrassPresent && surfaceCue == AudioEventIds.FootstepDirt)
+            return AudioEventIds.FootstepGrass;
         if (!string.IsNullOrWhiteSpace(surfaceCue))
             return surfaceCue;
         if (hasSupport || biomeId == (int)SurfaceBiomeKind.Stone)

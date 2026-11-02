@@ -3,6 +3,7 @@
   "tiles": [
     {
       "id": "TileBase_Stone",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 0,
       "loadCapacity": 10,
       "displayName": "矿洞石地",
@@ -15,6 +16,7 @@
     },
     {
       "id": "Tile_Grass",
+      "footstepCueId": "player.footstep.grass",
       "runtimeTileId": 1,
       "loadCapacity": 8,
       "naturalPlantable": true,
@@ -37,6 +39,7 @@
     },
     {
       "id": "Tile_Dirt",
+      "footstepCueId": "player.footstep.dirt",
       "runtimeTileId": 29,
       "loadCapacity": 8,
       "naturalPlantable": true,
@@ -55,6 +58,7 @@
     },
     {
       "id": "Tile_Clay",
+      "footstepCueId": "player.footstep.dirt",
       "runtimeTileId": 30,
       "loadCapacity": 7,
       "displayName": "黏土",
@@ -72,6 +76,7 @@
     },
     {
       "id": "Tile_Sand",
+      "footstepCueId": "player.footstep.sand",
       "runtimeTileId": 3,
       "loadCapacity": 5,
       "displayName": "Tile_Sand",
@@ -90,6 +95,7 @@
     },
     {
       "id": "Tile_Stone",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 4,
       "loadCapacity": 10,
       "displayName": "Tile_Stone",
@@ -109,6 +115,7 @@
     },
     {
       "id": "Tile_Bedrock",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 31,
       "minimumSurfaceDepth": 5,
       "loadCapacity": 10,
@@ -123,6 +130,7 @@
     },
     {
       "id": "Tile_Ice",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 9,
       "loadCapacity": 8,
       "displayName": "Tile_Ice",
@@ -136,6 +144,7 @@
     },
     {
       "id": "Tile_Peat",
+      "footstepCueId": "player.footstep.dirt",
       "runtimeTileId": 28,
       "loadCapacity": 8,
       "naturalPlantable": true,
@@ -154,6 +163,7 @@
     },
     {
       "id": "Tile_Farmland",
+      "footstepCueId": "player.footstep.dirt",
       "runtimeTileId": 14,
       "loadCapacity": 8,
       "naturalPlantable": true,
