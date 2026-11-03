@@ -375,11 +375,6 @@ public partial class ChunkMgr
         runtimeEpoch = world.Epoch;
         try
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            slowChunkLogCount = 0;
-            slowChunkLogWindowStart = Time.realtimeSinceStartup;
-            world.StreamingDiagnostics.SlowGenerationCompleted += LogSlowChunkGeneration;
-#endif
             runtimeGenerator = generator as DeterministicChunkGenerator;
             runtimeChunkManager = new RuntimeChunkMgr(world, generator,
                 EffectiveBackgroundGenerationConcurrency, GameplayWorldRegistry.UsesLocalCoordinates(world.WorldId)
@@ -400,9 +395,6 @@ public partial class ChunkMgr
             }
             finally
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
-#endif
                 runtimeChunkManager = null;
                 runtimeGenerator = null;
                 sightBlockingChunkCommittedSubscription = null;
@@ -710,9 +702,6 @@ public partial class ChunkMgr
                 WorldRuntime world = manager.World;
                 try
                 {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    world.StreamingDiagnostics.SlowGenerationCompleted -= LogSlowChunkGeneration;
-#endif
                     manager.Dispose();
                 }
                 finally { GameplayWorldRegistry.DetachOwnedWorldModel(world.WorldId, world, this); }

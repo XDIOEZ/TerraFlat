@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using Stopwatch = System.Diagnostics.Stopwatch;
@@ -11,40 +10,6 @@ public partial class ChunkMgr
     private long streamingAdvanceCount;
     private long lastStreamingAdvanceTimestamp;
     private int lastStreamingAdvanceFrame = -1;
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    // 每 30 秒最多输出 12 条慢生成日志，保证后续传送仍能采样。
-    private const int MaxSlowChunkLogsPerWindow = 12;
-    private const float SlowChunkLogWindowSeconds = 30f;
-    private int slowChunkLogCount;
-    private float slowChunkLogWindowStart;
-
-    /// <summary>后台计时完成后在主线程输出慢区块分段耗时。</summary>
-    private void LogSlowChunkGeneration(ChunkGenerationDiagnostic diagnostic)
-    {
-        float now = Time.realtimeSinceStartup;
-        if (now - slowChunkLogWindowStart >= SlowChunkLogWindowSeconds)
-        {
-            slowChunkLogWindowStart = now;
-            slowChunkLogCount = 0;
-        }
-        if (slowChunkLogCount >= MaxSlowChunkLogsPerWindow)
-            return;
-        slowChunkLogCount++;
-        var stages = new StringBuilder();
-        foreach (KeyValuePair<string, double> stage in diagnostic.GenerationStagesMs)
-        {
-            if (stages.Length > 0) stages.Append(", ");
-            stages.Append(stage.Key).Append('=').Append(stage.Value.ToString("F0")).Append("ms");
-        }
-        foreach (KeyValuePair<string, long> count in diagnostic.GenerationCounts)
-            stages.Append(", ").Append(count.Key).Append('=').Append(count.Value);
-        Debug.Log($"[ChunkGenSlow] {diagnostic.Dimension} " +
-                  $"({diagnostic.Origin[0]},{diagnostic.Origin[1]}) " +
-                  $"result={diagnostic.Stage} queue={diagnostic.GenerationQueueMs:F0}ms " +
-                  $"work={diagnostic.GenerationWorkMs:F0}ms | {stages}", this);
-    }
-#endif
 
     /// <summary>只记录主线程实际推进，不从任何诊断读取入口提交区块或重绑宿主。</summary>
     [System.Diagnostics.Conditional("UNITY_EDITOR")]
