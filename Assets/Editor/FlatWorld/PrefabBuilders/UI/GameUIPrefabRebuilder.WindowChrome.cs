@@ -279,6 +279,14 @@ public static partial class GameUIPrefabRebuilder
 
     private static void ConfigureActionButton(GameObject gameObject, string caption, bool primary)
     {
+        // 嵌套公共按钮由 Variant 管理外观，此处只更新业务文字。
+        if (ReusableUIControl.OwnsVisuals(gameObject.GetComponent<Button>()))
+        {
+            TMP_Text sharedLabel = gameObject.GetComponentInChildren<TMP_Text>(true);
+            if (sharedLabel != null)
+                sharedLabel.text = caption;
+            return;
+        }
         Image image = EnsureImage(gameObject);
         image.color = primary ? new Color(0.70f, 0.36f, 0.16f, 0.98f) : SurfaceRaised;
         image.sprite = null;

@@ -154,7 +154,13 @@ public static class PortableBuildingPanelBuilder
         string name, string caption, Vector2 size, Vector2? position)
     {
         Button existing = root.GetComponentsInChildren<Button>(true).FirstOrDefault(button => button.name == name);
-        Button button = existing != null ? existing : UnityEngine.Object.Instantiate(template, parent);
+        RectTransform templateRect = (RectTransform)template.transform;
+        Button button = existing != null ? existing :
+            FlatWorldEditorUiLayout.CreateSharedButton(
+                parent, name, caption, position ?? templateRect.anchoredPosition, size,
+                templateRect.pivot, name == "拆回建筑按钮"
+                    ? FlatWorldEditorUiLayout.SharedButtonKind.Destructive
+                    : FlatWorldEditorUiLayout.SharedButtonKind.Primary);
         button.name = name;
         button.onClick = new Button.ButtonClickedEvent();
         button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
@@ -176,13 +182,16 @@ public static class PortableBuildingPanelBuilder
             UnityEngine.Object.DestroyImmediate(binder);
         TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
         text.text = caption;
-        text.fontSize = 22f;
-        text.rectTransform.anchorMin = Vector2.zero;
-        text.rectTransform.anchorMax = Vector2.one;
-        text.rectTransform.offsetMin = new Vector2(6f, 0f);
-        text.rectTransform.offsetMax = new Vector2(-6f, 0f);
-        text.alignment = TextAlignmentOptions.Center;
-        FlatWorldUITheme.Apply(button.transform);
+        if (!ReusableUIControl.OwnsVisuals(button))
+        {
+            text.fontSize = 22f;
+            text.rectTransform.anchorMin = Vector2.zero;
+            text.rectTransform.anchorMax = Vector2.one;
+            text.rectTransform.offsetMin = new Vector2(6f, 0f);
+            text.rectTransform.offsetMax = new Vector2(-6f, 0f);
+            text.alignment = TextAlignmentOptions.Center;
+            FlatWorldUITheme.Apply(button.transform);
+        }
         button.gameObject.SetActive(false);
         return button;
     }

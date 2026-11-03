@@ -14,6 +14,55 @@ public static partial class RuntimeUIPrefabBuilder
 {
     #region 公共控件回归验证
 
+    /// <summary>只读列出尚未保持 Prefab 连接的复用控件，供定向修复，不修改资源。</summary>
+    public static string AuditDisconnectedSharedControls()
+    {
+        var results = new List<string>();
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { PrefabRoot }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (IsSharedLibraryAsset(path))
+                continue;
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                foreach (ReusableUIControl control in root.GetComponentsInChildren<ReusableUIControl>(true))
+                    if (!PrefabUtility.IsPartOfPrefabInstance(control))
+                        results.Add(path + " / " + control.name);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        return string.Join("\n", results);
+    }
+
+    /// <summary>只读列出阻断公共外观继承的 Graphic 色值实例覆盖。</summary>
+    public static string AuditSharedVisualColorOverrides()
+    {
+        var results = new List<string>();
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { PrefabRoot }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (IsSharedLibraryAsset(path))
+                continue;
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                foreach (ReusableUIControl control in root.GetComponentsInChildren<ReusableUIControl>(true))
+                {
+                    PropertyModification[] changes = PrefabUtility.GetPropertyModifications(control.gameObject);
+                    if (changes == null)
+                        continue;
+                    int count = changes.Count(change => change.target is Graphic graphic &&
+                        ReusableUIControl.OwnsVisuals(graphic) && change.propertyPath.StartsWith("m_Color"));
+                    if (count > 0)
+                        results.Add(path + " / " + control.name + " (" + count + ")");
+                }
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        return string.Join("\n", results);
+    }
+
     /// <summary>验证正式资产的嵌套关系、外观继承和音量手柄，失败时输出具体资产与节点。</summary>
     [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Validate Prefabs")]
     public static void ValidateSharedControlPrefabs()
@@ -28,7 +77,8 @@ public static partial class RuntimeUIPrefabBuilder
             foreach (Transform node in asset.GetComponentsInChildren<Transform>(true))
                 RequireSharedUI(GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(node.gameObject) == 0, key + " 有丢失脚本");
         }
-        foreach (string key in new[] { "UI_CloseButton", "UI_TabButton", "UI_ProgressBar", "UI_SwitchOption" })
+        foreach (string key in new[] { "UI_CloseButton", "UI_TabButton", "UI_PrimaryButton",
+                     "UI_DestructiveButton", "UI_TransparentButton", "UI_ProgressBar", "UI_SwitchOption" })
         {
             GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(SharedControlsRoot + key + ".prefab");
             RequireSharedUI(PrefabUtility.GetPrefabAssetType(asset) == PrefabAssetType.Variant, key + " 不是继承基础控件的 Variant");
@@ -83,7 +133,7 @@ public static partial class RuntimeUIPrefabBuilder
         RequireSharedUI(instanceCount > 6, "迁移范围不足，尚未在窗口中应用公共控件");
         ValidateAudioSliderAssets();
         ValidateSharedStylePropagation();
-        string message = $"PASS: {SharedControlNames.Length} 个公共资产，4 个 Variant，{panelCount} 个引用资产，{instanceCount} 个嵌套实例；引用、六路音量几何、主题隔离和源资产样式传播通过。";
+        string message = $"PASS: {SharedControlNames.Length} 个公共资产，7 个 Variant，{panelCount} 个引用资产，{instanceCount} 个嵌套实例；引用、六路音量几何、主题隔离和源资产样式传播通过。";
         Directory.CreateDirectory("Temp/SharedUI");
         File.WriteAllText("Temp/SharedUI/validation.txt", message);
         Debug.Log("[Shared UI] " + message);

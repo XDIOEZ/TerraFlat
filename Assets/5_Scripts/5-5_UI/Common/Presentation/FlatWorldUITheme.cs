@@ -67,6 +67,8 @@ public static class FlatWorldUITheme
     private static Color StackBadgeBorder => ThemeColor("stackBadgeBorder");
     private static Color ButtonDestructive => ThemeColor("buttonDestructive");
     private static Color ButtonPrimary => ThemeColor("buttonPrimary");
+    public static Color PrimaryActionSurface => ButtonPrimary;
+    public static Color DestructiveActionSurface => ButtonDestructive;
     private static Color ButtonClose => ThemeColor("buttonClose");
     private static Color TintNormal => ThemeColor("tintNormal");
     public static Color TintHighlight => ThemeColor("tintHighlight");

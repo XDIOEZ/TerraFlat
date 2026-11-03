@@ -166,7 +166,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateSettingsHint(content, "轻量（低配）：简化水面细节，减少渲染开销。", 52f);
 
         Transform footer = CreateRow("底部操作", content, 72f).transform;
-        Button reset = CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 200f, 64f, false);
+        Button reset = CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 200f, SettingsTouchActionHeight, false);
         SetButtonLabelSize(reset, 18f);
         var controller = root.AddComponent<VisualEffectsSettingsPanelLauncher>();
         var serialized = new SerializedObject(controller);

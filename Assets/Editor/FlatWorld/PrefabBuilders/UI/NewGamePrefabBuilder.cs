@@ -6,6 +6,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 public static class NewGamePrefabBuilder
 {
@@ -121,9 +122,23 @@ public static class NewGamePrefabBuilder
         foreach (Transform child in children)
             child.SetParent(contentRect, false);
         content.SetActive(true);
+        RuntimeUIPrefabBuilder.ClearSharedVisualOverrides(contentRect);
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(content, path);
         Object.DestroyImmediate(content);
         return prefab;
+    }
+
+    /// <summary>修正旧的世界设置分页在编辑态烘焙选中色导致的公共 Prefab 样式覆盖。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Clean New World Tab Overrides")]
+    public static void CleanNewWorldTabOverrides()
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(WorldContentPath);
+        try
+        {
+            if (RuntimeUIPrefabBuilder.ClearSharedVisualOverrides(root.transform) > 0)
+                PrefabUtility.SaveAsPrefabAsset(root, WorldContentPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
     #endregion
@@ -213,7 +228,9 @@ public static class NewGamePrefabBuilder
         TMP_Text title = CreateText("新世界标题", card, "创建新世界", font, 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(42f, -34f), new Vector2(700f, 68f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -28f), new Vector2(210f, 72f), InkSoft, 22f, new Vector2(1f, 1f));
+        CreateSharedButton(card, GameManager.NewGameBackButtonKey, "返回主界面",
+            new Vector2(-42f, -28f), new Vector2(210f, 72f), Vector2.one,
+            SharedButtonKind.Close, GameManager.NewGameBackButtonKey + "_文字");
 
         Image divider = CreateImage("新世界标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -252,8 +269,12 @@ public static class NewGamePrefabBuilder
         RectTransform content = BuildWorldSettingsScrollView(panel.transform);
         Transform basic = CreateWorldSettingsPage(content, "基础世界设置");
         Transform advanced = CreateWorldSettingsPage(content, "高级世界设置");
-        Button basicTab = CreateButton(panel.transform, font, "基础世界设置分页", "基础", new Vector2(500f, -20f), new Vector2(300f, 60f), InkSoft, 22f, new Vector2(0f, 1f));
-        Button advancedTab = CreateButton(panel.transform, font, "高级世界设置分页", "高级", new Vector2(820f, -20f), new Vector2(300f, 60f), InkSoft, 22f, new Vector2(0f, 1f));
+        Button basicTab = CreateSharedButton(panel.transform, "基础世界设置分页", "基础",
+            new Vector2(500f, -20f), new Vector2(300f, 60f), new Vector2(0f, 1f),
+            SharedButtonKind.Tab, "基础世界设置分页_文字");
+        Button advancedTab = CreateSharedButton(panel.transform, "高级世界设置分页", "高级",
+            new Vector2(820f, -20f), new Vector2(300f, 60f), new Vector2(0f, 1f),
+            SharedButtonKind.Tab, "高级世界设置分页_文字");
 
         string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
         CreateWorldSettingInputRow(
@@ -444,28 +465,24 @@ public static class NewGamePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  难度 0", new Vector2(42f, 20f), new Vector2(300f, 80f), InkSoft, 22f, new Vector2(0f, 0f));
+        CreateSharedButton(card, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  难度 0",
+            new Vector2(42f, 20f), new Vector2(300f, 80f), Vector2.zero,
+            labelObjectName: GameManager.NewGameDifficultySummaryTextKey);
 
         CreatePageButton(card, GameManager.NewGameWorldSettingsButtonKey, "世界设置");
         Button identityButton = CreatePageButton(card, GameManager.NewGameIdentityButtonKey, "返回名称设置");
         identityButton.gameObject.SetActive(false);
 
-        CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), 25f, new Vector2(1f, 0f));
+        CreateSharedButton(card, GameManager.NewGameStartButtonKey, "生成新世界",
+            new Vector2(-42f, 20f), new Vector2(280f, 80f), new Vector2(1f, 0f),
+            SharedButtonKind.Primary, GameManager.NewGameStartButtonKey + "_文字");
     }
 
     /// <summary>分页入口使用正式公共按钮，外部布局与底部原有操作对齐。</summary>
     private static Button CreatePageButton(Transform card, string name, string caption)
     {
-        RuntimeUIPrefabBuilder.EnsureSharedControlPrefabs();
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(RuntimeUIPrefabBuilder.SharedControlsRoot + "UI_Button.prefab");
-        GameObject instance = PrefabUtility.InstantiatePrefab(prefab, card) as GameObject;
-        instance.name = name;
-        SetRect(instance.GetComponent<RectTransform>(), new Vector2(368f, 20f), new Vector2(300f, 80f), Vector2.zero);
-        LayoutElement layout = instance.GetComponent<LayoutElement>();
-        layout.preferredWidth = 300f;
-        layout.preferredHeight = 80f;
-        instance.GetComponentInChildren<TMP_Text>(true).text = caption;
-        return instance.GetComponent<Button>();
+        return CreateSharedButton(card, name, caption, new Vector2(368f, 20f),
+            new Vector2(300f, 80f), Vector2.zero);
     }
 
     #endregion
@@ -491,7 +508,9 @@ public static class NewGamePrefabBuilder
         subtitle.gameObject.SetActive(false);
         SetRect(subtitle.rectTransform, new Vector2(76f, -80f), new Vector2(692f, 32f), new Vector2(0f, 1f));
 
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCloseButtonKey, "关闭", new Vector2(-48f, -28f), new Vector2(170f, 72f), InkSoft, 24f, new Vector2(1f, 1f));
+        CreateSharedButton(dialog.transform, GameManager.NewGameDifficultyCloseButtonKey, "关闭",
+            new Vector2(-48f, -28f), new Vector2(170f, 72f), Vector2.one,
+            SharedButtonKind.Close, GameManager.NewGameDifficultyCloseButtonKey + "_文字");
 
         Image divider = CreateImage("难度标题分隔线", dialog.transform, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -504,7 +523,9 @@ public static class NewGamePrefabBuilder
         BuildOfficialDifficultyPage(dialog.transform, font);
         BuildDifficultyDetails(dialog.transform, font);
 
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择  >", new Vector2(-48f, 24f), new Vector2(300f, 72f), Amber, 25f, new Vector2(1f, 0f));
+        CreateSharedButton(dialog.transform, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择  >",
+            new Vector2(-48f, 24f), new Vector2(300f, 72f), new Vector2(1f, 0f),
+            SharedButtonKind.Primary, GameManager.NewGameDifficultyConfirmButtonKey + "_文字");
         overlay.gameObject.SetActive(false);
         return dialog.rectTransform;
     }

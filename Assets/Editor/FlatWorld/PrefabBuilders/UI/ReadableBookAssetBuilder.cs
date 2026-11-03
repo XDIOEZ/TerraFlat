@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Tables;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 /// <summary>生成通用可阅读书籍的正式模块 Prefab、双页 UI Prefab 和矿工笔记书页本地化内容。</summary>
 public static class ReadableBookAssetBuilder
@@ -96,6 +97,36 @@ public static class ReadableBookAssetBuilder
         }
     }
 
+    /// <summary>仅迁移现有书籍的翻页和关闭按钮，保留书页与正文引用。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Sync Readable Book Shared Buttons")]
+    public static void SyncReadableBookSharedButtons()
+    {
+        RuntimeUIPrefabBuilder.EnsureSharedControlPrefabs();
+        GameObject root = PrefabUtility.LoadPrefabContents(PanelPath);
+        try
+        {
+            Transform frame = root.transform.Find("书籍框");
+            Button previous = frame?.Find("上一页")?.GetComponent<Button>();
+            Button next = frame?.Find("下一页")?.GetComponent<Button>();
+            Button close = frame?.Find("关闭")?.GetComponent<Button>();
+            ReadableBookPanel view = root.GetComponent<ReadableBookPanel>();
+            if (previous == null || next == null || close == null || view == null)
+                throw new InvalidOperationException("书籍正式 Prefab 缺少基础按钮或视图");
+            SerializedObject fields = new SerializedObject(view);
+            if (previous.GetComponent<ReusableUIControl>() == null)
+                fields.FindProperty("previousButton").objectReferenceValue =
+                    ReplaceLegacyButton(previous, "‹", SharedButtonKind.Normal);
+            if (next.GetComponent<ReusableUIControl>() == null)
+                fields.FindProperty("nextButton").objectReferenceValue =
+                    ReplaceLegacyButton(next, "›", SharedButtonKind.Normal);
+            if (close.GetComponent<ReusableUIControl>() == null)
+                ReplaceLegacyButton(close, "×", SharedButtonKind.Close);
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(root, PanelPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     private static void BuildModulePrefab()
     {
         GameObject root = new GameObject("Module_ReadableBook");
@@ -141,14 +172,8 @@ public static class ReadableBookAssetBuilder
 
     private static Button Button(string name, Transform parent, string label, Vector2 size, Vector2 position)
     {
-        RectTransform rect = Rect(name, parent, size, position);
-        Image image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color32(84, 84, 84, 255);
-        Button button = rect.gameObject.AddComponent<Button>();
-        button.targetGraphic = image;
-        Text(name + "文字", rect, label, size, Vector2.zero, 30f,
-            new Color32(238, 238, 238, 255), TextAlignmentOptions.Center, false);
-        return button;
+        return CreateSharedButton(parent, name, label, position, size,
+            new Vector2(.5f, .5f), name == "关闭" ? SharedButtonKind.Close : SharedButtonKind.Normal);
     }
 
     private static TextMeshProUGUI Text(

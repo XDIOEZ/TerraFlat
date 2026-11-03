@@ -160,6 +160,12 @@ public static class ModManagerPrefabBuilder
             SetReference(serialized, "nextPage", card.Find("下一页").GetComponent<Button>());
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
+            // 标准关闭按钮继承公共视觉；复杂的 MOD 行、翻页与拖拽装饰仍由本页维护。
+            Button closeButton = header.Find("关闭").GetComponent<Button>();
+            if (closeButton.GetComponent<ReusableUIControl>() == null)
+                FlatWorldEditorUiLayout.ReplaceLegacyButton(
+                    closeButton, "关闭", FlatWorldEditorUiLayout.SharedButtonKind.Close, "关闭_标题");
+
             // 只维护当前面板，保存前统一边框和按钮状态。
             FlatWorldUITheme.ApplyBorderThickness(root.transform);
             FlatWorldUITheme.ApplySelectionColors(root.transform);

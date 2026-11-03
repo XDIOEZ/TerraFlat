@@ -11,6 +11,7 @@ using UnityEngine.SceneManagement;
 using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 /// <summary>石臼正式资源装配：导入像素精灵、构建可拖动捣棒面板和通用加工模块，并注册 Addressables。</summary>
 public static class StoneMortarAssetBuilder
@@ -132,6 +133,32 @@ public static class StoneMortarAssetBuilder
     }
 
     #region 正式面板
+
+    /// <summary>仅迁移现有石臼的三个基础操作按钮，不重建美术、槽位和模块。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Sync Stone Mortar Shared Buttons")]
+    public static void SyncStoneMortarSharedButtons()
+    {
+        RuntimeUIPrefabBuilder.EnsureSharedControlPrefabs();
+        GameObject root = PrefabUtility.LoadPrefabContents(PanelPath);
+        try
+        {
+            Button close = root.transform.Find("关闭")?.GetComponent<Button>();
+            Button previous = root.transform.Find("上一页")?.GetComponent<Button>();
+            Button next = root.transform.Find("下一页")?.GetComponent<Button>();
+            MortarInteractionView view = root.GetComponentInChildren<MortarInteractionView>(true);
+            if (close == null || previous == null || next == null || view == null)
+                throw new InvalidOperationException("石臼正式 Prefab 缺少基础按钮或交互视图");
+            if (close.GetComponent<ReusableUIControl>() == null)
+                ReplaceLegacyButton(close, "×", SharedButtonKind.Close);
+            if (previous.GetComponent<ReusableUIControl>() == null)
+                view.PreviousPage = ReplaceLegacyButton(previous, "‹", SharedButtonKind.Normal);
+            if (next.GetComponent<ReusableUIControl>() == null)
+                view.NextPage = ReplaceLegacyButton(next, "›", SharedButtonKind.Normal);
+            PrefabUtility.SaveAsPrefabAsset(root, PanelPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     private static GameObject BuildPanel(Sprite bowlSprite, Sprite pestleSprite)
     {
         RectTransform root = Rect("UI_StoneMortar", null, new Vector2(680, 710), Vector2.zero);
@@ -149,11 +176,8 @@ public static class StoneMortarAssetBuilder
         panel.canvasGroup = root.GetComponent<CanvasGroup>();
         RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
         Text("标题", root, "石臼", new Vector2(480, 50), new Vector2(-40, 300), 30);
-        RectTransform close = Rect("关闭", root, new Vector2(64, 60), new Vector2(290, 300));
-        Image closeImage = close.gameObject.AddComponent<Image>();
-        closeImage.color = new Color32(85, 85, 85, 255);
-        close.gameObject.AddComponent<Button>().targetGraphic = closeImage;
-        Text("关闭文字", close, "×", new Vector2(64, 60), Vector2.zero, 30);
+        CreateSharedButton(root, "关闭", "×", new Vector2(290, 300),
+            new Vector2(64, 60), new Vector2(.5f, .5f), SharedButtonKind.Close);
         Text("操作提示", root, "拖入材料后，向下捣击或贴着碗底左右研磨", new Vector2(630, 26), new Vector2(0, 262), 22);
         RectTransform area = Rect("捣料区域", root, new Vector2(610, 460), new Vector2(0, -38));
         RectTransform bowl = Rect("石碗切面", area, new Vector2(480, 360), new Vector2(0, -86));
@@ -203,17 +227,13 @@ public static class StoneMortarAssetBuilder
         MortarBowlDropRegion region = slotObject.AddComponent<MortarBowlDropRegion>();
         region.View = view;
         region.Slot = slot;
-        RectTransform previous = Rect("上一页", root, new Vector2(64, 60), new Vector2(-110, -305));
-        previous.gameObject.AddComponent<Image>().color = new Color32(85, 85, 85, 255);
-        view.PreviousPage = previous.gameObject.AddComponent<Button>();
-        Text("上一页文字", previous, "‹", new Vector2(64, 60), Vector2.zero, 30);
-        RectTransform next = Rect("下一页", root, new Vector2(64, 60), new Vector2(110, -305));
-        next.gameObject.AddComponent<Image>().color = new Color32(85, 85, 85, 255);
-        view.NextPage = next.gameObject.AddComponent<Button>();
-        Text("下一页文字", next, "›", new Vector2(64, 60), Vector2.zero, 30);
+        view.PreviousPage = CreateSharedButton(root, "上一页", "‹", new Vector2(-110, -305),
+            new Vector2(64, 60), new Vector2(.5f, .5f));
+        view.NextPage = CreateSharedButton(root, "下一页", "›", new Vector2(110, -305),
+            new Vector2(64, 60), new Vector2(.5f, .5f));
         view.PageText = Text("库存页码", root, "", new Vector2(140, 35), new Vector2(0, -305), 20);
-        previous.gameObject.SetActive(false);
-        next.gameObject.SetActive(false);
+        view.PreviousPage.gameObject.SetActive(false);
+        view.NextPage.gameObject.SetActive(false);
         slotObject.SetActive(false);
         PortableBuildingPanelBuilder.ConfigureMortar(root.gameObject);
         root.gameObject.SetActive(true);

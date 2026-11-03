@@ -26,7 +26,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateSliderRow(content, "语音音量", "VoiceVolume");
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, 42f, false);
+        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, SettingsCompactActionHeight, false);
         return root;
     }
 
@@ -178,7 +178,7 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, 42f, false);
+        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, SettingsCompactActionHeight, false);
         return root;
     }
 
@@ -264,7 +264,7 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, 42f, false);
+        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, SettingsCompactActionHeight, false);
         return root;
     }
 
@@ -374,22 +374,22 @@ public static partial class RuntimeUIPrefabBuilder
         message.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
 
         Transform footer = CreateFooter(dialog);
-        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
+        footer.GetComponent<LayoutElement>().preferredHeight = SettingsTouchFooterHeight;
         SetButtonLabelSize(CreateButton(
             GameManager.MainMenuExitConfirmationCancelButtonKey,
             footer,
             "取消",
             170f,
-            64f,
+            SettingsTouchActionHeight,
             false), 21f);
         Button confirmButton = CreateButton(
             GameManager.MainMenuExitConfirmationConfirmButtonKey,
             footer,
             "退出游戏",
             190f,
-            64f,
-            false);
-        confirmButton.GetComponent<Image>().color = Danger;
+            SettingsTouchActionHeight,
+            false,
+            FlatWorldEditorUiLayout.SharedButtonKind.Destructive);
         SetButtonLabelSize(confirmButton, 21f);
         return root;
     }
@@ -437,9 +437,9 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(content);
-        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
-        SetButtonLabelSize(CreateSettingsButton("取消按钮", footer, "取消", 132f, 60f, false), 18f);
-        SetButtonLabelSize(CreateSettingsButton("应用按钮", footer, "应用", 144f, 60f, true), 18f);
+        footer.GetComponent<LayoutElement>().preferredHeight = SettingsTouchFooterHeight;
+        SetButtonLabelSize(CreateSettingsButton("取消按钮", footer, "取消", 132f, SettingsTouchActionHeight, false), 18f);
+        SetButtonLabelSize(CreateSettingsButton("应用按钮", footer, "应用", 144f, SettingsTouchActionHeight, true), 18f);
         return root;
     }
 
@@ -470,8 +470,8 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("取消按钮", footer, "取消", 104f, 42f, false);
-        CreateSettingsButton("应用按钮", footer, "应用", 116f, 42f, true);
+        CreateSettingsButton("取消按钮", footer, "取消", 104f, SettingsCompactActionHeight, false);
+        CreateSettingsButton("应用按钮", footer, "应用", 116f, SettingsCompactActionHeight, true);
         return root;
     }
 
@@ -493,8 +493,8 @@ public static partial class RuntimeUIPrefabBuilder
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("取消按钮", footer, "取消", 104f, 42f, false);
-        CreateSettingsButton("应用按钮", footer, "应用", 116f, 42f, true);
+        CreateSettingsButton("取消按钮", footer, "取消", 104f, SettingsCompactActionHeight, false);
+        CreateSettingsButton("应用按钮", footer, "应用", 116f, SettingsCompactActionHeight, true);
         return root;
     }
 

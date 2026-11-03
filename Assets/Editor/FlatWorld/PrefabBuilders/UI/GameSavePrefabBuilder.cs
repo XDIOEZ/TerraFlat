@@ -4,6 +4,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 public static class GameSavePrefabBuilder
 {
@@ -146,7 +147,9 @@ public static class GameSavePrefabBuilder
         TMP_Text title = CreateText("存档标题", card, "选择存档", font, 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(42f, -34f), new Vector2(700f, 68f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, GameManager.GameSaveBackButtonKey, "返回主界面", new Vector2(-42f, -28f), new Vector2(210f, 72f), InkSoft, Cream, 22f, new Vector2(1f, 1f));
+        CreateSharedButton(card, GameManager.GameSaveBackButtonKey, "返回主界面",
+            new Vector2(-42f, -28f), new Vector2(210f, 72f), Vector2.one,
+            SharedButtonKind.Close, GameManager.GameSaveBackButtonKey + "_文字");
 
         Image divider = CreateImage("存档标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -165,17 +168,10 @@ public static class GameSavePrefabBuilder
         TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(22f, -62f), new Vector2(250f, 40f), new Vector2(0f, 1f));
 
-        CreateButton(
-            panel.transform,
-            font,
-            GameManager.GameSaveBatchDeleteButtonKey,
-            "批量删除存档",
-            new Vector2(-20f, -50f),
-            new Vector2(210f, 56f),
-            new Color(0.30f, 0.10f, 0.09f, 1f),
-            Cream,
-            18f,
-            new Vector2(1f, 1f));
+        CreateSharedButton(panel.transform, GameManager.GameSaveBatchDeleteButtonKey,
+            "批量删除存档", new Vector2(-20f, -50f), new Vector2(210f, 56f),
+            Vector2.one, SharedButtonKind.Destructive,
+            GameManager.GameSaveBatchDeleteButtonKey + "_文字");
 
         return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -122f), new Vector2(480f, 300f));
     }
@@ -190,7 +186,9 @@ public static class GameSavePrefabBuilder
         SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 28f), new Vector2(0f, 1f));
 
         // 正式面板与运行时沿用同一个改名按钮身份，重建时一并保留绑定入口。
-        Button renameButton = CreateButton(panel.transform, font, GameManager.GameSaveRenameButtonKey, "重命名", new Vector2(24f, -28f), new Vector2(180f, 52f), InkSoft, Cream, 18f, new Vector2(0f, 1f));
+        Button renameButton = CreateSharedButton(panel.transform, GameManager.GameSaveRenameButtonKey,
+            "重命名", new Vector2(24f, -28f), new Vector2(180f, 52f),
+            new Vector2(0f, 1f), labelObjectName: GameManager.GameSaveRenameButtonKey + "_文字");
         renameButton.interactable = false;
         renameButton.navigation = new Navigation { mode = Navigation.Mode.Automatic };
 
@@ -200,8 +198,12 @@ public static class GameSavePrefabBuilder
         TMP_Text saveTime = CreateText(GameManager.GameSaveTimeTextKey, panel.transform, GameManager.GameSaveNoTimeText, font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(saveTime.rectTransform, new Vector2(24f, -140f), new Vector2(540f, 36f), new Vector2(0f, 1f));
 
-        CreateButton(panel.transform, font, GameManager.GameSaveLoadButtonKey, "载入存档", new Vector2(-24f, -28f), new Vector2(210f, 78f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 23f, new Vector2(1f, 1f));
-        Button deleteButton = CreateButton(panel.transform, font, GameManager.GameSaveDeleteButtonKey, "删除存档", new Vector2(-24f, -116f), new Vector2(210f, 52f), new Color(0.38f, 0.11f, 0.10f, 1f), Cream, 18f, new Vector2(1f, 1f));
+        CreateSharedButton(panel.transform, GameManager.GameSaveLoadButtonKey, "载入存档",
+            new Vector2(-24f, -28f), new Vector2(210f, 78f), Vector2.one,
+            SharedButtonKind.Primary, GameManager.GameSaveLoadButtonKey + "_文字");
+        Button deleteButton = CreateSharedButton(panel.transform, GameManager.GameSaveDeleteButtonKey,
+            "删除存档", new Vector2(-24f, -116f), new Vector2(210f, 52f), Vector2.one,
+            SharedButtonKind.Destructive, GameManager.GameSaveDeleteButtonKey + "_文字");
         deleteButton.interactable = false;
 
         Image divider = CreateImage("当前存档分隔线", panel.transform, new Color(0.55f, 0.64f, 0.65f, 0.17f));
@@ -241,7 +243,9 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 25f, new Vector2(1f, 0f));
+        CreateSharedButton(card, GameManager.GameSaveStartButtonKey, "进入世界",
+            new Vector2(-42f, 20f), new Vector2(280f, 80f), new Vector2(1f, 0f),
+            SharedButtonKind.Primary, GameManager.GameSaveStartButtonKey + "_文字");
     }
 
     /// <summary>构建左侧列表底部的批量选择操作区，使用移动端可触控的 60 像素按钮。</summary>
@@ -253,29 +257,13 @@ public static class GameSavePrefabBuilder
         actions.transform.SetParent(savePanel, false);
         SetRect(actions.GetComponent<RectTransform>(), new Vector2(20f, 20f), new Vector2(480f, 64f), Vector2.zero);
 
-        Button confirm = CreateButton(
-            actions.transform,
-            font,
-            GameManager.GameSaveBatchConfirmButtonKey,
-            "确认删除所选",
-            Vector2.zero,
-            new Vector2(292f, 60f),
-            new Color(0.48f, 0.12f, 0.10f, 1f),
-            Cream,
-            18f,
-            new Vector2(0f, 0f));
+        Button confirm = CreateSharedButton(actions.transform, GameManager.GameSaveBatchConfirmButtonKey,
+            "确认删除所选", Vector2.zero, new Vector2(292f, 60f), Vector2.zero,
+            SharedButtonKind.Destructive, GameManager.GameSaveBatchConfirmButtonKey + "_文字");
         confirm.interactable = false;
-        CreateButton(
-            actions.transform,
-            font,
-            GameManager.GameSaveBatchCancelButtonKey,
-            "取消批量选择",
-            Vector2.zero,
-            new Vector2(176f, 60f),
-            InkSoft,
-            Cream,
-            17f,
-            new Vector2(1f, 0f));
+        CreateSharedButton(actions.transform, GameManager.GameSaveBatchCancelButtonKey,
+            "取消批量选择", Vector2.zero, new Vector2(176f, 60f), new Vector2(1f, 0f),
+            labelObjectName: GameManager.GameSaveBatchCancelButtonKey + "_文字");
 
         actions.SetActive(false);
         return actions;
@@ -312,28 +300,13 @@ public static class GameSavePrefabBuilder
             true);
         SetRect(warning.rectTransform, new Vector2(42f, -120f), new Vector2(736f, 174f), new Vector2(0f, 1f));
 
-        CreateButton(
-            dialog.transform,
-            font,
-            GameManager.GameSaveBatchDialogCancelButtonKey,
-            "取消并返回",
-            new Vector2(42f, 34f),
-            new Vector2(270f, 72f),
-            InkSoft,
-            Cream,
-            21f,
-            new Vector2(0f, 0f));
-        CreateButton(
-            dialog.transform,
-            font,
-            GameManager.GameSaveBatchDialogConfirmButtonKey,
-            "永久删除所选存档",
-            new Vector2(-42f, 34f),
-            new Vector2(330f, 72f),
-            new Color(0.60f, 0.11f, 0.09f, 1f),
-            Cream,
-            21f,
-            new Vector2(1f, 0f));
+        CreateSharedButton(dialog.transform, GameManager.GameSaveBatchDialogCancelButtonKey,
+            "取消并返回", new Vector2(42f, 34f), new Vector2(270f, 72f),
+            Vector2.zero, labelObjectName: GameManager.GameSaveBatchDialogCancelButtonKey + "_文字");
+        CreateSharedButton(dialog.transform, GameManager.GameSaveBatchDialogConfirmButtonKey,
+            "永久删除所选存档", new Vector2(-42f, 34f), new Vector2(330f, 72f),
+            new Vector2(1f, 0f), SharedButtonKind.Destructive,
+            GameManager.GameSaveBatchDialogConfirmButtonKey + "_文字");
 
         overlay.gameObject.SetActive(false);
         return overlay.gameObject;
@@ -573,36 +546,6 @@ public static class GameSavePrefabBuilder
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
         outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         return panel;
-    }
-
-    private static Button CreateButton(Transform parent, TMP_FontAsset font, string name, string caption, Vector2 position, Vector2 size, Color color, Color textColor, float fontSize, Vector2 pivot)
-    {
-        GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        buttonObject.layer = LayerMask.NameToLayer("UI");
-        buttonObject.transform.SetParent(parent, false);
-        SetRect(buttonObject.GetComponent<RectTransform>(), position, size, pivot);
-
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = color;
-        Outline outline = buttonObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.28f);
-        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
-
-        Button button = buttonObject.GetComponent<Button>();
-        button.targetGraphic = image;
-        button.navigation = new Navigation { mode = Navigation.Mode.None };
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.16f, 1.11f, 1.02f, 1f);
-        colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-        colors.selectedColor = FlatWorldUITheme.Selection;
-        colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
-        colors.fadeDuration = 0.12f;
-        button.colors = colors;
-
-        TMP_Text label = CreateText(name + "_文字", buttonObject.transform, caption, font, fontSize, textColor, FontStyles.Bold, TextAlignmentOptions.Center);
-        Stretch(label.rectTransform);
-        return button;
     }
 
     private static Image CreateImage(string name, Transform parent, Color color)

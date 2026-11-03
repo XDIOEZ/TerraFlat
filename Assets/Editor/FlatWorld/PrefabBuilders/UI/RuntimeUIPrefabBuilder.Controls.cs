@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -15,6 +16,58 @@ public static partial class RuntimeUIPrefabBuilder
     private const int SettingsPageVerticalPadding = 18;
     private const float SettingsPageRowSpacing = 10f;
     private const float SettingsPageHeaderHeight = 76f;
+    // 同一设置页仅使用紧凑操作与触屏操作两档高度，页签导航保留独立尺寸约束。
+    private const float SettingsCompactActionHeight = 42f;
+    private const float SettingsTouchActionHeight = 60f;
+    private const float SettingsCompactFooterHeight = 56f;
+    private const float SettingsTouchFooterHeight = 76f;
+
+    /// <summary>对正式设置页原位同步两档操作高度，不重建业务页或覆盖人工排版。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Sync Settings Action Sizes")]
+    public static void SyncSettingsActionSizes()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("请先退出 Play Mode 再修改设置 UI");
+        int updated = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { SettingsPanelsRoot }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                bool dirty = false;
+                foreach (Button button in root.GetComponentsInChildren<Button>(true))
+                {
+                    if (button.name != "恢复默认按钮" && button.name != "取消按钮" &&
+                        button.name != "应用按钮")
+                        continue;
+                    LayoutElement layout = button.GetComponent<LayoutElement>();
+                    if (layout == null)
+                        continue;
+                    float oldHeight = layout.preferredHeight;
+                    float height = oldHeight >= 58f ? SettingsTouchActionHeight : SettingsCompactActionHeight;
+                    if (Mathf.Approximately(oldHeight, height))
+                        continue;
+                    layout.preferredHeight = height;
+                    RectTransform rect = (RectTransform)button.transform;
+                    if (Mathf.Approximately(rect.anchorMin.y, rect.anchorMax.y))
+                        rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
+                    if (PrefabUtility.IsPartOfPrefabInstance(button))
+                    {
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(layout);
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(rect);
+                    }
+                    dirty = true;
+                    updated++;
+                }
+                if (dirty)
+                    PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log($"[Shared UI] 设置页操作按钮已统一为 42/60 两档，调整 {updated} 处。");
+    }
 
     /// <summary>设置分页统一使用同一组内边距、行距及左上对齐。</summary>
     private static void ConfigureSettingsPageVerticalLayout(VerticalLayoutGroup layout)
@@ -180,8 +233,7 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI titleText = CreateText("标题文本", header.transform, title, 32f, Cream);
         titleText.fontStyle = FontStyles.Bold;
         titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        Button closeButton = CreateButton(closeButtonName, header.transform, "关闭", 120f, 64f, false);
-        closeButton.GetComponent<Image>().color = new Color(0.058f, 0.047f, 0.043f, 1f);
+        Button closeButton = CreateButton(closeButtonName, header.transform, "关闭", 120f, SettingsTouchActionHeight, false);
         SetButtonLabelSize(closeButton, 20f);
     }
 
@@ -603,7 +655,7 @@ public static partial class RuntimeUIPrefabBuilder
     private static Transform CreateFooter(Transform parent)
     {
         GameObject footer = CreateUIObject("底部操作", parent);
-        footer.AddComponent<LayoutElement>().preferredHeight = 56f;
+        footer.AddComponent<LayoutElement>().preferredHeight = SettingsCompactFooterHeight;
         HorizontalLayoutGroup layout = footer.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 10f;
         layout.childAlignment = TextAnchor.MiddleRight;
@@ -616,12 +668,16 @@ public static partial class RuntimeUIPrefabBuilder
         return footer.transform;
     }
 
-    private static Button CreateButton(string name, Transform parent, string caption, float width, float height, bool primary)
+    private static Button CreateButton(
+        string name, Transform parent, string caption, float width, float height, bool primary,
+        FlatWorldEditorUiLayout.SharedButtonKind? visualRole = null)
     {
         if (!buildingSharedControls)
         {
-            string key = name.Contains("关闭") ? "UI_CloseButton" :
-                name.Contains("分页") || name.Contains("切换") || name.Contains("页签") ? "UI_TabButton" : "UI_Button";
+            string key = visualRole == FlatWorldEditorUiLayout.SharedButtonKind.Destructive ? "UI_DestructiveButton" :
+                name.Contains("关闭") ? "UI_CloseButton" :
+                name.Contains("分页") || name.Contains("切换") || name.Contains("页签") ? "UI_TabButton" :
+                primary ? "UI_PrimaryButton" : "UI_Button";
             Button shared = InstantiateSharedControl<Button>(key, name, parent);
             LayoutElement sharedLayout = shared.GetComponent<LayoutElement>();
             sharedLayout.preferredWidth = width;

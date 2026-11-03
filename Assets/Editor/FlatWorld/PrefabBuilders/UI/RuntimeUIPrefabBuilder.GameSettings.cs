@@ -43,7 +43,7 @@ public static partial class RuntimeUIPrefabBuilder
         CreateGameSettingsDimensionRow(content, GameSettingsPanel.HeightSliderName);
         Transform footer = CreateFooter(content);
         footer.GetComponent<LayoutElement>().preferredHeight = 64f;
-        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 200f, 64f, false);
+        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 200f, SettingsTouchActionHeight, false);
         root.AddComponent<GameSettingsPanel>();
         return root;
     }

@@ -5,6 +5,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using static FlatWorldEditorUiLayout;
 
 public static class NetworkModePrefabBuilder
 {
@@ -132,7 +133,8 @@ public static class NetworkModePrefabBuilder
         TMP_Text title = CreateText("标题", card, "联机模式", font, 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(42f, -34f), new Vector2(700f, 68f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, "关闭按钮", "×", new Vector2(-34f, -26f), new Vector2(68f, 68f), new Color(0.08f, 0.11f, 0.13f, 0.96f), new Color(0.64f, 0.70f, 0.71f, 0.28f), 34f, new Vector2(1f, 1f));
+        CreateSharedButton(card, "关闭按钮", "×", new Vector2(-34f, -26f),
+            new Vector2(68f, 68f), Vector2.one, SharedButtonKind.Close, "关闭按钮_文字");
 
         Image divider = CreateImage("标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -216,9 +218,12 @@ public static class NetworkModePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, "创建主机按钮", "创建主机", new Vector2(42f, 30f), new Vector2(300f, 82f), new Color(0.70f, 0.36f, 0.16f, 1f), new Color(1f, 0.71f, 0.38f, 0.38f), 24f, Vector2.zero);
-        CreateButton(card, font, "加入游戏按钮", "加入好友", new Vector2(362f, 30f), new Vector2(300f, 82f), new Color(0.08f, 0.29f, 0.29f, 1f), new Color(0.36f, 0.78f, 0.72f, 0.34f), 24f, Vector2.zero);
-        CreateButton(card, font, "断开按钮", "断开连接", new Vector2(-42f, 30f), new Vector2(260f, 82f), new Color(0.25f, 0.075f, 0.075f, 0.96f), new Color(0.78f, 0.34f, 0.29f, 0.30f), 22f, new Vector2(1f, 0f));
+        CreateSharedButton(card, "创建主机按钮", "创建主机", new Vector2(42f, 30f),
+            new Vector2(300f, 82f), Vector2.zero, SharedButtonKind.Primary, "创建主机按钮_文字");
+        CreateSharedButton(card, "加入游戏按钮", "加入好友", new Vector2(362f, 30f),
+            new Vector2(300f, 82f), Vector2.zero, SharedButtonKind.Primary, "加入游戏按钮_文字");
+        CreateSharedButton(card, "断开按钮", "断开连接", new Vector2(-42f, 30f),
+            new Vector2(260f, 82f), new Vector2(1f, 0f), SharedButtonKind.Destructive, "断开按钮_文字");
     }
 
     #endregion
@@ -294,50 +299,6 @@ public static class NetworkModePrefabBuilder
         TMP_Text text = CreateText(objectName, parent, value, font, 23f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(text.rectTransform);
         return text;
-    }
-
-    private static Button CreateButton(
-        Transform parent,
-        TMP_FontAsset font,
-        string objectName,
-        string caption,
-        Vector2 position,
-        Vector2 size,
-        Color color,
-        Color outlineColor,
-        float fontSize,
-        Vector2 pivot)
-    {
-        GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-        buttonObject.layer = LayerMask.NameToLayer("UI");
-        buttonObject.transform.SetParent(parent, false);
-
-        RectTransform rect = buttonObject.GetComponent<RectTransform>();
-        SetRect(rect, position, size, pivot);
-
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = color;
-
-        Outline outline = buttonObject.AddComponent<Outline>();
-        outline.effectColor = outlineColor;
-        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
-
-        Button button = buttonObject.GetComponent<Button>();
-        button.targetGraphic = image;
-        button.navigation = new Navigation { mode = Navigation.Mode.None };
-
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.18f, 1.13f, 1.04f, 1f);
-        colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-        colors.selectedColor = FlatWorldUITheme.Selection;
-        colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
-        colors.fadeDuration = 0.12f;
-        button.colors = colors;
-
-        TMP_Text label = CreateText(objectName + "_文字", buttonObject.transform, caption, font, fontSize, Cream, FontStyles.Bold, TextAlignmentOptions.Center);
-        Stretch(label.rectTransform);
-        return button;
     }
 
     private static Image CreateImage(string name, Transform parent, Color color)

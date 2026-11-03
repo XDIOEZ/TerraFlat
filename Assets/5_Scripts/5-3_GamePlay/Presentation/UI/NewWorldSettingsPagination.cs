@@ -23,6 +23,10 @@ public sealed class NewWorldSettingsPagination : MonoBehaviour
     {
         basicButton?.onClick.AddListener(ShowBasic);
         advancedButton?.onClick.AddListener(ShowAdvanced);
+        // 选中外观在运行时恢复，避免编辑器构建时序列化公共按钮的颜色覆盖。
+        bool advanced = advancedPage != null && advancedPage.activeSelf;
+        basicButton?.GetComponent<ReusableUITabVisual>()?.SetSelected(!advanced);
+        advancedButton?.GetComponent<ReusableUITabVisual>()?.SetSelected(advanced);
     }
 
     private void OnDisable()

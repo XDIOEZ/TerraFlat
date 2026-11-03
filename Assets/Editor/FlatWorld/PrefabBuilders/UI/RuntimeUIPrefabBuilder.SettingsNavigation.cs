@@ -256,7 +256,7 @@ public static partial class RuntimeUIPrefabBuilder
                 throw new MissingReferenceException($"主菜单设置缺少客户端页签，索引={index}。");
 
             orderedTabs[index].transform.SetSiblingIndex(index);
-            orderedTabs[index].GetComponent<Image>().color = SurfaceRaised;
+            // 运行时由页签选中态统一控制，不产生颜色覆盖。
         }
 
         TextMeshProUGUI title = FindTransform(root.transform, "FWUI_标题")?.GetComponent<TextMeshProUGUI>();
@@ -639,7 +639,6 @@ public static partial class RuntimeUIPrefabBuilder
             180f,
             64f,
             false);
-        cancelButton.GetComponent<Image>().color = new Color(0.30f, 0.33f, 0.35f, 1f);
         SetButtonLabelSize(cancelButton, 22f);
 
         Button confirmButton = CreateButton(
@@ -649,7 +648,6 @@ public static partial class RuntimeUIPrefabBuilder
             180f,
             64f,
             true);
-        confirmButton.GetComponent<Image>().color = new Color(0.91f, 0.68f, 0.18f, 1f);
         SetButtonLabelSize(confirmButton, 22f);
 
         cancelButton.navigation = new Navigation
@@ -719,11 +717,9 @@ public static partial class RuntimeUIPrefabBuilder
         for (int index = 0; index < orderedTabs.Length; index++)
         {
             orderedTabs[index].transform.SetSiblingIndex(index);
-            orderedTabs[index].GetComponent<Image>().color = SurfaceRaised;
         }
 
-        worldTab.GetComponent<Image>().color = new Color(0.16f, 0.40f, 0.42f, 1f);
-        sessionTab.GetComponent<Image>().color = SurfaceRaised;
+        // 页签视觉由 ReusableUITabVisual.SetSelected 维护，不在实例上覆写源 Prefab 的底色。
         tabBar.SetAsLastSibling();
     }
 

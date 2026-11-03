@@ -40,8 +40,8 @@ public static partial class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText("状态文本", content, "一年共 24 天", 17f, Teal);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 54f;
         Transform footer = CreateFooter(content);
-        SetButtonLabelSize(CreateSettingsButton("取消按钮", footer, "取消", 132f, 60f, false), 18f);
-        SetButtonLabelSize(CreateSettingsButton("应用按钮", footer, "应用", 144f, 60f, true), 18f);
+        SetButtonLabelSize(CreateSettingsButton("取消按钮", footer, "取消", 132f, SettingsTouchActionHeight, false), 18f);
+        SetButtonLabelSize(CreateSettingsButton("应用按钮", footer, "应用", 144f, SettingsTouchActionHeight, true), 18f);
         root.AddComponent<SeasonSettingsPanel>();
         return root;
     }

@@ -20,7 +20,7 @@ public static class AtmosphereAnalyzerPanelAssetBuilder
     public const string RowPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Screens/UI_AtmosphereAnalyzerGasRow.prefab";
     private const string ArtworkPath = "Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer_Panel.png";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
-    private const string ButtonPath = "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab";
+    private const string ButtonPath = "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TransparentButton.prefab";
     private static readonly Color ScreenInk = new Color32(210, 234, 177, 255);
     private static readonly Color SecondaryInk = new Color32(164, 193, 143, 255);
     private static readonly Dictionary<string, string> Texts = new()
@@ -105,12 +105,12 @@ public static class AtmosphereAnalyzerPanelAssetBuilder
             status.rectTransform.sizeDelta = new Vector2(0f, 26f);
             status.rectTransform.anchoredPosition = Vector2.zero;
 
+            RuntimeUIPrefabBuilder.EnsureSharedControlPrefabs();
             GameObject buttonAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ButtonPath);
             if (buttonAsset == null) throw new FileNotFoundException("缺少公共关闭按钮。", ButtonPath);
             GameObject closeRoot = (GameObject)PrefabUtility.InstantiatePrefab(buttonAsset, frame);
             closeRoot.name = "FWUI_AnalyzerClose";
-            // 实体按键由机壳贴图提供，公共按钮只保留透明点击面和文字。
-            closeRoot.GetComponent<Image>().color = Color.clear;
+            // 实体按键由机壳贴图提供，透明度归公共 Variant，不产生实例颜色覆盖。
             RectTransform closeRect = closeRoot.GetComponent<RectTransform>();
             closeRect.anchorMin = closeRect.anchorMax = new Vector2(.67f, .175f);
             closeRect.pivot = new Vector2(.5f, .5f);

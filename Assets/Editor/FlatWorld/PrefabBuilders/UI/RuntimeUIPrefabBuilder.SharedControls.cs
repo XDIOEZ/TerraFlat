@@ -23,7 +23,8 @@ public static partial class RuntimeUIPrefabBuilder
     private static readonly string[] SharedControlNames =
     {
         RuntimeUIPrefabKeys.PanelBackground,
-        "UI_Button", "UI_CloseButton", "UI_TabButton", "UI_Toggle",
+        "UI_Button", "UI_CloseButton", "UI_TabButton",
+        "UI_PrimaryButton", "UI_DestructiveButton", "UI_TransparentButton", "UI_Toggle",
         "UI_SwitchOption", "UI_Switch", "UI_SliderControl", "UI_ProgressBar",
         "UI_Dropdown", "UI_InputField"
     };
@@ -51,6 +52,9 @@ public static partial class RuntimeUIPrefabBuilder
             CreateSharedAsset("UI_InputField", () => CreateInputField("UI_InputField", null, string.Empty).gameObject);
             CreateSharedVariant("UI_CloseButton", "UI_Button", ConfigureCloseButton);
             CreateSharedVariant("UI_TabButton", "UI_Button", ConfigureTabButton);
+            CreateSharedVariant("UI_PrimaryButton", "UI_Button", ConfigurePrimaryButton);
+            CreateSharedVariant("UI_DestructiveButton", "UI_Button", ConfigureDestructiveButton);
+            CreateSharedVariant("UI_TransparentButton", "UI_Button", ConfigureTransparentButton);
             CreateSharedVariant("UI_ProgressBar", "UI_SliderControl", ConfigureProgressBar);
             CreateSharedVariant("UI_SwitchOption", "UI_Toggle", ConfigureSwitchOption);
             CreateSharedAsset("UI_Switch", BuildSharedSwitch);
@@ -272,6 +276,16 @@ public static partial class RuntimeUIPrefabBuilder
             root.GetComponent<Image>(), root.GetComponentInChildren<TextMeshProUGUI>(true));
     }
 
+    private static void ConfigurePrimaryButton(GameObject root)
+        => root.GetComponent<Image>().color = FlatWorldUITheme.PrimaryActionSurface;
+
+    private static void ConfigureDestructiveButton(GameObject root)
+        => root.GetComponent<Image>().color = FlatWorldUITheme.DestructiveActionSurface;
+
+    // 物理仪器上的按键图案由机壳提供，公共按钮只提供透明命中区域。
+    private static void ConfigureTransparentButton(GameObject root)
+        => root.GetComponent<Image>().color = Color.clear;
+
     private static void ConfigureProgressBar(GameObject root)
     {
         Slider slider = root.GetComponent<Slider>();
@@ -320,6 +334,133 @@ public static partial class RuntimeUIPrefabBuilder
     #endregion
 
     #region 显式原位迁移
+
+    /// <summary>去掉构建期临时选中态产生的外观覆盖，保留公共控件的文案和布局差异。</summary>
+    public static int ClearSharedVisualOverrides(Transform root)
+    {
+        int removed = 0;
+        foreach (ReusableUIControl control in root.GetComponentsInChildren<ReusableUIControl>(true))
+            if (PrefabUtility.IsAnyPrefabInstanceRoot(control.gameObject))
+                removed += RemoveSharedVisualOverrides(control.gameObject);
+        return removed;
+    }
+
+    /// <summary>修复历史克隆导致的少数脱链公共控件，不重建所在界面。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Repair Disconnected Controls")]
+    public static void RepairDisconnectedSharedControls()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("请先退出 Play Mode 再修复公共控件");
+        EnsureSharedControlPrefabs();
+        string[][] groups =
+        {
+            new[] { PrefabRoot + "Gameplay/Containers/UI_FuelInteraction.prefab",
+                "放置建筑按钮", "UI_PrimaryButton", "拆回建筑按钮", "UI_DestructiveButton" },
+            new[] { MainMenuCoreRoot + "UI_ActionList.prefab",
+                "打开语言设置", "UI_Button", "设置页签_语言", "UI_TabButton" },
+            new[] { SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab",
+                "滚轮每次翻动行数", "UI_SliderControl" },
+            new[] { SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab",
+                "打开语言设置", "UI_Button", "设置页签_语言", "UI_TabButton" }
+        };
+        foreach (string[] group in groups)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(group[0]);
+            try
+            {
+                bool dirty = false;
+                for (int index = 1; index < group.Length; index += 2)
+                {
+                    string name = group[index];
+                    ReusableUIControl control = root.GetComponentsInChildren<ReusableUIControl>(true)
+                        .FirstOrDefault(value => value.name == name &&
+                            !PrefabUtility.IsPartOfPrefabInstance(value));
+                    if (control == null)
+                        continue;
+                    GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(
+                        SharedControlsRoot + group[index + 1] + ".prefab");
+                    PrefabUtility.ConvertToPrefabInstance(control.gameObject, asset,
+                        new ConvertToPrefabInstanceSettings
+                        {
+                            objectMatchMode = ObjectMatchMode.ByHierarchy,
+                            changeRootNameToAssetName = false,
+                            recordPropertyOverridesOfMatches = true,
+                            componentsNotMatchedBecomesOverride = true,
+                            gameObjectsNotMatchedBecomesOverride = true
+                        }, InteractionMode.AutomatedAction);
+                    RemoveSharedVisualOverrides(control.gameObject);
+                    dirty = true;
+                }
+                if (dirty)
+                    PrefabUtility.SaveAsPrefabAsset(root, group[0]);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Shared UI] 已修复历史遗留的公共控件 Prefab 连接。");
+    }
+
+    /// <summary>仅清理已审计的制作按钮与检测仪按键，保留其他资产的人工覆盖。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/Shared Controls/Consolidate Crafting and Analyzer Buttons")]
+    public static void ConsolidateCraftingAndAnalyzerButtons()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("请先退出 Play Mode 再迁移公共按钮");
+        EnsureSharedControlPrefabs();
+        string craftingRoot = PrefabRoot + "Gameplay/Crafting/";
+        string[][] targets =
+        {
+            new[] { craftingRoot + "UI_Anvil.prefab", "合成按钮", "拆回建筑按钮", "关闭" },
+            new[] { craftingRoot + "UI_HandCraftTable.prefab", "合成按钮", "关闭" },
+            new[] { craftingRoot + "UI_MakerTable.prefab", "合成按钮", "关闭" },
+            new[] { AtmosphereAnalyzerPanelAssetBuilder.PanelPath, "FWUI_AnalyzerClose" }
+        };
+        foreach (string[] group in targets)
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(group[0]);
+            try
+            {
+                for (int index = 1; index < group.Length; index++)
+                {
+                    string name = group[index];
+                    Button button = root.GetComponentsInChildren<Button>(true)
+                        .FirstOrDefault(value => value.name == name);
+                    if (button == null || button.GetComponent<ReusableUIControl>() == null)
+                        throw new InvalidOperationException(group[0] + " 缺少公共按钮：" + name);
+                    string variant = name == "合成按钮" ? "UI_PrimaryButton" :
+                        name == "拆回建筑按钮" ? "UI_DestructiveButton" :
+                        name == "FWUI_AnalyzerClose" ? "UI_TransparentButton" : null;
+                    if (variant != null)
+                        ReplaceSharedButtonVariant(button.gameObject, variant);
+                    RemoveSharedVisualOverrides(button.gameObject);
+                }
+                PrefabUtility.SaveAsPrefabAsset(root, group[0]);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Shared UI] 制作台、铁砧与检测仪的公共按钮已改用语义 Variant 并清除外观覆盖。");
+    }
+
+    /// <summary>同构 Variant 原位替换，保留 Button、文本及其业务引用。</summary>
+    private static void ReplaceSharedButtonVariant(GameObject instance, string key)
+    {
+        string path = SharedControlsRoot + key + ".prefab";
+        if (PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instance) == path)
+            return;
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (asset == null || !PrefabUtility.IsAnyPrefabInstanceRoot(instance))
+            throw new InvalidOperationException("公共按钮无法转换为 " + key + "：" + instance.name);
+        PrefabUtility.UnpackPrefabInstance(instance, PrefabUnpackMode.OutermostRoot, InteractionMode.AutomatedAction);
+        PrefabUtility.ConvertToPrefabInstance(instance, asset, new ConvertToPrefabInstanceSettings
+        {
+            objectMatchMode = ObjectMatchMode.ByHierarchy,
+            changeRootNameToAssetName = false,
+            recordPropertyOverridesOfMatches = true,
+            componentsNotMatchedBecomesOverride = true,
+            gameObjectsNotMatchedBecomesOverride = true
+        }, InteractionMode.AutomatedAction);
+    }
 
     /// <summary>构建器统一保存入口：记录业务差异，但不把临时主题结果烘焙成外观覆盖。</summary>
     private static void PrepareSharedControlsForSave(GameObject root)
