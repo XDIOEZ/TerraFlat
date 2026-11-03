@@ -31,7 +31,8 @@ public static partial class GameplayTestSystemProbe
             ["productionRoots"] = roots.Contains(typeof(Mod_AnimalBehaviorTree)) && roots.Contains(typeof(MonsterSpawnerManager)) &&
                 roots.Contains(typeof(RuntimeItemModuleAssemblyPlan)) && roots.Contains(typeof(AnimalSpecialMovementBehaviorNodes)),
             ["playerRoots"] = roots.Contains(typeof(Player)) && roots.Contains(typeof(ItemMgr)) &&
-                roots.Contains(typeof(ItemTickScheduler)) && roots.Contains(typeof(WorldPresentationProjection)),
+                roots.Contains(typeof(ItemTickScheduler)) && roots.Contains(typeof(WorldPresentationProjection)) &&
+                roots.Contains(typeof(GameManager)) && roots.Contains(typeof(SaveDataMgr)),
             ["capabilitiesAndNodes"] = roots.Contains(typeof(AnimalCombatCapability)) && roots.Contains(typeof(AnimalWanderAction)),
             ["capabilityFactoryHelpers"] = roots.Contains(typeof(AnimalLandActionSupport)) && roots.Contains(typeof(AnimalLandTargetRules)),
             ["closedCapabilityFactory"] = capabilityMethods.Exists(method =>

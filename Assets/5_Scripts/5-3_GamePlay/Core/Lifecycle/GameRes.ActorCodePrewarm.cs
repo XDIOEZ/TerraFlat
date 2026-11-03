@@ -122,6 +122,8 @@ public partial class GameRes
         yield return typeof(ItemMgr);
         yield return typeof(ItemTickScheduler);
         yield return typeof(WorldPresentationProjection);
+        yield return typeof(GameManager);
+        yield return typeof(SaveDataMgr);
         foreach (Type type in typeof(AnimalBehaviorTreeNode).Assembly.GetTypes())
             if (typeof(AnimalBehaviorTreeNode).IsAssignableFrom(type) ||
                 typeof(AnimalBehaviorTreeCapability).IsAssignableFrom(type)) yield return type;
