@@ -410,10 +410,41 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         WorldVisualPose live = WorldVisualPose.ReadLocal(node.Source);
         WorldVisualPose displayed = node.SimulationPose != null && node.SampledParent == node.Source.parent
             ? node.SimulationPose.Evaluate(live, FlatWorld.Simulation.GameplaySimulationTime.PresentationTime) : live;
-        // 手持根由动画逐帧定位，位置不能再混用固定步快照，否则骑乘时会在两种坐标间跳动。
+        // 手持位置跟随同一显示帧的挂点与身体姿态，避免实时挂点和插值身体错帧。
         if (node.NestedItem != null && node.NestedItem.Owner != null && node.NestedItem.InHand)
-            return new WorldVisualPose(live.Position, displayed.Rotation, displayed.Scale);
+            return new WorldVisualPose(ResolvePresentedHeldItemLocalPosition(node, live.Position),
+                displayed.Rotation, displayed.Scale);
         return displayed;
+    }
+
+    private Vector3 ResolvePresentedHeldItemLocalPosition(NodeCopy node, Vector3 fallbackPosition)
+    {
+        IReadOnlyList<IHeldItemPositionControl> positionControls = node.NestedItem.itemMods
+            .GetCapabilities<IHeldItemPositionControl>();
+        for (int i = 0; i < positionControls.Count; i++)
+            if (positionControls[i].ControlsHeldItemPosition) return fallbackPosition;
+
+        Transform attachment = node.Source.parent;
+        Mod_AnimatorController animator = node.NestedItem.Owner.itemMods
+            .GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+        Transform poseRoot = animator != null ? animator.PresentedBodyPoseRoot : null;
+        if (poseRoot == null || attachment == null || attachment == poseRoot || attachment.IsChildOf(poseRoot) ||
+            !nodes.TryGetValue(attachment, out NodeCopy attachmentNode) ||
+            !nodes.TryGetValue(poseRoot, out NodeCopy poseNode))
+            return fallbackPosition;
+
+        Matrix4x4 poseParentMatrix = Matrix4x4.identity;
+        if (poseRoot.parent != null)
+        {
+            if (!nodes.TryGetValue(poseRoot.parent, out NodeCopy poseParentNode)) return fallbackPosition;
+            poseParentMatrix = ResolvePresentedSourceWorld(poseParentNode);
+        }
+
+        Matrix4x4 attachmentMatrix = ResolvePresentedSourceWorld(attachmentNode);
+        Vector3 displayedAttachmentPosition = attachmentMatrix.MultiplyPoint3x4(Vector3.zero);
+        Vector3 displayedWorldPosition = ResolvePresentedSourceWorld(poseNode).MultiplyPoint3x4(
+            poseParentMatrix.inverse.MultiplyPoint3x4(displayedAttachmentPosition));
+        return attachmentMatrix.inverse.MultiplyPoint3x4(displayedWorldPosition);
     }
 
     private Matrix4x4 ResolvePresentedSourceWorld(NodeCopy node)
