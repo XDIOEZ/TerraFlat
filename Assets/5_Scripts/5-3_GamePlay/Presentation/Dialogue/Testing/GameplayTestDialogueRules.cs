@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -129,7 +130,12 @@ namespace FlatWorld.Dialogue
         /// <summary>核对正式台词资源是否为每句中文提供了可用的英文译文。</summary>
         private static JObject CaptureBuiltinLocales(JObject args)
         {
+            CharacterSpeechConfigLoader.InvalidateResourceCache();
+            IEnumerator prewarm = CharacterSpeechConfigLoader.PrewarmResourceDocuments(() => true);
+            int prewarmSlices = 0;
+            while (prewarm.MoveNext()) prewarmSlices++;
             CharacterSpeechConfigLoadResult loaded = CharacterSpeechConfigLoader.LoadFromResources(logIssues: false);
+            bool cacheReused = ReferenceEquals(loaded, CharacterSpeechConfigLoader.LoadFromResources(logIssues: false));
             var incompleteIds = new JArray();
             var externalEntries = new JArray();
             int translated = 0;
@@ -191,6 +197,9 @@ namespace FlatWorld.Dialogue
                 ["lines"] = lines,
                 ["translatedLines"] = translated,
                 ["issues"] = loaded.Issues.Count,
+                ["prewarmSlices"] = prewarmSlices,
+                ["cacheReused"] = cacheReused,
+                ["startupPrewarmSupported"] = typeof(IStartupRuntimeContentPrewarm).IsAssignableFrom(typeof(ConfiguredSpeechProvider)),
                 ["incompleteIds"] = incompleteIds,
                 ["externalEntries"] = externalEntries
             };

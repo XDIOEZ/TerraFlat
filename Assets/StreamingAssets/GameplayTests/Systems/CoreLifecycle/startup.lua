@@ -114,6 +114,7 @@ end, "正式启动图中的菜单去重、物品身份与液体 Buff 依赖")
 
 test.system("core_lifecycle", "startup_actor_code_prewarm", {}, function(data)
     assert(data.productionRoots and data.capabilitiesAndNodes, "出生、行为工厂或可扩展能力节点没有进入代码预热")
+    assert(data.playerRoots, "玩家实体、注册或 Tick 调度未进入首次运行代码预热")
     assert(data.capabilityFactoryHelpers and data.closedCapabilityFactory and data.closedCapabilityClosure,
         "陆地能力工厂或其泛型闭包仍留到首只动物出生时编译")
     assert(data.invalidCapabilityRejected, "非具体能力类型错误地进入泛型工厂预热")
