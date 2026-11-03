@@ -1382,7 +1382,7 @@ public static partial class GameplayTestSystemProbe
         };
         float opacity = SurfaceZoomTransition.ResolveOpacity((float)Number(args, "size", 60),
             defaults);
-        float surfaceAudioGain = 1f - opacity;
+        float surfaceAudioGain = Mod_Cam.ResolveSurfaceZoomAudioGain(opacity);
         float current = (float)Number(args, "current", 60);
         float requested = (float)Number(args, "requested", 60);
         float presentedOpacity = (float)Number(args, "presentedOpacity", 0);

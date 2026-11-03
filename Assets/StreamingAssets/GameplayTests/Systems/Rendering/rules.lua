@@ -782,17 +782,22 @@ for _, duration in ipairs({ 0, -1 }) do
 end
 
 for _, args in ipairs({
-    { size = 20, expected = 0 }, { size = 55, expected = 0 }, { size = 60, expected = 0 },
-    { size = 75, expected = 0.5 }, { size = 90, expected = 1 }, { size = 200, expected = 1 }
+    { size = 20, expected = 0, expectedGain = 1 },
+    { size = 55, expected = 0, expectedGain = 1 },
+    { size = 60, expected = 0, expectedGain = 1 },
+    { size = 75, expected = 0.5, expectedGain = 1 },
+    { size = 80, expected = 0.7407407, expectedGain = 1 },
+    { size = 85, expected = 0.9259259, expectedGain = 0.21135 },
+    { size = 90, expected = 1, expectedGain = 0 },
+    { size = 200, expected = 1, expectedGain = 0 }
 }) do
     test.system("rendering", "universe_view_transition", args, function(data)
         assert(math.abs(data.opacity - args.expected) < 0.0001, "宇宙画面没有在原视野区间直接淡入")
-        local gain = 1 - args.expected
-        assert(math.abs(data.sfxAudioGain - gain) < 0.0001
-            and math.abs(data.ambientAudioGain - gain) < 0.0001
-            and math.abs(data.musicAudioGain - gain) < 0.0001
-            and math.abs(data.voiceAudioGain - gain) < 0.0001,
-            "地表接近太空时游戏音量未跟随画面渐隐")
+        assert(math.abs(data.sfxAudioGain - args.expectedGain) < 0.0001
+            and math.abs(data.ambientAudioGain - args.expectedGain) < 0.0001
+            and math.abs(data.musicAudioGain - args.expectedGain) < 0.0001
+            and math.abs(data.voiceAudioGain - args.expectedGain) < 0.0001,
+            "地表过渡应先保持原音量、接近太空时才平滑淡出")
         assert(math.abs(data.uiAudioGain - 1) < 0.0001,
             "地表宇宙过渡错误地静音了 UI 点击声音")
     end, "动态加载雾窗下的宇宙视图直接淡入")

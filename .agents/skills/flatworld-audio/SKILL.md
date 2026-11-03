@@ -63,4 +63,4 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 风声以本机玩家位置读取正式混合风场，实际完整风级复用 `WindEnvironmentRules.ResolveWindLevel`：0～7 级为 `weather.wind.loop`，8 级起为 `weather.wind.gale.loop`，两路按 0.8 秒交叉淡化，失效路回收，退出/禁用天气同时停止。`WindAudioState` 独立平滑同一玩家风强，沿用天气过渡时长、超过 `0.5` 才起声、1.5 次方曲线和满风调用方音量 `0.4`，不受相机跨风区影响；Lua `audio/wind_sequence` 采样边界、续接和重置，阈值只影响声音。
 - 雨声从本机玩家逻辑位置读取 `TryGetPrecipitationAt`，不跟随镜头雨量；`RainAudioState` 沿用完整降水过渡时长与 0.9 倍音量，缺失/无效样本保留上一目标，真实零雨量才淡出，退出清状态。`audio/rain_sequence` 覆盖缺样续接、途中恢复、停雨和重置；雨风循环共用句柄维护，包络归零后回收。
 - 游戏暂停由 `AudioService` 统一跟随 `Time.timeScale<=0`：非 UI 总线保留句柄和采样位置暂停/续播，UI 照常，加减速不改 pitch；暂停时冻结淡入、Stop 淡出仍按真实时间回收，新音立即同步，池回收清掉暂停状态。Lua `audio/voice_lifecycle` 覆盖正式音源跨帧采样。
-- 地表镜头向宇宙观察缩放时，`Mod_Cam` 读取 `SurfaceZoomTransition.Sample` 并调用 `AudioService.SetWorldPresentationGain`；与画面共用淡变（默认视野 60～90），只衰减非 UI 总线，返回近景或解绑本机监听器恢复原音量。该倍率不写用户设置、不停止循环句柄，暂不按世界分组；规则 `rendering/universe_view_transition`。
+- 地表镜头向宇宙观察缩放时，`Mod_Cam` 读取 `SurfaceZoomTransition.Sample` 并调用 `AudioService.SetWorldPresentationGain`；默认视野 60～90 的宇宙画面过渡前 75% 保持世界原音量（约至视野 80），最后一段用 SmoothStep 平滑减至静音。只衰减非 UI 总线，返回近景或解绑本机监听器恢复原音量；不写用户设置、不停止循环句柄，暂不按世界分组。规则 `rendering/universe_view_transition`。

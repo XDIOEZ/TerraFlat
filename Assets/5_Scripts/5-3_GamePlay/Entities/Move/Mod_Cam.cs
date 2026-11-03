@@ -284,6 +284,15 @@ public class Mod_Cam : Module
 
     #region 玩家听音位置
 
+    // 地表宇宙画面淡入的前 75% 保持原音量，接近宇宙后再缓入静音。
+    private const float SurfaceAudioFadeStartOpacity = 0.75f;
+
+    internal static float ResolveSurfaceZoomAudioGain(float universeOpacity)
+    {
+        float fadeProgress = Mathf.InverseLerp(SurfaceAudioFadeStartOpacity, 1f, universeOpacity);
+        return 1f - Mathf.SmoothStep(0f, 1f, fadeProgress);
+    }
+
     // 世界音量跟随地表宇宙画面的同一淡变进度，切换驾驶或离开地表时恢复。
     private void UpdateWorldAudioForSurfaceZoom()
     {
@@ -293,7 +302,7 @@ public class Mod_Cam : Module
         float gain = Player.isActiveAndEnabled && !HasFollowOverride &&
                      !SpaceMgr.IsSpaceScene(Player.gameObject.scene.name) &&
                      CameraZoomExtensions.GetProfile(this).Enabled
-            ? 1f - SurfaceZoomTransition.Sample(this)
+            ? ResolveSurfaceZoomAudioGain(SurfaceZoomTransition.Sample(this))
             : 1f;
         AudioService.Instance.SetWorldPresentationGain(gain);
     }
