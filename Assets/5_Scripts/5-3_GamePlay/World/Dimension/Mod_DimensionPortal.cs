@@ -2,7 +2,7 @@ using FlatWorld.Localization;
 using UnityEngine;
 
 /// <summary>维度入口功能模块；可由自然入口或通用建筑本体 Shell 复用。</summary>
-public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPoolLifecycle,
+public sealed partial class Mod_DimensionPortal : Module, IWorldHoldInteraction, IItemPoolLifecycle,
     IBuildingPlacementCommitted, IBuildingFatalDamagePolicy
 {
     #region 模块数据
@@ -144,7 +144,13 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
         OnBuildingPlacementCommitted();
     }
 
-    public void OnInteractStart(Item playerItem)
+    #region 入口长按交互
+
+    /// <summary>按下仅建立共享长按会话，不立即切换世界。</summary>
+    public void OnInteractStart(Item playerItem) { }
+
+    /// <summary>圆形进度达标后继续沿用原有权威维度迁移流程。</summary>
+    public void OnHoldCompleted(Item playerItem)
     {
         if (transitionRequested || playerItem is not Player player)
             return;
@@ -209,6 +215,8 @@ public sealed partial class Mod_DimensionPortal : Module, IInteractable, IItemPo
     public void OnInteractCancel(Item playerItem)
     {
     }
+
+    #endregion
 
     private void CachePortalContext()
     {

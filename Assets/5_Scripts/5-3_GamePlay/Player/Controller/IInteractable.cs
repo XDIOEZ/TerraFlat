@@ -31,6 +31,14 @@ public interface IInteractable
     void OnInteractCancel(Item playerItem);
 }
 
+/// <summary>长按目标共享交互发送器的计时和圆形进度，松手或取消不会触发未完成的动作。</summary>
+public interface IWorldHoldInteraction : IInteractable
+{
+    const float DefaultHoldSeconds = 0.55f;
+    float HoldSeconds => DefaultHoldSeconds;
+    void OnHoldCompleted(Item playerItem);
+}
+
 /// <summary>无 GameObject 的世界数据交互目标；位置和身份由权威世界模型提供。</summary>
 public interface IWorldInteractionTarget : IInteractable
 {

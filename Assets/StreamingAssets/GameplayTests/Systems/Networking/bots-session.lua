@@ -73,6 +73,11 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
     assert(publishing.pendingInventoryCaptures == 0 and publishing.pendingInventoryForceCaptures == 1,
         "未确认库存事务破坏了普通提交门禁或服务器强制发布")
     assert(publishing.retainedPayloadUnchanged, "后续捕获修改了已经交给网络的旧快照缓冲")
+    assert(publishing.privateHostCaptures == 0 and publishing.privateDirtyPreserved,
+        "私有 Host 仍编码无人接收的库存，或吞掉后续联机需要的脏状态")
+    assert(publishing.privateForcedCaptures == 1 and publishing.remoteOwnerCaptures == 1
+        and publishing.readyRecipientCaptures == 1,
+        "私有 Host 优化拦截了强制事务、远端权威状态或新就绪接收者")
     local replay = data.replayedHandshake
     assert(replay and replay.snapshotsBefore == 1 and replay.snapshotsAfter == 1
         and replay.notSpawnedBeforeReady and replay.originalProfilePreserved,

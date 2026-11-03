@@ -164,7 +164,7 @@ public static class AtmosphereAnalyzerPanelAssetBuilder
         Image hitArea = container.gameObject.AddComponent<Image>();
         hitArea.color = Color.clear;
         hitArea.raycastTarget = true;
-        ScrollRect scroll = container.gameObject.AddComponent<ScrollRect>();
+        ScrollRect scroll = container.gameObject.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;

@@ -36,6 +36,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
 
     private const float MinimumTweenDuration = 0.04f;
     private const float ScaleComparisonEpsilonSquared = 0.000001f;
+    private const float HoverColorFadeSeconds = 0.11f;
 
     private Selectable selectable;
     private Tween scaleTween;
@@ -63,7 +64,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     {
         CaptureBaseScale();
         selectable = GetComponent<Selectable>();
-        ConfigureSelectedColor();
+        RefreshInteractionColors();
     }
 
     private void OnEnable()
@@ -72,6 +73,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         transform.localScale = baseScale;
         selected = EventSystemGuard.IsGamepadMode && EventSystem.current != null &&
                    EventSystem.current.currentSelectedGameObject == gameObject;
+        RefreshInteractionColors();
         SetSelectionVisual(selected);
         AnimateToCurrentState();
     }
@@ -118,6 +120,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     public void OnPointerEnter(PointerEventData eventData)
     {
         hovered = true;
+        RefreshInteractionColors();
         AnimateToCurrentState();
     }
 
@@ -125,6 +128,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     {
         hovered = false;
         pressed = false;
+        RefreshInteractionColors();
         AnimateToCurrentState();
     }
 
@@ -155,13 +159,14 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         if (!EventSystemGuard.IsGamepadMode)
         {
             selected = false;
+            RefreshInteractionColors();
             SetSelectionVisual(false);
             AnimateToCurrentState();
             return;
         }
 
         selected = true;
-        ConfigureSelectedColor();
+        RefreshInteractionColors();
         SetSelectionVisual(true);
         AnimateToCurrentState();
     }
@@ -169,6 +174,7 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     public void OnDeselect(BaseEventData eventData)
     {
         selected = false;
+        RefreshInteractionColors();
         SetSelectionVisual(false);
         AnimateToCurrentState();
     }
@@ -197,8 +203,10 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
             if (button == null || IsSlotButton(button.transform))
                 continue;
 
-            if (button.GetComponent<FlatWorldUIFeedback>() == null)
-                button.gameObject.AddComponent<FlatWorldUIFeedback>();
+            FlatWorldUIFeedback feedback = button.GetComponent<FlatWorldUIFeedback>();
+            if (feedback == null)
+                feedback = button.gameObject.AddComponent<FlatWorldUIFeedback>();
+            feedback.RefreshInteractionColors();
         }
     }
 
@@ -246,16 +254,29 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
             tween.Kill(false);
     }
 
-    /// <summary>
-    /// 将普通按钮的选中颜色切换到主题强调色。
-    /// </summary>
-    private void ConfigureSelectedColor()
+    /// <summary>普通按钮共用悬浮色；鼠标选中时跟随悬浮而非留下永久高亮，手柄焦点另用选中色。</summary>
+    public void RefreshInteractionColors()
     {
+        if (selectable == null)
+            selectable = GetComponent<Selectable>();
         if (selectable == null)
             return;
 
+        if (selectable.transition != Selectable.Transition.ColorTint)
+            return;
+
         ColorBlock colors = selectable.colors;
-        colors.selectedColor = FlatWorldUITheme.Selection;
+        Color hoverColor = FlatWorldUITheme.TintHighlight;
+        Color selectedColor = selected
+            ? FlatWorldUITheme.Selection
+            : hovered ? hoverColor : colors.normalColor;
+        if (colors.highlightedColor == hoverColor && colors.selectedColor == selectedColor &&
+            Mathf.Approximately(colors.fadeDuration, HoverColorFadeSeconds))
+            return;
+
+        colors.highlightedColor = hoverColor;
+        colors.selectedColor = selectedColor;
+        colors.fadeDuration = HoverColorFadeSeconds;
         selectable.colors = colors;
     }
 

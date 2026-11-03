@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 /// <summary>
 /// 物品拾取器组件，用于自动收集可拾取物品
 /// </summary>
-public partial class Mod_ItemPicker : Module
+public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, IItemPhysicsComponentsReceiver2D
 {
     #region 拾取性能诊断
     // 数量快照与事务次数分开记录，整堆入包不等于逐件创建。
@@ -49,17 +49,25 @@ public partial class Mod_ItemPicker : Module
         TryAddInventoryById(ModText.Hotbar);
         TryAddInventoryById(ModText.Bag);
         BindPickupCapacityEvents();
-        droppedPickupCollider = GetComponent<Collider2D>();
-        if (droppedPickupCollider == null) droppedPickupCollider = GetComponentInChildren<Collider2D>(true);
+        OnItemPhysicsComponentsAvailable();
         DroppedItemService.RegisterPicker(this);
         PickerLoaded?.Invoke(this);
     }
 
-    /// <summary>
-    /// 初始化时尝试获取自身的Inventory组件
-    /// </summary>
-    private void Start()
+    // 物理租借可以晚于模块加载；只在就绪通知时重新绑定拾取形状。
+    public void OnItemPhysicsComponentsAvailable()
     {
+        droppedPickupCollider = GetComponent<Collider2D>();
+        if (droppedPickupCollider != null && droppedPickupCollider.enabled) return;
+        using var lease = UnityEngine.Pool.ListPool<Collider2D>.Get(out var shapes);
+        GetComponentsInChildren(true, shapes);
+        droppedPickupCollider = null;
+        foreach (Collider2D shape in shapes)
+            if (shape.enabled && shape.isTrigger && shape.GetComponentInParent<Item>(true) == item)
+            {
+                droppedPickupCollider = shape;
+                break;
+            }
     }
     protected override void OnSave()
     {
@@ -73,6 +81,7 @@ public partial class Mod_ItemPicker : Module
         UnbindPickupCapacityEvents();
         deferredPickupItems.Clear();
         pickupAttemptedItems.Clear();
+        droppedPickupCollider = null;
         PickupAmountMultiplier = 1;
     }
 
@@ -154,7 +163,12 @@ public partial class Mod_ItemPicker : Module
             }
             return false;
         }
-        set => canPickUp = value;
+        set
+        {
+            if (canPickUp == value) return;
+            canPickUp = value;
+            pickupCapacityRevision++;
+        }
     }
 
     #endregion
@@ -208,6 +222,13 @@ public partial class Mod_ItemPicker : Module
 
 
     #region 物品交互
+
+    public void ReceivePhysicsTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase == WorldPhysicsTriggerPhase2D.Enter) OnTriggerEnter2D(other);
+        else if (phase == WorldPhysicsTriggerPhase2D.Stay) OnTriggerStay2D(other);
+        else if (phase == WorldPhysicsTriggerPhase2D.Exit) OnTriggerExit2D(other);
+    }
 
     /// <summary>
     /// 当有物体进入触发器时尝试拾取物品
@@ -296,8 +317,16 @@ public partial class Mod_ItemPicker : Module
 
         deferredPickupItems.Remove(pickAble);
         pickupAttemptedItems.Add(pickAble);
-        if (ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble))
+        WorldItemPickupRequestStatus request = ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble);
+        if (request != WorldItemPickupRequestStatus.NotHandled)
         {
+            if (request == WorldItemPickupRequestStatus.Deferred)
+            {
+                deferredPickupItems.Add(pickAble);
+                pickupAttemptedItems.Remove(pickAble);
+            }
+            else if (request == WorldItemPickupRequestStatus.CapacityRejected)
+                ShowInventoryFullPrompt(pickAble.itemData);
             return;
         }
 
@@ -321,6 +350,8 @@ public partial class Mod_ItemPicker : Module
     /// <summary>拾取失败时按触发事件限频提示，不在空闲期间轮询或重复弹窗。</summary>
     private void ShowInventoryFullPrompt(ItemData attemptedItem)
     {
+        // 容量提示只属于本地玩家，非玩家和远端拾取器不操作本机 HUD。
+        if (item is not Player { IsLocalProfile: true }) return;
         float now = Time.unscaledTime;
         if (now < nextInventoryFullPromptTime)
             return;
@@ -611,7 +642,7 @@ public partial class Mod_ItemPicker : Module
     internal bool TryGetDroppedPickupBounds(out Bounds bounds)
     {
         bounds = default;
-        if (!isActiveAndEnabled || !gameObject.activeInHierarchy || droppedPickupCollider == null ||
+        if (!IsRuntimeLoaded || !isActiveAndEnabled || !gameObject.activeInHierarchy || droppedPickupCollider == null ||
             !droppedPickupCollider.enabled || item == null || item.DestructionHandled) return false;
         bounds = droppedPickupCollider.bounds;
         bounds.Expand(0.5f);

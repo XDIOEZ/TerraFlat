@@ -4,6 +4,7 @@ using FlatWorld.Geometry;
 using Unity.Mathematics;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>少量后端 Bridge 的契约；只有实际武器 Pulse 查询外部后端，不为每只 AI 注册事件。</summary>
 public interface IGameplayCombatBridge
@@ -43,12 +44,61 @@ public static class GameplayCombatBridge
 
     #region 物理碰撞目标映射
 
+    /// <summary>武器命中只认明确受击区域，不沿父子或兄弟节点猜测生命归属。</summary>
+    public static Mod_DamageReceiver ResolvePhysicsDamageReceiver(Collider2D collider)
+    {
+        Collider2D source = ResolveSameWorldPhysicsSource(collider);
+        if (source == null) return null;
+        if (WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding))
+            return (binding.Purpose & WorldPhysicsPurpose2D.Damage) != 0
+                ? binding.Receiver as Mod_DamageReceiver ?? binding.Entity as Mod_DamageReceiver : null;
+        ItemPhysicsRegion2D region = source.GetComponent<ItemPhysicsRegion2D>();
+        if (region != null)
+            return (region.Purpose & WorldPhysicsPurpose2D.Damage) != 0 ? region.Receiver as Mod_DamageReceiver : null;
+        return CombatPhysicsChannels.IsDamageReceiverCollider(source) ? source.GetComponent<Mod_DamageReceiver>() : null;
+    }
+
+    /// <summary>身体接触沿已登记物品读取主生命能力，专供荆棘和投射物实体碰撞。</summary>
+    public static Mod_DamageReceiver ResolvePhysicsBodyDamageReceiver(Collider2D collider)
+    {
+        Collider2D source = ResolveSameWorldPhysicsSource(collider);
+        if (source == null || source.isTrigger) return null;
+        Item owner;
+        if (WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding))
+        {
+            if ((binding.Purpose & WorldPhysicsPurpose2D.Blocking) == 0) return null;
+            owner = binding.Item ?? binding.Entity as Item;
+        }
+        else owner = source.GetComponentInParent<Item>();
+        // 身体只转交主生命模块，不把同一物品的任意子接收器当作受击部位。
+        return owner != null ? owner.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) : null;
+    }
+
+    private static Collider2D ResolveSameWorldPhysicsSource(Collider2D collider)
+    {
+        Collider2D source = ColliderSource2D.Resolve(collider);
+        return source != null && (source == collider ||
+            source.gameObject.scene.GetPhysicsScene2D() == collider.gameObject.scene.GetPhysicsScene2D()) ? source : null;
+    }
+
     /// <summary>按 Unity 返回的具体 Collider 读取目标，不按接触点猜测附近实体。</summary>
     internal static bool TryGetPhysicsDamageTarget(Collider2D collider, out IGameplayPhysicsDamageTarget target)
     {
         target = null;
-        if (!WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding)) return false;
-        target = binding.DamageTarget;
+        if (!WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding) ||
+            (binding.Purpose & WorldPhysicsPurpose2D.Damage) == 0) return false;
+        // 物理层只提供区域归属，伤害能力由玩法适配层解析。
+        target = binding.Entity as IGameplayPhysicsDamageTarget ?? binding.Receiver as IGameplayPhysicsDamageTarget;
+        return target != null;
+    }
+
+    /// <summary>实体碰撞允许沿阻挡区域找到原生生命后端，但交互区域不能伪造命中。</summary>
+    internal static bool TryGetPhysicsContactDamageTarget(Collider2D collider, out IGameplayPhysicsDamageTarget target)
+    {
+        target = null;
+        if (!WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding) ||
+            (binding.Purpose & (WorldPhysicsPurpose2D.Damage | WorldPhysicsPurpose2D.Blocking)) == 0) return false;
+        target = binding.Entity as IGameplayPhysicsDamageTarget ?? binding.Receiver as IGameplayPhysicsDamageTarget;
         return target != null;
     }
 

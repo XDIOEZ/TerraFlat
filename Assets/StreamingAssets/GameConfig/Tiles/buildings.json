@@ -85,6 +85,7 @@
     },
     {
       "id": "Tile_Platform_Stone",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 15,
       "loadCapacity": 10,
       "displayName": "石平台",
@@ -105,6 +106,7 @@
     },
     {
       "id": "Tile_Platform_Copper",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 16,
       "loadCapacity": 10,
       "displayName": "铜平台",
@@ -125,6 +127,7 @@
     },
     {
       "id": "Tile_Platform_Iron",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 17,
       "loadCapacity": 10,
       "displayName": "铁平台",
@@ -145,6 +148,7 @@
     },
     {
       "id": "Tile_Platform_Bronze",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 18,
       "loadCapacity": 10,
       "displayName": "青铜平台",
@@ -266,6 +270,7 @@
     },
     {
       "id": "Tile_Floor_Stone",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 24,
       "loadCapacity": 10,
       "displayName": "石地板",
@@ -286,6 +291,7 @@
     },
     {
       "id": "Tile_Floor_Copper",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 25,
       "loadCapacity": 10,
       "displayName": "铜地板",
@@ -306,6 +312,7 @@
     },
     {
       "id": "Tile_Floor_Iron",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 26,
       "loadCapacity": 10,
       "displayName": "铁地板",
@@ -326,6 +333,7 @@
     },
     {
       "id": "Tile_Floor_Bronze",
+      "footstepCueId": "player.footstep.metal",
       "runtimeTileId": 27,
       "loadCapacity": 10,
       "displayName": "青铜地板",
@@ -346,6 +354,7 @@
     },
     {
       "id": "Tile_Floor_Bitumen",
+      "footstepCueId": "player.footstep.stone",
       "runtimeTileId": 35,
       "loadCapacity": 10,
       "displayName": "沥青地板",

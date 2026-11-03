@@ -96,6 +96,10 @@ namespace FlatWorld.Audio
             public float StartedAt;
             public float BaseGain;
             public float VolumeScale;
+            public float PortalGain;
+            public string SourceWorldKey;
+            public AudioLowPassFilter LowPass;
+            public float MaxDistance;
             public float Fade;
             public float FadeSpeed;
             public bool Stopping;
@@ -203,6 +207,7 @@ namespace FlatWorld.Audio
 
             listenerTarget = null;
             worldListener = null;
+            ClearWorldAcoustics();
         }
 
         private bool HasWorldListener => listenerTarget != null &&
@@ -237,16 +242,31 @@ namespace FlatWorld.Audio
             if (!voice.IsSpatial)
                 return;
 
-            bool hasListener = HasWorldListener;
-            voice.Source.mute = !hasListener;
-            if (!hasListener)
+            if (!HasWorldListener)
+            {
+                voice.Source.mute = true;
                 return;
+            }
 
             if (voice.FollowTarget != null)
                 voice.WorldPosition = voice.FollowTarget.position;
 
-            Vector3 offset = voice.WorldPosition - listenerTarget.position;
-            offset.z = 0f;
+            bool audible = TryResolveWorldSoundPosition(voice.SourceWorldKey, voice.WorldPosition,
+                voice.MaxDistance, out Vector3 audiblePosition, out float portalGain, out float cutoff);
+            voice.Source.mute = !audible;
+            voice.LowPass.enabled = audible && cutoff < 22000f;
+            if (voice.LowPass.enabled)
+                voice.LowPass.cutoffFrequency = cutoff;
+            if (!Mathf.Approximately(voice.PortalGain, portalGain))
+            {
+                voice.PortalGain = portalGain;
+                ApplyVolume(voice);
+            }
+            if (!audible)
+                return;
+
+            Vector2 direction = ResolveSoundDelta(listenerTarget.position, audiblePosition);
+            Vector3 offset = new Vector3(direction.x, direction.y, 0f);
             voice.GameObject.transform.position = worldListener.transform.position + offset;
         }
 
@@ -389,13 +409,19 @@ namespace FlatWorld.Audio
                 return AudioHandle.Invalid;
 
             options.Normalize();
-            bool isSpatial = cue.SpatialBlend > 0f &&
+            bool isSpatial = (cue.SpatialBlend > 0f || options.ForceSpatial) &&
                 (options.HasWorldPosition || options.FollowTarget != null);
+            float maxDistance = options.SpatialMaxDistanceOverride > 0f
+                ? options.SpatialMaxDistanceOverride : cue.MaxDistance;
             bool isLooping = options.OverrideLoop ? options.Loop : cue.Loop;
             Vector3 worldPosition = ResolveWorldPosition(options);
+            string sourceWorldKey = isSpatial
+                ? options.SourceWorldKey ?? SourceWorldKeyResolver?.Invoke(options.FollowTarget)
+                : null;
             // 范围外的短音不占声源和冷却；循环音保留句柄，靠近时可以重新听见。
             if (isSpatial && !isLooping &&
-                (!HasWorldListener || Vector2.Distance(worldPosition, listenerTarget.position) >= cue.MaxDistance))
+                (!HasWorldListener || !TryResolveWorldSoundPosition(sourceWorldKey, worldPosition,
+                    maxDistance, out _, out _, out _)))
             {
                 return AudioHandle.Invalid;
             }
@@ -453,6 +479,9 @@ namespace FlatWorld.Audio
             voice.StartedAt = now;
             voice.BaseGain = Mathf.Max(0f, cue.Volume.Sample());
             voice.VolumeScale = options.VolumeScale;
+            voice.PortalGain = 1f;
+            voice.SourceWorldKey = sourceWorldKey;
+            voice.MaxDistance = maxDistance;
             voice.Fade = options.FadeIn > 0f ? 0f : 1f;
             voice.FadeSpeed = options.FadeIn > 0f ? 1f / options.FadeIn : 0f;
             voice.Stopping = false;
@@ -466,7 +495,7 @@ namespace FlatWorld.Audio
             source.spread = 0f;
             source.mute = false;
             source.minDistance = cue.MinDistance;
-            source.maxDistance = cue.MaxDistance;
+            source.maxDistance = maxDistance;
             source.priority = cue.Priority;
             source.rolloffMode = isSpatial ? AudioRolloffMode.Linear : cue.RolloffMode;
             source.outputAudioMixerGroup = ResolveOutput(cue);
@@ -650,12 +679,15 @@ namespace FlatWorld.Audio
             voiceObject.transform.SetParent(transform, false);
             AudioSource source = voiceObject.AddComponent<AudioSource>();
             source.playOnAwake = false;
+            AudioLowPassFilter lowPass = voiceObject.AddComponent<AudioLowPassFilter>();
+            lowPass.enabled = false;
             totalVoices++;
 
             return new Voice
             {
                 GameObject = voiceObject,
-                Source = source
+                Source = source,
+                LowPass = lowPass
             };
         }
 
@@ -682,10 +714,14 @@ namespace FlatWorld.Audio
             voice.Source.clip = null;
             voice.Source.outputAudioMixerGroup = null;
             voice.FollowTarget = null;
+            voice.SourceWorldKey = null;
+            voice.MaxDistance = 0f;
             voice.WorldPosition = Vector3.zero;
             voice.IsSpatial = false;
             voice.Source.mute = false;
             voice.Source.panStereo = 0f;
+            voice.PortalGain = 1f;
+            voice.LowPass.enabled = false;
             voice.Cue = null;
             voice.Id = 0;
             voice.Fade = 1f;
@@ -718,7 +754,7 @@ namespace FlatWorld.Audio
             float settingsGain = userSettings.Muted
                 ? 0f
                 : userSettings.Master * userSettings.GetBusVolume(voice.Cue.Bus);
-            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.VolumeScale * voice.Fade * settingsGain);
+            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.VolumeScale * voice.PortalGain * voice.Fade * settingsGain);
         }
 
         private void LoadUserSettings()

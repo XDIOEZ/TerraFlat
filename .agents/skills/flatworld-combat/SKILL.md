@@ -22,7 +22,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - GO 的 DamageReceiver、原生 ECS 的 AiecsDamageSettlementSystem 各为目标唯一生命权威，外部代理 HP 是快照；远程 Client 仅应用权威结果。
 - ResolveDamage 先提交钳制 HP 和实际损失快照，再发回调；同步/死亡收尾/解锁保证执行。死亡在通知前锁存一次，重入/延迟结果不重复掉落；Unload 取消延迟销毁，显式复活/新 Load 重置死亡标记。
-- GO 世界血条在同轮实体内首次创建、隐藏停用并复用；连续受伤仅续一个隐藏协程的截止时间。Unload、回池、销毁释放血条和监听，新 Load 不复用旧代际面板；隐藏血条不刷新文本或布局。
+- GO 生物世界血条用独立 `UI_CreatureHealth` 横向进度条；资源接收器继续显示数字。血条在同轮实体内首次创建、隐藏停用并复用；连续受伤仅续一个隐藏协程的截止时间。Unload、回池、销毁释放血条和监听，新 Load 不复用旧代际面板；隐藏血条不刷新 UI。
 - 致命扣血在回调前把 `DeathCauseRecord` 锁存到生命 Data，随血量保存/同步，重生清除；`ForceHurt` 的来源方传稳定原因 ID，特殊发送端用 `IDeathCauseSource`，投射物用 `IDeathCauseSnapshotSource` 冻结射手和发射武器。Shared Context 只携固定容量定义 ID，不让叙事字段溢出阻断伤害。
 - Heal 查询 IHealingCostPolicy 可恢复额度，按实际恢复量支付，无策略免费；普通回血不复活，启用部位生命时只分配给存活部位，重生/满血赋值才恢复耗尽部位。
 - 掉落以稳定物品 ID 定义，实体顶层 lootTableId 展开到唯一接收器；LootPrefabName 实为 Item.itemData.IDName，非外壳名。引用在目录加载时校验。
@@ -64,13 +64,14 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 使用同节点专用 Trigger，身体/拾取阻挡分开。GO 生物保留预制体刚体和碰撞模板，世界物理管理器在租借组件后登记原碰撞体，不为生物创建物理代理。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。
 - Mod_Weapon_AnimationAction 每段 StartAttack 调持有者 Stamina.TryConsumeStamina，不足不开始；配置 staminaCostPerAttack 受统一角色体力参数修正。Mod_ColdWeapon 仍按 ColdWeaponStaminaObserver.StaminaConsumeSpeed 每秒扣，基础与 StaminaConsumeSpeedRate 是不同参数。
+- 动画武器的基础挥击体力由物品 JSON 显式配置，平衡基准为向上取最近 0.5 的 `2 + 物理伤害×0.4 + 重量kg×0.35`；继承后伤害变更的子物品须单独覆盖 animation.parameters.staminaCostPerAttack，免得高伤害仍套父级低费用。
 - CombatImpactEffectSet 是类型特效，AttackEffects 是每次反馈；DominantKind 统一选类型，空反馈不阻断命中。JSON 不覆盖 Prefab Unity 资源引用集合。
 - 动画武器通过正伤害回执局部卡肉，`hitStopDuration` 默认0.12秒、每段挥击最多一次；独立动画时钟扣除停顿，不改 Time.timeScale，停用/卸载恢复当前攻速。`HitShakeDuration/HitShakeDistance` 默认0.16秒/0.035米，GO 经 `ActorRenderHitShakeEffect` 合成 Shader 位移并外扩裁剪边界，原生资源仅在提交显示矩阵时抖动，均不改碰撞/占格/掉落位置。规则入口 `combat/hit_feedback_clock`、`combat/hit_shake_render`；可选 AIECS 动物和联机远端表现未覆盖。
 - On-hit 的 applicationStacks/CombatOnHitBuff.Stacks 一次传完整层数并原子施加，GO 回调与纯数据各应用一次，Tile 不发实体命中事件。
 
 ## 弓、投射物与飞行
 
-- Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓/反曲弓基础每秒2.25，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
+- Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓每秒6、反曲弓每秒9，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭；吹箭/投石索每秒6。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
 - 弓伤害倍率经 Launch 传投射物；IProjectileChargeModifier 提供额外速度/伤害，蓄力结束收状态。麦克风修饰只由本地玩家蓄力期间拥有，不存档。
 - 投射模块仅飞行或附着时逐帧运行，状态改变立即失效调度；投射和丢弃伤害按模块来源独立请求空闲休眠，开窗及手持仍唤醒。动画伤害窗口随动作显式唤醒固定步采样，伤害碰撞体关闭且动作结束后休眠；LateUpdate 只同步表现姿态。
 - 投石索复用 Mod_Bow，以 AmmoItemId 或 AmmoTag 任一匹配选弹；石头与硬质矿石通过 SlingAmmo_Base 组合 Mod_Projectile+Mod_Damage，石头保留独立丢弃飞行伤害。不要给石头子定义统一增加 SlingAmmo 标签，以免黏土/硝石继承弹药资格；`combat/archery_cycle` 覆盖最终模块与配置边界。
@@ -101,3 +102,5 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 举盾在权威端订阅生命 `OnHitReceived`，每次正式非环境命中（含全挡零伤）经 `Mod_Stamina.ConsumeStamina` 支付本角色翻滚费用，默认10点、不足扣到零；盾击/弹反、冷却或无敌拒绝、环境/直接扣血不消费。费用来源 `flatworld.combat.shield_guard_hit`，回归 `combat/shield_hit_stamina`。
 - 临时防御用 `AcquireTemporaryDefense`，不改存档基础防御；普通/部位结算均消费有效防御。客户端 `OffhandParry` 走现有战斗权威交接，`NetworkWorldPlayer.Shield` 只复制表现。协议版本 25。
 - 独立验证：`python Tools/Tests/ShieldActions/verify.py --build`；正式 Lua：`Systems/Combat/shield-rules.lua`。Unity 播放中不刷新或运行场景测试。
+
+- 撕咬的 `ActorActionConstraints.FollowLease` 自行登记 `PhysicsPreparation`，逐物理步读取双方权威刚体位置与锚点速度；技能模块只推进时长/伤害，不重复驱动跟随。`DrivenMotionLease.SetWorldVelocity` 明确提交总速度，避免再次叠加风/水流；释放、失效及丢权威时撤销调度。`combat/bite_attack` 补跨TPS跟随速度与限速边界，真实碰撞仍需现场回归。

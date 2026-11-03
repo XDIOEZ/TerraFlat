@@ -3,6 +3,7 @@
 ## 温度场与热源
 
 - 地理 temperature.celsius 固定为纬度底温+局部噪声+一次海拔修正，blendRadius 固定顺序平滑，归一化同源；TryGetGeographicTemperature 不叠季节/天气/全局调温。
+- 区域降水激活时-10℃、区域刮风时额外-5℃，两者可叠加；环境先合成地理/季节/轨道温度T，再取 `min(T, max(10, T+天气负偏移))`，不足10℃不变；全局、单点、区块快照及落雪预检共用，禁天气维度不生效，局部冷热源另行结算。
 - 温室规则读取星球真实 CO₂ 分压（基准气压×CO₂ mol/基准 mol），相对 `AtmosphereState.InitialCarbonDioxidePartialPressureKPa` 算温差；初始气柱随大气创建、克隆及存档保存，不查来源目录。`GameConfig/Fluids/greenhouse-effect.json` 配有效光学量 `1+p/scale` 的对数温差，默认 scale=0.04kPa、每翻倍3℃、钳-30～60℃；初始大气零偏移，抽走其他气体不会因比例提高而增温。
 - `PlanetData.ClimateTemperatureOffset` 合并全局基准差与 `AtmosphericGreenhouseTemperatureOffset`，当前环境、历史雪基温及冷世界查询共用，只叠一次；固定地理层不改。大气库存修改必须递增 `Revision`，抽排和飞船来源均使同帧温度缓存失效，地表队列仍保留入队温度快照。
 - LocalTemperatureSource 发布目标环境温度（篝火默认40℃），ThermalInfluenceRuntime 权重 max(0,1-d²/R²)²，以当前天气环境为基准选最强升/降温，制冷独立、同类不累加。仅缓存几何距离权重，温度/功率/天气变化不重建；设备负责燃料/供电/撤销。

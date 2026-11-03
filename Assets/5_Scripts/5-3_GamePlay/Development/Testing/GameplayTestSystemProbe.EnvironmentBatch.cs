@@ -614,9 +614,35 @@ public static partial class GameplayTestSystemProbe
         bool geographicChangeKept = rangeInvalidation.MayFreeze(0f);
         chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 1, 0f);
         bool freezingEdgeKept = Risk().MayFreeze(0f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 0, 0, 5f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 0, 15f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 0, 1, 25f);
+        chunk.Terrain.SetEnvironmentValue("temperature.celsius", 1, 1, 35f);
+        var rain = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, -10f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        var wind = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, -5f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        var rainAndWind = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, -15f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        var clear = new TemperatureMgr.AmbientChunkSnapshot(chunk, default, 0f, 0f, 0f, 0f, 0f,
+            local.GetChunkInfluences(origin), emptyLiquid);
+        var rainTemperatures = new float[4];
+        var windTemperatures = new float[4];
+        var rainAndWindTemperatures = new float[4];
+        var clearTemperatures = new float[4];
+        int[] allIndices = { 0, 1, 2, 3 };
+        rain.TrySample(chunk, allIndices, rainTemperatures);
+        wind.TrySample(chunk, allIndices, windTemperatures);
+        rainAndWind.TrySample(chunk, allIndices, rainAndWindTemperatures);
+        clear.TrySample(chunk, allIndices, clearTemperatures);
         return new JObject
         {
             ["samples"] = samples, ["afterSourceRemoved"] = afterTemperatures[0],
+            ["rainTemperatures"] = new JArray(rainTemperatures),
+            ["windTemperatures"] = new JArray(windTemperatures),
+            ["rainAndWindTemperatures"] = new JArray(rainAndWindTemperatures),
+            ["clearTemperatures"] = new JArray(clearTemperatures),
+            ["rainFieldNoFreeze"] = !rain.MayFreeze(0f) && !wind.MayFreeze(0f) && !rainAndWind.MayFreeze(0f),
             ["warmRainOnly"] = warmRainOnly, ["seasonKept"] = seasonKept, ["orbitalKept"] = orbitalKept,
             ["coolingKept"] = coolingKept, ["geographicChangeKept"] = geographicChangeKept,
             ["freezingEdgeKept"] = freezingEdgeKept

@@ -4,6 +4,19 @@ using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
+/// <summary>洞口两端的逻辑坐标，供跨维度声音等表现系统复用。</summary>
+public readonly struct CaveExitLink
+{
+    public readonly Vector2 SurfacePosition;
+    public readonly Vector2 CavePosition;
+
+    public CaveExitLink(Vector2 surfacePosition, Vector2 cavePosition)
+    {
+        SurfacePosition = surfacePosition;
+        CavePosition = cavePosition;
+    }
+}
+
 public static partial class DimensionTravelProgressStore
 {
     #region 入口状态的持久化
@@ -71,6 +84,12 @@ public static partial class DimensionTravelProgressStore
         if (save == null || result == null ||
             cave.DimensionId != WorldAddress.CaveDimensionId) return;
         GetSaveReadCache(save).CollectOpenCaveExitPositions(cave.WorldKey, result);
+    }
+
+    public static void CollectOpenCaveExitLinks(GameSaveData save, WorldAddress cave, List<CaveExitLink> result)
+    {
+        if (save == null || result == null || cave.DimensionId != WorldAddress.CaveDimensionId) return;
+        GetSaveReadCache(save).CollectOpenCaveExitLinks(cave.WorldKey, result);
     }
 
     private static bool TryParseEntranceCellKey(string key, out Vector2Int cell)

@@ -48,33 +48,12 @@
             "type": "sequence",
             "children": [
               {
-                "type": "condition",
-                "name": "land.attackLocked"
-              },
-              {
-                "type": "condition",
-                "name": "land.target",
-                "parameters": {
-                  "source": "pack"
-                }
-              },
-              {
-                "type": "action",
-                "name": "land.attack",
-                "id": "attack",
-                "parameters": {
-                  "source": "pack",
-                  "trySkills": true
-                }
-              }
-            ]
-          },
-          {
-            "type": "sequence",
-            "children": [
-              {
                 "type": "selector",
                 "children": [
+                  {
+                    "type": "condition",
+                    "name": "land.attackLocked"
+                  },
                   {
                     "type": "condition",
                     "name": "land.groupSize",

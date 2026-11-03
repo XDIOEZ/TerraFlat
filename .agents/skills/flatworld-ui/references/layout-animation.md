@@ -9,13 +9,13 @@
 - 主菜单四个旅程入口采用 0.9 倍设计比例（原 0.6 放大50%）；MainMenuResponsiveLayout 与构建器/Prefab 共用此基准，按完整设计内容占屏预算对标题、卡片、设置按钮及边距统一限幅，优先保持 UIRoot/UIScaleController 的实时用户倍率，空间不足才等比缩小，不能按已缩放 Canvas 尺寸反向缩边距。
 - 选择存档、新世界、联机、MOD 管理四个主菜单模态面板的卡片/投影（新世界另含难度弹窗）保留各自内部布局，RectTransform 基准比例统一为 0.9（原 0.6 放大50%）；SafeAreaScaleGroup 按真实基准尺寸限幅，全局用户倍率只由根 CanvasScaler 执行。构建器与正式 Prefab 同步，规则 `ui_settings/main_menu_modal_scale_layout` 检查基准尺寸和空间不足时的限幅。
 - 窗口拖动在直接父级换算指针，用 `UIWindowDragSurface.WindowRect` 的真实四角限制边界；拖边固定开始时的坐标矩阵、实际尺寸及比例，避免移动后的自身坐标造成抖动。回归 `window_drag_bounds/window_resize_pointer`。
-- 背包最小1004×288保留十列及一整行，正文随窗口拉伸；32宽滚动条绑定正式ScrollRect并预留视口。根复用SafeAreaScaleGroup，仅空间不足时等比缩小；分类弹层挂所属安全区，继承实际父比例并限幅，展开时响应安全区变化。回归 `inventory_bag_window_layout/inventory_category_popup_layout`。
+- 背包默认及最小1148×572，保留十列和上下贴边的完整五排槽位，正文随窗口拉伸；32宽滚动条绑定正式ScrollRect并预留视口。根复用SafeAreaScaleGroup，仅空间不足时等比缩小；分类弹层挂所属安全区，继承实际父比例并限幅，展开时响应安全区变化。回归 `inventory_bag_window_layout/inventory_category_popup_layout`。
 - 列表 `ItemStepScrollRect` 按 scrollDeltaPerTick 还原刻度，再按条目/网格行滚动；长文本用 fixedWheelStep。显式迁移只换 MonoScript GUID，保 fileID/引用。
 - `InventoryVirtualizedSlotGrid` 用数据索引/环形池，仅重绑新进入格；回调读取当前 slotIndex，同库存走 RebindVirtualSlotUI，搜索只改变化格，拖动时延迟重绑，重建池重建回调归属。
 - `InventoryBagSearch.Bind` 在同一 `Inventory_Data` 扩缩槽重绑时保留滚动；切换数据或更改搜索/分类才回顶，未提交的筛选回顶请求继续保留，列表缩短时由虚拟网格夹紧到有效范围。
 - `SaveSelectionFileCatalog` 每档案一次退出时间采样后内存排序；打开刷新、Start仅兜底，首行同步，其余每帧≤4行/约2ms，关闭停补建。完整身份列表不裁剪，批选/改名不依赖已建行；删除由 SaveDataManager_UI 确认层锁定目标。
 - 新游戏由 `UI_NewGame`、`UI_NewGameWorldContent/UI_NewGameDifficultyContent` 三Prefab与 NewGamePrefabBuilder 共持；隐藏页按需建一次，创建请求直接读未开页默认值。世界参数分页仅改显隐，难度覆盖层透明，加载存档失败弹正式确认并停止角色选择。
-- `DropdownListLayout` 展开前用真实行高，≤5项全显、更多最多5行；BasePanel/公共构建器同步接入。条目/Content归原生Dropdown，模板禁竞争LayoutGroup/ContentSizeFitter，Viewport无垂直内缩。交互滑块与只读进度条分资产；纯色无Sprite进度用纵缩放，不能Filled。
+- `DropdownListLayout` 展开前用真实行高，≤5项全显、更多最多5行；BasePanel/公共构建器同步接入。条目/Content归原生Dropdown，模板禁竞争LayoutGroup/ContentSizeFitter，Viewport无垂直内缩。交互滑块与只读进度条分资产；纯色无Sprite进度按填充方向缩放（竖条Y、横条X），不使用Filled。
 
 - 大气检测仪屏幕由正式贴图、可滚动气体行和 SafeAreaScaleGroup 组成；预览与规则按 1920×1080 Expand 和 UI 倍率换算画布，桌面与竖屏都检查。
 

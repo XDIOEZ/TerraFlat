@@ -187,6 +187,7 @@ public static partial class GameplayTestSystemProbe
         replica.TryGetSnapshot(origin, out RegionalWeatherSnapshot raw);
         result["rawStrength"] = raw.WindStrength;
         snapshot.WindX = snapshot.WindY = snapshot.WindStrength = 0f;
+        snapshot.CoolingOffsetCelsius = 0f;
         snapshot.Revision++;
         replica.ApplyReplicatedSnapshot(snapshot);
         field.Synchronize(replica, 1.5d, 3f);

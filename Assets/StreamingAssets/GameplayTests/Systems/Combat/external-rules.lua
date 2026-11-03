@@ -9,6 +9,39 @@ test.system("combat", "damage_window_without_collider", {}, function(data)
         "缺少物理碰撞体时伤害窗口没有正确关闭或清理")
 end, "伤害窗口：缺少碰撞体时重复关闭并清理")
 
+test.system("combat", "hit_window_identity", {}, function(data)
+    assert(data.firstAccepted and not data.duplicateAccepted, "同一逻辑目标被多个碰撞来源重复预约")
+    assert(data.identityIsolated and data.quotaExhausted, "对象代际、世界和维度没有隔离或目标预算错误")
+    assert(data.nextWindowAccepted and not data.invalidAccepted and data.resetCount == 0 and data.resetSequence == 0,
+        "新窗口、非法目标或回收复位错误")
+end, "命中去重：统一逻辑身份、名额与生命周期")
+
+test.system("combat", "attack_window_order", {}, function(data)
+    assert(data.firstAccepted and data.notReopened and data.bindingPreserved,
+        "已经开始的攻击被物理观察或组件重绑再次清空预约")
+    assert(data.closed and data.reopened and data.nextAttack, "关闭、动画重开或下一次攻击遗留旧窗口")
+end, "攻击时序：先开窗再命中，绑定与观察不重复开窗")
+
+test.system("combat", "physics_hit_ownership", {}, function(data)
+    assert(data.noHierarchyGuess and data.exactReceiver and data.mirrorReceiver, "受击接收方被层级猜测或镜像覆盖")
+    assert(data.nonDamageRejected and data.nativeMapped and data.noFakeHealth and data.nativeInteractionRejected,
+        "物理区域用途与实际逻辑接收方混淆")
+    assert(data.bodyMapped and data.nativeBodyMapped and data.triggerBodyRejected and data.interactionBodyRejected,
+        "身体接触失去主生命归属，或交互触发器冒充身体碰撞")
+    assert(data.released and data.rebound, "物理代理回收重绑残留旧伤害路由")
+end, "物理边界：区域身份、镜像、原生目标与代理复用")
+
+test.system("combat", "damage_number_ownership", {}, function(data)
+    assert(data.numberCount == 1 and data.suppressedCount == 0, "同一命中出现重复数字或无法交接显示权")
+    assert(data.positiveOwned and data.blockedUnclaimed and data.rejectedUnclaimed, "实际伤害与零伤拒绝反馈混淆")
+    assert(data.disabledReleased and data.oldLeaseKeptNew and data.unregistered, "数字显示者停用或重绑后归属泄漏")
+end, "伤害表现：一击一个数字、零伤与显示权交接")
+
+test.system("combat", "physics_region_delivery", {}, function(data)
+    assert(data.firstCount == 1 and data.secondCount == 3 and data.secondLastPhase == "Exit",
+        "物理消息广播到非目标模块或重绑后继续投递旧接收方")
+end, "接触转发：只投递明确接收方并支持解绑")
+
 -- 直接采样正式等级公式，不以Lua重新实现概率规则。
 local hitCases = {
     {name = "零命中等级", args = {accuracy = 0, size = 10}, hit = 0},

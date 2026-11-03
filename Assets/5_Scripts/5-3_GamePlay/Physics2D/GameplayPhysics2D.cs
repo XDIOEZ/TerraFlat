@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using UnityEngine.SceneManagement;
 
@@ -22,8 +22,6 @@ public static partial class GameplayPhysics2D
         if (WorldPhysicsService2D.TryResolveCollider(collider, out WorldPhysicsColliderBinding2D binding))
         {
             bool namedRegion = !string.IsNullOrEmpty(binding.RegionId);
-            if (namedRegion && typeof(T) == typeof(Mod_DamageReceiver) &&
-                (binding.Purpose & WorldPhysicsPurpose2D.Damage) == 0) return null;
             if (namedRegion && typeof(T) == typeof(IInteractable) &&
                 (binding.Purpose & WorldPhysicsPurpose2D.Interaction) == 0) return null;
             if (binding.Receiver is T receiver) return receiver;
@@ -43,5 +41,6 @@ public static partial class GameplayPhysics2D
         Item owner = registeredItem != null ? registeredItem : source.GetComponentInParent<Item>();
         return owner != null ? owner.GetComponentInChildren<T>(true) : null;
     }
+
     #endregion
 }

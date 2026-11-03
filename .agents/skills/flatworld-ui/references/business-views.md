@@ -4,7 +4,7 @@
 
 - 矿车 `UI_Minecart/MinecartPanel` 左侧两个通用引擎槽、右侧18格货仓，绑定 `Mod_MinecartInventory` 的真实库存；按领域 `CanAccess` 与窗口开关持有 `RuntimeAccessGuard`，关闭立即撤销旧拖拽资格。F 上车开普通窗口，WASD不受阻、再F下车；页内连接/断开/乘坐只调用矿车公开接口。`UI_SteamEngine/SteamEnginePanel` 订阅手持蒸汽机 `OpenRequested`，只编辑自身开关和档位，切离手持即关闭。
 
-- 通用背包/储物 `UI_Bag` 默认十列（1004×560，槽80、间距4）；快捷栏十格（982×104，槽82、间距10），数字键按 `1～9、0` 对应。同步 Prefab、`GameUIPrefabRebuilder`、`Mod_HotBar`、输入资产/生成包装与 `InputBindingService`；普通容器总格数仍由各自容量配置决定。
+- 通用背包/储物 `UI_Bag` 默认十列（1148×572，槽80、间距4，正文完整五排、上下贴边）；快捷栏十格（982×104，槽82、间距10），数字键按 `1～9、0` 对应。同步 Prefab、`GameUIPrefabRebuilder`、`Mod_HotBar`、输入资产/生成包装与 `InputBindingService`；普通容器总格数仍由各自容量配置决定。
 
 - 太空电梯 `UI_SpaceElevator` 只绑定当前端独立仓库，复用背包 `UI_Slot`，默认6×4并按实际容量扩展滚动内容；主背包仍开原窗口。会话只追加/移除自己的库存刷新监听，不调用会清空其它监听的 InitData/SyncData；关闭或离开终端即拒绝旧拖拽。打包发送到站自动入另一端仓库，满仓余货提示按 CargoDestination 显示，不能阻止客运或召回。
 

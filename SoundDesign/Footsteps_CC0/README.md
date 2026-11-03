@@ -13,4 +13,8 @@ python SoundDesign/Footsteps_CC0/prepare.py
 
 来源页已于 2026-10-21 核对 CC0；实际主观听感与游戏内切换由用户验收。
 
+金属地板/平台新增 Thimras 的 CC0 金属脚步实录，原始 25 声存于 `Sources/metal_steps_48k24b.7z`，执行 `python SoundDesign/Footsteps_CC0/prepare_metal.py` 可重建八声金属脚步、对应 Unity Cue 和 `manifest-metal.json`。执行 `python SoundDesign/Footsteps_CC0/verify_tiles.py` 可核对正式地块清单的完整脚步映射和八变体音频资源。原声来源与许可在 `sources.json`，鸣谢已同步随包声明。
+
+结冰地块单独使用 qubodup 的 CC0 硬壳冰雪实录，原始九声存于 `Sources/qubodup-wet_snow_steps.7z`；执行 `python SoundDesign/Footsteps_CC0/prepare_ice.py`（需 `numpy`、`soundfile` 和系统 `tar`）可重建八声冰面脚步与 `manifest-ice.json`。冰面有积雪时仍先踩雪、浅水仍先踩水；没有改变任何地块的游戏逻辑。
+
 2026-10-22：再运行 `python SoundDesign/Footsteps_CC0/expand_recordings.py`（需 FFmpeg）恢复扩展音库。七类脚步各保留原三声并增加五个实录／轻微变速版本，单类最近三声不重复，并使用小幅随机音高；没有固定八声循环。`player.roll` 的三个变体由 Kenney 的软物撞击和地毯摩擦录音混合，供翻滚发动时播放。扩展的逐文件来源与输出清单在 `sources-expanded.json` / `manifest-expanded.json`；本次仅生成和接入，未执行游戏试听验收。

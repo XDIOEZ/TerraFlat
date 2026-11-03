@@ -74,7 +74,7 @@ GM最终复扫补充三类滚动容器的Viewport/Content正式构建采样，�
 
 2026-10-15：当时登记的快速规则和 PlayMode 入口均已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增的下拉布局、设置会话规则尚未编译或执行，不属于该历史通过范围；本轮只做静态修改，保留用户当前 PlayMode，最终画面验收由用户进行。
 
-快速入口：`rules.lua`；操作：`ui_settings/mobile_size、mobile_layout、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session`。
+快速入口：`rules.lua`；操作：`ui_settings/mobile_size、mobile_layout、navigation_policy、panel_lifecycle、held_item_world_drop、held_item_world_drop_position、dropdown_layout、edit_session_values、edit_session_commit、edit_session_participants、edit_session_errors、input_binding_session、input_binding_shared_key`。
 
 2026-10-24 新增 `mobile_layout`：使用正式手机 HUD 的独立副本和正式预览准备入口，覆盖六类控件的实际 Graphic 祖先过滤、点按/拖动后尺寸保持、其他触点拒绝、两种根尺寸和边界夹紧；另检查浮动朝向摇杆应用底座位置及尺寸时保持捕获区不变。夹具不写玩家偏好、不注册用户 UI、不发送虚拟设备输入。本轮六份改动脚本的外部 C# 静态编译通过，保留用户 PlayMode，Unity 未重编译、未执行 Lua；不覆盖真实手指输入、保存/取消的完整设置会话、浮动触点释放及运行时按钮 Tween 的跨帧画面，由用户验收。
 
@@ -87,6 +87,7 @@ GM最终复扫补充三类滚动容器的Viewport/Content正式构建采样，�
 设置会话规则使用正式 `SettingsProviderRegistry` 和只存内存的独立 Provider，覆盖四类控件未改、已改、改后改回、混合修改、重复关闭、保存建立新基线、带变化检测的补充状态、无检测能力时保守恢复，以及字段读取、恢复写入、补充状态检测失败后的错误收集与后续字段/Provider 继续恢复。采样返回实际恢复次数和 `restoreAttempted`，Lua 持有应跳过/应恢复的判断。若已有活动设置会话则拒绝运行，不覆盖当前基线；结束只关闭自建会话并注销自有 Provider，不写 PlayerPrefs，也不操作用户当前窗口。此处验证事务和多余工作是否被跳过，不测实际关闭帧耗时或 Game View 手感。
 
 按键会话规则使用独立 `PlayerInputActions`、正式 `InputBindingService` 与内存覆盖存储，覆盖默认绑定/已有覆盖基线下的未改、修改、改后改回、保存后关闭与重复关闭；采样真实 JSON、变化通知次数和存储调用次数，确认无变化关闭跳过重载/广播、放弃修改不写入存储。夹具不挂 EventSystem、不启用动作、不读写玩家偏好；实际硬件重绑期间取消、运行时 UI 动作同步和关闭帧耗时仍未覆盖。
+`input_binding_shared_key` 验证键鼠/手柄不同行为共享同一键位，保存后重载不清理，单独清空或恢复默认不影响其他行为。
 
 PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共用同一个 `ui_localization_gameplay` 案例；不重复登记第二份脚本。
 

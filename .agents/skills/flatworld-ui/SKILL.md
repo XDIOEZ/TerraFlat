@@ -15,6 +15,8 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 ## 公共控件与布局
 
 - **普通按钮/页签（含 GM、调试窗口）实例化 `Common/Controls/UI_Button` / `UI_TabButton`，不临时拼 Image/Button/TMP。** `ReusableUIControl` 持结构、字体、Sprite；使用处只设文案、事件、值、外部布局，页签选中走 `ReusableUITabVisual.SetSelected`。
+- **普通按钮悬浮与按压走 `FlatWorldUIFeedback`**，ColorTint 的悬浮色读取主题 `tintHighlight`；鼠标点击后移出恢复原色，手柄焦点保持独立描边。物品槽和独立视觉控件保留自身状态，存档条目悬浮只预选不提交。
+- **所有可滚动 UI 列表使用 `ItemStepScrollRect`**，统一读取 `UIUserSettings.ScrollRowsPerWheelTick`；按布局行高滚动，大型分组不能当作一行。仅统一滚轮行为，不统一各面板的滚动条外观或排版；非滚动分页和物品格子滚轮业务保持独立。
 - **公共 Prefab 不限制父布局。** 固定导航设 min/preferredHeight、flexibleHeight=0，父组控制高度并关闭纵向扩张；正文独立 flexibleHeight=1。验收同时限制行高、按钮上限和正文剩余空间，不能只查未越界；尺寸见[布局参考](references/layout-animation.md)。
 - Prefab 持视觉/引用，领域控制器持业务，UIManager 管生命周期。节点名/RuntimeUIPrefabKeys 是身份，不翻译；文案走 FlatWorldUI 表 GetUiText/GetUiFormat。资产标 Addressables Prefab，移动保 meta/GUID，UI 子目录继承 UI.asmdef。
 - 主菜单灰阶为基准，根→内容/按钮逐级提亮；近白字、低对比边框约2像素、字描边约1，图标/语义色独立。主题走 `FlatWorldUIThemeConfigCatalog → FlatWorldUITheme → BasePanel/构建器`；文案只留字段、操作、状态和必要规则。

@@ -28,10 +28,129 @@ public static partial class GameplayTestSystemProbe
 #if UNITY_EDITOR
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
         Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
+        Register("ui_settings", "scroll_wheel_step", CaptureScrollWheelStep);
+        Register("ui_settings", "button_hover_feedback", CaptureButtonHoverFeedback);
 #endif
     }
 
 #if UNITY_EDITOR
+    /// <summary>验证统一悬浮配色、鼠标选中态回退和独立存档条目的预选反馈。</summary>
+    private static JObject CaptureButtonHoverFeedback(JObject _)
+    {
+        GameObject root = new GameObject("[LuaButtonHoverFeedback]", typeof(RectTransform));
+        root.SetActive(false);
+        try
+        {
+            GameObject buttonObject = new GameObject("Button", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(root.transform, false);
+            Button button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = buttonObject.GetComponent<Image>();
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = Color.red;
+            colors.selectedColor = Color.red;
+            colors.fadeDuration = 0.5f;
+            button.colors = colors;
+
+            FlatWorldUIFeedback feedback = buttonObject.AddComponent<FlatWorldUIFeedback>();
+            feedback.RefreshInteractionColors();
+            bool unifiedTint = button.colors.highlightedColor == FlatWorldUITheme.TintHighlight &&
+                               Mathf.Abs(button.colors.fadeDuration - 0.11f) < 0.001f;
+            feedback.OnPointerEnter(null);
+            feedback.OnSelect(null);
+            bool hoveredSelected = button.colors.selectedColor == FlatWorldUITheme.TintHighlight;
+            feedback.OnPointerExit(null);
+            bool exitsToNormal = button.colors.selectedColor == button.colors.normalColor;
+
+            button.transition = Selectable.Transition.None;
+            colors = button.colors;
+            colors.highlightedColor = Color.red;
+            button.colors = colors;
+            feedback.RefreshInteractionColors();
+            bool dedicatedTransitionPreserved = button.colors.highlightedColor == Color.red;
+
+            GameObject saveObject = new GameObject("Save", typeof(RectTransform),
+                typeof(CanvasRenderer), typeof(Image));
+            saveObject.transform.SetParent(root.transform, false);
+            Image saveBackground = saveObject.GetComponent<Image>();
+            GameSaveItemView saveItem = saveObject.AddComponent<GameSaveItemView>();
+            saveItem.Background = saveBackground;
+            saveItem.SetSelected(false);
+            saveItem.OnPointerEnter(null);
+            bool saveHover = saveBackground.color == FlatWorldUITheme.SaveItemFocused;
+            saveItem.OnPointerExit(null);
+            bool saveHoverCleared = saveBackground.color == FlatWorldUITheme.SaveItemNormal;
+            saveItem.SetSelected(true);
+            saveItem.OnPointerEnter(null);
+            saveItem.OnPointerExit(null);
+            bool saveSelectionPreserved = saveBackground.color == FlatWorldUITheme.SaveItemSelected;
+
+            return new JObject
+            {
+                ["unifiedTint"] = unifiedTint,
+                ["hoveredSelected"] = hoveredSelected,
+                ["exitsToNormal"] = exitsToNormal,
+                ["dedicatedTransitionPreserved"] = dedicatedTransitionPreserved,
+                ["saveHover"] = saveHover,
+                ["saveHoverCleared"] = saveHoverCleared,
+                ["saveSelectionPreserved"] = saveSelectionPreserved
+            };
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
+    /// <summary>验证自有 UI 列表都使用公共滚轮规则，且大型分组不会冒充一行。</summary>
+    private static JObject CaptureScrollWheelStep(JObject _)
+    {
+        int scrollCount = 0, nativeScrollCount = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[]
+            { "Assets/2_Prefabs/2-1_UI", "Assets/Plugins/Fungus/Resources/Prefabs" }))
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+            if (prefab == null) continue;
+            foreach (ScrollRect scroll in prefab.GetComponentsInChildren<ScrollRect>(true))
+            {
+                scrollCount++;
+                if (!(scroll is ItemStepScrollRect)) nativeScrollCount++;
+            }
+        }
+
+        GameObject root = new GameObject("[LuaScrollWheelStep]", typeof(RectTransform), typeof(ItemStepScrollRect));
+        try
+        {
+            RectTransform viewport = root.GetComponent<RectTransform>();
+            viewport.sizeDelta = new Vector2(300f, 400f);
+            RectTransform content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup))
+                .GetComponent<RectTransform>();
+            content.SetParent(viewport, false);
+            content.sizeDelta = new Vector2(300f, 1000f);
+            content.GetComponent<VerticalLayoutGroup>().spacing = 7f;
+            RectTransform group = new GameObject("大型操作选项分组", typeof(RectTransform)).GetComponent<RectTransform>();
+            group.SetParent(content, false);
+            group.sizeDelta = new Vector2(300f, 700f);
+            RectTransform row = new GameObject("绑定行", typeof(RectTransform)).GetComponent<RectTransform>();
+            row.SetParent(content, false);
+            row.sizeDelta = new Vector2(300f, 44f);
+            ItemStepScrollRect scroll = root.GetComponent<ItemStepScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = content;
+            var method = typeof(ItemStepScrollRect).GetMethod("ResolveItemStep",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (method == null) throw new System.MissingMethodException("ItemStepScrollRect.ResolveItemStep");
+            float rowStep = (float)method.Invoke(scroll, new object[] { 1, viewport.rect.height });
+            row.gameObject.SetActive(false);
+            float groupOnlyStep = (float)method.Invoke(scroll, new object[] { 1, viewport.rect.height });
+            return new JObject
+            {
+                ["scrollCount"] = scrollCount,
+                ["nativeScrollCount"] = nativeScrollCount,
+                ["rowStep"] = rowStep,
+                ["groupOnlyStep"] = groupOnlyStep
+            };
+        }
+        finally { Object.DestroyImmediate(root); }
+    }
+
     /// <summary>读取四个正式主菜单面板的基准卡片，用真实安全区组件验证用户倍率。</summary>
     private static JObject CaptureMainMenuModalScaleLayout(JObject args)
     {

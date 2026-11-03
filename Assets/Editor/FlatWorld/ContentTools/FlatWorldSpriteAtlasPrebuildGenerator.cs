@@ -135,14 +135,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
         SpriteAtlasGenerationPlan generation = CreateSpriteAtlasGenerationPlan(settings, plan);
         ValidateSpriteAtlasGenerationPlan(settings, generation);
 
-        int compressedSourceCount = ConfigureSpriteSourceTextureCompression(plan.sprites, generation.Pages);
-        if (compressedSourceCount != 0)
-        {
-            // 源纹理重新导入后 Sprite 实例可能失效，重新获取构建计划和实际引用。
-            plan = FlatWorldSpriteAtlasBuildPlanTool.CreateSpriteAtlasBuildPlan();
-            generation = CreateSpriteAtlasGenerationPlan(settings, plan);
-            ValidateSpriteAtlasGenerationPlan(settings, generation);
-        }
+        // 源图只由手动一次性工具优化，构建不再临时修改导入尺寸或源图。
 
         NewGeneratedAssetPaths.Clear();
         BackupExistingAsset(AssetDatabase.GetAssetPath(settings));
@@ -197,7 +190,7 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
                       $"可读纹理排除 {generation.ReadableTextureExclusionCount}、特殊Shader排除 {generation.SpecialShaderExclusionCount}、" +
                       $"大图排除 {generation.OversizedSpriteExclusionCount}、地址冲突 {generation.AmbiguousAddresses.Count}；" +
                       $"实际纹理页 {packed.actualTexturePageCount}、漏绑 {packed.missingSpriteCount}、源组恢复 {sources.Restored}、" +
-                      $"本次压缩源纹理 {compressedSourceCount} 张。" +
+                      "源纹理直接使用编辑器中的工作图，不执行构建期降分辨率。" +
                       "图集 IncludeInBuild 且显式 Addressable，catalog 由 Addressables 依赖图接入。");
         }
         catch (Exception exception)
@@ -205,65 +198,6 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
             throw new BuildFailedException("SpriteAtlas 生成中途失败；可能已写入 " + GeneratedRoot +
                                            " 与 Addressables 组，源文件基线位于 " + BaselineRoot + "。\n" + exception);
         }
-    }
-
-    #endregion
-
-    #region Sprite源纹理平台压缩
-
-    private static int ConfigureSpriteSourceTextureCompression(
-        IReadOnlyList<FlatWorldSpriteAtlasBuildPlanTool.SpritePlanEntry> sprites,
-        IReadOnlyList<AtlasGenerationPage> pages)
-    {
-        HashSet<string> packedSourceGuids = pages.SelectMany(page => page.Candidates)
-            .Select(sprite => sprite.sourceGuid).ToHashSet(StringComparer.Ordinal);
-        int updated = 0;
-        AssetDatabase.StartAssetEditing();
-        try
-        {
-            foreach (string path in sprites.Where(sprite => !packedSourceGuids.Contains(sprite.sourceGuid))
-                         .Select(sprite => sprite.sourcePath).Distinct(StringComparer.Ordinal))
-            {
-                if (AssetImporter.GetAtPath(path) is not TextureImporter importer ||
-                    importer.textureType != TextureImporterType.Sprite || importer.isReadable)
-                    continue;
-
-                // 保留已有平台最大尺寸；未覆盖时沿用源图上限，不改变 PPU、尺寸和过滤方式。
-                TextureImporterPlatformSettings android = importer.GetPlatformTextureSettings("Android");
-                bool androidChanged = !android.overridden || android.format != TextureImporterFormat.ASTC_6x6 ||
-                    android.textureCompression != TextureImporterCompression.Compressed || android.crunchedCompression;
-                if (androidChanged)
-                {
-                    if (!android.overridden) android.maxTextureSize = importer.maxTextureSize;
-                    android.name = "Android";
-                    android.overridden = true;
-                    android.format = TextureImporterFormat.ASTC_6x6;
-                    android.textureCompression = TextureImporterCompression.Compressed;
-                    android.crunchedCompression = false;
-                    importer.SetPlatformTextureSettings(android);
-                }
-
-                TextureImporterPlatformSettings standalone = importer.GetPlatformTextureSettings("Standalone");
-                bool standaloneChanged = !standalone.overridden || standalone.format != TextureImporterFormat.BC7 ||
-                    standalone.textureCompression != TextureImporterCompression.Compressed || standalone.crunchedCompression;
-                if (standaloneChanged)
-                {
-                    if (!standalone.overridden) standalone.maxTextureSize = importer.maxTextureSize;
-                    standalone.name = "Standalone";
-                    standalone.overridden = true;
-                    standalone.format = TextureImporterFormat.BC7;
-                    standalone.textureCompression = TextureImporterCompression.Compressed;
-                    standalone.crunchedCompression = false;
-                    importer.SetPlatformTextureSettings(standalone);
-                }
-
-                if (!androidChanged && !standaloneChanged) continue;
-                importer.SaveAndReimport();
-                updated++;
-            }
-        }
-        finally { AssetDatabase.StopAssetEditing(); }
-        return updated;
     }
 
     #endregion

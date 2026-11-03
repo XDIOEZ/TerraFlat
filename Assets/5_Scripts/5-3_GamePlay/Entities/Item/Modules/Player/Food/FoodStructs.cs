@@ -10,13 +10,15 @@ public readonly struct FoodConsumeResult
         Item consumedItem,
         FoodConsumeKind kind,
         float consumedWater,
-        float actualWaterGain)
+        float actualWaterGain,
+        FoodConsumeSnapshot snapshot = default)
     {
         Consumer = consumer;
         ConsumedItem = consumedItem;
         Kind = kind;
         ConsumedWater = consumedWater;
         ActualWaterGain = actualWaterGain;
+        Snapshot = snapshot;
     }
 
     public Item Consumer { get; }
@@ -24,7 +26,47 @@ public readonly struct FoodConsumeResult
     public FoodConsumeKind Kind { get; }
     public float ConsumedWater { get; }
     public float ActualWaterGain { get; }
+    public FoodConsumeSnapshot Snapshot { get; }
+    public string ConsumedItemId => Snapshot.ItemId;
+    public float SpoilageRemainingSeconds => Snapshot.SpoilageRemainingSeconds;
+    public float SpoilageIntervalSeconds => Snapshot.SpoilageIntervalSeconds;
     public bool IsDrink => Kind == FoodConsumeKind.Drink;
+}
+
+/// <summary>在库存扣除或替换前冻结被吃物品的身份与腐败计时。</summary>
+public readonly struct FoodConsumeSnapshot
+{
+    public FoodConsumeSnapshot(string itemId, float spoilageRemainingSeconds, float spoilageIntervalSeconds)
+    {
+        ItemId = itemId ?? string.Empty;
+        SpoilageRemainingSeconds = spoilageRemainingSeconds;
+        SpoilageIntervalSeconds = spoilageIntervalSeconds;
+    }
+
+    public string ItemId { get; }
+    public float SpoilageRemainingSeconds { get; }
+    public float SpoilageIntervalSeconds { get; }
+
+    #region 快照捕获
+
+    public static FoodConsumeSnapshot Capture(IFoodRuntimeContext food)
+    {
+        string itemId = food?.ItemData?.IDName ?? string.Empty;
+        ModData_FoodData persistentData = food?.PersistentData;
+        if (persistentData?.FindSpoilageState() == null)
+            return new FoodConsumeSnapshot(itemId, 0f, 0f);
+
+        FoodSpoilageObserverData spoilage = FoodSpoilageObserverData.Load(persistentData);
+        if (!spoilage.EnableSpoilage || !spoilage.HasValidInterval ||
+            !float.IsFinite(spoilage.SpoilageElapsedSeconds))
+        {
+            return new FoodConsumeSnapshot(itemId, 0f, 0f);
+        }
+
+        return new FoodConsumeSnapshot(itemId, spoilage.RemainingSeconds, spoilage.SpoilageIntervalSeconds);
+    }
+
+    #endregion
 }
 
 /// <summary>一次食用行为的上下文。</summary>

@@ -347,13 +347,13 @@ public static partial class GameplayTestSystemProbe
             bool oldShapesDisabled = !legacyInteraction.enabled && !legacySolid.enabled &&
                 !firstReceiver.GetComponent<Collider2D>().enabled && !secondReceiver.GetComponent<Collider2D>().enabled;
             root.SetActive(true);
-            bool twoExactReceivers = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(firstDamage.GetComponent<Collider2D>()) == firstReceiver &&
-                GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(secondDamage.GetComponent<Collider2D>()) == secondReceiver;
+            bool twoExactReceivers = GameplayCombatBridge.ResolvePhysicsDamageReceiver(firstDamage.GetComponent<Collider2D>()) == firstReceiver &&
+                GameplayCombatBridge.ResolvePhysicsDamageReceiver(secondDamage.GetComponent<Collider2D>()) == secondReceiver;
             bool exactInteractionReceiver = ReferenceEquals(GameplayPhysics2D.ResolveComponent<IInteractable>(interaction.GetComponent<Collider2D>()), interactionReceiver);
-            bool blockingHasNoDamageReceiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(left.GetComponent<Collider2D>()) == null &&
-                GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(interaction.GetComponent<Collider2D>()) == null;
+            bool blockingHasNoDamageReceiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(left.GetComponent<Collider2D>()) == null &&
+                GameplayCombatBridge.ResolvePhysicsDamageReceiver(interaction.GetComponent<Collider2D>()) == null;
             world.RegisterCollider(legacyInteraction, item, firstReceiver, "interaction:wrong-receiver", WorldPhysicsPurpose2D.Interaction);
-            bool purposePrecedesReceiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(legacyInteraction) == null;
+            bool purposePrecedesReceiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(legacyInteraction) == null;
             var hits = new Collider2D[8];
             var solidsOnly = new ContactFilter2D { useTriggers = false };
             Physics2D.SyncTransforms();
@@ -429,7 +429,7 @@ public static partial class GameplayTestSystemProbe
         bool registered = WorldPhysicsService2D.TryResolveCollider(region, out var binding);
         bool originalItem = registered && binding.Item == item;
         bool exactReceiver = registered && binding.Receiver == secondReceiver &&
-            GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(region) == secondReceiver;
+            GameplayCombatBridge.ResolvePhysicsDamageReceiver(region) == secondReceiver;
         string regionId = registered ? binding.RegionId : null;
         bool originalEntity = registered && ReferenceEquals(binding.Entity, entity);
         bool damageOnly = registered && (binding.Purpose & WorldPhysicsPurpose2D.Damage) != 0 &&

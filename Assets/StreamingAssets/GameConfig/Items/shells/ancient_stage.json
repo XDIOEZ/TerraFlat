@@ -627,6 +627,7 @@
         "flipY": false
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 5 } },
         "shovel": {
           "parameters": {
             "harvestTier": 1,
@@ -739,6 +740,7 @@
         "flipY": false
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 9 } },
         "shovel": {
           "parameters": {
             "harvestTier": 3,
@@ -776,6 +778,7 @@
         "flipY": false
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 10 } },
         "shovel": {
           "parameters": {
             "harvestTier": 4,
@@ -813,6 +816,7 @@
         "flipY": false
       },
       "modules": {
+        "animation": { "parameters": { "staminaCostPerAttack": 11.5 } },
         "shovel": {
           "parameters": {
             "harvestTier": 4,

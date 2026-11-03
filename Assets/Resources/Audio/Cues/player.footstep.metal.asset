@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: player.footstep.metal
+  m_EditorClassIdentifier:
+  id: player.footstep.metal
+  bus: 1
+  clips:
+  - {fileID: 8300000, guid: de81fe7f99aa4dfca381fe90aa2e4ef5, type: 3}
+  - {fileID: 8300000, guid: 57120876992e42a088f4106357e3a8eb, type: 3}
+  - {fileID: 8300000, guid: e2f1ca78740345009ccd6374825bc7d6, type: 3}
+  - {fileID: 8300000, guid: e5bc3628ad1f486eaffd98481602652e, type: 3}
+  - {fileID: 8300000, guid: 6bcf241432234886b6088fc2c9eacc3d, type: 3}
+  - {fileID: 8300000, guid: 972a696042d74420a7cde72d6ec63843, type: 3}
+  - {fileID: 8300000, guid: 7af99d842a0a4234887229c6eb9d9bc3, type: 3}
+  - {fileID: 8300000, guid: 86e34be142ff4c6c89edf99b27be9072, type: 3}
+  selection: 0
+  noRepeatHistory: 3
+  loop: 0
+  volume:
+    Min: 0.85
+    Max: 0.98
+  pitch:
+    Min: 0.94
+    Max: 1.06
+  spatialBlend: 1
+  minDistance: 1.5
+  maxDistance: 14
+  priority: 128
+  cooldown: 0
+  maxInstances: 16
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

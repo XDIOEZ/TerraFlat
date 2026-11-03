@@ -24,7 +24,7 @@ public partial class Mod_Mover
     }
 
     public float WalkingSpeed => GetWalkingSpeedValue() *
-        ResolveBuildingMoveSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
+        ResolveSurfaceTraversalSpeedMultiplier() * ResolveSurfaceGravitySpeedMultiplier();
 
     /// <summary>临时动作复用正式刚体与环境速度，只替换当前主动速度。</summary>
     public bool TryAcquireDrivenMotion(Vector2 velocity, out DrivenMotionLease lease)
@@ -44,9 +44,11 @@ public partial class Mod_Mover
     private void ApplyDrivenMotion()
     {
         if (drivenMotionLease == null || rb == null) return;
-        DrivenVelocity = drivenMotionLease.Velocity;
         RequestedMoveInput = Vector2.zero;
         ExternalVelocity = ResolveExternalVelocity();
+        // 跟随约束提交总速度，其它主动动作仍在自身速度上叠加环境推动。
+        DrivenVelocity = drivenMotionLease.UsesWorldVelocity
+            ? drivenMotionLease.Velocity - ExternalVelocity : drivenMotionLease.Velocity;
         if (rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
             rb.velocity = DrivenVelocity + ExternalVelocity;
         hungerActionInstance?.SetMovementState(false, false);
@@ -74,12 +76,18 @@ public partial class Mod_Mover
     {
         private Mod_Mover owner;
         public Vector2 Velocity { get; private set; }
+        internal bool UsesWorldVelocity { get; private set; }
         public bool IsActive => owner != null && ReferenceEquals(owner.drivenMotionLease, this);
         internal DrivenMotionLease(Mod_Mover owner, Vector2 velocity) { this.owner = owner; Velocity = velocity; }
         public void SetVelocity(Vector2 velocity)
+            => SetMotionVelocity(velocity, false);
+        public void SetWorldVelocity(Vector2 velocity)
+            => SetMotionVelocity(velocity, true);
+        private void SetMotionVelocity(Vector2 velocity, bool usesWorldVelocity)
         {
             if (!IsActive || !FiniteVelocity(velocity)) return;
             Velocity = velocity;
+            UsesWorldVelocity = usesWorldVelocity;
             owner.ApplyDrivenMotion();
         }
         internal void Invalidate() => owner = null;

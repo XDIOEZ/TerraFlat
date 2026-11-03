@@ -5,6 +5,8 @@ description: "FlatWorld 时间、区域天气、温湿度、光风、角色生�
 
 # 环境
 
+- 物件覆雪表现由 `SeasonalSnowRenderEffect` 在同帧/同世界共享地形寻址与雪气候上下文，地块层仍实时采样；换管理器、世界纪元或帧号重建，不缓存雪厚、不降低采样频率。回归 `rendering/snow_batch_query` 覆盖液体、平台、铲雪、环绕与逐出重载。
+
 ## 定位与按需读取
 
 代码根 `Assets/5_Scripts/`：

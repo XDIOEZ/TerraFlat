@@ -79,7 +79,7 @@ namespace FlatWorld.NaturalEntities
             var regions = record.Profile.PhysicsRegions;
             WriteHotState(record, record.Snapshot);
             record.PhysicsProxy = GameplayWorldRegistry.CurrentPhysics.AllocateEntityProxy(record, record.Snapshot,
-                configuration, regions, pose => CommitNaturalEntityPhysicsPose(record.Handle, pose), record,
+                configuration, regions, pose => CommitNaturalEntityPhysicsPose(record.Handle, pose),
                 stateAuthority: GameNetwork.HasStateAuthority);
             record.PhysicsScale = record.Snapshot.transform.scale;
         }

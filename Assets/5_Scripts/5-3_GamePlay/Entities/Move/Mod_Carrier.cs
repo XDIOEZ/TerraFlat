@@ -8,11 +8,11 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTerrainContactPolicy, ICarrierBoostPolicy, IInteractable, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTerrainContactPolicy, ICarrierBoostPolicy, IWorldHoldInteraction, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
-    public const float HoldToDriveSeconds = 0.55f;
+    public const float HoldToDriveSeconds = IWorldHoldInteraction.DefaultHoldSeconds;
     public Ex_ModData Data = new(); // 标准 JSON 模块数据。
     [Min(0.1f)] public float MaxSpeed = 5f; // 满幅速度。
     [Min(1f)] public float BoostSpeedMultiplier = 1.5f; // 乘员主动加速时的最高速度倍率。
@@ -72,7 +72,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     private CarrierWaterWake waterWake;
     private ICarrierMotionDriver motionDriver;
     private Player holdingPlayer;
-    private float holdStartedAt;
     private bool holdCompleted;
     public bool AllowsRiderBoost => motionDriver == null || motionDriver.AllowsRiderBoost;
     public Rigidbody2D Body => body;
@@ -245,14 +244,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     {
         if (!CanInteract(actor)) return;
         holdingPlayer = ResolvePlayer(actor);
-        holdStartedAt = Time.unscaledTime;
         holdCompleted = false;
     }
 
-    public void OnInteractUpdate(Item actor)
+    /// <summary>到达共享长按阈值后才执行一次上下车。</summary>
+    public void OnHoldCompleted(Item actor)
     {
         if (holdingPlayer == null || holdCompleted || ResolvePlayer(actor) != holdingPlayer ||
-            !CanInteract(actor) || Time.unscaledTime - holdStartedAt < HoldToDriveSeconds) return;
+            !CanInteract(actor)) return;
         CompleteHeldDrivingInteraction();
     }
 
@@ -268,9 +267,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     public void OnInteractEnd(Item actor)
     {
         Player player = ResolvePlayer(actor);
-        if (!holdCompleted && player != null && player == holdingPlayer && CanInteract(actor) &&
-            Time.unscaledTime - holdStartedAt >= HoldToDriveSeconds)
-            CompleteHeldDrivingInteraction();
         bool isTap = player != null && player == holdingPlayer && !holdCompleted;
         ResetHeldInteraction();
         if (isTap && CanInteract(actor) && motionDriver is ICarrierTapInteractionPolicy tapPolicy)
@@ -281,7 +277,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     {
         holdingPlayer = null;
         holdCompleted = false;
-        holdStartedAt = 0f;
     }
 
     /// <summary>所有车型共用单座上下车与安全下车规则。</summary>

@@ -571,14 +571,6 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
                     UIManager.ExistingInstance?.NotifyCancelHandled();
                     SetStatus(FlatWorldLocalizationService.GetUiText("已取消本次修改。"));
                     break;
-                case InputRebindStatus.Conflict:
-                    SetStatus(
-                        FlatWorldLocalizationService.GetUiFormat(
-                            "该按键已用于“{0}”，未作修改。",
-                            FlatWorldLocalizationService.GetUiText(
-                                result.ConflictingEntry?.DisplayName ?? "其他操作")),
-                        true);
-                    break;
                 default:
                     SetStatus(
                         FlatWorldLocalizationService.GetUiFormat(
@@ -747,8 +739,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     {
         return FlatWorldLocalizationService.GetUiFormat(
             bindingService != null && bindingService.IsSettingsEditSessionActive
-                ? "当前：{0}。选择一项后输入新控制；冲突会被拦截，点击保存后保留修改。"
-                : "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
+                ? "当前：{0}。多个行为可以共用按键，点击保存后保留修改。"
+                : "当前：{0}。多个行为可以共用按键，修改后自动保存。",
             FlatWorldLocalizationService.GetUiText(GetDevicePageName()));
     }
 

@@ -4,6 +4,43 @@ using UnityEngine;
 /// <summary>静止世界物件的雪顶材质通道，复用统一 MPB 控制器，移动、拿起、回池和退出世界时撤销。</summary>
 public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
 {
+    #region 同帧覆雪查询上下文
+    private static int queryFrame = -1;
+    private static ChunkMgr queryManager;
+    private static WeatherMgr queryWeather;
+    private static ChunkMgr.RuntimeTerrainPresenceQuery terrainQuery;
+    private static SnowCoverState querySnow;
+    private static float queryBaselineOffset;
+    private static bool queryReady;
+
+    private static float SampleCoverage(Vector3 position, WeatherMgr weather)
+    {
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null) return 0f;
+        // 只复用本帧的世界寻址与气候上下文，积雪、液体和支撑层仍读取实时值。
+        if (queryFrame != Time.frameCount || queryManager != manager || queryWeather != weather ||
+            !terrainQuery.IsForWorld(manager.WorldRuntime))
+        {
+            queryFrame = Time.frameCount;
+            queryManager = manager;
+            queryWeather = weather;
+            queryReady = manager.TryCreateTerrainPresenceQuery(out terrainQuery);
+            querySnow = null;
+            queryBaselineOffset = 0f;
+            weather.TryGetSnowCoverageContext(out querySnow, out queryBaselineOffset);
+        }
+        return queryReady ? SampleCoverage(ref terrainQuery, position, querySnow, queryBaselineOffset) : 0f;
+    }
+
+    internal static float SampleCoverage(ref ChunkMgr.RuntimeTerrainPresenceQuery query, Vector3 position,
+        SnowCoverState snow, float baselineOffset)
+    {
+        if (!query.TrySample(position, out RuntimeTerrainTileSample sample)) return 0f;
+        return WorldSnowSystem.GetSurfaceDepth(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
+            sample.Cell, snow, baselineOffset);
+    }
+    #endregion
+
     #region 覆雪状态与生命周期
     private static readonly int CoverageId = Shader.PropertyToID("_SnowCoverage");
     // 只给真正的环境采样计时，空闲跳过与覆盖变化独立计数。
@@ -21,6 +58,12 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
     {
+        queryFrame = -1;
+        queryManager = null;
+        queryWeather = null;
+        terrainQuery = default;
+        querySnow = null;
+        queryReady = false;
         ItemMgr.RuntimeItemInstantiated -= Attach;
         ItemMgr.RuntimeItemInstantiated += Attach;
     }
@@ -54,7 +97,7 @@ public sealed class SeasonalSnowRenderEffect : ActorRenderEffectModule
         WeatherMgr weather = WeatherMgr.ExistingInstance;
         if (moved || weather == null) { SetCoverage(0f); return; }
         using var sample = SampleDebug.Measure(1);
-        SetCoverage(Mathf.Clamp01(weather.GetSnowCoverage(position)));
+        SetCoverage(Mathf.Clamp01(SampleCoverage(position, weather)));
     }
     /// <summary>覆雪值变化时才要求控制器提交材质参数。</summary>
     private void SetCoverage(float value)

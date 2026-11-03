@@ -28,6 +28,7 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 - 单机地表↔太空迁移先在原世界上下文清理并解绑区块，保留本机 ChunkMgr 和可复用空壳；其他世界、普通退出及联机仍完整释放。回归 `presentation_cache`。
 - 离线迁移的世界退出已由注册表保存并解绑，写盘后不再重复解绑；目标进入通知开始后若失败，回程先清理部分进入的世界。
 - 矿洞默认抑制天气/怪物，`FixedLighting` 是光照上限；开放洞口的自然采光按距离线性衰减，20米归零，强度与局部灯光独立。环绕补绘相机的局部 Light2D 使用轻量镜像代理，代理不进入玩法查询。
+- `DimensionTravelProgressStore.CollectOpenCaveExitLinks` 与采光共用只读缓存和进度版本；天然入口同格配对，人工入口保留地表位置与洞内锚点，封堵即移除传声通道。规则在 `dimension/cave_exit_cache_*` 中核验。
 - 洞穴关闭静态岩壁的 URP 墙影遮罩，避免玩家被阴影盖黑；地表墙影、洞穴实际光照与阻挡碰撞照常保留。
 
 ## 洞穴与入口
@@ -35,4 +36,5 @@ description: "FlatWorld 世界地址、地表/洞穴切换、入口配对、维�
 - 洞穴走 WorldModel Profile；`CavePortalPairingSnapshot` 冻结地表 Profile、派生种子、拓扑和空间倍率，纯采样决定配对，指纹进入洞穴签名，不读取已加载地表。
 - 地下湖由同一快照复算地表高度带与最低降水门槛；群系交界用基础气候，洞室/隧道/河流/安全区跟随 `world.spatialDistanceScale`。
 - 地表自然生成的山洞入口由维度目录 `PortalItemId=NaturalMineEntrance` 指定，按生态基线生成并走确定性配对；`MineEntrance` 只供玩家作为 Ground 层人工建筑安装后进入，不能写入自然生成目录；地下 `CaveExit` 由纯生成配对或手工入口锚点创建。洞口可通行、贴地显示，不注册实体导航阻挡；两类入口共用 `Mod_DimensionPortal`，人工入口须完成安装。
+- `Mod_DimensionPortal` 进入/离开均实现 `IWorldHoldInteraction`，复用自行车的 0.55 秒圆形长按进度；单次点击不迁移，达标后仍由原 `DimensionManager` 权威切换。
 - 入口安全区分别改 Ground/Blocking，并经 `WorldLiquidSystem.TrySet(...,0)` 清 Liquid；准备期间不推进旧地块效果。

@@ -351,10 +351,15 @@ namespace FlatWorld.WorldModel
             ThrowIfDisposed();
             int index = GetIndex(x, y);
             uint mask = 1u << (index & 31);
+            uint before = _terrainSightBlockingBits[index >> 5] | _dynamicSightBlockingBits[index >> 5];
             if (blocking)
                 _dynamicSightBlockingBits[index >> 5] |= mask;
             else
                 _dynamicSightBlockingBits[index >> 5] &= ~mask;
+            // 动态建筑改变最终遮挡时，立即使依赖遮挡版本的视线缓存失效。
+            uint after = _terrainSightBlockingBits[index >> 5] | _dynamicSightBlockingBits[index >> 5];
+            if (((before ^ after) & mask) != 0)
+                _blockingRevision++;
         }
 
         #endregion

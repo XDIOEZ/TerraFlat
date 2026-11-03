@@ -5,7 +5,7 @@ using UnityEngine;
 /// 动物通用蓄力冲撞模块：蓄力期间锁定原地，冲刺开始时锁定方向和终点，
 /// 按配置距离直线冲刺后停止，并用独立触发器按普通 Mod_Damage 的伤害模板结算一次碰撞伤害。
 /// </summary>
-public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirection
+public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirection, IWorldPhysicsTriggerReceiver2D
 {
     public const string DefaultSkillId = "animal.charge_attack";
     public const string PersistedModuleId = "AnimalSkill_ChargeAttack";
@@ -301,7 +301,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         for (int i = 0; i < _overlapColliders.Count; i++)
         {
-            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(
+            Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsDamageReceiver(
                 _overlapColliders[i]);
             ApplyDamage(receiver);
         }
@@ -315,7 +315,12 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
             return;
         }
 
-        ApplyDamage(GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(other));
+        ApplyDamage(GameplayCombatBridge.ResolvePhysicsDamageReceiver(other));
+    }
+
+    public void ReceivePhysicsTrigger(Collider2D other, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase == WorldPhysicsTriggerPhase2D.Enter) OnTriggerEnter2D(other);
     }
 
     private void ApplyDamage(Mod_DamageReceiver receiver)

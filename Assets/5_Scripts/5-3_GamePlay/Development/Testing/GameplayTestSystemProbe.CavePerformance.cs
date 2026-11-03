@@ -43,14 +43,24 @@ public static partial class GameplayTestSystemProbe
         float factor = cache.Evaluate(save, CavePerformanceAddress, position, domain);
         var exits = new List<Vector2>();
         DimensionTravelProgressStore.CollectOpenCaveExitPositions(save, CavePerformanceAddress, exits);
+        var links = new List<CaveExitLink>();
+        DimensionTravelProgressStore.CollectOpenCaveExitLinks(save, CavePerformanceAddress, links);
         var positions = new JArray();
         foreach (Vector2 exit in exits) positions.Add(new JObject { ["x"] = exit.x, ["y"] = exit.y });
+        var audioLinks = new JArray();
+        foreach (CaveExitLink link in links)
+            audioLinks.Add(new JObject
+            {
+                ["surfaceX"] = link.SurfacePosition.x, ["surfaceY"] = link.SurfacePosition.y,
+                ["caveX"] = link.CavePosition.x, ["caveY"] = link.CavePosition.y
+            });
         return new JObject
         {
             ["factor"] = factor, ["positionsRefreshes"] = cache.PositionsRefreshCount,
             ["distanceEvaluations"] = cache.DistanceEvaluationCount,
             ["revision"] = DimensionTravelProgressStore.GetCaveExitLightingRevision(save),
-            ["openCount"] = exits.Count, ["positions"] = positions
+            ["openCount"] = exits.Count, ["positions"] = positions,
+            ["audioLinkCount"] = links.Count, ["audioLinks"] = audioLinks
         };
     }
 

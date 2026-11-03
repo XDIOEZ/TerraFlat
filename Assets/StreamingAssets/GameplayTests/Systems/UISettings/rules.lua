@@ -1,4 +1,22 @@
 -- 固定二级页签与每页独立滚动，窄内容区也不能把导航挤出边界。
+test.system("ui_settings", "button_hover_feedback", {}, function(data)
+    assert(data.unifiedTint and data.hoveredSelected and data.exitsToNormal,
+        "普通按钮的悬浮色、点击后预选或移出恢复未统一")
+    assert(data.dedicatedTransitionPreserved,
+        "统一悬浮反馈不得覆盖独立控件自己的视觉过渡")
+    assert(data.saveHover and data.saveHoverCleared and data.saveSelectionPreserved,
+        "存档列表悬浮不能预选，或鼠标移出时错误清除了已确认选择")
+end, "按钮统一悬浮与存档条目预选")
+
+test.system("ui_settings", "scroll_wheel_step", {}, function(data)
+    assert(data.scrollCount > 0 and data.nativeScrollCount == 0,
+        "自有UI仍有未接入通用滚轮规则的滚动列表")
+    assert(math.abs(data.rowStep - 51) < 0.01,
+        "大型操作选项分组被误认为滚动一行，未按44像素行高和7像素间距滚动")
+    assert(data.groupOnlyStep > 0 and data.groupOnlyStep <= 48,
+        "只有大型分组时，单次滚轮不得跨越整页")
+end, "通用滚轮步长与按键绑定长分组")
+
 local function scroll_near(actual, expected, message)
     assert(type(actual) == "number" and math.abs(actual - expected) < 0.001, message)
 end
@@ -916,6 +934,15 @@ for _, existing in ipairs({ false, true }) do
         end, "按键会话跳过无变化恢复：" .. tostring(existing) .. "/" .. mode)
     end
 end
+
+test.system("ui_settings", "input_binding_shared_key", {}, function(data)
+    assert(data.editWasDirty and data.savedOnce and data.reloadKeptOverrides,
+        "同键共享的覆盖没有经过正常会话保存，或重新加载时被错误清理")
+    assert(data.keyboardShared and data.gamepadShared,
+        "键鼠或手柄的不同行为无法保留相同的绑定键位")
+    assert(data.clearIndependent and data.resetIndependent,
+        "清空或重置一个行为时意外影响了共用按键的其他行为")
+end, "多个行为共用按键：保存、重载和独立修改")
 
 for _, row in ipairs({
     { kind = "button", root = "ProbePanel", excluded = false },

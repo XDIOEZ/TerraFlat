@@ -18,6 +18,13 @@ public partial class SaveDataMgr
     };
 
     // 大型会话集合按现有身份分行，头记录保留时钟、目录与未知扩展属性。
+    internal static List<SaveArchiveRecord> EncodeFrozenSqliteSpaceRecords(string frozenJson)
+    {
+        var records = new List<SaveArchiveRecord>();
+        AppendSqliteSpaceRecords(records, frozenJson);
+        return records;
+    }
+
     private static void AppendSqliteSpaceRecords(List<SaveArchiveRecord> records, string json)
     {
         if (string.IsNullOrWhiteSpace(json)) return;

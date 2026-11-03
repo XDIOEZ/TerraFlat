@@ -95,6 +95,10 @@ public sealed partial class RecipeDto
     [JsonProperty("manualWorkSteps")]
     public int ManualWorkSteps = 1;
 
+    /// <summary>每次有效手动制作操作播放的音效事件，不配置则静音。</summary>
+    [JsonProperty("manualWorkCueId")]
+    public string ManualWorkCueId;
+
     [JsonProperty("inputs")]
     public List<RecipeIngredientDto> Inputs = new List<RecipeIngredientDto>();
 

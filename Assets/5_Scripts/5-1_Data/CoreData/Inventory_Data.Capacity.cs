@@ -8,6 +8,10 @@ public partial class Inventory_Data
 {
     #region 动态槽位容量
 
+    // 容量规则变化独立通知拾取器，不把它误报为实际物品质量变化。
+    [field: System.NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    public event System.Action<Inventory_Data> CapacityChanged;
+
     [System.NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     private uint lastMaintainedSlotRevision;
     [System.NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
@@ -104,25 +108,33 @@ public partial class Inventory_Data
     /// <summary>普通容器恢复为只使用槽位规则，不参与玩家携带容量计算。</summary>
     public void ClearCarryCapacity()
     {
+        bool changed = HasCarryCapacity || HasUnlimitedCarryCapacity;
         HasCarryCapacity = false;
         HasUnlimitedCarryCapacity = false;
         CarryCapacityOverageMultiplier = 1f;
         MaxCarryWeight = float.PositiveInfinity;
         MaxCarryVolume = float.PositiveInfinity;
+        if (changed) CapacityChanged?.Invoke(this);
     }
 
     /// <summary>设置整包重量/体积上限。</summary>
     public void SetCarryCapacity(float maxWeight, float maxVolume)
     {
-        MaxCarryWeight = Mathf.Max(0f, maxWeight);
-        MaxCarryVolume = Mathf.Max(0f, maxVolume);
+        maxWeight = Mathf.Max(0f, maxWeight);
+        maxVolume = Mathf.Max(0f, maxVolume);
+        bool changed = !HasCarryCapacity || MaxCarryWeight != maxWeight || MaxCarryVolume != maxVolume;
+        MaxCarryWeight = maxWeight;
+        MaxCarryVolume = maxVolume;
         HasCarryCapacity = true;
+        if (changed) CapacityChanged?.Invoke(this);
     }
 
     /// <summary>设置是否绕过整包重量/体积上限。</summary>
     public void SetUnlimitedCarryCapacity(bool enabled)
     {
+        if (HasUnlimitedCarryCapacity == enabled) return;
         HasUnlimitedCarryCapacity = enabled;
+        CapacityChanged?.Invoke(this);
     }
 
     /// <summary>设置单格无限堆叠策略；不可堆叠物品仍然严格保持一格一件。</summary>

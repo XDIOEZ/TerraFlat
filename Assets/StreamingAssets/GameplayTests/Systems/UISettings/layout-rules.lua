@@ -225,7 +225,8 @@ for _, row in ipairs({
     {width = 2560, height = 1440, scale = 0.5}
 }) do
     test.system("ui_settings", "inventory_bag_window_layout", row, function(data)
-        assert(data.scalesRoot and data.columns == 10, "背包缺少整体安全区缩放，或十列库存布局改变")
+        assert(data.scalesRoot and data.columns == 10 and data.categoriesFillHeight,
+            "背包缺少整体安全区缩放、十列库存布局或分类按钮纵向填充")
         assert(data.scrollbarBound and data.scrollbarAutomatic and data.scrollbarActive,
             "背包滚动条没有绑定正式列表或未由滚动区自动控制显隐")
         assert(data.verticalScroll and not data.horizontalScroll and data.verticalFit == 2,
@@ -237,6 +238,12 @@ for _, row in ipairs({
             bag_window_inside(sample.inner, sample.root, "背包正文底板越过窗口")
             bag_window_inside(sample.footer, sample.root, "背包底栏越过窗口")
             bag_window_inside(sample.scroll, sample.inner, "背包滚动区越过正文")
+            bag_window_inside(sample.categories, sample.inner, "背包分类栏越过正文")
+            assert(math.abs(sample.scroll.top - sample.inner.top) < 0.1
+                and math.abs(sample.scroll.bottom - sample.inner.bottom) < 0.1
+                and math.abs(sample.categories.top - sample.inner.top) < 0.1
+                and math.abs(sample.categories.bottom - sample.inner.bottom) < 0.1,
+                "背包滚动区或分类栏上下没有贴紧正文")
             bag_window_inside(sample.viewport, sample.scroll, "背包视口越过滚动区")
             bag_window_inside(sample.bar, sample.scroll, "背包滚动条越过滚动区")
             assert(sample.viewport.right <= sample.bar.left + 0.1 and math.abs(sample.bar.width - 32) < 0.1,
@@ -254,9 +261,12 @@ for _, row in ipairs({
                 and math.abs(sample.scaleX - sample.scaleY) < 0.001,
                 "背包安全区适配失去等比缩小规则")
         end
-        assert(math.abs(data.samples[1].root.width - 1004) < 0.1
-            and math.abs(data.samples[1].root.height - 560) < 0.1,
+        assert(math.abs(data.samples[1].root.width - 1148) < 0.1
+            and math.abs(data.samples[1].root.height - 572) < 0.1,
             "背包默认设计尺寸改变")
+        assert(data.paddingY == 0 and math.abs(data.samples[1].viewportHeight -
+            (5 * data.cellHeight + 4 * data.spacing)) < 0.1,
+            "背包默认高度必须完整容纳五排槽位且上下无空白")
         if row.scale == 1 and row.width == 1920 then
             assert(math.abs(data.samples[1].scaleX - 1) < 0.001,
                 "空间足够时背包未保留原始显示比例")

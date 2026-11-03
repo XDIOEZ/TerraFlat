@@ -365,7 +365,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             if (body != null) { body.velocity = Vector2.zero; body.constraints = RigidbodyConstraints2D.FreezeAll; }
             BoxCollider2D receiverShape = target.GetComponentsInChildren<BoxCollider2D>(true)
                 .FirstOrDefault(shape => shape.isActiveAndEnabled && CombatPhysicsChannels.IsDamageReceiverCollider(shape) &&
-                    ReferenceEquals(GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(shape), targetReceiver));
+                    ReferenceEquals(GameplayCombatBridge.ResolvePhysicsDamageReceiver(shape), targetReceiver));
             if (receiverShape == null) throw new InvalidOperationException("固定步武器采样缺少启用的受击盒。");
             receiverShape.size = Vector2.one * 4f;
             Physics2D.SyncTransforms();

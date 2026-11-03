@@ -59,6 +59,11 @@ public static partial class GameplayTestSystemProbe
             RectTransform header = FindInventoryBagLayoutRect(instance, "FWUI_Header");
             RectTransform inner = FindInventoryBagLayoutRect(instance, "FWUI_InnerField");
             RectTransform footer = FindInventoryBagLayoutRect(instance, "FWUI_Footer");
+            RectTransform categories = FindInventoryBagLayoutRect(instance, "FWUI_InventoryCategoryTabs");
+            VerticalLayoutGroup categoryLayout = categories.GetComponent<VerticalLayoutGroup>();
+            bool categoriesFillHeight = categoryLayout != null && categoryLayout.childForceExpandHeight;
+            foreach (Transform tab in categories)
+                categoriesFillHeight &= tab.TryGetComponent(out LayoutElement element) && element.flexibleHeight > 0f;
             var samples = new JArray();
             Vector2[] sizes =
             {
@@ -79,6 +84,7 @@ public static partial class GameplayTestSystemProbe
                     ["inner"] = CaptureBuildingRectBounds(inner, root),
                     ["footer"] = CaptureBuildingRectBounds(footer, root),
                     ["scroll"] = CaptureBuildingRectBounds((RectTransform)scroll.transform, root),
+                    ["categories"] = CaptureBuildingRectBounds(categories, root),
                     ["viewport"] = CaptureBuildingRectBounds(scroll.viewport, root),
                     ["bar"] = scroll.verticalScrollbar != null
                         ? CaptureBuildingRectBounds((RectTransform)scroll.verticalScrollbar.transform, root) : null,
@@ -101,6 +107,7 @@ public static partial class GameplayTestSystemProbe
                 ["spacing"] = grid.spacing.x,
                 ["paddingX"] = grid.padding.left + grid.padding.right,
                 ["paddingY"] = grid.padding.top + grid.padding.bottom,
+                ["categoriesFillHeight"] = categoriesFillHeight,
                 ["scrollbarBound"] = scroll.verticalScrollbar != null,
                 ["scrollbarAutomatic"] = scroll.verticalScrollbarVisibility == ScrollRect.ScrollbarVisibility.AutoHide,
                 ["scrollbarActive"] = scroll.verticalScrollbar != null && scroll.verticalScrollbar.gameObject.activeSelf,

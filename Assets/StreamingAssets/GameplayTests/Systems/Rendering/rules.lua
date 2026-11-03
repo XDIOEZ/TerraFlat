@@ -1069,3 +1069,13 @@ test.system("rendering", "ship_block_visual", {}, function(data)
     end
     for _, rejected in ipairs(data.invalidRejected) do assert(rejected, "无效机身尺寸没有被拒绝") end
 end, "化学引擎满格、四朝向双扇门世界滑动、反转恢复与回收")
+
+test.system("rendering", "snow_batch_query", {}, function(data)
+    local function near(key, value)
+        assert(math.abs(data[key] - value) < 0.0001, "批量覆雪读取错误：" .. key)
+    end
+    near("natural", 0.3); near("weather", 0.6); near("water", 0); near("platform", 0.6)
+    near("edited", 0.2); near("weatherAfterEdit", 0.4); near("wrapped", 0.4)
+    near("missing", 0); near("evicted", 0); near("replaced", 0.7); near("oldEpoch", 0)
+    assert(data.foreignRejected, "覆雪查询复用了另一个世界的寻址上下文")
+end, "同轮覆雪实时读取液体、平台、铲雪和天气变化，区块回收及世界纪元隔离")

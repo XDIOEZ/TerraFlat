@@ -27,7 +27,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private Component previewReceiverComponent;
     private InteractionTargetOutline previewOutline;
     private IInteractable heldReceiver; // 仅记录当前由交互键按住产生的持续交互目标。
-    private float heldInteractionStartedAt; // 只负责光标进度，载具动作仍由目标自身决定。
+    private float heldInteractionStartedAt;
+    private bool heldInteractionCompleted;
     private bool showsHeldInteractionCursor;
     public bool HasHeldInteraction => IsInteractionReceiverAlive(heldReceiver) && currentReceiver == heldReceiver; // 只读诊断：当前是否正在持续世界交互。
     public string CurrentInteractionType => IsInteractionReceiverAlive(currentReceiver) ? currentReceiver.GetType().Name : string.Empty; // 只读诊断：当前交互目标类型。
@@ -99,11 +100,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
         {
             ClearHeldInteractionCursor();
+            ClearPrecipitationDrinkingCursor();
             ClearInteractionPreview();
             return;
         }
         RefreshInteractionPreview();
         RefreshHeldInteractionCursor();
+        RefreshPrecipitationDrinkingCursor();
     }
     #endregion
 
@@ -138,6 +141,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
+            return;
+
+        // 雨雪天指向空地优先饮用降水，不被附近设施的半径兜底抢走交互键。
+        if (TryBeginPrecipitationDrinking())
             return;
 
         // 交互键只操作世界目标，手持建筑的放置状态不占用这条通道。
@@ -191,6 +198,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             : TryStartInteractionAtCurrentPosition();
         heldReceiver = interacted && IsInteractionReceiverAlive(currentReceiver) ? currentReceiver : null;
         heldInteractionStartedAt = Time.unscaledTime;
+        heldInteractionCompleted = false;
         RefreshHeldInteractionCursor();
         return interacted;
     }
@@ -199,19 +207,22 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     public void EndHeldInteraction()
     {
         IInteractable releasedReceiver = heldReceiver;
+        if (IsInteractionReceiverAlive(releasedReceiver) && releasedReceiver == currentReceiver)
+            TryCompleteHeldInteraction();
         heldReceiver = null;
+        heldInteractionCompleted = false;
         ClearHeldInteractionCursor();
         if (IsInteractionReceiverAlive(releasedReceiver) && releasedReceiver == currentReceiver)
             releasedReceiver.OnInteractEnd(item);
     }
 
-    /// <summary>载具长按共用交互键时间阈值，进度仅是视图，不决定上下车。</summary>
+    /// <summary>自行车和维度入口共用同一个圆形长按进度光标。</summary>
     private void RefreshHeldInteractionCursor()
     {
         using var worldScope = UseActorInteractionWorld();
-        if (heldReceiver is not Mod_Carrier carrier || currentReceiver != heldReceiver ||
+        if (heldReceiver is not IWorldHoldInteraction holdTarget || currentReceiver != heldReceiver ||
             gameController == null || !IsLocalInteractionOwner() || IsGameplayInputLocked() ||
-            !carrier.CanInteract(item))
+            !holdTarget.CanInteract(item))
         {
             ClearHeldInteractionCursor();
             return;
@@ -220,7 +231,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         showsHeldInteractionCursor = true;
         float elapsed = Time.unscaledTime - heldInteractionStartedAt;
         EventSystemGuard.SetWorldInteractionHoldCursor(
-            Mathf.Clamp01(elapsed / Mod_Carrier.HoldToDriveSeconds), gameController.GetPointerScreenPosition());
+            Mathf.Clamp01(elapsed / Mathf.Max(0.01f, holdTarget.HoldSeconds)), gameController.GetPointerScreenPosition());
     }
 
     private void ClearHeldInteractionCursor()
@@ -751,6 +762,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (heldReceiver == receiver)
         {
             heldReceiver = null;
+            heldInteractionCompleted = false;
             ClearHeldInteractionCursor();
         }
         currentReceiver = null;
@@ -777,6 +789,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (heldReceiver == stoppedReceiver)
         {
             heldReceiver = null;
+            heldInteractionCompleted = false;
             ClearHeldInteractionCursor();
         }
         currentReceiver = null;
@@ -791,10 +804,31 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!IsInteractionReceiverAlive(heldReceiver) || currentReceiver != heldReceiver)
         {
             heldReceiver = null;
+            heldInteractionCompleted = false;
+            ClearHeldInteractionCursor();
             return;
         }
 
-        currentReceiver.OnInteractUpdate(item);
+        TryCompleteHeldInteraction();
+        if (IsInteractionReceiverAlive(heldReceiver) && currentReceiver == heldReceiver)
+            currentReceiver.OnInteractUpdate(item);
+    }
+
+    /// <summary>只有同一目标持续有效且长按时间达标时才执行一次玩法动作。</summary>
+    private void TryCompleteHeldInteraction()
+    {
+        if (heldInteractionCompleted || heldReceiver is not IWorldHoldInteraction holdTarget ||
+            Time.unscaledTime - heldInteractionStartedAt < holdTarget.HoldSeconds)
+            return;
+
+        if (!CanInteractTarget(heldReceiver))
+        {
+            StopCurrentInteraction();
+            return;
+        }
+
+        heldInteractionCompleted = true;
+        holdTarget.OnHoldCompleted(item);
     }
 
     /// <summary>把交互接口归属到 Item，供结构化调试读取，不改变交互选择规则。</summary>

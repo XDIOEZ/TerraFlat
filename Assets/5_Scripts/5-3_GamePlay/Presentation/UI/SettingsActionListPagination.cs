@@ -389,7 +389,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             background.raycastTarget = true;
 
         ScrollRect navigation = sidebar.GetComponent<ScrollRect>() ??
-                                sidebar.gameObject.AddComponent<ScrollRect>();
+                                sidebar.gameObject.AddComponent<ItemStepScrollRect>();
         navigation.viewport = sidebar;
         navigation.content = tabList;
         navigation.horizontal = false;

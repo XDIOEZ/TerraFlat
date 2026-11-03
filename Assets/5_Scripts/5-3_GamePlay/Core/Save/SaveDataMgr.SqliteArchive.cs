@@ -76,7 +76,8 @@ public partial class SaveDataMgr
         return new SaveArchiveRecord(kind, world ?? "", key, x, y, schema, ArchiveSchemas.GetCurrentVersion(schema), bytes, deleted);
     }
 
-    private List<SaveArchiveRecord> CaptureSqliteCoreRecords(GameSaveData source, byte[] machines, byte[] drops)
+    private List<SaveArchiveRecord> CaptureSqliteCoreRecords(GameSaveData source, byte[] machines, byte[] drops,
+        bool includeSpaceRecords = true)
     {
         var records = new List<SaveArchiveRecord>();
         var planets = source.PlanetData_Dict;
@@ -110,7 +111,7 @@ public partial class SaveDataMgr
         ModRuntimeManager mods = ModRuntimeManager.Instance;
         if (mods == null || !mods.IsReady) throw new InvalidOperationException("MOD 框架尚未就绪。");
         records.Add(ArchiveRecord("global", "", "mods", MemoryPackSerializer.Serialize(mods.CaptureSaveMetadata())));
-        AppendSqliteSpaceRecords(records, space);
+        if (includeSpaceRecords) AppendSqliteSpaceRecords(records, space);
         var machineArchive = machines?.Length > 0 ? MemoryPackSerializer.Deserialize<FrozenMachineArchivePayload>(machines) : null;
         if (machineArchive != null)
         {

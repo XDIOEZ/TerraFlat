@@ -7,7 +7,8 @@
 - ItemStack.Amount/Weight、ItemData.Stack 原位改动发质量事件。Inventory_Data 单格替换只重绑该格 MassChanged，换槽表才全绑；新含质量载荷走 NotifyMassChanged/PayloadChanged，无质量变化不使船重失效。观察引用/订阅不存档或克隆。
 - GetCarryUsage 单次即时扫描实际随身库存并去重；预览不计入，不跨帧缓存，创造模式跳过无用预检。背包监听全部随身库存，手工台绑定数据事件，卸载解绑。储物 kg/m³ 在 InitData/恢复时换L、复用容量策略；IsDepositBlocked 拒跨库转入，仍可取出/内部整理。
 - 世界拾取先用独立候选/去重目标生成只读容量计划，整数物能收多少收多少，快捷栏余量入背包；回执区分原堆扣量与实际入包量，GM倍率仍以完整原份结算。轻量掉落 body.Amount 为唯一数量权威，先播种冷载荷，防旧数量复活。
-- 质量事件/倍率实变只标拾取修订号，下次接触重试，不递归拾取。Mod_ItemPicker 的 Trigger 每次只解析一次Collider；无Item/有效Stack不扫库存，飞行/禁拾取目标只登记延迟拾取、不做容量同步，恢复后按修订号重试。
+- 质量、`CapacityChanged` 或倍率实变只标拾取修订号，下次接触重试，不递归拾取；容量上限、无限容量及清除约束的变化不修改实际质量版本。Mod_ItemPicker 的 Trigger 每次只解析一次Collider；无Item/有效Stack不扫库存，飞行/禁拾取目标只登记延迟拾取、不做容量同步，恢复后按修订号重试。
+- 拾取范围在模块加载和 `IItemPhysicsComponentsReceiver2D` 就绪通知中绑定，卸载清理；网络桥用 `WorldItemPickupRequestStatus` 区分暂缓、已发送和容量拒绝。暂缓保留原地重试，已发送去重，满包提示并等待容量变化；恢复拾取权限使尝试缓存失效。回归 `inventory/pickup_lifecycle`。
 
 ## 基类耐久与堆叠
 

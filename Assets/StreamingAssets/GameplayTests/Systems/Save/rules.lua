@@ -134,3 +134,12 @@ test.system("save", "load_failure_state", {}, function(data)
     assert(data.missingError == "存档文件不存在。", "载入不存在的存档保留旧错误或没有提供当前原因")
     assert(data.missingCleared, "载入不存在的文件留下了旧会话差量")
 end, "当前格式、旧结构拒绝、载入失败角色失效与区块差量回滚")
+
+test.system("save", "frozen_space_encoding", {}, function(data)
+    assert(data.count == 3 and data.clock == 12.5 and data.shipQuality == 7,
+        "后台拆行遗漏实体，或冻结后的源修改污染了保存点")
+    assert(data.shipWorld == "earth" and data.passengerWorld == "cave", "太空实体世界归属丢失")
+    assert(data.headerHasNoEntities and data.extensionPreserved and data.schemaPreserved,
+        "头记录重复实体、未知扩展丢失或存档 schema 被改变")
+    assert(data.emptyCount == 0 and data.invalidRejected, "空快照或无身份实体的错误语义改变")
+end, "太空冻结字符串在工作线程拆行，保留一致性、世界身份和扩展字段")

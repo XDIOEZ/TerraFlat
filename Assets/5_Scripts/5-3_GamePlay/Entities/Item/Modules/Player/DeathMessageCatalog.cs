@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -36,6 +37,24 @@ public sealed partial class DeathMessageCatalog
         if (loaded == null)
             throw new InvalidDataException($"死亡描述目录缺失：{ResourcePath}.json");
         return new DeathMessageCatalog(loaded);
+    }
+
+    /// <summary>入世前异步准备文案，死亡结算不再承担资源读取、反序列化和模板校验。</summary>
+    internal static IEnumerator PreloadAsync()
+    {
+        if (current != null) yield break;
+        CatalogData loaded = null;
+        Exception failure = null;
+        yield return BuiltInContentBinaryCatalog.ReadResourceAsync<CatalogData>(ResourcePath, ParseConfiguration,
+            value => loaded = value, exception => failure = exception);
+        if (failure != null) throw new InvalidDataException("死亡描述预加载失败。", failure);
+        if (loaded == null) throw new InvalidDataException($"死亡描述目录缺失：{ResourcePath}.json");
+
+        DeathMessageCatalog prepared = null;
+        yield return StreamingAssetsTextLoader.BeginPureDataAsync(() => new DeathMessageCatalog(loaded),
+            value => prepared = value, exception => failure = exception);
+        if (failure != null) throw new InvalidDataException("死亡描述模板校验失败。", failure);
+        current ??= prepared ?? throw new InvalidDataException("死亡描述预加载未返回目录。");
     }
 
     [BuiltInContentBake]

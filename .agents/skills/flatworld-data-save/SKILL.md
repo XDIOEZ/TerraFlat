@@ -5,6 +5,9 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 
 # 数据与存档
 
+- `BuiltInContentBinaryCatalog.ReadResourceAsync` 主线程取得 Resources 文本、后台解码私有 DTO；死亡文案在完整会话 `combat-prewarm` 预载与校验，主线程发布，原位更新候选不替换活跃目录，保留同步烘焙与失败语义。
+- 自动保存的太空会话仍在玩家/机器/掉落联合点冻结为字符串；`EncodeFrozenSqliteSpaceRecords` 只对该字符串在工作线程拆分独立记录，禁止读取活跃 `SpaceSession`。等待期间换档/新保存版本须丢弃旧结果，异常不提交半份记录；格式不变，回归 `save/frozen_space_encoding`。
+
 - 存档/角色改名的 `out reason` 由存档服务按真实校验与写盘阶段给出，UI原样呈现；资源重载结果区分目录发布前后，保留实际错误而不一概宣称旧资源仍在运行。
 - 正式存档为 SQLite v1；`SaveDataMgr.SaveData` 换根时装配业务规则并隔离旧存储会话，规则装配失败保留旧根。开发期 `.bytes` 不迁移且保留原文件；Compact/FWD6 仅保留内部冻结载荷测试入口，不再走磁盘或首次联机。
 

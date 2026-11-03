@@ -85,7 +85,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 2.1,
+            "staminaCostPerAttack": 5,
             "RawData": []
           }
         }

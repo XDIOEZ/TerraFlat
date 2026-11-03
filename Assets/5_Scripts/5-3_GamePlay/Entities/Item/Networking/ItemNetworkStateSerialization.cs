@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
 
+// 区分未接管、暂缓、已发送和容量拒绝，不能把暂时忙碌当成已经请求。
+public enum WorldItemPickupRequestStatus : byte { NotHandled, Deferred, Pending, CapacityRejected }
+
 /// <summary>
 /// Item/Module 的通用网络快照。网络层只传 byte[]，避免与具体 Module 类型耦合。
 /// </summary>
@@ -16,7 +19,7 @@ public static class ItemNetworkStateSerialization
     public static event Action<Item> RuntimeStateChanged;
     public static Func<bool> ShouldDeferLocalDestruction;
     public static Func<bool> IsLocalInventoryTransactionPending;
-    public static Func<Mod_ItemPicker, Item, bool> TryBeginNetworkPickup;
+    public static Func<Mod_ItemPicker, Item, WorldItemPickupRequestStatus> TryBeginNetworkPickup;
     public static Func<Mod_Building, Vector3, bool> TryBeginNetworkBuilding;
     public static Func<Mod_Building, bool> TryBeginNetworkBuildingDismantle;
     public static Func<MachineEntity, bool> TryBeginNetworkMechanicalDismantle;
@@ -38,8 +41,8 @@ public static class ItemNetworkStateSerialization
     public static bool HasPendingLocalInventoryTransaction()
         => IsLocalInventoryTransactionPending?.Invoke() == true;
 
-    public static bool BeginNetworkPickup(Mod_ItemPicker picker, Item worldItem)
-        => TryBeginNetworkPickup?.Invoke(picker, worldItem) == true;
+    public static WorldItemPickupRequestStatus BeginNetworkPickup(Mod_ItemPicker picker, Item worldItem)
+        => TryBeginNetworkPickup?.Invoke(picker, worldItem) ?? WorldItemPickupRequestStatus.NotHandled;
 
     public static bool BeginNetworkBuilding(Mod_Building building, Vector3 position)
         => TryBeginNetworkBuilding?.Invoke(building, position) == true;

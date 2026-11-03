@@ -52,6 +52,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - ECS 宿主/后端路由按 WorldKey 独立，观察与战斗代理包含该世界所有真实玩家；距离档取最近玩家，不能只跟主机视角。联机客户端不 Tick 权威生态，`AiEcologyNetworkBridge` 将正式表现快照按连接 WorldKey/RealmRevision 分片同步，完整包才替换表现快照，移动按世界最短位移插值；离开世界/断线释放副本缓存，死亡/掉落仍由服务器提交。
 
 - GO 自然出生通过 `SpawnCreatureInSteps` 单任务分帧：池未命中异步复制外壳，逐模块配置/依赖/Load，每帧目标 1.5ms、最多 8 步；单个模块不可抢占。候选停用且未登记，加载模块前先脱离准备根并进入所属世界 Scene；完成后复核落点/人数/预算再交付，成功才记账；退出、失效或取消释放候选。显式即时出生与居民恢复仍保留同步入口。
+- 首只生物的 Mono JIT 由 `GameRes.ActorCodePrewarm` 在菜单/入世资源阶段按共享预算预备，不能指望出生步数预算抢占一个冷方法；实际模块类型、行为节点/能力、陆地能力工厂及其闭合泛型闭包、构造一并准备，不生成样本动物、不消耗随机数、不推进 AI。回归 `core_lifecycle/startup_actor_code_prewarm`；`FlatWorld.AnimalBehaviorTree.ResolveTemplate/BindContext/CreateNodes` 区分装配阶段，实际雨天/晴天首次出生峰值需现场对照。
 - 生物外壳可只用 `ItemPhysicsTemplate2D` 声明刚体；模块 `OnLoad` 前预租物理组件，完整出生后才登记世界，失败回收预租组件；`ai/incremental_creature_creation` 检查无根刚体的小鱼。
 - 当前全部正式物种（含 Zombie）走 GameObject；`useAiecsBackend=false`、条目为 `gameObject`。正式 Actor 的最终继承配置统一启用 SingleSprite；GO 使用真实模块与主动移动信号，由 ItemMgr 分级 Tick 和池化，`ecs` 是可选后端配置。
 - 单图首帧必须配置 `visual.spriteAddress`，使用已注册 Addressables 的 `Assets/...png[切片名]`；摇摆初始化直接读取定义 Sprite，不启动旧 Animator、不依赖 Idle/Stand 状态。共享狼外壳的 Zombie 必须覆盖首帧。内容校验 `FWC-ACTORJSON-007/008` 检查模式与首帧；静态入口 `python Tools/Tests/ActorSway/verify.py`，正式规则 `ai/single_sprite_catalog`。
@@ -80,7 +81,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
 - `ItemMgr.QueueDetectorQuery` 用本批 `Dictionary<Mod_ItemDetector,int>` 定位已有请求槽位，重复申请只更新最新版本且保持首次顺序；批次消费后清空索引，不跨批缓存检测器。
 - `ItemMgr.Perception.Apply` 对请求版本已过期的检测器跳过候选精筛与 LOS，但仍逐项消费其 NativeStream 索引并结束当前流；有效请求和缺失检测器按原规则处理，回归 `ai/stale_perception_batch`。
-- 同 detector 的同步候选批次用 `GridLineOfSightQuery` 冻结观察者与世界上下文；每条射线首次进入区块时验证加载态，射线内复用地形引用、逐格实时读取遮挡，下一条射线重新验证，防止沿用卸载/重建区块。规则 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk`。
+- 同 detector 的 `GridLineOfSightQuery` 按世界/维度/拓扑/观察者格缓存精确 LOS；逐次验证已访问区块身份、加载态和 `BlockingRevision`（包括动态建筑），未加载结果不缓存。≥24 个有效候选触发最多 16 格的 Shadowcasting，只有无阻挡八分区的安全方向跳过 Bresenham，阴影边缘仍精确判定。回归 `ai/line_of_sight_batch`；Profiler `FlatWorld.Perception.GridLineOfSight/ResolveSightChunk/Shadowcast`。
 - 视线遇阻即返回不可见，仅在整条射线无遮挡时检查终点是否加载；起点、拐角侧格和中途区块照常验证。
 - 水平和垂直的整数格 LOS 用直线逐格扫描代替通用 Bresenham 分支；中途仍实时检查遮挡，起终点豁免和环绕/区块加载语义保持，`ai/line_of_sight_batch` 覆盖两轴正负方向与接缝。
 
@@ -123,3 +124,5 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 水生线路保留每 0.2 米采样，只合并同次调用中连续相同规范格的查询；每次重新读取水态，不跨帧缓存。鱼觅食筛选委托和捕食能力列表复用，模块结构变化仍自动失效。
 - 鱼饱食低于 90% 吃近物、低于 70% 主动觅食，先筛水域后选最近；`eatRange` 共用于扫描/计时/消费。Stranded 间歇蹦跳回水，起跳期间推进地面位移，逐段检查阻挡/未知格；离水回水优先温度游动，钓线/携带接管清蹦跳。
 - 鱼用 `underwater-creature` 整身染色，无实体阻挡/半身裁切，保留受击 Trigger；`AquaticActorPresentation` 保留水平翻面、水下排序与染色，单图摇摆及搁浅/携带的高度倾角交共用表现层，不旋根/碰撞体。无阴影物种在 `visual.shadows.enabled` 配置。
+
+- 群猎只有一个普通攻击动作节点；`attackLocked` 放在该分支的资格守卫内，禁止另设高优先攻击节点抢占自身前摇。`encirclementEnabled` 组合 `AnimalPackPursuitSteering`：稳定身份均分近身两翼，远处后方施压/双翼/前方有限预判，近身收拢；同目标支援不清阵型，包抄路径失败退回直追并等目标明显移动才重试。回归 `ai/wolf_attack_continuity`（20/30/60/120 TPS完整树）与 `ai/wolf_dispersed_pursuit`。

@@ -29,6 +29,7 @@ public static partial class GameUIPrefabRebuilder
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string ScreensRoot = PrefabRoot + "Gameplay/Screens/";
     private const string PlayerStatusRoot = PrefabRoot + "Gameplay/Status/Player/";
+    private const string CreatureStatusRoot = PrefabRoot + "Gameplay/Status/Creatures/";
     private const string CombatStatusRoot = PrefabRoot + "Gameplay/Status/Combat/";
     private const string BagPrefabPath = InventoryPanelsRoot + "UI_Bag.prefab";
     private const string SlotPrefabPath = InventoryComponentsRoot + "UI_Slot.prefab";
@@ -89,6 +90,7 @@ public static partial class GameUIPrefabRebuilder
         },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
+        { CreatureStatusRoot + "UI_CreatureHealth.prefab", new[] { "血量模块_世界面板", "背景", "血条底槽", "血量" } },
         { CombatStatusRoot + "UI_DamageReceiverStatus.prefab", new[] { "整体血量", "部位耐久列表", "部位耐久模板" } },
         { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "食物", "FoodTrack", "FoodSegments", "FoodLegend", "水", "维生素", "体温", "DataText_食物", "DataText_碳水", "DataText_脂肪", "DataText_蛋白质", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
@@ -140,6 +142,7 @@ public static partial class GameUIPrefabRebuilder
             new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Health.prefab", BuildHealthWorldPanel),
+            new BuildTarget(CreatureStatusRoot + "UI_CreatureHealth.prefab", BuildCreatureHealthWorldPanel),
             new BuildTarget(CombatStatusRoot + "UI_DamageReceiverStatus.prefab", BuildDamageReceiverStatusPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud),
             new BuildTarget(PlayerStatusRoot + "UI_Sleep.prefab", BuildSleepHud),
@@ -647,12 +650,12 @@ public static partial class GameUIPrefabRebuilder
 
     /// <summary>
     /// 构建灰阶简约行囊版式。
-    /// 使用 1148×560 窗口、左侧分类栏和十列滚动布局，只清理旧彩色装饰并统一内容区层级。
+    /// 使用 1148×572 窗口、左侧分类栏和十列滚动布局，让五排槽位完整贴合正文上下边界。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
         const float width = 1148f;
-        const float height = 560f;
+        const float height = 572f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty, true);
         RectTransform rootRect = (RectTransform)root.transform;
@@ -717,8 +720,8 @@ public static partial class GameUIPrefabRebuilder
         {
             scroll.anchorMin = Vector2.zero;
             scroll.anchorMax = Vector2.one;
-            scroll.offsetMin = new Vector2(192f, 80f);
-            scroll.offsetMax = new Vector2(-48f, -112f);
+            scroll.offsetMin = new Vector2(192f, 64f);
+            scroll.offsetMax = new Vector2(-48f, -92f);
             Image scrollImage = scroll.GetComponent<Image>();
             if (scrollImage != null)
             {
@@ -735,7 +738,7 @@ public static partial class GameUIPrefabRebuilder
             grid.constraintCount = 10;
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
-            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.padding = new RectOffset(8, 8, 0, 0);
             grid.childAlignment = TextAnchor.UpperLeft;
         }
 

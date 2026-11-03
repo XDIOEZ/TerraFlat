@@ -258,7 +258,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             foreach (string cueId in new[]
                      {
                          AudioEventIds.FootstepDirt, AudioEventIds.FootstepGrass,
-                         AudioEventIds.FootstepSand, AudioEventIds.FootstepStone, AudioEventIds.FootstepWood,
+                         AudioEventIds.FootstepSand, AudioEventIds.FootstepStone, "player.footstep.metal", "player.footstep.ice", AudioEventIds.FootstepWood,
                          AudioEventIds.FootstepSnow, AudioEventIds.FootstepWater,
                          AudioEventIds.FishingCast, AudioEventIds.FishingHook,
                          AudioEventIds.FishingReel

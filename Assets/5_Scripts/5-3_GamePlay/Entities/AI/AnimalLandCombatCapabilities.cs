@@ -13,6 +13,7 @@ public sealed class AnimalCombatCapability : AnimalBehaviorTreeCapability
     private readonly string animation;
     public float AttackRange { get; }
     public bool IsAttackLocked => attack.IsAttackLocked;
+    public bool IsDamageWindowActive => attack.IsDamageWindowActive;
     public bool IsCooldownDone => attack.IsCooldownDone;
     public float CooldownRemaining => attack.CooldownRemaining;
     public bool HasActiveSkill => skills.IsAnyActive;

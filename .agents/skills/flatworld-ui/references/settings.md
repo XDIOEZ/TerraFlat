@@ -1,6 +1,7 @@
 # 设置会话
 
 - 主菜单与游戏内共用 `SettingsActionListPagination` 的左侧竖向滚动分类栏、右侧设置内容区；画面只分「显示」「画质」两个相邻分类：显示容纳坐标、FPS/TPS 与帧率，画质将六档预设、后处理、水体、透视、阴影和描边合入同一可滚动 Prefab。界面、语言、镜头、音频、调试仍独立，世界/会话操作只在游戏内显示。Prefab 构建器调用 `EnsureSidebarLayout` 固化结构，运行时隐藏旧视觉特效侧栏入口。
+- 所有设置分页统一 76 高标题、左右 20／上下 18 内边距、10 行距和左上对齐；按键绑定的模式行位于标题说明下方，绑定列表保留独立滚动和弹性高度。
 - 单项浮点偏好共用 `PlayerPrefsFloatValueCommitter` 的缓存比较/持久化；校验、惰性初始化和保存后通知归各领域。画质/动画的重应用及批量重置保留专属流程，不改成逐项保存。
 - Data契约只含元数据/读写能力；功能管理器实现 `ISettingsProvider` 与 Toggle/Slider/Dropdown/Switch能力并在自身生命周期注册。UI按稳定 ProviderId/Key 绑定，选项身份为 SettingOption.Id，写入返回校验结果；Provider不创建视觉。
 - `SettingsEditSessionController` 持保存基线，非控件偏好用 `ISettingsEditSessionParticipant` 快照/还原，按键独立会话，分页器收集 `ISettingsPageLifecycle`。关闭只恢复偏离基线值，扩展状态用 `ISettingsEditSessionChangeTracker` 跳过无变化恢复（未实现者仍恢复）；仅可能写回时保存。按键放弃仅在覆盖改变时重载/通知，避免无改动关闭重建输入/画质/写盘。

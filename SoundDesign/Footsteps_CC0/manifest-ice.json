@@ -1,0 +1,81 @@
+{
+  "sourcePage": "https://opengameart.org/content/9-wet-snow-steps",
+  "license": "CC0-1.0",
+  "archiveSha256": "699f5327342bcd5ea7478f8ad84144de15dcb4161b9916ae065e550921beacf9",
+  "sampleRate": 48000,
+  "channels": 1,
+  "clips": [
+    {
+      "cue": "player.footstep.ice",
+      "variant": 1,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-01.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__01.wav",
+      "guid": "fa70ac423f8946c0831ca74250951f7f",
+      "seconds": 0.4417291666666667,
+      "sha256": "419375410a48b49d1065aea9e29caedfc783543c7fbe9a68eb56fb597aef2568"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 2,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-02.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__02.wav",
+      "guid": "e16ce26184914e2797c306d619f72d2c",
+      "seconds": 0.3178125,
+      "sha256": "9bd245b343efe254a9be4777115e3582fbd753188d08f73849963d680e1bb3ed"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 3,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-03.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__03.wav",
+      "guid": "641b5a1027244185891a7aaa5bc9835f",
+      "seconds": 0.438875,
+      "sha256": "fd88e02897870ddf345423d92ab1bb5d144cbe48fc557718f2d59d9c6b8158b4"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 4,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-04.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__04.wav",
+      "guid": "21d34e67f18d49eea7111aec6addc886",
+      "seconds": 0.3463541666666667,
+      "sha256": "a313d06fbf6966077e2e2d79f6c44d91f4b6516727efdee23060cea8a17c608f"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 5,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-05.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__05.wav",
+      "guid": "5379e3c5c3a04612a2496f597bd831d5",
+      "seconds": 0.19791666666666666,
+      "sha256": "4f31dd8eb2026d4d221f6e830bceab8bf9146acd028b5c2f9d43d64edda9c432"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 6,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-06.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__06.wav",
+      "guid": "9a19d5c10aa04ec2952d84282898becc",
+      "seconds": 0.4319791666666667,
+      "sha256": "b861446bc2a233cd88d06f5f24d694915c7519f97d3e0e2c8487f6f4972b550c"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 7,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-07.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__07.wav",
+      "guid": "b400f02267854dfab0212b312b5eb967",
+      "seconds": 0.2547083333333333,
+      "sha256": "df8d53763fa0f2a04d9e83267d067f7e0bd21f763c74039ace85eb033bb98371"
+    },
+    {
+      "cue": "player.footstep.ice",
+      "variant": 8,
+      "source": "qubodup-wet_snow_steps/snow_step_wet-08.flac",
+      "file": "Assets/Audio/FootstepsCC0/player.footstep.ice__08.wav",
+      "guid": "58e86ccbbc6e459296d21f1726be8313",
+      "seconds": 0.5227708333333333,
+      "sha256": "f6d8e6ca68491182983025ee873bae73639a58ca5c358c41215bdc32687346c8"
+    }
+  ]
+}

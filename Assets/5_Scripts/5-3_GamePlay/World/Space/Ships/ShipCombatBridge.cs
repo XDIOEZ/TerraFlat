@@ -268,11 +268,12 @@ namespace FlatWorld.Spaceflight
                     else playerHit.HitPoint = contact.Point;
                     weapon.ConsumeWeaponDurabilityForHit();
                     float received;
+                    bool receiverOwnsNumber = CombatDamageNumberOwnership.HasPresenter(target.Receiver);
                     using (GameplayWorldRegistry.TryGet(targetWorld, out _)
                         ? GameplayWorldRegistry.UseWorld(targetWorld) : default)
                         received = target.Receiver.Hurt(playerHit);
                     CombatDamageContext sourceHit = context; sourceHit.HitPoint = contact.Point;
-                    weapon.PublishExternalDamage(sourceHit, received);
+                    weapon.PublishExternalDamage(sourceHit, received, receiverOwnsNumber);
                     continue;
                 }
                 if (!target.Piece.IsAlive || !int.TryParse(target.Piece.PieceId, out int guid)) continue;

@@ -42,3 +42,14 @@ public interface IItemPhysicsComponentsReceiver2D
 {
     void OnItemPhysicsComponentsAvailable();
 }
+
+/// <summary>模块声明碰撞用途与初始配置，物理管理器不识别具体玩法模块。</summary>
+public interface IItemPhysicsColliderOwner2D
+{
+    WorldPhysicsPurpose2D PhysicsColliderPurpose { get; }
+    bool RequiresInitialPhysicsAnimationRebind { get; }
+    void ConfigureOwnedPhysicsCollider(Collider2D collider);
+}
+
+/// <summary>声明能接收受击区域的模块，伤害结算不属于物理接口。</summary>
+public interface IItemPhysicsDamageReceiver2D : IItemPhysicsColliderOwner2D { }

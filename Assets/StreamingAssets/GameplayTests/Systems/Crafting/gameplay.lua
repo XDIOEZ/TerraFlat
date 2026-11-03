@@ -40,6 +40,16 @@ test.runtime("crafting", "handcraft_clicks", {}, function(data)
         and math.abs(data.carryWhileClosed.weight - data.carryWithInput.weight) < .001
         and math.abs(data.carryWhileClosed.volume - data.carryWithInput.volume) < .001,
         "关闭手工面板后材料不再计入随身携带量")
+    assert(data.mortarMaterialsInserted and data.mortarRecipeSelected and data.mortarRequiredClicks == 50,
+        "石板加石料的石臼配方没有使用50次点击要求")
+    assert(data.mortarWorkCueId == "craft.stone_mortar.hit" and data.mortarWorkCueReady,
+        "石臼每次有效敲击的石头碰撞音效没有接入或被冷却限制")
+    assert(data.mortarProgressBeforeFinal == 49 and data.mortarStoneBeforeFinal == 1
+        and data.mortarSlabBeforeFinal == 1 and data.mortarOutputBeforeFinal == 0,
+        "石臼在第49次制作前后提前扣除材料或产出物品")
+    assert(data.mortarStoneAfterFinal == 0 and data.mortarSlabAfterFinal == 0
+        and data.mortarOutputAfterFinal == data.mortarExpectedOutput,
+        "石臼在第50次制作后没有原子扣料并正确产出")
     assert(data.cleanupRegistered, "制作自有材料没有登记失败时的收尾")
 end, "真实手工按钮点击、产出扣料及满输出拒绝")
 test.runtime("crafting", "cleanup", {}, function(data)

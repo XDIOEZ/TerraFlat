@@ -13,14 +13,12 @@ public enum InputRebindStatus
 {
     Completed,
     Canceled,
-    Conflict,
     Failed
 }
 
 public struct InputRebindResult
 {
     public InputRebindStatus Status;
-    public InputBindingEntry ConflictingEntry;
     public Exception Exception;
 }
 
@@ -347,22 +345,7 @@ public sealed class InputBindingService : IDisposable
                 }))
                 .OnComplete(_ =>
                 {
-                    InputBindingEntry conflict = FindConflict(entry);
-                    if (conflict != null)
-                    {
-                        RestoreOverride(
-                            action,
-                            bindingIndex,
-                            previousOverridePath,
-                            hadPreviousOverride);
-                        FinishRebind(new InputRebindResult
-                        {
-                            Status = InputRebindStatus.Conflict,
-                            ConflictingEntry = conflict
-                        });
-                        return;
-                    }
-
+                    // 不同行为允许共用同一个物理按键，分别保留各自的绑定覆盖。
                     SaveOverrides();
                     BindingsChanged?.Invoke();
                     FinishRebind(new InputRebindResult
@@ -566,7 +549,6 @@ public sealed class InputBindingService : IDisposable
                     });
             }
 
-            removedCount += RemoveConflictingLoadedOverrides();
             if (removedCount > 0)
                 SaveOverrides();
         }
@@ -687,101 +669,6 @@ public sealed class InputBindingService : IDisposable
         }
 
         return -1;
-    }
-
-    private InputBindingEntry FindConflict(InputBindingEntry changedEntry)
-    {
-        string changedPath = changedEntry.Action.bindings[changedEntry.BindingIndex].effectivePath;
-        if (string.IsNullOrWhiteSpace(changedPath))
-            return null;
-
-        foreach (InputAction action in actionMap.actions)
-        {
-            for (int bindingIndex = 0; bindingIndex < action.bindings.Count; bindingIndex++)
-            {
-                if (ReferenceEquals(action, changedEntry.Action) &&
-                    bindingIndex == changedEntry.BindingIndex)
-                {
-                    continue;
-                }
-
-                InputBinding binding = action.bindings[bindingIndex];
-                if (!BelongsToGroup(binding, changedEntry.BindingGroup) ||
-                    !AreBindingPathsConflicting(changedPath, binding.effectivePath))
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < entries.Count; i++)
-                {
-                    InputBindingEntry candidate = entries[i];
-                    if (candidate.DeviceGroup == changedEntry.DeviceGroup &&
-                        ReferenceEquals(candidate.Action, action) &&
-                        candidate.BindingIndex == bindingIndex)
-                    {
-                        return candidate;
-                    }
-                }
-
-                return new InputBindingEntry(
-                    action.name,
-                    action,
-                    bindingIndex,
-                    changedEntry.DeviceGroup,
-                    changedEntry.BindingGroup,
-                    action.expectedControlType);
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>清理旧版本冲突检测漏掉的覆盖；例如 leftShift 与通用 shift 实际属于同一修饰键。</summary>
-    private int RemoveConflictingLoadedOverrides()
-    {
-        int removedCount = 0;
-        for (int i = 0; i < entries.Count; i++)
-        {
-            InputBindingEntry entry = entries[i];
-            InputBinding binding = entry.Action.bindings[entry.BindingIndex];
-            if (binding.overridePath == null || string.IsNullOrEmpty(binding.effectivePath))
-                continue;
-
-            if (FindConflict(entry) == null)
-                continue;
-
-            entry.Action.RemoveBindingOverride(entry.BindingIndex);
-            removedCount++;
-        }
-
-        return removedCount;
-    }
-
-    /// <summary>按实际物理按键语义判断冲突，统一左右修饰键与 Input System 的通用修饰键路径。</summary>
-    private static bool AreBindingPathsConflicting(string leftPath, string rightPath)
-    {
-        if (string.IsNullOrEmpty(leftPath) || string.IsNullOrEmpty(rightPath))
-            return false;
-
-        return string.Equals(
-            NormalizeModifierPath(leftPath),
-            NormalizeModifierPath(rightPath),
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeModifierPath(string path)
-    {
-        if (string.Equals(path, "<Keyboard>/leftShift", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(path, "<Keyboard>/rightShift", StringComparison.OrdinalIgnoreCase))
-            return "<Keyboard>/shift";
-        if (string.Equals(path, "<Keyboard>/leftCtrl", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(path, "<Keyboard>/rightCtrl", StringComparison.OrdinalIgnoreCase))
-            return "<Keyboard>/ctrl";
-        if (string.Equals(path, "<Keyboard>/leftAlt", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(path, "<Keyboard>/rightAlt", StringComparison.OrdinalIgnoreCase))
-            return "<Keyboard>/alt";
-
-        return path;
     }
 
     private bool IsValidEntry(InputBindingEntry entry)

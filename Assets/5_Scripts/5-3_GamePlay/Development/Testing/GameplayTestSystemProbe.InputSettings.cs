@@ -97,6 +97,83 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
+    /// <summary>用独立输入资产验证多个行为共用键位时的保存、加载和单项修改互不干扰。</summary>
+    private static JObject ServiceInputBindingSharedKey(JObject args)
+    {
+        const string keyboardPath = "<Keyboard>/k";
+        const string gamepadPath = "<Gamepad>/buttonNorth";
+        var originalActions = new PlayerInputActions();
+        var reloadedActions = new PlayerInputActions();
+        var store = new InputSettingsMemoryStore();
+        try
+        {
+            bool editWasDirty;
+            using (var originalService = new InputBindingService(originalActions.asset, store))
+            {
+                originalService.BeginSettingsEditSession();
+                foreach (InputBindingDeviceGroup group in new[]
+                         { InputBindingDeviceGroup.KeyboardMouse, InputBindingDeviceGroup.Gamepad })
+                {
+                    string path = group == InputBindingDeviceGroup.KeyboardMouse ? keyboardPath : gamepadPath;
+                    foreach (string actionName in new[] { "E", "F" })
+                    {
+                        InputBindingEntry entry = FindEditableInputBindingEntry(originalService, actionName, group);
+                        entry.Action.ApplyBindingOverride(entry.BindingIndex, path);
+                    }
+                }
+
+                editWasDirty = originalService.HasSettingsEditSessionChanges;
+                originalService.CommitSettingsEditSession();
+                originalService.DiscardSettingsEditSession();
+            }
+
+            int savedBeforeReload = store.SaveCount;
+            using var reloadedService = new InputBindingService(reloadedActions.asset, store);
+            InputBindingEntry keyboardE = FindEditableInputBindingEntry(reloadedService, "E", InputBindingDeviceGroup.KeyboardMouse);
+            InputBindingEntry keyboardF = FindEditableInputBindingEntry(reloadedService, "F", InputBindingDeviceGroup.KeyboardMouse);
+            InputBindingEntry gamepadE = FindEditableInputBindingEntry(reloadedService, "E", InputBindingDeviceGroup.Gamepad);
+            InputBindingEntry gamepadF = FindEditableInputBindingEntry(reloadedService, "F", InputBindingDeviceGroup.Gamepad);
+
+            bool keyboardShared = keyboardE.Action.bindings[keyboardE.BindingIndex].effectivePath == keyboardPath &&
+                                  keyboardF.Action.bindings[keyboardF.BindingIndex].effectivePath == keyboardPath;
+            bool gamepadShared = gamepadE.Action.bindings[gamepadE.BindingIndex].effectivePath == gamepadPath &&
+                                 gamepadF.Action.bindings[gamepadF.BindingIndex].effectivePath == gamepadPath;
+            bool reloadKeptOverrides = store.SaveCount == savedBeforeReload;
+            bool clearIndependent = reloadedService.ClearBinding(keyboardE) &&
+                                    string.IsNullOrEmpty(keyboardE.Action.bindings[keyboardE.BindingIndex].effectivePath) &&
+                                    keyboardF.Action.bindings[keyboardF.BindingIndex].effectivePath == keyboardPath;
+            bool resetIndependent = reloadedService.ResetBindingToDefault(gamepadE) &&
+                                    gamepadE.Action.bindings[gamepadE.BindingIndex].overridePath == null &&
+                                    gamepadF.Action.bindings[gamepadF.BindingIndex].effectivePath == gamepadPath;
+
+            return new JObject
+            {
+                ["editWasDirty"] = editWasDirty,
+                ["savedOnce"] = savedBeforeReload == 1,
+                ["reloadKeptOverrides"] = reloadKeptOverrides,
+                ["keyboardShared"] = keyboardShared,
+                ["gamepadShared"] = gamepadShared,
+                ["clearIndependent"] = clearIndependent,
+                ["resetIndependent"] = resetIndependent
+            };
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(originalActions.asset);
+            UnityEngine.Object.DestroyImmediate(reloadedActions.asset);
+        }
+    }
+
+    private static InputBindingEntry FindEditableInputBindingEntry(
+        InputBindingService service, string actionName, InputBindingDeviceGroup deviceGroup)
+    {
+        foreach (InputBindingEntry entry in service.Entries)
+            if (entry.Action.name == actionName && entry.DeviceGroup == deviceGroup)
+                return entry;
+
+        throw new InvalidOperationException($"未找到可测试的按键绑定：{actionName}/{deviceGroup}");
+    }
+
     private sealed class InputSettingsMemoryStore : IInputBindingStore
     {
         public string Json = string.Empty;

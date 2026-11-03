@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
 using FlatWorld.Gameplay.Progress;
@@ -29,21 +29,23 @@ namespace FlatWorld.Networking.Gameplay
         private readonly List<int> serverPickupTimeoutGuids = new();
         private readonly List<uint> serverPickupReceiptTokens = new();
 
-        private bool TryBeginClientPickup(Mod_ItemPicker picker, Item worldItem)
+        private WorldItemPickupRequestStatus TryBeginClientPickup(Mod_ItemPicker picker, Item worldItem)
         {
-            if (!NetworkClient.active || !NetworkClient.ready || picker == null ||
-                worldItem?.itemData == null || worldItem.itemData.Guid == 0) return false;
+            if (!NetworkClient.active) return WorldItemPickupRequestStatus.NotHandled;
+            if (!NetworkClient.ready || picker == null || worldItem?.itemData == null || worldItem.itemData.Guid == 0)
+                return WorldItemPickupRequestStatus.Deferred;
             int guid = worldItem.itemData.Guid;
-            if (pendingClientPickups.ContainsKey(guid)) return true;
-            // 已经放不下一份时沿用原生容量事件重试，不为满包玩家反复申请世界租约。
-            if (picker.GetAcceptablePickupSourceAmount(worldItem.itemData) <= PickupAmountTolerance) return true;
+            if (pendingClientPickups.ContainsKey(guid)) return WorldItemPickupRequestStatus.Pending;
             NetworkWorldPlayer actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (buildingRequests.HasPending(NetworkBuildingRequestKind.Place) || pendingMachineTransfer != 0 ||
                 pendingMachineInventoryOperation != 0 || pendingContainerIntent != 0 ||
                 SpaceSession.ClientGroundCombatPending || SpaceSession.ClientAttackHeld || actor?.GroundCombatPending == true)
-                return true;
+                return WorldItemPickupRequestStatus.Deferred;
+            // 满包交回拾取器提示并等待容量变化，临时忙碌则保留原地重试。
+            if (picker.GetAcceptablePickupSourceAmount(worldItem.itemData) <= PickupAmountTolerance)
+                return WorldItemPickupRequestStatus.CapacityRejected;
             if (actor?.CorePlayer == null || picker.item != actor.CorePlayer ||
-                !actor.SubmitPickupInventoryBaseline()) return true;
+                !actor.SubmitPickupInventoryBaseline()) return WorldItemPickupRequestStatus.Deferred;
             ClientPickupRequest pending = new()
             {
                 Picker = picker,
@@ -52,7 +54,7 @@ namespace FlatWorld.Networking.Gameplay
             };
             pendingClientPickups.Add(guid, pending);
             SendClientPickupRequest(guid, pending);
-            return true;
+            return WorldItemPickupRequestStatus.Pending;
         }
 
         private static void SendClientPickupRequest(int guid, ClientPickupRequest request)

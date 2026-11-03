@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Building;
 using UnityEngine;
 
@@ -118,23 +117,13 @@ public partial class GameRes
             typeof(FluidNetworkGraph), typeof(MachineCatalog), typeof(MachinePersistence),
             typeof(MachineContent), typeof(FurnaceLogic), typeof(MechanicalDepthVisual)
         };
-        const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic |
-            BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly;
         int prepared = 0, unsupported = 0;
-        foreach (Type type in types)
+        foreach (MethodBase method in ResourceRuntimeMethodPrewarmer.EnumerateClosedMethods(types))
         {
-            foreach (MethodInfo method in type.GetMethods(flags))
-            {
-                if (method.IsAbstract || method.ContainsGenericParameters ||
-                    (method.Attributes & MethodAttributes.PinvokeImpl) != 0) continue;
-                try
-                {
-                    RuntimeHelpers.PrepareMethod(method.MethodHandle);
-                    prepared++;
-                }
-                catch (Exception) { unsupported++; }
-                if (ShouldYieldResourceWork()) yield return null;
-            }
+            ResourceRuntimeMethodPrewarmer.PreparationResult result = ResourceRuntimeMethodPrewarmer.PrepareMethod(method);
+            if (result == ResourceRuntimeMethodPrewarmer.PreparationResult.Prepared) prepared++;
+            else if (result == ResourceRuntimeMethodPrewarmer.PreparationResult.Unsupported) unsupported++;
+            if (ShouldYieldResourceWork()) yield return null;
         }
         machinePlacementCodePrepared = true;
         Debug.Log($"[GameRes] 机器首次放置代码预热完成：{prepared} 个方法，跳过 {unsupported} 个不支持的方法。");

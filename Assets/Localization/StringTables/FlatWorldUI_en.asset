@@ -9028,6 +9028,14 @@ MonoBehaviour:
     m_Localized: "Liquid network {0:0.##}°C · Total {1:0.###} L"
     m_Metadata:
       m_Items: []
+  - m_Id: 202611020000005
+    m_Localized: "Current: {0}. Multiple actions can share a key; click Save to keep your changes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000006
+    m_Localized: "Current: {0}. Multiple actions can share a key; changes are saved automatically."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

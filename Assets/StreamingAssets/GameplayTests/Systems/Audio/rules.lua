@@ -609,9 +609,20 @@ end
 for _, row in ipairs({
     { support = true, surfaceCue = "player.footstep.wood", cue = "player.footstep.wood" },
     { support = true, surfaceCue = "player.footstep.stone", cue = "player.footstep.stone" },
+    { support = true, surfaceCue = "player.footstep.metal", cue = "player.footstep.metal" },
+    { biome = 4, surfaceCue = "player.footstep.ice", cue = "player.footstep.ice" },
+    { biome = 4, grass = 2, surfaceCue = "player.footstep.ice", cue = "player.footstep.ice" },
+    { biome = 4, grass = 2, surfaceCue = "player.footstep.stone", cue = "player.footstep.stone" },
+    { biome = 4, grass = 2, surfaceCue = "player.footstep.dirt", cue = "player.footstep.grass" },
+    { biome = 4, grass = 0, surfaceCue = "player.footstep.dirt", cue = "player.footstep.dirt" },
+    { support = true, grass = 2, surfaceCue = "player.footstep.dirt", cue = "player.footstep.dirt" },
     { surfaceCue = "mod:surface.footstep", cue = "mod:surface.footstep" },
     { support = true, surfaceCue = "player.footstep.wood", water = 0.1, cue = "player.footstep.water" },
     { support = true, surfaceCue = "player.footstep.wood", snow = 0.5, cue = "player.footstep.snow" },
+    { support = true, surfaceCue = "player.footstep.metal", snow = 0.5, cue = "player.footstep.snow" },
+    { support = true, surfaceCue = "player.footstep.metal", water = 0.1, cue = "player.footstep.water" },
+    { surfaceCue = "player.footstep.ice", snow = 0.5, cue = "player.footstep.snow" },
+    { surfaceCue = "player.footstep.ice", water = 0.1, cue = "player.footstep.water" },
     { support = true, surfaceCue = "player.footstep.wood", water = 0.31, cue = "" }
 }) do
     test.system("audio", "footstep_surface", row, function(data)

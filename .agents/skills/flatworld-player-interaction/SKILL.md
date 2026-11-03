@@ -28,7 +28,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 
 `Input System → Mod_GameController → 玩家模块`；控制器位于玩家根，模块 ID 为 `ModText.Controller`。
 
-- 键位源为 `.inputactions`，包装器由生成器同步；Action 名是内部身份，物理键来自 binding `effectivePath`。覆盖按 binding GUID 保存，加载过滤不存在的 GUID；冲突检测将 Shift/Ctrl/Alt 与其左右键统一为物理修饰语义。
+- 键位源为 `.inputactions`，包装器由生成器同步；Action 名是内部身份，物理键来自 binding `effectivePath`。覆盖按 binding GUID 保存，加载只过滤不存在的 GUID；不同行为可共用同一按键，互不覆盖。
 - 控制偏好手动保存为键鼠/手柄/手机，只影响 HUD 与指针；玩法/UI ActionMap 接受并行设备输入。设备变化仅更新 UI/指针，手机触摸由自身生命周期清理；鼠标/Touchscreen 点击退出手柄 UI 模式，Shift 等修饰键不切设备。
 - 文本焦点由 `EventSystemGuard.IsTextInputFocused` 与 `IsGameplayInputAllowed` 拦截键盘玩法，移动返回零；鼠标仍经 UI 射线仲裁。鼠标位置缓存响应 performed/canceled，按键读取当前坐标；切回键鼠清理非文本选择焦点。
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
@@ -39,6 +39,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 ## 交互
 
 - `IInteractable` 的交互键通道为 Start→按住 Update→松开 End，取消/目标失效为 Cancel；鼠标与外部单次调用为 Start→End。`CanPointerInteract=false` 仅禁鼠标点选。
+- `IWorldHoldInteraction` 由 `Mod_InteractSender` 统一按真实时间计时、圆形进度及完成回调；载具与矿洞入口共用默认 0.55 秒，短按不触发完成，取消/超距/输入锁立即清理。
 - 发送器 `OnDisable` 解绑输入并取消交互；已加载模块的 `OnEnable` 必须幂等重绑，场景迁移或临时停用不会重新执行 `OnLoad`。回归 `player/interaction_input_reenable` 检查真实按下/松开及多次恢复不重复订阅。
 - 交互发送器正式 `OnUnload` 同样解绑输入并取消目标/环境会话，不依赖 GameObject 随后停用；`player/interaction_input_unload` 检查对象保持激活时的卸载拒绝输入与三轮重载。
 - 目标主动完成时调用 `Mod_InteractSender.CompleteInteraction(receiver)`，只清理仍匹配的当前/按住/候选/描边引用，不再发送取消回调；重复或旧会话完成不得清除新目标。帐篷所有睡眠结束分支共用此收尾。
@@ -55,6 +56,8 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 指针、半径、注册目标和自然资源空间桶共用单轮 `WorldTopologyDomain`；桶内不逐格重建活动世界上下文，目标与准入仍每帧现查，不跨帧缓存或改变输入响应周期。
 - `SpatialInteractionRegistry.QueryRegisteredTargets` 一轮只读取一次玩家位置及场景，先排除远处/未激活目标，再调用 `CanInteract`，并复用最短距离平方进行半径与光标过滤；正常命中和动态移动仍实时检查，回归 `player/interaction_registry_prefilter`。
 - 环境输入只转发按下/持续/松开，环境定义由 `EnvironmentInteractionRunner` 建独立实例；玩家状态不存于共享地块定义。
+- 雨中长按 F 指向无液体的空地可缓慢饮水，要求玩家有潮湿 Buff 且当地真实降雨；复用 `DrinkWaterActionInstance`，水质沿用 `VesselRainwaterCollection` 污染规则，雨停/不再潮湿/光标离开空地立即取消。
+- 下雪时同样可对空地长按 F 吃雪，不需要潮湿 Buff；与雨水共用 2.5 秒起饮、每 3 秒补水 5 点，雪每口额外使体温下降 5℃，停雪或失去目标立即取消。
 - 载具按键交互和描边共享落点查询，上下船均要求实际命中；无邻近陆地时允许安全水面落点，未命中载具的可触及水面仍可交给环境动作。
 
 ## 移动、承载与镜头
@@ -70,6 +73,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - Mover 的移动动画事件只在加载时绑定、卸载时解绑；输入锁使用已绑定控制器，太空直立状态切换时才更新相机跟随模式，避免对象池重复订阅和逐帧模块查找。
 - 风区边缘的推动按 `WeatherMgr.TryGetWindBlendAt` 给出的邻区距离权重混合；各区先用原始风强换算推速，再混合速度向量，不能拿混合后的风强重新套起推门槛。默认过渡总宽 32 格，玩家被吹出强风区时按距离逐渐减速。
 - 水流推动复用 movement JSON 的 Actor 指定值或重量规则，河流强度来自权威 Flow 与 `ResolveRiverStrength`；动态建筑减速仅作用主动目标速度。输送带读取实际带面与有符号 RPM，本机物理步合入外速，输入锁保留环境推动。
+- 世界资源通过物品定义 `traversalSpeedMultiplier` 声明占格行走减速，`NaturalEntityEcsService.GetTraversalSpeedMultiplierAtCell` 按实时脚下格查询；浆果丛设为 0.5，玩家/GO 动物都生效，离格自动恢复，不影响环境推动。
 - `Mod_Mover` 的逐帧水流推动先查询当前格真实流向，有有效水流后才解析 Actor 推动配置；`WorldMotionSystem.CalculateWaterCurrentVelocity` 与数值速度入口共用原流量曲线，不跨帧缓存水态。回归 `environment/water_current_reuse`。
 - 风推动共用 `WindEnvironmentRules/WorldMotionSystem.SampleWindVelocity`：等效质量=当前堆叠总质量×星球重力/9.81；目录最轻 B 到轻重中点 C=(A+B)/2 均分三档，分别需 8/9/10 级风，达到 C 不推动。达到起吹级/高一级/高两级分别为 0.06/0.2/0.5 单位/s，同风级内不随风强连续变化，邻风区保留空间过渡。玩家/GO 生物/载具合入 ExternalVelocity，不计步行与体力；载具含乘员质量，乘员不重复受风；太空与禁用天气维度返回零。
 - `ICarrierMotionSource/Mod_Mover.TryAttachCarrier` 管理承载租约：载具拥有位移/速度/力，乘员无 Transform 父级变更，关闭自身刚体模拟并跟座；瞬时承载关系不存档，恢复点由登船作用域租约持有。载具运动接管期间持续暂停建筑离散占地，单独停用载具后恢复；物理碰撞仍负责实体阻挡。船头只由有效乘员划行输入按固定角速度调整，水流/滑行/推动不改变朝向；根刚体 FreezeRotation，视觉子节点转向。

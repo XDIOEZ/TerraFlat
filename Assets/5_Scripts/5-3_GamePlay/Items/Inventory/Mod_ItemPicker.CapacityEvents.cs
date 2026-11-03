@@ -29,7 +29,10 @@ public partial class Mod_ItemPicker
     {
         pickupCapacityEventsBound = false;
         foreach (Inventory_Data data in pickupCapacitySources)
+        {
             data.MassChanged -= HandlePickupCapacityChanged;
+            data.CapacityChanged -= HandlePickupCapacityChanged;
+        }
         pickupCapacitySources.Clear();
     }
 
@@ -48,13 +51,17 @@ public partial class Mod_ItemPicker
             changed = !ReferenceEquals(sources[i], pickupCapacitySources[i]);
         if (!changed) return;
         foreach (Inventory_Data data in pickupCapacitySources)
+        {
             data.MassChanged -= HandlePickupCapacityChanged;
+            data.CapacityChanged -= HandlePickupCapacityChanged;
+        }
         pickupCapacitySources.Clear();
         pickupCapacitySources.AddRange(sources);
         foreach (Inventory_Data data in pickupCapacitySources)
         {
             _ = data.MassRevision;
             data.MassChanged += HandlePickupCapacityChanged;
+            data.CapacityChanged += HandlePickupCapacityChanged;
         }
         pickupCapacityRevision++;
     }

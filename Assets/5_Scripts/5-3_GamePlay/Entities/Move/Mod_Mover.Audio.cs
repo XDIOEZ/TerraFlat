@@ -102,7 +102,11 @@ public partial class Mod_Mover
         if (chunks == null || !chunks.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample sample))
             return null;
 
+        // 只有真正的水接触才播放涉水脚步，岩浆和石油等液体不能冒充水声。
         float waterDepth = sample.LiquidDepth;
+        if (waterDepth > 0f && (!WorldLiquidSystem.TryGetDefinition(sample, out LiquidDefinition liquid) ||
+                                !liquid.WorldWater.WaterContact))
+            waterDepth = 0f;
         float snowDepth = 0f;
         if (waterDepth <= DeepWaterThreshold)
         {
@@ -113,7 +117,8 @@ public partial class Mod_Mover
                 sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
                 seasonalSnow, baselineOffset);
         }
-        int supportTileId = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
+        // 优先取真正露出的地面：支撑面上再次铺土时应播放新表面的脚步声。
+        int supportTileId = TerrainSupportLayer.GetExposedTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
         bool onSupport = supportTileId != 0;
         string surfaceCue = null;
         if (GameRes.ExistingInstance?.TryGetTileDefinition(
@@ -160,6 +165,9 @@ public partial class Mod_Mover
             return AudioEventIds.FootstepWater;
         if (snowDepth > .05f)
             return AudioEventIds.FootstepSnow;
+        // 真实草被盖在泥土地面时优先踩草，石地与人工地板仍按硬质底材发声。
+        if (!hasSupport && grass == ChunkTerrainData.GrassPresent && surfaceCue == AudioEventIds.FootstepDirt)
+            return AudioEventIds.FootstepGrass;
         if (!string.IsNullOrWhiteSpace(surfaceCue))
             return surfaceCue;
         if (hasSupport || biomeId == (int)SurfaceBiomeKind.Stone)

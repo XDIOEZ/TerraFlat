@@ -19,10 +19,15 @@ public sealed partial class RuntimeRecipe
     public float Temperature_Max = 2000f;
     public float ProcessingSeconds;
     public int ManualWorkSteps = 1;
+    public string ManualWorkCueId;
     public RuntimeLiquidOutput LiquidOutput;
 
     [MemoryPack.MemoryPackIgnore]
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
+
+    /// <summary>普通合成以制作站基础点击数与配方指定次数中较高者为准。</summary>
+    public int GetRequiredCraftingClickCount(int stationBaseClickCount)
+        => Math.Max(1, Math.Max(stationBaseClickCount, ManualWorkSteps));
 }
 
 [MemoryPack.MemoryPackable]

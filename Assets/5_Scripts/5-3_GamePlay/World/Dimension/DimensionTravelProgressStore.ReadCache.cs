@@ -54,6 +54,7 @@ public static partial class DimensionTravelProgressStore
         private readonly Dictionary<(string World, Vector2Int Cell), EntranceReadFlags> entrances = new();
         private readonly Dictionary<(string World, int Guid), DimensionPortalAnchor> anchors = new();
         private readonly Dictionary<string, List<Vector2>> openExits = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, List<CaveExitLink>> openExitLinks = new(StringComparer.Ordinal);
         public long LightingRevision { get; private set; }
 
         public void Refresh(GameSaveData save)
@@ -63,6 +64,7 @@ public static partial class DimensionTravelProgressStore
             entrances.Clear();
             anchors.Clear();
             openExits.Clear();
+            openExitLinks.Clear();
             JObject data = ItemSpecialDataJsonStore.ReadRoot(json);
             if (data[EntranceStatesKey] is JObject worlds)
                 foreach (JProperty world in worlds.Properties())
@@ -87,7 +89,8 @@ public static partial class DimensionTravelProgressStore
                     if (anchor == null) continue;
                     anchors[(anchor.CaveWorldKey, anchor.CaveExitGuid)] = anchor;
                     if (!HasEntranceFlag(anchor.SurfaceWorldKey, Vector2Int.FloorToInt(anchor.SurfaceEntrancePosition), EntranceReadFlags.Blocked))
-                        AddOpenExit(anchor.CaveWorldKey, anchor.CaveExitPosition, seen);
+                        AddOpenExit(anchor.CaveWorldKey,
+                            new CaveExitLink(anchor.SurfaceEntrancePosition, anchor.CaveExitPosition), seen);
                 }
             foreach (var pair in entrances)
             {
@@ -96,7 +99,8 @@ public static partial class DimensionTravelProgressStore
                 if (!surface.IsSurface || surface.WorldKey != pair.Key.World) continue;
                 Vector2Int cell = pair.Key.Cell;
                 AddOpenExit(surface.WithDimension(WorldAddress.CaveDimensionId).WorldKey,
-                    new Vector2(cell.x + .5f, cell.y + .5f), seen);
+                    new CaveExitLink(new Vector2(cell.x + .5f, cell.y + .5f),
+                        new Vector2(cell.x + .5f, cell.y + .5f)), seen);
             }
             source = json;
             current = true;
@@ -115,14 +119,24 @@ public static partial class DimensionTravelProgressStore
             if (openExits.TryGetValue(world, out List<Vector2> positions)) result.AddRange(positions);
         }
 
-        private void AddOpenExit(string world, Vector2 position, Dictionary<string, HashSet<Vector2Int>> seen)
+        public void CollectOpenCaveExitLinks(string world, List<CaveExitLink> result)
+        {
+            if (openExitLinks.TryGetValue(world, out List<CaveExitLink> links)) result.AddRange(links);
+        }
+
+        private void AddOpenExit(string world, CaveExitLink link, Dictionary<string, HashSet<Vector2Int>> seen)
         {
             if (!seen.TryGetValue(world, out HashSet<Vector2Int> cells))
             {
                 seen.Add(world, cells = new HashSet<Vector2Int>());
                 openExits.Add(world, new List<Vector2>());
+                openExitLinks.Add(world, new List<CaveExitLink>());
             }
-            if (cells.Add(Vector2Int.FloorToInt(position))) openExits[world].Add(position);
+            if (cells.Add(Vector2Int.FloorToInt(link.CavePosition)))
+            {
+                openExits[world].Add(link.CavePosition);
+                openExitLinks[world].Add(link);
+            }
         }
     }
 

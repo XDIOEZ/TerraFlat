@@ -128,7 +128,7 @@ internal sealed class ContactDamageRuntime
                 GameplayCombatBridge.Identity(sourceItem) != source))) break;
             if (collider == null || collider.isTrigger || collider.attachedRigidbody == null ||
                 !collider.attachedRigidbody.simulated) continue;
-            Mod_DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<Mod_DamageReceiver>(collider);
+            Mod_DamageReceiver receiver = GameplayCombatBridge.ResolvePhysicsBodyDamageReceiver(collider);
             Item target = receiver != null ? receiver.item : null;
             if (target == null || target == sourceItem || target.itemData == null || target.itemData.inHand ||
                 target.DestructionHandled || receiver.Hp <= 0f || target.gameObject.scene.name != worldKey ||

@@ -229,8 +229,9 @@ public partial class TemperatureMgr
         if (!geographicRanges.GetValue(terrain, value => new GeographicTemperatureRange(value))
                 .TryRead(out float low, out float high)) return float.NegativeInfinity;
         float orbitalBaseline = orbitalFactor >= 0f ? low : high;
-        return low + ambientOffset + Mathf.Min(0f, seasonOffset) + weatherOffset +
+        float minimum = low + ambientOffset + Mathf.Min(0f, seasonOffset) +
             Mathf.Max(1f, orbitalBaseline + globalOffset + 273.15f) * orbitalFactor;
+        return ApplyWeatherTemperatureOffset(minimum, weatherOffset);
     }
 
     internal bool MayFreezeAmbientChunk(ChunkRuntime chunk, float freezingTemperature)
@@ -512,7 +513,7 @@ public partial class TemperatureMgr
         float poleProximity = OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position);
         float physicalBaseline = baseline + globalOffset;
         float seasonOffset = seasonTilt * poleProximity + Mathf.Max(1f, physicalBaseline + 273.15f) * orbitalFactor;
-        return baseline + ambientOffset + seasonOffset + weatherOffset;
+        return ApplyWeatherTemperatureOffset(baseline + ambientOffset + seasonOffset, weatherOffset);
     }
 
     #endregion

@@ -8833,6 +8833,14 @@ MonoBehaviour:
     m_Localized: "液网温度 {0:0.##}℃ · 总液量 {1:0.###} L"
     m_Metadata:
       m_Items: []
+  - m_Id: 202611020000005
+    m_Localized: "当前：{0}。多个行为可以共用按键，点击保存后保留修改。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611020000006
+    m_Localized: "当前：{0}。多个行为可以共用按键，修改后自动保存。"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

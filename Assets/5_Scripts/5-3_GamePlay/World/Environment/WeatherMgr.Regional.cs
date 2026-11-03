@@ -171,6 +171,7 @@ public partial class WeatherMgr
 
     public float GetTemperatureOffsetAt(Vector2 position) =>
         _weatherRuntimeAllowed && regionalEngine != null &&
+        DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather != true &&
         float.IsFinite(position.x) && float.IsFinite(position.y)
             ? regionalEngine.SampleCoolingOffsetAt(new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)))
             : 0f;
@@ -200,6 +201,17 @@ public partial class WeatherMgr
             !TemperatureMgr.Instance.TryGetAmbientTemperature(position, out float temperature)) return false;
         if (temperature <= PrecipitationFreezingTemperature) snowIntensity = sample.PrecipitationIntensity;
         else rainIntensity = sample.PrecipitationIntensity;
+        return true;
+    }
+
+    // 远程听音在地表地块卸载时退回天气区的雨雪分类，不为播放雨声重新加载区块。
+    public bool TryGetRemoteRainAudioAt(Vector2 position, out float rainIntensity)
+    {
+        if (TryGetPrecipitationAt(position, out rainIntensity, out _)) return true;
+        rainIntensity = 0f;
+        if (!_weatherRuntimeAllowed || !TryGetPrecipitationSnapshot(regionalEngine, position, out var sample))
+            return false;
+        rainIntensity = sample.RainIntensity;
         return true;
     }
 

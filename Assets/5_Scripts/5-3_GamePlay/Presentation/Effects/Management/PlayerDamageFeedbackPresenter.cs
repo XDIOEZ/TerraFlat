@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Mod_DamageReceiver))]
-public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
+public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour, ICombatDamageNumberPresenter
 {
     #region 配置
 
@@ -39,6 +39,7 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
     #region 运行时
 
     private Mod_DamageReceiver receiver;
+    public bool CanPresentDamageNumber => isActiveAndEnabled && damageTextPrefab != null;
 
     private void Awake()
     {
@@ -55,10 +56,12 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
 
         receiver.OnDamageReceived -= HandleDamageReceived;
         receiver.OnDamageReceived += HandleDamageReceived;
+        CombatDamageNumberOwnership.Register(receiver, this);
     }
 
     private void OnDisable()
     {
+        CombatDamageNumberOwnership.Unregister(receiver, this);
         if (receiver != null)
             receiver.OnDamageReceived -= HandleDamageReceived;
     }
@@ -70,7 +73,8 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
     /// <summary>每次实际扣血后显示伤害数字，再按本次命中结果显示一个或两个身体部位提示。</summary>
     private void HandleDamageReceived(DamageReceiverDamageInfo damageInfo)
     {
-        if (damageInfo == null || damageInfo.DamageValue <= 0f || damageTextPrefab == null)
+        if (damageInfo == null || damageInfo.DamageValue <= 0f || damageTextPrefab == null ||
+            !CombatDamageNumberOwnership.IsOwner(receiver, this))
             return;
 
         Vector3 anchor = damageInfo.HitPosition;
@@ -140,21 +144,8 @@ public sealed class PlayerDamageFeedbackPresenter : MonoBehaviour
 
     private static DamageTextEffectData BuildDamageNumberData(DamageReceiverDamageInfo damageInfo)
     {
-        DamageTextStyle style = DamageTextStyle.Normal;
-        CombatDamage senderDamage = damageInfo.SenderDamageValues;
-        if (senderDamage != null)
-        {
-            style = senderDamage.DominantKind switch
-            {
-                CombatDamageKind.Cutting => DamageTextStyle.Cutting,
-                CombatDamageKind.Chopping => DamageTextStyle.Cutting,
-                CombatDamageKind.Piercing => DamageTextStyle.Piercing,
-                CombatDamageKind.Blunt => DamageTextStyle.Blunt,
-                _ => DamageTextStyle.Normal
-            };
-        }
-
-        return new DamageTextEffectData(damageInfo.DamageValue, style);
+        return CombatImpactPresentation.BuildDamageNumber(damageInfo.DamageValue,
+            damageInfo.SenderDamageValues?.DominantKind ?? CombatDamageKind.None);
     }
 
     private static string GetBodyPartDamageText(BodyPartType bodyPart)

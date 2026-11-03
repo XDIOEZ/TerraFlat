@@ -6,6 +6,8 @@
       "displayName": "石臼",
       "recipeType": "crafting",
       "inputRule": "unordered",
+      "manualWorkSteps": 50,
+      "manualWorkCueId": "craft.stone_mortar.hit",
       "inputs": [
         {
           "match": "exact_item",

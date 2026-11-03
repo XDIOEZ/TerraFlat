@@ -173,6 +173,8 @@ namespace FlatWorld.Networking.Gameplay
         [Server]
         private void PublishServerPlayerState(bool force = false)
         {
+            // 私有 Host 的本机对象已经是权威状态，没有远端接收者时不重复编码完整库存。
+            if (!force && isOwned && !HasReadyRemotePlayerStateRecipient()) return;
             bool ownedDirty = isOwned && itemStateDirty && pendingTeleportRequest == 0 && !authoritativeWorldTransferPending &&
                 !ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction();
             if (corePlayer == null || !corePlayer.IsInitialized || !force && !ownedDirty && serverStateTimer > 0f) return;
@@ -205,6 +207,14 @@ namespace FlatWorld.Networking.Gameplay
                 groundCombatSentHashes.Add(hash);
             }
             authoritativeItemState = payload;
+        }
+
+        private static bool HasReadyRemotePlayerStateRecipient()
+        {
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (connection != null && connection != NetworkServer.localConnection && connection.isReady)
+                    return true;
+            return false;
         }
         #region 同地表船体战斗的临时权威交接
         public bool SubmitGroundCombatBaseline()
