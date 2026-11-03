@@ -49,6 +49,11 @@ namespace PuertsUnityMcp
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void AutoCreateRuntime()
         {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // 正式 APK 不启动开发调试服务，避免在游戏画面出现前加载不兼容的原生插件。
+            if (!Debug.isDebugBuild)
+                return;
+#endif
             Debug.Log("[UnityMCP] Runtime bootstrap invoked. isEditor=" + Application.isEditor
                 + ", productName=" + Application.productName
                 + ", streamingAssetsPath=" + Application.streamingAssetsPath);
