@@ -23,7 +23,7 @@ public sealed partial class GMReflectionConsole
         TextMeshProUGUI title = CreateText(parent, "一键导出打包版性能报告", 18f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
-        AddPageHint(parent, "直接导出最近一段时间的帧间隔、FPS、内存快照、性能点累计值和近期日志为一个 ZIP；" +
+        AddPageHint(parent, "F9 快捷导出最近 30 秒；也可直接导出最近一段时间的帧间隔、FPS、内存快照、性能点累计值和近期日志为一个 ZIP；" +
             "无需连接编辑器。范围不足时仍可导出，并在报告标明实际覆盖时间。完整 CPU 调用树需使用 Unity Profiler。", 60f);
 
         Transform quickGrid = CreateActionGrid(parent, 3, 220f, 44f, 3);
@@ -93,20 +93,20 @@ public sealed partial class GMReflectionConsole
 
     private void OpenRuntimePerformanceReportsDirectory()
     {
-        string directory = RuntimePerformanceReportRecorder.ReportsDirectory;
-        Directory.CreateDirectory(directory);
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
         try
         {
+            string directory = RuntimePerformanceReportRecorder.ReportsDirectory;
+            Directory.CreateDirectory(directory);
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             using (var process = System.Diagnostics.Process.Start(
                        new System.Diagnostics.ProcessStartInfo(directory) { UseShellExecute = true }))
             { }
+#else
+            GUIUtility.systemCopyBuffer = directory;
+            SetStatus("当前平台已复制报告目录路径，请从文件管理器打开。", GmTextSecondary);
+#endif
         }
         catch (Exception exception) { SetStatus("打开目录失败：" + exception.Message, Color.yellow); }
-#else
-        GUIUtility.systemCopyBuffer = directory;
-        SetStatus("当前平台已复制报告目录路径，请从文件管理器打开。", GmTextSecondary);
-#endif
     }
 
     private void RefreshRuntimePerformanceReportControls()

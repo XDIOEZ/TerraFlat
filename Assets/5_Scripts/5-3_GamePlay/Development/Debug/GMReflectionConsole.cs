@@ -271,6 +271,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         HandleTeleportInput();
         hoverPropertyInspector.UpdateFromPointer();
 
+        // F9 无需打开 GM，直接导出最近 30 秒的运行时性能报告。
+        if (Keyboard.current?.f9Key.wasPressedThisFrame == true)
+            ExportRuntimePerformanceReport(30);
+
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
             return;
 

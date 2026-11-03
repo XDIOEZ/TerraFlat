@@ -36,8 +36,9 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
             if (instance == null || instance.recordedFrameCount == 0) return 0d;
             int oldest = (instance.nextFrameIndex - instance.recordedFrameCount + MaximumRecordedFrames) % MaximumRecordedFrames;
             RecordedFrame first = instance.frames[oldest];
+            int newest = (instance.nextFrameIndex - 1 + MaximumRecordedFrames) % MaximumRecordedFrames;
             return Math.Min(MaximumExportSeconds, Math.Max(0d,
-                Time.realtimeSinceStartupAsDouble - first.timeSeconds + first.frameMilliseconds / 1000d));
+                instance.frames[newest].timeSeconds - first.timeSeconds + first.frameMilliseconds / 1000d));
         }
     }
 
@@ -53,7 +54,6 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
     {
         if (instance != null) return;
         var root = new GameObject(nameof(RuntimePerformanceReportRecorder));
-        DontDestroyOnLoad(root);
         root.AddComponent<RuntimePerformanceReportRecorder>();
     }
 
@@ -65,6 +65,7 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
             return;
         }
         instance = this;
+        PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(gameObject, PersistentRuntimeObjectCategory.Debug);
     }
 
     private void OnDestroy()
@@ -186,7 +187,8 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
         }
 
         Array.Sort(orderedFrameTimes);
-        report.coveredSeconds = Math.Min(requestedSeconds, now - firstTime + selected[0].frameMilliseconds / 1000d);
+        report.coveredSeconds = Math.Min(requestedSeconds,
+            selected[selected.Count - 1].timeSeconds - firstTime + selected[0].frameMilliseconds / 1000d);
         report.averageFrameMilliseconds = (float)(totalMilliseconds / selected.Count);
         report.averageFps = report.averageFrameMilliseconds > 0f ? 1000f / report.averageFrameMilliseconds : 0f;
         report.fastestFrameMilliseconds = orderedFrameTimes[0];
@@ -265,14 +267,16 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
         }
         catch
         {
-            if (File.Exists(pendingPath)) File.Delete(pendingPath);
+            try { if (File.Exists(pendingPath)) File.Delete(pendingPath); }
+            catch (IOException) { }
             throw;
         }
     }
 
     private static void WriteTextEntry(ZipArchive archive, string name, string content)
     {
-        using var writer = new StreamWriter(archive.CreateEntry(name, CompressionLevel.Fastest).Open(), new UTF8Encoding(false));
+        using var writer = new StreamWriter(
+            archive.CreateEntry(name, System.IO.Compression.CompressionLevel.Fastest).Open(), new UTF8Encoding(false));
         writer.Write(content);
     }
 
