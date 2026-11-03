@@ -190,8 +190,8 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
         {
             while (constantBufferCapacity < capacity)
             {
-                int bytes = ZeroPrefixBytes + constantBufferPageCapacity * InstanceStride;
-                var pageBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16)
+                int pageBytes = ZeroPrefixBytes + constantBufferPageCapacity * InstanceStride;
+                var pageBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Constant, pageBytes / 16, 16)
                 {
                     name = $"ContactShadows-BRG-Page{constantPages.Count}"
                 };
@@ -199,7 +199,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
                 {
                     pageBuffer.SetData(new InstanceData[ZeroPrefixBytes / InstanceStride], 0, 0,
                         ZeroPrefixBytes / InstanceStride);
-                    BatchID pageId = AddBatch(pageBuffer, bytes);
+                    BatchID pageId = AddBatch(pageBuffer, pageBytes);
                     constantPages.Add(new ConstantBufferPage(pageBuffer, pageId));
                     constantBufferCapacity += constantBufferPageCapacity;
                 }
