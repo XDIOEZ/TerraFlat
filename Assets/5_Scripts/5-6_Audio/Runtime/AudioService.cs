@@ -50,6 +50,7 @@ namespace FlatWorld.Audio
 
         private Transform listenerTarget;
         private AudioListener worldListener;
+        private float worldPresentationGain = 1f;
 
         public static AudioService Instance
         {
@@ -165,6 +166,29 @@ namespace FlatWorld.Audio
 
         #endregion
 
+        #region 世界画面音量
+
+        /// <summary>仅作用于游戏声音的临时倍率，不改变用户音量或正在播放的声源状态。</summary>
+        public void SetWorldPresentationGain(float gain)
+        {
+            if (!float.IsFinite(gain))
+                return;
+
+            float next = Mathf.Clamp01(gain);
+            if (Mathf.Approximately(worldPresentationGain, next))
+                return;
+
+            worldPresentationGain = next;
+            for (int i = 0; i < activeVoices.Count; i++)
+                ApplyVolume(activeVoices[i]);
+        }
+
+        /// <summary>界面音不随世界画面远离而变小，其余总线共享画面过渡倍率。</summary>
+        public static float ResolveWorldPresentationBusGain(AudioBus bus, float gain)
+            => bus == AudioBus.UI ? 1f : Mathf.Clamp01(gain);
+
+        #endregion
+
         #region 游戏暂停与恢复
 
         // 世界声音保留播放位置随游戏暂停，界面声音照常播放且加减速不改变音高。
@@ -196,6 +220,8 @@ namespace FlatWorld.Audio
         // 听音以玩家为中心，把声源投影到相机监听器的 XY 平面，排除镜头高度和前探偏移。
         public void SetWorldListener(Transform target, AudioListener listener)
         {
+            if (listenerTarget != target)
+                SetWorldPresentationGain(1f);
             listenerTarget = target;
             worldListener = listener;
         }
@@ -208,6 +234,7 @@ namespace FlatWorld.Audio
             listenerTarget = null;
             worldListener = null;
             ClearWorldAcoustics();
+            SetWorldPresentationGain(1f);
         }
 
         private bool HasWorldListener => listenerTarget != null &&
@@ -754,7 +781,8 @@ namespace FlatWorld.Audio
             float settingsGain = userSettings.Muted
                 ? 0f
                 : userSettings.Master * userSettings.GetBusVolume(voice.Cue.Bus);
-            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.VolumeScale * voice.PortalGain * voice.Fade * settingsGain);
+            voice.Source.volume = Mathf.Clamp01(voice.BaseGain * voice.VolumeScale * voice.PortalGain *
+                voice.Fade * settingsGain * ResolveWorldPresentationBusGain(voice.Cue.Bus, worldPresentationGain));
         }
 
         private void LoadUserSettings()

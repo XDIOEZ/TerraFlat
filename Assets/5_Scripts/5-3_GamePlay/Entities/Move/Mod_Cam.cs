@@ -156,6 +156,7 @@ public class Mod_Cam : Module
         // 临时目标被外部销毁时释放租约，避免镜头继续保留驾驶更新方式。
         if (!ReferenceEquals(_followOverride, null) && _followOverride == null)
             ClearFollowOverride(_followOverride);
+        UpdateWorldAudioForSurfaceZoom();
     }
 
     // 在Load方法中实例化相机逻辑
@@ -282,6 +283,20 @@ public class Mod_Cam : Module
     #endregion
 
     #region 玩家听音位置
+
+    // 世界音量跟随地表宇宙画面的同一淡变进度，切换驾驶或离开地表时恢复。
+    private void UpdateWorldAudioForSurfaceZoom()
+    {
+        if (Player == null || !Player.IsLocalProfile || !AudioService.HasInstance)
+            return;
+
+        float gain = Player.isActiveAndEnabled && !HasFollowOverride &&
+                     !SpaceMgr.IsSpaceScene(Player.gameObject.scene.name) &&
+                     CameraZoomExtensions.GetProfile(this).Enabled
+            ? 1f - SurfaceZoomTransition.Sample(this)
+            : 1f;
+        AudioService.Instance.SetWorldPresentationGain(gain);
+    }
 
     // 本机玩家拥有世界听音中心，相机只提供屏幕左右方向和音频输出监听器。
     private void BindWorldAudioListener()

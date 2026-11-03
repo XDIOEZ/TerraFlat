@@ -1382,6 +1382,7 @@ public static partial class GameplayTestSystemProbe
         };
         float opacity = SurfaceZoomTransition.ResolveOpacity((float)Number(args, "size", 60),
             defaults);
+        float surfaceAudioGain = 1f - opacity;
         float current = (float)Number(args, "current", 60);
         float requested = (float)Number(args, "requested", 60);
         float presentedOpacity = (float)Number(args, "presentedOpacity", 0);
@@ -1389,6 +1390,11 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["opacity"] = opacity,
+            ["sfxAudioGain"] = AudioService.ResolveWorldPresentationBusGain(AudioBus.Sfx, surfaceAudioGain),
+            ["ambientAudioGain"] = AudioService.ResolveWorldPresentationBusGain(AudioBus.Ambient, surfaceAudioGain),
+            ["musicAudioGain"] = AudioService.ResolveWorldPresentationBusGain(AudioBus.Music, surfaceAudioGain),
+            ["voiceAudioGain"] = AudioService.ResolveWorldPresentationBusGain(AudioBus.Voice, surfaceAudioGain),
+            ["uiAudioGain"] = AudioService.ResolveWorldPresentationBusGain(AudioBus.UI, surfaceAudioGain),
             ["clampedSize"] = clamped,
             ["repeatedSize"] = SurfaceZoomTransition.ClampInputSize(clamped, requested, presentedOpacity, settings),
             ["releasedSize"] = SurfaceZoomTransition.ClampInputSize(clamped, clamped, 1f, settings)

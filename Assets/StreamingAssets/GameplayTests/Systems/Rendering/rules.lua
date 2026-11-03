@@ -787,6 +787,14 @@ for _, args in ipairs({
 }) do
     test.system("rendering", "universe_view_transition", args, function(data)
         assert(math.abs(data.opacity - args.expected) < 0.0001, "宇宙画面没有在原视野区间直接淡入")
+        local gain = 1 - args.expected
+        assert(math.abs(data.sfxAudioGain - gain) < 0.0001
+            and math.abs(data.ambientAudioGain - gain) < 0.0001
+            and math.abs(data.musicAudioGain - gain) < 0.0001
+            and math.abs(data.voiceAudioGain - gain) < 0.0001,
+            "地表接近太空时游戏音量未跟随画面渐隐")
+        assert(math.abs(data.uiAudioGain - 1) < 0.0001,
+            "地表宇宙过渡错误地静音了 UI 点击声音")
     end, "动态加载雾窗下的宇宙视图直接淡入")
 end
 
