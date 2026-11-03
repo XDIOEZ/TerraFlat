@@ -32,9 +32,10 @@ def main() -> None:
         normalized.putalpha(normalized.getchannel("A").point(lambda value: 0 if value <= alpha_cutoff else value))
         return normalized
     with Image.open(ART / "GasPump_Mechanical_Idle.png") as original:
-        source_size = original.size
-        require(source_size == (1254, 1254), "原气泵图不得为动画降采样")
-    require(tuple(rig["canvasSize"]) == source_size, "拆件的基准画布与原图不一致")
+        idle_size = original.size
+    source_size = tuple(rig["canvasSize"])
+    require(source_size == tuple(rig["sourceSheetSize"]) == (1254, 1254),
+            "拆件必须保留未降采样的源画布")
     parts = rig["parts"]
     require(len(parts) == 8, "气泵应由前后壳、两活塞、两连杆、曲柄和表针八层构成")
     states = [part["stateKey"] for part in parts]
@@ -42,6 +43,10 @@ def main() -> None:
     original_meta = (ART / "GasPump_Mechanical_Idle.png.meta").read_text(encoding="utf-8-sig")
     guids: set[str] = {re.search(r"^guid:\s*([0-9a-f]{32})", original_meta, re.MULTILINE).group(1)}
     rig_ppu = float(rig["pixelsPerUnit"])
+    idle_ppu = float(re.search(r"spritePixelsToUnits:\s*([\d.]+)", original_meta).group(1))
+    require(abs(idle_size[0] / idle_ppu - source_size[0] / rig_ppu) < 1e-4 and
+            abs(idle_size[1] / idle_ppu - source_size[1] / rig_ppu) < 1e-4,
+            "压缩后的Idle与完整关节画布世界尺寸不一致")
     catalog = json.loads((ROOT / "Assets/StreamingAssets/GameConfig/Items/shells/chemical_machines.json")
                         .read_text(encoding="utf-8-sig"))
     item = next(item for item in catalog["items"] if item["id"] == "GasPump_Mechanical")
@@ -60,9 +65,11 @@ def main() -> None:
             [source_size[0] / 2, source_size[1] / 2], "正式机体画布锚点没有保持原图中心")
     require([part["SpriteState"] for part in sorted(configured["Parts"], key=lambda part: part["Order"])] ==
             rig["layerOrder"], "正式图层顺序与素材遮挡关系不同")
-    addresses = (ROOT / "Assets/AddressableAssetsData/AssetGroups/Default.asset").read_text(encoding="utf-8-sig")
-    entries = {guid: address.strip() for guid, address in re.findall(
-        r"- m_GUID:\s*([a-f0-9]{32})\s*\n\s*m_Address:\s*([^\r\n]+)", addresses)}
+    entries = {}
+    for group_file in (ROOT / "Assets/AddressableAssetsData/AssetGroups").glob("*.asset"):
+        addresses = group_file.read_text(encoding="utf-8-sig")
+        for guid, address in re.findall(r"- m_GUID:\s*([a-f0-9]{32})\s*\n\s*m_Address:\s*([^\r\n]+)", addresses):
+            entries.setdefault(guid, set()).add(address.strip())
     sample_path = ROOT / "Temp/Tests/MachineArticulation/bin/net8.0/production-pump-poses.json"
     require(sample_path.is_file(), "请先运行同目录dotnet回归以导出正式解算器逐帧销轴采样")
     samples = json.loads(sample_path.read_text(encoding="utf-8-sig"))
@@ -118,12 +125,15 @@ def main() -> None:
             require(abs(declaration["SourceAngleRadians"] - part["sourceRestAngleUnityRadians"]) < 1e-7,
                     name + "：源零件朝向没有进入生产旋转补偿")
         meta = Path(str(path) + ".meta").read_text(encoding="utf-8-sig")
+        if name in ("articulatedBack", "articulatedFront"):
+            require(re.search(r"(?m)^labels:\s*\n- FlatWorldKeepFullResolution\s*$", meta) is not None,
+                    name + "：整张机壳必须标记保留原始分辨率，避免再次与关节错位")
         guid = re.search(r"^guid:\s*([0-9a-f]{32})\s*$", meta, re.MULTILINE)
         require(guid is not None, name + "：Unity GUID 无效")
         require(guid.group(1) not in guids, name + "：Unity GUID 与其他拆件重复")
         guids.add(guid.group(1))
         expected_address = path.relative_to(ROOT).as_posix()
-        require(entries.get(guid.group(1)) == expected_address, name + "：Addressables未按实际GUID与路径登记")
+        require(expected_address in entries.get(guid.group(1), set()), name + "：Addressables未按实际GUID与路径登记")
         visual_states = item["visual"]["spriteStates"]
         state = visual_states[name]
         declared_address = state["spriteAddress"] if isinstance(state, dict) else state

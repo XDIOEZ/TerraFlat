@@ -38,6 +38,9 @@ def texture_meta(path: Path, pivot: tuple[float, float], source: bool = False) -
     match = re.search(r"^guid: ([0-9a-f]{32})$", old, re.MULTILINE)
     guid = match.group(1) if match else uuid.uuid4().hex
     template = re.sub(r"^guid: .*", f"guid: {guid}", template, flags=re.MULTILINE)
+    if path.stem in ("GasPump_ArticulatedBack", "GasPump_ArticulatedFront"):
+        # 完整源画布的前后壳不能被一次性贴图优化器独立压缩。
+        template = template.replace("TextureImporter:\n", "labels:\n- FlatWorldKeepFullResolution\nTextureImporter:\n", 1)
     template = template.replace("spriteGenerateFallbackPhysicsShape: 1", "spriteGenerateFallbackPhysicsShape: 0")
     template = re.sub(r"spritePivot: \{.*\}", f"spritePivot: {{x: {pivot[0]:.12g}, y: {pivot[1]:.12g}}}", template)
     if not source:

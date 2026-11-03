@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: e89ee2f67e1641ba9926ec08a407aa27
+labels:
+- FlatWorldKeepFullResolution
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
