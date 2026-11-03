@@ -89,6 +89,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private sealed class NodeCopy
     {
         internal Transform Source, Target;
+        internal Item NestedItem;
         internal SortingGroup SourceSorting, TargetSorting;
         internal Renderer QueueSource;
         internal bool SortingRegistered;
@@ -407,8 +408,12 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private WorldVisualPose ResolvePresentedLocalPose(NodeCopy node)
     {
         WorldVisualPose live = WorldVisualPose.ReadLocal(node.Source);
-        return node.SimulationPose != null && node.SampledParent == node.Source.parent
+        WorldVisualPose displayed = node.SimulationPose != null && node.SampledParent == node.Source.parent
             ? node.SimulationPose.Evaluate(live, FlatWorld.Simulation.GameplaySimulationTime.PresentationTime) : live;
+        // 手持根由动画逐帧定位，位置不能再混用固定步快照，否则骑乘时会在两种坐标间跳动。
+        if (node.NestedItem != null && node.NestedItem.Owner != null && node.NestedItem.InHand)
+            return new WorldVisualPose(live.Position, displayed.Rotation, displayed.Scale);
+        return displayed;
     }
 
     private Matrix4x4 ResolvePresentedSourceWorld(NodeCopy node)
@@ -664,7 +669,8 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         WorldPresentationHierarchyWatcher watcher = source.GetComponent<WorldPresentationHierarchyWatcher>();
         if (watcher == null) watcher = source.gameObject.AddComponent<WorldPresentationHierarchyWatcher>();
         watcher.Add(this);
-        var result = new NodeCopy { Source = source, Target = target, Watcher = watcher };
+        var result = new NodeCopy { Source = source, Target = target, Watcher = watcher,
+            NestedItem = source.GetComponent<Item>() };
         nodes.Add(source, result);
         return result;
     }

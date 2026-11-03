@@ -1241,9 +1241,10 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         var positionControls = CurentSelectItem.itemMods.GetCapabilities<IHeldItemPositionControl>();
         for (int i = 0; i < positionControls.Count; i++)
             if (positionControls[i].ControlsHeldItemPosition) return;
-        // 每次从未抖动的挂点重新取位置，避免偏移累积，也不改武器动画与瞄准旋转。
-        CurentSelectItem.transform.position = heldPresentationSource != null
-            ? heldPresentationSource.GetPresentedAttachmentPosition(spawnLocation) : spawnLocation.position;
+        // 始终写挂点局部位置，载具移动时不再用逐帧世界坐标反复校正手持根。
+        CurentSelectItem.transform.localPosition = heldPresentationSource != null
+            ? spawnLocation.InverseTransformPoint(heldPresentationSource.GetPresentedAttachmentPosition(spawnLocation))
+            : Vector3.zero;
     }
 
 #endregion
