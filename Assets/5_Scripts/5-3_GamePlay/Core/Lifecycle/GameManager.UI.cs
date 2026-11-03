@@ -52,6 +52,7 @@ public partial class GameManager
     public const string NewGameIdentityPageKey = "身份与存档区";
     public const string NewGameWorldPageKey = "世界参数区";
     public const string NewGameWorldSettingsButtonKey = "世界设置";
+    public const string NewGameWorldSettingsCloseButtonKey = "关闭世界设置";
     public const string NewGameIdentityButtonKey = "返回名称设置";
     public const string NewGamePlayerInputKey = "新增玩家名称输入框";
     public const string NewGameSaveInputKey = "新增存档名称输入框";
@@ -1138,7 +1139,7 @@ public partial class GameManager
 
     #region 新世界内容分页
 
-    /// <summary>名称页和世界页复用同一面板，切页只改变显隐，不重建或清空输入框。</summary>
+    /// <summary>世界设置以独立覆盖层显示，名称输入和创建按钮保持原有布局。</summary>
     private void BindNewGamePageControls(BasePanel panel)
     {
         panel.SetButtonOnClick(NewGameWorldSettingsButtonKey, () =>
@@ -1160,13 +1161,7 @@ public partial class GameManager
 
     private static void ShowNewGamePage(BasePanel panel, bool worldSettings, bool focusFirstControl)
     {
-        SetChildVisible(panel, NewGameIdentityPageKey, !worldSettings);
         SetChildVisible(panel, NewGameWorldPageKey, worldSettings);
-        panel.SetButtonVisible(NewGameWorldSettingsButtonKey, !worldSettings);
-        panel.SetButtonVisible(NewGameIdentityButtonKey, false);
-        LocalizedTextRuntime.SetText(
-            panel.GetText(NewGameBackButtonKey + "_文字"),
-            worldSettings ? "关闭" : "返回主界面");
         panel.RefreshGamepadNavigationState();
 
         if (!EventSystemGuard.IsGamepadMode || !focusFirstControl || !panel.IsOpen() || EventSystem.current == null)
@@ -1181,7 +1176,7 @@ public partial class GameManager
         EventSystem.current.SetSelectedGameObject(target.gameObject);
     }
 
-    /// <summary>返回键先收起难度设置，再从世界页回到名称页，最后才关闭新世界面板。</summary>
+    /// <summary>返回键先关闭弹出的设置层，最后才关闭新世界面板。</summary>
     private static bool TryReturnFromNewGameDetailPage(BasePanel panel)
     {
         Transform difficultyPage = FindChildRecursive(panel.transform, NewGameDifficultyPanelKey);

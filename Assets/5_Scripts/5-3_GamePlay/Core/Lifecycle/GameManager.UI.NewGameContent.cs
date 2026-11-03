@@ -18,6 +18,9 @@ public partial class GameManager
         if (content == null || !content.EnsureWorldContent(panel))
             return;
 
+        panel.SetButtonOnClick(NewGameWorldSettingsCloseButtonKey,
+            () => ShowNewGamePage(panel, false, true));
+
         TMP_InputField radiusInput = panel.GetInputField(NewGameRadiusInputKey);
         TMP_InputField spatialInput = panel.GetInputField(NewGameSpatialDistanceScaleInputKey);
         TMP_InputField chunkWidthInput = panel.GetInputField(NewGameChunkWidthInputKey);

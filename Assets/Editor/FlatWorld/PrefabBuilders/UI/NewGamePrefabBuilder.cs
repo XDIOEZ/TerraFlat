@@ -49,13 +49,14 @@ public static class NewGamePrefabBuilder
             Image card = BuildCard(root.transform);
             BuildHeader(card.transform, font);
             BuildIdentity(card.transform, font);
-            BuildWorldSettings(card.transform, font);
+            RectTransform worldDialog = BuildWorldSettings(root.transform, font);
             BuildFooter(card.transform, font);
             RectTransform difficultyDialog = BuildDifficultyPanel(root.transform, font);
-            ConfigureResponsiveScale(root, card.rectTransform, difficultyDialog);
+            ConfigureResponsiveScale(root, card.rectTransform, worldDialog, difficultyDialog);
 
             FlatWorldUITheme.Apply(root.transform);
-            ConfigureDeferredContent(root, card.transform.Find(GameManager.NewGameWorldPageKey), difficultyDialog);
+            ConfigureDeferredContent(root,
+                root.transform.Find(GameManager.NewGameWorldPageKey)?.Find("世界设置窗口"), difficultyDialog);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
@@ -203,6 +204,7 @@ public static class NewGamePrefabBuilder
     private static void ConfigureResponsiveScale(
         GameObject root,
         RectTransform card,
+        RectTransform worldDialog,
         RectTransform difficultyDialog)
     {
         RectTransform shadow = root.transform.Find("新世界主卡投影") as RectTransform;
@@ -211,6 +213,8 @@ public static class NewGamePrefabBuilder
         if (shadow != null)
             shadow.localScale = baseScale;
         card.localScale = baseScale;
+        if (worldDialog != null)
+            worldDialog.localScale = baseScale;
         if (difficultyDialog != null)
             difficultyDialog.localScale = baseScale;
         SafeAreaScaleGroup scaleGroup = root.GetComponent<SafeAreaScaleGroup>();
@@ -219,7 +223,7 @@ public static class NewGamePrefabBuilder
 
         scaleGroup.Configure(
             difficultyDialog != null ? difficultyDialog : card,
-            new[] { shadow, card, difficultyDialog },
+            new[] { shadow, card, worldDialog, difficultyDialog },
             new Vector2(24f, 24f));
     }
 
@@ -258,13 +262,21 @@ public static class NewGamePrefabBuilder
         CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, string.Empty, string.Empty, new Vector2(40f, -314f), new Vector2(ContentInnerWidth, 104f), TMP_InputField.ContentType.Standard);
     }
 
-    private static void BuildWorldSettings(Transform card, TMP_FontAsset font)
+    private static RectTransform BuildWorldSettings(Transform root, TMP_FontAsset font)
     {
-        Image panel = CreatePanelCard(GameManager.NewGameWorldPageKey, card);
-        SetRect(panel.rectTransform, new Vector2((FlatWorldUIPanelMetrics.SharedModalCardSize.x - ContentPageWidth) * 0.5f, -150f), new Vector2(ContentPageWidth, 520f), new Vector2(0f, 1f));
+        // 世界设置作为独立覆盖窗口，不再修改创建世界主卡的内容布局。
+        Image overlay = CreateImage(GameManager.NewGameWorldPageKey, root, Color.clear);
+        Stretch(overlay.rectTransform);
+        overlay.raycastTarget = true;
+        overlay.gameObject.AddComponent<FullScreenRectController>();
+        Image panel = CreatePanelCard("世界设置窗口", overlay.transform);
+        SetRect(panel.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
 
         TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界设置", font, 34f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(40f, -28f), new Vector2(360f, 44f), new Vector2(0f, 1f));
+        CreateSharedButton(panel.transform, GameManager.NewGameWorldSettingsCloseButtonKey, "关闭",
+            new Vector2(-40f, -20f), new Vector2(170f, 64f), Vector2.one,
+            SharedButtonKind.Close, GameManager.NewGameWorldSettingsCloseButtonKey + "_文字");
 
         RectTransform content = BuildWorldSettingsScrollView(panel.transform);
         Transform basic = CreateWorldSettingsPage(content, "基础世界设置");
@@ -346,7 +358,8 @@ public static class NewGamePrefabBuilder
             TMP_InputField.ContentType.Standard);
         content.gameObject.AddComponent<NewWorldSettingsPagination>().Configure(
             basic.gameObject, advanced.gameObject, basicTab, advancedTab);
-        panel.gameObject.SetActive(false);
+        overlay.gameObject.SetActive(false);
+        return panel.rectTransform;
     }
 
     /// <summary>子分页的纵向布局提供实际首选高度，外层滚动区负责限幅。</summary>
@@ -370,7 +383,7 @@ public static class NewGamePrefabBuilder
         GameObject scrollObject = new GameObject("世界设置滚动区", typeof(RectTransform), typeof(ItemStepScrollRect));
         scrollObject.layer = LayerMask.NameToLayer("UI");
         scrollObject.transform.SetParent(panel, false);
-        SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(28f, -88f), new Vector2(ContentPageWidth - 56f, 404f), new Vector2(0f, 1f));
+        SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(28f, -88f), new Vector2(ContentPageWidth - 56f, 680f), new Vector2(0f, 1f));
 
         GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(RectMask2D));
         viewportObject.layer = LayerMask.NameToLayer("UI");
