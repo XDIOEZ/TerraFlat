@@ -130,6 +130,7 @@ public static class MainMenuPrefabBuilder
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
             BuildSettingsButton(root.transform, font);
+            BuildBackgroundPreloadIndicator(root.transform);
             ConfigureResponsiveLayout(root);
 
             EditorUtility.SetDirty(root);
@@ -348,6 +349,23 @@ public static class MainMenuPrefabBuilder
             FontStyles.Bold,
             TextAlignmentOptions.Center);
         SetRect(arrow.rectTransform, new Vector2(-19f, 0f), new Vector2(24f, 30f), Vector2.one * 0.5f);
+    }
+
+    /// <summary>在菜单左下角放置不拦截交互的后台资源加载圈。</summary>
+    private static void BuildBackgroundPreloadIndicator(Transform root)
+    {
+        RectTransform rect = CreateRect("后台资源加载指示", root);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.zero;
+        rect.pivot = Vector2.one * 0.5f;
+        rect.anchoredPosition = new Vector2(96f, 32f);
+        rect.sizeDelta = new Vector2(32f, 32f);
+
+        rect.gameObject.AddComponent<CanvasRenderer>();
+        MainMenuBackgroundResourceLoadingIndicator indicator =
+            rect.gameObject.AddComponent<MainMenuBackgroundResourceLoadingIndicator>();
+        indicator.color = new Color32(236, 238, 239, 225);
+        indicator.raycastTarget = false;
     }
 
     /// <summary>重建主菜单时保留标题、旅程按钮与设置入口的屏幕适配引用。</summary>

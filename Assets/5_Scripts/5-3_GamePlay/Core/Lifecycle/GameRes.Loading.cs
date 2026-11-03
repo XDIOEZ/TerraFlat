@@ -32,6 +32,11 @@ public partial class GameRes
     public float LoadProgress => loadingProgress;
     /// <summary>完整资源会话的当前阶段文案。</summary>
     public string LoadStatusText => GetResourceLoadStatusText();
+    /// <summary>仅当菜单后台的世界资源请求仍在排队或执行时显示加载提示。</summary>
+    public bool IsBackgroundWorldResourcePreloadInProgress =>
+        LoadState == ResourceLoadState.Loading && IsStartupReady &&
+        (worldResourceRequestQueued || (worldResourceSessionActive && loadCoroutine != null)) &&
+        ShouldKeepCurrentResourceLoadingInBackground;
     private int cacheBuildStartRevision;
     private bool resourceSessionStarted;
     private bool completingInitialResourceLoad;
