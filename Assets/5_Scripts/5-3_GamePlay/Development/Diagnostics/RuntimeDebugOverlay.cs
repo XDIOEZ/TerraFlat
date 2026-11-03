@@ -23,6 +23,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>复制条数设置的持久化键。</summary>
     private const string CopyEntryCountPreferenceKey = "FlatWorld.RuntimeDebugOverlay.CopyEntryCount";
 
+    private const float ToastVisibleSeconds = 2.2f;
+    private const float ToastFadeSeconds = 0.3f;
+
     #endregion
 
     #region 单例状态
@@ -98,6 +101,12 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     [SerializeField] private Toggle warningLogsToggle;
     [SerializeField] private Toggle errorLogsToggle;
 
+    /// <summary>独立于日志刷新状态的短时操作提示，不拦截触屏和鼠标事件。</summary>
+    [SerializeField] private GameObject feedbackToast;
+    [SerializeField] private CanvasGroup feedbackToastCanvasGroup;
+    [SerializeField] private Image feedbackToastBackground;
+    [SerializeField] private TextMeshProUGUI feedbackToastText;
+
     #endregion
 
     #region 运行时状态
@@ -113,6 +122,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     /// <summary>当前生效的最近日志复制条数。</summary>
     private int copyEntryCount;
+
+    private float toastVisibleUntil;
+    private Vector2 lastPanelBoundsSize;
 
     #endregion
 
@@ -184,6 +196,8 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>仅在日志版本变化时刷新摘要；正文只在页面展开时重建。</summary>
     private void Update()
     {
+        FitExpandedPanelToSafeArea();
+        RefreshToast();
         RefreshPresentation(force: false);
     }
 
@@ -338,7 +352,31 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
             ordinaryLogsToggle == null || ordinaryLogsToggle.isOn,
             warningLogsToggle == null || warningLogsToggle.isOn,
             errorLogsToggle == null || errorLogsToggle.isOn);
-        GUIUtility.systemCopyBuffer = snapshot;
+
+        if (copiedEntries == 0)
+        {
+            if (statusText != null)
+                SetLocalizedText(statusText, "当前筛选条件下没有可复制的日志。");
+            ShowToast(false, "没有可复制的日志");
+            return;
+        }
+
+        try
+        {
+            GUIUtility.systemCopyBuffer = snapshot;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogWarning($"[RuntimeDebugOverlay] 复制到剪贴板失败：{exception.Message}");
+            if (statusText != null)
+                SetLocalizedText(statusText, "复制失败，请检查系统剪贴板。");
+            ShowToast(false, "复制失败，请重试");
+            return;
+        }
+
+        ShowToast(true,
+            truncated ? "已复制最近 {0} 个日志槽位（较早已省略）" : "已复制 {0} 个日志槽位",
+            copiedEntries);
         if (statusText != null)
         {
             if (truncated)
@@ -368,7 +406,14 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         if (int.TryParse(rawValue, out int parsedCount))
             selectedCount = parsedCount;
 
-        copyEntryCount = Mathf.Clamp(selectedCount, 1, GameLogManager.RuntimeLogCapacity);
+        int boundedCount = Mathf.Clamp(selectedCount, 1, GameLogManager.RuntimeLogCapacity);
+        if (boundedCount == copyEntryCount)
+        {
+            RefreshCopyEntryCountInput();
+            return;
+        }
+
+        copyEntryCount = boundedCount;
         RefreshCopyEntryCountInput();
         PlayerPrefs.SetInt(CopyEntryCountPreferenceKey, copyEntryCount);
         PlayerPrefs.Save();
@@ -389,6 +434,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         GameLogManager.ClearRuntimeLogBuffer();
         if (statusText != null)
             SetLocalizedText(statusText, "面板日志已清空，磁盘日志仍然保留。");
+        ShowToast(true, "面板日志已清空");
         RefreshPresentation(force: true);
     }
 
@@ -402,9 +448,71 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         if (debugPanel == null)
             return;
 
+        if (!visible && feedbackToast != null)
+            feedbackToast.SetActive(false);
         debugPanel.SetActive(visible);
         if (visible)
+        {
+            FitExpandedPanelToSafeArea(force: true);
             RefreshPresentation(force: true);
+        }
+    }
+
+    /// <summary>小窗口按安全区等比收缩，避免展开页和底部操作被裁切。</summary>
+    private void FitExpandedPanelToSafeArea(bool force = false)
+    {
+        if (debugPanel == null || !debugPanel.activeSelf ||
+            !(debugPanel.transform is RectTransform panelRect) ||
+            !(panelRect.parent is RectTransform boundsRect))
+            return;
+
+        Vector2 boundsSize = boundsRect.rect.size;
+        if (!force && boundsSize == lastPanelBoundsSize)
+            return;
+
+        lastPanelBoundsSize = boundsSize;
+        if (boundsSize.x <= 0f || boundsSize.y <= 0f)
+            return;
+
+        float scale = Mathf.Clamp01(Mathf.Min(
+            (boundsSize.x - 24f) / (panelRect.rect.width + 22f),
+            (boundsSize.y - 88f) / (panelRect.rect.height + 82f)));
+        panelRect.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    /// <summary>使用不受暂停影响的真实时间自动淡出 Toast，且不重建 UI。</summary>
+    private void RefreshToast()
+    {
+        if (feedbackToast == null || !feedbackToast.activeSelf || feedbackToastCanvasGroup == null)
+            return;
+
+        float remaining = toastVisibleUntil - Time.unscaledTime;
+        if (remaining <= 0f)
+        {
+            feedbackToast.SetActive(false);
+            return;
+        }
+
+        feedbackToastCanvasGroup.alpha = Mathf.Clamp01(remaining / ToastFadeSeconds);
+    }
+
+    private void ShowToast(bool success, string sourceTemplate, params object[] arguments)
+    {
+        if (feedbackToast == null || feedbackToastCanvasGroup == null || feedbackToastText == null)
+            return;
+
+        if (arguments.Length == 0)
+            SetLocalizedText(feedbackToastText, sourceTemplate);
+        else
+            SetLocalizedFormat(feedbackToastText, sourceTemplate, arguments);
+
+        if (feedbackToastBackground != null)
+            feedbackToastBackground.color = success
+                ? new Color(0.09f, 0.22f, 0.19f, 0.98f)
+                : new Color(0.25f, 0.16f, 0.10f, 0.98f);
+        feedbackToastCanvasGroup.alpha = 1f;
+        feedbackToast.SetActive(true);
+        toastVisibleUntil = Time.unscaledTime + ToastVisibleSeconds;
     }
 
     /// <summary>刷新悬浮入口、数量摘要以及展开状态下的日志正文。</summary>
@@ -427,7 +535,8 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         }
 
         if (summaryText != null)
-            SetLocalizedFormat(summaryText, "共 {0} 条    错误 {1}    警告 {2}", total, errors, warnings);
+            SetLocalizedFormat(summaryText, "总计 {0} 条     警告 {1}     错误 {2}",
+                total, warnings, errors);
 
         if (debugPanel != null && debugPanel.activeSelf)
             RefreshLogText();

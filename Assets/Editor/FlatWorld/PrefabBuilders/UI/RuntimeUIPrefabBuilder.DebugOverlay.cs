@@ -42,92 +42,106 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject safeArea = CreateUIObject("调试安全区", root.transform, typeof(SafeAreaRectController));
         Stretch(safeArea.GetComponent<RectTransform>());
 
-        Button toggleButton = CreateButton("调试悬浮按钮", safeArea.transform, "日志  0", 75f, 31f, false);
-        SetTopRight(toggleButton.GetComponent<RectTransform>(), 22f, 22f, 75f, 31f);
-        toggleButton.GetComponent<Image>().color = new Color(0.12f, 0.22f, 0.25f, 0.98f);
-        SetButtonLabelSize(toggleButton, 14f);
+        Button toggleButton = CreateButton("调试悬浮按钮", safeArea.transform, "日志  0", 132f, 42f, false);
+        SetTopRight(toggleButton.GetComponent<RectTransform>(), 22f, 22f, 132f, 42f);
+        SetButtonLabelSize(toggleButton, 15f);
         TextMeshProUGUI toggleLabel = toggleButton.GetComponentInChildren<TextMeshProUGUI>(true);
         toggleLabel.gameObject.name = "悬浮日志数量";
 
         GameObject panel = CreateUIObject("调试页面", safeArea.transform, typeof(Image), typeof(Shadow));
-        SetTopRight(panel.GetComponent<RectTransform>(), 22f, 98f, 980f, 760f);
+        SetTopRight(panel.GetComponent<RectTransform>(), 22f, 80f, 960f, 780f);
         Image panelImage = panel.GetComponent<Image>();
-        panelImage.color = new Color(0.018f, 0.03f, 0.04f, 0.985f);
+        panelImage.color = new Color(0.055f, 0.075f, 0.102f, 0.985f);
         panelImage.raycastTarget = true;
-        AddOutline(panelImage, Amber);
+        AddOutline(panelImage, Border);
         Shadow shadow = panel.GetComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
-        shadow.effectDistance = new Vector2(8f, -8f);
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.7f);
+        shadow.effectDistance = new Vector2(6f, -8f);
 
-        TextMeshProUGUI title = CreateText("调试页标题", panel.transform, "运行日志 / DEBUG", 25f, Cream);
+        // 独立背景、标题、统计、过滤、正文、底部操作形成清晰的信息层级。
+        Image headerBackground = CreateImage("日志顶部栏背景", panel.transform, new Color(0.09f, 0.12f, 0.16f, 1f));
+        SetTopLeft(headerBackground.rectTransform, 2f, 2f, 956f, 92f);
+        headerBackground.raycastTarget = false;
+
+        Image headerAccent = CreateImage("日志标题AccentRail", panel.transform, Teal);
+        SetTopLeft(headerAccent.rectTransform, 26f, 24f, 4f, 52f);
+        headerAccent.raycastTarget = false;
+
+        TextMeshProUGUI eyebrow = CreateText(
+            "诊断英文标识", panel.transform, "TERRAFLAT  /  DEVELOPER CONSOLE", 12f, Muted);
+        SetTopLeft(eyebrow.rectTransform, 43f, 16f, 405f, 24f);
+        eyebrow.enableWordWrapping = false;
+
+        TextMeshProUGUI title = CreateText("调试页标题", panel.transform, "运行日志", 27f, Cream);
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
-        SetTopLeft(title.rectTransform, 24f, 18f, 230f, 38f);
+        SetTopLeft(title.rectTransform, 43f, 42f, 240f, 38f);
 
-        TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform, "共 0 条    错误 0    警告 0", 16f, Muted);
+        Image liveDot = CreateImage("实时指示灯", panel.transform, Teal);
+        SetTopLeft(liveDot.rectTransform, 278f, 54f, 8f, 8f);
+        liveDot.raycastTarget = false;
+        TextMeshProUGUI liveLabel = CreateText("运行状态", panel.transform, "LIVE", 12f, Muted);
+        SetTopLeft(liveLabel.rectTransform, 292f, 45f, 72f, 27f);
+
+        Button openGmButton = CreateButton("打开GM面板按钮", panel.transform, "GM 控制台", 150f, 44f, false);
+        SetTopRight(openGmButton.GetComponent<RectTransform>(), 123f, 26f, 150f, 44f);
+        Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 88f, 44f, false);
+        SetTopRight(closeButton.GetComponent<RectTransform>(), 22f, 26f, 88f, 44f);
+
+        Image headerDivider = CreateImage("日志页头分隔线", panel.transform, Border);
+        headerDivider.raycastTarget = false;
+        SetTopLeft(headerDivider.rectTransform, 24f, 94f, 912f, 1f);
+
+        Image summaryBackground = CreateImage("日志统计栏背景", panel.transform,
+            new Color(0.07f, 0.10f, 0.13f, 0.95f));
+        SetTopLeft(summaryBackground.rectTransform, 24f, 104f, 912f, 56f);
+        summaryBackground.raycastTarget = false;
+
+        TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform, "总计 0 条     警告 0     错误 0", 17f, Cream);
         summary.enableWordWrapping = false;
         summary.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(summary.rectTransform, 265f, 22f, 220f, 30f);
+        SetTopLeft(summary.rectTransform, 42f, 115f, 560f, 34f);
 
-        TextMeshProUGUI copyCountLabel = CreateText("复制槽位标题", panel.transform, "复制槽位", 15f, Muted);
-        copyCountLabel.enableWordWrapping = false;
-        SetTopLeft(copyCountLabel.rectTransform, 493f, 23f, 70f, 30f);
+        TextMeshProUGUI latestLabel = CreateText("日志统计说明", panel.transform, "内存日志  ·  实时更新", 13f, Muted);
+        latestLabel.alignment = TextAlignmentOptions.MidlineRight;
+        SetTopLeft(latestLabel.rectTransform, 658f, 116f, 254f, 32f);
 
-        TMP_InputField copyEntryCountInput = CreateInputField("复制日志条数输入框", panel.transform, "50");
-        copyEntryCountInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        copyEntryCountInput.characterLimit = 3;
-        SetTopLeft(copyEntryCountInput.GetComponent<RectTransform>(), 570f, 14f, 62f, 48f);
+        TextMeshProUGUI filterTitle = CreateText("类型筛选说明", panel.transform, "筛选 / FILTER", 14f, Muted);
+        SetTopLeft(filterTitle.rectTransform, 29f, 182f, 132f, 35f);
+        Toggle ordinaryLogs = CreateLogFilterToggle(panel.transform, "普通日志过滤", "普通日志", 169f, Teal);
+        Toggle warningLogs = CreateLogFilterToggle(panel.transform, "警告日志过滤", "警告日志", 377f, Amber);
+        Toggle errorLogs = CreateLogFilterToggle(panel.transform, "错误日志过滤", "错误日志", 585f,
+            new Color(0.93f, 0.46f, 0.42f, 1f));
 
-        Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 96f, 48f, false);
-        SetTopRight(closeButton.GetComponent<RectTransform>(), 18f, 14f, 96f, 48f);
-        Button clearButton = CreateButton("清空日志按钮", panel.transform, "清空", 96f, 48f, false);
-        SetTopRight(clearButton.GetComponent<RectTransform>(), 124f, 14f, 96f, 48f);
-        Button copyButton = CreateButton("复制日志按钮", panel.transform, "复制", 108f, 48f, true);
-        SetTopRight(copyButton.GetComponent<RectTransform>(), 230f, 14f, 108f, 48f);
-        SetButtonLabelSize(closeButton, 17f);
-        SetButtonLabelSize(clearButton, 17f);
-        SetButtonLabelSize(copyButton, 17f);
-
-        Button openGmButton = CreateButton("打开GM面板按钮", panel.transform, "打开 GM 面板", 220f, 60f, true);
-        SetTopLeft(openGmButton.GetComponent<RectTransform>(), 24f, 80f, 220f, 60f);
-        SetButtonLabelSize(openGmButton, 19f);
-
-        Toggle ordinaryLogs = CreateLogFilterToggle(panel.transform, "普通日志过滤", "普通", 284f);
-        Toggle warningLogs = CreateLogFilterToggle(panel.transform, "警告日志过滤", "警告", 500f);
-        Toggle errorLogs = CreateLogFilterToggle(panel.transform, "错误日志过滤", "报错", 716f);
-
-        Image divider = CreateImage("页头分隔线", panel.transform, new Color(0.83f, 0.49f, 0.23f, 0.72f));
-        divider.raycastTarget = false;
-        RectTransform dividerRect = divider.rectTransform;
-        dividerRect.anchorMin = new Vector2(0f, 1f);
-        dividerRect.anchorMax = new Vector2(1f, 1f);
-        dividerRect.pivot = new Vector2(0.5f, 1f);
-        dividerRect.anchoredPosition = new Vector2(0f, -154f);
-        dividerRect.sizeDelta = new Vector2(-40f, 2f);
+        TextMeshProUGUI streamTitle = CreateText("日志流标题", panel.transform, "LOG STREAM   /   日志详情", 14f, Cream);
+        SetTopLeft(streamTitle.rectTransform, 28f, 238f, 390f, 27f);
+        TextMeshProUGUI streamHint = CreateText("日志流说明", panel.transform, "最新日志在下方  ·  可滚动查看", 12f, Muted);
+        streamHint.alignment = TextAlignmentOptions.MidlineRight;
+        SetTopLeft(streamHint.rectTransform, 647f, 238f, 282f, 27f);
 
         GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ItemStepScrollRect));
         RectTransform scrollRootRect = scrollRoot.GetComponent<RectTransform>();
         scrollRootRect.anchorMin = Vector2.zero;
         scrollRootRect.anchorMax = Vector2.one;
-        scrollRootRect.offsetMin = new Vector2(22f, 62f);
-        scrollRootRect.offsetMax = new Vector2(-22f, -168f);
+        scrollRootRect.offsetMin = new Vector2(24f, 110f);
+        scrollRootRect.offsetMax = new Vector2(-24f, -270f);
         Image scrollBackground = scrollRoot.GetComponent<Image>();
-        scrollBackground.color = new Color(0.006f, 0.012f, 0.016f, 0.96f);
+        scrollBackground.color = new Color(0.025f, 0.036f, 0.05f, 0.97f);
         scrollBackground.raycastTarget = true;
         AddOutline(scrollBackground, Border);
 
         GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
         RectTransform viewportRect = viewport.GetComponent<RectTransform>();
         Stretch(viewportRect);
-        viewportRect.offsetMin = new Vector2(14f, 12f);
-        viewportRect.offsetMax = new Vector2(-14f, -12f);
+        viewportRect.offsetMin = new Vector2(16f, 14f);
+        viewportRect.offsetMax = new Vector2(-16f, -14f);
 
         TextMeshProUGUI logText = CreateText(
             "日志正文",
             viewport.transform,
             "暂无运行日志。",
             15f,
-            new Color(0.82f, 0.86f, 0.84f, 1f));
+            new Color(0.84f, 0.87f, 0.90f, 1f));
         RectTransform logRect = logText.rectTransform;
         logRect.anchorMin = new Vector2(0f, 1f);
         logRect.anchorMax = new Vector2(1f, 1f);
@@ -139,7 +153,7 @@ public static partial class RuntimeUIPrefabBuilder
         logText.enableAutoSizing = false;
         logText.overflowMode = TextOverflowModes.Overflow;
         logText.richText = false;
-        logText.lineSpacing = 4f;
+        logText.lineSpacing = 5f;
         ContentSizeFitter contentFitter = logText.gameObject.AddComponent<ContentSizeFitter>();
         contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
@@ -153,19 +167,69 @@ public static partial class RuntimeUIPrefabBuilder
         scrollRect.viewport = viewportRect;
         scrollRect.content = logRect;
 
+        Image footerBackground = CreateImage("日志操作区背景", panel.transform,
+            new Color(0.075f, 0.10f, 0.135f, 1f));
+        footerBackground.raycastTarget = false;
+        footerBackground.rectTransform.anchorMin = new Vector2(0f, 0f);
+        footerBackground.rectTransform.anchorMax = new Vector2(1f, 0f);
+        footerBackground.rectTransform.pivot = new Vector2(0.5f, 0f);
+        footerBackground.rectTransform.anchoredPosition = Vector2.zero;
+        footerBackground.rectTransform.sizeDelta = new Vector2(-4f, 98f);
+
+        Image footerDivider = CreateImage("日志操作分隔线", panel.transform, Border);
+        footerDivider.raycastTarget = false;
+        SetBottomLeft(footerDivider.rectTransform, 24f, 98f, 912f, 1f);
+
         TextMeshProUGUI status = CreateText(
             "调试操作状态",
             panel.transform,
-            "复制时将取最近 50 个去重日志槽位。",
-            14f,
+            "复制保留原始日志与堆栈，磁盘记录不会清除。",
+            13f,
             Muted);
         status.enableWordWrapping = false;
         status.overflowMode = TextOverflowModes.Ellipsis;
-        status.rectTransform.anchorMin = new Vector2(0f, 0f);
-        status.rectTransform.anchorMax = new Vector2(1f, 0f);
-        status.rectTransform.pivot = new Vector2(0.5f, 0f);
-        status.rectTransform.anchoredPosition = new Vector2(0f, 17f);
-        status.rectTransform.sizeDelta = new Vector2(-44f, 30f);
+        SetBottomLeft(status.rectTransform, 26f, 32f, 450f, 27f);
+
+        TextMeshProUGUI copyCountLabel = CreateText("复制槽位标题", panel.transform, "复制最近", 14f, Muted);
+        copyCountLabel.enableWordWrapping = false;
+        SetBottomLeft(copyCountLabel.rectTransform, 490f, 33f, 70f, 27f);
+
+        TMP_InputField copyEntryCountInput = CreateInputField("复制日志条数输入框", panel.transform, "50");
+        copyEntryCountInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+        copyEntryCountInput.characterLimit = 3;
+        SetBottomLeft(copyEntryCountInput.GetComponent<RectTransform>(), 566f, 24f, 78f, 48f);
+
+        Button clearButton = CreateButton("清空日志按钮", panel.transform, "清空", 112f, 48f, false);
+        SetBottomRight(clearButton.GetComponent<RectTransform>(), 182f, 24f, 112f, 48f);
+        Button copyButton = CreateButton("复制日志按钮", panel.transform, "复制日志", 146f, 48f, true);
+        SetBottomRight(copyButton.GetComponent<RectTransform>(), 24f, 24f, 146f, 48f);
+        SetButtonLabelSize(copyButton, 16f);
+
+        GameObject feedbackToast = CreateUIObject(
+            "操作Toast提示", panel.transform, typeof(Image), typeof(Shadow), typeof(CanvasGroup));
+        RectTransform toastRect = feedbackToast.GetComponent<RectTransform>();
+        toastRect.anchorMin = toastRect.anchorMax = new Vector2(0.5f, 0f);
+        toastRect.pivot = new Vector2(0.5f, 0f);
+        toastRect.anchoredPosition = new Vector2(0f, 132f);
+        toastRect.sizeDelta = new Vector2(460f, 56f);
+        Image toastBackground = feedbackToast.GetComponent<Image>();
+        toastBackground.color = new Color(0.09f, 0.22f, 0.19f, 0.98f);
+        toastBackground.raycastTarget = false;
+        AddOutline(toastBackground, Teal);
+        Shadow toastShadow = feedbackToast.GetComponent<Shadow>();
+        toastShadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+        toastShadow.effectDistance = new Vector2(0f, -4f);
+        CanvasGroup toastGroup = feedbackToast.GetComponent<CanvasGroup>();
+        toastGroup.alpha = 0f;
+        toastGroup.interactable = false;
+        toastGroup.blocksRaycasts = false;
+        TextMeshProUGUI toastText = CreateText("Toast提示内容", feedbackToast.transform, "已复制", 16f, Cream);
+        Stretch(toastText.rectTransform);
+        toastText.rectTransform.offsetMin = new Vector2(16f, 7f);
+        toastText.rectTransform.offsetMax = new Vector2(-16f, -7f);
+        toastText.alignment = TextAlignmentOptions.Center;
+        toastText.enableWordWrapping = false;
+        toastText.overflowMode = TextOverflowModes.Ellipsis;
 
         RuntimeDebugOverlay controller = root.AddComponent<RuntimeDebugOverlay>();
         SerializedObject serializedController = new SerializedObject(controller);
@@ -184,21 +248,33 @@ public static partial class RuntimeUIPrefabBuilder
         serializedController.FindProperty("ordinaryLogsToggle").objectReferenceValue = ordinaryLogs;
         serializedController.FindProperty("warningLogsToggle").objectReferenceValue = warningLogs;
         serializedController.FindProperty("errorLogsToggle").objectReferenceValue = errorLogs;
+        serializedController.FindProperty("feedbackToast").objectReferenceValue = feedbackToast;
+        serializedController.FindProperty("feedbackToastCanvasGroup").objectReferenceValue = toastGroup;
+        serializedController.FindProperty("feedbackToastBackground").objectReferenceValue = toastBackground;
+        serializedController.FindProperty("feedbackToastText").objectReferenceValue = toastText;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
+        feedbackToast.SetActive(false);
         panel.SetActive(false);
         return root;
     }
 
-    /// <summary>过滤勾选保留60像素触控区域，正文与复制共用其状态。</summary>
-    private static Toggle CreateLogFilterToggle(Transform parent, string name, string caption, float left)
+    /// <summary>过滤器保持共享 Toggle 的交互和点击范围，彩色侧条帮助识别日志级别。</summary>
+    private static Toggle CreateLogFilterToggle(
+        Transform parent, string name, string caption, float left, Color accentColor)
     {
         FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(caption);
+        Image filterBackground = CreateImage(name + "背景", parent, new Color(0.085f, 0.112f, 0.15f, 1f));
+        SetTopLeft(filterBackground.rectTransform, left, 174f, 190f, 54f);
+        filterBackground.raycastTarget = false;
+        Image accentRail = CreateImage(name + "等级AccentRail", parent, accentColor);
+        SetTopLeft(accentRail.rectTransform, left, 180f, 3f, 42f);
+        accentRail.raycastTarget = false;
         Toggle toggle = CreateToggle(name, parent);
-        SetTopLeft(toggle.GetComponent<RectTransform>(), left, 80f, 60f, 60f);
+        SetTopLeft(toggle.GetComponent<RectTransform>(), left + 13f, 183f, 54f, 38f);
         toggle.SetIsOnWithoutNotify(true);
-        TextMeshProUGUI label = CreateText(name + "标签", parent, caption, 20f, Cream);
-        SetTopLeft(label.rectTransform, left + 72f, 92f, 108f, 36f);
+        TextMeshProUGUI label = CreateText(name + "标签", parent, caption, 16f, Cream);
+        SetTopLeft(label.rectTransform, left + 75f, 184f, 109f, 36f);
         FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { label });
         return toggle;
     }
