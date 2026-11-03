@@ -229,6 +229,7 @@ MonoBehaviour:
   PedalCrank: {fileID: 720000000000000003}
   WheelRadius: 0.299
   PedalTurnsPerWheelTurn: 0.55
+  FacingDeadZonePixels: 48
 --- !u!210 &710000000000000002
 SortingGroup:
   m_ObjectHideFlags: 0
