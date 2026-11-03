@@ -84,6 +84,10 @@ public sealed class GamepadUISelectionFollower : MonoBehaviour, ISelectHandler
     /// </summary>
     public void OnSelect(BaseEventData eventData)
     {
+        // 鼠标点击下拉选项也会改变焦点，只有手柄方向导航才允许推动外层页面。
+        if (!EventSystemGuard.IsGamepadUISelectionActive)
+            return;
+
         if (scrollRect == null)
         {
             if (!CacheHierarchyReferences())
@@ -120,11 +124,15 @@ public sealed class GamepadUISelectionFollower : MonoBehaviour, ISelectHandler
         processingRequests = pendingRequests;
         pendingRequests = swap;
 
+        // 点击或焦点切换可能发生在帧末执行前，旧请求不能再调整滚动位置。
+        GameObject selectedObject = EventSystemGuard.IsGamepadUISelectionActive
+            ? EventSystem.current.currentSelectedGameObject : null;
         foreach (KeyValuePair<ScrollRect, GamepadUISelectionFollower> request in processingRequests)
         {
             ScrollRect targetScrollRect = request.Key;
             GamepadUISelectionFollower follower = request.Value;
             if (targetScrollRect == null || follower == null ||
+                follower.gameObject != selectedObject ||
                 !follower.isActiveAndEnabled || follower.scrollRect != targetScrollRect ||
                 !follower.RefreshScrollRectReferences())
             {

@@ -29,11 +29,119 @@ public static partial class GameplayTestSystemProbe
         Register("ui_settings", "main_menu_scale_layout", CaptureMainMenuScaleLayout);
         Register("ui_settings", "main_menu_modal_scale_layout", CaptureMainMenuModalScaleLayout);
         Register("ui_settings", "scroll_wheel_step", CaptureScrollWheelStep);
+        Register("ui_settings", "scroll_focus_input_mode", CaptureScrollFocusInputMode);
         Register("ui_settings", "button_hover_feedback", CaptureButtonHoverFeedback);
 #endif
     }
 
 #if UNITY_EDITOR
+    /// <summary>用正式焦点跟随器检查下拉框点击不重定位外层页面，手柄导航仍能显露焦点。</summary>
+    private static JObject CaptureScrollFocusInputMode(JObject _)
+    {
+        EventSystem previousEvents = EventSystem.current;
+        bool previousGamepadMode = EventSystemGuard.IsGamepadMode;
+        var allowedField = typeof(EventSystemGuard).GetField("gamepadModeEntryAllowed",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        bool previousGamepadEntryAllowed = (bool)allowedField.GetValue(null);
+        var root = new GameObject("[LuaScrollFocus]", typeof(RectTransform), typeof(Canvas));
+        root.hideFlags = HideFlags.HideAndDontSave;
+        root.SetActive(false);
+        try
+        {
+            Canvas canvas = root.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.enabled = false;
+            ((RectTransform)root.transform).sizeDelta = new Vector2(500f, 500f);
+
+            var events = new GameObject("EventSystem", typeof(GameplayTestDropdownEventSystem))
+                .GetComponent<EventSystem>();
+            events.transform.SetParent(root.transform, false);
+            var scrollRect = new GameObject("SettingsPage", typeof(RectTransform), typeof(ItemStepScrollRect))
+                .GetComponent<RectTransform>();
+            scrollRect.SetParent(root.transform, false);
+            scrollRect.sizeDelta = new Vector2(240f, 120f);
+            var viewport = new GameObject("Viewport", typeof(RectTransform)).GetComponent<RectTransform>();
+            viewport.SetParent(scrollRect, false);
+            viewport.sizeDelta = scrollRect.sizeDelta;
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(viewport, false);
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(.5f, 1f);
+            content.sizeDelta = new Vector2(0f, 550f);
+            var dropdown = new GameObject("Dropdown", typeof(RectTransform), typeof(Button),
+                typeof(GamepadUISelectionFollower)).GetComponent<RectTransform>();
+            dropdown.SetParent(content, false);
+            dropdown.anchorMin = dropdown.anchorMax = new Vector2(.5f, 1f);
+            dropdown.pivot = new Vector2(.5f, 1f);
+            dropdown.anchoredPosition = new Vector2(0f, -400f);
+            dropdown.sizeDelta = new Vector2(160f, 40f);
+            var other = new GameObject("OtherSelection", typeof(RectTransform), typeof(Button));
+            other.transform.SetParent(root.transform, false);
+            var scroll = scrollRect.GetComponent<ScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            root.SetActive(true);
+            EventSystem.current = events;
+            EventSystemGuard.SetGamepadModeEntryAllowed(true);
+
+            var flush = typeof(GamepadUISelectionFollower).GetMethod("FlushPendingRequests",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            if (flush == null) throw new System.InvalidOperationException("焦点滚动队列入口缺失");
+            void Flush() => flush.Invoke(null, null);
+            void SelectDropdown()
+            {
+                events.SetSelectedGameObject(null);
+                events.SetSelectedGameObject(dropdown.gameObject);
+                // 编辑态不会自动执行普通组件的 OnSelect，显式触发正式回调。
+                dropdown.GetComponent<GamepadUISelectionFollower>().OnSelect(new BaseEventData(events));
+            }
+
+            EventSystemGuard.SetGamepadMode(false);
+            SelectDropdown();
+            Flush();
+            bool pointerPreserved = Mathf.Abs(content.anchoredPosition.y) < .01f;
+
+            EventSystemGuard.SetGamepadMode(true);
+            SelectDropdown();
+            bool navigationActive = EventSystemGuard.IsGamepadUISelectionActive;
+            bool selectedIsDropdown = events.currentSelectedGameObject == dropdown.gameObject;
+            bool eventSystemCurrent = EventSystem.current == events;
+            bool gamepadModeEnabled = EventSystemGuard.IsGamepadMode;
+            bool buttonInteractable = dropdown.GetComponent<Button>().IsInteractable();
+            Flush();
+            bool gamepadScrolled = content.anchoredPosition.y > 0f;
+
+            content.anchoredPosition = Vector2.zero;
+            SelectDropdown();
+            events.SetSelectedGameObject(other);
+            Flush();
+            bool staleSelectionIgnored = Mathf.Abs(content.anchoredPosition.y) < .01f;
+
+            SelectDropdown();
+            EventSystemGuard.SetGamepadMode(false);
+            Flush();
+            bool modeChangeIgnored = Mathf.Abs(content.anchoredPosition.y) < .01f;
+
+            return new JObject { ["pointerPreserved"] = pointerPreserved, ["gamepadScrolled"] = gamepadScrolled,
+                ["navigationActive"] = navigationActive,
+                ["selectedIsDropdown"] = selectedIsDropdown, ["eventSystemCurrent"] = eventSystemCurrent,
+                ["gamepadModeEnabled"] = gamepadModeEnabled, ["buttonInteractable"] = buttonInteractable,
+                ["staleSelectionIgnored"] = staleSelectionIgnored, ["modeChangeIgnored"] = modeChangeIgnored };
+        }
+        finally
+        {
+            EventSystemGuard.SetGamepadMode(false);
+            EventSystemGuard.SetGamepadModeEntryAllowed(previousGamepadEntryAllowed);
+            Object.DestroyImmediate(root);
+            EventSystem.current = previousEvents;
+            if (previousGamepadMode) EventSystemGuard.SetGamepadMode(true);
+        }
+    }
+
     /// <summary>验证统一悬浮配色、鼠标选中态回退和独立存档条目的预选反馈。</summary>
     private static JObject CaptureButtonHoverFeedback(JObject _)
     {

@@ -8,6 +8,13 @@ test.system("ui_settings", "button_hover_feedback", {}, function(data)
         "存档列表悬浮不能预选，或鼠标移出时错误清除了已确认选择")
 end, "按钮统一悬浮与存档条目预选")
 
+test.system("ui_settings", "scroll_focus_input_mode", {}, function(data)
+    assert(data.pointerPreserved and data.gamepadScrolled,
+        "鼠标选择下拉项改变了外层滚动位置，或手柄导航不能滚动至焦点")
+    assert(data.staleSelectionIgnored and data.modeChangeIgnored,
+        "旧焦点或切回鼠标模式后，帧末滚动队列仍修改页面位置")
+end, "下拉选择保持页面位置与手柄焦点滚动")
+
 test.system("ui_settings", "scroll_wheel_step", {}, function(data)
     assert(data.scrollCount > 0 and data.nativeScrollCount == 0,
         "自有UI仍有未接入通用滚轮规则的滚动列表")
