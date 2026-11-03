@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -24,6 +25,9 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private static readonly int ColorId = Shader.PropertyToID("_Color");
     private readonly object syncRoot = new();
     private readonly BatchRendererGroup group;
+    private readonly bool useConstantBuffer;
+    private readonly int constantBufferPageCapacity;
+    private readonly List<ConstantBufferPage> constantPages = new();
     private readonly Mesh mesh;
     private readonly Material material;
     private GraphicsBuffer buffer;
@@ -33,6 +37,7 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     private InstanceData[] instances = new InstanceData[InitialCapacity];
     private int[] visibleInstanceIndices = new int[InitialCapacity];
     private int count;
+    private int constantBufferCapacity;
     private int uploadedCount;
     private bool dataChanged = true;
     private bool previousFrameComplete;
@@ -50,6 +55,13 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     /// <summary>共享材质和单位方片只创建一次；BRG 按实例生成柔边椭圆。</summary>
     public ContactShadowBatchRenderer(int renderQueue = ShadowRenderQueue)
     {
+        useConstantBuffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer;
+        if (useConstantBuffer)
+        {
+            constantBufferPageCapacity = (BatchRendererGroup.GetConstantBufferMaxWindowSize() - ZeroPrefixBytes) / InstanceStride;
+            if (constantBufferPageCapacity < 1)
+                throw new InvalidOperationException("当前图形设备的 BRG 常量缓冲窗口无法容纳接触阴影实例。");
+        }
         Material template = Resources.Load<Material>("AIECS/ActorBlobShadow");
         if (template == null) throw new InvalidOperationException("缺少 AIECS/ActorBlobShadow 阴影材质。");
         material = new Material(template)
@@ -114,7 +126,15 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
         {
             if (count > 0 && (dataChanged || count != uploadedCount))
             {
-                buffer.SetData(instances, 0, ZeroPrefixBytes / InstanceStride, count);
+                if (useConstantBuffer)
+                {
+                    // 每个 GLES UBO 窗口只上传自己对应的实例区间。
+                    for (int start = 0, page = 0; start < count; start += constantBufferPageCapacity, page++)
+                        constantPages[page].Buffer.SetData(instances, start, ZeroPrefixBytes / InstanceStride,
+                            Mathf.Min(constantBufferPageCapacity, count - start));
+                }
+                else
+                    buffer.SetData(instances, 0, ZeroPrefixBytes / InstanceStride, count);
                 uploadedCount = count;
             }
             // 空帧直接由 count 禁止绘制，缓冲区原数据可以在恢复时继续复用。
@@ -166,6 +186,30 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
     /// <summary>扩容时重新登记批次，保持同一网格和材质注册。</summary>
     private void Resize(int capacity)
     {
+        if (useConstantBuffer)
+        {
+            while (constantBufferCapacity < capacity)
+            {
+                int bytes = ZeroPrefixBytes + constantBufferPageCapacity * InstanceStride;
+                var pageBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16)
+                {
+                    name = $"ContactShadows-BRG-Page{constantPages.Count}"
+                };
+                try
+                {
+                    pageBuffer.SetData(new InstanceData[ZeroPrefixBytes / InstanceStride], 0, 0,
+                        ZeroPrefixBytes / InstanceStride);
+                    BatchID pageId = AddBatch(pageBuffer, bytes);
+                    constantPages.Add(new ConstantBufferPage(pageBuffer, pageId));
+                    constantBufferCapacity += constantBufferPageCapacity;
+                }
+                catch { pageBuffer.Dispose(); throw; }
+            }
+            uploadedCount = 0;
+            dataChanged = true;
+            previousFrameComplete = false;
+            return;
+        }
         if (buffer != null)
         {
             group.RemoveBatch(batchId);
@@ -178,17 +222,36 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
         };
         buffer.SetData(new InstanceData[ZeroPrefixBytes / InstanceStride], 0, 0,
             ZeroPrefixBytes / InstanceStride);
-        var metadata = new NativeArray<MetadataValue>(1, Allocator.Temp);
-        try
-        {
-            metadata[0] = new MetadataValue { NameID = InstanceDataId, Value = ZeroPrefixBytes };
-            batchId = group.AddBatch(metadata, buffer.bufferHandle);
-        }
-        finally { metadata.Dispose(); }
+        batchId = AddBatch(buffer, bytes);
         // 新 GraphicsBuffer 只有元数据前缀，下一次非空 EndFrame 必须完整上传实例。
         uploadedCount = 0;
         dataChanged = true;
         previousFrameComplete = false;
+    }
+
+    private BatchID AddBatch(GraphicsBuffer target, int bytes)
+    {
+        var metadata = new NativeArray<MetadataValue>(1, Allocator.Temp);
+        try
+        {
+            metadata[0] = new MetadataValue { NameID = InstanceDataId, Value = ZeroPrefixBytes };
+            return useConstantBuffer
+                ? group.AddBatch(metadata, target.bufferHandle, 0, (uint)bytes)
+                : group.AddBatch(metadata, target.bufferHandle);
+        }
+        finally { metadata.Dispose(); }
+    }
+
+    private readonly struct ConstantBufferPage
+    {
+        public ConstantBufferPage(GraphicsBuffer buffer, BatchID batchId)
+        {
+            Buffer = buffer;
+            BatchId = batchId;
+        }
+
+        public GraphicsBuffer Buffer { get; }
+        public BatchID BatchId { get; }
     }
 
     #endregion
@@ -210,8 +273,21 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
             commands->drawCommandPickingInstanceIDs = null;
             commands->instanceSortingPositions = null;
             commands->instanceSortingPositionFloatCount = 0;
-            commands->drawCommandCount = visible > 0 ? 1 : 0;
-            commands->drawRangeCount = visible > 0 ? 1 : 0;
+            int drawCount = visible > 0 ? 1 : 0;
+            if (useConstantBuffer && visible > 0)
+            {
+                int lastPage = -1;
+                drawCount = 0;
+                for (int i = 0; i < visible; i++)
+                {
+                    int page = visibleInstanceIndices[i] / constantBufferPageCapacity;
+                    if (page == lastPage) continue;
+                    lastPage = page;
+                    drawCount++;
+                }
+            }
+            commands->drawCommandCount = drawCount;
+            commands->drawRangeCount = drawCount;
             commands->visibleInstanceCount = visible;
             if (visible == 0)
             {
@@ -223,34 +299,46 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
 
             int alignment = UnsafeUtility.AlignOf<long>();
             commands->drawCommands = (BatchDrawCommand*)UnsafeUtility.Malloc(
-                UnsafeUtility.SizeOf<BatchDrawCommand>(), alignment, Allocator.TempJob);
+                UnsafeUtility.SizeOf<BatchDrawCommand>() * drawCount, alignment, Allocator.TempJob);
             commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(
-                UnsafeUtility.SizeOf<BatchDrawRange>(), alignment, Allocator.TempJob);
+                UnsafeUtility.SizeOf<BatchDrawRange>() * drawCount, alignment, Allocator.TempJob);
             commands->visibleInstances = (int*)UnsafeUtility.Malloc(
                 sizeof(int) * visible, alignment, Allocator.TempJob);
-
-            BatchDrawCommand* draw = commands->drawCommands;
-            draw->visibleOffset = 0;
-            draw->visibleCount = (uint)visible;
-            draw->batchID = batchId;
-            draw->materialID = materialId;
-            draw->meshID = meshId;
-            draw->submeshIndex = 0;
-            draw->splitVisibilityMask = 0xff;
-            draw->flags = 0;
-            draw->sortingPosition = 0;
-            BatchDrawRange* range = commands->drawRanges;
-            range->drawCommandsBegin = 0;
-            range->drawCommandsCount = 1;
-            range->filterSettings = new BatchFilterSettings
+            // 每个 DrawCommand 的索引都相对它所属的 BRG Batch/UBO 页。
+            for (int start = 0, commandIndex = 0; start < visible; commandIndex++)
             {
-                layer = 0,
-                renderingLayerMask = uint.MaxValue,
-                allDepthSorted = false
-            };
+                int page = useConstantBuffer ? visibleInstanceIndices[start] / constantBufferPageCapacity : 0;
+                int end = start + 1;
+                while (end < visible && (!useConstantBuffer ||
+                       visibleInstanceIndices[end] / constantBufferPageCapacity == page))
+                    end++;
 
-            for (int i = 0; i < visible; i++)
-                commands->visibleInstances[i] = visibleInstanceIndices[i];
+                BatchDrawCommand* draw = commands->drawCommands + commandIndex;
+                draw->visibleOffset = (uint)start;
+                draw->visibleCount = (uint)(end - start);
+                draw->batchID = useConstantBuffer ? constantPages[page].BatchId : batchId;
+                draw->materialID = materialId;
+                draw->meshID = meshId;
+                draw->submeshIndex = 0;
+                draw->splitVisibilityMask = 0xff;
+                draw->flags = 0;
+                draw->sortingPosition = 0;
+                BatchDrawRange* range = commands->drawRanges + commandIndex;
+                range->drawCommandsBegin = (uint)commandIndex;
+                range->drawCommandsCount = 1;
+                range->filterSettings = new BatchFilterSettings
+                {
+                    layer = 0,
+                    renderingLayerMask = uint.MaxValue,
+                    allDepthSorted = false
+                };
+
+                for (int i = start; i < end; i++)
+                    commands->visibleInstances[i] = useConstantBuffer
+                        ? visibleInstanceIndices[i] % constantBufferPageCapacity
+                        : visibleInstanceIndices[i];
+                start = end;
+            }
         }
         return default;
     }
@@ -295,15 +383,24 @@ internal sealed class ContactShadowBatchRenderer : IDisposable
                 try { previous?.Dispose(); }
                 finally
                 {
-                    if (Application.isPlaying)
+                    try
                     {
-                        UnityEngine.Object.Destroy(mesh);
-                        UnityEngine.Object.Destroy(material);
+                        foreach (ConstantBufferPage page in constantPages)
+                            page.Buffer.Dispose();
+                        constantPages.Clear();
                     }
-                    else
+                    finally
                     {
-                        UnityEngine.Object.DestroyImmediate(mesh);
-                        UnityEngine.Object.DestroyImmediate(material);
+                        if (Application.isPlaying)
+                        {
+                            UnityEngine.Object.Destroy(mesh);
+                            UnityEngine.Object.Destroy(material);
+                        }
+                        else
+                        {
+                            UnityEngine.Object.DestroyImmediate(mesh);
+                            UnityEngine.Object.DestroyImmediate(material);
+                        }
                     }
                 }
             }

@@ -291,6 +291,8 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
+        private readonly bool useConstantBuffer;
+        private readonly int constantBufferPageCapacity;
         private readonly Dictionary<ChunkTilemapRenderer, Dictionary<int, InstanceHandle>> ownerHandles = new();
         /// <summary>注册时建立区块可见状态，剔除回调不再逐实例查字典。</summary>
         private readonly Dictionary<int, OwnerCullingState> ownerCullingById = new();
@@ -319,6 +321,14 @@ internal static class ChunkBatchRendererGroupService
 
         public Backend()
         {
+            useConstantBuffer = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer;
+            if (useConstantBuffer)
+            {
+                // GLES 的 UBO 每次只能绑定一个有限窗口，实例不得跨窗口读取。
+                constantBufferPageCapacity = (BatchRendererGroup.GetConstantBufferMaxWindowSize() - ZeroPrefixBytes) / InstanceStride;
+                if (constantBufferPageCapacity < 1)
+                    throw new InvalidOperationException("当前图形设备的 BRG 常量缓冲窗口无法容纳区块实例。");
+            }
             ValidateBatchSortingProfiles();
             spriteTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Sprite-Lit");
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
@@ -943,7 +953,7 @@ internal static class ChunkBatchRendererGroupService
             material.SetFloat(ElevationEdgeWidthId, GroundElevationShadowSettings.Width);
         }
 
-        private BatchID CreateBatch(GraphicsBuffer buffer)
+        private BatchID CreateBatch(GraphicsBuffer buffer, int byteCount)
         {
             var metadata = new NativeArray<MetadataValue>(1, Allocator.Temp);
             try
@@ -954,7 +964,9 @@ internal static class ChunkBatchRendererGroupService
                     // 自定义 AoS 加载：这里保存实例 0 的字节地址，不使用最高位数组协议。
                     Value = InstanceMetadataAddress
                 };
-                return rendererGroup.AddBatch(metadata, buffer.bufferHandle);
+                return useConstantBuffer
+                    ? rendererGroup.AddBatch(metadata, buffer.bufferHandle, 0, (uint)byteCount)
+                    : rendererGroup.AddBatch(metadata, buffer.bufferHandle);
             }
             finally
             {
@@ -984,7 +996,8 @@ internal static class ChunkBatchRendererGroupService
                     int batchVisible = allOwnersVisible ? batchCount : batchVisibleInstances[i].Count;
                     if (batchVisible <= 0)
                         continue;
-                    commandCount += batch.DepthSorted ? batchVisible : 1;
+                    commandCount += batch.DepthSorted ? batchVisible :
+                        batch.CountVisiblePageCommands(allOwnersVisible ? null : batchVisibleInstances[i], batchVisible);
                     if (batch.DepthSorted) sortedVisibleCount += batchVisible;
                     visibleCount += batchVisible;
                 }
@@ -1042,7 +1055,7 @@ internal static class ChunkBatchRendererGroupService
                             BatchDrawCommand* sortedDraw = commands->drawCommands + commandIndex;
                             sortedDraw->visibleOffset = (uint)visibleOffset;
                             sortedDraw->visibleCount = 1;
-                            sortedDraw->batchID = batch.BatchId;
+                            sortedDraw->batchID = batch.GetBatchId(instance);
                             sortedDraw->materialID = batch.MaterialId;
                             sortedDraw->meshID = batch.MeshId;
                             sortedDraw->submeshIndex = 0;
@@ -1054,7 +1067,7 @@ internal static class ChunkBatchRendererGroupService
                             commands->instanceSortingPositions[sortingFloatOffset] = position.x;
                             commands->instanceSortingPositions[sortingFloatOffset + 1] = position.y;
                             commands->instanceSortingPositions[sortingFloatOffset + 2] = position.z;
-                            commands->visibleInstances[visibleOffset] = instance;
+                            commands->visibleInstances[visibleOffset] = batch.GetLocalInstanceIndex(instance);
 
                             BatchDrawRange* sortedRange = commands->drawRanges + commandIndex;
                             sortedRange->drawCommandsBegin = (uint)commandIndex;
@@ -1072,32 +1085,44 @@ internal static class ChunkBatchRendererGroupService
                         continue;
                     }
 
-                    BatchDrawCommand* draw = commands->drawCommands + commandIndex;
-                    draw->visibleOffset = (uint)visibleOffset;
-                    draw->visibleCount = (uint)batchVisible;
-                    draw->batchID = batch.BatchId;
-                    draw->materialID = batch.MaterialId;
-                    draw->meshID = batch.MeshId;
-                    draw->submeshIndex = 0;
-                    draw->splitVisibilityMask = 0xff;
-                    draw->flags = 0;
-                    draw->sortingPosition = 0;
-
-                    BatchDrawRange* range = commands->drawRanges + commandIndex;
-                    range->drawCommandsBegin = (uint)commandIndex;
-                    range->drawCommandsCount = 1;
-                    range->filterSettings = new BatchFilterSettings
+                    // 同一绘制命令中的可见索引必须属于同一个 UBO 窗口。
+                    for (int start = 0; start < batchVisible;)
                     {
-                        renderingLayerMask = uint.MaxValue,
-                        allDepthSorted = false
-                    };
+                        int firstInstance = allOwnersVisible ? start : visibleInstances[start];
+                        int pageIndex = batch.GetPageIndex(firstInstance);
+                        int end = start + 1;
+                        while (end < batchVisible &&
+                               batch.GetPageIndex(allOwnersVisible ? end : visibleInstances[end]) == pageIndex)
+                            end++;
 
-                    for (int visibleIndex = 0; visibleIndex < batchVisible; visibleIndex++)
-                        commands->visibleInstances[visibleOffset + visibleIndex] =
-                            allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex];
+                        BatchDrawCommand* draw = commands->drawCommands + commandIndex;
+                        draw->visibleOffset = (uint)visibleOffset;
+                        draw->visibleCount = (uint)(end - start);
+                        draw->batchID = batch.GetBatchId(firstInstance);
+                        draw->materialID = batch.MaterialId;
+                        draw->meshID = batch.MeshId;
+                        draw->submeshIndex = 0;
+                        draw->splitVisibilityMask = 0xff;
+                        draw->flags = 0;
+                        draw->sortingPosition = 0;
 
-                    visibleOffset += batchVisible;
-                    commandIndex++;
+                        BatchDrawRange* range = commands->drawRanges + commandIndex;
+                        range->drawCommandsBegin = (uint)commandIndex;
+                        range->drawCommandsCount = 1;
+                        range->filterSettings = new BatchFilterSettings
+                        {
+                            renderingLayerMask = uint.MaxValue,
+                            allDepthSorted = false
+                        };
+
+                        for (int visibleIndex = start; visibleIndex < end; visibleIndex++)
+                            commands->visibleInstances[visibleOffset + visibleIndex - start] =
+                                batch.GetLocalInstanceIndex(allOwnersVisible ? visibleIndex : visibleInstances[visibleIndex]);
+
+                        visibleOffset += end - start;
+                        commandIndex++;
+                        start = end;
+                    }
                 }
             }
 
@@ -1287,6 +1312,7 @@ internal static class ChunkBatchRendererGroupService
             private readonly List<InstanceOwner> owners = new();
             private readonly List<Vector3> sortingPositions = new();
             private readonly InstanceData[] scratch = new InstanceData[1];
+            private readonly List<ConstantBufferPage> constantPages = new();
             private GraphicsBuffer buffer;
             private int capacity;
             private bool bulkRemoving;
@@ -1318,6 +1344,26 @@ internal static class ChunkBatchRendererGroupService
             public int Count => gpuData.Count;
             public InstanceData GetData(int index) => gpuData[index];
             public Vector3 GetSortingPosition(int index) => sortingPositions[index];
+
+            public int GetPageIndex(int index) => backend.useConstantBuffer ? index / backend.constantBufferPageCapacity : 0;
+            public int GetLocalInstanceIndex(int index) => backend.useConstantBuffer ? index % backend.constantBufferPageCapacity : index;
+            public BatchID GetBatchId(int index) => backend.useConstantBuffer ? constantPages[GetPageIndex(index)].BatchId : BatchId;
+
+            public int CountVisiblePageCommands(List<int> visibleIndices, int visibleCount)
+            {
+                if (!backend.useConstantBuffer) return 1;
+                if (visibleIndices == null)
+                    return (visibleCount + backend.constantBufferPageCapacity - 1) / backend.constantBufferPageCapacity;
+                int lastPage = -1, commands = 0;
+                for (int i = 0; i < visibleCount; i++)
+                {
+                    int page = GetPageIndex(visibleIndices[i]);
+                    if (page == lastPage) continue;
+                    lastPage = page;
+                    commands++;
+                }
+                return commands;
+            }
 
             /// <summary>只在可见区块集合变化时扫描本批次，平常复用上次的索引。</summary>
             public void CollectVisibleInstances(List<int> visibleInstances)
@@ -1420,8 +1466,20 @@ internal static class ChunkBatchRendererGroupService
 
             private void UploadRange(int start, int end)
             {
-                if (start >= 0)
+                if (start < 0) return;
+                if (!backend.useConstantBuffer)
+                {
                     buffer.SetData(gpuData, start, start + 1, end - start + 1);
+                    return;
+                }
+                while (start <= end)
+                {
+                    int pageIndex = GetPageIndex(start);
+                    int localIndex = GetLocalInstanceIndex(start);
+                    int count = Mathf.Min(end - start + 1, backend.constantBufferPageCapacity - localIndex);
+                    constantPages[pageIndex].Buffer.SetData(gpuData, start, localIndex + 1, count);
+                    start += count;
+                }
             }
 
             public bool Remove(int index, out InstanceOwner movedOwner)
@@ -1452,6 +1510,27 @@ internal static class ChunkBatchRendererGroupService
             private void Resize(int newCapacity)
             {
                 newCapacity = Mathf.Max(InitialCapacity, newCapacity);
+                if (backend.useConstantBuffer)
+                {
+                    while (capacity < newCapacity)
+                    {
+                        int pageBytes = ZeroPrefixBytes + backend.constantBufferPageCapacity * InstanceStride;
+                        var pageBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Constant, pageBytes / 16, 16)
+                        {
+                            name = $"ChunkBRG_{Key.Layer}_{Key.SpriteId}_Page{constantPages.Count}"
+                        };
+                        try
+                        {
+                            scratch[0] = default;
+                            pageBuffer.SetData(scratch, 0, 0, 1);
+                            BatchID pageBatchId = backend.CreateBatch(pageBuffer, pageBytes);
+                            constantPages.Add(new ConstantBufferPage(pageBuffer, pageBatchId));
+                            capacity += backend.constantBufferPageCapacity;
+                        }
+                        catch { pageBuffer.Dispose(); throw; }
+                    }
+                    return;
+                }
                 if (buffer != null)
                 {
                     backend.rendererGroup.RemoveBatch(BatchId);
@@ -1467,7 +1546,7 @@ internal static class ChunkBatchRendererGroupService
                 // 第一份 112 字节零实例覆盖官方建议的 64 字节零前缀。
                 scratch[0] = default;
                 buffer.SetData(scratch, 0, 0, 1);
-                BatchId = backend.CreateBatch(buffer);
+                BatchId = backend.CreateBatch(buffer, byteCount);
                 if (gpuData.Count > 0)
                 {
                     buffer.SetData(gpuData, 0, 1, gpuData.Count);
@@ -1477,12 +1556,15 @@ internal static class ChunkBatchRendererGroupService
             private void Upload(int index, InstanceData data)
             {
                 scratch[0] = data;
-                buffer.SetData(scratch, 0, index + 1, 1);
+                if (backend.useConstantBuffer)
+                    constantPages[GetPageIndex(index)].Buffer.SetData(scratch, 0, GetLocalInstanceIndex(index) + 1, 1);
+                else
+                    buffer.SetData(scratch, 0, index + 1, 1);
             }
 
             public void Dispose()
             {
-                if (buffer == null)
+                if (buffer == null && constantPages.Count == 0)
                     return;
                 GraphicsBuffer previous = buffer;
                 buffer = null;
@@ -1490,8 +1572,34 @@ internal static class ChunkBatchRendererGroupService
                 owners.Clear();
                 sortingPositions.Clear();
                 bulkDirtyIndices.Clear();
-                try { backend.rendererGroup.RemoveBatch(BatchId); }
-                finally { previous.Dispose(); }
+                try
+                {
+                    if (previous != null)
+                        try { backend.rendererGroup.RemoveBatch(BatchId); }
+                        finally { previous.Dispose(); }
+                }
+                finally
+                {
+                    foreach (ConstantBufferPage page in constantPages)
+                    {
+                        try { backend.rendererGroup.RemoveBatch(page.BatchId); }
+                        catch (Exception exception) { Debug.LogException(exception); }
+                        finally { page.Buffer.Dispose(); }
+                    }
+                    constantPages.Clear();
+                }
+            }
+
+            private readonly struct ConstantBufferPage
+            {
+                public ConstantBufferPage(GraphicsBuffer buffer, BatchID batchId)
+                {
+                    Buffer = buffer;
+                    BatchId = batchId;
+                }
+
+                public GraphicsBuffer Buffer { get; }
+                public BatchID BatchId { get; }
             }
         }
 

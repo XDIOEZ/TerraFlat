@@ -22,6 +22,7 @@
 - AIECS 从真实 Actor 首图、外壳状态贴图和动画模块参数导出单图目录，保留三角形/UV、尺寸/Pivot/PPU；程序摇摆结果同时供主体网格、裁剪和太阳阴影使用。重导仅显式菜单并保 GUID，PlayMode 不重导。`AiecsLegacySortScope` 用于单相机完整 Sprite 场景。
 - `DroppedItemPresentation` 按空间行/贴图/层增量合并真实 Sprite，静止不重传、离视野释放；类别 world-item，材质 `Assets/9_Shaders/Resources/DroppedItems`，水线为规范坐标，用默认零 `_WaterLineOffset` 补镜像。
 - DOTS 实例读取用 `DOTSInstanceData_Load4` 兼容 GLES 常量缓冲；各 Pass 自行引入使用的二维调试类型。
+- BRG 实例缓冲按 `BatchRendererGroup.BufferTarget` 选择 Raw 或 Constant：Raw 保留单缓冲，GLES Constant 按 `GetConstantBufferMaxWindowSize` 分页注册非零 `windowSize`；裁剪绘制索引转换为页内索引，跨页上传、扩容和注销须保持一致。
 
 ## 定位性能
 
