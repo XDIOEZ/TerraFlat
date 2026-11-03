@@ -58,6 +58,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e6b29fbb8bd4a84cb0f5d63fd9aaea5
+    m_Address: FlatWorld_GameplayUI_02
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4571acf9805f403da0898ebd32bdb38a
     m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Bleeding1.png
     m_ReadOnly: 0
@@ -164,6 +169,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bc23851495e993d478281a42ec865865
+    m_Address: FlatWorld_GameplayUI_03
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d20cd9fe8508435d9d8c3ffd50516e21
     m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Dehydration.png

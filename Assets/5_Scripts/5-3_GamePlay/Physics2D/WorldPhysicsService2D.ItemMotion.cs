@@ -133,6 +133,7 @@ public sealed partial class WorldPhysicsService2D
         ItemPhysicsDefinitionDto definition = GetConfiguredItemPhysics(item);
         body.bodyType = GameNetwork.HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
         body.simulated = true;
+        if (Physics2D.simulationMode == SimulationMode2D.Script) body.interpolation = RigidbodyInterpolation2D.None;
         body.gravityScale = 0f;
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.useAutoMass = false;

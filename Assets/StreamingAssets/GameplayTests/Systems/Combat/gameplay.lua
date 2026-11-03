@@ -70,7 +70,8 @@ for _, weaponCase in ipairs({
         assert(data.impactKind == case.impact, case.name .. "伤害类型错误")
         assert(data.initialWindowClosed, case.name .. "待机时伤害窗未关闭")
         assert(data.idleDamageTickDisabled, case.name .. "待机时伤害模块仍被逐帧调度")
-        assert(data.animatorUpdateMode == "AnimatePhysics", case.name .. "武器动画没有绑定 Unity 固定步")
+        assert(data.animatorUpdateMode == "Normal" and data.simulationOwnedAnimation,
+            case.name .. "武器时间轴没有交给游戏 Tick 独占，或仍依赖 Unity FixedUpdate")
         assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
         assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
         assert(data.sawOpenWindowWithFixedDamageTick, case.name .. "动画伤害窗没有唤醒固定逻辑 Tick")

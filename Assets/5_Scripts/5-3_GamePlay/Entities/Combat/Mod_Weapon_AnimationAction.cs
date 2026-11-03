@@ -68,6 +68,9 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
     private System.Action<bool> actionFinished;
     private AnimatorUpdateMode previousAnimatorUpdateMode;
     private bool ownsAnimatorUpdateMode;
+    private float previousAnimatorSpeed;
+    private float animationSampleRate = 60f;
+    public bool UsesSimulationAnimationClock => ownsAnimatorUpdateMode;
 
     public override ModuleTickMode TickMode => isAttacking || restoreIdleWhenActive || queuedNext
         ? ModuleTickMode.EveryFrame : ModuleTickMode.Disabled;
@@ -121,11 +124,17 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
             }
         }
         animator = item.GetComponentInChildren<Animator>();
-        if (animator != null)
+        if (animator != null && animator.runtimeAnimatorController != null)
         {
             previousAnimatorUpdateMode = animator.updateMode;
+            previousAnimatorSpeed = animator.speed;
             ownsAnimatorUpdateMode = true;
-            animator.updateMode = AnimatorUpdateMode.AnimatePhysics;
+            animator.updateMode = AnimatorUpdateMode.Normal;
+            // 源 Animator 只由游戏 Tick 手动推进；绘制副本负责两次采样之间的显示。
+            animator.speed = 0f;
+            animationSampleRate = 1f;
+            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+                animationSampleRate = Mathf.Max(animationSampleRate, clip.frameRate);
         }
         BindHitFeedback(cachedDamageModule);
         ApplyAttackSpeedToAnimator();
@@ -153,7 +162,8 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         isHoldingInput = false;
         ResetToIdle(playAnimation: false);
         UnbindAttackInput();
-        if (ownsAnimatorUpdateMode && animator != null) animator.updateMode = previousAnimatorUpdateMode;
+        if (ownsAnimatorUpdateMode && animator != null)
+        { animator.updateMode = previousAnimatorUpdateMode; animator.speed = previousAnimatorSpeed; }
         ownsAnimatorUpdateMode = false;
     }
 
@@ -174,6 +184,29 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         cachedController = null;
     }
     #endregion
+    #region 模拟拥有的动作时间轴
+    private void AdvanceSimulationAnimation(float deltaTime)
+    {
+        if (!IsRuntimeLoaded || !Enabled || !isAttacking || !CanPlayWeaponAnimation() || UpdateHitStop()) return;
+        using var world = item?.UseOwnedWorldForItemCallbacks();
+        float remaining = deltaTime;
+        while (remaining > 0f && isAttacking && !IsHitStopped)
+        {
+            float speed = AttackSpeedMultiplier;
+            float sampleSeconds = Mathf.Min(remaining, 1f / (animationSampleRate * Mathf.Max(.001f, speed)));
+            animator.speed = speed;
+            try { animator.Update(sampleSeconds); }
+            finally { if (animator != null) animator.speed = 0f; }
+            remaining = Mathf.Max(0f, remaining - sampleSeconds);
+            // 只细分当前动作的曲线和伤害窗，不重复推进世界、体力或物理。
+            cachedDamageModule?.SampleSimulationAnimationDamagePose();
+            if (!CanPlayWeaponAnimation()) break;
+            AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+            if (state.shortNameHash != currentStateHash || state.normalizedTime >= 1f) break;
+        }
+    }
+    #endregion
+
     #region 攻击动作与持有者输入
     [InfoBox("驱动持有者攻击语义与连击状态机")]
     public override void ModUpdate(float deltaTime)
@@ -197,6 +230,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
         if (UpdateHitStop()) return;
 
+        AdvanceSimulationAnimation(deltaTime);
         UpdateActionCompletion();
 
         if (queuedNext)
@@ -323,7 +357,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
     public void SetAttackSpeedMultiplier(float multiplier) /// 设置攻击速度倍率（同时影响动画速度和攻击时序）
     {
-        if (multiplier <= 0f)
+        if (!float.IsFinite(multiplier) || multiplier <= 0f)
         {
             throw new System.ArgumentOutOfRangeException(nameof(multiplier), multiplier, "攻击速度倍率必须大于0");
         }
@@ -344,10 +378,10 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         if (!IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation())
             return;
 
+        int index = attackAnimationNames.IndexOf(animationName);
+        if (index < 0) throw new System.ArgumentException("攻击动画必须在动作列表中登记。", nameof(animationName));
         FinishAction(false);
-        ResetHitStop();
-        restoreIdleWhenActive = false;
-        animator.Play(animationName);
+        StartAttack(index);
     }
 
     [InfoBox("开始播放指定索引的攻击动画")]
@@ -490,6 +524,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         if (playAnimation && CanPlayWeaponAnimation())
         {
             animator.Play(idleAnimationName, 0, 0f);
+            animator.Update(0f);
             restoreIdleWhenActive = false;
         }
         else
@@ -512,6 +547,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
             return;
 
         animator.Play(idleAnimationName, 0, 0f);
+        animator.Update(0f);
         restoreIdleWhenActive = false;
         InvalidateTickSchedule();
     }
@@ -550,7 +586,7 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
             return;
         }
 
-        animator.speed = IsHitStopped ? 0f : AttackSpeedMultiplier;
+        animator.speed = ownsAnimatorUpdateMode || IsHitStopped ? 0f : AttackSpeedMultiplier;
     }
     #endregion
 }

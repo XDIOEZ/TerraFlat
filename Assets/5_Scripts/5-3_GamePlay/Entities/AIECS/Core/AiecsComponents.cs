@@ -233,6 +233,7 @@ namespace FlatWorld.AIECS
     {
         public CombatIdentity Key; // 真实身份。
         public float2 Position, Facing; // 当前位置与逻辑朝向。
+        public double MotionSampleTime; // 本实体实际推进时刻，不把低频脉冲伪装成每个基础 Tick。
         public float Hp, MaxHp, ActionElapsed; // 生命与动作时钟。
         public float LiquidDepth, WaterBlend; // 有效水深与入水表现混合。
         public float FlightHeight, FlightCruiseHeight; // 表现高度与巡航高度，不改变地面碰撞与掉落位置。

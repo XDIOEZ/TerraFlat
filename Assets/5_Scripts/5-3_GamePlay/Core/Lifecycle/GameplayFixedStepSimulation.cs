@@ -13,7 +13,8 @@ public enum GameplayFixedStepSimulationPhase
     PhysicsPreparation,
     SpaceSimulation,
     Physics,
-    AfterPhysics
+    AfterPhysics,
+    SnapshotCapture
 }
 
 /// <summary>逻辑系统的目标频率；Hz60 表示每个基础 Tick，其余档位按游戏秒累计。</summary>
@@ -53,7 +54,7 @@ public sealed class GameplayFixedStepSimulationScheduler
     }
 
     private readonly Dictionary<IGameplayFixedStepSimulationSystem, Registration> systems = new();
-    private readonly LinkedList<Registration>[] phases = new LinkedList<Registration>[(int)GameplayFixedStepSimulationPhase.AfterPhysics + 1];
+    private readonly LinkedList<Registration>[] phases = new LinkedList<Registration>[(int)GameplayFixedStepSimulationPhase.SnapshotCapture + 1];
     private readonly List<Registration> dispatch = new();
     public ulong TickIndex { get; private set; }
     public int RegisteredSystemCount => systems.Count;
@@ -67,7 +68,7 @@ public sealed class GameplayFixedStepSimulationScheduler
             throw new ArgumentOutOfRangeException(nameof(rate));
         if ((phase is GameplayFixedStepSimulationPhase.WorldTime or GameplayFixedStepSimulationPhase.PhysicsPreparation or
             GameplayFixedStepSimulationPhase.SpaceSimulation or GameplayFixedStepSimulationPhase.Physics or
-            GameplayFixedStepSimulationPhase.AfterPhysics) && rate != GameplayFixedStepTickRate.Hz60)
+            GameplayFixedStepSimulationPhase.AfterPhysics or GameplayFixedStepSimulationPhase.SnapshotCapture) && rate != GameplayFixedStepTickRate.Hz60)
             throw new ArgumentException("时间与物理阶段必须每个固定步执行。", nameof(rate));
         if (systems.ContainsKey(system)) return;
         var registration = new Registration { System = system, Rate = rate };
@@ -157,7 +158,7 @@ public sealed class GameplaySimulationFrameClock
         if (ticksPerSecond != targetTicksPerSecond)
         {
             ticksPerSecond = targetTicksPerSecond;
-            accumulatedSeconds = 0d;
+            // 切换 TPS 保留已过去的余量，不能让表现时间倒退或丢掉半个 Tick。
         }
         if (!float.IsFinite(unscaledDeltaTime) || !float.IsFinite(timeScale) ||
             unscaledDeltaTime <= 0f || timeScale <= 0f) return 0;

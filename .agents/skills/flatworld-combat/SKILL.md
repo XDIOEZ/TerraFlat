@@ -57,7 +57,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - JSON 模块装配后 IItemModuleDependencyBinder 按稳定 ID 绑定；武器 Mod_Damage 的节点层级须匹配 Animator 伤害窗口曲线，不能随意挪动。修饰器从已注册 ItemMods 缓存并校验 FixedList 容量，多伤害盒合法，聚合器排除所有其它 Mod_Damage，避免互调。
 - 武器自身 Source 与 Owner Credit 分开，防自伤在候选/扫描/结算排 Owner，不改 IDamageSender.attacker；上下文携 generation/world/dimension 和 double 模拟 Tick/Time。
 - 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。
-- 窗口打开主动扫已重叠目标；动画武器用 Unity `AnimatePhysics`，动作来源以 `SetAnimationDamageSamplingActive` 唤醒固定步命中采样；`LateUpdate` 只同步表现姿态。窗口预约集跨逻辑步保留、关窗清空，DamageInterval 不限制姿态采样；持续伤害用 Pulse。默认 MaxAttackTargets=3，可被 Prefab/JSON 覆盖。真实武器现场覆盖 30 FPS 下普通/两倍速的固定步开窗与命中回执。
+- 窗口打开主动扫已重叠目标。动画武器由 `Mod_Weapon_AnimationAction.ModUpdate` 独占源 Animator 时间轴：Normal 模式、手动采样外 speed=0，当前 Tick 按素材采样率与攻速细分动作/真实伤害窗，不重复推进世界和体力；无物理绘制副本补间姿态，不依赖 Unity AnimatePhysics。动作以 `SetAnimationDamageSamplingActive` 唤醒固定步采样；预约集跨步保留、关窗清空，DamageInterval 不限制姿态采样，持续伤害用 Pulse。默认 MaxAttackTargets=3，可被配置覆盖。
 - 伤害 Collider 尚未租借或已归还时，关窗仍清理预约和调度状态；尝试开窗缺 Collider 继续报错。回归 `combat/damage_window_without_collider`。
 - AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - 机械武器 Pulse 的候选/去重/命中列表通过 Unity CollectionPool 租约在调用结束归还，支持重入；命中先按扫掠时间再按到接触点的距离排序，预先计算距离并复用静态比较器，不在排序时捕获当前攻击中心。分段 Marker 为 `FlatWorld.Combat.MachineCandidates/MachinePhysicsQuery/MachineApplyHits`；规则 `mechanical/machine_pulse_order`。
@@ -73,7 +73,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - Mod_Bow 从 AttackStarted/Ended 驱动 `ProjectileChargeCycle`；默认松开发射并持续耗体力，`ReleaseMode=LoadThenReleaseToFire` 满蓄力后停耗、首次松手上膛、再次按下松开发射，未满松手取消，取消/卸载清时序。来源 `flatworld.combat.bow_charge`；木弓每秒6、反曲弓每秒9，弩 `Crossbow_Wood` 继承反曲弓数值与普通箭；吹箭/投石索每秒6。弹药经同库存事务，AmmoItemId 与 AmmoTag 任一匹配；箭组合 Mod_Projectile+Mod_Damage。规则回归 `combat/archery_cycle`。
 - 弓伤害倍率经 Launch 传投射物；IProjectileChargeModifier 提供额外速度/伤害，蓄力结束收状态。麦克风修饰只由本地玩家蓄力期间拥有，不存档。
-- 投射模块仅飞行或附着时逐帧运行，状态改变立即失效调度；投射和丢弃伤害按模块来源独立请求空闲休眠，开窗及手持仍唤醒。动画伤害窗口随动作显式唤醒固定步采样，伤害碰撞体关闭且动作结束后休眠；LateUpdate 只同步表现姿态。
+- 投射模块仅飞行或附着时按 Tick 运行，状态改变立即失效调度；投射和丢弃伤害按来源独立请求空闲休眠，开窗及手持仍唤醒。动画伤害窗随动作显式唤醒采样，伤害盒在逻辑采样同步，不由 LateUpdate 修改；关窗且动作结束后休眠。
 - 投石索复用 Mod_Bow，以 AmmoItemId 或 AmmoTag 任一匹配选弹；石头与硬质矿石通过 SlingAmmo_Base 组合 Mod_Projectile+Mod_Damage，石头保留独立丢弃飞行伤害。不要给石头子定义统一增加 SlingAmmo 标签，以免黏土/硝石继承弹药资格；`combat/archery_cycle` 覆盖最终模块与配置边界。
 - 默认箭矢/投掷物从手持武器根位置沿瞄准方向前移生成；配置局部管口的武器使用真实管口，发射与轨迹预览共用位置。`TrajectorySettings` 从实际弹药定义/Prefab 缓存，资源变更失效；预览与 UseVisibleArc 使用同速度/时长/虚拟重力，匀速地面位移，落点是无碰撞预计终点。
 - Dynamic Rigidbody2D 驱动地面，虚拟高度只偏移视觉/攻击盒。高速飞行用实际伤害盒作前后帧 NonAlloc 扫掠，再交 Mod_Damage 结算；实体接触先判伤，正伤正常命中/回收/附着，只有有效 0 伤才反弹。

@@ -64,6 +64,7 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
             EnsureTrail();
             if (trailRenderer != null)
             {
+                SynchronizeRenderedTrailAnchor();
                 SyncTrailSorting();
                 if (!wasFlying)
                     BeginTrail();
@@ -112,6 +113,9 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
     {
         if (projectile == null || ownerItem == null || !projectile.HasActiveWorldAttachment)
             return false;
+        if (!ownerItem.isActiveAndEnabled || ownerItem.IsInPool ||
+            GameplayWorldRegistry.GetItemWorldKey(ownerItem) != GameplayWorldRegistry.LocalPresentationWorldKey)
+            return false;
 
         ownerBody ??= ownerItem.GetComponent<Rigidbody2D>();
         return ownerBody != null &&
@@ -127,7 +131,17 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
 
     private void EnsureTrail()
     {
-        if (trailRenderer != null || sourceRenderer == null)
+        if (trailRenderer != null)
+        {
+            if (trailObject.scene != ownerItem.gameObject.scene)
+            {
+                trailObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                    ownerItem.gameObject.scene, RuntimeSceneObjectCategory.Rendering), false);
+                trailRenderer.Clear();
+            }
+            return;
+        }
+        if (sourceRenderer == null)
             return;
 
         Material material = ResolveSharedTrailMaterial();
@@ -139,8 +153,9 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
             hideFlags = HideFlags.DontSave,
             layer = sourceRenderer.gameObject.layer
         };
-        trailObject.transform.SetParent(sourceRenderer.transform, false);
-        trailObject.transform.localPosition = ResolveTrailAnchorLocalPosition();
+        trailObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            ownerItem.gameObject.scene, RuntimeSceneObjectCategory.Rendering), false);
+        SynchronizeRenderedTrailAnchor();
         trailObject.transform.localRotation = Quaternion.identity;
         trailObject.transform.localScale = Vector3.one;
 
@@ -171,7 +186,7 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         if (trailRenderer == null)
             return;
 
-        trailObject.transform.localPosition = ResolveTrailAnchorLocalPosition();
+        SynchronizeRenderedTrailAnchor();
         trailRenderer.time = Mathf.Max(0.01f, TrailTime);
         trailRenderer.startWidth = Mathf.Max(0f, StartWidth);
         trailRenderer.endWidth = Mathf.Max(0f, EndWidth);
@@ -224,6 +239,16 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
         int sortingOrder = sourceRenderer.sortingOrder - 1;
         if (trailRenderer.sortingOrder != sortingOrder)
             trailRenderer.sortingOrder = sortingOrder;
+    }
+
+    private void SynchronizeRenderedTrailAnchor()
+    {
+        if (trailObject == null || sourceRenderer == null) return;
+        Vector3 point = ResolveTrailAnchorLocalPosition();
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        trailObject.transform.position = rendering != null
+            ? rendering.GetItemRenderedTransformPoint(ownerItem, sourceRenderer.transform, point)
+            : sourceRenderer.transform.TransformPoint(point);
     }
 
     /// <summary>对象池再次发射时复用未变的颜色渐变，修改颜色仍按原时机刷新。</summary>

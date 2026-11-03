@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using UltEvents;
@@ -198,10 +198,14 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     /// <summary>FixedInterval 模式下的更新间隔。</summary>
     public virtual float FixedTickInterval => 0.1f;
 
-    /// <summary>声明需要独立的画面帧更新；变化时调用 InvalidateTickSchedule。</summary>
+    /// <summary>输入在模拟前逐帧采样，不用渲染回调承载玩家命令。</summary>
+    public virtual bool WantsInputFrameUpdate => false;
+    public virtual void ModInputUpdate(float deltaTime) { }
+
+    /// <summary>声明需要独立的表现帧更新；变化时调用 InvalidateTickSchedule。</summary>
     public virtual bool WantsRenderFrameUpdate => false;
 
-    /// <summary>只更新输入采样或表现，不推进固定步玩法。</summary>
+    /// <summary>模拟后逐帧更新表现，禁止在此推进玩法时钟或结算伤害。</summary>
     public virtual void ModRenderUpdate(float deltaTime) { }
 
     protected void InvalidateTickSchedule()

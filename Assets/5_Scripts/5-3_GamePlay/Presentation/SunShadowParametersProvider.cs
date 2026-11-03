@@ -61,8 +61,8 @@ public static class SunShadowParametersProvider
             float.IsNaN(data.DayLength) || float.IsInfinity(data.DayLength) || data.DayLength <= 0f)
             return default;
 
-        float day = Mathf.Repeat(data.CurrentTime / Mathf.Max(1f, data.DayLength), 1f);
-        float alpha = ResolveOpacity(time.GetSunLighting(worldKey));
+        float day = time.GetPresentationDayProgress(worldKey);
+        float alpha = ResolveOpacity(time.GetSunLighting(worldKey, presentation: true));
         if (alpha <= 0.001f) return default;
 
         // 时间只决定太阳在天空中的方向，不再决定影子的出现和消失。

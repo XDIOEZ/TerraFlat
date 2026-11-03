@@ -78,21 +78,16 @@ public class Mod_TurnBack : Module
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！" + item.name);
     }
 
-    public override bool WantsRenderFrameUpdate => item is Player;
+    public override bool WantsRenderFrameUpdate => false;
 
     public override void ModUpdate(float deltaTime)
     {
         if (!IsMirroringEnabled) return;
         UpdateWork();
-        if (!WantsRenderFrameUpdate) AdvanceTurnPresentation(deltaTime);
+        AdvanceTurnSimulationPose(deltaTime);
     }
 
-    public override void ModRenderUpdate(float deltaTime)
-    {
-        if (IsMirroringEnabled) AdvanceTurnPresentation(deltaTime);
-    }
-
-    private void AdvanceTurnPresentation(float deltaTime)
+    private void AdvanceTurnSimulationPose(float deltaTime)
     {
         UpdateTurn(deltaTime);
         UpdateTransform_Positions();

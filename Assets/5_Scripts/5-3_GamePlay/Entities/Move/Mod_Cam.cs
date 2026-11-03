@@ -490,7 +490,9 @@ public class Mod_Cam : Module
         Vector3 position = rendering != null
             ? rendering.GetItemRenderedWorldPosition(CameraFollowItem)
             : CameraFollowItem.transform.position;
-        _defaultPresentationFollowTarget.SetPositionAndRotation(position, CameraFollowItem.transform.rotation);
+        Quaternion rotation = rendering != null ? rendering.GetItemRenderedWorldRotation(CameraFollowItem)
+            : CameraFollowItem.transform.rotation;
+        _defaultPresentationFollowTarget.SetPositionAndRotation(position, rotation);
     }
 
     /// <summary>

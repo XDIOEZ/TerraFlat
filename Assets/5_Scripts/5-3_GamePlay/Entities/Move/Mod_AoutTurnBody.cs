@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class Mod_AoutTurnBody : Mod_TurnBack
 {
-    public override bool WantsRenderFrameUpdate => false;
     public Mod_Mover mover;
     protected override void OnLoad()
     {
@@ -15,7 +14,6 @@ public class Mod_AoutTurnBody : Mod_TurnBack
     public override void ModUpdate(float delta)
     {
         UpdateTurn(delta);
-
         if (mover != null)
         {
             Vector2 direction = mover.TargetPosition - (Vector2)item.transform.position;

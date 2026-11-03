@@ -165,6 +165,7 @@ namespace FlatWorld.AIECS.Gameplay
 
                 PruneDestroyedActors();
                 RefreshMirrors();
+                _renderer?.CaptureSimulationSnapshot(_bridge.Simulation.Display, _bridge.Navigation.Read().Domain);
             }
             catch (Exception exception)
             {

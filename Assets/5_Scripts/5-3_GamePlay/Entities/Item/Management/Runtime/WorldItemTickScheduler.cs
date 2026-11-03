@@ -113,8 +113,11 @@ internal sealed class WorldItemTickScheduler
         dispatch.Clear();
     }
 
-    // 只遍历显式声明画面更新的物品，并按注册令牌隔离回调中的增删。
-    public void UpdateRenderFrame(float deltaTime)
+    // 输入和表现共用注册令牌校验，但分别在模拟前后独立分发。
+    public void UpdateInputFrame(float deltaTime) => UpdateFrameModules(deltaTime, true);
+    public void UpdateRenderFrame(float deltaTime) => UpdateFrameModules(deltaTime, false);
+
+    private void UpdateFrameModules(float deltaTime, bool input)
     {
         renderSnapshot.Clear();
         renderSnapshot.AddRange(renderItems);
@@ -126,7 +129,8 @@ internal sealed class WorldItemTickScheduler
                 if (item == null || !item.isActiveAndEnabled || item.RuntimeGeneration != entry.Generation ||
                     GameplayWorldRegistry.GetItemWorldRevision(item) != entry.WorldRevision ||
                     !renderSlots.TryGetValue(item, out int slot) || renderItems[slot].Token != entry.Token) continue;
-                item.TickRenderFrame(deltaTime);
+                if (input) item.TickInputFrame(deltaTime);
+                else item.TickRenderFrame(deltaTime);
             }
         }
         finally { renderSnapshot.Clear(); }
@@ -135,7 +139,7 @@ internal sealed class WorldItemTickScheduler
     private void RefreshRenderMembership(Item item)
     {
         bool hasSlot = renderSlots.TryGetValue(item, out int slot);
-        if (!item.HasRenderFrameUpdates)
+        if (!item.HasRenderFrameUpdates && !item.HasInputFrameUpdates)
         {
             if (hasSlot) RemoveRenderMembership(item);
             return;

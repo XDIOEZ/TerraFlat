@@ -93,6 +93,10 @@ public sealed class WorldPresentationProjection : MonoBehaviour
         internal Renderer QueueSource;
         internal bool SortingRegistered;
         internal WorldPresentationHierarchyWatcher Watcher;
+        internal WorldVisualPoseHistory SimulationPose;
+        internal Transform SampledParent;
+        internal Matrix4x4 PresentedSourceWorld;
+        internal int PresentedPoseVersion;
         internal readonly List<SortingGroup> AncestorSortingGroups = new();
     }
     private sealed class RenderCopy
@@ -143,7 +147,8 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     private WorldPresentationSortingDomain sortingDomain;
     private Matrix4x4 synchronizedProjection = Matrix4x4.identity;
     private Matrix4x4 synchronizedDisplayToSource = Matrix4x4.identity;
-    private Vector3 visualMotionOffset;
+    private Matrix4x4 visualMotionMatrix = Matrix4x4.identity;
+    private int poseSynchronizationVersion;
     private bool synchronizedVisible;
     private bool released;
     private Item sourceItem;
@@ -207,7 +212,12 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     internal void RefreshBeforeLocalSorting()
     {
         if (!released && sortingDomain != null && synchronizedVisible)
+        {
+            // 排序前的末次同步不能抹掉本帧已经提交的视觉姿态。
+            Matrix4x4 motion = synchronizedDisplayToSource * visualMotionMatrix * synchronizedProjection;
             Synchronize(synchronizedProjection, true);
+            if (motion != Matrix4x4.identity) ApplyVisualMotionTransform(motion);
+        }
     }
 
     public void SetVisible(bool visible)
@@ -314,7 +324,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
 
     private void SynchronizeProjectionRootPose(Matrix4x4 worldToDisplay, bool visible)
     {
-        visualMotionOffset = Vector3.zero;
+        visualMotionMatrix = Matrix4x4.identity;
         if (synchronizedProjection != worldToDisplay)
         {
             synchronizedProjection = worldToDisplay;
@@ -339,15 +349,79 @@ public sealed class WorldPresentationProjection : MonoBehaviour
     internal void ApplyVisualMotionTranslation(Vector3 sourceWorldOffset)
     {
         if (released || !synchronizedVisible || sourceWorldOffset == Vector3.zero) return;
-        Vector3 displayOffset = synchronizedProjection.MultiplyVector(sourceWorldOffset);
-        transform.position += displayOffset;
+        ApplyVisualMotionTransform(Matrix4x4.Translate(sourceWorldOffset));
+    }
+
+    // 姿态补间只作用于副本；逃逸到排序域的节点也必须使用同一变换。
+    internal void ApplyVisualMotionTransform(Matrix4x4 sourceMotion)
+    {
+        if (released || !synchronizedVisible) return;
+        Matrix4x4 displayMotion = synchronizedProjection * sourceMotion * synchronizedDisplayToSource;
+        ApplyWorldMotionToTransform(transform, displayMotion);
         if (sortingDomain != null && sortingDomain.Root != null)
             foreach (NodeCopy node in nodes.Values)
                 if (node.Target != null && node.Target != transform && node.Target.parent == sortingDomain.Root)
-                    node.Target.position += displayOffset;
-        visualMotionOffset = displayOffset;
+                    ApplyWorldMotionToTransform(node.Target, displayMotion);
+        visualMotionMatrix = displayMotion * visualMotionMatrix;
         if (sortingDomain != null) SynchronizeLocalSortingUnits();
     }
+
+    internal static void ApplyWorldMotionToTransform(Transform target, Matrix4x4 worldMotion)
+    {
+        Matrix4x4 matrix = worldMotion * target.localToWorldMatrix;
+        if (target.parent != null) matrix = target.parent.worldToLocalMatrix * matrix;
+        target.localPosition = matrix.GetColumn(3);
+        target.localRotation = matrix.rotation;
+        target.localScale = matrix.lossyScale;
+    }
+
+    #region 模拟子节点快照
+    internal void CaptureSimulationPoses(double simulationTime)
+    {
+        if (released || hierarchyDirty) return;
+        foreach (NodeCopy node in nodes.Values)
+        {
+            if (node.Source == null || node.Source == sourceRoot) continue;
+            node.SimulationPose ??= new WorldVisualPoseHistory();
+            WorldVisualPose pose = WorldVisualPose.ReadLocal(node.Source);
+            if (node.SampledParent != node.Source.parent)
+                node.SimulationPose.Reset(pose, simulationTime);
+            else node.SimulationPose.Capture(pose, simulationTime, float.PositiveInfinity);
+            node.SampledParent = node.Source.parent;
+        }
+    }
+
+    internal void ResetSimulationPoses()
+    {
+        foreach (NodeCopy node in nodes.Values) node.SimulationPose = null;
+    }
+
+    internal Matrix4x4 GetRenderedSourceMatrix(Transform source)
+    {
+        if (source == null) return Matrix4x4.identity;
+        if (!nodes.TryGetValue(source, out NodeCopy node)) return source.localToWorldMatrix;
+        poseSynchronizationVersion++;
+        return ResolvePresentedSourceWorld(node);
+    }
+
+    private WorldVisualPose ResolvePresentedLocalPose(NodeCopy node)
+    {
+        WorldVisualPose live = WorldVisualPose.ReadLocal(node.Source);
+        return node.SimulationPose != null && node.SampledParent == node.Source.parent
+            ? node.SimulationPose.Evaluate(live, FlatWorld.Simulation.GameplaySimulationTime.PresentationTime) : live;
+    }
+
+    private Matrix4x4 ResolvePresentedSourceWorld(NodeCopy node)
+    {
+        if (node.PresentedPoseVersion == poseSynchronizationVersion) return node.PresentedSourceWorld;
+        node.PresentedPoseVersion = poseSynchronizationVersion;
+        node.PresentedSourceWorld = node.Source == sourceRoot ||
+            !nodes.TryGetValue(node.Source.parent, out NodeCopy parent)
+            ? node.Source.localToWorldMatrix
+            : ResolvePresentedSourceWorld(parent) * ResolvePresentedLocalPose(node).Matrix;
+        return node.PresentedSourceWorld;
+    }
+    #endregion
 
     // 结构变化才重新发现组件，逐帧只同步已经绑定的显示数据。
     public void Synchronize(Matrix4x4 worldToDisplay, bool visible)
@@ -363,6 +437,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                 if (copy.Source != null) copy.Source.forceRenderingOff = true;
             return;
         }
+        poseSynchronizationVersion++;
         foreach (NodeCopy node in nodes.Values)
         {
             if (node.Source == null || node.Target == null) { hierarchyDirty = true; continue; }
@@ -374,16 +449,17 @@ public sealed class WorldPresentationProjection : MonoBehaviour
                 if (node.Target.parent != parent) node.Target.SetParent(parent, true);
                 if (escape)
                 {
-                    Matrix4x4 matrix = parent.worldToLocalMatrix * worldToDisplay * node.Source.localToWorldMatrix;
+                    Matrix4x4 matrix = parent.worldToLocalMatrix * worldToDisplay * ResolvePresentedSourceWorld(node);
                     node.Target.localPosition = matrix.GetColumn(3);
                     node.Target.localRotation = matrix.rotation;
                     node.Target.localScale = matrix.lossyScale;
                 }
                 else
                 {
-                    if (node.Target.localPosition != node.Source.localPosition) node.Target.localPosition = node.Source.localPosition;
-                    if (node.Target.localRotation != node.Source.localRotation) node.Target.localRotation = node.Source.localRotation;
-                    if (node.Target.localScale != node.Source.localScale) node.Target.localScale = node.Source.localScale;
+                    WorldVisualPose pose = ResolvePresentedLocalPose(node);
+                    if (node.Target.localPosition != pose.Position) node.Target.localPosition = pose.Position;
+                    if (node.Target.localRotation != pose.Rotation) node.Target.localRotation = pose.Rotation;
+                    if (node.Target.localScale != pose.Scale) node.Target.localScale = pose.Scale;
                 }
                 bool active = escape ? SourceActiveForProjection(node.Source) : node.Source.gameObject.activeSelf;
                 if (node.Target.gameObject.activeSelf != active) node.Target.gameObject.SetActive(active);
@@ -692,7 +768,8 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             int queue = node.QueueSource != null && copies.TryGetValue(node.QueueSource, out RenderCopy queueCopy)
                 ? queueCopy.RenderQueue : 3000;
             // 从规范脚点只投影一次，避免不同显示层级的浮点误差拆开同格线路。
-            float footY = synchronizedProjection.MultiplyPoint3x4(source.transform.position).y + visualMotionOffset.y;
+            float footY = visualMotionMatrix.MultiplyPoint3x4(
+                synchronizedProjection.MultiplyPoint3x4(source.transform.position)).y;
             sortingDomain.ApplyLocalSortingGroupKey(target, source.sortingLayerID, source.sortingOrder,
                 queue, footY, sameFootOrder: node.QueueSource.sortingOrder);
             node.SortingRegistered = true;
@@ -712,7 +789,7 @@ public sealed class WorldPresentationProjection : MonoBehaviour
             }
             Vector3 sourceFoot = copy.Source is SpriteRenderer sprite && sprite.spriteSortPoint == SpriteSortPoint.Pivot
                 ? copy.Source.transform.position : copy.Source.bounds.center;
-            float footY = synchronizedProjection.MultiplyPoint3x4(sourceFoot).y + visualMotionOffset.y;
+            float footY = visualMotionMatrix.MultiplyPoint3x4(synchronizedProjection.MultiplyPoint3x4(sourceFoot)).y;
             sortingDomain.ApplyLocalRendererSortingKey(copy.Target, copy.Source.sortingLayerID, copy.Source.sortingOrder,
                 copy.RenderQueue, footY);
             copy.SortingRegistered = true;

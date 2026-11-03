@@ -448,7 +448,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, _body)) return false;
             // 可见抛物线必须保持匀速地面位移，否则向下投掷时阻力会把曲线扭成非二次曲线。
             WorldPhysicsService2D.ApplyLegacyItemLinearDamping(item, _body, UseVisibleArc ? 0f : FlightLinearDrag);
-            _body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            _body.interpolation = Physics2D.simulationMode == SimulationMode2D.Script
+                ? RigidbodyInterpolation2D.None : RigidbodyInterpolation2D.Interpolate;
             _arcVelocity = normalizedDirection * speed;
             _groundFlightPosition = _body.position;
             _body.velocity = FlatWorld.Networking.GameNetwork.HasStateAuthority ? _arcVelocity : Vector2.zero;

@@ -182,10 +182,10 @@ public partial class Mod_Mover
     }
     private void HandleCarrierRiderDeath(Mod_DamageReceiver receiver) => ReleaseCarrierLease();
     private void HandleCarrierWorldExit() => ReleaseCarrierLease();
-    /// <summary>载具完成本帧积分后再同步座位，避免乘员画面滞后一帧。</summary>
-    private void LateUpdate()
+    /// <summary>由载具在物理结算后提交乘员位置，表现帧不再改写刚体或存档。</summary>
+    internal void CommitCarrierPassengerAfterPhysics(ICarrierMotionSource source)
     {
-        if (CarrierSource == null || !ValidateCarrierLease()) return;
+        if (!ReferenceEquals(CarrierSource, source) || CarrierSource == null || !ValidateCarrierLease()) return;
         ExternalVelocity = CarrierSource.CurrentVelocity;
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }

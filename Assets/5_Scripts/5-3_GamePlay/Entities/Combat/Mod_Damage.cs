@@ -394,19 +394,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     }
 
     /// <summary>Animator 更新后只同步武器姿态，伤害查询统一留给固定逻辑步。</summary>
-    private void LateUpdate()
-    {
-        // 动画伤害窗由 Animator 直接开关，待机时无需进入世界作用域或同步碰撞盒。
-        if (animationDrivenDamageWindow && boundWeaponRenderer == null && item != null && item.InHand &&
-            item.Sprite != null && item.Sprite.sprite != null)
-            BindToWeaponRenderer(item.Sprite);
-        if (damageCollider == null || !damageCollider.enabled && (!animationDrivenDamageWindow || !lastColliderEnabled))
-            return;
-
-        using var worldScope = item?.UseOwnedWorldForItemCallbacks();
-        if (damageCollider.enabled) SyncBoundWeaponHitbox();
-    }
-
     public override void ModUpdate(float deltaTime)
     {
         // 没有动画动作模块的简易近战武器也必须在拿到手时绑定实际 Sprite 区域。
@@ -416,6 +403,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         {
             BindToWeaponRenderer(item.Sprite);
         }
+        if (damageCollider != null && damageCollider.enabled) SyncBoundWeaponHitbox();
 
         if (animationDrivenDamageWindow)
         {
@@ -456,6 +444,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
             if (!explicitProjectileSweep && GameplayFixedStepSimulation.CurrentTime >= nextDataPulseTime)
                 EmitDataPulse();
         }
+    }
+
+    /// <summary>动作源按作者采样精度推进后检查真实窗口，低 TPS 不遗漏一开一关的短窗口。</summary>
+    internal void SampleSimulationAnimationDamagePose()
+    {
+        if (!animationDrivenDamageWindow || !IsRuntimeLoaded || !Enabled || !isActiveAndEnabled ||
+            !PlayerSimulationAuthority.CanTick(this)) return;
+        ModUpdate(0f);
     }
 
     /// <summary>登记真实碰撞体的窗口开关，返回本次是否已完成开启时的即时查询。</summary>

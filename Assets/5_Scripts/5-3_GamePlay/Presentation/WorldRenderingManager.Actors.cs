@@ -8,6 +8,7 @@ public sealed partial class WorldRenderingManager
     #region 角色独立视觉租约
     private sealed class ActorView
     {
+        internal WorldVisualPoseHistory AnchorMotion = new();
         internal Item Item;
         internal Mod_AnimatorController Animation;
         internal ActorRenderEffectController Effects;

@@ -58,6 +58,31 @@ public static partial class GameplayTestSystemProbe
         float seamMid = wrapped.Evaluate(1.075d).x;
 
         bool sourceUnchanged = false, projectionTranslated = false, projectionRestored = false;
+        var poses = new WorldVisualPoseHistory();
+        poses.Reset(new WorldVisualPose(Vector3.zero, Quaternion.identity, Vector3.one), 0d);
+        poses.Capture(new WorldVisualPose(Vector3.right, Quaternion.Euler(0f, 0f, 90f), Vector3.one * 2f), .1d);
+        WorldVisualPose middlePose = poses.Evaluate(.15d);
+        for (int i = 0; i < 100; i++) poses.Evaluate(.15d);
+        bool pureReads = poses.SampledAt == .1d && poses.Current.Position == Vector3.right &&
+            poses.Evaluate(.15d).Matches(middlePose);
+        WorldVisualPose external = new(new Vector3(12f, 0f, 0f), Quaternion.identity, Vector3.one);
+        bool externalPosePreserved = poses.Evaluate(external, .15d).Matches(external);
+        poses.Capture(new WorldVisualPose(new Vector3(2f, 0f, 0f), Quaternion.identity, Vector3.one), .2d);
+        poses.Capture(new WorldVisualPose(new Vector3(3f, 0f, 0f), Quaternion.identity, Vector3.one), .3d);
+        float catchUpPosition = poses.Evaluate(.35d).Position.x;
+        poses.Reset(external, .4d);
+        bool snapPosePreserved = poses.Evaluate(.45d).Matches(external);
+        var clock = new GameplaySimulationFrameClock();
+        int sampleTicks = 0;
+        clock.AdvanceFrame(.02f, 1f, 30, _ => sampleTicks++);
+        double presentationBeforeRateChange = clock.PresentationTime;
+        clock.AdvanceFrame(0f, 1f, 120, _ => sampleTicks++);
+        bool rateChangeKeepsRemainder = clock.PresentationTime == presentationBeforeRateChange && sampleTicks == 0;
+        clock.AdvanceFrame(.001f, 1f, 120, _ => sampleTicks++);
+        bool rateChangeAdvances = sampleTicks == 2 && clock.PresentationTime >= presentationBeforeRateChange;
+        bool childPoseInterpolated = false, childSourceUnchanged = false, rootRotationApplied = false;
+        double oldSimulationTime = FlatWorld.Simulation.GameplaySimulationTime.CurrentTime;
+        double oldPresentationTime = FlatWorld.Simulation.GameplaySimulationTime.PresentationTime;
         Scene scene = default;
         WorldPresentationProjection projection = null;
         try
@@ -67,18 +92,37 @@ public static partial class GameplayTestSystemProbe
             SceneManager.MoveGameObjectToScene(source, scene);
             source.transform.position = new Vector3(7f, 3f, 0f);
             source.AddComponent<SpriteRenderer>();
+            var child = new GameObject("LogicalActionPose");
+            child.transform.SetParent(source.transform, false);
+            child.AddComponent<SpriteRenderer>();
             projection = WorldPresentationProjection.Create(source.transform);
             projection.Synchronize(Matrix4x4.identity, true);
+            projection.CaptureSimulationPoses(0d);
+            child.transform.localPosition = Vector3.right;
+            child.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            projection.CaptureSimulationPoses(.1d);
+            FlatWorld.Simulation.GameplaySimulationTime.Publish(.1d, .15d);
+            projection.Synchronize(Matrix4x4.identity, true);
+            Transform childView = projection.transform.Find("LogicalActionPose");
+            childPoseInterpolated = childView != null && Mathf.Abs(childView.localPosition.x - .5f) < .0001f &&
+                Quaternion.Angle(childView.localRotation, Quaternion.Euler(0f, 0f, 45f)) < .001f;
+            childSourceUnchanged = child.transform.localPosition == Vector3.right &&
+                Quaternion.Angle(child.transform.localRotation, Quaternion.Euler(0f, 0f, 90f)) < .001f;
             Vector3 original = projection.transform.position;
             projection.ApplyVisualMotionTranslation(new Vector3(-0.5f, 0.25f, 0f));
             sourceUnchanged = source.transform.position == new Vector3(7f, 3f, 0f);
             projectionTranslated = projection.transform.position == original + new Vector3(-0.5f, 0.25f, 0f);
             projection.Synchronize(Matrix4x4.identity, true);
             projectionRestored = projection.transform.position == original;
+            projection.ApplyVisualMotionTransform(Matrix4x4.Translate(original) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, 45f)) * Matrix4x4.Translate(-original));
+            rootRotationApplied = Quaternion.Angle(projection.transform.rotation, Quaternion.Euler(0f, 0f, 45f)) < .001f &&
+                source.transform.rotation == Quaternion.identity;
         }
         finally
         {
             projection?.Release();
+            FlatWorld.Simulation.GameplaySimulationTime.Publish(oldSimulationTime, oldPresentationTime);
             if (scene.IsValid()) CloseGameplayTestProbeScene(scene);
         }
 
@@ -100,6 +144,18 @@ public static partial class GameplayTestSystemProbe
             ["sourceUnchanged"] = sourceUnchanged,
             ["projectionTranslated"] = projectionTranslated,
             ["projectionRestored"] = projectionRestored
+            , ["poseMidPosition"] = middlePose.Position.x
+            , ["poseMidRotation"] = middlePose.Rotation.eulerAngles.z
+            , ["poseMidScale"] = middlePose.Scale.x
+            , ["pureReads"] = pureReads
+            , ["externalPosePreserved"] = externalPosePreserved
+            , ["catchUpPosition"] = catchUpPosition
+            , ["snapPosePreserved"] = snapPosePreserved
+            , ["rateChangeKeepsRemainder"] = rateChangeKeepsRemainder
+            , ["rateChangeAdvances"] = rateChangeAdvances
+            , ["childPoseInterpolated"] = childPoseInterpolated
+            , ["childSourceUnchanged"] = childSourceUnchanged
+            , ["rootRotationApplied"] = rootRotationApplied
         };
     }
 

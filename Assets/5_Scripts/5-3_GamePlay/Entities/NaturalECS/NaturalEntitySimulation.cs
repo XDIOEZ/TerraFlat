@@ -164,6 +164,81 @@ namespace FlatWorld.NaturalEntities
 
         #region 组件边界
 
+        // 同批共用组件访问器和依赖同步，避免逐棵自然物重复调用 EntityManager。
+        internal struct EnvironmentInputBatch
+        {
+            private readonly NaturalEntitySimulation owner;
+            private ComponentTypeHandle<EntityWeatherInput> weatherType;
+            private ComponentTypeHandle<EntityClimate> climateType;
+            private ArchetypeChunk cachedChunk;
+            private NativeArray<EntityWeatherInput> weatherInputs;
+            private NativeArray<EntityClimate> climates;
+            private bool hasWeather, hasClimate;
+
+            internal EnvironmentInputBatch(NaturalEntitySimulation owner)
+            {
+                this.owner = owner;
+                EntityManager manager = owner.Manager;
+                manager.CompleteDependencyBeforeRW<EntityWeatherInput>();
+                manager.CompleteDependencyBeforeRW<EntityClimate>();
+                weatherType = manager.GetComponentTypeHandle<EntityWeatherInput>();
+                climateType = manager.GetComponentTypeHandle<EntityClimate>();
+                cachedChunk = default;
+                weatherInputs = default;
+                climates = default;
+                hasWeather = hasClimate = false;
+            }
+
+            internal EntityStorageInfo Locate(int id) => owner.Manager.GetStorageInfo(owner.entities[id]);
+
+            private void SelectChunk(EntityStorageInfo storage)
+            {
+                if (cachedChunk.Equals(storage.Chunk)) return;
+                cachedChunk = storage.Chunk;
+                hasWeather = cachedChunk.Has(ref weatherType);
+                hasClimate = cachedChunk.Has(ref climateType);
+                weatherInputs = hasWeather ? cachedChunk.GetNativeArray(ref weatherType) : default;
+                climates = hasClimate ? cachedChunk.GetNativeArray(ref climateType) : default;
+            }
+
+            internal void SetWeather(int id, ref EntityStorageInfo storage, EntityWeatherInput value)
+            {
+                SelectChunk(storage);
+                if (hasWeather)
+                {
+                    weatherInputs[storage.IndexInChunk] = value;
+                    return;
+                }
+
+                // 保留旧定义缺少组件时的补装行为，结构变化后重新领取访问器。
+                owner.Set(id, value, notifyChanged: false);
+                weatherType = owner.Manager.GetComponentTypeHandle<EntityWeatherInput>();
+                climateType = owner.Manager.GetComponentTypeHandle<EntityClimate>();
+                cachedChunk = default;
+                storage = Locate(id);
+            }
+
+            internal bool TryGetClimate(EntityStorageInfo storage, out EntityClimate value)
+            {
+                SelectChunk(storage);
+                if (hasClimate)
+                {
+                    value = climates[storage.IndexInChunk];
+                    return true;
+                }
+                value = default;
+                return false;
+            }
+
+            internal void SetClimate(EntityStorageInfo storage, EntityClimate value)
+            {
+                SelectChunk(storage);
+                climates[storage.IndexInChunk] = value;
+            }
+        }
+
+        internal EnvironmentInputBatch BeginEnvironmentInputBatch() => new(this);
+
         internal readonly struct BodyReadBatch : IDisposable
         {
             private readonly NaturalEntitySimulation owner;

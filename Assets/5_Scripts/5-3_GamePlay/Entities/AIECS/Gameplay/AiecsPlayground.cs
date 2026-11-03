@@ -99,6 +99,7 @@ namespace FlatWorld.AIECS.Gameplay
             try
             {
                 bridge.Step(deltaTime, GameplayFixedStepSimulation.CurrentTime);
+                display?.CaptureSimulationSnapshot(bridge.Simulation.Display, bridge.Navigation.Read().Domain);
             }
             catch (Exception exception)
             { SetStatus("模拟已停止：" + exception.Message); Debug.LogException(exception, this); StopScenario(); }

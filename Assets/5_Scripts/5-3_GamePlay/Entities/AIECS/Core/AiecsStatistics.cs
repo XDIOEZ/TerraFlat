@@ -48,6 +48,7 @@ namespace FlatWorld.AIECS
 
             bool hasFlight = Flights.TryGetComponent(entity, out AiecsFlight flight);
             Display[index] = new AiecsDisplayRecord { Key = identity.Key, Position = actor.Position, Facing = body.Facing,
+                MotionSampleTime = pulse.LastTickTime,
                 Hp = vital.Hp, MaxHp = vital.MaxHp, Definition = identity.Definition, Group = identity.Group, Behavior = brain.Behavior,
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
                 ActionElapsed = math.max(0f, (float)(displayTime - actionStarted)),

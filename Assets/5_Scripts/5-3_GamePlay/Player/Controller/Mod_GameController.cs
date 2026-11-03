@@ -316,9 +316,9 @@ public partial class Mod_GameController : Module
     }
 
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
-    public override bool WantsRenderFrameUpdate => true;
+    public override bool WantsInputFrameUpdate => true;
 
-    public override void ModRenderUpdate(float deltaTime)
+    public override void ModInputUpdate(float deltaTime)
     {
         if (_preferredInputDevice == InputDeviceType.Mobile && !_gamepadPointerActive)
             UpdateMobileRadialCursor();

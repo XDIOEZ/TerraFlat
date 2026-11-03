@@ -341,10 +341,13 @@ public static partial class GameplayTestSystemProbe
         var interval = AddTickCallbackProbe(item, "interval", ModuleTickMode.FixedInterval);
         var render = AddTickCallbackProbe(item, "render", ModuleTickMode.Disabled);
         render.Render = true;
+        var input = AddTickCallbackProbe(item, "input", ModuleTickMode.Disabled);
+        input.Input = true;
         item.ResumeRuntimeAfterReplacement();
         item.gameObject.SetActive(true);
         var scheduler = new WorldItemTickScheduler();
         scheduler.Register(item);
+        scheduler.UpdateInputFrame(.01f);
         scheduler.UpdateRenderFrame(.01f);
         int frame = Time.frameCount;
         const float step = 1f / 60f;
@@ -352,7 +355,13 @@ public static partial class GameplayTestSystemProbe
         for (int i = 0; i < 6; i++)
             scheduler.Update(step, start + i * (double)step, null, Array.Empty<Transform>(), default);
         bool noRenderOnFixedSteps = render.RenderTickCount == 1;
+        bool noInputOnFixedSteps = input.InputTickCount == 1;
         scheduler.UpdateRenderFrame(.02f);
+        bool renderDoesNotSampleInput = input.InputTickCount == 1;
+        int fixedBeforeInput = every.TickCount;
+        scheduler.UpdateInputFrame(.01f);
+        bool isolatedInputLane = input.InputTickCount == 2 && input.TickCount == 0 &&
+            input.RenderTickCount == 0 && every.TickCount == fixedBeforeInput && render.RenderTickCount == 2;
         int fixedTicks = every.TickCount;
         float fixedSeconds = every.TotalDelta;
         int intervalTicks = interval.TickCount;
@@ -386,6 +395,9 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["multipleStepsInOneFrame"] = frame == Time.frameCount,
+            ["noInputOnFixedSteps"] = noInputOnFixedSteps,
+            ["renderDoesNotSampleInput"] = renderDoesNotSampleInput,
+            ["isolatedInputLane"] = isolatedInputLane,
             ["fixedTicks"] = fixedTicks, ["fixedSeconds"] = fixedSeconds,
             ["intervalTicks"] = intervalTicks, ["intervalSeconds"] = intervalSeconds,
             ["renderTicks"] = renderTicks, ["renderOnlyHasNoSimulationTicks"] = render.TickCount == 0,
@@ -779,6 +791,10 @@ internal sealed class GameplayTestItemTickCallbackProbe : Module
     public float LastDelta;
     public float TotalDelta;
     public bool Render;
+    public bool Input;
+    public int InputTickCount;
+    public override bool WantsInputFrameUpdate => Input;
+    public override void ModInputUpdate(float deltaTime) { InputTickCount++; }
     public override bool WantsRenderFrameUpdate => Render;
     protected override void OnLoad() { }
     protected override void OnSave() { }

@@ -325,6 +325,13 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
                 Defaults.minimumWidth, Defaults.maximumWidth);
         }
 
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (rendering != null)
+        {
+            Matrix4x4 displayMotion = rendering.GetItemRenderedTransformMatrix(item, sourceRenderer.transform) *
+                sourceRenderer.transform.worldToLocalMatrix;
+            footprintAnchor = displayMotion.MultiplyPoint3x4(footprintAnchor);
+        }
         if (projected) footprintAnchor = projection.MultiplyPoint3x4(footprintAnchor);
         float projectedWidth = projected ? binding.ShadowWidth * projection.MultiplyVector(Vector3.right).magnitude : binding.ShadowWidth;
         AppendContactShadow(sortingDomain, false, new Vector2(footprintAnchor.x,
@@ -421,7 +428,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         }
 
         cachedShadowOpacity = SunShadowParametersProvider.ResolveOpacity(
-            dayTimeSystem.GetSunLighting(sceneName));
+            dayTimeSystem.GetSunLighting(sceneName, presentation: true));
         return cachedShadowOpacity;
     }
 

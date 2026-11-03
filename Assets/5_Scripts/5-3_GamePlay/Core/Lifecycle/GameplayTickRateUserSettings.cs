@@ -51,7 +51,7 @@ public static class GameplayTickRateUserSettings
             return false;
         }
         EnsureInitialized();
-        if (selectedIndex == index) return true;
+        if (selectedIndex == index && PlayerPrefs.GetInt(PreferenceKey, -1) == Rates[index]) return true;
         selectedIndex = index;
         PlayerPrefs.SetInt(PreferenceKey, Rates[index]);
         PlayerPrefs.Save();

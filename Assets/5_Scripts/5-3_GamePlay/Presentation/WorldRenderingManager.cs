@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>物品共用的渲染功能入口，只分发表现请求，不参与游戏状态结算。</summary>
 [DisallowMultipleComponent]
-public sealed partial class WorldRenderingManager : SingletonMono<WorldRenderingManager>
+public sealed partial class WorldRenderingManager : SingletonMono<WorldRenderingManager>, IGameplayFixedStepSimulationSystem
 {
     #region 会话状态与正式启动
 
@@ -144,7 +144,9 @@ public sealed partial class WorldRenderingManager : SingletonMono<WorldRendering
     /// <summary>结构更新或重新显示时只重建该物品的绑定，保留调用方的表现请求。</summary>
     public void RefreshItemRendering(Item item)
     {
-        if (!IsItemRenderingRegistered(item)) return;
+        if (item == null || !itemRenderingRegistrations.ContainsKey(item)) return;
+        // 工厂先登记、Load 再换代；结构通知必须重绑定新代，不能永久保留冷实例的注册。
+        if (!IsItemRenderingRegistered(item) && !RegisterItemRendering(item)) return;
         RequestItemPresentation(item);
         RegisterItemSorting(item);
         ApplyItemShadowRegistration(item, itemRenderingRegistrations[item], true);

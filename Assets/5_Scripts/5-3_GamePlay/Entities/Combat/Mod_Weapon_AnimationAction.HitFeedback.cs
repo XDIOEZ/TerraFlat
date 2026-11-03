@@ -11,7 +11,7 @@ public partial class Mod_Weapon_AnimationAction
 
     public float HitStopDuration => CombatHitFeedback.HitStopDuration(hitStopDuration);
     public bool IsHitStopped => hitStopClock.IsPaused;
-    private float AttackTime => (float)hitStopClock.AnimationTime(Time.timeAsDouble);
+    private float AttackTime => (float)hitStopClock.AnimationTime(GameplayFixedStepSimulation.CurrentTime);
 
     private void BindHitFeedback(Mod_Damage source)
     {
@@ -30,13 +30,14 @@ public partial class Mod_Weapon_AnimationAction
     private void HandleImpactDamage(float damage)
     {
         if (!isAttacking || !isActiveAndEnabled || animator == null) return;
-        if (hitStopClock.TryPause(damage, HitStopDuration, Time.timeAsDouble, Time.unscaledTimeAsDouble))
+        if (hitStopClock.TryPause(damage, HitStopDuration,
+            GameplayFixedStepSimulation.CurrentTime, Time.unscaledTimeAsDouble))
             animator.speed = 0f;
     }
 
     private bool UpdateHitStop()
     {
-        if (hitStopClock.ResumeIfReady(Time.timeAsDouble, Time.unscaledTimeAsDouble))
+        if (hitStopClock.ResumeIfReady(GameplayFixedStepSimulation.CurrentTime, Time.unscaledTimeAsDouble))
             ApplyAttackSpeedToAnimator();
         return hitStopClock.IsPaused;
     }

@@ -16,6 +16,9 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 
 ## 共用契约
 
+- 输入、模拟与绘制分道。`WorldRenderingManager` 在 `SnapshotCapture` 采样 GO 根/借出锚点/投影子节点的位移、旋转和缩放；渲染及挂点查询只读同一显示姿态，排序前刷新不得抹掉本帧插值。`GetItemRenderedTransformMatrix/Point` 供镜头、UI、鱼线、拖尾共用，世界锚定视觉子节点通过反投影避免重复跟随；不量化真实坐标，也不把显示坐标写回物理/存档。
+- ECS 在实际模拟提交后按 `MotionSampleTime` 记录位置和飞行高度；轻量掉落物在 Tick 后记录平移/旋转/高度/沉没显示值，全部使用游戏表现时钟，不混用 Unity 时间或叠水流补间。已由网络/太空逐帧输出的状态不重复补间。脚本驱动物理统一关闭原生插值，自动物理模式仍保留模板设置。
+
 - 完整自然物的可见副本由 WorldRenderingManager.NaturalItems 持有，复用 WorldPresentationProjection 的 visualHierarchyOnly 模式，只复制绘制必需的节点；逻辑外壳暂保留隐藏的外观输入，不复制 Item、Module 或原生物理。撤销 ChunkView 只解绑投影，不销毁生态。Mod_HeldFood 只提交进食进度，WorldRenderingManager.HeldFood 持有排序和咬痕资源；MPB 清空咬痕用计数关闭及共享空纹理，不传 null。规则 world_streaming/detached_item_projection、rendering/held_food_bites，正式 Leaf 重绑见 natural_item_decoupling_gameplay。
 - SingleSprite GO Actor 和已初始化、纯视觉子树的普通/自然物由 WorldRenderingManager 直接借出 Render 到所属场景 Rendering；Item、模块及物理留逻辑树，回池还原原层级和动画 PoseRoot。玩家及混有逻辑/物理的复杂视觉继续以 visualHierarchyOnly 投影，源隐藏、显示副本不复制逻辑；自然物区块租约仍由 NaturalItems 负责。注册世界 Renderer 时不要把投影临时 forceRenderingOff 当作原始隐藏值；跨场景、手持和注销均清理旧视图。
 
@@ -34,6 +37,8 @@ description: "FlatWorld 特效、Shader、世界排序与光影、水体渲染�
 - 贴图优化是手动一次性工具：`FlatWorld/其他工具/美术/一次性贴图优化器`；构建不再次降分辨率。用途目录引用的 Generated 单图 Point PNG 通过双网格颜色/轮廓检查后最近邻替换，图标优先256、其他512，画质不足从原图尝试高一档；已优化副本按备份哈希防重复缩水。长边等比同步PPU，短边取整误差最多半个目标像素，保留归一化锚点并校验GUID/子Sprite ID；不能因长宽无法整除就跳过。原图及meta逐版本存项目根 `ArtSourceBackups/PixelArtTextures/`（Assets外，不进包），先验备份、失败回滚、恢复不覆盖后续编辑。可读图、切片、自定义形状/骨骼/辅助图及保全分辨率/UV标签跳过，平台编码不变。报告 `Library/FlatWorldSpriteAtlasPlan/texture-optimization.json`；真实Unity回归 `Tools/Tests/PixelArtTextures/verify.py`。
 
 ## 按主题读取
+
+TPS/FPS 分离与跨系统职责见 [表现和模拟边界核查](references/presentation-simulation-boundary.md)。
 
 只读取当前改动需要的参考，不批量加载。
 

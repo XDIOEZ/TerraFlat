@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public static class GameplayTestFixedStepClockRuntimeProbe
 {
@@ -18,8 +19,126 @@ public static class GameplayTestFixedStepClockRuntimeProbe
     [UnityEditor.InitializeOnLoadMethod]
     private static void RegisterEditor() => Register();
 #endif
-    private static void Register() => GameplayTestRuntimeProbe.RegisterAsync(
-        "core_lifecycle", "fixed_step_clock", CaptureFixedStepClock);
+    private static void Register()
+    {
+        GameplayTestRuntimeProbe.RegisterAsync("core_lifecycle", "fixed_step_clock", CaptureFixedStepClock);
+        GameplayTestRuntimeProbe.RegisterAsync("player", "independent_presentation_frames", CaptureIndependentPresentationFrames);
+    }
+
+    #region 真实绘制帧与权威位姿隔离
+    private static IEnumerator CaptureIndependentPresentationFrames(Player player, JObject args, Action<JObject> completed)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var fixture = new IndependentPresentationFixture(player);
+        GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        fixture.Begin();
+        double deadline = Time.realtimeSinceStartupAsDouble + 8d;
+        while (Time.realtimeSinceStartupAsDouble < deadline &&
+            (fixture.Frames < 24 || fixture.IntermediateFrames < 5)) yield return null;
+        completed(fixture.Sample());
+    }
+
+    private sealed class IndependentPresentationFixture : IDisposable
+    {
+        private const string RateKey = "FlatWorld.Simulation.TickRate";
+        private readonly Player player;
+        private readonly Mod_Cam camera;
+        private readonly Mod_Mover mover;
+        private readonly Rigidbody2D body;
+        private readonly Vector3 original;
+        private readonly float timeScale = Time.timeScale;
+        private readonly int fps = Application.targetFrameRate, vSync = QualitySettings.vSyncCount;
+        private readonly int rate = GameplayTickRateUserSettings.SelectedIndex, storedRate = PlayerPrefs.GetInt(RateKey);
+        private readonly bool hadRate = PlayerPrefs.HasKey(RateKey);
+        private Mod_Mover.DrivenMotionLease motion;
+        private IDisposable wind;
+        private bool disposed;
+        private ulong previousTick;
+        private Vector3 previousLogic, previousDisplay;
+        private int lastFrame = -1;
+        private float maxViewError, maxCameraTargetError, maxBodyError;
+        private bool queriesPure = true;
+        private int callbacks, missingManager, missingView, hiddenView, missingCameraTarget;
+        public int Frames { get; private set; }
+        public int IntermediateFrames { get; private set; }
+
+        public IndependentPresentationFixture(Player player)
+        {
+            this.player = player;
+            original = WorldTopologyRuntime.NormalizePosition(player.transform.position);
+            camera = player.GetComponentInChildren<Mod_Cam>(true);
+            mover = player.GetComponentInChildren<Mod_Mover>(true);
+            body = player.GetComponent<Rigidbody2D>();
+        }
+
+        public void Begin()
+        {
+            if (mover == null || body == null || camera == null || camera.HasFollowOverride)
+                throw new InvalidOperationException("显示分离回归需要隔离玩家的普通移动和默认镜头。");
+            GameplayTickRateUserSettings.TrySetSelectedIndex(0, out _);
+            // 慢放扩大 Tick 间隙，在低性能 Editor 中也能观测多张真实渲染帧。
+            Time.timeScale = .25f;
+            Application.targetFrameRate = 120;
+            QualitySettings.vSyncCount = 0;
+            wind = mover.SuppressWindMotion();
+            if (!mover.TryAcquireDrivenMotion(Vector2.right * 2f, out motion))
+                throw new InvalidOperationException("显示分离回归无法取得正式主动移动租约。");
+            RenderPipelineManager.endContextRendering += ObserveRenderedFrame;
+        }
+
+        private void ObserveRenderedFrame(ScriptableRenderContext context, List<Camera> cameras)
+        {
+            if (lastFrame == Time.frameCount || player == null) return;
+            lastFrame = Time.frameCount;
+            callbacks++;
+            WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+            if (rendering == null) { missingManager++; return; }
+            if (!rendering.TryGetItemPresentation(player, out var view)) { missingView++; return; }
+            if (!view.gameObject.activeInHierarchy) { hiddenView++; return; }
+            if (camera.Vcam?.Follow == null) { missingCameraTarget++; return; }
+            Vector3 logic = player.transform.position;
+            Vector3 display = rendering.GetItemRenderedWorldPosition(player);
+            ulong tick = GameplayFixedStepSimulation.TickIndex;
+            if (Frames > 2 && tick == previousTick && logic.Equals(previousLogic) &&
+                (display - previousDisplay).sqrMagnitude > .0000000001f) IntermediateFrames++;
+            for (int i = 0; i < 8; i++)
+                queriesPure &= rendering.GetItemRenderedWorldPosition(player).Equals(display) &&
+                    player.transform.position.Equals(logic) && GameplayFixedStepSimulation.TickIndex == tick;
+            maxViewError = Mathf.Max(maxViewError, Vector3.Distance(view.transform.position, display));
+            maxCameraTargetError = Mathf.Max(maxCameraTargetError, Vector3.Distance(camera.Vcam.Follow.position, display));
+            maxBodyError = Mathf.Max(maxBodyError, Vector2.Distance(body.position, logic));
+            previousTick = tick; previousLogic = logic; previousDisplay = display; Frames++;
+        }
+
+        public JObject Sample() => new()
+        {
+            ["frames"] = Frames, ["intermediateFrames"] = IntermediateFrames,
+            ["viewError"] = maxViewError, ["cameraTargetError"] = maxCameraTargetError,
+            ["bodyError"] = maxBodyError, ["queriesPure"] = queriesPure,
+            ["tps"] = GameplayFixedStepSimulation.TicksPerSecond, ["timeScale"] = Time.timeScale,
+            ["callbacks"] = callbacks, ["missingManager"] = missingManager, ["missingView"] = missingView,
+            ["hiddenView"] = hiddenView, ["missingCameraTarget"] = missingCameraTarget,
+            ["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player),
+            ["shownWorld"] = GameplayWorldRegistry.LocalPresentationWorldKey,
+            ["renderingRegistrations"] = WorldRenderingManager.ExistingInstance?.RegisteredItemCount ?? -1,
+            ["nativeInterpolationDisabled"] = body.interpolation == RigidbodyInterpolation2D.None
+        };
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            RenderPipelineManager.endContextRendering -= ObserveRenderedFrame;
+            motion?.Dispose(); wind?.Dispose();
+            Time.timeScale = timeScale;
+            Application.targetFrameRate = fps; QualitySettings.vSyncCount = vSync;
+            GameplayTickRateUserSettings.TrySetSelectedIndex(rate, out _);
+            if (hadRate) PlayerPrefs.SetInt(RateKey, storedRate); else PlayerPrefs.DeleteKey(RateKey);
+            PlayerPrefs.Save();
+            if (player != null) PlayerTeleportService.ApplySurfacePose(player, original);
+        }
+    }
+    #endregion
 
     private sealed class FixedStepClockObservation : IGameplayFixedStepSimulationSystem
     {

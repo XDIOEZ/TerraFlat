@@ -2,6 +2,8 @@
 
 ## 性能导出
 
+- 打包版快捷性能报告：Development/Diagnostics/RuntimePerformanceReportRecorder 在运行时以有界环形缓存记录 Time.unscaledDeltaTime 帧间隔（并非 CPU Profiler 调用树）；GM「设备数据」页顶部提供最近 10/30/60 秒一键导出及 5～120 秒自定义范围。后台压缩输出到 Application.persistentDataPath/PerformanceReports/performance-*.zip，包含 performance.json（帧时间线、FPS 分位数、内存快照、可选的会话累计性能点）、runtime-logs.txt 与说明，完成后复制 ZIP 完整路径；范围不足仍导出并记录实际覆盖时长。普通 Release Player 可用，不依赖 Editor，Unity Profiler 的完整调用树仍使用编辑器附加目标采样。目录按钮仅桌面 Windows 直接打开，其余平台复制路径。
+
 - 一级菜单仅「测试」「性能分析」「其他工具」；其余归 `FlatWorld/其他工具/` 并同步验证函数/ExecuteMenuItem 路径。
 - 顶栏「性能 JSON」/`FlatWorld/性能分析/导出选中或最新帧与控制台 JSON` 由 `Automation/ProfilerSnapshotToolbar.cs` 调 PuerTS `UnityMcpProfilerSnapshot`，复用 editor.profiler.analyze。输出到已忽略的 `Logs/ProfileData/<时间_frame-帧号_编号>/`，包含 profiler-analysis.json、console-logs.json、world-scene.json，以及成功时的 Unity 主窗口 screen.png；截图用 Windows Graphics Capture，后台遮挡可采集，最小化或工具失败时只记录 screenshot.status/error，不截桌面。工具首次使用需要 .NET 8 SDK，构建产物放 Library；附加回调全部写 pending 后原子发布，忽略 `.pending-*`。手动导出成功后复制本次报告文件夹的完整路径，在当前编辑器窗口和 Console 提示；共用 `ExportFrame` 不操作剪贴板。
 - 先读根共享说明（instructionsFile 用 `../`；模板在 PuerTS 包根 ProfilerAnalysisGuide.md）。schema 5 保留 Top100、目标帧完整树、邻帧摘要及独立范围内最慢帧树、Registry 累计快照与 additionalFiles 现场。设置窗口可填摘要邻帧总数/筛选邻帧总数/额外详情数，默认60/300/3，均不含目标帧；前后平分，奇数前多1，一侧不足不补齐，无50ms门槛。摘要>300、筛选>1000或详情>10显示黄色警告；手动/自动/MCP共用设置，MCP显式半径只覆盖摘要。改导出结构同步模板，离线回归见 `Tools/Tests/ProfilerAutoExport/`。

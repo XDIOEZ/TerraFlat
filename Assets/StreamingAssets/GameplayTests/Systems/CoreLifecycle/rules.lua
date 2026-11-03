@@ -109,9 +109,9 @@ test.system("core_lifecycle", "fixed_step_scheduler", {}, function(data)
         "低帧率或卡顿未按最大4 Tick预算丢弃超额时间")
     near(clock.hitchSeconds, 4 / 30, "卡顿追赶推进时长")
     assert(clock.pausedTicks == 0 and clock.resumedTicks == 1 and
-        clock.changedTicks == 1 and clock.changedRate == 120,
+        clock.changedTicks == 3 and clock.changedRate == 120,
         "暂停恢复或动态切换 TPS 没有刷新独立时钟")
-    near(clock.changedSeconds, 1 / 120, "切档后不能沿用旧 Tick 零头")
+    near(clock.changedSeconds, 1 / 60 + 1 / 120, "切档后必须保留已累计的真实游戏秒")
 end, "固定步阶段顺序、停用注销、步内注册及不同渲染分组")
 
 test.system("core_lifecycle", "scene_object_hierarchy", {}, function(data)

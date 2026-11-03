@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
@@ -24,14 +24,6 @@ public partial class Mod_FocusPoint : Module
     private readonly HashSet<Transform> _presentedRotationTargets = new HashSet<Transform>();
     private int _lastTargetCount = -1;
     private bool _needsRefresh = true;
-    #endregion
-
-    #region Unity Methods
-    private void LateUpdate()
-    {
-        if (!IsRuntimeLoaded || !Enabled || Mod_GameController == null) return;
-        RefreshPresentedRotation(Time.deltaTime);
-    }
     #endregion
 
     #region Module Methods
@@ -67,16 +59,25 @@ public partial class Mod_FocusPoint : Module
         _needsRefresh = true;
     }
 
-    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
-    public override bool WantsRenderFrameUpdate => true;
+    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+    public override bool WantsInputFrameUpdate => true;
+    public override bool WantsRenderFrameUpdate => false;
 
-    public override void ModRenderUpdate(float deltaTime)
+    public override void ModInputUpdate(float deltaTime)
+    {
+        if (Mod_GameController == null) return;
+        Data.See_Point = Mod_GameController.GetMouseWorldPosition();
+        Data.DefaultSkill_Point = Data.See_Point;
+    }
+
+    public override void ModUpdate(float deltaTime)
     {
         // 优化：提前检查列表状态和旋转激活状态
         if (targetRotationTransforms == null || targetRotationTransforms.Count == 0 || !Data.ActivateRotation) 
             return;
 
-        PlayerTakeItem_FaceMouse(deltaTime, includePresentedTargets: false);
+        // 命中盒与持握根只按逻辑步旋转，逐帧旋转交给无物理的绘制副本。
+        if (Mod_GameController != null) FaceToMouse(Data.See_Point, deltaTime);
     }
 
     protected override void OnSave()

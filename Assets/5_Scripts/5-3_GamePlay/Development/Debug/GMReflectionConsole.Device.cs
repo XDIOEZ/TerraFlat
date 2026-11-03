@@ -18,6 +18,7 @@ public sealed partial class GMReflectionConsole
     {
         GmPageView page = CreatePage(GmPageId.Device);
         AddPageIntro(page.Content, "设备数据", "当前游戏内存与运行设备信息；仅在本页打开时每秒刷新一次。");
+        BuildRuntimePerformanceReportControls(page.Content);
 
         TextMeshProUGUI memoryTitle = CreateText(page.Content, "内存占用", 18f, GmTextPrimary);
         memoryTitle.fontStyle = FontStyles.Bold;

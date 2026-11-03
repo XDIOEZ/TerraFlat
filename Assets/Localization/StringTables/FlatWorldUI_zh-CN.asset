@@ -19,63 +19,63 @@ MonoBehaviour:
     m_Items: []
   m_TableData:
   - m_Id: 202611020000001
-    m_Localized: "画面风格"
+    m_Localized: "\u753B\u9762\u98CE\u683C"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000002
-    m_Localized: "清晰原色"
+    m_Localized: "\u6E05\u6670\u539F\u8272"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000003
-    m_Localized: "自然柔光"
+    m_Localized: "\u81EA\u7136\u67D4\u5149"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000004
-    m_Localized: "电影氛围"
+    m_Localized: "\u7535\u5F71\u6C1B\u56F4"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000001
-    m_Localized: "大气检测仪"
+    m_Localized: "\u5927\u6C14\u68C0\u6D4B\u4EEA"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000002
-    m_Localized: "星球大气总量 · 标准 m³"
+    m_Localized: "\u661F\u7403\u5927\u6C14\u603B\u91CF \xB7 \u6807\u51C6 m\xB3"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000003
-    m_Localized: "气体成分 / 占比"
+    m_Localized: "\u6C14\u4F53\u6210\u5206 / \u5360\u6BD4"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000004
-    m_Localized: "未连接星球"
+    m_Localized: "\u672A\u8FDE\u63A5\u661F\u7403"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000005
-    m_Localized: "星球气压  {0:0.###} kPa"
+    m_Localized: "\u661F\u7403\u6C14\u538B  {0:0.###} kPa"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000006
-    m_Localized: "星球气压  {0} kPa"
+    m_Localized: "\u661F\u7403\u6C14\u538B  {0} kPa"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000007
-    m_Localized: "实时测量 · 标准体积 / 摩尔占比"
+    m_Localized: "\u5B9E\u65F6\u6D4B\u91CF \xB7 \u6807\u51C6\u4F53\u79EF / \u6469\u5C14\u5360\u6BD4"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000008
-    m_Localized: "当前星球没有大气"
+    m_Localized: "\u5F53\u524D\u661F\u7403\u6CA1\u6709\u5927\u6C14"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000009
-    m_Localized: "当前区域无法测量星球大气"
+    m_Localized: "\u5F53\u524D\u533A\u57DF\u65E0\u6CD5\u6D4B\u91CF\u661F\u7403\u5927\u6C14"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000010
-    m_Localized: "无可检出的气体"
+    m_Localized: "\u65E0\u53EF\u68C0\u51FA\u7684\u6C14\u4F53"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000011
-    m_Localized: "请在星球上使用检测仪"
+    m_Localized: "\u8BF7\u5728\u661F\u7403\u4E0A\u4F7F\u7528\u68C0\u6D4B\u4EEA"
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001245
@@ -8766,79 +8766,81 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200000
-    m_Localized: "自然补气"
+    m_Localized: "\u81EA\u7136\u8865\u6C14"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200001
-    m_Localized: "气罐不可用"
+    m_Localized: "\u6C14\u7F50\u4E0D\u53EF\u7528"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200002
-    m_Localized: "气量 {0:0.###}/{1:0.###} 标准 L"
+    m_Localized: "\u6C14\u91CF {0:0.###}/{1:0.###} \u6807\u51C6 L"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200003
-    m_Localized: "液体 {0:0.###}/{1:0.###} L"
+    m_Localized: "\u6DB2\u4F53 {0:0.###}/{1:0.###} L"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200004
-    m_Localized: "自然补气上限 {0:0.#}% · 动力充装可充满"
+    m_Localized: "\u81EA\u7136\u8865\u6C14\u4E0A\u9650 {0:0.#}% \xB7 \u52A8\u529B\u5145\u88C5\u53EF\u5145\u6EE1"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200005
-    m_Localized: "{0}：{1:0.###} 标准 L"
+    m_Localized: "{0}\uFF1A{1:0.###} \u6807\u51C6 L"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200006
-    m_Localized: "气体ID / 每秒速率（0停止）"
+    m_Localized: "\u6C14\u4F53ID / \u6BCF\u79D2\u901F\u7387\uFF080\u505C\u6B62\uFF09"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900000
-    m_Localized: "建筑装饰"
+    m_Localized: "\u5EFA\u7B51\u88C5\u9970"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900001
-    m_Localized: "自然植物"
+    m_Localized: "\u81EA\u7136\u690D\u7269"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900002
-    m_Localized: "功能设施"
+    m_Localized: "\u529F\u80FD\u8BBE\u65BD"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900003
-    m_Localized: "工具用品"
+    m_Localized: "\u5DE5\u5177\u7528\u54C1"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900004
-    m_Localized: "武器装备"
+    m_Localized: "\u6B66\u5668\u88C5\u5907"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900005
-    m_Localized: "食物饮品"
+    m_Localized: "\u98DF\u7269\u996E\u54C1"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900006
-    m_Localized: "材料零件"
+    m_Localized: "\u6750\u6599\u96F6\u4EF6"
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900007
-    m_Localized: "交通运输"
+    m_Localized: "\u4EA4\u901A\u8FD0\u8F93"
     m_Metadata:
       m_Items: []
   - m_Id: 28102900000100001
-    m_Localized: "无限供气（组分样本 {0:0.###} 标准 L）"
+    m_Localized: "\u65E0\u9650\u4F9B\u6C14\uFF08\u7EC4\u5206\u6837\u672C {0:0.###}
+      \u6807\u51C6 L\uFF09"
     m_Metadata:
       m_Items: []
   - m_Id: 28103100000100001
-    m_Localized: "液网温度 {0:0.##}℃ · 总液量 {1:0.###} L"
+    m_Localized: "\u6DB2\u7F51\u6E29\u5EA6 {0:0.##}\u2103 \xB7 \u603B\u6DB2\u91CF
+      {1:0.###} L"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000005
-    m_Localized: "当前：{0}。多个行为可以共用按键，点击保存后保留修改。"
+    m_Localized: "\u5F53\u524D\uFF1A{0}\u3002\u591A\u4E2A\u884C\u4E3A\u53EF\u4EE5\u5171\u7528\u6309\u952E\uFF0C\u70B9\u51FB\u4FDD\u5B58\u540E\u4FDD\u7559\u4FEE\u6539\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000006
-    m_Localized: "当前：{0}。多个行为可以共用按键，修改后自动保存。"
+    m_Localized: "\u5F53\u524D\uFF1A{0}\u3002\u591A\u4E2A\u884C\u4E3A\u53EF\u4EE5\u5171\u7528\u6309\u952E\uFF0C\u4FEE\u6539\u540E\u81EA\u52A8\u4FDD\u5B58\u3002"
     m_Metadata:
       m_Items: []
   references:

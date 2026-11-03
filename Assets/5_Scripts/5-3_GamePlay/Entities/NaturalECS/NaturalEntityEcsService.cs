@@ -170,9 +170,12 @@ namespace FlatWorld.NaturalEntities
                         WeatherMgr weather = WeatherMgr.ExistingInstance;
                         using TemperatureMgr.PointSamplingContext temperatures = temperature != null
                             ? temperature.CreatePointSamplingContext() : default;
+                        using WeatherMgr.PointWeatherSamplingBatch weatherSamples = weather != null
+                            ? weather.BeginPointWeatherSampling() : default;
+                        NaturalEntitySimulation.EnvironmentInputBatch inputs = simulation.BeginEnvironmentInputBatch();
                         EnvironmentWork work = default;
                         foreach (Record record in environmentInputRecords)
-                            FreezeEnvironment(record, hasBounds, bounds, temperatures, weather, ref work);
+                            FreezeEnvironment(record, hasBounds, bounds, temperatures, weather, weatherSamples, ref inputs, ref work);
                         work.Publish();
                     }
                 }
@@ -846,13 +849,19 @@ namespace FlatWorld.NaturalEntities
             TemperatureMgr temperature = TemperatureMgr.Instance;
             using TemperatureMgr.PointSamplingContext temperatures = temperature != null
                 ? temperature.CreatePointSamplingContext() : default;
+            WeatherMgr weather = WeatherMgr.ExistingInstance;
+            using WeatherMgr.PointWeatherSamplingBatch weatherSamples = weather != null
+                ? weather.BeginPointWeatherSampling() : default;
+            NaturalEntitySimulation.EnvironmentInputBatch inputs = simulation.BeginEnvironmentInputBatch();
             EnvironmentWork work = default;
-            FreezeEnvironment(record, hasBounds, bounds, temperatures, WeatherMgr.ExistingInstance, ref work);
+            FreezeEnvironment(record, hasBounds, bounds, temperatures, weather, weatherSamples, ref inputs, ref work);
             work.Publish();
         }
 
         private static void FreezeEnvironment(Record record, bool hasBounds, WorldTopologyBounds bounds,
-            TemperatureMgr.PointSamplingContext temperatures, WeatherMgr weather, ref EnvironmentWork work)
+            TemperatureMgr.PointSamplingContext temperatures, WeatherMgr weather,
+            WeatherMgr.PointWeatherSamplingBatch weatherSamples,
+            ref NaturalEntitySimulation.EnvironmentInputBatch inputs, ref EnvironmentWork work)
         {
             Vector3 position = record.Snapshot.transform.position;
             bool localEnvironment = ItemEnvironmentSources.TryGet(record.WorldKey, position, out ItemEnvironmentSample environment);
@@ -862,7 +871,7 @@ namespace FlatWorld.NaturalEntities
             {
                 using var sample = EnvironmentWeatherMarker.Auto();
                 work.WeatherSamples++;
-                hasWeather = !localEnvironment && weather != null && weather.TryGetWeatherAt(position, out localWeather);
+                hasWeather = !localEnvironment && weather != null && weatherSamples.TryGetWeatherAt(position, out localWeather);
                 if (!hasWeather && !localEnvironment) work.MissingWeather++;
             }
             float ambient = 0f, baseline = 0f;
@@ -881,6 +890,7 @@ namespace FlatWorld.NaturalEntities
                 if (!hasTemperature) work.MissingTemperature++;
             }
             using var write = EnvironmentWriteMarker.Auto();
+            EntityStorageInfo storage = inputs.Locate(record.Handle.Id);
             if (record.Profile.HasGrowth)
             {
                 EntityWeatherInput input = new() { GrowthMultiplier = 1f };
@@ -891,11 +901,11 @@ namespace FlatWorld.NaturalEntities
                     input.GrowthMultiplier = EntityWeatherInput.ResolveGrowthMultiplier(
                         input.RainIntensity, localWeather.CloudCoverage, localWeather.WindStrength);
                 }
-                simulation.Set(record.Handle.Id, input, notifyChanged: false);
+                inputs.SetWeather(record.Handle.Id, ref storage, input);
                 work.InputWrites++;
             }
             if (!record.Profile.HasClimate ||
-                !simulation.TryGet(record.Handle.Id, out NaturalEntityClimate climate)) return;
+                !inputs.TryGetClimate(storage, out NaturalEntityClimate climate)) return;
             climate.EnvironmentReady = 0;
             climate.SeasonPoleProximity = localEnvironment ? 0f : hasBounds ? OrbitalSeasonPhysics.ResolvePoleProximity(bounds, position)
                 : 1f;
@@ -905,7 +915,7 @@ namespace FlatWorld.NaturalEntities
                 climate.BaselineCelsius = baseline;
                 climate.EnvironmentReady = 1;
             }
-            simulation.Set(record.Handle.Id, climate, notifyChanged: false);
+            inputs.SetClimate(storage, climate);
             work.InputWrites++;
         }
 

@@ -5,6 +5,7 @@ using FlatWorld.Networking;
 using FlatWorld.Diagnostics;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using UnityEngine.Pool;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public readonly struct RegionalLightningEvent
@@ -143,13 +144,50 @@ public partial class WeatherMgr
         return _weatherRuntimeAllowed && regionalEngine != null && double.IsFinite(gravity) && gravity >= 0d;
     }
 
+    // 仅在一次同步采样中复用区域快照；风向仍按每个实体的实际坐标插值。
+    public readonly struct PointWeatherSamplingBatch : IDisposable
+    {
+        private readonly WeatherMgr owner;
+        private readonly RegionalWeatherEngine engine;
+        private readonly Dictionary<Int2, RegionalWeatherSnapshot> snapshots;
+
+        internal PointWeatherSamplingBatch(WeatherMgr owner)
+        {
+            this.owner = owner;
+            engine = owner.regionalEngine;
+            snapshots = DictionaryPool<Int2, RegionalWeatherSnapshot>.Get();
+        }
+
+        public bool TryGetWeatherAt(Vector2 position, out RegionalWeatherSnapshot sample)
+        {
+            sample = default;
+            if (owner == null) return false;
+            return ReferenceEquals(engine, owner.regionalEngine)
+                ? owner.TryGetWeatherAt(position, snapshots, out sample)
+                : owner.TryGetWeatherAt(position, out sample);
+        }
+
+        public void Dispose()
+        {
+            if (snapshots != null) DictionaryPool<Int2, RegionalWeatherSnapshot>.Release(snapshots);
+        }
+    }
+
+    public PointWeatherSamplingBatch BeginPointWeatherSampling() => new(this);
+
     public bool TryGetWeatherAt(Vector2 position, out RegionalWeatherSnapshot sample)
+        => TryGetWeatherAt(position, null, out sample);
+
+    private bool TryGetWeatherAt(Vector2 position,
+        Dictionary<Int2, RegionalWeatherSnapshot> cachedRegions, out RegionalWeatherSnapshot sample)
     {
         sample = default;
         if (!_weatherRuntimeAllowed || regionalEngine == null ||
             !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
-        bool found = regionalEngine.TryGetSnapshot(
-            new Int2(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y)), out sample);
+        Int2 cell = new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y));
+        bool found = cachedRegions == null
+            ? regionalEngine.TryGetSnapshot(cell, out sample)
+            : TryGetCachedWeatherRegionSnapshot(cell, cachedRegions, out sample);
         if (TryGetWindBlendAt(position, out var blend))
         {
             Unity.Mathematics.float2 wind = blend.Wind;
@@ -159,6 +197,16 @@ public partial class WeatherMgr
             found = true;
         }
         return found;
+    }
+
+    private bool TryGetCachedWeatherRegionSnapshot(Int2 cell,
+        Dictionary<Int2, RegionalWeatherSnapshot> cachedRegions, out RegionalWeatherSnapshot sample)
+    {
+        Int2 region = regionalEngine.ResolveRegion(cell);
+        if (cachedRegions.TryGetValue(region, out sample)) return true;
+        if (!regionalEngine.TryGetRegionSnapshot(region, out sample)) return false;
+        cachedRegions.Add(region, sample);
+        return true;
     }
 
     /// <summary>提供风区原始风向量与空间权重，推力换算由移动规则负责。</summary>

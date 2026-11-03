@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Globalization;
 using FlatWorld.Diagnostics;
 using FlatWorld.Localization;
@@ -14,6 +15,112 @@ public sealed partial class GMReflectionConsole
     private Button performanceStatisticsButton, performanceSlowButton;
     private TMP_InputField performanceThresholdInput;
     private TextMeshProUGUI performanceSummaryText;
+    private TMP_InputField performanceReportSecondsInput;
+    private TextMeshProUGUI performanceReportStatusText;
+
+    private void BuildRuntimePerformanceReportControls(Transform parent)
+    {
+        TextMeshProUGUI title = CreateText(parent, "一键导出打包版性能报告", 18f, GmTextPrimary);
+        title.fontStyle = FontStyles.Bold;
+        title.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+        AddPageHint(parent, "直接导出最近一段时间的帧间隔、FPS、内存快照、性能点累计值和近期日志为一个 ZIP；" +
+            "无需连接编辑器。范围不足时仍可导出，并在报告标明实际覆盖时间。完整 CPU 调用树需使用 Unity Profiler。", 60f);
+
+        Transform quickGrid = CreateActionGrid(parent, 3, 220f, 44f, 3);
+        CreateSearchableButton(quickGrid, GmPageId.Device, "导出最近 10 秒", "打包 性能 导出 最近 10 秒 ZIP",
+            () => ExportRuntimePerformanceReport(10), 44f);
+        CreateSearchableButton(quickGrid, GmPageId.Device, "导出最近 30 秒", "打包 性能 导出 最近 30 秒 ZIP",
+            () => ExportRuntimePerformanceReport(30), 44f);
+        CreateSearchableButton(quickGrid, GmPageId.Device, "导出最近 60 秒", "打包 性能 导出 最近 60 秒 ZIP",
+            () => ExportRuntimePerformanceReport(60), 44f);
+
+        GameObject row = CreateDesktopRow(parent, 44f);
+        CreateDesktopFieldLabel(row.transform, "自定义范围（秒）", 132f);
+        performanceReportSecondsInput = CreateInputField(row.transform, "5～120", 90f, false);
+        performanceReportSecondsInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+        performanceReportSecondsInput.characterLimit = 3;
+        performanceReportSecondsInput.SetTextWithoutNotify("30");
+        CreateButton(row.transform, "导出指定范围", ExportCustomRuntimePerformanceReport, 160f, 44f);
+
+        Transform locationGrid = CreateActionGrid(parent, 2, 338f, 40f, 2);
+        CreateSearchableButton(locationGrid, GmPageId.Device, "复制最近报告路径", "打包 性能 报告 路径 复制",
+            CopyLatestRuntimePerformanceReportPath, 40f);
+        CreateSearchableButton(locationGrid, GmPageId.Device, "打开报告目录", "打包 性能 ZIP 文件夹 打开",
+            OpenRuntimePerformanceReportsDirectory, 40f);
+
+        performanceReportStatusText = CreateText(parent, string.Empty, 12f, GmTextSecondary);
+        performanceReportStatusText.enableWordWrapping = true;
+        performanceReportStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 72f;
+        RefreshRuntimePerformanceReportControls();
+    }
+
+    private void ExportCustomRuntimePerformanceReport()
+    {
+        if (!int.TryParse(performanceReportSecondsInput?.text, out int seconds))
+        {
+            SetStatus("请输入 5～120 的整数秒数。", Color.yellow);
+            return;
+        }
+        ExportRuntimePerformanceReport(seconds);
+    }
+
+    private void ExportRuntimePerformanceReport(int seconds)
+    {
+        if (!RuntimePerformanceReportRecorder.TryExportRecentSeconds(seconds, out string error))
+        {
+            SetStatus("性能报告导出失败：" + error, Color.yellow);
+            return;
+        }
+        SetStatus($"正在导出最近 {seconds} 秒的性能 ZIP，写入完成后自动复制文件路径。", GmTextSecondary);
+        RefreshRuntimePerformanceReportControls();
+    }
+
+    private void CopyLatestRuntimePerformanceReportPath()
+    {
+        string path = RuntimePerformanceReportRecorder.LastReportPath;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+        {
+            SetStatus("还没有可复制的已完成性能报告。", Color.yellow);
+            return;
+        }
+        try
+        {
+            GUIUtility.systemCopyBuffer = path;
+            SetStatus("最新性能 ZIP 文件路径已复制，可直接粘贴或发送给 Agent。", GmTextSecondary);
+        }
+        catch (Exception exception) { SetStatus("复制失败：" + exception.Message, Color.yellow); }
+    }
+
+    private void OpenRuntimePerformanceReportsDirectory()
+    {
+        string directory = RuntimePerformanceReportRecorder.ReportsDirectory;
+        Directory.CreateDirectory(directory);
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        try
+        {
+            using (var process = System.Diagnostics.Process.Start(
+                       new System.Diagnostics.ProcessStartInfo(directory) { UseShellExecute = true }))
+            { }
+        }
+        catch (Exception exception) { SetStatus("打开目录失败：" + exception.Message, Color.yellow); }
+#else
+        GUIUtility.systemCopyBuffer = directory;
+        SetStatus("当前平台已复制报告目录路径，请从文件管理器打开。", GmTextSecondary);
+#endif
+    }
+
+    private void RefreshRuntimePerformanceReportControls()
+    {
+        if (performanceReportStatusText == null) return;
+        string status = RuntimePerformanceReportRecorder.IsExporting ? "正在压缩并写入 ZIP…" :
+            !string.IsNullOrEmpty(RuntimePerformanceReportRecorder.LastError)
+                ? "上次导出失败：" + RuntimePerformanceReportRecorder.LastError
+                : !string.IsNullOrEmpty(RuntimePerformanceReportRecorder.LastReportPath)
+                    ? "最近报告（路径已自动复制）：\n" + RuntimePerformanceReportRecorder.LastReportPath
+                    : "未导出过报告。";
+        SetLocalizedText(performanceReportStatusText,
+            $"当前可回看 {RuntimePerformanceReportRecorder.AvailableSeconds:0.#} 秒（最多 {RuntimePerformanceReportRecorder.MaximumExportSeconds} 秒）。\n{status}");
+    }
 
     private void BuildPerformanceDebugControls(Transform parent)
     {
@@ -68,6 +175,7 @@ public sealed partial class GMReflectionConsole
 
     private void RefreshPerformanceDebugControls()
     {
+        RefreshRuntimePerformanceReportControls();
         if (performanceStatisticsButton == null) return;
         SetLocalizedText(performanceStatisticsButton.GetComponentInChildren<TextMeshProUGUI>(true),
             PerformanceDebugRegistry.StatisticsEnabled ? "性能统计：开" : "性能统计：关");

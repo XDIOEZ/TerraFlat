@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>侧视车架按骑手光标左右翻面，车轮和独立曲柄只随真实位移转动，座位随翻面镜像。</summary>
 [DefaultExecutionOrder(-100)]
-public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffsetResolver, IShadowFootprintBoundsProvider
+public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffsetResolver, IShadowFootprintBoundsProvider,
+    IGameplayFixedStepSimulationSystem
 {
     #region 车轮表现配置与状态
     public SpriteRenderer FrameRenderer;
@@ -27,6 +28,16 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     {
         carrier = GetComponentInChildren<Mod_Carrier>(true);
         ResetWheelPresentationMotionBaseline();
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.PhysicsPreparation);
+    }
+
+    private void OnDisable() => GameplayFixedStepSimulation.Unregister(this);
+
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (carrier == null || !carrier.IsAvailable || !FlatWorld.Networking.GameNetwork.HasStateAuthority) return;
+        using var world = carrier.item?.UseOwnedWorldForItemCallbacks();
+        RefreshFacingFromRiderPointer();
     }
 
     public void ResetWheelPresentationMotionBaseline()
@@ -50,8 +61,9 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     {
         if (FrameRenderer != null && FrameSprite != null && FrameRenderer.sprite != FrameSprite)
             FrameRenderer.sprite = FrameSprite;
-        RefreshFacingFromRiderPointer();
-        Vector2 position = transform.position;
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        Vector2 position = rendering != null && carrier?.item != null
+            ? rendering.GetItemRenderedWorldPosition(carrier.item) : transform.position;
         Vector2 displacement = WorldTopologyRuntime.ShortestDelta(previousPosition, position);
         previousPosition = position;
         // 传送和重新投影只重设基线，不能把位置突变当作骑行距离。

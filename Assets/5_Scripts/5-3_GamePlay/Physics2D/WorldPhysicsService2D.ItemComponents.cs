@@ -390,7 +390,8 @@ public sealed partial class WorldPhysicsService2D
         body.gravityScale = template.bodyGravityScale;
         body.constraints = template.bodyConstraints;
         body.collisionDetectionMode = template.bodyCollisionDetection;
-        body.interpolation = template.bodyInterpolation;
+        body.interpolation = Physics2D.simulationMode == SimulationMode2D.Script
+            ? RigidbodyInterpolation2D.None : template.bodyInterpolation;
         body.sleepMode = template.bodySleepingMode;
         body.useFullKinematicContacts = template.bodyUseFullKinematicContacts;
         body.simulated = template.bodySimulated;

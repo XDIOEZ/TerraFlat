@@ -179,6 +179,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
     protected override void Awake()
     {
         base.Awake();
+        if (!TryGetComponent<ItemPresentationFrameDriver>(out _))
+            gameObject.AddComponent<ItemPresentationFrameDriver>();
         WorldRenderingManager.EnsureForOwner(this);
         Item.RuntimeStructureChanged += OnPerceptionStructureChanged;
         Item.RuntimeStructureChanged += TrackWorldItemMatter;
@@ -288,7 +290,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         }
 
         _itemTickSuspended = false;
-        _tickScheduler.UpdateRenderFrame(Time.deltaTime);
+        _tickScheduler.UpdateInputFrame(Time.deltaTime);
     }
 
     public void SimulateFixedStep(float deltaTime)
@@ -329,6 +331,12 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         PresentWorldItemMatter();
         using (NaturalPresentMarker.Auto())
             FlatWorld.NaturalEntities.NaturalEntityEcsService.Present();
+    }
+
+    internal void UpdateItemPresentationFrame()
+    {
+        if (isActiveAndEnabled && IsWorldItemRuntimeActive())
+            _tickScheduler.UpdateRenderFrame(Time.deltaTime);
     }
 
     // 等全部世界投影同步完再提交掉落物，避免读取上一帧船姿。

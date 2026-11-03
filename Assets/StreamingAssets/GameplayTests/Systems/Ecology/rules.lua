@@ -97,6 +97,15 @@ test.system("ecology", "body_read_batch", {}, function(data)
         "发布快照跨批保留了旧外观，或把没有生命能力的实体当作死亡")
 end, "自然物发布批量读取保留停用状态与批内写入、移除、新增边界")
 
+test.system("ecology", "environment_input_batch", {}, function(data)
+    assert(data.climatesFound and data.rain1 == 0.25 and data.rain2 == 0.5 and data.rain3 == 0.75,
+        "环境输入批量访问丢失天气组件或结构变化后访问器失效")
+    assert(data.multiplier2 == 0.75 and data.temperature1 == 31 and data.temperature2 == 32 and data.temperature3 == 33,
+        "自然实体跨原型更新后天气倍率或耐候温度被覆盖")
+    assert(data.baseline1 == 10 and data.baseline2 == 20 and data.baseline3 == 30,
+        "环境批量更新不应清空原有地理气候基温")
+end, "自然物环境批次在组件补装和跨原型访问后仍保持全部输入")
+
 test.system("ecology", "selective_body_read_batch", {}, function(data)
     assert(data.frozenCount == 2 and data.initialPosition == 1 and data.frozenPosition == 1,
         "少量目标读取扫描了整个 ECS 世界，或失去了批次一致性")

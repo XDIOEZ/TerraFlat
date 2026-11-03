@@ -158,7 +158,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>, IGameplayFixe
         cachedActiveSceneName = string.Empty;
     }
 
-    private void Update()
+    private void LateUpdate()
     {
         if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld)
             return;
@@ -185,6 +185,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>, IGameplayFixe
                 TimeRun(sceneName, deltaTime);
             }
         }
+        CommitAuthoritativeSceneLighting(GetCurrentActiveSceneName());
     }
 
 /// <summary>
@@ -213,10 +214,13 @@ private void TimeRun(string sceneName, float deltaTime)
             ApplyPresentationSettings(currentSceneName);
             float lighting = GetLighting(currentSceneName);
             Color lightColor = GetLightColor(currentSceneName);
-            float moonlight = GetMoonReflectionIntensity(currentSceneName, lighting);
-            float moonAppearance = GetMoonAppearance(currentSceneName);
-            SetGlobalGameDay(GetAbsoluteGameDay(currentSceneName));
-            SetGlobalLight(lighting, lightColor, moonlight, moonAppearance);
+            float shownLighting = GetLightingInternal(currentSceneName, true, true) *
+                (WeatherMgr.ExistingInstance?.GetCloudLightingMultiplier(currentSceneName, false) ?? 1f);
+            float moonlight = GetMoonReflectionIntensity(currentSceneName, shownLighting, true);
+            float moonAppearance = GetMoonAppearance(currentSceneName, true);
+            SetGlobalGameDay(GetAbsoluteGameDay(currentSceneName, true));
+            SetGlobalLight(lighting, lightColor, moonlight, moonAppearance,
+                shownLighting, GetLightColor(currentSceneName, true));
         }
     }
 
@@ -244,10 +248,11 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 设置全局光源以及供水面使用的最终月光强度。
     /// </summary>
-    private void SetGlobalLight(float intensity, Color color, float moonlightIntensity, float moonAppearance)
+    private void SetGlobalLight(float intensity, Color color, float moonlightIntensity, float moonAppearance,
+        float? displayIntensity = null, Color? displayColor = null)
     {
-        float presentationIntensity = intensity;
-        Color presentationColor = color;
+        float presentationIntensity = displayIntensity ?? intensity;
+        Color presentationColor = displayColor ?? color;
         ResolveLocalPresentationLighting(ref presentationIntensity, ref presentationColor);
 
         if (GlobalLight != null)
@@ -256,18 +261,16 @@ private void TimeRun(string sceneName, float deltaTime)
             GlobalLight.color = presentationColor;
         }
 
-        if (syncTileLightLayer)
-        {
-            LightLayerMgr.Instance.SetTimeLighting(
-                GlobalLight,
-                intensity,
-                color,
-            activeChunkLightRefreshInterval,
-            inactiveChunkLightRefreshInterval);
-        }
-
         SetGlobalMoonlightIntensity(moonlightIntensity);
         SetGlobalMoonAppearance(moonAppearance);
+    }
+
+    // 玩法采光缓存由逻辑时间提交，不能由显示帧的频率或插值亮度反向驱动。
+    private void CommitAuthoritativeSceneLighting(string sceneName)
+    {
+        if (!syncTileLightLayer || string.IsNullOrEmpty(sceneName)) return;
+        LightLayerMgr.Instance.SetTimeLighting(GlobalLight, GetLighting(sceneName), GetLightColor(sceneName),
+            activeChunkLightRefreshInterval, inactiveChunkLightRefreshInterval);
     }
 
     /// <summary>
@@ -355,25 +358,35 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 获取当前场景解析后的绝对游戏日，存档恢复或跳时后仍保持确定结果。
     /// </summary>
-    private float GetAbsoluteGameDay(string sceneName)
+    private float GetAbsoluteGameDay(string sceneName, bool presentation = false)
     {
         if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData) || timeData == null)
             return 0f;
 
         float dayLength = Mathf.Max(1f, timeData.DayLength);
-        float dayProgress = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float dayProgress = GetPresentationAwareDaySeconds(timeData, presentation) / dayLength;
         return Mathf.Max(0, timeData.TotalDays) + dayProgress;
     }
 
-    private Color GetLightColor(string sceneName)
+    private Color GetLightColor(string sceneName, bool presentation = false)
     {
         if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData))
             return defaultLightColor;
 
         // 0-1 的昼夜进度
-        float t = Mathf.Clamp01(timeData.CurrentTime / timeData.DayLength);
+        float t = Mathf.Repeat(GetPresentationAwareDaySeconds(timeData, presentation), timeData.DayLength) / timeData.DayLength;
         return timeData.dayNightGradient.Evaluate(t);
     }
+
+    // 只为画面投影基础 Tick 之间的时间余量，不推进日期、天气、植物或存档。
+    private static float GetPresentationAwareDaySeconds(TimeData data, bool presentation)
+        => data.CurrentTime + (presentation
+            ? (float)(GameplayFixedStepSimulation.PresentationTime - GameplayFixedStepSimulation.CurrentTime) *
+                data.TimeScaleModifier * GameRuleConfiguration.Current.World.TimeSpeedMultiplier : 0f);
+
+    public float GetPresentationDayProgress(string sceneName)
+        => TryGetResolvedTimeData(sceneName, out _, out TimeData data) && data != null
+            ? Mathf.Repeat(GetPresentationAwareDaySeconds(data, true) / Mathf.Max(1f, data.DayLength), 1f) : 0f;
 
     private void ApplyPresentationSettings(string sceneName)
     {
@@ -458,14 +471,16 @@ private void TimeRun(string sceneName, float deltaTime)
     }
 
     /// <summary>获取仅由太阳日照产生的最终场景亮度，不包含月光。</summary>
-    public float GetSunLighting(string sceneName)
+    public float GetSunLighting(string sceneName) => GetSunLighting(sceneName, false);
+
+    public float GetSunLighting(string sceneName, bool presentation)
     {
         float cloudMultiplier = WeatherMgr.ExistingInstance?.GetCloudLightingMultiplier(sceneName, true) ?? 1f;
-        return GetLightingInternal(sceneName, false) * cloudMultiplier;
+        return GetLightingInternal(sceneName, false, presentation) * cloudMultiplier;
     }
 
     /// <summary>统一计算场景光照；太阳阴影通过 includeMoonlight=false 读取纯日照。</summary>
-    private float GetLightingInternal(string sceneName, bool includeMoonlight)
+    private float GetLightingInternal(string sceneName, bool includeMoonlight, bool presentation = false)
     {
         // 获取采光率
         float lightingRate = 1.0f;
@@ -480,15 +495,15 @@ private void TimeRun(string sceneName, float deltaTime)
         // 如果该场景引用了其他场景，则使用被引用场景的光照参数
         if (!string.IsNullOrEmpty(timeData.ReferenceScene))
         {
-            baseLightIntensity = GetLightingInternal(timeData.ReferenceScene, includeMoonlight);
+            baseLightIntensity = GetLightingInternal(timeData.ReferenceScene, includeMoonlight, presentation);
         }
         else
         {
             // 使用自身光照参数计算基础光照强度
-            float timeRatio = timeData.CurrentTime / timeData.DayLength;
+            float timeRatio = Mathf.Repeat(GetPresentationAwareDaySeconds(timeData, presentation), timeData.DayLength) / timeData.DayLength;
             baseLightIntensity = Mathf.Max(0f, timeData.LightParams.Evaluate(timeRatio));
             if (includeMoonlight)
-                baseLightIntensity = Mathf.Max(baseLightIntensity, GetMoonlightIntensity(timeData));
+                baseLightIntensity = Mathf.Max(baseLightIntensity, GetMoonlightIntensity(timeData, presentation));
         }
 
         // 维度光照值是上限而不是固定值：白天不会超过矿洞亮度，夜晚仍跟随地表继续变暗。
@@ -527,13 +542,13 @@ private void TimeRun(string sceneName, float deltaTime)
             save, manager.ActiveAddress, player.position, WorldTopologyRuntime.GetActiveDomain());
     }
 
-    private float GetMoonlightIntensity(TimeData timeData)
+    private float GetMoonlightIntensity(TimeData timeData, bool presentation = false)
     {
         if (timeData == null)
             return 0f;
 
         float dayLength = Mathf.Max(1f, timeData.DayLength);
-        float currentDayProgress = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float currentDayProgress = GetPresentationAwareDaySeconds(timeData, presentation) / dayLength;
         float elapsedDays = Mathf.Max(0, timeData.TotalDays) + currentDayProgress;
         float cycleDays = Mathf.Max(1f, timeData.LunarCycleDays);
         float moonPhase = Mathf.Repeat(timeData.InitialMoonPhase + elapsedDays / cycleDays, 1f);
@@ -548,43 +563,43 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 根据最终场景光照提取仅在夜间可见的月光强度。
     /// </summary>
-    private float GetMoonReflectionIntensity(string sceneName, float finalLighting)
+    private float GetMoonReflectionIntensity(string sceneName, float finalLighting, bool presentation = false)
     {
         if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData))
             return 0f;
 
         float dayLength = Mathf.Max(1f, timeData.DayLength);
-        float timeRatio = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float timeRatio = Mathf.Repeat(GetPresentationAwareDaySeconds(timeData, presentation), dayLength) / dayLength;
         float daylight = Mathf.Max(0f, timeData.LightParams.Evaluate(timeRatio));
-        float moonlight = GetMoonlightIntensity(timeData);
+        float moonlight = GetMoonlightIntensity(timeData, presentation);
         float baseLighting = Mathf.Max(daylight, moonlight);
         if (baseLighting <= Mathf.Epsilon || moonlight <= Mathf.Epsilon)
             return 0f;
 
         float sceneLightingScale = Mathf.Max(0f, finalLighting / baseLighting);
-        float nightVisibility = GetMoonAppearance(timeData);
+        float nightVisibility = GetMoonAppearance(timeData, presentation);
         return Mathf.Clamp01(moonlight * sceneLightingScale * nightVisibility);
     }
 
     /// <summary>
     /// 计算月亮从黄昏到夜晚的平滑出现进度；提前于完全入夜开始，避免瞬间弹出。
     /// </summary>
-    private float GetMoonAppearance(string sceneName)
+    private float GetMoonAppearance(string sceneName, bool presentation = false)
     {
         return TryGetResolvedTimeData(sceneName, out _, out TimeData timeData)
-            ? GetMoonAppearance(timeData)
+            ? GetMoonAppearance(timeData, presentation)
             : 0f;
     }
 
-    private float GetMoonAppearance(TimeData timeData)
+    private float GetMoonAppearance(TimeData timeData, bool presentation = false)
     {
         if (timeData == null)
             return 0f;
 
         float dayLength = Mathf.Max(1f, timeData.DayLength);
-        float timeRatio = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float timeRatio = Mathf.Repeat(GetPresentationAwareDaySeconds(timeData, presentation), dayLength) / dayLength;
         float daylight = Mathf.Max(0f, timeData.LightParams.Evaluate(timeRatio));
-        float moonlight = GetMoonlightIntensity(timeData);
+        float moonlight = GetMoonlightIntensity(timeData, presentation);
         if (moonlight <= Mathf.Epsilon)
             return 0f;
 
@@ -598,6 +613,7 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public void SetCurrentSceneLighting(string sceneName)
     {
+        CommitAuthoritativeSceneLighting(sceneName);
         float lighting = GetLighting(sceneName);
         Color lightColor = GetLightColor(sceneName);
         float moonlight = GetMoonReflectionIntensity(sceneName, lighting);

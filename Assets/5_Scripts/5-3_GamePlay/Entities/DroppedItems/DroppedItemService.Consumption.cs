@@ -116,6 +116,19 @@ public static partial class DroppedItemService
         return ResolveHandleEpoch(handle) == Epoch && runtime != null && runtime.TryGetPickablePosition(handle.Id, out position);
     }
 
+    /// <summary>鱼线等画面跟随读取同一显示位置；拾取距离仍使用原权威查询。</summary>
+    public static bool TryGetRenderedPickablePosition(DroppedItemHandle handle, out Vector2 position)
+    {
+        if (!TryGetPickablePosition(handle, out position)) return false;
+        if (handle.Legacy != null)
+        {
+            WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+            if (rendering != null) position = rendering.GetItemRenderedWorldPosition(handle.Legacy);
+        }
+        else position = runtime.GetRenderedGroundPosition(handle.Id, position);
+        return true;
+    }
+
     /// <summary>实际使用前取得独立冷载荷；调用者不能通过此快照修改世界中的库存数量。</summary>
     public static bool TryGetSnapshot(DroppedItemHandle handle, out ItemData snapshot)
     {

@@ -345,6 +345,7 @@ public abstract class Item : MonoBehaviour
     private ScheduledModuleTick[] everyFrameModules = Array.Empty<ScheduledModuleTick>();
     private ScheduledModuleTick[] scheduledModules = Array.Empty<ScheduledModuleTick>();
     private ScheduledModuleTick[] renderFrameModules = Array.Empty<ScheduledModuleTick>();
+    private ScheduledModuleTick[] inputFrameModules = Array.Empty<ScheduledModuleTick>();
     private readonly Dictionary<Module, ScheduledModuleTick> moduleClocks = new();
     private static readonly Dictionary<Type, bool> moduleTickImplementationCache = new Dictionary<Type, bool>();
     private bool moduleScheduleDirty = true;
@@ -587,21 +588,34 @@ public abstract class Item : MonoBehaviour
         get { EnsureModuleSchedule(); return renderFrameModules.Length != 0; }
     }
 
-    internal void TickRenderFrame(float deltaTime)
+    internal bool HasInputFrameUpdates
     {
-        if (!IsInitialized || simulationRangePaused) return;
+        get { EnsureModuleSchedule(); return inputFrameModules.Length != 0; }
+    }
+
+    internal void TickInputFrame(float deltaTime) => TickFrameModules(deltaTime, true);
+    internal void TickRenderFrame(float deltaTime) => TickFrameModules(deltaTime, false);
+
+    private void TickFrameModules(float deltaTime, bool input)
+    {
+        if (!IsInitialized) return;
         using var worldScope = UseOwnedWorldForItemCallbacks();
         EnsureModuleSchedule();
         uint generation = RuntimeGeneration;
         ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(this);
-        ScheduledModuleTick[] snapshot = renderFrameModules;
+        ScheduledModuleTick[] snapshot = input ? inputFrameModules : renderFrameModules;
         for (int i = 0; i < snapshot.Length; i++)
         {
             if (!IsInitialized || RuntimeGeneration != generation ||
                 GameplayWorldRegistry.GetItemWorldRevision(this) != worldRevision) return;
             ScheduledModuleTick clock = snapshot[i];
-            if (IsScheduledModuleValid(clock) && clock.Module.isActiveAndEnabled && PlayerSimulationAuthority.CanTick(clock.Module))
-                clock.Module.ModRenderUpdate(deltaTime);
+            if (!IsScheduledModuleValid(clock) || !clock.Module.isActiveAndEnabled) continue;
+            // 远端快照仍要显示；只有输入与玩法推进受模拟权威限制。
+            if (input)
+            {
+                if (PlayerSimulationAuthority.CanTick(clock.Module)) clock.Module.ModInputUpdate(deltaTime);
+            }
+            else clock.Module.ModRenderUpdate(deltaTime);
         }
     }
 
@@ -1420,6 +1434,7 @@ public abstract class Item : MonoBehaviour
         using var frameScope = ListPool<ScheduledModuleTick>.Get(out var frameModules);
         using var scheduledScope = ListPool<ScheduledModuleTick>.Get(out var intervalModules);
         using var renderScope = ListPool<ScheduledModuleTick>.Get(out var renderModules);
+        using var inputScope = ListPool<ScheduledModuleTick>.Get(out var inputModules);
         float shortestInterval = float.MaxValue;
         bool useItemInterval = updateInterval > 0.1f;
 
@@ -1428,7 +1443,8 @@ public abstract class Item : MonoBehaviour
             if (module == null || !module.Enabled || !module.IsRuntimeLoaded) continue;
             ModuleTickMode mode = ResolveModuleTickMode(module);
             bool render = module.WantsRenderFrameUpdate;
-            if (mode == ModuleTickMode.Disabled && !render) continue;
+            bool input = module.WantsInputFrameUpdate;
+            if (mode == ModuleTickMode.Disabled && !render && !input) continue;
             if (useItemInterval && mode != ModuleTickMode.Disabled) mode = ModuleTickMode.FixedInterval;
             float interval = mode == ModuleTickMode.EveryFrame || mode == ModuleTickMode.Disabled ? 0f
                 : useItemInterval ? updateInterval : Mathf.Max(0.01f, module.FixedTickInterval);
@@ -1445,6 +1461,7 @@ public abstract class Item : MonoBehaviour
             }
             moduleClocks.Add(module, clock);
             if (render) renderModules.Add(clock);
+            if (input) inputModules.Add(clock);
             if (mode == ModuleTickMode.EveryFrame) frameModules.Add(clock);
             else if (mode == ModuleTickMode.FixedInterval)
             {
@@ -1455,6 +1472,7 @@ public abstract class Item : MonoBehaviour
         everyFrameModules = frameModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : frameModules.ToArray();
         scheduledModules = intervalModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : intervalModules.ToArray();
         renderFrameModules = renderModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : renderModules.ToArray();
+        inputFrameModules = inputModules.Count == 0 ? Array.Empty<ScheduledModuleTick>() : inputModules.ToArray();
         tickTier = frameModules.Count > 0 ? ItemTickTier.EveryFrame
             : intervalModules.Count == 0 ? ItemTickTier.Dormant
             : shortestInterval <= 0.075f ? ItemTickTier.Fast
@@ -1526,6 +1544,7 @@ public abstract class Item : MonoBehaviour
         everyFrameModules = Array.Empty<ScheduledModuleTick>();
         scheduledModules = Array.Empty<ScheduledModuleTick>();
         renderFrameModules = Array.Empty<ScheduledModuleTick>();
+        inputFrameModules = Array.Empty<ScheduledModuleTick>();
         moduleClocks.Clear();
         tickTier = ItemTickTier.Dormant;
         lastScheduledTickTime = -1f;

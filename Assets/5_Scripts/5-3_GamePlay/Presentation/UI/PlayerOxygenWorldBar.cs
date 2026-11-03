@@ -5,6 +5,7 @@ using UnityEngine;
 /// 仅在水体真正阻断呼吸、氧气处于消耗阶段时启用 Canvas；数值通过 Mod_Oxygen 事件更新，不做逐帧轮询。
 /// </summary>
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(11000)]
 public sealed class PlayerOxygenWorldBar : MonoBehaviour
 {
     #region 引用
@@ -13,6 +14,9 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
     [SerializeField] private Canvas barCanvas; // 关闭时停止整条世界空间 UI 渲染。
     [SerializeField] private RectTransform fillRect; // 蓝色氧气填充的实际宽度节点。
     [SerializeField, Min(0f)] private float fullFillWidth = 88f; // 满氧时填充宽度。
+    private Item followItem;
+    private Vector3 canvasLocalPosition;
+    private bool hasCanvasAnchor;
 
     #endregion
 
@@ -20,6 +24,9 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
 
     private void OnEnable()
     {
+        followItem = GetComponentInParent<Item>();
+        if (barCanvas != null && !hasCanvasAnchor)
+        { canvasLocalPosition = barCanvas.transform.localPosition; hasCanvasAnchor = true; }
         Subscribe();
         RefreshVisual();
     }
@@ -27,6 +34,16 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
     private void OnDisable()
     {
         Unsubscribe();
+        if (barCanvas != null && hasCanvasAnchor) barCanvas.transform.localPosition = canvasLocalPosition;
+    }
+
+    private void LateUpdate()
+    {
+        if (barCanvas == null || !barCanvas.enabled || !hasCanvasAnchor || followItem == null) return;
+        Transform parent = barCanvas.transform.parent;
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (parent != null && rendering != null)
+            barCanvas.transform.position = rendering.GetItemRenderedTransformPoint(followItem, parent, canvasLocalPosition);
     }
 
     private void Subscribe()

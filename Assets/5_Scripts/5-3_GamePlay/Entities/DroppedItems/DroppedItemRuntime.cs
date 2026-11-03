@@ -167,6 +167,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         using (TransportTickMarker.Auto()) TickTransport(deltaTime);
         using (MatterTickMarker.Auto()) TickMatter(deltaTime);
         using (PickupTickMarker.Auto()) TickPickup(deltaTime, pickers);
+        presentation?.CaptureSimulationPoses(domain, GameplayFixedStepSimulation.CurrentTime);
     }
 
     // 视图只绑定有效的世界场景，重绑不改变掉落物模拟与句柄。
@@ -199,6 +200,9 @@ internal sealed partial class DroppedItemRuntime : IDisposable
         presentation?.SetSortingDomain(sortingDomain);
         presentation?.Present(camera, domain, spatial, SpatialCellSize, worldToDisplay ?? Matrix4x4.identity);
     }
+
+    public Vector2 GetRenderedGroundPosition(int id, Vector2 fallback)
+        => presentation != null && presentation.TryGetRenderedGroundPosition(id, out Vector2 position) ? position : fallback;
 
     public List<DroppedItemSaveRecord> Capture(bool includeUnresolved = true)
     {
@@ -271,13 +275,12 @@ internal sealed partial class DroppedItemRuntime : IDisposable
     private readonly HashSet<int> environmentMotionOwners = new();
 
     // 环境来源只交付目标，位置、空间索引、水态和表现统一在这里提交。
-    private bool CommitEnvironmentMotion(int id, Vector2 position, float interpolationSeconds = 0f)
+    private bool CommitEnvironmentMotion(int id, Vector2 position)
     {
         if (!simulation.Contains(id)) return false;
         LightweightDroppedBody body = simulation.Get(id);
         Vector2 movement = domain.ShortestDelta(body.Position, position);
         if (movement.sqrMagnitude <= .00000001f) return false;
-        if (interpolationSeconds > 0f) presentation?.RecordWaterDrift(id, movement, interpolationSeconds);
         body.Position = position;
         simulation.Set(body);
         UpdatePlacement(id);

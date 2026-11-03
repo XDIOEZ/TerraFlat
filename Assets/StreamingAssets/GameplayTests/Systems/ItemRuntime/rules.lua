@@ -153,6 +153,8 @@ test.system("item_runtime", "module_tick_mutations", {}, function(data)
 end, "物品 Tick 快照：增删、嵌套、时钟、跨世界、回池与注册令牌")
 
 test.system("item_runtime", "fixed_step_and_render_schedule", {}, function(data)
+    assert(data.noInputOnFixedSteps and data.renderDoesNotSampleInput and data.isolatedInputLane,
+        "输入、模拟和显示分发串道，显示帧次数影响了玩法推进或输入采样")
     assert(data.multipleStepsInOneFrame and data.fixedTicks == 6,
         "同一画面帧内的多个固定步没有逐步执行玩法模块")
     assert(math.abs(data.fixedSeconds - .1) < .0001 and data.intervalTicks == 1 and

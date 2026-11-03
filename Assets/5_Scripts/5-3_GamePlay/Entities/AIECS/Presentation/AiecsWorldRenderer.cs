@@ -258,7 +258,7 @@ namespace FlatWorld.AIECS
                 float2 initialDelta = domain.ShortestDelta(center, record.Position);
                 if (math.abs(initialDelta.x) > xRadius + WorldVisualMotionHistory.TeleportDistance ||
                     math.abs(initialDelta.y) > yRadius + WorldVisualMotionHistory.TeleportDistance) continue;
-                float2 presentationPosition = ResolveActorPresentationPosition(record.Key, record.Position, domain);
+                float2 presentationPosition = ResolveActorPresentationPosition(record.Key, record.Position, domain, record.FlightHeight);
                 float2 delta = domain.ShortestDelta(center, presentationPosition);
                 // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
                 if (math.abs(delta.x) > xRadius || math.abs(delta.y) > yRadius) continue;
@@ -299,6 +299,7 @@ namespace FlatWorld.AIECS
                 if (!animationStates.TryGetValue(record.Key, out SwayEntry entry))
                     animationStates.Add(record.Key, entry = new SwayEntry());
                 entry.LastDraw = drawSequence;
+                record.FlightHeight = ResolveActorPresentationHeight(record.Key, record.FlightHeight);
                 AiecsSwayPose pose = animations[record.Definition].Sample(ref entry.State, record, animationDelta);
                 var frame = pose.Frame;
                 float2 ground = item.PresentationPosition;
@@ -413,7 +414,7 @@ namespace FlatWorld.AIECS
             {
                 var actor = simulation.Display[visible[i].Index]; if (actor.Dead != 0) continue;
                 float2 position = visible[i].PresentationPosition +
-                    new float2(0, 0.8f + actor.FlightHeight);
+                    new float2(0, 0.8f + ResolveActorPresentationHeight(actor.Key, actor.FlightHeight));
                 Vector3 point = camera.WorldToScreenPoint(worldToDisplay.MultiplyPoint3x4(new Vector3(position.x, position.y, 0f)));
                 Rect rect = new Rect(point.x - 20f, Screen.height - point.y, 40f, 5f);
                 GUI.color = Color.black; GUI.DrawTexture(rect, Texture2D.whiteTexture);

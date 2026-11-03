@@ -267,7 +267,8 @@ public sealed partial class Mod_FishingRod : Module
             return;
         }
 
-        Vector3 tip = GetRodTipWorldPosition();
+        Vector3 tip = GetRodTipWorldPosition(presentation: true);
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
         Vector2 anchor = tip;
         if (!hangingHookInitialized || (anchor - previousRodTipPosition).sqrMagnitude > 2.25f)
         {
@@ -275,6 +276,10 @@ public sealed partial class Mod_FishingRod : Module
             hookVisualRenderer.transform.localPosition = ApplyRigFlip(HookVisualPosition, rigVisualFlipX, rigVisualFlipY);
             hookVisualRenderer.transform.localRotation = Quaternion.identity;
             hangingHookPosition = GetRigSpriteAnchorWorldPosition(hookVisualRenderer, HookLineEyeAnchor);
+            if (rendering != null)
+                hangingHookPosition = rendering.GetItemRenderedTransformPoint(item, hookVisualRenderer.transform,
+                    ResolveSpriteAttachmentLocalPoint(hookVisualRenderer.sprite.bounds, HookLineEyeAnchor,
+                        hookVisualRenderer.flipX, hookVisualRenderer.flipY));
             hangingLineLength = Mathf.Max(0.2f, Vector2.Distance(anchor, hangingHookPosition));
             previousHangingHookPosition = hangingHookPosition;
             hangingHookInitialized = true;
@@ -286,7 +291,14 @@ public sealed partial class Mod_FishingRod : Module
         }
         previousRodTipPosition = anchor;
         Quaternion hookRotation = Quaternion.FromToRotation(Vector3.down, hangingHookPosition - anchor);
-        PoseHookAtLineEye(hangingHookPosition, hookRotation);
+        Vector2 sourceEye = hangingHookPosition;
+        if (rendering != null)
+        {
+            sourceEye = rendering.GetSourceWorldPointForRenderedParent(item, rigVisualRoot, sourceEye);
+            hookRotation = rigVisualRoot.rotation *
+                Quaternion.Inverse(rendering.GetItemRenderedTransformMatrix(item, rigVisualRoot).rotation) * hookRotation;
+        }
+        PoseHookAtLineEye(sourceEye, hookRotation);
         if (fishingLine != null)
             ShowFishingLine(tip, hangingHookPosition);
     }
@@ -745,11 +757,20 @@ public sealed partial class Mod_FishingRod : Module
         if (!hasCast) { UpdateHangingHookVisual(deltaTime); return; }
         if (item.Owner == null) return;
         Vector2 endpoint = castLastPosition;
-        if (hookedTarget?.ActorItem != null) endpoint = hookedTarget.ActorItem.transform.position;
-        else if (DroppedItemService.TryGetPickablePosition(castBait, out Vector2 baitPosition)) endpoint = baitPosition;
-        Vector3 start = GetRodTipWorldPosition();
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (hookedTarget?.ActorItem != null)
+            endpoint = rendering != null ? rendering.GetItemRenderedWorldPosition(hookedTarget.ActorItem)
+                : hookedTarget.ActorItem.transform.position;
+        else if (DroppedItemService.TryGetRenderedPickablePosition(castBait, out Vector2 baitPosition)) endpoint = baitPosition;
+        Vector3 start = GetRodTipWorldPosition(presentation: true);
         Vector2 nearEnd = WorldTopologyRuntime.NearestImagePosition(start, endpoint);
+        if (rendering != null && rigVisualRoot != null)
+            nearEnd = rendering.GetSourceWorldPointForRenderedParent(item, rigVisualRoot, nearEnd);
         Vector3 lineEye = PoseCastHookAtBaitPosition(nearEnd);
+        if (rendering != null && hookVisualRenderer != null && hookVisualRenderer.sprite != null)
+            lineEye = rendering.GetItemRenderedTransformPoint(item, hookVisualRenderer.transform,
+                ResolveSpriteAttachmentLocalPoint(hookVisualRenderer.sprite.bounds, HookLineEyeAnchor,
+                    hookVisualRenderer.flipX, hookVisualRenderer.flipY));
         if (fishingLine != null) ShowFishingLine(start, lineEye);
     }
 
@@ -849,7 +870,7 @@ public sealed partial class Mod_FishingRod : Module
         RaiseSound(FishingSoundAction.Hook);
     }
 
-    private Vector3 GetRodTipWorldPosition()
+    private Vector3 GetRodTipWorldPosition(bool presentation = false)
     {
         SpriteRenderer renderer = item != null ? item.Sprite : null;
         Sprite sprite = renderer != null ? renderer.sprite : null;
@@ -863,7 +884,9 @@ public sealed partial class Mod_FishingRod : Module
             bounds.min.x + bounds.size.x * anchor.x,
             bounds.min.y + bounds.size.y * anchor.y,
             0f);
-        return renderer.transform.TransformPoint(localPosition);
+        WorldRenderingManager rendering = presentation ? WorldRenderingManager.ExistingInstance : null;
+        return rendering != null ? rendering.GetItemRenderedTransformPoint(item, renderer.transform, localPosition)
+            : renderer.transform.TransformPoint(localPosition);
     }
 
     private void ApplyCastSprite()

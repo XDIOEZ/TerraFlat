@@ -200,7 +200,7 @@ internal sealed partial class DroppedItemRuntime
                     destination = LooseItemMotion.AdvanceWater(matterWorldKey, payloads[id], body.Position,
                         velocity, driftSeconds, body.LiquidDepth < .995f);
                 using (WaterCommitMarker.Auto())
-                    if (CommitEnvironmentMotion(id, destination, driftSeconds)) moved++;
+                    if (CommitEnvironmentMotion(id, destination)) moved++;
             }
             WaterMovedPoint.AddWork(moved);
         }

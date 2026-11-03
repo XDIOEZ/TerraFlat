@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!612988286 &1
+SpriteAtlasAsset:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FlatWorld_GameplayUI_02
+  serializedVersion: 2
+  m_MasterAtlas: {fileID: 0}
+  m_ImporterData:
+    packables:
+    - {fileID: 21300000, guid: 4b9925f6667f4e159e1d3fadb970482e, type: 3}
+    - {fileID: 21300000, guid: 659939f4454a4c33a346bc1c52eac7d5, type: 3}
+    - {fileID: 21300000, guid: 7f05590e25164caeb61e044105b5c49d, type: 3}
+    - {fileID: 21300000, guid: 824103b54b2b4dddbeb0993b45de3794, type: 3}
+    - {fileID: 21300000, guid: 9b2dc666d5ca4faeae8abc317c760a90, type: 3}
+    - {fileID: 21300000, guid: a624c3f7167547bda463b75eaea62da7, type: 3}
+    - {fileID: 21300000, guid: ab7022e0946b493ab2be9347727d463e, type: 3}
+    - {fileID: 21300000, guid: adce54d1bbbb452ea232ed826192f32c, type: 3}
+    - {fileID: 21300000, guid: b2e5239f772e44f4989e54a7e7fb5b02, type: 3}
+    - {fileID: 21300000, guid: bd0f4ea1afde9fe4fadffab332790e38, type: 3}
+  m_IsVariant: 0

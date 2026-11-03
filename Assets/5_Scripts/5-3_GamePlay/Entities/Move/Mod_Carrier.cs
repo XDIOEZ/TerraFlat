@@ -210,7 +210,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
         if (activated || !IsAvailable) return;
         if (!WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(item, body)) return;
         physicalCollider.enabled = true;
-        body.interpolation = RigidbodyInterpolation2D.Interpolate;
+        body.interpolation = Physics2D.simulationMode == SimulationMode2D.Script
+            ? RigidbodyInterpolation2D.None : RigidbodyInterpolation2D.Interpolate;
         motionDriver?.ActivateCarrier(this, body);
         lastPhysicsPosition = body.position;
         building.SetPlacementOccupancySuspended(true);
@@ -428,6 +429,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
         CurrentForce = (CurrentVelocity - previousVelocity) *
             (body.mass / Mathf.Max(0.001f, deltaTime));
         TrackPhysicsMovement();
+        Rider?.CommitCarrierPassengerAfterPhysics(this);
     }
 
     /// <summary>当前有效玩家输入才可推动；已乘坐同一载具的乘员不能形成循环作用链。</summary>

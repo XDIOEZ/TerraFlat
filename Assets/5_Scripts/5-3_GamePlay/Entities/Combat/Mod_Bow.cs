@@ -194,7 +194,11 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     public override void ModRenderUpdate(float deltaTime)
     {
         if (!_chargeCycle.IsActive) return;
-        float charge01 = GetCharge01();
+        // 显示预测只推进值类型副本；发射强度和体力仍读取正式 Tick 状态。
+        ProjectileChargeCycle presentationCycle = _chargeCycle;
+        presentationCycle.Advance((float)(GameplayFixedStepSimulation.PresentationTime - GameplayFixedStepSimulation.CurrentTime),
+            FullChargeSeconds, ReleaseMode);
+        float charge01 = presentationCycle.GetCharge01(FullChargeSeconds);
         UpdateNockedArrowVisual(charge01);
         UpdateTrajectoryPreview(charge01);
         UpdateHeldChargeSpin(charge01, Mathf.Max(0f, deltaTime));

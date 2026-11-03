@@ -703,6 +703,18 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         Vector3 position = source.transform.position - visualOffset;
         Quaternion rotation = source.transform.rotation;
         Vector3 scale = source.transform.lossyScale;
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (rendering != null)
+        {
+            Matrix4x4 displayed = rendering.GetItemRenderedTransformMatrix(owner, source.transform);
+            Matrix4x4 motion = displayed * source.transform.worldToLocalMatrix;
+            footY = motion.MultiplyPoint3x4(new Vector3(footprint.center.x, footY, footprint.center.z)).y;
+            footprint = WorldVisualPose.TransformBounds(footprint, motion);
+            sourceBounds = WorldVisualPose.TransformBounds(sourceBounds, motion);
+            position = motion.MultiplyPoint3x4(position);
+            rotation = displayed.rotation;
+            scale = displayed.lossyScale;
+        }
         if (hasProjection)
         {
             footY = projection.MultiplyPoint3x4(new Vector3(footprint.center.x, footY, footprint.center.z)).y;

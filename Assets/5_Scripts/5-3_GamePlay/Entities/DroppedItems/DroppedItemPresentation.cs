@@ -90,8 +90,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public LightweightDroppedBody LastBody;
         public Vector2 LastNearestPosition;
         public Matrix4x4 LastProjection;
-        public WorldItemWaterRules.DriftInterpolation WaterDrift;
-        public readonly WorldVisualMotionHistory VisualMotion = new();
+        public readonly WorldVisualPoseHistory VisualMotion = new();
         public ShaderFlameEffect CombustionFlame;
         public int FlameRenderQueue;
         public bool LastBurning;
@@ -164,7 +163,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         foreach (PooledView view in active.Values)
         {
             if (view.HasState)
-                view.VisualMotion.Reset(new Vector3(view.LastBody.Position.x, view.LastBody.Position.y, 0f),
+                view.VisualMotion.Reset(CreateVisualPose(view.LastBody, view.LastBody.Position),
                     GameplayFixedStepSimulation.CurrentTime);
             view.HasState = false;
         }
@@ -181,12 +180,26 @@ internal sealed class DroppedItemPresentation : IDisposable
         // 表现由统一 Present 刷新；这里不产生逐物品回调或组件更新。
     }
 
-    #region 水流显示插值
+    #region 已提交的掉落物姿态
+    private static WorldVisualPose CreateVisualPose(LightweightDroppedBody body, float2 position) =>
+        new(new Vector3(position.x, position.y, body.VisualHeight), Quaternion.Euler(0f, 0f, body.Rotation),
+            new Vector3(body.Scale.x, body.Scale.y, body.SubmergedProgress));
 
-    public void RecordWaterDrift(int id, Vector2 movement, float seconds)
+    public void CaptureSimulationPoses(WorldTopologyDomain domain, double simulationTime)
     {
-        if (active.TryGetValue(id, out PooledView view))
-            view.WaterDrift.RecordMovement(movement, seconds, Time.timeAsDouble);
+        foreach (var pair in active)
+        {
+            if (!simulation.Contains(pair.Key)) continue;
+            LightweightDroppedBody body = simulation.Get(pair.Key);
+            WorldVisualPoseHistory history = pair.Value.VisualMotion;
+            float2 position = body.Position;
+            if (history.HasSnapshot)
+            {
+                float2 old = new(history.Current.Position.x, history.Current.Position.y);
+                position = old + domain.ShortestDelta(old, position);
+            }
+            history.Capture(CreateVisualPose(body, position), simulationTime);
+        }
     }
 
     #endregion
@@ -196,6 +209,15 @@ internal sealed class DroppedItemPresentation : IDisposable
         if (!active.TryGetValue(id, out PooledView view)) return;
         active.Remove(id);
         Release(view);
+    }
+
+    public bool TryGetRenderedGroundPosition(int id, out Vector2 position)
+    {
+        position = default;
+        if (!active.TryGetValue(id, out var view) || !view.VisualMotion.HasSnapshot) return false;
+        Vector3 displayed = view.VisualMotion.Evaluate(GameplayFixedStepSimulation.PresentationTime).Position;
+        position = new Vector2(displayed.x, displayed.y);
+        return true;
     }
 
     public void Present(
@@ -235,20 +257,14 @@ internal sealed class DroppedItemPresentation : IDisposable
             if (view != null)
             {
                 if (!ReferenceEquals(view.Visual, visual))
-                    view.VisualMotion.Reset(new Vector3(body.Position.x, body.Position.y, 0f),
-                        GameplayFixedStepSimulation.CurrentTime);
-                view.VisualMotion.CaptureWrapped(new Vector2(body.Position.x, body.Position.y), domain,
-                    GameplayFixedStepSimulation.CurrentTime);
-                Vector3 offsetFromCurrent = WorldVisualMotionHistory.PixelAlignTranslation(
-                    view.VisualMotion.Evaluate(Time.timeAsDouble) - view.VisualMotion.Current,
-                    visual.Sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, visual.Sprite.pixelsPerUnit)
-                        : WorldVisualMotionHistory.PixelGrid);
-                Vector3 interpolated = view.VisualMotion.Current + offsetFromCurrent;
-                displayPosition = new float2(interpolated.x, interpolated.y);
-                if (body.WaterKind == 0 || simulation.TryGetFlight(id, out _))
-                    view.WaterDrift = default;
-                Vector2 offset = view.WaterDrift.GetOffset(Time.timeAsDouble);
-                displayPosition += new float2(offset.x, offset.y);
+                    view.VisualMotion.Reset(CreateVisualPose(body, body.Position), GameplayFixedStepSimulation.CurrentTime);
+                WorldVisualPose pose = view.VisualMotion.Evaluate(GameplayFixedStepSimulation.PresentationTime);
+                displayPosition = new float2(pose.Position.x, pose.Position.y);
+                // 仅修改本地显示副本，模拟体、拾取坐标和存档载荷保持原值。
+                body.VisualHeight = pose.Position.z;
+                body.Rotation = pose.Rotation.eulerAngles.z;
+                body.Scale = new float2(pose.Scale.x, pose.Scale.y);
+                body.SubmergedProgress = pose.Scale.z;
             }
             float2 nearest = domain.NearestImagePosition(cameraCenter, displayPosition);
             if (Mathf.Abs(nearest.x - cameraCenter.x) > xRadius ||
@@ -259,8 +275,7 @@ internal sealed class DroppedItemPresentation : IDisposable
             if (view == null)
             {
                 view = Acquire();
-                view.VisualMotion.Reset(new Vector3(body.Position.x, body.Position.y, 0f),
-                    GameplayFixedStepSimulation.CurrentTime);
+                view.VisualMotion.Reset(CreateVisualPose(body, body.Position), GameplayFixedStepSimulation.CurrentTime);
                 active.Add(id, view);
             }
             Apply(view, id, visual, body, nearest, worldToDisplay);
@@ -507,7 +522,6 @@ internal sealed class DroppedItemPresentation : IDisposable
         if (sortingDomain != null) RemoveViewSortingKeys(view, sortingDomain);
         view.Visual = null;
         view.HasState = false;
-        view.WaterDrift = default;
         view.LastBurning = false;
         if (view.CombustionFlame != null)
             view.CombustionFlame.SetBurning(false);

@@ -15,11 +15,74 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterNaturalEntityBatchOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ecology/body_read_batch", NaturalEntityBodyReadBatch);
+        operations.Add("ecology/environment_input_batch", NaturalEntityEnvironmentInputBatch);
         operations.Add("ecology/selective_body_read_batch", NaturalEntitySelectiveBodyReadBatch);
         operations.Add("ecology/spatial_geometry", NaturalEntitySpatialGeometryValues);
         operations.Add("ecology/soil_snapshot_reuse", NaturalEntitySoilSnapshotReuse);
         operations.Add("ecology/soil_liquid_prefilter", NaturalEntitySoilLiquidPrefilter);
         operations.Add("ecology/output_validation_cache", NaturalEntityOutputValidationCache);
+    }
+
+    // 只创建自有 ECS World，读取正式批次结果，不触碰玩家世界或重算业务规则。
+    private static JObject NaturalEntityEnvironmentInputBatch(JObject args)
+    {
+        using var world = new World("probe:natural-environment-inputs");
+        using var simulation = new NaturalEntitySimulation(world);
+        var fullProfile = new NaturalEntityEcsProfile { ComponentTypes = new[]
+        {
+            ComponentType.ReadWrite<NaturalEntityLocation>(), ComponentType.ReadWrite<EntityModuleAppearance>(),
+            ComponentType.ReadWrite<EntityModuleActive>(), ComponentType.ReadWrite<EntityWeatherInput>(),
+            ComponentType.ReadWrite<EntityClimate>()
+        } };
+        var missingWeatherProfile = new NaturalEntityEcsProfile { ComponentTypes = new[]
+        {
+            ComponentType.ReadWrite<NaturalEntityLocation>(), ComponentType.ReadWrite<EntityModuleAppearance>(),
+            ComponentType.ReadWrite<EntityModuleActive>(), ComponentType.ReadWrite<EntityClimate>()
+        } };
+        var body = new NaturalEntityBody { NaturalGuid = 1, Scale = new float2(1f) };
+        for (int id = 1; id <= 3; id++)
+        {
+            body.RuntimeId = id;
+            simulation.Create(id == 2 ? missingWeatherProfile : fullProfile, id, body,
+                null, null, new EntityClimate { BaselineCelsius = id * 10 }, null);
+        }
+
+        var inputs = simulation.BeginEnvironmentInputBatch();
+        EntityStorageInfo first = inputs.Locate(1);
+        inputs.SetWeather(1, ref first, new EntityWeatherInput { RainIntensity = .25f, GrowthMultiplier = .5f });
+        bool firstClimateFound = inputs.TryGetClimate(first, out EntityClimate firstClimate);
+        firstClimate.AmbientCelsius = 31f;
+        inputs.SetClimate(first, firstClimate);
+
+        // 缺少天气组件时会产生结构变化，随后仍需正确读取原型与新原型。
+        EntityStorageInfo second = inputs.Locate(2);
+        inputs.SetWeather(2, ref second, new EntityWeatherInput { RainIntensity = .5f, GrowthMultiplier = .75f });
+        bool secondClimateFound = inputs.TryGetClimate(second, out EntityClimate secondClimate);
+        secondClimate.AmbientCelsius = 32f;
+        inputs.SetClimate(second, secondClimate);
+
+        EntityStorageInfo third = inputs.Locate(3);
+        inputs.SetWeather(3, ref third, new EntityWeatherInput { RainIntensity = .75f, GrowthMultiplier = 1f });
+        bool thirdClimateFound = inputs.TryGetClimate(third, out EntityClimate thirdClimate);
+        thirdClimate.AmbientCelsius = 33f;
+        inputs.SetClimate(third, thirdClimate);
+
+        simulation.TryGet(1, out EntityWeatherInput firstWeather);
+        simulation.TryGet(2, out EntityWeatherInput secondWeather);
+        simulation.TryGet(3, out EntityWeatherInput thirdWeather);
+        simulation.TryGet(1, out firstClimate);
+        simulation.TryGet(2, out secondClimate);
+        simulation.TryGet(3, out thirdClimate);
+        return new JObject
+        {
+            ["climatesFound"] = firstClimateFound && secondClimateFound && thirdClimateFound,
+            ["rain1"] = firstWeather.RainIntensity, ["rain2"] = secondWeather.RainIntensity,
+            ["rain3"] = thirdWeather.RainIntensity, ["multiplier2"] = secondWeather.GrowthMultiplier,
+            ["temperature1"] = firstClimate.AmbientCelsius, ["temperature2"] = secondClimate.AmbientCelsius,
+            ["temperature3"] = thirdClimate.AmbientCelsius,
+            ["baseline1"] = firstClimate.BaselineCelsius, ["baseline2"] = secondClimate.BaselineCelsius,
+            ["baseline3"] = thirdClimate.BaselineCelsius
+        };
     }
 
     // 只创建自有 ECS World，读取正式批次结果，不触碰玩家世界或重算业务规则。

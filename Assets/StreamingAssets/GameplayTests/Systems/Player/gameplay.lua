@@ -1,6 +1,15 @@
 -- 在隔离测试世界用正式控制与快捷栏入口完成关键玩家流程。
 test.check("world_ready", "世界已进入")
 test.check("terrain_ready", "玩家脚下地形就绪")
+test.runtime("player", "independent_presentation_frames", {}, function(data)
+    assert(data.frames >= 24 and data.intermediateFrames >= 5,
+        "逻辑位置不变的真实渲染帧之间没有连续显示移动")
+    assert(data.tps == 30 and data.timeScale == .25 and data.nativeInterpolationDisabled,
+        "显示分离采样没有使用独立30TPS时钟和手动物理")
+    assert(data.viewError < .001 and data.cameraTargetError < .001 and data.bodyError < .001,
+        "镜头、绘制副本或物理根不同步")
+    assert(data.queriesPure, "读取显示位置反向推进了逻辑或修改了真实位置")
+end, "真实30TPS慢放：逻辑不变时画面继续移动，镜头同源且查询只读")
 test.runtime("player", "surface_arrival", {}, function(data)
     assert(data.poseMatches and data.cameraShiftError < .001, "落点、刚体、存档或相机没有同步")
     assert(data.velocity < .001 and math.abs(data.angularVelocity) < .001 and data.motionResets == 1,

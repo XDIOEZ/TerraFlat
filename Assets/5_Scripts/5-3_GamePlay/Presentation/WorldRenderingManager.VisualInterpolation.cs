@@ -9,7 +9,7 @@ public sealed partial class WorldRenderingManager
 
     private sealed class ItemVisualMotionEntry
     {
-        internal readonly WorldVisualMotionHistory History = new();
+        internal readonly WorldVisualPoseHistory History = new();
         internal uint Generation;
         internal int SceneHandle;
         internal int ViewInstanceId;
@@ -23,6 +23,7 @@ public sealed partial class WorldRenderingManager
 
     private void RegisterVisualInterpolationRendering()
     {
+        GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.SnapshotCapture);
         RenderPipelineManager.beginContextRendering -= PresentInterpolatedItemVisuals;
         // 必须排在原有 PresentNaturalItemViews 之后，否则该帧同步会覆盖显示位置。
         RenderPipelineManager.beginContextRendering += PresentInterpolatedItemVisuals;
@@ -30,12 +31,25 @@ public sealed partial class WorldRenderingManager
 
     private void UnregisterVisualInterpolationRendering()
     {
+        GameplayFixedStepSimulation.Unregister(this);
         RenderPipelineManager.beginContextRendering -= PresentInterpolatedItemVisuals;
         ClearVisualInterpolationHistory();
     }
 
     /// <summary>瞬移调用方可主动丢弃旧视觉历史；权威位置由调用方自行管理。</summary>
-    public void SnapItemVisualPresentation(Item item) => ForgetItemVisualInterpolation(item);
+    public void SnapItemVisualPresentation(Item item)
+    {
+        ForgetItemVisualInterpolation(item);
+        ResetViewSimulationPoseHistories(item);
+    }
+
+    private void ResetViewSimulationPoseHistories(Item item)
+    {
+        if (item == null) return;
+        if (itemViews.TryGetValue(item, out var view)) view.Projection?.ResetSimulationPoses();
+        if (naturalItemViews.TryGetValue(item, out var natural)) natural.Projection?.ResetSimulationPoses();
+        if (actorViews.TryGetValue(item, out var actor)) actor.AnchorMotion = new WorldVisualPoseHistory();
+    }
 
     private void ForgetItemVisualInterpolation(Item item)
     {
@@ -44,42 +58,82 @@ public sealed partial class WorldRenderingManager
 
     private void ClearVisualInterpolationHistory() => itemVisualMotion.Clear();
 
-    /// <summary>相机与头顶气泡读取与画面相同的插值位置，不改变物理或存档坐标。</summary>
+    /// <summary>相机与头顶 UI 只读同一份已提交姿态，不因查询次数改变插值历史。</summary>
     public Vector3 GetItemRenderedWorldPosition(Item item)
     {
         if (item == null) return Vector3.zero;
-        Vector3 sourcePosition = item.transform.position;
-        if (!renderingServicesActive || !itemVisualMotion.TryGetValue(item, out var entry) ||
-            entry.Generation != item.RuntimeGeneration || entry.WorldKey != GameplayWorldRegistry.GetItemWorldKey(item) ||
-            Time.frameCount - entry.LastVisibleFrame > 1 || !entry.History.HasSnapshot ||
-            entry.Body != null && entry.Body.interpolation != RigidbodyInterpolation2D.None)
-            return sourcePosition;
-
-        entry.History.Capture(sourcePosition, GameplayFixedStepSimulation.CurrentTime);
-        Sprite sprite = item.Sprite != null ? item.Sprite.sprite : null;
-        float ppu = sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, sprite.pixelsPerUnit)
-            : WorldVisualMotionHistory.PixelGrid;
-        Vector3 offset = entry.History.Evaluate(GameplayFixedStepSimulation.PresentationTime) - sourcePosition;
-        return sourcePosition + WorldVisualMotionHistory.PixelAlignTranslation(offset, ppu);
+        return GetItemRenderedWorldPoint(item, item.transform.position);
     }
 
-    private Vector3 GetVisualMotionOffsetForReflection(Item item, Sprite sprite)
+    public Vector3 GetItemRenderedWorldPoint(Item item, Vector3 sourceWorldPoint)
     {
-        // 已借出的角色 Sprite 本身就在视觉根下，不可二次补偿。
-        if (actorViews.ContainsKey(item) || !itemVisualMotion.TryGetValue(item, out var entry) ||
-            entry.LastVisibleFrame != Time.frameCount ||
-            entry.Body != null && entry.Body.interpolation != RigidbodyInterpolation2D.None)
-            return Vector3.zero;
-        Vector3 delta = entry.History.Evaluate(GameplayFixedStepSimulation.PresentationTime) - entry.History.Current;
-        float ppu = sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, sprite.pixelsPerUnit)
-            : WorldVisualMotionHistory.PixelGrid;
-        return WorldVisualMotionHistory.PixelAlignTranslation(delta, ppu);
+        if (item == null) return sourceWorldPoint;
+        // 手持物包含在持有者绘制树中，不能再独立插值一遍。
+        Item owner = item.InHand && item.Owner != null ? item.Owner : item;
+        return TryResolveVisualMotion(owner, out Matrix4x4 motion)
+            ? motion.MultiplyPoint3x4(sourceWorldPoint) : sourceWorldPoint;
+    }
+
+    public Quaternion GetItemRenderedWorldRotation(Item item)
+    {
+        if (item == null) return Quaternion.identity;
+        return TryResolveVisualMotion(item, out Matrix4x4 motion)
+            ? motion.rotation * item.transform.rotation : item.transform.rotation;
+    }
+
+    /// <summary>挂点与拖尾同时读取根运动和局部动作姿态，已借出的视觉节点不重复平移。</summary>
+    public Vector3 GetItemRenderedTransformPoint(Item item, Transform source, Vector3 localPoint)
+        => GetItemRenderedTransformMatrix(item, source).MultiplyPoint3x4(localPoint);
+
+    public Matrix4x4 GetItemRenderedTransformMatrix(Item item, Transform source)
+    {
+        if (source == null) return Matrix4x4.identity;
+        if (item == null) return source.localToWorldMatrix;
+        Item owner = item.InHand && item.Owner != null ? item.Owner : item;
+        if (actorViews.TryGetValue(owner, out var actor) && actor.Anchor != null && actor.ViewRoot != null &&
+            source.IsChildOf(actor.ViewRoot.transform))
+        {
+            WorldVisualPose pose = actor.AnchorMotion.Evaluate(WorldVisualPose.ReadWorld(actor.Anchor),
+                GameplayFixedStepSimulation.PresentationTime);
+            return pose.Matrix * actor.ViewRoot.transform.worldToLocalMatrix * source.localToWorldMatrix;
+        }
+        Matrix4x4 matrix = itemViews.TryGetValue(owner, out var view) && view.Projection != null
+            ? view.Projection.GetRenderedSourceMatrix(source)
+            : naturalItemViews.TryGetValue(owner, out var natural) && natural.Projection != null
+                ? natural.Projection.GetRenderedSourceMatrix(source) : source.localToWorldMatrix;
+        return TryResolveVisualMotion(owner, out Matrix4x4 motion) ? motion * matrix : matrix;
+    }
+
+    // 世界锚定的纯视觉子节点反投影到源层级，避免被父节点插值第二次移动。
+    public Vector3 GetSourceWorldPointForRenderedParent(Item item, Transform parent, Vector3 displayedWorldPoint)
+        => parent.localToWorldMatrix.MultiplyPoint3x4(
+            GetItemRenderedTransformMatrix(item, parent).inverse.MultiplyPoint3x4(displayedWorldPoint));
+
+    /// <summary>唯一的 GO 姿态采样入口，位于整轮物理和接触回调之后。</summary>
+    public void SimulateFixedStep(float deltaTime)
+    {
+        if (!renderingServicesActive) return;
+        double now = GameplayFixedStepSimulation.CurrentTime;
+        foreach (ActorView view in actorViews.Values)
+        {
+            if (!CaptureItemSimulationPose(view.Item, view.Generation, view.ViewRoot, deltaTime, now)) continue;
+            if (view.Anchor != null)
+                view.AnchorMotion.Capture(WorldVisualPose.ReadWorld(view.Anchor), now,
+                    ResolveContinuousMotionDistance(itemVisualMotion[view.Item].Body, deltaTime));
+        }
+        foreach (ItemView view in itemViews.Values)
+            if (view.Projection != null && !view.Projection.IsReleased &&
+                CaptureItemSimulationPose(view.Item, view.Generation, view.Projection.gameObject, deltaTime, now))
+                view.Projection.CaptureSimulationPoses(now);
+        foreach (NaturalItemView view in naturalItemViews.Values)
+            if (view.Projection != null && !view.Projection.IsReleased &&
+                CaptureItemSimulationPose(view.Item, view.Generation, view.Projection.gameObject, deltaTime, now))
+                view.Projection.CaptureSimulationPoses(now);
     }
 
     private void PresentInterpolatedItemVisuals(ScriptableRenderContext context, List<Camera> cameras)
     {
         if (!renderingServicesActive) return;
-        double simulationTime = GameplayFixedStepSimulation.CurrentTime;
         double renderTime = GameplayFixedStepSimulation.PresentationTime;
 
         foreach (ActorView view in actorViews.Values)
@@ -87,30 +141,30 @@ public sealed partial class WorldRenderingManager
             if (view.Item == null || view.Anchor == null || view.ViewRoot == null ||
                 !view.ViewRoot.activeInHierarchy || view.Generation != view.Item.RuntimeGeneration)
                 continue;
-            if (TryResolveVisualTranslation(view.Item, view.Generation, view.ViewRoot,
-                view.Item.transform.position, view.Sprite != null ? view.Sprite.sprite : null,
-                simulationTime, renderTime, out Vector3 translation))
-                view.ViewRoot.transform.position += translation;
+            MarkItemViewPresented(view.Item);
+            WorldVisualPose live = WorldVisualPose.ReadWorld(view.Anchor);
+            WorldVisualPose displayed = view.AnchorMotion.Evaluate(live, renderTime);
+            if (!displayed.Matches(live))
+                WorldPresentationProjection.ApplyWorldMotionToTransform(view.ViewRoot.transform,
+                    displayed.Matrix * live.Matrix.inverse);
         }
         foreach (ItemView view in itemViews.Values)
         {
             if (view.Item == null || view.Projection == null || view.Projection.IsReleased ||
                 !view.Projection.gameObject.activeInHierarchy || view.Generation != view.Item.RuntimeGeneration)
                 continue;
-            if (TryResolveVisualTranslation(view.Item, view.Generation, view.Projection.gameObject,
-                view.Item.transform.position, view.Item.Sprite != null ? view.Item.Sprite.sprite : null,
-                simulationTime, renderTime, out Vector3 translation))
-                view.Projection.ApplyVisualMotionTranslation(translation);
+            MarkItemViewPresented(view.Item);
+            if (TryResolveVisualMotion(view.Item, out Matrix4x4 motion))
+                view.Projection.ApplyVisualMotionTransform(motion);
         }
         foreach (NaturalItemView view in naturalItemViews.Values)
         {
             if (view.Item == null || view.Projection == null || view.Projection.IsReleased ||
                 !view.Projection.gameObject.activeInHierarchy || view.Generation != view.Item.RuntimeGeneration)
                 continue;
-            if (TryResolveVisualTranslation(view.Item, view.Generation, view.Projection.gameObject,
-                view.Item.transform.position, view.Item.Sprite != null ? view.Item.Sprite.sprite : null,
-                simulationTime, renderTime, out Vector3 translation))
-                view.Projection.ApplyVisualMotionTranslation(translation);
+            MarkItemViewPresented(view.Item);
+            if (TryResolveVisualMotion(view.Item, out Matrix4x4 motion))
+                view.Projection.ApplyVisualMotionTransform(motion);
         }
 
         // 不可见、被回池或转移渲染所有权的旧视图不保留跨场景插值历史。
@@ -120,13 +174,12 @@ public sealed partial class WorldRenderingManager
         foreach (Item item in expired) itemVisualMotion.Remove(item);
     }
 
-    private bool TryResolveVisualTranslation(Item item, uint generation, GameObject viewRoot,
-        Vector3 sourcePosition, Sprite sprite, double simulationTime, double renderTime,
-        out Vector3 translation)
+    private bool CaptureItemSimulationPose(Item item, uint generation, GameObject viewRoot,
+        float deltaTime, double simulationTime)
     {
-        translation = Vector3.zero;
-        if (!item.isActiveAndEnabled || item.IsInPool || item.DestructionHandled ||
-            !item.gameObject.scene.isLoaded)
+        if (item == null || viewRoot == null || !viewRoot.activeInHierarchy || generation != item.RuntimeGeneration ||
+            !item.isActiveAndEnabled || item.IsInPool || item.DestructionHandled ||
+            !item.gameObject.scene.isLoaded || !FlatWorld.Networking.GameNetwork.HasStateAuthority)
         {
             ForgetItemVisualInterpolation(item);
             return false;
@@ -146,24 +199,45 @@ public sealed partial class WorldRenderingManager
             entry.SceneHandle = item.gameObject.scene.handle;
             entry.ViewInstanceId = viewRoot.GetInstanceID();
             entry.WorldKey = worldKey;
-            entry.Body = item.GetComponent<Rigidbody2D>();
-            entry.History.Reset(sourcePosition, simulationTime);
+            entry.Body = WorldPhysicsService2D.GetItemRigidbody(item);
+            entry.LastVisibleFrame = Time.frameCount;
+            ResetViewSimulationPoseHistories(item);
+            entry.History.Reset(WorldVisualPose.ReadWorld(item.transform), simulationTime);
         }
-        entry.LastVisibleFrame = Time.frameCount;
-        // 已由原生 Rigidbody2D 插值的来源不能再次平滑，否则出现双重滞后。
-        if (entry.Body != null && entry.Body.interpolation != RigidbodyInterpolation2D.None)
+        if (UsesNativeBodyInterpolation(entry))
         {
-            entry.History.Reset(sourcePosition, simulationTime);
+            entry.History.Reset(WorldVisualPose.ReadWorld(item.transform), simulationTime);
             return false;
         }
+        float distance = ResolveContinuousMotionDistance(entry.Body, deltaTime);
+        entry.History.Capture(WorldVisualPose.ReadWorld(item.transform), simulationTime, distance);
+        return true;
+    }
 
-        entry.History.Capture(sourcePosition, simulationTime);
-        translation = entry.History.Evaluate(renderTime) - sourcePosition;
-        // 像素风按源贴图像素网格量化位移，不量化真实坐标与物理节点。
-        float pixelsPerUnit = sprite != null ? Mathf.Max(WorldVisualMotionHistory.PixelGrid, sprite.pixelsPerUnit)
-            : WorldVisualMotionHistory.PixelGrid;
-        translation = WorldVisualMotionHistory.PixelAlignTranslation(translation, pixelsPerUnit);
-        return translation != Vector3.zero;
+    private void MarkItemViewPresented(Item item)
+    { if (itemVisualMotion.TryGetValue(item, out var entry)) entry.LastVisibleFrame = Time.frameCount; }
+
+    private static float ResolveContinuousMotionDistance(Rigidbody2D body, float deltaTime) => body != null
+        ? Mathf.Max(WorldVisualMotionHistory.TeleportDistance, body.velocity.magnitude * deltaTime * 2f)
+        : WorldVisualMotionHistory.TeleportDistance;
+
+    private static bool UsesNativeBodyInterpolation(ItemVisualMotionEntry entry) =>
+        Physics2D.simulationMode != SimulationMode2D.Script && entry.Body != null &&
+        entry.Body.interpolation != RigidbodyInterpolation2D.None;
+
+    private bool TryResolveVisualMotion(Item item, out Matrix4x4 motion)
+    {
+        motion = Matrix4x4.identity;
+        if (!renderingServicesActive || !itemVisualMotion.TryGetValue(item, out var entry) ||
+            item.RuntimeGeneration != entry.Generation || item.IsInPool || item.DestructionHandled ||
+            !item.isActiveAndEnabled || item.gameObject.scene.handle != entry.SceneHandle ||
+            entry.WorldKey != GameplayWorldRegistry.GetItemWorldKey(item) ||
+            Time.frameCount - entry.LastVisibleFrame > 1 || UsesNativeBodyInterpolation(entry)) return false;
+        WorldVisualPose live = WorldVisualPose.ReadWorld(item.transform);
+        WorldVisualPose displayed = entry.History.Evaluate(live, GameplayFixedStepSimulation.PresentationTime);
+        if (displayed.Matches(live)) return false;
+        motion = displayed.Matrix * live.Matrix.inverse;
+        return true;
     }
 
     #endregion

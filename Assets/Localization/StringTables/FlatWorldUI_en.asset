@@ -19,63 +19,63 @@ MonoBehaviour:
     m_Items: []
   m_TableData:
   - m_Id: 202611020000001
-    m_Localized: "Visual Style"
+    m_Localized: Visual Style
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000002
-    m_Localized: "Clear Pixel"
+    m_Localized: Clear Pixel
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000003
-    m_Localized: "Soft Natural"
+    m_Localized: Soft Natural
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000004
-    m_Localized: "Cinematic"
+    m_Localized: Cinematic
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000001
-    m_Localized: "Atmosphere Analyzer"
+    m_Localized: Atmosphere Analyzer
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000002
-    m_Localized: "TOTAL ATMOSPHERE · STANDARD m³"
+    m_Localized: "TOTAL ATMOSPHERE \xB7 STANDARD m\xB3"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000003
-    m_Localized: "GAS COMPOSITION / SHARE"
+    m_Localized: GAS COMPOSITION / SHARE
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000004
-    m_Localized: "NO PLANET SIGNAL"
+    m_Localized: NO PLANET SIGNAL
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000005
-    m_Localized: "PLANET PRESSURE  {0:0.###} kPa"
+    m_Localized: PLANET PRESSURE  {0:0.###} kPa
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000006
-    m_Localized: "PLANET PRESSURE  {0} kPa"
+    m_Localized: PLANET PRESSURE  {0} kPa
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000007
-    m_Localized: "LIVE · STANDARD VOLUME / MOLAR SHARE"
+    m_Localized: "LIVE \xB7 STANDARD VOLUME / MOLAR SHARE"
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000008
-    m_Localized: "THIS PLANET HAS NO ATMOSPHERE"
+    m_Localized: THIS PLANET HAS NO ATMOSPHERE
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000009
-    m_Localized: "PLANET ATMOSPHERE UNAVAILABLE HERE"
+    m_Localized: PLANET ATMOSPHERE UNAVAILABLE HERE
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000010
-    m_Localized: "NO DETECTABLE GAS"
+    m_Localized: NO DETECTABLE GAS
     m_Metadata:
       m_Items: []
   - m_Id: 28102700009000011
-    m_Localized: "USE THE ANALYZER ON A PLANET"
+    m_Localized: USE THE ANALYZER ON A PLANET
     m_Metadata:
       m_Items: []
   - m_Id: 17923500000001245
@@ -8961,79 +8961,82 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200000
-    m_Localized: "Natural air refill"
+    m_Localized: Natural air refill
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200001
-    m_Localized: "Gas tank unavailable"
+    m_Localized: Gas tank unavailable
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200002
-    m_Localized: "Gas {0:0.###}/{1:0.###} standard L"
+    m_Localized: Gas {0:0.###}/{1:0.###} standard L
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200003
-    m_Localized: "Liquid {0:0.###}/{1:0.###} L"
+    m_Localized: Liquid {0:0.###}/{1:0.###} L
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200004
-    m_Localized: "Natural refill limit {0:0.#}% · Powered filling can reach full capacity"
+    m_Localized: "Natural refill limit {0:0.#}% \xB7 Powered filling can reach full
+      capacity"
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200005
-    m_Localized: "{0}: {1:0.###} standard L"
+    m_Localized: '{0}: {1:0.###} standard L'
     m_Metadata:
       m_Items: []
   - m_Id: 28000000000200006
-    m_Localized: "Gas ID / Rate per second (0 stops)"
+    m_Localized: Gas ID / Rate per second (0 stops)
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900000
-    m_Localized: "Building & Decoration"
+    m_Localized: Building & Decoration
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900001
-    m_Localized: "Nature & Plants"
+    m_Localized: Nature & Plants
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900002
-    m_Localized: "Functional Blocks"
+    m_Localized: Functional Blocks
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900003
-    m_Localized: "Tools & Utilities"
+    m_Localized: Tools & Utilities
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900004
-    m_Localized: "Weapons & Equipment"
+    m_Localized: Weapons & Equipment
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900005
-    m_Localized: "Food & Drinks"
+    m_Localized: Food & Drinks
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900006
-    m_Localized: "Materials & Parts"
+    m_Localized: Materials & Parts
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000900007
-    m_Localized: "Transportation"
+    m_Localized: Transportation
     m_Metadata:
       m_Items: []
   - m_Id: 28102900000100001
-    m_Localized: "Unlimited gas supply (composition sample: {0:0.###} standard L)"
+    m_Localized: 'Unlimited gas supply (composition sample: {0:0.###} standard L)'
     m_Metadata:
       m_Items: []
   - m_Id: 28103100000100001
-    m_Localized: "Liquid network {0:0.##}°C · Total {1:0.###} L"
+    m_Localized: "Liquid network {0:0.##}\xB0C \xB7 Total {1:0.###} L"
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000005
-    m_Localized: "Current: {0}. Multiple actions can share a key; click Save to keep your changes."
+    m_Localized: 'Current: {0}. Multiple actions can share a key; click Save to keep
+      your changes.'
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000006
-    m_Localized: "Current: {0}. Multiple actions can share a key; changes are saved automatically."
+    m_Localized: 'Current: {0}. Multiple actions can share a key; changes are saved
+      automatically.'
     m_Metadata:
       m_Items: []
   references:

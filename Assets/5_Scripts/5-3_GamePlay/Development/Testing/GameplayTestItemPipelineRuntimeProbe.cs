@@ -464,6 +464,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["initialWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["idleDamageTickDisabled"] = damage != null && damage.TickMode == ModuleTickMode.Disabled;
             result["animatorUpdateMode"] = animation?.animator != null ? animation.animator.updateMode.ToString() : "missing";
+            result["simulationOwnedAnimation"] = animation?.UsesSimulationAnimationClock == true;
 
             if (args.Value<bool?>("verifyFixedStep") == true)
             {
@@ -473,6 +474,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
             }
 
             result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
+            ulong firstActionTick = GameplayFixedStepSimulation.TickIndex;
             bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
             result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
             bool sawAttackState = false, sawOpenWindow = false, sawOpenWindowWithFixedDamageTick = false, returnedToIdle = false;
@@ -501,6 +503,16 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["returnedToIdle"] = returnedToIdle;
             result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["sampledFrames"] = sampledFrames;
+            result["simulationTicks"] = (long)(GameplayFixedStepSimulation.TickIndex - firstActionTick);
+            result["simulationTime"] = GameplayFixedStepSimulation.CurrentTime;
+            result["lastItemTickTime"] = Convert.ToDouble(typeof(Item).GetField("lastScheduledTickTime",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(weapon));
+            result["itemTickTier"] = weapon.GetTickTier().ToString();
+            result["animationTickMode"] = animation.TickMode.ToString();
+            result["animationProgress"] = animation.animator != null
+                ? animation.animator.GetCurrentAnimatorStateInfo(0).normalizedTime : -1f;
+            result["weaponWorld"] = GameplayWorldRegistry.GetItemWorldKey(weapon);
+            result["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player);
             if (fixedStep != null)
                 result["fixedStep"] = new JObject
                 {

@@ -651,6 +651,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38ebc273526d24d47b4b31987d965dff
+    m_Address: FlatWorld_CommonItems_13
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 392f49685d31b894f8ba9907a27e9e5e
     m_Address: "Assets/6_Art/Food/\u5806\u80A5\u6876.png"
     m_ReadOnly: 0
@@ -770,6 +775,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 45c0fc482c0604844b77ec64cd8f9839
+    m_Address: FlatWorld_CommonItems_17
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 46bec2f007662bf42aba264dec445378
     m_Address: Assets/6_Art/Building/Door_Stone_Close.png
@@ -1316,6 +1326,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 842deae6e4dad104386fe18ce9f130fa
+    m_Address: FlatWorld_CommonItems_15
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 84321a6210744a0793e218e731d4d703
     m_Address: Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Tungsten/Mine_Tungsten_Idle.png
     m_ReadOnly: 0
@@ -1510,6 +1525,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 945ec0142ac4bc946bcd5413595a7c92
+    m_Address: FlatWorld_CommonItems_21
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 961aa0119ab07f747bee68beff05f437
     m_Address: FlatWorld_CommonItems_03
     m_ReadOnly: 0
@@ -1598,6 +1618,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a037be1d181f17549a810deceb487bd6
+    m_Address: FlatWorld_CommonItems_11
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a100409960561d6498f07f89d3f90030
     m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalPlates/TinPlate_Icon.png
     m_ReadOnly: 0
@@ -1609,6 +1634,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a19ca0c87ba04fa40933d8cad18535ff
+    m_Address: FlatWorld_CommonItems_14
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a24e86abf0bf498d81b64cd55a4f5430
     m_Address: Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png
@@ -1641,6 +1671,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     - Sprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a3aaefdc85845b645ae938704b39ed68
+    m_Address: FlatWorld_CommonItems_23
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a3f088204b0a27542838f566d87b8a55
     m_Address: Assets/6_Art/Generated/Farming/Chili/Chili_Icon.png
@@ -1738,6 +1773,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2299c42e4a9ef94b97c014ba9fd6399
+    m_Address: FlatWorld_CommonItems_20
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b2ff97fe3e0e44a7a8db664f387ffa5e
     m_Address: Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png
@@ -1957,6 +1997,16 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9e5f5bc8a589be43b5851e1d9eee9c8
+    m_Address: FlatWorld_CommonItems_19
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9eae91a6655f6244b500cf82378329a
+    m_Address: FlatWorld_CommonItems_18
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cae40f2d99874d32bdc33fcc7a8d8709
     m_Address: Assets/6_Art/Generated/Equipment/Chestplate_Wood/Chestplate_Wood_Icon.png
     m_ReadOnly: 0
@@ -2096,6 +2146,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: da5a5190fe7547f45a3f20c81b754382
+    m_Address: FlatWorld_CommonItems_12
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: da977895be3294447b0554bdf137f9f1
     m_Address: Assets/6_Art/Generated/Medical/Bandage_Plant.png
     m_ReadOnly: 0
@@ -2174,6 +2229,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     - Sprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e1239f37a115274429c994286112a6a5
+    m_Address: FlatWorld_CommonItems_22
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e16d7171b535b604f92984034cf5087c
     m_Address: Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png
@@ -2373,6 +2433,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f9779bf04a841fb4c91d33a25f07c6e6
+    m_Address: FlatWorld_CommonItems_16
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f9bb476464b241d49b75ca46af896266
     m_Address: Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Growing.png

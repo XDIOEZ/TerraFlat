@@ -490,7 +490,11 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     {
         ReconcileBodyPartPenalties();
         UpdateHitSlowdown(deltaTime);
+    }
 
+    public override bool WantsRenderFrameUpdate => true;
+    public override void ModRenderUpdate(float deltaTime)
+    {
         // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
         if (IsPanelVisible() && !_isVisualShaking)
             UpdateWorldHealthBarLayout();
@@ -525,6 +529,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         GameObject owner = item != null ? item.gameObject : gameObject;
         // 反复定位血条复用容器，避免每帧为渲染器数组分配内存。
         owner.GetComponentsInChildren(false, healthBarRendererBuffer);
+        if (item != null && item.Sprite != null && !healthBarRendererBuffer.Contains(item.Sprite))
+            healthBarRendererBuffer.Add(item.Sprite);
         bool hasBounds = false;
         Bounds bounds = default;
 
@@ -537,17 +543,17 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             // 手持武器等物品会挂在角色节点下，但不属于角色自身外观。
             // 只合并由当前 Item 直接拥有的渲染器，避免武器位置改变血条锚点。
             Item rendererOwner = renderer.GetComponentInParent<Item>();
-            if (item != null && rendererOwner != item)
+            if (item != null && rendererOwner != item && renderer != item.Sprite)
                 continue;
 
             if (!hasBounds)
             {
-                bounds = renderer.bounds;
+                bounds = GetRenderedHealthBarBounds(renderer);
                 hasBounds = true;
             }
             else
             {
-                bounds.Encapsulate(renderer.bounds);
+                bounds.Encapsulate(GetRenderedHealthBarBounds(renderer));
             }
         }
 
@@ -556,9 +562,32 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
         Collider2D ownerCollider = owner.GetComponentInChildren<Collider2D>(false);
         if (ownerCollider != null)
-            return ownerCollider.bounds;
+        {
+            Bounds colliderBounds = ownerCollider.bounds;
+            WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+            if (rendering != null && item != null)
+                colliderBounds.center += rendering.GetItemRenderedWorldPosition(item) - item.transform.position;
+            return colliderBounds;
+        }
 
         return new Bounds(owner.transform.position, Vector3.one);
+    }
+
+    // 借出的 Sprite 和普通投影统一读取显示矩阵，血条不再跟随不可见的逻辑根。
+    private Bounds GetRenderedHealthBarBounds(SpriteRenderer renderer)
+    {
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        if (rendering == null || item == null) return renderer.bounds;
+        Matrix4x4 matrix = rendering.GetItemRenderedTransformMatrix(item, renderer.transform);
+        Bounds local = renderer.sprite.bounds;
+        Vector3 center = local.center;
+        if (renderer.flipX) center.x = -center.x;
+        if (renderer.flipY) center.y = -center.y;
+        Vector3 x = matrix.MultiplyVector(Vector3.right * local.extents.x);
+        Vector3 y = matrix.MultiplyVector(Vector3.up * local.extents.y);
+        Vector3 extents = new(Mathf.Abs(x.x) + Mathf.Abs(y.x), Mathf.Abs(x.y) + Mathf.Abs(y.y),
+            Mathf.Abs(x.z) + Mathf.Abs(y.z));
+        return new Bounds(matrix.MultiplyPoint3x4(center), extents * 2f);
     }
 
     private float GetAdaptiveTopPadding(Bounds bounds)

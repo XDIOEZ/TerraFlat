@@ -1,4 +1,4 @@
-﻿using Force.DeepCloner;
+using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
@@ -291,7 +291,8 @@ public partial class ItemMgr
         {
             WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(player, body);
             body.velocity = Vector2.zero;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.interpolation = Physics2D.simulationMode == SimulationMode2D.Script
+                ? RigidbodyInterpolation2D.None : RigidbodyInterpolation2D.Interpolate;
         }
 
         if (_networkInitializedPlayers.Add(player))

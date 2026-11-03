@@ -1,6 +1,7 @@
 # 调度、感知与环绕空间
 
-- 覆写 ModUpdate 的模块显式选 EveryFrame/FixedInterval/Disabled，由统一固定步推进并保留声明的间隔；输入与表现以 WantsRenderFrameUpdate/ModRenderUpdate 单独逐画面帧执行。启停/结构/配置/池复用使调度失效，事件能力变用 MarkModuleScheduleDirty。投射/投掷伤害按模块来源独立请求空闲休眠，飞行/附着和有效攻击保持更新。通知只进已注册世界 Item，冷宿主/测试夹具卸载仅自身 dirty。
+- 模块分三条通道：`WantsInputFrameUpdate/ModInputUpdate` 在 Update 采样输入；`ModUpdate` 的 EveryFrame/FixedInterval/Disabled 由游戏 Tick 推进；`WantsRenderFrameUpdate/ModRenderUpdate` 在 LateUpdate 只读状态做表现。每条通道独立计数，不能借显示回调推进玩法或旋转命中盒。启停/结构/配置/池复用使调度失效，事件能力变更用 MarkModuleScheduleDirty。投射/投掷伤害按来源独立请求空闲休眠；通知只进已注册世界 Item，冷宿主/测试夹具卸载仅自身 dirty。
+- 每 Tick 的 `AfterPhysics` 先提交接触和载具乘员，最后 `SnapshotCapture` 采样姿态；`WorldVisualPoseHistory` 只在提交时写入，显示查询只读。多 Tick 追赶保留最后两个姿态，TPS 切换保留累计的游戏秒余量；传送/回池/换世界清历史。基础模式不修改 Unity FixedUpdate 时钟。
 - Tick 捕注册令牌及 Item/Module 代际，回调后复核；调度重建生成稳定模块快照并保留未变模块时钟，休眠不补算。固定时钟从统一入口显式传递，画面模块只遍历已登记物品。Profiler：FlatWorld.ItemScheduler.* 分段、FlatWorld.Item.Tick.Dispatch / RebuildSchedule 与 FlatWorld.Module.<类型名>；Hive.SpawnResident 区分真生成，勿把实例化峰误作频率问题。
 - 世界 Tick 登记同时保存 Scene.handle 和世界名；同场景移动复用世界名，跨场景重新登记。AI 实体查询每次借还 ListPool 实时读子能力，包含停用节点，不跨帧缓存资格；规则 `item_runtime/world_tick_move_query`、`item_runtime/ai_entity_live_query`。
 - 距离档以同 Scene 最近玩家及环绕最短距限制 ItemMgr Tick，不提高模块频率；玩家/地图/手持完整，Owner 不豁免。ItemSimulationRangeIndex 用近档集合、到期堆、区域判档；明显全近/全停区域用带余量平方距离快捷判，边界精算。

@@ -148,13 +148,16 @@ public sealed partial class WorldRenderingManager
             float waterY = immersion != null && immersion.HasWorldWaterReference
                 ? immersion.CurrentWaterY : bounds.min.y + bounds.size.y * 0.3f;
             float blend = immersion != null ? immersion.CurrentBlend : 1f;
-            Vector3 sourcePosition = source.transform.position +
-                GetVisualMotionOffsetForReflection(item, source.sprite);
+            Matrix4x4 displayed = GetItemRenderedTransformMatrix(item, source.transform);
+            Matrix4x4 motion = displayed * source.transform.worldToLocalMatrix;
+            bounds = WorldVisualPose.TransformBounds(bounds, motion);
+            Vector3 sourcePosition = displayed.GetColumn(3);
+            waterY += sourcePosition.y - source.transform.position.y;
             Transform reflection = view.Root.transform;
             reflection.SetPositionAndRotation(
                 new Vector3(sourcePosition.x, waterY * 2f - sourcePosition.y, sourcePosition.z),
-                Quaternion.Euler(0f, 0f, -source.transform.eulerAngles.z));
-            Vector3 scale = source.transform.lossyScale;
+                Quaternion.Euler(0f, 0f, -displayed.rotation.eulerAngles.z));
+            Vector3 scale = displayed.lossyScale;
             reflection.localScale = new Vector3(scale.x, -scale.y, scale.z);
             view.Renderer.sprite = source.sprite;
             view.Renderer.color = source.color;

@@ -237,7 +237,7 @@ private bool EnsureView()
             Vector3 worldPosition = transform.position;
             WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
             if (followItem != null && rendering != null)
-                worldPosition += rendering.GetItemRenderedWorldPosition(followItem) - followItem.transform.position;
+                worldPosition = rendering.GetItemRenderedTransformPoint(followItem, transform, Vector3.zero);
             Vector3 screenPoint = worldCamera.WorldToScreenPoint(worldPosition + worldOffset);
             bool onScreen = screenPoint.z >= 0f &&
                             screenPoint.x >= 0f &&
