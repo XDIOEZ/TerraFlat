@@ -17,6 +17,7 @@ ART = ROOT / "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical"
 SOURCE = ART / "Source"
 PPU = 1475.294118
 CANVAS = 1254
+MAX_TEXTURE_SIZE = 2048
 CRANK_AXIS = (630.0, 590.0)
 CRANK_RADIUS = 36.0
 ROD_LENGTH = 218.0
@@ -39,6 +40,11 @@ def texture_meta(path: Path, pivot: tuple[float, float], source: bool = False) -
     template = re.sub(r"^guid: .*", f"guid: {guid}", template, flags=re.MULTILINE)
     template = template.replace("spriteGenerateFallbackPhysicsShape: 1", "spriteGenerateFallbackPhysicsShape: 0")
     template = re.sub(r"spritePivot: \{.*\}", f"spritePivot: {{x: {pivot[0]:.12g}, y: {pivot[1]:.12g}}}", template)
+    if not source:
+        template = re.sub(r"^spritePixelsToUnits:[ \t]*[\d.]+$",
+                          f"spritePixelsToUnits: {PPU:.7f}", template, flags=re.MULTILINE)
+        template = re.sub(r"^([ \t]*maxTextureSize:[ \t]*)\d+$",
+                          rf"\g<1>{MAX_TEXTURE_SIZE}", template, flags=re.MULTILINE)
     sprite_match = re.search(r"spriteID: ([0-9a-f]{32})", old)
     sprite_id = sprite_match.group(1) if sprite_match else uuid.uuid4().hex
     template = re.sub(r"spriteID: .*", f"spriteID: {sprite_id}", template)

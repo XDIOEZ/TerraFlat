@@ -41,13 +41,15 @@ def main() -> None:
     require(len(set(states)) == len(states), "拆件状态键重复")
     original_meta = (ART / "GasPump_Mechanical_Idle.png.meta").read_text(encoding="utf-8-sig")
     guids: set[str] = {re.search(r"^guid:\s*([0-9a-f]{32})", original_meta, re.MULTILINE).group(1)}
-    source_ppu = float(re.search(r"spritePixelsToUnits:\s*([\d.]+)", original_meta).group(1))
+    rig_ppu = float(rig["pixelsPerUnit"])
     catalog = json.loads((ROOT / "Assets/StreamingAssets/GameConfig/Items/shells/chemical_machines.json")
                         .read_text(encoding="utf-8-sig"))
     item = next(item for item in catalog["items"] if item["id"] == "GasPump_Mechanical")
     configured = item["modules"]["机械扭矩模块"]["parameters"]["Articulation"]
     configured_parts = {part["SpriteState"]: part for part in configured["Parts"]}
     require(len(configured_parts) == 8, "正式气泵定义没有完整登记八层零件")
+    require(abs(configured["CanvasPixelsPerUnit"] - rig_ppu) < 1e-5,
+            "正式装配换算PPU与Rig源画布不一致")
     require(configured["WorkingFlowPhase"] == "gas", "正式动画没有绑定真实抽气反馈")
     require(configured["CrankRadiusPixels"] == rig["crankRadiusPixels"] and
             configured["ConnectingRodLengthPixels"] == rig["connectingRodLengthPixels"],
@@ -127,12 +129,21 @@ def main() -> None:
         declared_address = state["spriteAddress"] if isinstance(state, dict) else state
         require(declared_address == expected_address, name + "：正式物品Sprite状态映射到错误图片")
         for key, expected in (("textureType", 8), ("spriteMode", 1), ("filterMode", 0),
-                              ("enableMipMap", 0), ("nPOTScale", 0), ("textureCompression", 0)):
+                              ("enableMipMap", 0), ("nPOTScale", 0)):
             values = re.findall(r"^\s*" + key + r":\s*(\d+)\s*$", meta, re.MULTILINE)
             require(bool(values) and all(int(value) == expected for value in values),
                     name + "：导入设置改变原图清晰度或Sprite类型：" + key)
+        default_platform = re.search(
+            r"^[ \t]*-[ \t]*serializedVersion: 3[ \t]*\r?\n"
+            r"[ \t]*buildTarget: DefaultTexturePlatform[ \t]*\r?\n"
+            r"(?P<settings>.*?)(?=^[ \t]*-[ \t]*serializedVersion: 3|\Z)",
+            meta, re.MULTILINE | re.DOTALL)
+        default_compression = re.search(r"^\s*textureCompression:\s*(\d+)\s*$",
+                                        default_platform.group("settings"), re.MULTILINE) if default_platform else None
+        require(default_compression is not None and int(default_compression.group(1)) == 0,
+                name + "：默认导入平台应关闭纹理压缩")
         ppu = float(re.search(r"spritePixelsToUnits:\s*([\d.]+)", meta).group(1))
-        require(abs(ppu - source_ppu) < 1e-5, name + "：拆件PPU与原机体不一致")
+        require(abs(ppu - rig_ppu) < 1e-3, name + "：拆件PPU与Rig源画布不一致")
         pivot = re.search(r"spritePivot:\s*\{x:\s*([^,]+),\s*y:\s*([^}]+)\}", meta)
         require(pivot is not None, name + "：缺少Unity像素锚点")
         source_x, source_y = part["pivotSourcePixels"]

@@ -4,6 +4,7 @@ local function near(actual, expected, message)
 end
 
 local function cycle(data)
+    near(data.canvasPixelsPerUnit, 1475.294118, "关节画布PPU未使用素材源画布基准")
     local first = data.frames[1]
     local leftMin, leftMax, rightMin, rightMax = math.huge, -math.huge, math.huge, -math.huge
     for _, frame in ipairs(data.frames) do

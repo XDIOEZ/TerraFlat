@@ -63,7 +63,8 @@ public static partial class GameplayTestSystemProbe
                      (0d, -1d, length), (0d, double.NaN, length), (0d, radius, 0d), (0d, radius, 1d) })
             rejected.Add(MachineArticulatedKinematics.TrySolveVerticalSliderCrank(invalid.Item1,
                 centerX, centerY, invalid.Item2, leftX, invalid.Item3, branch, out _));
-        return new JObject { ["centerX"] = centerX, ["centerY"] = centerY, ["radius"] = radius,
+        return new JObject { ["canvasPixelsPerUnit"] = Number(rig, "CanvasPixelsPerUnit", 0),
+            ["centerX"] = centerX, ["centerY"] = centerY, ["radius"] = radius,
             ["length"] = length, ["leftAxisX"] = leftX, ["rightAxisX"] = rightX,
             ["frames"] = frames, ["invalidAccepted"] = rejected };
     }

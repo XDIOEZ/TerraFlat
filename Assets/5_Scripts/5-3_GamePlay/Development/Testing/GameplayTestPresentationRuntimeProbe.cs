@@ -31,6 +31,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("rendering", "player_external_effects", CaptureRendering);
         GameplayTestRuntimeProbe.Register("rendering", "combat_effect_prewarm", CaptureCombatEffectPrewarm);
         GameplayTestRuntimeProbe.Register("rendering", "cold_machine_content", CaptureColdMachineContentAndPreparedVisuals);
+        GameplayTestRuntimeProbe.Register("mechanical", "articulated_pump_pose", CaptureMechanicalPumpArticulatedSpritePose);
     }
     #endregion
 
