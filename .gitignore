@@ -128,3 +128,13 @@ __pycache__.meta
 # Build-time baked configuration output
 /Assets/Resources/CompiledContent/
 /Assets/Resources/CompiledContent.meta
+
+# Addressables 自动生成的代码裁剪配置
+/Assets/AddressableAssetsData/link.xml
+/Assets/AddressableAssetsData/link.xml.meta
+
+# Unity Performance Testing 运行时生成的本机记录
+/Assets/Resources/PerformanceTestRunInfo.json
+/Assets/Resources/PerformanceTestRunInfo.json.meta
+/Assets/Resources/PerformanceTestRunSettings.json
+/Assets/Resources/PerformanceTestRunSettings.json.meta
