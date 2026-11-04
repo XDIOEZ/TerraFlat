@@ -308,7 +308,7 @@ internal sealed partial class ChunkDepthMeshRenderer
             float secondaryStrength = source.HasProperty("_GrassSecondaryStrength")
                 ? source.GetFloat("_GrassSecondaryStrength")
                 : 0f;
-            SwayMargin = swayAmplitude * 3f * (1f + Mathf.Abs(secondaryStrength));
+            SwayMargin = swayAmplitude * 4.05f * (1f + Mathf.Abs(secondaryStrength));
         }
 
         internal static MaterialLease Acquire(GroupKey key)

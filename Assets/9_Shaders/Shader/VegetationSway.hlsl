@@ -78,7 +78,7 @@ float VegetationSwayWave(float2 worldPosition, float2 direction)
     return primary + secondary * _GrassSecondaryStrength;
 }
 
-// 强风把顺风倾斜和树身左右回摆分开，同一棵树按根部相位一起摇，始终留在下风侧。
+// 强风保留顺风倾斜并将左右回摆加倍，同一棵树按根部相位一起摇。
 float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float2 basisX, float2 basisY,
     float2 swayRootWS)
 {
@@ -97,7 +97,7 @@ float2 ResolveVegetationSwayOffset(float2 worldPosition, float bendWeight, float
     float wave = VegetationSwayWave(swayRootWS, windDirection);
     float2 leanOffset = windDirection * (0.65 * (1.0 + abs(_GrassSecondaryStrength)));
     float2 rockingDirection = basisX / max(length(basisX), 0.001);
-    float2 rockingOffset = rockingDirection * (0.35 * wave);
+    float2 rockingOffset = rockingDirection * (0.70 * wave);
     float objectScale = max(length(basisX), length(basisY));
     float2 directionalOffset = (leanOffset + rockingOffset) * amplitude * objectScale;
     // 六级以上强风已完全顺风摆动，避免再算一整套不会显示的旧波形。

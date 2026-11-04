@@ -26,7 +26,7 @@
 - `ActorStatusVisualEffectController` 按 Buff 事件维护活跃表现，无激活表现的 NPC 跳过字典遍历；重绑/换父级仍刷新来源。睡眠粒子仅排序/Transform 改变时提交，但逐帧校验池引用。
 - `InteractionOutlineCommon` 用屏幕 UV 导数和渲染缩放补偿内侧白边，宽度来自 `InteractionOutlineSettings`；代理保持源尺寸，持续核对 Sprite/排序/裁剪，仅差异写入。局部变换仅创建时归零，重高亮/换材质重交裁剪。`PlayerOcclusionShaderGlobals` 提供本地主角坐标，树冠 `_PlayerOccluder` 在共享壳/回池明确写 1 或 0。
 - `ShipPieceView.AirSupply` 按实供功率重染原图左上 `(26,11,12,3)` 灯玻璃：通电保留原色、断电暗灰，故障红只由显式接口触发。`_DeviceIndicatorRect/_DeviceIndicatorTint` 共用光照/回退 Pass，Tint Alpha 默认 0，写 MPB 保留其它通道。
-- `WeatherMgr` 平滑发布 `_GlobalWindStrength/_GlobalWindDirection`（XY 吹去方向）；Sprite/BRG/行网格共用 `VegetationSway.hlsl`。树 `_GrassFollowWind=1`：≤0.5 原左右摆、0.5～0.6 过渡、≥0.6 用 65% 顺风倾斜+35% 回摆，不越上风侧。同树以树根相位、行网格以单株 `input.origin`，不可用整行/各顶点相位；最大位移仍为 `摆幅×3×(1+abs(次级摆动))`。Sprite 按 Pivot/PPU、Tilemap 按格锚点弯曲，各 Pass 一致；风向单独变化也刷新，退出清零。
+- `WeatherMgr` 平滑发布 `_GlobalWindStrength/_GlobalWindDirection`（XY 吹去方向）；Sprite/BRG/行网格共用 `VegetationSway.hlsl`。树 `_GrassFollowWind=1`：≤0.5 原左右摆、0.5～0.6 过渡、≥0.6 用 65% 顺风倾斜+70% 回摆，保留倾斜与频率，强风回摆加倍。同树以树根相位、行网格以单株 `input.origin`，不可用整行/各顶点相位；树主体行网格最大位移按 `摆幅×4.05×(1+abs(次级摆动))` 外扩。Sprite 按 Pivot/PPU、Tilemap 按格锚点弯曲，各 Pass 一致；风向单独变化也刷新，退出清零。
 - 徒手采摘由 `ManualHarvestShake` 给物品主体和附属果实一次性设置 `_HarvestShake`（各自局部坐标对应公共根点，世界投影显示副本同步一次），`VegetationSway.hlsl` 在 GPU 摇摆 0.24 秒，结束清 MPB 和裁剪边界，不逐帧修改 Transform。原生自然物通过 `ChunkDepthMeshRenderer` 模式 11 共用行网格顶点流，开始/结束各更新一次；物理、排序脚点及脱落果实轨迹不受影响。回归 `agriculture/manual_harvest_shader`。
 
 ## 阴影与遮光
