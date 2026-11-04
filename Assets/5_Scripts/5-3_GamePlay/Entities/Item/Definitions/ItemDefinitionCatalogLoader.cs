@@ -1667,7 +1667,10 @@ public static class ItemDefinitionCatalogLoader
                     ["Radiation"] = defense.Radiation
                 }
             },
-            ["weakTool"] = (int)health.WeakTool
+            ["weakTool"] = (int)health.WeakTool,
+            ["impactAudioMaterial"] = (int)health.ImpactAudioMaterial,
+            ["hurtAudioCueId"] = health.HurtAudioCueId,
+            ["blockedAudioCueId"] = health.BlockedAudioCueId
         };
         if (lootTable != null)
             ((JObject)parameters["Data"])["LootTable"] = lootTable.CreateDamageReceiverEntries();

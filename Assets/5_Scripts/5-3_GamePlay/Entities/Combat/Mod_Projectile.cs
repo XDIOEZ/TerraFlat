@@ -509,6 +509,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             SetFlightDeliveryCapabilities();
 
             // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
+            _damage.SuppressProjectileAttackAudio = true;
+            CombatAudioRouter.PlayProjectileLaunch(sourceWeapon != null ? sourceWeapon : item);
             _damage.StartAttack();
             return true;
         }

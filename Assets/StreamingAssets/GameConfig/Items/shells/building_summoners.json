@@ -74,6 +74,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -197,6 +198,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -322,6 +324,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 50,
         "maxHp": 50,
@@ -457,6 +460,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -582,6 +586,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 50,
         "maxHp": 50,
@@ -717,6 +722,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -841,6 +847,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -969,6 +976,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1092,6 +1100,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1216,6 +1225,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1351,6 +1361,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1476,6 +1487,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 50,
         "maxHp": 50,
@@ -1611,6 +1623,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1736,6 +1749,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1884,6 +1898,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 20,
         "maxHp": 20,
@@ -2010,6 +2025,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2095,6 +2111,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 1.0,
         "maxHp": 1.0,

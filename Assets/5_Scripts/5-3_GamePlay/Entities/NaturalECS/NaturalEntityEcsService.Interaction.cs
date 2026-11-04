@@ -622,11 +622,11 @@ namespace FlatWorld.NaturalEntities
                 record.Profile.Definition.LootTableId, ResourceLootPosition(record));
             if (actualDamage > 0f) PublishNetworkStateCommitted(record);
             // 显式声明的声音跟随有效命中发声，零伤按配置处理，致命命中也在移除前播放一次。
-            if (!environmentalDamage && context.Attack.Source.Backend != CombatBackend.Environment &&
-                !string.IsNullOrWhiteSpace(record.Profile.HurtAudioCueId))
+            if (!environmentalDamage && context.Attack.Source.Backend != CombatBackend.Environment)
                 CombatAudioRouter.PlayImpact(record.Snapshot, record.Profile.ImpactAudioMaterial,
-                    record.Profile.HurtAudioCueId, actualDamage, record.WorldPosition, sender,
-                    playOnBlockedHit: record.Profile.PlayHurtAudioOnBlockedHit);
+                    record.Profile.HurtAudioCueId, actualDamage, (Vector2)context.HitPoint, sender,
+                    blockedCueId: record.Profile.BlockedAudioCueId,
+                    location: CombatAudioLocation.Capture(context.HitPoint, GameplayWorldRegistry.ExecutionWorldKey));
             return actualDamage;
         }
 

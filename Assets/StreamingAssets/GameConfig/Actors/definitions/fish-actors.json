@@ -222,7 +222,7 @@
               "DestroyDelay": 1.1,
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 6,
             "hurtAudioCueId": "",
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,

@@ -371,7 +371,7 @@
               "DestroyDelay": 1.1,
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 6,
             "hurtAudioCueId": "",
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
@@ -1126,7 +1126,7 @@
               },
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 6,
             "hurtAudioCueId": "",
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
@@ -1918,7 +1918,7 @@
               },
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 6,
             "hurtAudioCueId": "",
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,
@@ -2409,7 +2409,7 @@
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 1,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "$transform": {
@@ -2488,7 +2488,7 @@
               },
               "CombatBalanceVersion": 1
             },
-            "impactAudioMaterial": 0,
+            "impactAudioMaterial": 1,
             "hurtAudioCueId": "",
             "enableHitSlowdown": true,
             "hitSlowMultiplier": 0.5,

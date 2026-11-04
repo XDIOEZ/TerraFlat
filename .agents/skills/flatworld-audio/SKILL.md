@@ -39,7 +39,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 
 - 飞船专用舱门、点火与触地使用 Kenney `Sci-fi Sounds 1.0` 的 CC0 原声，`SoundDesign/Space_SFX/install_kenney.py` 接入独立 `ship.door.open/close`、`ship.ignition/landing`；来源与哈希、原声及原许可同目录保留，随包署名在 `ThirdPartyNotices/Space-SFX-CREDITS.md`。推进循环仍复用已登记的燃烧实录，转变音与持续音各归正式状态/出力，读档静默。
 
-- 树木受击使用独立 `combat.impact.tree` 三个真实砍木变体，成品在 `Assets/Audio/Trees/`，`SoundDesign/Tree_Chopping/` 保留来源、署名和裁切重建脚本；原生资源与 GO 共用 `health.hurtAudioCueId` / `playHurtAudioOnBlockedHit`，仅正式接受的攻击命中后播放，后者默认关闭、树配置开启后零掉血也响，拒绝命中与环境扣血不触发。
+- 树木受击使用独立 `combat.impact.tree` 三个真实砍木变体，成品在 `Assets/Audio/Trees/`，`SoundDesign/Tree_Chopping/` 保留来源、署名和裁切重建脚本；原生资源与 GO 共用 `hurtAudioCueId` / `blockedAudioCueId`：正伤使用砍木专用声，正式零伤使用独立木材挡击声；拒绝命中与环境扣血不触发。
 - 统一燃烧循环在 `SoundDesign/Fire_LMMS/`：CC0 木柴实录经 LMMS MCP 渲染、`finalize.py` 整理成 20 秒单声道循环；`CombustionAudioLoop` 固定共享 `fire.burning.loop`。火把/普通物品由 `Mod_CombustionVisual`、完整物质物品由 `ItemMgr.Matter`、轻量掉落由 `DroppedItemPresentation`、设施由 `MechanicalDepthVisual.Audio` 按真实燃烧状态组合，不再逐物品配置 Cue；火场遮蔽只隐藏独立火焰，不关闭物品声音。熄灭、禁用、回池及卸载释放句柄，空间衰减和远景静音复用音频服务。
 - 动物待机声由 `Mod_AnimalAmbientAudio` 读取 Actor 的 `animalAudio` 模块配置，`animal.<species>.idle` 走附着动物的单声道空间短音；`AnimalAmbientAudioSchedule` 使用独立随机时钟错峰、拒播后等待完整间隔，不改玩法随机。行为模块通过 `IAnimalAmbientAudioActivity` 提供平静状态资格，死亡、休眠、禁用和卸载停声；声音资源位于 `Assets/Audio/Animals/`，避免 Generated 重建改变空间设置。第三方素材统一登记于 `开发文档文件夹/09_美术素材/第三方素材引用与鸣谢记录.md`，详细采样证据仍留各组来源账。
 - 自然声景由 `Mod_Cam` 组合 `NaturalAmbientAudioPresenter`，仅本机玩家拥有树叶/河流两条 Ambient 空间循环，默认 JSON 六档 32 格；禁用、卸载、换世界清理。树叶读 `NatureAudio.Foliage` 原生资源标签和当地混合风，枯树不声明该标签；树干受击材质显式为 Wood（3），不靠含叶标签猜材质。附近查询复用自然实体空间桶及 `SpatialRevision`，玩家跨格或索引变化才重选。河水由 `RiverAmbientAudioChunkIndex` 首次建稀疏格索引，之后按地形/液体单格和批次事件增量更新；只读真实 WaterContact、riverKind=1、流量/水量及冰盖融化，不生成区块。录音和重建脚本在 `SoundDesign/Nature_Ambience/`，成品 `Assets/Audio/Nature/`，随包署名 `ThirdPartyNotices/Nature-Ambience-CREDITS.md`。
@@ -64,3 +64,9 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 雨声从本机玩家逻辑位置读取 `TryGetPrecipitationAt`，不跟随镜头雨量；`RainAudioState` 沿用完整降水过渡时长与 0.9 倍音量，缺失/无效样本保留上一目标，真实零雨量才淡出，退出清状态。`audio/rain_sequence` 覆盖缺样续接、途中恢复、停雨和重置；雨风循环共用句柄维护，包络归零后回收。
 - 游戏暂停由 `AudioService` 统一跟随 `Time.timeScale<=0`：非 UI 总线保留句柄和采样位置暂停/续播，UI 照常，加减速不改 pitch；暂停时冻结淡入、Stop 淡出仍按真实时间回收，新音立即同步，池回收清掉暂停状态。Lua `audio/voice_lifecycle` 覆盖正式音源跨帧采样。
 - 地表镜头向宇宙观察缩放时，`Mod_Cam` 读取 `SurfaceZoomTransition.Sample` 并调用 `AudioService.SetWorldPresentationGain`；默认视野 60～90 的宇宙画面过渡前 75% 保持世界原音量（约至视野 80），最后一段用 SmoothStep 平滑减至静音。只衰减非 UI 总线，返回近景或解绑本机监听器恢复原音量；不写用户设置、不停止循环句柄，暂不按世界分组。规则 `rendering/universe_view_transition`。
+
+- 战斗短音由 `CombatAudioRouter` 按真实损失分受伤/挡击，GO、原生资源、格子建筑、机器、船体/陨石和 AIECS 共用；专用 Cue 留空仍按材质选音，None 显式静音。`CombatImpactAudioOverride.BlockedCueId` 与对象 `blockedAudioCueId` 只覆盖零伤，旧零伤开关已移除。
+
+- `CombatAudioFeedback` 冻结世界、星区 double 坐标及船内锚点，权威动作/命中各发一次；Networking 可靠序号事件复制，Host 排除自收、Client 按 RealmRevision 过滤，不由快照重放。远程成功 Launch 使用源武器 `Mod_Bow.LaunchAudioCueId`，弹丸伤害窗不重复发动作声。
+
+- `SoundDesign/Combat_Impacts_CC0/install.py` 接入七材质双结果、十类动作共72个独立录音变体，四个组合 Cue 复用同类录音；Sources/、sources.json 与 CREDITS 保留来源证据，随包 `ThirdPartyNotices/Combat-SFX-CREDITS.md`。新增录音位于 `Assets/Audio/Combat/`，不受 Generated 重建覆盖。规则 `audio/combat_configuration` 与 `networking/combat_audio_wire`，现场 `audio/combat_settlement`；本轮 PlayMode 中未运行。

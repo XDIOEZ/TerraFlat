@@ -42,6 +42,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -133,6 +134,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -205,6 +207,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -278,6 +281,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -350,6 +354,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -423,6 +428,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -514,6 +520,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -606,6 +613,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -678,6 +686,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -751,6 +760,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -823,6 +833,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -896,6 +907,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1004,6 +1016,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1077,6 +1090,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1149,6 +1163,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1222,6 +1237,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1294,6 +1310,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1367,6 +1384,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1449,6 +1467,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1633,6 +1652,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1705,6 +1725,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1778,6 +1799,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1850,6 +1872,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1923,6 +1946,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1995,6 +2019,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2068,6 +2093,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2182,6 +2208,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2273,6 +2300,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2345,6 +2373,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2418,6 +2447,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2490,6 +2520,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2563,6 +2594,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2635,6 +2667,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2708,6 +2741,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2780,6 +2814,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2853,6 +2888,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,

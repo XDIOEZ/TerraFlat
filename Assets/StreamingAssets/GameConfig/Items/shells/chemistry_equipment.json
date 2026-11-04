@@ -31,6 +31,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 5,
         "weakTool": 0,
         "maxHp": 80,
         "defense": {
@@ -124,6 +125,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 80,
         "maxHp": 80,
@@ -209,6 +211,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 5,
         "weakTool": 0,
         "maxHp": 160,
         "defense": {
@@ -304,6 +307,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 160,
         "maxHp": 160,
@@ -438,6 +442,7 @@
         "InventoryCategory.Equipment"
       ],
       "health": {
+        "impactAudioMaterial": 1,
         "weakTool": 0,
         "hp": 200,
         "maxHp": 200,

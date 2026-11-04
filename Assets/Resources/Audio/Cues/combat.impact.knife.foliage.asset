@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.impact.knife.foliage
   bus: 1
   clips:
-  - {fileID: 8300000, guid: 0308cd22156b9e5a1d06606b64224eff, type: 3}
-  - {fileID: 8300000, guid: 87fb52b229884e5994e0b5b245d5daf2, type: 3}
-  - {fileID: 8300000, guid: 9dfdbc49b00b4e73a118c87c80e0b378, type: 3}
+  - {fileID: 8300000, guid: 145a45388e6e4ee6ac5705be7cb8a141, type: 3}
+  - {fileID: 8300000, guid: 903d2dc557a4402b97d6ac892cfb53d7, type: 3}
+  - {fileID: 8300000, guid: 51d87312acd8419b9d26a74fe6446b87, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.92
+    Min: 0.9
     Max: 1
   pitch:
-    Min: 0.97
-    Max: 1.06
+    Min: 0.96
+    Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

@@ -16,6 +16,7 @@
       "stackable": false,
       "canBePickedUp": true,
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -67,6 +68,7 @@
       "stackable": false,
       "canBePickedUp": false,
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,

@@ -17,6 +17,7 @@
       "canBePickedUp": true,
       "tags": ["InventoryCategory.Functional"],
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 50,
         "maxHp": 50,

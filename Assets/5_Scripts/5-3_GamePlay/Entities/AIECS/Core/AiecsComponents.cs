@@ -170,6 +170,7 @@ namespace FlatWorld.AIECS
     /// <summary>命中后的只读结果；负值表示拒绝，零是有效零伤害，死亡与实际类型损失均属于同一笔结算。</summary>
     public struct AiecsDamageResult
     {
+        public int TargetDefinitionIndex;
         public CombatIdentity Target; // 被命中的实例。
         public CombatDamageContext Context; // 本次生效来源与 Tick。
         public float Loss, Hp; // 实际生命损失与提交后生命。

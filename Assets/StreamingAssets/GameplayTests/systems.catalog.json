@@ -1395,7 +1395,10 @@
         "Assets/Audio/*",
         "Assets/Resources/Audio/*",
         "Assets/StreamingAssets/GameplayTests/Systems/Audio/*",
-        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Music/*"
+        "Assets/5_Scripts/Shared/Utilities/ProjectBase/Music/*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/CombatAudioFeedback.cs",
+        "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkSpaceStateCoordinator.CombatAudio.cs",
+        "Assets/5_Scripts/5-4_Networking/Gameplay/Testing/GameplayTestCombatAudioNetworkRules.cs"
       ],
       "dependsOn": [
         "core_lifecycle"
@@ -1410,7 +1413,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Audio/README.md",
       "integrationCaseIds": [
-        "audio_gameplay"
+        "audio_gameplay",
+        "audio_combat_settlement"
       ],
       "rulesCoverage": "partial"
     },

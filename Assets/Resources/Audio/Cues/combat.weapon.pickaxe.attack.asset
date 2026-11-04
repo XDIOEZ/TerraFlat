@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.weapon.pickaxe.attack
   bus: 1
   clips:
-  - {fileID: 8300000, guid: 194e8ff99b7fd852e1bb7edb05c34455, type: 3}
-  - {fileID: 8300000, guid: eefa25fd771f4d16aa33d256287df999, type: 3}
-  - {fileID: 8300000, guid: 05bda063ff4442dcbddbbed58676b2b5, type: 3}
+  - {fileID: 8300000, guid: 5afc7644696849ad8c21e5232c8e037e, type: 3}
+  - {fileID: 8300000, guid: 96e4f76079cf42d49f0851895ea5a7f9, type: 3}
+  - {fileID: 8300000, guid: 45deaec0496545fbbdd6227ca3c7a34c, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.85
+    Min: 0.9
     Max: 1
   pitch:
-    Min: 0.95
-    Max: 1.04
+    Min: 0.96
+    Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

@@ -19,7 +19,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `NetworkItemStateCoordinator` 的 `Spawning/Buildings/MachineReplication` 分管生成、建造事务与机器复制；`NetworkBuildingRequestLedger` 统一建造/拆除回执、到期与断线清理，等待帧不复制键数组。规则 `networking/building_request_ledger`。
 - `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
-- Gameplay 协议为 37；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
+- Gameplay 协议为 38；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
 - 假人手写 Mirror Command 参数时，`uint` 须使用 Weaver 对应的 `WriteVarUInt`；定长 `WriteUInt` 会使后续参数错位。
@@ -80,3 +80,5 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 菜单新游戏与读档均在世界/角色Ready后自动建立私有Host；工具隔离测试用 `NetworkGameBootstrap.SuppressAutomaticSession()` 显式租约阻止自动启动，不能停止用户现有会话。主菜单只加入，游戏内设置经 `GameNetwork.SettingsRequested` 打开同一个常驻面板。`PrepareHostWorld` 只接管已就绪世界与稳定 ProfileId；Host 不回放自身快照或重发玩家进入事件，关闭公开保留同一本机角色和正式联机流送。客户端经 `EnterWorldWithExternalPlayer` 复用正式进入流程；退出使进入代次失效并停网络，客户端不落盘主机存档。
 
 `NetworkModeUIController` 和面板挂常驻根，在场景加载及 `UIManager.InteractionSurfaceChanged` 后幂等重绑。`RuntimeUIPrefabKeys.NetworkMode` 必须进入 `GameRes.StartupPrefabKeys`；菜单加入只等 `IsStartupReady`，点击后快照连接参数、请求世界资源，完整 Ready 且请求代次仍有效才连接。关闭/取消只撤销自身等待，不取消共享加载；公开 Host 仍要求完整目录、玩家和世界 Ready。Prefab 根 CanvasGroup Alpha 为 1、默认关闭交互与射线，运行时以 `BasePanel.InitClosed()` 初始化隐藏。
+
+- `NetworkSpaceStateCoordinator.CombatAudio` 订阅权威已解析 Cue，可靠短音消息携递增 Sequence、接收者 RealmRevision、原始世界/星区位置与船内锚点；Host 不自收，Client 序号/世界代际门禁后交 AudioService 过滤。地表保留洞内接收者以支持原有洞口传声，不从HP/物品快照补声音。`networking/combat_audio_wire` 采样真实 Mirror 读写与接收门禁。

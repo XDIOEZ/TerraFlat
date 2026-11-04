@@ -25,6 +25,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -102,6 +103,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -179,6 +181,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -252,6 +255,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -330,6 +334,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -404,6 +409,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -480,6 +486,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -557,6 +564,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -628,6 +636,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -705,6 +714,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -777,6 +787,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -858,6 +869,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -934,6 +946,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1011,6 +1024,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1085,6 +1099,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1158,6 +1173,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Horizontal.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1229,6 +1245,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1302,6 +1319,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1375,6 +1393,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1449,6 +1468,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1521,6 +1541,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1595,6 +1616,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1671,6 +1693,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1735,6 +1758,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1803,6 +1827,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1875,6 +1900,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -1939,6 +1965,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -2000,6 +2027,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png"
       },
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,

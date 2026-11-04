@@ -126,8 +126,12 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         float attackMultiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false);
         float damage = CalculateDamage(definition.Health, context, attackMultiplier);
         if (!math.isfinite(damage)) throw new InvalidOperationException("机器伤害数值无效：" + node.Definition.Id);
+        CombatAudioLocation audioLocation = CombatAudioLocation.Capture(context.HitPoint,
+            GameplayWorldRegistry.ExecutionWorldKey, weapon?.item);
         if (damage <= 0f)
         {
+            if (context.Attack.Source.Backend != CombatBackend.Environment)
+                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, 0f), audioLocation);
             weapon?.PublishExternalDamage(context, 0f);
             return;
         }
@@ -154,6 +158,8 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         else Mod_Building.DestroyMechanical(node);
 
         // 先提交耐久和摧毁事务，再回传真实损失，避免表现异常留下零血挡路节点。
+        if (context.Attack.Source.Backend != CombatBackend.Environment)
+            CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, actualLoss), audioLocation);
         weapon?.PublishExternalDamage(context, actualLoss);
     }
     #endregion

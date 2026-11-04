@@ -34,6 +34,7 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
         private readonly Dictionary<CombatIdentity, ExternalProxy> proxyLookup = new Dictionary<CombatIdentity, ExternalProxy>();
         private readonly Dictionary<CombatIdentity, Mod_Damage> weapons = new Dictionary<CombatIdentity, Mod_Damage>();
+        private readonly RuntimeItemDefinition[] combatAudioDefinitions;
         private readonly List<string> factionNames = new List<string>();
         private readonly Dictionary<string, int> factionIndices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private readonly Queue<CorpseRecord> corpses = new Queue<CorpseRecord>();
@@ -107,6 +108,7 @@ namespace FlatWorld.AIECS.Gameplay
             Faction(FactionRelationService.GetFactionId(player)); Faction(string.Empty);
             var definitions = new AiecsDefinition[actorIds.Length]; Templates = new AiecsActorTemplate[actorIds.Length];
             lootTables = new RuntimeLootTable[actorIds.Length];
+            combatAudioDefinitions = new RuntimeItemDefinition[actorIds.Length];
             float extent = 0f;
             for (int i = 0; i < actorIds.Length; i++)
             {
@@ -115,6 +117,7 @@ namespace FlatWorld.AIECS.Gameplay
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Perception.Center) + Templates[i].Body.Perception.Extents));
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Hit.Center) + Templates[i].Body.Hit.Extents));
                 GameRes.Instance.TryGetLootTable(definitions[i].LootTable.ToString(), out lootTables[i]);
+                GameRes.Instance.TryGetItemDefinition(actorIds[i], out combatAudioDefinitions[i]);
             }
             waterCurrentRevision = WaterCurrentPushConfigService.Revision;
             environmentResourceSource = GameRes.ExistingInstance;
@@ -462,6 +465,7 @@ namespace FlatWorld.AIECS.Gameplay
             {
                 if (resources == null || !resources.TryGetItemDefinition(actorIds[i], out RuntimeItemDefinition source) || !source.IsActor)
                     throw new InvalidOperationException("环境推动无法读取 Actor 定义：" + actorIds[i]);
+                combatAudioDefinitions[i] = source;
                 ItemData data = source.CreateItemData();
                 if (data?.Stack == null)
                     throw new InvalidOperationException("环境推动 Actor 定义缺少重量数据：" + actorIds[i]);
@@ -687,7 +691,12 @@ namespace FlatWorld.AIECS.Gameplay
             }
             foreach (var result in Simulation.DamageResults)
             {
-                if (!weapons.TryGetValue(result.Context.Attack.Source, out var weapon) || weapon == null) continue;
+                weapons.TryGetValue(result.Context.Attack.Source, out var weapon);
+                if (result.Context.Attack.Source.Backend != CombatBackend.Environment && result.Loss >= 0f)
+                    CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(
+                        combatAudioDefinitions[result.TargetDefinitionIndex], weapon, result.Loss),
+                        CombatAudioLocation.Capture(result.Context.HitPoint, worldKey));
+                if (weapon == null) continue;
                 if (result.Loss >= 0f) PlayerToEcsHits++;
                 weapon.PublishExternalDamage(result.Context, result.Loss);
             }

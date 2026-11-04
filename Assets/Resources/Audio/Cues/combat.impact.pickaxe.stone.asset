@@ -15,13 +15,14 @@ MonoBehaviour:
   id: combat.impact.pickaxe.stone
   bus: 1
   clips:
-  - {fileID: 8300000, guid: 2a8a3c319f5da3a942dcccf33aef706f, type: 3}
-  - {fileID: 8300000, guid: 99533618dead45cb897ce058c386498c, type: 3}
-  - {fileID: 8300000, guid: 334d6b0de5cc4db9b19e80d8186b6184, type: 3}
+  - {fileID: 8300000, guid: 7266c49cafd747e0b4e27c44d6941798, type: 3}
+  - {fileID: 8300000, guid: 90e249a55e7540309683f3ef4f7ac3bd, type: 3}
+  - {fileID: 8300000, guid: cd4c253736b742ca82634014233910b8, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.92
+    Min: 0.9
     Max: 1
   pitch:
     Min: 0.96
@@ -30,8 +31,8 @@ MonoBehaviour:
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

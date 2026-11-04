@@ -80,6 +80,7 @@
         "InventoryCategory.Functional"
       ],
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -160,6 +161,7 @@
         "InventoryCategory.Functional"
       ],
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,

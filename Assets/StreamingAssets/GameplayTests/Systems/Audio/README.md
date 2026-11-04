@@ -65,3 +65,5 @@ PlayMode `audio/voice_lifecycle` 检查三类游泳 Cue 的 ID、各 3 个变体
 2026-10-18 雪地脚步按真实雪深分十档：沿用 `player.footstep.snow` 与三个录音变体，一层音量倍率 0.45、pitch 1.10，逐层增强到十层 1.60、pitch 0.86；声音复用 `SnowDepthLayer` 量化并在十层封顶，不截断实际积雪。`audio/footstep_surface` 采样正式选音、音量和音高，Lua 新增十档严格单调、浅深端点、无雪/选音阈值、层间量化、十层以上封顶、人工支撑与沙/石/草/泥原参数、涉水优先和深水静音断言。本轮只静态修改，未编译或运行，实际计步接线、嘎吱音色和雪层加深的最终听感由用户在编译后自行验收。
 
 2026-10-21：脚步统一改用开放 CC0 实录，新增木地板 Cue，合计七种地表各三变体；来源/裁切/散列在 `SoundDesign/Footsteps_CC0/`。地块可声明 `footstepCueId`，正式计步读取真实支撑地块；`footstep_surface` 补声明音色、MOD Cue、水雪覆盖木地板及深水静音断言，现场 Cue 清单加入木板。本轮未跑游戏验收，最终音量、自然感和真实行走切换由用户验收。
+
+2026-11-04 战斗声音补齐：`combat_impact` 区分正式零伤挡击与正伤受伤；`combat_configuration` 读取 Item/Actor 正式继承目录并检查全部28 Cue、三独立Clip、48kHz单声道及空间SFX；`networking/combat_audio_wire` 调用真实Mirror序列化与Sequence/RealmRevision接收门禁。`combat.lua` / `audio/combat_settlement` 走正式GO和原生石矿生命结算，采样零伤、正伤、无敌拒绝、环境静音、致命命中及实际AudioSource。本轮起初Unity在PlayMode，后由并行任务触发自动编译成功；按并行开发约定未运行新Lua，真实声源池忙时现场playing断言仍可能受其他声音干扰；机器/格子/船体/AIECS真实场景及双进程联机仍待验收。全量sync_catalog受现有space系统超过10份Lua阻断，本轮仅精确同步音频案例和总入口。

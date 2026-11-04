@@ -61,7 +61,7 @@
             "HitSlowMultiplier": 0.5,
             "HitSlowDuration": 0.35,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 1,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "playImpactFeedbackOnNonDamageableHit": false,

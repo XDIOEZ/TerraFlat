@@ -56,6 +56,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (serverStarted) return;
             StartFixedShipServerBridge();
+            CombatAudioFeedback.Published += PublishCombatAudio;
             NetworkServer.RegisterHandler<NetworkSpaceSnapshotRequest>(OnSnapshotRequest, true);
             NetworkServer.RegisterHandler<NetworkSpaceInput>(OnInput, true);
             NetworkServer.RegisterHandler<NetworkSpaceIntentRequest>(OnIntent, true);
@@ -70,6 +71,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (clientStarted) return;
             StartFixedShipClientBridge();
+            NetworkClient.RegisterHandler<NetworkCombatAudioFeedback>(ApplyCombatAudio, true);
+            lastCombatAudioSequence = 0;
             NetworkClient.RegisterHandler<NetworkSpaceSnapshotBegin>(OnSnapshotBegin, true);
             NetworkClient.RegisterHandler<NetworkSpaceSnapshotChunk>(OnSnapshotChunk, true);
             NetworkClient.RegisterHandler<NetworkSpaceIntentResponse>(OnIntentResponse, true);
@@ -94,6 +97,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!serverStarted) return;
             StopFixedShipServerBridge();
+            CombatAudioFeedback.Published -= PublishCombatAudio;
             foreach (ConnectionState state in connections.Values)
             {
                 SpaceSession.Current?.RemoveNetworkPassengerInput(state.Profile);
@@ -116,6 +120,7 @@ namespace FlatWorld.Networking.Gameplay
             snapshotReceiver.Reset();
             if (!clientStarted) return;
             StopFixedShipClientBridge();
+            NetworkClient.UnregisterHandler<NetworkCombatAudioFeedback>();
             NetworkClient.UnregisterHandler<NetworkSpaceSnapshotBegin>();
             NetworkClient.UnregisterHandler<NetworkSpaceSnapshotChunk>();
             NetworkClient.UnregisterHandler<NetworkSpaceIntentResponse>();

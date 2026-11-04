@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.weapon.knife.attack
   bus: 1
   clips:
-  - {fileID: 8300000, guid: ffab60d188b2436c705fd83ea1203a0f, type: 3}
-  - {fileID: 8300000, guid: f58ce56a031b4c13929a8d87875e6beb, type: 3}
-  - {fileID: 8300000, guid: cd81355992b24b8daf4627e34d8871d4, type: 3}
+  - {fileID: 8300000, guid: 7f5c19a3b2824e15b087323ac0c487ee, type: 3}
+  - {fileID: 8300000, guid: 1e5e6024c3434a50983c69f46e4582f0, type: 3}
+  - {fileID: 8300000, guid: 217ed12aff084b8b88e1f93ea349d3b8, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.85
+    Min: 0.9
     Max: 1
   pitch:
-    Min: 0.97
+    Min: 0.96
     Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

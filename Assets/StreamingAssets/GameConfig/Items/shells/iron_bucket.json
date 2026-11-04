@@ -15,6 +15,7 @@
       "canBePickedUp": true,
       "tags": ["Container", "Iron", "InventoryCategory.Tool"],
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 80,
         "maxHp": 80,
@@ -59,6 +60,7 @@
       "canBePickedUp": false,
       "tags": ["Container", "Iron", "InventoryCategory.Tool"],
       "health": {
+        "impactAudioMaterial": 5,
         "hasHp": true,
         "hp": 80,
         "maxHp": 80,

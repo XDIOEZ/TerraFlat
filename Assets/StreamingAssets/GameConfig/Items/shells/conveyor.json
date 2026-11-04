@@ -24,6 +24,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -97,6 +98,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png"
       },
       "health": {
+        "impactAudioMaterial": 3,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -167,6 +169,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,
@@ -240,6 +243,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 60,
         "maxHp": 60,

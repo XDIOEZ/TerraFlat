@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.impact.flesh
   bus: 1
   clips:
-  - {fileID: 8300000, guid: 3135e3cacbfb0dcc907cd75339a9acdb, type: 3}
-  - {fileID: 8300000, guid: e264a0039a7742639c79ac1cdfd4ee89, type: 3}
-  - {fileID: 8300000, guid: 1c78923bbda444f784ac03ef31d72c78, type: 3}
+  - {fileID: 8300000, guid: 1e62e6092ecd42acb1d81781e648e6f0, type: 3}
+  - {fileID: 8300000, guid: 5bfd8354028f43b0863fa66c6b33c73d, type: 3}
+  - {fileID: 8300000, guid: 2358ec04676d418b8429fab84d2cb5ea, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
     Min: 0.9
     Max: 1
   pitch:
-    Min: 0.95
-    Max: 1.04
+    Min: 0.96
+    Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

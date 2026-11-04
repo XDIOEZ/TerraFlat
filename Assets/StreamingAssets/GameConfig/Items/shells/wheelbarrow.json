@@ -23,6 +23,7 @@
         "spriteAddress": "Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png"
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 80,
         "maxHp": 80,
@@ -94,6 +95,7 @@
         }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 80,
         "maxHp": 80,

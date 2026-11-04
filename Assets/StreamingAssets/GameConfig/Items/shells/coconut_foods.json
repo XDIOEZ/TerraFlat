@@ -14,6 +14,7 @@
       "volume": 2.0,
       "canBePickedUp": true,
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 20.0,
         "maxHp": 20.0,
@@ -91,6 +92,7 @@
       "weight": 0.75,
       "volume": 1.0,
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 20.0,
         "maxHp": 20.0,
@@ -234,6 +236,7 @@
       "volume": 1.0,
       "canBePickedUp": true,
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 20.0,
         "maxHp": 20.0,

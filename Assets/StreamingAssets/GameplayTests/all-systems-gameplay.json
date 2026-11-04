@@ -441,6 +441,12 @@
       "name": "真实自然物的逻辑物理视觉分离",
       "luaPath": "GameplayTests/Systems/WorldStreaming/natural-decoupling-gameplay.lua",
       "enabled": true
+    },
+    {
+      "id": "audio_combat_settlement",
+      "name": "正式GO与原生资源挡击、受伤、拒绝、环境与致命命中声音",
+      "luaPath": "GameplayTests/Systems/Audio/combat.lua",
+      "enabled": true
     }
   ]
 }

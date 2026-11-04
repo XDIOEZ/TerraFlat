@@ -16,6 +16,7 @@
         "collider": { "type": "BoxCollider2D", "enabled": true, "isTrigger": false, "size": { "x": 0.95, "y": 0.95 }, "offset": { "x": 0, "y": 0 } }
       },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 120,
         "maxHp": 120,
@@ -72,6 +73,7 @@
       "tags": ["35", "Space.Device", "InventoryGroup.WorkFacilities", "InventoryCategory.Functional"],
       "visual": { "spriteAddress": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png[SpaceCultivator_Idle]" },
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 120,
         "maxHp": 120,

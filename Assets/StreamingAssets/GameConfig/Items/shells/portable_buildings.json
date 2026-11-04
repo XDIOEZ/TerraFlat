@@ -21,6 +21,7 @@
         "InventoryCategory.Tool"
       ],
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 20,
         "maxHp": 20,
@@ -82,6 +83,7 @@
         "InventoryCategory.Tool"
       ],
       "health": {
+        "impactAudioMaterial": 1,
         "hasHp": true,
         "hp": 40,
         "maxHp": 40,
@@ -142,6 +144,7 @@
         "InventoryCategory.Functional"
       ],
       "health": {
+        "impactAudioMaterial": 4,
         "hasHp": true,
         "hp": 50,
         "maxHp": 50,

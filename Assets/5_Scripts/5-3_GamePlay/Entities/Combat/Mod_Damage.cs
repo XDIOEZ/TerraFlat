@@ -110,6 +110,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private readonly HashSet<Mod_DamageReceiver> windowScanHitReceivers = new HashSet<Mod_DamageReceiver>();
     private readonly FlatWorld.Combat.CombatHitWindow hitWindow = new();
     private uint attackSequence => hitWindow.Sequence;
+    internal bool SuppressProjectileAttackAudio;
     private uint attackPulse; // 物理接触与数据查询共用一个逻辑窗口。
     private double nextDataPulseTime; // 周期查询时钟，不依赖是否命中旧 Collider。
     private readonly List<ICombatDamageContextModifier> contextModifiers = new List<ICombatDamageContextModifier>(); // 装配时缓存的能力。
@@ -384,6 +385,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         overlapColliders.Clear();
         windowScanHitReceivers.Clear();
         hitWindow.Reset(); attackPulse = 0; nextDataPulseTime = 0;
+        SuppressProjectileAttackAudio = false;
         windowOverlapScanEnabled = false;
         lastColliderEnabled = false;
         tileDamageAppliedThisWindow = false;
@@ -470,9 +472,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
                 if (colliderEnabled)
                 {
                     BeginTileDamageWindow();
-                    // 动画片段会直接切换 BoxCollider2D.m_Enabled，
-                    // 因此这里也是通用的攻击动作音效入口。
-                    CombatAudioRouter.PlayWeaponAttack(this);
                     return true;
                 }
                 else
@@ -801,7 +800,11 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         tileDamageAppliedThisWindow = true;
         if (result.AppliedDamage >= 0f)
+        {
+            CombatAudioRouter.PlayImpact(null, result.ImpactMaterial, null, result.AppliedDamage,
+                result.HitPoint, this);
             SpawnEffect(result.HitPoint, result.AppliedDamage);
+        }
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = GameplayFixedStepSimulation.CurrentTime;
     }
@@ -823,6 +826,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         nonDamageableImpactAppliedThisWindow = false;
         windowScanHitReceivers.Clear();
         hitWindow.Begin();
+        // 动作声先于窗口的即时命中查询，同一窗口仅发布一次。
+        CombatAudioRouter.PlayWeaponAttack(this);
         attackPulse = 0;
         if (explicitProjectileSweep) return;
         bool shouldQueryData = EnableOnTriggerEnterDamage && IsDamageIntervalReady();
@@ -1269,7 +1274,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (enabled && (!wasEnabled || !wasWindowOpen))
         {
             BeginTileDamageWindow();
-            CombatAudioRouter.PlayWeaponAttack(this);
         }
 
         if (!enabled)
@@ -1300,8 +1304,6 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         {
             SetDamageEnabled(true);
         }
-        // 某些持续伤害模块的碰撞体可能已经启用，路由器会按攻击者去重。
-        CombatAudioRouter.PlayWeaponAttack(this);
     }
     public void StopAttack()
     {
@@ -1310,7 +1312,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     public bool TryGetImpactAudioOverride(
         CombatImpactMaterial material,
-        out string cueId)
+        out string cueId, bool blocked = false)
     {
         cueId = null;
         if (impactAudioOverrides == null)
@@ -1319,14 +1321,14 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         for (int i = 0; i < impactAudioOverrides.Count; i++)
         {
             CombatImpactAudioOverride entry = impactAudioOverrides[i];
-            if (entry == null ||
-                entry.Material != material ||
-                string.IsNullOrWhiteSpace(entry.CueId))
+            if (entry == null || entry.Material != material)
             {
                 continue;
             }
 
-            cueId = entry.CueId.Trim();
+            string configured = blocked ? entry.BlockedCueId : entry.CueId;
+            if (string.IsNullOrWhiteSpace(configured)) continue;
+            cueId = configured.Trim();
             return true;
         }
 

@@ -146,7 +146,7 @@ namespace FlatWorld.AIECS
                         fatal = 1;
                     }
                 }
-                Results.AddNoResize(new AiecsDamageResult { Target = identity.Key, Context = context,
+                Results.AddNoResize(new AiecsDamageResult { Target = identity.Key, TargetDefinitionIndex = identity.Definition, Context = context,
                     Loss = loss, Hp = vital.Hp, TypedLoss = typed, Fatal = fatal }); counters.DamageResults++;
             }
             brain.RandomState = random.state;

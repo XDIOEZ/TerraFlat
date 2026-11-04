@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.weapon.spear.attack
   bus: 1
   clips:
-  - {fileID: 8300000, guid: 274bc2d6bdeee8b52dfd0190b46801b0, type: 3}
-  - {fileID: 8300000, guid: ac2e6b0f0afd420181da8a67fbb9a3b6, type: 3}
-  - {fileID: 8300000, guid: 75a90e1e1fdc4e128d5335c2a5be484b, type: 3}
+  - {fileID: 8300000, guid: 48b6b24ec7ef498493a0adda4c31f8a1, type: 3}
+  - {fileID: 8300000, guid: 89a6b1aa85624afab7696308786027a5, type: 3}
+  - {fileID: 8300000, guid: e8149eb69af8425f9b2e1e0c34be785c, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.85
+    Min: 0.9
     Max: 1
   pitch:
-    Min: 0.97
+    Min: 0.96
     Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

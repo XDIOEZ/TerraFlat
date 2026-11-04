@@ -49,17 +49,24 @@ for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.
     end, "音频总线范围与空间参数：" .. row.expected)
 end
 
--- 命中声音只读取正式选音规则，树允许零伤命中，拒绝结果与其他对象原有静音规则保持独立。
+-- 正式接受的零伤与正伤分开选音，专用受伤声不能覆盖挡击声。
 for _, row in ipairs({
     { itemId = "AppleTree", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
     { itemId = "AppleTree", weapon = "Axe", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
-    { itemId = "Tree_Pine", weapon = "Axe", damage = 0, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
+    { itemId = "Tree_Pine", weapon = "Axe", damage = 0, targetCue = "combat.impact.tree", expected = "combat.blocked.wood" },
     { itemId = "Tree_Pine", weapon = "Axe", damage = -1, targetCue = "combat.impact.tree", blocked = true, expected = "" },
-    { itemId = "Tree_Pine", damage = 0, targetCue = "combat.impact.tree", blocked = false, expected = "" },
+    { itemId = "Mine_Stone", weapon = "Axe", damage = 0, expected = "combat.blocked.stone" },
+    { itemId = "Mine_Stone", weapon = "Axe", damage = 1, expected = "combat.impact.stone" },
+    { itemId = "Mine_Stone", weapon = "Pickaxe", damage = 1, expected = "combat.impact.pickaxe.stone" },
+    { itemId = "Iceberg", damage = 0, expected = "combat.blocked.ice" },
+    { itemId = "Iceberg", damage = 1, expected = "combat.impact.ice" },
+    { itemId = "Tree_Pine", damage = 0, targetBlockedCue = " probe.blocked.target ", expected = "probe.blocked.target" },
+    { itemId = "Tree_Pine", damage = 0, targetBlockedCue = "probe.target", weaponBlockedCue = " probe.blocked.weapon ", expected = "probe.blocked.weapon" },
+    { itemId = "Tree_Pine", damage = 1, targetBlockedCue = "probe.blocked", expected = "combat.impact.wood" },
     { itemId = "Tree_Pine", damage = 1, targetCue = "  combat.impact.tree  ", expected = "combat.impact.tree" },
     { itemId = "Tree_Pine", weapon = "Axe", targetCue = "combat.impact.tree", weaponCue = " probe.weapon.override ", expected = "probe.weapon.override" },
     { itemId = "Tree_Pine", material = "None", targetCue = "combat.impact.tree", blocked = true, expected = "" },
-    { itemId = "WoodenDoor", damage = 0, expected = "" },
+    { itemId = "WoodenDoor", damage = 0, expected = "combat.blocked.wood" },
     { itemId = "WoodenDoor", damage = 1, expected = "combat.impact.wood" },
     { itemId = "WoodenDoor", weapon = "Axe", damage = 1, expected = "combat.impact.axe.wood" },
     { itemId = "Bush", weapon = "Knife", expected = "combat.impact.knife.foliage" },
@@ -78,15 +85,37 @@ test.system("audio", "tree_impact_configuration", {}, function(data)
     for _, tree in ipairs(data.trees) do
         assert(not seen[tree.id], "树木存在重复生命模块：" .. tree.id)
         seen[tree.id] = true
-        assert(tree.cue == "combat.impact.tree" and tree.blocked and tree.material == "Wood",
-            "树木未继承砍木声音或零伤命中配置：" .. tree.id)
-        assert(tree.normalCue == tree.cue and tree.axeCue == tree.cue and tree.blockedCue == tree.cue,
-            "树木普通攻击、斧砍或零伤命中没有使用专用声音：" .. tree.id)
+        assert(tree.cue == "combat.impact.tree" and tree.material == "Wood",
+            "树木未继承砍木声音或木材分类：" .. tree.id)
+        assert(tree.normalCue == tree.cue and tree.axeCue == tree.cue and tree.blockedCue == "combat.blocked.wood",
+            "树木未区分砍入与挡击声音：" .. tree.id)
     end
     for _, id in ipairs({ "AppleTree", "PeachTree", "OrangeTree", "Tree_Coconut", "Tree_Pine", "Tree_Willow", "Tree_Oak" }) do
         assert(seen[id], "遗漏正式树木或继承定义：" .. id)
     end
 end, "树木定义继承与普通攻击、斧砍、零伤选音")
+
+test.system("audio", "combat_configuration", {}, function(data)
+    assert(data.damageDefinitions >= 60 and data.healthDefinitions >= 57, "正式战斗定义覆盖缺失")
+    for _, row in ipairs(data.targets) do
+        assert(row.material ~= "Auto", "目标没有解析材质：" .. row.id)
+        assert(row.damagedExists and row.blockedExists, "目标命中 Cue 未登记：" .. row.id)
+    end
+    for _, row in ipairs(data.cues) do
+        assert(row.exists and row.clipCount >= 3, "命中声音缺少三个独立变体：" .. row.id)
+        assert(row.validClips, "命中声音变体未导入、重复或不符合48kHz单声道：" .. row.id)
+        assert(row.spatial and row.sfx and not row.loop, "命中声音必须为世界空间短音：" .. row.id)
+    end
+end, "全部正式战斗定义与七类材质双结果声音")
+
+test.system("networking", "combat_audio_wire", {}, function(data)
+    assert(data.cue == "combat.blocked.stone" and data.world == "space:test" and data.ship == "test-ship",
+        "音频消息丢失 Cue、世界或船体身份")
+    assert(data.x == 123456.125 and data.y == -98765.5 and data.localX == 2.5 and data.localY == -3.25,
+        "音频消息丢失 double 星区坐标或船内坐标")
+    assert(data.first and not data.duplicate and not data.staleRealm and not data.wrongRealm and data.resumed,
+        "正式音频接收门禁未去重、隔离旧世界或恢复新事件")
+end, "联机音频正式序列化、重复事件与世界切换")
 
 -- 每个槽位持有独立正式时钟，Lua 只检查返回的发声机会与剩余时间。
 local function animal_idle_sequence(label, steps, validate)

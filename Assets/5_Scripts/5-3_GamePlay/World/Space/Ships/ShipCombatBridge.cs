@@ -237,7 +237,12 @@ namespace FlatWorld.Spaceflight
                     weapon.ConsumeWeaponDurabilityForHit();
                     float multiplier = GameplayCombatBridge.Tuning().Resolve(context.SourceIsPlayer != 0, false);
                     float asteroidDamage = CombatRules.ResolvePhysical(math.csum(context.Damage), 0f, multiplier, 1f);
-                    weapon.PublishExternalDamage(asteroidHit, (float)session.ApplyResolvedOreAsteroidDamage(target.Asteroid, asteroidDamage));
+                    CombatAudioLocation asteroidAudio = CombatAudioLocation.Capture(contact.Point,
+                        GameplayWorldRegistry.GetItemWorldKey(weapon.item), weapon.item);
+                    float asteroidLoss = (float)session.ApplyResolvedOreAsteroidDamage(target.Asteroid, asteroidDamage);
+                    CombatAudioRouter.PlayImpact(null, CombatImpactMaterial.Stone, null, asteroidLoss,
+                        contact.Point, weapon, location: asteroidAudio);
+                    weapon.PublishExternalDamage(asteroidHit, asteroidLoss);
                     continue;
                 }
                 if (target.Receiver != null)
@@ -289,7 +294,16 @@ namespace FlatWorld.Spaceflight
                 float4 protection = hit.IsTrueDamage != 0 ? float4.zero :
                     new float4((float)target.Piece.PhysicalDefense, 0f, 0f, 0f);
                 float damage = math.csum(CombatRules.Resolve(hit.Damage, protection, attackMultiplier, weakness));
-                weapon.PublishExternalDamage(hit, (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击"));
+                CombatAudioLocation pieceAudio = CombatAudioLocation.Capture(contact.Point,
+                    GameplayWorldRegistry.GetItemWorldKey(weapon.item), weapon.item);
+                SpaceSectorPosition piecePoint = pieceAudio.Position;
+                ShipGeometry.WorldToLocal(target.Ship, piecePoint.Sector, piecePoint.LocalMeters.X,
+                    piecePoint.LocalMeters.Y, out double audioX, out double audioY);
+                pieceAudio.ShipId = target.Ship.ShipId;
+                pieceAudio.ShipLocalPosition = new Vector2((float)audioX, (float)audioY);
+                float pieceLoss = (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击");
+                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(target.Definition, weapon, pieceLoss), pieceAudio);
+                weapon.PublishExternalDamage(hit, pieceLoss);
             }
         }
         #endregion

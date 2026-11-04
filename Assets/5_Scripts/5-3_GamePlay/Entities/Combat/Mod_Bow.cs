@@ -13,6 +13,7 @@ public sealed class Mod_Bow : Module, IItemModuleDependencyBinder
     public const string PersistedModuleId = "Mod_Bow";
 
     #region 配置
+    public string LaunchAudioCueId;
 
     [Tooltip("可作为弹药的物品标签；与指定弹药 ID 任一匹配即可。")]
     public string AmmoTag = "Arrow";

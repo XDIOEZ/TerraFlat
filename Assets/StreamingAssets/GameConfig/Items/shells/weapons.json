@@ -338,7 +338,7 @@
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 5,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "lastDamageTime": 0.0,
@@ -517,7 +517,7 @@
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 5,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "lastDamageTime": 0.0,
@@ -696,7 +696,7 @@
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 5,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "lastDamageTime": 0.0,
@@ -875,7 +875,7 @@
             "HitSlowMultiplier": 0.65,
             "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 5,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "lastDamageTime": 0.0,
@@ -1071,7 +1071,7 @@
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
             "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
+            "weaponAudioClass": 1,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
             "lastDamageTime": 0.0,
@@ -1334,6 +1334,7 @@
             "Type": 0
           },
           "parameters": {
+            "LaunchAudioCueId": "combat.weapon.bow.attack",
             "AmmoTag": "Arrow",
             "FullChargeSeconds": 1.0,
             "ReleaseMode": "ReleaseToFire",
@@ -1399,6 +1400,7 @@
       "modules": {
         "bow": {
           "parameters": {
+            "LaunchAudioCueId": "combat.weapon.crossbow.attack",
             "ReleaseMode": "LoadThenReleaseToFire"
           }
         }
@@ -1421,6 +1423,7 @@
       "modules": {
         "bow": {
           "parameters": {
+            "LaunchAudioCueId": "combat.weapon.blowpipe.attack",
             "StaminaConsumePerSecond": 6.0,
             "ShowNockedAmmo": false,
             "OverrideHeldVisualTransform": true,
@@ -1482,6 +1485,7 @@
           "enabled": true,
           "data": {"BitData": [], "Type": 0},
           "parameters": {
+            "LaunchAudioCueId": "combat.weapon.sling.attack",
             "AmmoTag": "SlingAmmo",
             "AmmoItemId": "Ore_Stone",
             "UseHeldItemAsAmmo": false,

@@ -103,12 +103,12 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     private CombatImpactMaterial impactAudioMaterial = CombatImpactMaterial.Auto;
     [SerializeField, Tooltip("对象专属受击 AudioCue ID。留空时按材质及武器组合自动选择。")]
     private string hurtAudioCueId;
-    [SerializeField, Tooltip("有效命中被防御完全挡住时，也播放受击声音。")]
-    private bool playHurtAudioOnBlockedHit;
+    [SerializeField, Tooltip("对象专属挡击声音，留空按材质选择。")]
+    private string blockedAudioCueId;
 
     public CombatImpactMaterial ImpactAudioMaterial => impactAudioMaterial;
     public string HurtAudioCueId => hurtAudioCueId;
-    public bool PlayHurtAudioOnBlockedHit => playHurtAudioOnBlockedHit;
+    public string BlockedAudioCueId => blockedAudioCueId;
 
     public bool UsesBodyPartHealth =>
         Data != null &&
@@ -890,7 +890,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
                 OnAction.Invoke(Hp);
                 PlayHitVisualFeedback();
             }
-            else if (playHurtAudioOnBlockedHit)
+            else
             {
                 // 有效零伤命中只补声音，不派发扣血、受击状态或死亡事件。
                 CombatAudioRouter.PlayImpact(this, damageInfo);

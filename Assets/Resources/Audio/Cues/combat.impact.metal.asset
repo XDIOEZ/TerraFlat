@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.impact.metal
   bus: 1
   clips:
-  - {fileID: 8300000, guid: ac29b975b3ee9708773d2fc86c48b44c, type: 3}
-  - {fileID: 8300000, guid: a05280438ee340a691e308a2e6943582, type: 3}
-  - {fileID: 8300000, guid: 1fc44bddca0a49419e7916cfba0f6100, type: 3}
+  - {fileID: 8300000, guid: 9bf792922b7f401c85a92b7efba4479f, type: 3}
+  - {fileID: 8300000, guid: a32129555564405481f5c081321bbd99, type: 3}
+  - {fileID: 8300000, guid: 0a46fba1b46c4fb2949f39263b8e8447, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
     Min: 0.9
     Max: 1
   pitch:
-    Min: 0.97
+    Min: 0.96
     Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

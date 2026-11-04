@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.weapon.generic.attack
   bus: 1
   clips:
-  - {fileID: 8300000, guid: b7751afd2c9d70a044d6f68d4ce9c992, type: 3}
-  - {fileID: 8300000, guid: 859112ed1f27477f9d9fad54a180aa25, type: 3}
-  - {fileID: 8300000, guid: 7f65bf17d5bb49378a41e0b7f103fe11, type: 3}
+  - {fileID: 8300000, guid: be473fd239924f3d89135437cb8d9d58, type: 3}
+  - {fileID: 8300000, guid: 37358025b55848ab903af6b2987b435e, type: 3}
+  - {fileID: 8300000, guid: 0a4207e0d1314f76b5add3c8c804fbcf, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.85
+    Min: 0.9
     Max: 1
   pitch:
     Min: 0.96
-    Max: 1.04
+    Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

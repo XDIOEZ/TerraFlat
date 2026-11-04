@@ -15,23 +15,24 @@ MonoBehaviour:
   id: combat.impact.axe.wood
   bus: 1
   clips:
-  - {fileID: 8300000, guid: b2e475d40f7fa59d00555f8f06e6c0de, type: 3}
-  - {fileID: 8300000, guid: 06eb0f70e1f544868a7a7912c34bb801, type: 3}
-  - {fileID: 8300000, guid: 190c2da182754135945ec00a73cba59c, type: 3}
+  - {fileID: 8300000, guid: 81c85787850e4bba9d5226d472786938, type: 3}
+  - {fileID: 8300000, guid: df1c916071cd4afba711994a87859bd9, type: 3}
+  - {fileID: 8300000, guid: 5776e8671a7c4abb87fd62426a062fe1, type: 3}
   selection: 0
+  noRepeatHistory: 2
   loop: 0
   volume:
-    Min: 0.92
+    Min: 0.9
     Max: 1
   pitch:
-    Min: 0.95
-    Max: 1.03
+    Min: 0.96
+    Max: 1.05
   spatialBlend: 1
   minDistance: 1.5
   maxDistance: 14
   priority: 128
-  cooldown: 0.04
-  maxInstances: 5
+  cooldown: 0
+  maxInstances: 16
   concurrencyPolicy: 1
   rolloffMode: 1
   outputOverride: {fileID: 0}

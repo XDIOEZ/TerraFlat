@@ -1,0 +1,737 @@
+{
+  "group": "Combat actions, blocked hits and damaging hits",
+  "retrievedOn": "2026-11-04",
+  "processing": "Independent recorded takes; trim, stereo fold-down, 48kHz resample, DC removal, edge fades and peak gain only. No synthesis, pitch shifting or artificial extra variants. Glass Foley represents ice; cloth and soft Foley represent foliage; Seax air swishes represent sling release; compressed-air recording represents blowpipe release.",
+  "sources": [
+    {
+      "title": "Impact Sounds",
+      "author": "Kenney",
+      "sourcePage": "https://kenney.nl/assets/impact-sounds",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidence": "Licenses/impact-sounds.txt"
+    },
+    {
+      "title": "RPG Audio",
+      "author": "Kenney",
+      "sourcePage": "https://kenney.nl/assets/rpg-audio",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidence": "Licenses/rpg-audio.txt"
+    },
+    {
+      "title": "Medieval sound effects - Weapon Textures",
+      "author": "Ben Jaszczak and Brian Nelson / Still North Media",
+      "sourcePage": "https://opengameart.org/node/146862",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidence": "Licenses/WeaponTextures.html"
+    },
+    {
+      "title": "Blow on piece #0748",
+      "author": "Joseph SARDIN",
+      "sourcePage": "https://bigsoundbank.com/blow-on-piece-s0748.html",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "licenseEvidence": "Licenses/BigSoundBank0748.html"
+    }
+  ],
+  "cues": {
+    "combat.blocked.default": [
+      {
+        "source": "Sources/impact-sounds_impactGeneric_light_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "f0e982611e97512fee5f777986b67e8b435434b601f94992ec044f7e89fb5acb",
+        "output": "Assets/Audio/Combat/combat.blocked.default__01.wav",
+        "outputSha256": "5cc74abafff53b862fd9a21acc3f4086cdf5394bdf2cdda5b3d59a13d408c64e"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGeneric_light_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "c3cd1c073d186ae8fa35788ba94de581f1826e7427a7bb26490b2695fac18efa",
+        "output": "Assets/Audio/Combat/combat.blocked.default__02.wav",
+        "outputSha256": "5fe55af061072b77d8e7f019ac7efeac366c41b685657024ba9d62d52358be48"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGeneric_light_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "d0bf60905b59ff630ffe01eb0edeeacd2504eaa8fb6523aeef7d2458b78264d3",
+        "output": "Assets/Audio/Combat/combat.blocked.default__03.wav",
+        "outputSha256": "9a6e3a6d76a4cd80968ce8004d0e8cb09b4f078c5710cf35a31ac6872fb322d7"
+      }
+    ],
+    "combat.impact.default": [
+      {
+        "source": "Sources/impact-sounds_impactSoft_heavy_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1",
+        "output": "Assets/Audio/Combat/combat.impact.default__01.wav",
+        "outputSha256": "3d0e661c3ca50d9dc9a42de4855c4cacd689ea7026f959a6c99c4f7b2d97c3fa"
+      },
+      {
+        "source": "Sources/impact-sounds_impactSoft_heavy_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6",
+        "output": "Assets/Audio/Combat/combat.impact.default__02.wav",
+        "outputSha256": "e3c2ee8cea4ab064214e505c7312cde98497f4e1a9c5ca7247fe5d2478eb6af2"
+      },
+      {
+        "source": "Sources/impact-sounds_impactSoft_heavy_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563",
+        "output": "Assets/Audio/Combat/combat.impact.default__03.wav",
+        "outputSha256": "1d0414e884b64714b166172711f1acfef943004a5df7757e41957b30494df536"
+      }
+    ],
+    "combat.blocked.wood": [
+      {
+        "source": "Sources/impact-sounds_impactWood_light_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "eb45e35b4bed784d3f120de4afec4b0d6ac09d9e143cce8cfcb7d739e1b1f3c3",
+        "output": "Assets/Audio/Combat/combat.blocked.wood__01.wav",
+        "outputSha256": "14b77cce8481438615dc77e3fc288e90476e53b6059db2a0c85322d628f04dfc"
+      },
+      {
+        "source": "Sources/impact-sounds_impactWood_light_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "4b76bf3ccc8e60d19188f3165b778a7817786faa6887c55d9049bcbeef3b425f",
+        "output": "Assets/Audio/Combat/combat.blocked.wood__02.wav",
+        "outputSha256": "af4bfc232aecb5d7b0a3b97ef0461150954653b3c2bba801d594495e8d724a0f"
+      },
+      {
+        "source": "Sources/impact-sounds_impactWood_light_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "b183cf7a5bd783817e0e4b82af34ac6658fa1927049089dadc8b15c2ecc771dc",
+        "output": "Assets/Audio/Combat/combat.blocked.wood__03.wav",
+        "outputSha256": "d05c3cca09465e44f8f147f30cf0133d5a61c6c7b9f7fe285af76b72c5f86c5e"
+      }
+    ],
+    "combat.impact.wood": [
+      {
+        "source": "Sources/impact-sounds_impactWood_heavy_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d",
+        "output": "Assets/Audio/Combat/combat.impact.wood__01.wav",
+        "outputSha256": "f9f5f20703e5ecc72a687e68eff05457b6da4e5c03a3b0f984d9172517f50dd1"
+      },
+      {
+        "source": "Sources/impact-sounds_impactWood_heavy_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "f1b07a53ac10c615fff9ba470511fdeb722b5902e1a8520759fc20ad6f546015",
+        "output": "Assets/Audio/Combat/combat.impact.wood__02.wav",
+        "outputSha256": "2715bfdecd6b777d447ddf6a72785666fc1f0244d25a20e612d56d1a6bad4058"
+      },
+      {
+        "source": "Sources/impact-sounds_impactWood_heavy_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4",
+        "output": "Assets/Audio/Combat/combat.impact.wood__03.wav",
+        "outputSha256": "db836a71ff79955f185bfb94cedf5cb670826e9828a2e07223b5252351c22fd8"
+      }
+    ],
+    "combat.blocked.stone": [
+      {
+        "source": "Sources/impact-sounds_impactMetal_light_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "33b5e6e37c6e9d54e07bf5a89b12c76e879f40c1ea83cdd82714df1d6f9fec6d",
+        "output": "Assets/Audio/Combat/combat.blocked.stone__01.wav",
+        "outputSha256": "8a190c57ab592af14da2c9589a81f1d9630f273603d1382f7c62d27b60b2faf5"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMetal_light_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "fba69c467ddd85da7b1d82e259f936b876d9ba6a3d6f1b24bdd10468e46bfe08",
+        "output": "Assets/Audio/Combat/combat.blocked.stone__02.wav",
+        "outputSha256": "b3d163b1921f17733fcb7d813376f31e45a295eea18fad3a724909667fe70a51"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMetal_light_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "25a96f90a9a1f88a531e824e126f0519504625e5635e65a72e4f31611428db29",
+        "output": "Assets/Audio/Combat/combat.blocked.stone__03.wav",
+        "outputSha256": "3a987002eab2ed67924c407d1273819e0c159ccaf75f3e4a64aa903ac54f8928"
+      }
+    ],
+    "combat.impact.stone": [
+      {
+        "source": "Sources/impact-sounds_impactMining_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "36b4ea107222d073c67ca64dde26944975609202d5090b2f2021213c1a7e35cd",
+        "output": "Assets/Audio/Combat/combat.impact.stone__01.wav",
+        "outputSha256": "600adc148a6d91057593770b217ce086e1604e6b99114f110f5946ac474a9f69"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMining_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "61235a18de3f3d92118235398222dbf51d448f1be70b1c8bc962b10b86f2d9c6",
+        "output": "Assets/Audio/Combat/combat.impact.stone__02.wav",
+        "outputSha256": "86c925de38cdedd3eb460240707f658f85f25242fe3b83365d56f34cef9a35b0"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMining_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "059558ec751115ca6b1441e00f0adc837c1a3eeb0a066b109e0fd879fc5d0b0c",
+        "output": "Assets/Audio/Combat/combat.impact.stone__03.wav",
+        "outputSha256": "58256c46baeb85130f06292495ccdcfb1fcf858b9285641cdc5918be967907d3"
+      }
+    ],
+    "combat.blocked.metal": [
+      {
+        "source": "Sources/impact-sounds_impactPlate_light_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "6e797cf8a5bfc52d7ed5eb47c227974c1cf2a674954fec5b539cea7d62c7282c",
+        "output": "Assets/Audio/Combat/combat.blocked.metal__01.wav",
+        "outputSha256": "b0e8907265ce5c45342c9b7bd5a33465dc49b5721318ded4feea45bccb03567d"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPlate_light_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "947915c2eb6ac57ee08fd3a48b297fd108d69abc72076e79882c21cad0eef56e",
+        "output": "Assets/Audio/Combat/combat.blocked.metal__02.wav",
+        "outputSha256": "86175b90df0e90743269c50b253f67bf0f2ea31b3a022fd926b79ac1a91bf9c0"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPlate_light_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "8ac5869ea434cf0d364872774efe70b2d666a4f02ba35ddfc1e051d336721be8",
+        "output": "Assets/Audio/Combat/combat.blocked.metal__03.wav",
+        "outputSha256": "c15bf841fc2d55f22607ab8a484306c25e55a5d2fe7760ebd13481bede842086"
+      }
+    ],
+    "combat.impact.metal": [
+      {
+        "source": "Sources/impact-sounds_impactMetal_heavy_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831",
+        "output": "Assets/Audio/Combat/combat.impact.metal__01.wav",
+        "outputSha256": "f5574d5f2e38ab40da551f4e14e2288d47f1f3e85eac460fe2243bce9db3e3c9"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMetal_heavy_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "83554049f81f4db9209379e103c30bfa63f65c42189a03f300b045c2c82e23ae",
+        "output": "Assets/Audio/Combat/combat.impact.metal__02.wav",
+        "outputSha256": "6bc6dcab38fce617cf07034e604413542ae70687ce67ea0d30d33b02e662c674"
+      },
+      {
+        "source": "Sources/impact-sounds_impactMetal_heavy_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "b914c8f1eb7c0f34bb165d7c77f4be0351f6be0660c13c53e65424e262e2c093",
+        "output": "Assets/Audio/Combat/combat.impact.metal__03.wav",
+        "outputSha256": "75ba034561317b73c5b1b7517fc15c8f6700ec56ea83da33da0803c8be2fc58f"
+      }
+    ],
+    "combat.blocked.flesh": [
+      {
+        "source": "Sources/impact-sounds_impactPunch_medium_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "486988aa2d6440ffc4c62a0e8ccf3c23673ba84424bd4723378d451b7255eb5c",
+        "output": "Assets/Audio/Combat/combat.blocked.flesh__01.wav",
+        "outputSha256": "8e8c7b833397b117bcc70753b834c549243eb49141828ded9f34a3a27ce3093e"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPunch_medium_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "e71d23abcc3f10d9d6bc9615b2a431fff70b12333a5fcdd9964457564ace4349",
+        "output": "Assets/Audio/Combat/combat.blocked.flesh__02.wav",
+        "outputSha256": "7ebe75d8f754b09ad4b82abc9aa66baba464d5aaa42487c01b2cffc6ecc7f5bc"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPunch_medium_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "6492f9ccbc8d24dcef607bb1b48790b7870961474561f7fe5601e1c73a3018ef",
+        "output": "Assets/Audio/Combat/combat.blocked.flesh__03.wav",
+        "outputSha256": "a3fb4edae20f6e83808cfc322370422d3aba1f02267c41ac9fd044e66b8b4eca"
+      }
+    ],
+    "combat.impact.flesh": [
+      {
+        "source": "Sources/impact-sounds_impactPunch_heavy_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "b33a8f14068aec24ec69ba85e5e87fdc41228975f6a1a3e44a6e7d6fc3d9f8d8",
+        "output": "Assets/Audio/Combat/combat.impact.flesh__01.wav",
+        "outputSha256": "9b34b9ee9090e0ffa86fa7e82e56bbf1392e44efbceb5dc9ff25443e3adb7091"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPunch_heavy_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "f92f5cb6ba4ff2766497292ffd90865654317eeca976f5652e0708dbdcdc0dd9",
+        "output": "Assets/Audio/Combat/combat.impact.flesh__02.wav",
+        "outputSha256": "5dc84f25be94d5aca84fea79b7de4261165cc00800aff5a7535aea7d7db2caa5"
+      },
+      {
+        "source": "Sources/impact-sounds_impactPunch_heavy_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "7993dd4c156b9979ad69f17be5ebe31850b16039a3857f8477141be54dfee1b3",
+        "output": "Assets/Audio/Combat/combat.impact.flesh__03.wav",
+        "outputSha256": "a1924ac239d4b1f04e15edb20ac92cef6cbd77027bc62c0d24a98ff2eab42da3"
+      }
+    ],
+    "combat.blocked.ice": [
+      {
+        "source": "Sources/impact-sounds_impactGlass_light_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "d750cf88097d0c3e69920e6e14496e1444e1a9da01aa4cca8f5ec8cb44c57b4f",
+        "output": "Assets/Audio/Combat/combat.blocked.ice__01.wav",
+        "outputSha256": "e9f31487c8cac09d6b25c178ce3cf46e4a54384032e64ae38195bfce96c1630e"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGlass_light_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "05e513fbd42829060eb37855f8c3866722ec5c39a8937c9bfde518cc609effa2",
+        "output": "Assets/Audio/Combat/combat.blocked.ice__02.wav",
+        "outputSha256": "e46e440faa3ce8c25de580af27ab5b1a0f7f07d34a2871d5b4bf571e1cef3618"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGlass_light_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "710db7451bb7857b9140dfe6afe4621ea2188ad65eda3919c569d1bb285b933d",
+        "output": "Assets/Audio/Combat/combat.blocked.ice__03.wav",
+        "outputSha256": "17cc307e41bc014a5c41cf7d3f077cc029a0c729d9f969c3284aeae1d2a2a8f8"
+      }
+    ],
+    "combat.impact.ice": [
+      {
+        "source": "Sources/impact-sounds_impactGlass_heavy_000.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "b44b39a940e8948e74b9bd3776bff980df43cf220abdaf0d467dc4c43c0244a5",
+        "output": "Assets/Audio/Combat/combat.impact.ice__01.wav",
+        "outputSha256": "7fd2509406375b5fb2126da087ec380223c8553015ec8c7617282ea4be260a14"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGlass_heavy_001.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "58686e0e562612cc566791844a10e269f8d1921f4766c14ba43976fd0a429f4e",
+        "output": "Assets/Audio/Combat/combat.impact.ice__02.wav",
+        "outputSha256": "7a7a706479e4559a556b83de949ebce14f12c4b942cdd859551d71537ffd44bc"
+      },
+      {
+        "source": "Sources/impact-sounds_impactGlass_heavy_002.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "impact-sounds",
+        "sourceSha256": "4978654ac840ad519692d5d5ba48a8101cabce13b9a577be73ad589185e5e9ed",
+        "output": "Assets/Audio/Combat/combat.impact.ice__03.wav",
+        "outputSha256": "c7f062332d62bf79369911acb88afc051a96a025886e6185263b03d362e63ff3"
+      }
+    ],
+    "combat.blocked.foliage": [
+      {
+        "source": "Sources/rpg-audio_cloth1.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "ddb93a3671233f95da0e0b10367f082f7eb42fa6caaddcf776410aa8833c747d",
+        "output": "Assets/Audio/Combat/combat.blocked.foliage__01.wav",
+        "outputSha256": "14a1226d48c6e3c248fd7278d19ba87c08d505c49842b2cc9f2f6362b709d34d"
+      },
+      {
+        "source": "Sources/rpg-audio_cloth2.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "8a7451193c38bc05483aec25dd193e163a15d44cf7fff04ac7912573231b0201",
+        "output": "Assets/Audio/Combat/combat.blocked.foliage__02.wav",
+        "outputSha256": "1a95e4656a3f5db0c0fbe0216bab65bb3792e5c17487aec2f29498b2e25b5d78"
+      },
+      {
+        "source": "Sources/rpg-audio_cloth3.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "a48632d17a4f1416541d261a32a31612e01267144c407fa3ecab3ff410f0085b",
+        "output": "Assets/Audio/Combat/combat.blocked.foliage__03.wav",
+        "outputSha256": "24a622eb3d09492a912f2ad698ab5f51a27e99c4e3069965aa13365d57757878"
+      }
+    ],
+    "combat.impact.foliage": [
+      {
+        "source": "Sources/rpg-audio_cloth4.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "e7ab9a6c4466dea874196c61f59bf1da05cfe58748f42fadd695d441a154a99b",
+        "output": "Assets/Audio/Combat/combat.impact.foliage__01.wav",
+        "outputSha256": "a5f7e42e5828911147d7ac6f3f38fc0a172c231f8ce9a0739a2567fa113c294d"
+      },
+      {
+        "source": "Sources/rpg-audio_clothBelt.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "f29560a2aea95bbfeb643e1e8f56ec2b6f7e32f32ce4e140645a36db81de3253",
+        "output": "Assets/Audio/Combat/combat.impact.foliage__02.wav",
+        "outputSha256": "91b0f47150b3eee689339d455e5a0391c1709ef241a6769f4ab163be22a8e3bb"
+      },
+      {
+        "source": "Sources/rpg-audio_clothBelt2.ogg",
+        "start": 0,
+        "seconds": 1.0,
+        "sourceGroup": "rpg-audio",
+        "sourceSha256": "d545b1d9f20e6188140aaf551a96f1e82fe0d15f7ca066fac8b065e1231e0038",
+        "output": "Assets/Audio/Combat/combat.impact.foliage__03.wav",
+        "outputSha256": "fab1fec5d2ac5a0aeb3a2b5fdcdcf7ed6c609a5a758ef2fc692d6bcc7396be25"
+      }
+    ],
+    "combat.weapon.knife.attack": [
+      {
+        "source": "Sources/weapons1_Dagger Swing.wav",
+        "start": 0.06,
+        "seconds": 0.29,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "6503fce6a10700242e6a82c79914ce874564760dedfaac1abce46a85e4b0f8c2",
+        "output": "Assets/Audio/Combat/combat.weapon.knife.attack__01.wav",
+        "outputSha256": "0f9a20700e478b9e4c0d22328a604bcfbfdfac6ba424eb386eac17b6f4b18392"
+      },
+      {
+        "source": "Sources/weapons1_Dagger Swing.wav",
+        "start": 0.48,
+        "seconds": 0.29,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "6503fce6a10700242e6a82c79914ce874564760dedfaac1abce46a85e4b0f8c2",
+        "output": "Assets/Audio/Combat/combat.weapon.knife.attack__02.wav",
+        "outputSha256": "5b57b3f2d7b91481fe14070fbae35e2404eda46f2ad5fbd060afd271b16f7a08"
+      },
+      {
+        "source": "Sources/weapons1_Dagger Swing.wav",
+        "start": 0.97,
+        "seconds": 0.29,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "6503fce6a10700242e6a82c79914ce874564760dedfaac1abce46a85e4b0f8c2",
+        "output": "Assets/Audio/Combat/combat.weapon.knife.attack__03.wav",
+        "outputSha256": "fc2e76d5265453a91ff071a8b29b7671191eed5f2f277ebbdb0dd8488218db35"
+      }
+    ],
+    "combat.weapon.axe.attack": [
+      {
+        "source": "Sources/weapons1_Axe Swing.wav",
+        "start": 1.54,
+        "seconds": 0.36,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a27039c0778934e71e01b943cba04aa4cb788fd94e5e771b68374326494f38a4",
+        "output": "Assets/Audio/Combat/combat.weapon.axe.attack__01.wav",
+        "outputSha256": "1c28521c44a51e0549abb205a16793d25fbd0222c3c2882a3ec842b63f57158c"
+      },
+      {
+        "source": "Sources/weapons1_Axe Swing.wav",
+        "start": 2.46,
+        "seconds": 0.36,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a27039c0778934e71e01b943cba04aa4cb788fd94e5e771b68374326494f38a4",
+        "output": "Assets/Audio/Combat/combat.weapon.axe.attack__02.wav",
+        "outputSha256": "eaba5d4fcc2356665d618659e5fb5e93dd0cdd2f379436b26e7af93582559e20"
+      },
+      {
+        "source": "Sources/weapons1_Axe Swing.wav",
+        "start": 3.42,
+        "seconds": 0.36,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a27039c0778934e71e01b943cba04aa4cb788fd94e5e771b68374326494f38a4",
+        "output": "Assets/Audio/Combat/combat.weapon.axe.attack__03.wav",
+        "outputSha256": "51172a8a270ccd7950f7d48984455bcaa82816adf3ac989dde1368d4109a0a16"
+      }
+    ],
+    "combat.weapon.pickaxe.attack": [
+      {
+        "source": "Sources/weapons0_Katana Swing.wav",
+        "start": 0.32,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "133860f84cb4c311cf273f3a16256a45568d7d4ce468eb081dd17e4e4bfa7487",
+        "output": "Assets/Audio/Combat/combat.weapon.pickaxe.attack__01.wav",
+        "outputSha256": "976917b81ff003b173764d8b12b364b1a679bf784a8c82311d5d2d4f449a97f8"
+      },
+      {
+        "source": "Sources/weapons0_Katana Swing.wav",
+        "start": 1.29,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "133860f84cb4c311cf273f3a16256a45568d7d4ce468eb081dd17e4e4bfa7487",
+        "output": "Assets/Audio/Combat/combat.weapon.pickaxe.attack__02.wav",
+        "outputSha256": "1c536eab325ebbdde97663e1f77c7ee91b7f563d0bce751b5b28cfcce266ad05"
+      },
+      {
+        "source": "Sources/weapons0_Katana Swing.wav",
+        "start": 2.26,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "133860f84cb4c311cf273f3a16256a45568d7d4ce468eb081dd17e4e4bfa7487",
+        "output": "Assets/Audio/Combat/combat.weapon.pickaxe.attack__03.wav",
+        "outputSha256": "22e393f8cee3bbde0730626ece13e3fe22a803509fa1e39680f7f530d475bf55"
+      }
+    ],
+    "combat.weapon.spear.attack": [
+      {
+        "source": "Sources/weapons1_Spear Swing.wav",
+        "start": 0.14,
+        "seconds": 0.35,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a6faa99aa8d9a020b14f3ea27e422921c9fc336ff4d5870a14bf24a94bc0d016",
+        "output": "Assets/Audio/Combat/combat.weapon.spear.attack__01.wav",
+        "outputSha256": "8a79c7e13d8c316419ac75ab00e35e308863f3e45400d595e062116a2b51854b"
+      },
+      {
+        "source": "Sources/weapons1_Spear Swing.wav",
+        "start": 0.8,
+        "seconds": 0.35,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a6faa99aa8d9a020b14f3ea27e422921c9fc336ff4d5870a14bf24a94bc0d016",
+        "output": "Assets/Audio/Combat/combat.weapon.spear.attack__02.wav",
+        "outputSha256": "7539ce63a1fea5c8a3fab5800f6b0b3c99af0dcb757677693c08ac62199d1b3c"
+      },
+      {
+        "source": "Sources/weapons1_Spear Swing.wav",
+        "start": 1.49,
+        "seconds": 0.35,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "a6faa99aa8d9a020b14f3ea27e422921c9fc336ff4d5870a14bf24a94bc0d016",
+        "output": "Assets/Audio/Combat/combat.weapon.spear.attack__03.wav",
+        "outputSha256": "db999809d35691420fe0d2437fcb7bf0972702c2a2355a728f069ca2ba2fe9ec"
+      }
+    ],
+    "combat.weapon.blunt.attack": [
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 0.29,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.blunt.attack__01.wav",
+        "outputSha256": "4ee8b479d3735a73dc9d2f911c150d88ae77f697f182826d2e5ae7f008d39b87"
+      },
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 3.25,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.blunt.attack__02.wav",
+        "outputSha256": "a85776a6ed469668b12682ee429c508ae880634838cfc08ce43c4e6b9ba4c9ef"
+      },
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 4.0,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.blunt.attack__03.wav",
+        "outputSha256": "4436fea65987ec0e875ff980a0dc50de0bfd59bda2347ab075dcdc43b6b578e0"
+      }
+    ],
+    "combat.weapon.generic.attack": [
+      {
+        "source": "Sources/weapons1_Sabre Swing.wav",
+        "start": 6.39,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "bf6edd6317805e5579c58fc6ed5c52df917e6a3ebdb0b11cd7027684adaf4d04",
+        "output": "Assets/Audio/Combat/combat.weapon.generic.attack__01.wav",
+        "outputSha256": "7764d1c1103bc9939269537c47f0f39f8b82a9c95c52e20dff9fee8b71fee58a"
+      },
+      {
+        "source": "Sources/weapons1_Sabre Swing.wav",
+        "start": 9.01,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "bf6edd6317805e5579c58fc6ed5c52df917e6a3ebdb0b11cd7027684adaf4d04",
+        "output": "Assets/Audio/Combat/combat.weapon.generic.attack__02.wav",
+        "outputSha256": "e2d7b1e34db7bb44979e488d40c4368246bbb079dd622b33c74e89e3b0fa7118"
+      },
+      {
+        "source": "Sources/weapons1_Sabre Swing.wav",
+        "start": 10.14,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "bf6edd6317805e5579c58fc6ed5c52df917e6a3ebdb0b11cd7027684adaf4d04",
+        "output": "Assets/Audio/Combat/combat.weapon.generic.attack__03.wav",
+        "outputSha256": "ce212565732bc7996eec9ed674b5fd4cf0b28d562fb2598c1524be448802cac8"
+      }
+    ],
+    "combat.weapon.bow.attack": [
+      {
+        "source": "Sources/weapons0_English Longbow Shoot.wav",
+        "start": 0.07,
+        "seconds": 0.24,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee",
+        "output": "Assets/Audio/Combat/combat.weapon.bow.attack__01.wav",
+        "outputSha256": "f096b5272dd91cedc85934fb25564bbc36dd7ba55f4d67bf15d8a8a04a58236c"
+      },
+      {
+        "source": "Sources/weapons0_English Longbow Shoot.wav",
+        "start": 0.75,
+        "seconds": 0.24,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee",
+        "output": "Assets/Audio/Combat/combat.weapon.bow.attack__02.wav",
+        "outputSha256": "1c2148c2b5f7cb1e97023c8bdeb9414ab0d99bee17f8fb47c6549c360d4f74eb"
+      },
+      {
+        "source": "Sources/weapons0_English Longbow Shoot.wav",
+        "start": 1.22,
+        "seconds": 0.24,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "c25684ccdab3eb13f17a0ffa637fbd175659d092665f16c0bce8510d46c4fbee",
+        "output": "Assets/Audio/Combat/combat.weapon.bow.attack__03.wav",
+        "outputSha256": "68702f49edca26d6444a09d4696de17a097ef1828a32789e4f0f1c54bfb2f4d7"
+      }
+    ],
+    "combat.weapon.crossbow.attack": [
+      {
+        "source": "Sources/weapons0_Crossbow Shoot.wav",
+        "start": 0.29,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2",
+        "output": "Assets/Audio/Combat/combat.weapon.crossbow.attack__01.wav",
+        "outputSha256": "0c772bc4cc6b133d76c3fa06bd9acff62a637fdb7f127b9e34b0e630f0d4ba8f"
+      },
+      {
+        "source": "Sources/weapons0_Crossbow Shoot.wav",
+        "start": 0.81,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2",
+        "output": "Assets/Audio/Combat/combat.weapon.crossbow.attack__02.wav",
+        "outputSha256": "dc3447f26d4836e82775f94d51b64be948168b4881d2da8e7acb24493433abc0"
+      },
+      {
+        "source": "Sources/weapons0_Crossbow Shoot.wav",
+        "start": 1.38,
+        "seconds": 0.28,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "d8c68f970540d73ab6fe2db5309166e6dd911876501a16bb4df43498247e19b2",
+        "output": "Assets/Audio/Combat/combat.weapon.crossbow.attack__03.wav",
+        "outputSha256": "2f34c65db34df80bd382dc0a717d0b60ca306fd775e458edc1222dec7faf07ca"
+      }
+    ],
+    "combat.weapon.sling.attack": [
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 1.22,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.sling.attack__01.wav",
+        "outputSha256": "ede3cd3bc36f42278e190fd4a56804b20c503a718e98ddbdafcea5259a3ac385"
+      },
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 2.44,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.sling.attack__02.wav",
+        "outputSha256": "05906526ffab24a6323d287a47162ad70189e80226299719c1d1c0bdcb6fb66a"
+      },
+      {
+        "source": "Sources/weapons1_Seax Swing.wav",
+        "start": 6.9,
+        "seconds": 0.3,
+        "sourceGroup": "Weapon Textures",
+        "sourceSha256": "2fdf7688ce88a105393fe2b1f3b3f14dbe80e42708d2e2e46246d9d40bb2a151",
+        "output": "Assets/Audio/Combat/combat.weapon.sling.attack__03.wav",
+        "outputSha256": "247a972cb31e882c4210f3870dbb609baff690a85e6def30b4621140d21f7205"
+      }
+    ],
+    "combat.weapon.blowpipe.attack": [
+      {
+        "source": "Sources/0748.wav",
+        "start": 0.12,
+        "seconds": 0.28,
+        "sourceGroup": "BigSoundBank0748",
+        "sourceSha256": "e4ea7343576620fafdf92972b3c909efb5ce34b2d25fff5dd58b2f726424257b",
+        "output": "Assets/Audio/Combat/combat.weapon.blowpipe.attack__01.wav",
+        "outputSha256": "6d74366c19584c36569f2e9c63b6414c22733a1bdf740fabafc44f52af737280"
+      },
+      {
+        "source": "Sources/0748.wav",
+        "start": 2.08,
+        "seconds": 0.28,
+        "sourceGroup": "BigSoundBank0748",
+        "sourceSha256": "e4ea7343576620fafdf92972b3c909efb5ce34b2d25fff5dd58b2f726424257b",
+        "output": "Assets/Audio/Combat/combat.weapon.blowpipe.attack__02.wav",
+        "outputSha256": "14629ac940f0be2ae16f2f08e911054476289bdbccc5cd041386a7051a00c4ad"
+      },
+      {
+        "source": "Sources/0748.wav",
+        "start": 4.06,
+        "seconds": 0.28,
+        "sourceGroup": "BigSoundBank0748",
+        "sourceSha256": "e4ea7343576620fafdf92972b3c909efb5ce34b2d25fff5dd58b2f726424257b",
+        "output": "Assets/Audio/Combat/combat.weapon.blowpipe.attack__03.wav",
+        "outputSha256": "fbd48c4f786dcb1942ba00360d9e9c9719009ce98c77efd49eab7201d64990ba"
+      }
+    ]
+  }
+}

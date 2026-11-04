@@ -449,6 +449,12 @@ public sealed partial class ItemPhysicsRegionDefinitionDto
 [MemoryPackable]
 public sealed partial class ItemHealthDefinitionDto
 {
+    #region 受击声音配置
+    [JsonProperty("impactAudioMaterial")] public CombatImpactMaterial ImpactAudioMaterial;
+    [JsonProperty("hurtAudioCueId")] public string HurtAudioCueId;
+    [JsonProperty("blockedAudioCueId")] public string BlockedAudioCueId;
+    #endregion
+
     [JsonProperty("hasHp")]
     public bool HasHp = true;
 
@@ -787,6 +793,17 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
                 moduleData?.Enabled != false));
         }
         ModuleDefinitions = modules.AsReadOnly();
+        CombatImpactAudioMaterial = CombatAudioRouter.ResolveImpactMaterial(templateData);
+        foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
+        {
+            if (!module.Enabled || module.PrefabId != "Module_DamageReciver") continue;
+            JObject audio = string.IsNullOrEmpty(module.ParametersJson) ? null : JObject.Parse(module.ParametersJson);
+            CombatImpactAudioMaterial = CombatAudioRouter.ResolveImpactMaterial(templateData,
+                (CombatImpactMaterial)(audio?.Value<int?>("impactAudioMaterial") ?? 0));
+            CombatHurtAudioCueId = audio?.Value<string>("hurtAudioCueId");
+            CombatBlockedAudioCueId = audio?.Value<string>("blockedAudioCueId");
+            break;
+        }
         FireFuel = combustibility?.Compile() ?? WorldFireFuelProfile.Compile(this);
         moduleIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
@@ -904,6 +921,10 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
     }
 
     #endregion
+
+    public CombatImpactMaterial CombatImpactAudioMaterial { get; }
+    public string CombatHurtAudioCueId { get; }
+    public string CombatBlockedAudioCueId { get; }
 
     public bool TryGetModuleParameters(string stableModuleName, out string json)
     {

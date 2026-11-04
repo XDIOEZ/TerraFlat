@@ -59,7 +59,7 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 太空联机经 `SpaceSession.CombatNetworking` 校验真实连接玩家并驱动原武器输入、体力及弹药事务；`ShipCombatBridge` 在攻击者规范坐标系查询船体和乘员，远端船不依赖 Host 视野。太空 `Mod_Projectile` 不参与地表 Physics2D，固定规范坐标扫掠命中，回收交 `SpaceLooseItemState`；客户端投射物仅复制表现。
 - 窗口打开主动扫已重叠目标。动画武器由 `Mod_Weapon_AnimationAction.ModUpdate` 独占源 Animator 时间轴：Normal 模式、手动采样外 speed=0，当前 Tick 按素材采样率与攻速细分动作/真实伤害窗，不重复推进世界和体力；无物理绘制副本补间姿态，不依赖 Unity AnimatePhysics。动作以 `SetAnimationDamageSamplingActive` 唤醒固定步采样；预约集跨步保留、关窗清空，DamageInterval 不限制姿态采样，持续伤害用 Pulse。默认 MaxAttackTargets=3，可被配置覆盖。
 - 伤害 Collider 尚未租借或已归还时，关窗仍清理预约和调度状态；尝试开窗缺 Collider 继续报错。回归 `combat/damage_window_without_collider`。
-- AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
+- AttackShape2D 只描述范围；空间桶/身份/阵营/LOS 筛候选，临时受击 Collider 经 Physics2D Overlap/BoxCast 判几何，投影池归所属 WorldPhysicsScene2D，租约固定查询场景。重叠接触点优先取 ColliderDistance2D 中位于目标内的武器表面点，目标被武器包含时取目标表面点，正常扫掠保留 hit.point；GO 经 HurtAtHitPoint 把冻结的表现坐标传给接收侧数字，不混用环境/数据上下文的逻辑坐标。回归 `combat/hit_contact_positions`。两个后端共用配额/预约，Sequence/Window/Pulse 在生产处唯一。
 - 机械武器 Pulse 的候选/去重/命中列表通过 Unity CollectionPool 租约在调用结束归还，支持重入；命中先按扫掠时间再按到接触点的距离排序，预先计算距离并复用静态比较器，不在排序时捕获当前攻击中心。分段 Marker 为 `FlatWorld.Combat.MachineCandidates/MachinePhysicsQuery/MachineApplyHits`；规则 `mechanical/machine_pulse_order`。
 - DamageSender/DamageReciver 是专用 Trigger 层对，只互相接触；DamageReceiver 使用同节点专用 Trigger，身体/拾取阻挡分开。GO 生物保留预制体刚体和碰撞模板，世界物理管理器在租借组件后登记原碰撞体，不为生物创建物理代理。Tile/建筑走显式空间查询。一般组件解析可回最近 Item 根查子树，命中特效优先实际回调 Collider。
 - 动画武器伤害盒跟随实际 Sprite 局部姿态/flip，用物理轮廓或紧致网格，缺失才 bounds；TightSprite 默认，右上工具可配 UpperRightQuadrant。
@@ -104,3 +104,5 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 - 独立验证：`python Tools/Tests/ShieldActions/verify.py --build`；正式 Lua：`Systems/Combat/shield-rules.lua`。Unity 播放中不刷新或运行场景测试。
 
 - 撕咬的 `ActorActionConstraints.FollowLease` 自行登记 `PhysicsPreparation`，逐物理步读取双方权威刚体位置与锚点速度；技能模块只推进时长/伤害，不重复驱动跟随。`DrivenMotionLease.SetWorldVelocity` 明确提交总速度，避免再次叠加风/水流；释放、失效及丢权威时撤销调度。`combat/bite_attack` 补跨TPS跟随速度与限速边界，真实碰撞仍需现场回归。
+
+- 命中音效仅消费实际提交结果：零伤为材质挡击、正伤为受伤；环境/拒绝不响，致命删除前冻结位置。无外壳入口各自发布一次，不在 `PublishExternalDamage` 泛化重复发声。攻击动作按伤害窗口 Sequence 去重，成功远程 Launch 独立用源武器音色。详见 flatworld-audio。
