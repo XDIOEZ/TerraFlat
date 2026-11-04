@@ -114,7 +114,11 @@ public sealed class FlatWorldSpriteAtlasPrebuildGenerator : BuildPlayerProcessor
 
     #region 预构建入口
 
-    public override void PrepareForBuild(BuildPlayerContext context) => GenerateSpriteAtlasesAndPurposeCatalogs();
+    public override void PrepareForBuild(BuildPlayerContext context)
+    {
+        if (!FlatWorldBuildContentPolicy.SkipContentGeneration)
+            GenerateSpriteAtlasesAndPurposeCatalogs();
+    }
 
     public static void GenerateSpriteAtlasesAndPurposeCatalogs()
     {

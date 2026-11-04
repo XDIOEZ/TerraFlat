@@ -14,7 +14,11 @@ namespace FlatWorld.Editor.ContentTools
         #region 构建期烘焙
 
         public override int callbackOrder => -10000;
-        public override void PrepareForBuild(BuildPlayerContext context) => BakeBuiltInConfigurations();
+        public override void PrepareForBuild(BuildPlayerContext context)
+        {
+            if (!FlatWorldBuildContentPolicy.SkipContentGeneration)
+                BakeBuiltInConfigurations();
+        }
 
         [MenuItem("FlatWorld/资源/烘焙完整启动目录和图集")]
         public static void BakeCompleteStartupContent()
