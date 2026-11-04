@@ -847,12 +847,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 5a09aa4a7cdea2340b459e08029ae416
-    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PrimaryButton.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5b0080e215ad188439be42322d1d71a9
     m_Address: Module_CombustionVisual
     m_ReadOnly: 0
@@ -2410,12 +2404,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: fd5ff6df82e5dfe4db26faa6261915ab
-    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fd8723ea4457a3a48aa43f299cc9b24f
     m_Address: "Assets/2_Prefabs/World/Space/\u901A\u7528\u661F\u4F53.prefab"

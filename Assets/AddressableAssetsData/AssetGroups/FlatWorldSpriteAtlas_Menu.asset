@@ -23,6 +23,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 10fd22c24113b9f4cbc700d6e7c7958e
+    m_Address: FlatWorld_Menu_02
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 17b596bac2f14f92b50423d142dc1b84
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_GameSettings.prefab
     m_ReadOnly: 0
@@ -71,11 +76,22 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5a09aa4a7cdea2340b459e08029ae416
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PrimaryButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5c0312d9a4c30ca42bc62b3bfb10074e
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6885901abc8a37448b9d51494bbfe057
+    m_Address: FlatWorld_Menu_03
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6c3a1f4436d999445b39c197107ce458
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab
@@ -137,6 +153,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9cf09f7294f48354cae12fabc3b97ff6
+    m_Address: FlatWorld_Menu_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a6d627d3b13bbc54bb2b613ad872b30d
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_WorldLoading.prefab
     m_ReadOnly: 0
@@ -193,6 +214,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f75861c6e3f25eb4eb01b03f0816e913
     m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fd5ff6df82e5dfe4db26faa6261915ab
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

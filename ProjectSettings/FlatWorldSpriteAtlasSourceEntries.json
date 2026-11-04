@@ -1577,6 +1577,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "5a09aa4a7cdea2340b459e08029ae416",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PrimaryButton.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PrimaryButton.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PrimaryButton.prefab",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "5b5172528f03400790aa96cbe3029b88",
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
             "originalGroup": "Default",
@@ -4328,6 +4337,15 @@
             "originalAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "fd5ff6df82e5dfe4db26faa6261915ab",
+            "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab",
+            "managedGroup": "FlatWorldSpriteAtlas_Menu",
+            "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab",
             "previousManagedGroup": ""
         },
         {
