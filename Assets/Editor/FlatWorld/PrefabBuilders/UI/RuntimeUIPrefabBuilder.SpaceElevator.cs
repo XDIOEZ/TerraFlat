@@ -48,6 +48,7 @@ public static partial class RuntimeUIPrefabBuilder
             view.CallCabin = CreateElevatorButton(root.transform, "FWUI_ElevatorCall", "召回轿厢", 508, -690, 228, 48);
             root.SetActive(true);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
+            PhysicalDeviceArtworkPrefabBuilder.Configure(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
             EnsureRuntimePrefabAddressable(path);
         }

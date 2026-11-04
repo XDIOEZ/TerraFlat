@@ -19,6 +19,7 @@ public sealed class SpacesuitPanelSession : IDisposable
     private SpacesuitBinding binding;
     private Coroutine refresh;
     private bool disposed;
+    private float artworkGas01;
     private SpacesuitPanelSession(ItemData suit, Item actor)
     {
         this.suit = suit; this.actor = actor;
@@ -30,6 +31,13 @@ public sealed class SpacesuitPanelSession : IDisposable
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("宇航服面板缺少正式视图。");
+        panel.BindPhysicalDeviceArtwork(suit.IDName, () =>
+        {
+            var state = PhysicalDeviceArtworkBindings.ReadGauges(view);
+            state.Open = !binding.State.HelmetOn;
+            state.Gas = artworkGas01;
+            return state;
+        });
         view.SetProcessingVisible(true);
         view.OutputSlot.gameObject.SetActive(true);
         view.DismantleButton.gameObject.SetActive(false);
@@ -116,7 +124,12 @@ public sealed class SpacesuitPanelSession : IDisposable
             : suit.GameName;
         view.Title.text = FlatWorldLocalizationService.GetUiFormat("{0} · 宇航服", suitName);
         decimal standardLiters = 0m;
-        if (FluidTankStorage.TryGet(binding.Tank, out FluidInventory inventory, out _)) standardLiters = FluidUnits.MolToStandardLiters(inventory.GetGasMoles(FluidIds.Oxygen));
+        artworkGas01 = 0f;
+        if (FluidTankStorage.TryGet(binding.Tank, out FluidInventory inventory, out var tankConfiguration))
+        {
+            standardLiters = FluidUnits.MolToStandardLiters(inventory.GetGasMoles(FluidIds.Oxygen));
+            artworkGas01 = (float)((double)standardLiters / tankConfiguration.GasCapacityStandardLiters);
+        }
         decimal propulsionLiters = FluidTankStorage.TryGet(binding.PropulsionTank, out FluidInventory propulsionInventory, out _)
             ? FluidUnits.MolToStandardLiters(propulsionInventory.GasMoles) : 0m;
         Mod_Oxygen oxygen = actor.itemMods.GetMod_ByID<Mod_Oxygen>(Mod_Oxygen.ModuleId);

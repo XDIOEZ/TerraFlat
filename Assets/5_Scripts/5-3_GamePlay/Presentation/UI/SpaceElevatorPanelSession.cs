@@ -22,6 +22,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
     private readonly Dictionary<Button, TMP_Text> buttonLabels = new();
     private Coroutine refresh;
     private bool disposed;
+    private PhysicalDeviceArtworkView.OperatingState artworkState;
     private string feedbackSource = "把物品放入仓库，点击打包发送，到站后自动存入另一端仓库。";
 
     private SpaceElevatorPanelSession(SpaceSession session, Player actor, string terminalId,
@@ -33,6 +34,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
         if (prefab == null) throw new InvalidOperationException("太空电梯正式面板缺失。");
         panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
         panel.InitClosed();
+        panel.BindPhysicalDeviceArtwork("SpaceElevator", () => artworkState);
         panel.PrepareForGameplayWindow();
         try
         {
@@ -224,6 +226,11 @@ public sealed class SpaceElevatorPanelSession : IDisposable
         if (!session.TryGetSpaceElevatorEndpoint(actor, terminalId, out SpaceElevatorState elevator,
                 out SpaceElevatorEndpoint currentEndpoint, out string reason) || elevator.ElevatorId != elevatorId || currentEndpoint != endpoint)
         { ItemActionFeedback.Show(actor, reason ?? "电梯线路已变化，请重新打开终端。"); Close(); return; }
+        artworkState = new PhysicalDeviceArtworkView.OperatingState
+        {
+            Working = elevator.Travelling,
+            Progress = elevator.Travelling ? (float)(1d - elevator.RemainingSeconds / SpaceGameplaySettings.Current.ElevatorTravelSeconds) : (int)elevator.CabinEndpoint
+        };
         bool here = !elevator.Travelling && elevator.CabinEndpoint == endpoint;
         string destination = Ui(endpoint == SpaceElevatorEndpoint.Ground ? "太空站台" : "地面站台");
         view.Title.text = Ui("太空电梯");

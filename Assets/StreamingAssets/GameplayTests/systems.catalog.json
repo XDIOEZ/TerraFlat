@@ -1299,6 +1299,9 @@
       "name": "UI与设置",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestPhysicalDeviceArtworkRules.cs",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/PhysicalDeviceArtwork*.cs",
+        "Tools/UIArtwork/*",
         "Assets/5_Scripts/5-1_Data/CoreData/InventoryItemCategoryCatalog.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAtmosphereAnalyzerUiRules.cs",
         "Assets/Editor/FlatWorld/PrefabBuilders/UI/AtmosphereAnalyzerPanelAssetBuilder.cs",

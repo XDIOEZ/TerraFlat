@@ -32,6 +32,8 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     public bool IsAvailable => loaded && isActiveAndEnabled && Carrier != null && Carrier.IsAvailable;
     public bool IsLinked => state != null && (state.PreviousGuid != 0 || state.NextGuid != 0);
     public int TrainCount => train?.Cars.Count ?? 1;
+    public float SignedTravelSpeed => onRail && railPosition.IsValid
+        ? Vector2.Dot(Carrier.CurrentVelocity, railPosition.Tangent) : Carrier.CurrentVelocity.magnitude;
     public static event Action<Mod_Minecart, Player> MenuRequested;
     private Mod_MinecartInventory inventory;
     private MinecartState state;

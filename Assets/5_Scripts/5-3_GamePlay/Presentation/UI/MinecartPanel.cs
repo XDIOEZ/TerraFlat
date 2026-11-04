@@ -60,6 +60,8 @@ public sealed class MinecartPanel : MonoBehaviour
     private void Bind(Mod_Minecart target, Player player)
     {
         ClearTarget(); cart = target; actor = player;
+        panel.BindPhysicalDeviceArtwork(target.item.itemData.IDName, () =>
+            new PhysicalDeviceArtworkView.OperatingState { LinearSpeed = target.SignedTravelSpeed, Open = target.IsLinked });
         engines = target.EngineInventory; cargo = target.CargoInventory;
         if (engines == null || cargo == null) { ClearTarget(); return; }
         BindInventory(engines, "FWUI_EngineSlot"); BindInventory(cargo, "FWUI_CargoSlot");

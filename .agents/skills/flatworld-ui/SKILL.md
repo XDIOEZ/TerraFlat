@@ -27,6 +27,8 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - 普通底板用 `UI_PanelBackground`，根 Image 透明；底板 `LayoutElement.ignoreLayout=true`，铺满父节点且不参与正文排版，直接生成的语言页也复用同一底板。HUD角落锚点/透明容器，确认/改名遮罩透明。CanvasGroup.alpha=1、独立 Canvas.localScale=1，注册前 `InitClosed()`；启动加载页由 WorldManager.prefab 直引。
 - 固定 TMP 用 `FlatWorldUITextLayout.Configure(text, 设计字号)` 并同步 Prefab：最大字号不放大，下限通常12～18（可保更低有效值），超长 Ellipsis。输入、自适应长文、手动分页保自身规则，不在 Update 遍历修字。
 
+- 实体器具用 `PhysicalDeviceArtworkCatalog` 的设备外观/槽位锚点与 `PhysicalDeviceArtworkView` 固定16层表现池；`PhysicalDeviceArtworkBindings` 只投影真实状态，库存和业务仍由原会话负责。机械转速、泵真实交付、火种输出与作物阶段分别驱动表现，不解析文案。新增/重建面板走 `PhysicalDeviceArtworkPrefabBuilder.Configure`，重排前先 `RemoveBeforeRebuildingControls`；机械视图保 `PreservePrefabLayout`。正式资源检查 `ui_settings/physical_device_artwork`；独立预览工具 `Tools/UIArtwork/unity_artwork_preview.py`。
+
 ## 生命周期与输入
 
 - `CreatePanelFromGameObject` 归当前 `SceneUI/SafeAreaRoot`；玩家HUD/库存/设置/死亡页显式用 `CreatePersistentPanelFromGameObject`。共享库存按对象分流，弹窗/键盘用 `GetPanelRootFor` 继承；全屏只提排序。

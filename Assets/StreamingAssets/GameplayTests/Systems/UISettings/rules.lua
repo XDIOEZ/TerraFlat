@@ -1351,3 +1351,17 @@ test.system("ui_settings", "vessel_contents_layers", {}, function(data)
     end
     assert(crucible_found, "正式容器面板缺少坩埚外观")
 end, "坩埚材料独立前景层与锅内活动边界")
+
+test.system("ui_settings", "physical_device_artwork", {}, function(data)
+    assert(#data.panels == 18 and data.appearances >= 70, "器物界面或设备外观覆盖缺失")
+    assert(data.duplicateIds == 0 and data.oversized == 0 and data.missingSprites == 0,
+        "器物身份重复、图层容量超限或正式精灵丢失")
+    for _, panel in ipairs(data.panels) do
+        assert(panel.appearance and panel.pool == 16 and panel.passThrough and panel.safeArea,
+            "器物界面缺外观、固定图层、安全区或装饰拦截点击：" .. panel.id)
+    end
+    assert(data.realContents and data.emptyContents and data.handheldPartsMatch, "真实植株图与大小未同步，或空槽残留植物")
+    assert(data.bowMoves and data.hotSmoke > 0, "弓架未往复或高温材料未冒烟")
+    assert(data.prematureEmber == 0 and data.actualEmber > 0, "余烬未由真实火种决定")
+    assert(data.clearedSmoke == 0 and data.clearedEmber == 0, "关闭复位残留烟雾或余烬")
+end, "全部器物面板资源、动态弓钻与热状态表现")
