@@ -1245,7 +1245,7 @@
             "Type": 0
           },
           "parameters": {
-            "startBurning": true,
+            "startBurning": false,
             "burnWhileHeld": true,
             "burnWhileInWorld": true,
             "burnWhileStored": false,

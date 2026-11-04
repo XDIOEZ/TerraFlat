@@ -39,6 +39,7 @@
 - 寿命状态由 `Ex_ModData_MemoryPackable.ReadRuntimeState/WriteRuntimeState` 持有强类型值；只在读取正式载荷作快照/保存时编码，替换载荷即失效。营养、燃烧和生存数值核接收纯值/Span，模块负责环境采样、权威与即时回调，跨对象不延后原有结果提交。
 - 高频转化扫描用索引遍历 IReadOnlyList<RuntimeItemMatterTransition>、首个匹配，避接口装箱。
 - Fuel 数据/Combustion 状态/FuelInteraction 交互/ICombustionStateReceiver 表现组合；flameScale/flameHeightRatio/flameEmissionMultiplier 控视觉，attachFlameToAnchor 跟燃点，followSourceRenderer/sourceRendererAnchorOffset 跟贴图。火把底图熄灭，熄火清粒子；氧气模块只管储量/缺氧，供给方判断真实环境并扣量。
+- 火把两种定义 `startBurning=false`；FuelInteraction 持单格火种库存（现成库存快照持久化），放入不点火，显式点燃消费一份、熄灭保留余料；燃料投料区只补料。放置/拆回共享 `Mod_FuelInteraction`，面板按燃烧状态互斥显示按钮。回归 `item_runtime/torch_ignition`。
 - 玩法分类 ItemData.Tags；lootTableId 引稳定物品 ID，IResourceYieldModifier 源头聚合、每产出链一次并统一随机取整。requiredTool/minimumTier 是专精加成参考，不是普通采矿资格。
 
 回归：`item_runtime/{shell_final_configuration,initial_animator_activation,single_sprite_animation,matter_transition_scan}`。

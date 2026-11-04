@@ -6,7 +6,7 @@ using UnityEngine;
 /// 通用燃料交互模块：提供面板入口、库存投料和火种点燃。
 /// 只协调燃料、燃烧和可选建筑模块，不包含任何具体物品语义。
 /// </summary>
-public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDependencyBinder
+public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDependencyBinder, IInventory
 {
     #region 数据与依赖
 
@@ -14,6 +14,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     private const float FuelEpsilon = 0.01f;
 
     public Ex_ModData_MemoryPackable ModData = new() { ID = ModuleId };
+    public Inventory IgnitionInventory = new() { Data = MachineInventory.NewData("火种", 1) };
 
     [Tooltip("世界中允许玩家打开燃料面板的交互距离。")]
     public float reach = 2f;
@@ -35,7 +36,8 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     private Mod_Building building;
 
     public override string CanonicalModuleId => ModuleId;
-    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    public override float FixedTickInterval => 1f;
 
     public override ModuleData _Data
     {
@@ -65,6 +67,13 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     protected override void OnLoad()
     {
         ValidateDependencies();
+        IgnitionInventory.item = item;
+        InventoryModuleDataPersistence.TryRestore(IgnitionInventory,
+            InventoryModuleDataPersistence.TryRead(ModData), "火种");
+        IgnitionInventory.InitData();
+        IgnitionInventory.RuntimeAccessGuard = () => false;
+        IgnitionInventory.Data.SetItemAcceptancePolicy((source, _) => IsIgnitionSource(source));
+        IgnitionInventory.Data.Event_OnDataChanged += HandleIgnitionInventoryChanged;
         item.OnAct -= Act;
         item.OnAct += Act;
         combustion.Changed -= HandleStateChanged;
@@ -73,6 +82,9 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
 
     protected override void OnSave()
     {
+        var saved = new Inventory_ModuleData { ID = ModData.ID, Name = ModData.Name };
+        InventoryModuleDataPersistence.Capture(saved, "火种", IgnitionInventory);
+        InventoryModuleDataPersistence.Write(ModData, saved);
     }
 
     protected override void OnUnload()
@@ -81,7 +93,26 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
             item.OnAct -= Act;
         if (combustion != null)
             combustion.Changed -= HandleStateChanged;
+        IgnitionInventory.Data.Event_OnDataChanged -= HandleIgnitionInventoryChanged;
+        IgnitionInventory.UnbindRuntimeDataEvents();
+        IgnitionInventory.RuntimeAccessGuard = () => false;
+        IgnitionInventory.DefaultTarget_Inventory = null;
         Changed = null;
+    }
+
+    public override void ModUpdate(float deltaTime)
+    {
+        if (GameNetwork.HasStateAuthority)
+            IgnitionInventory.ModUpdate(deltaTime);
+    }
+
+    public Inventory GetDefaultTargetInventory() => IgnitionInventory;
+
+    private void HandleIgnitionInventoryChanged(ItemSlot _)
+    {
+        Save();
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        Changed?.Invoke();
     }
 
     public override void Act()
@@ -106,7 +137,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
 
     public bool CanOperate(Item actor)
     {
-        if (!GameNetwork.HasStateAuthority || actor == null || actor.DestructionHandled ||
+        if (!IsRuntimeLoaded || !GameNetwork.HasStateAuthority || actor == null || actor.DestructionHandled ||
             item == null || item.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
         {
@@ -136,7 +167,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     #region 库存投料
 
     /// <summary>
-    /// 熄灭时火种优先负责点火；其它带 Mod_Fuel 的物品按自身燃料值补充燃料。
+    /// 投料区只补充燃料；火种存入独立库存并由点燃按钮消费。
     /// 每次只消费一件，并通过来源库存事务扣除。
     /// </summary>
     public bool TryFeedFromInventoryItem(ItemData source, Item actor, float maximumItemAmount)
@@ -153,48 +184,10 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         if (sourceSlot?.itemData?.Stack == null || sourceSlot.itemData.Stack.Amount < 1f)
             return false;
 
-        bool ignitionSource = IsIgnitionSource(source);
         bool taggedFuel = source.Tags?.ContainsTag(Tag.CombustionFuel) == true;
         FuelData sourceFuel = null;
-        bool hasFuelData = (taggedFuel || ignitionSource) &&
+        bool hasFuelData = taggedFuel && !IsIgnitionSource(source) &&
                            Mod_Fuel.TryResolveItemData(source, out sourceFuel);
-
-        if (!combustion.IsBurning && ignitionSource)
-        {
-            if (!combustion.CanCombustNow())
-            {
-                ItemActionFeedback.Show(actor, "氧气不足 5%，无法点火。");
-                return false;
-            }
-            float starterFuel = 0f;
-            if (!fuel.HasFuel())
-            {
-                if (!hasFuelData || sourceFuel.Fuel.x <= FuelEpsilon)
-                {
-                    ItemActionFeedback.Show(actor, "没有燃料，火种无法点燃。");
-                    return false;
-                }
-
-                starterFuel = Mathf.Min(
-                    Mathf.Max(0f, ignitionFuelValueOverride),
-                    Mathf.Max(0f, sourceFuel.Fuel.x));
-                if (starterFuel <= FuelEpsilon)
-                    return false;
-            }
-
-            if (!inventory.Data.TryConsumeFromSlot(sourceSlot, 1, out _))
-                return false;
-
-            if (starterFuel > FuelEpsilon)
-                fuel.AddFuel(starterFuel);
-            fuel.Save();
-            if (!combustion.Ignite())
-                return false;
-
-            ItemActionFeedback.Show(actor, "已重新点燃。");
-            Changed?.Invoke();
-            return true;
-        }
 
         if (!hasFuelData || sourceFuel.Fuel.x <= FuelEpsilon)
         {
@@ -217,6 +210,44 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         combustion.NotifyFuelChanged(notifyNetwork: true);
         ItemActionFeedback.Show(actor, "已补充燃料。");
         Changed?.Invoke();
+        return true;
+    }
+
+    // 点火只消费槽内一份火种，熄灭保留燃料和其余火种。
+    public bool TryIgniteFromStoredTinder(Item actor)
+    {
+        if (!CanOperate(actor) || IsBurning || MachineInventory.IsBeingDragged(IgnitionInventory))
+            return false;
+        ItemSlot slot = IgnitionInventory.Data.GetItemSlot(0);
+        ItemData source = slot.itemData;
+        if (!IsIgnitionSource(source) || source.Stack.Amount < 1f)
+            return false;
+        if (!combustion.CanCombustNow())
+        {
+            ItemActionFeedback.Show(actor, "氧气不足 5%，无法点火。");
+            return false;
+        }
+
+        float starterFuel = 0f;
+        if (!fuel.HasFuel())
+        {
+            if (!Mod_Fuel.TryResolveItemData(source, out FuelData sourceFuel) || sourceFuel.Fuel.x <= FuelEpsilon)
+                return false;
+            starterFuel = Mathf.Min(Mathf.Max(0f, ignitionFuelValueOverride), sourceFuel.Fuel.x);
+            if (starterFuel <= FuelEpsilon)
+                return false;
+        }
+        if (!IgnitionInventory.Data.TryConsumeFromSlot(slot, 1, out _))
+            return false;
+        fuel.AddFuel(starterFuel);
+        return combustion.Ignite();
+    }
+
+    public bool TryExtinguish(Item actor)
+    {
+        if (!CanOperate(actor) || !IsBurning)
+            return false;
+        combustion.Extinguish();
         return true;
     }
 

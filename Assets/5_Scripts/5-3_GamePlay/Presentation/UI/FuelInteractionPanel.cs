@@ -21,6 +21,9 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
     private TMP_Text hint;
     private Slider fuelBar;
     private RectTransform inputDropZone;
+    private ItemSlot_UI ignitionSlot;
+    private Button igniteButton;
+    private Button extinguishButton;
     private Mod_FuelInteraction interaction;
     private Item actor;
     private float nextRefresh;
@@ -49,6 +52,12 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
         current.interaction = target;
         current.actor = owner;
         target.Changed += current.Refresh;
+        Inventory tinder = target.IgnitionInventory;
+        tinder.RuntimeAccessGuard = () => current != null && current.panel.IsOpen() &&
+            current.interaction == target && target.CanOperate(owner);
+        tinder.DefaultTarget_Inventory = owner.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        tinder.BindSlotUI(current.ignitionSlot, 0);
+        tinder.SyncData();
 
         BuildingPanelActions buildingActions = current.GetComponent<BuildingPanelActions>();
         if (buildingActions == null)
@@ -58,6 +67,7 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
         // 交给 UIManager 按当前面板层级处理返回，不单独维护 ESC 状态。
         current.panel.PrepareForGameplayWindow();
         current.panel.Open();
+        tinder.SyncQuickTransferTarget(current.panel);
         current.Refresh();
     }
 
@@ -69,6 +79,11 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
         hint = panel.GetText("说明文本");
         fuelBar = FindNamedComponent<Slider>("燃料进度");
         inputDropZone = FindNamedComponent<RectTransform>("燃料输入槽");
+        ignitionSlot = FindNamedComponent<ItemSlot_UI>("火种插槽");
+        igniteButton = panel.GetButton("点燃按钮");
+        extinguishButton = panel.GetButton("熄灭按钮");
+        igniteButton.onClick.AddListener(() => interaction?.TryIgniteFromStoredTinder(actor));
+        extinguishButton.onClick.AddListener(() => interaction?.TryExtinguish(actor));
 
         panel.GetButton("关闭按钮").onClick.AddListener(Close);
         panel.Closed += ClearTarget;
@@ -143,9 +158,13 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
             interaction.CurrentFuel,
             interaction.MaxFuel);
         hint.text = FlatWorldLocalizationService.GetUiText(
-            "拖入燃料补充燃料；熄灭后拖入火种可重新点燃。");
+            "放入火种后点击点燃；拖入燃料可补充燃料。");
 
         fuelBar.SetValueWithoutNotify(interaction.FuelRatio);
+        MechanicalPanelView.SetButtonCaption(igniteButton, "点燃");
+        MechanicalPanelView.SetButtonCaption(extinguishButton, "熄灭");
+        igniteButton.gameObject.SetActive(!interaction.IsBurning);
+        extinguishButton.gameObject.SetActive(interaction.IsBurning);
     }
 
     private void Close() => panel?.Close();
@@ -153,7 +172,15 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
     private void ClearTarget()
     {
         if (interaction != null)
+        {
             interaction.Changed -= Refresh;
+            Inventory tinder = interaction.IgnitionInventory;
+            ignitionSlot.ClearInventoryBinding(tinder);
+            tinder.itemSlot_UI.Clear();
+            tinder.DefaultTarget_Inventory = null;
+            tinder.SyncQuickTransferTarget(panel);
+            tinder.RuntimeAccessGuard = () => false;
+        }
         interaction = null;
         actor = null;
     }

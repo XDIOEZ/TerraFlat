@@ -82,7 +82,7 @@ public static class PortableBuildingPanelBuilder
     {
         Configure(root, FindButton(root, "关闭按钮"),
             root.transform.Find("设置对话框/操作列表"),
-            new Vector2(180f, 64f), null);
+            new Vector2(160f, 64f), null);
         root.GetComponent<Image>().raycastTarget = false;
         root.transform.Find("设置对话框").GetComponent<Image>().raycastTarget = false;
     }

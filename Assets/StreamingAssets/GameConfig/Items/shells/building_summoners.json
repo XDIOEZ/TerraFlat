@@ -1918,7 +1918,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"],\"CraftingMaterials\":{\"Ore_Coal\":1,\"Stick_Wood\":1}}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\",\"Mod_FuelInteraction\"],\"CraftingMaterials\":{\"Ore_Coal\":1,\"Stick_Wood\":1}}",
             "Type": 0
           },
           "parameters": {

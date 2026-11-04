@@ -1,3 +1,23 @@
+test.system("item_runtime", "torch_ignition", {}, function(data)
+    for _, config in ipairs(data.configurations) do
+        assert(not config.startsBurning, config.id .. " 新火把没有默认熄灭")
+        local shared = {}
+        for _, id in ipairs(config.sharedModules) do shared[id] = true end
+        assert(shared["燃料模块"] and shared.Mod_Combustion and shared.Mod_FuelInteraction,
+            config.id .. " 放置或拆回丢失燃料、燃烧状态或火种库存")
+    end
+    assert(data.emptyRejected and data.fuelRejected and data.insertionStayedOut,
+        "火种槽接受了普通燃料，或无需点击便已点火")
+    assert(data.ignited and data.afterIgnite == 2 and data.duplicateRejected,
+        "显式点火没有恰好消耗一份火种，或重复点火重复扣料")
+    assert(data.extinguished and data.retainedFuel == 100,
+        "手动熄灭没有改变状态或误清剩余燃料")
+    assert(data.oxygenRejected and data.afterOxygenFailure == 2,
+        "缺氧点火失败仍然扣除火种")
+    assert(data.unloadedRejected and data.restoredAmount == 2,
+        "卸载后仍可操作，或火种槽保存恢复丢失物品")
+end, "火把默认熄灭、火种单槽、显式点火熄灭与库存恢复")
+
 -- 分包以后继续沿正式目录校验跨文件继承，避免公共模板改变未声明的姿态或覆盖食物配方。
 test.system("item_runtime", "basic_item_catalog", {
     ids = {"Bone", "Leaf", "Cotton", "Apple", "Rice", "CookedRice", "Meat", "Ore_Iron", "SteelNail"}

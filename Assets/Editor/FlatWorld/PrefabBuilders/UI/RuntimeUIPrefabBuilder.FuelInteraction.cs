@@ -20,7 +20,7 @@ public static partial class RuntimeUIPrefabBuilder
         SyncFuelInteractionUiTexts();
     }
 
-    /// <summary>使用通用进度条和按钮构成投料面板；投料槽只负责拖放命中，不持有库存。</summary>
+    /// <summary>燃料投料区负责补料，公共物品槽绑定持久火种库存。</summary>
     private static GameObject BuildFuelInteraction()
     {
         GameObject root = CreateModalPanelRoot(FuelInteractionPanel.PrefabKey, new Vector2(620f, 520f));
@@ -29,7 +29,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         CreateText("标题", content, "燃料", 28f, Amber)
             .gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
-        CreateText("燃料状态", content, "燃烧中　燃料 1440 / 1440 秒", 22f, Cream)
+        CreateText("燃料状态", content, "已熄灭　燃料 1440 / 1440 秒", 22f, Cream)
             .gameObject.AddComponent<LayoutElement>().preferredHeight = 56f;
 
         Slider fuelBar = InstantiateSharedControl<Slider>("UI_ProgressBar", "燃料进度", content);
@@ -57,12 +57,17 @@ public static partial class RuntimeUIPrefabBuilder
         inputImage.raycastTarget = true;
         AddOutline(inputImage, new Color(1f, 1f, 1f, 0.16f));
 
-        TextMeshProUGUI slotText = CreateText("输入槽提示", input.transform, "燃料 / 火种", 18f, Cream);
+        TextMeshProUGUI slotText = CreateText("输入槽提示", input.transform, "燃料", 18f, Cream);
         Stretch(slotText.rectTransform);
         slotText.alignment = TextAlignmentOptions.Center;
         slotText.raycastTarget = false;
 
-        CreateSettingsHint(content, "拖入燃料补充燃料；熄灭后拖入火种可重新点燃。", 58f);
+        GameObject slotPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab");
+        GameObject tinderSlot = (GameObject)PrefabUtility.InstantiatePrefab(slotPrefab, slotRow.transform);
+        tinderSlot.name = "火种插槽";
+        ((RectTransform)tinderSlot.transform).sizeDelta = new Vector2(128f, 128f);
+        CreateSettingsHint(content, "放入火种后点击点燃；拖入燃料可补充燃料。", 58f);
 
         GameObject actions = CreateUIObject("操作列表", content);
         actions.AddComponent<LayoutElement>().preferredHeight = 76f;
@@ -73,7 +78,9 @@ public static partial class RuntimeUIPrefabBuilder
         actionsLayout.childControlHeight = true;
         actionsLayout.childForceExpandWidth = false;
         actionsLayout.childForceExpandHeight = false;
-        CreateButton("关闭按钮", actions.transform, "关闭", 180f, 64f, false);
+        CreateButton("点燃按钮", actions.transform, "点燃", 160f, 64f, false);
+        CreateButton("熄灭按钮", actions.transform, "熄灭", 160f, 64f, false).gameObject.SetActive(false);
+        CreateButton("关闭按钮", actions.transform, "关闭", 160f, 64f, false);
 
         PortableBuildingPanelBuilder.ConfigureFuelInteraction(root);
         root.AddComponent<FuelInteractionPanel>();
@@ -87,8 +94,10 @@ public static partial class RuntimeUIPrefabBuilder
             "燃烧中",
             "已熄灭",
             "{0}　燃料 {1:0} / {2:0} 秒",
-            "燃料 / 火种",
-            "拖入燃料补充燃料；熄灭后拖入火种可重新点燃。",
+            "火种",
+            "点燃",
+            "熄灭",
+            "放入火种后点击点燃；拖入燃料可补充燃料。",
             "没有燃料，火种无法点燃。",
             "已重新点燃。",
             "这个物品不能作为燃料。",

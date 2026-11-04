@@ -8711,6 +8711,22 @@ MonoBehaviour:
     m_Key: ui.text.1139A35F
     m_Metadata:
       m_Items: []
+  - m_Id: 28103100000100002
+    m_Key: ui.text.AABDC065
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100003
+    m_Key: ui.text.C3B9B5D5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100004
+    m_Key: ui.text.2677CF9A
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100005
+    m_Key: ui.text.DC1C5C45
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

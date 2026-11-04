@@ -1,5 +1,10 @@
 {
   "ui": {
+    "火种": "Tinder",
+    "点燃": "Ignite",
+    "熄灭": "Extinguish",
+    "放入火种后点击点燃；拖入燃料可补充燃料。": "Place tinder in the slot and click Ignite. Drag fuel to replenish it.",
+
     "保存并退出": "Save & Exit",
     "保存成功": "Saved successfully",
     "液网温度 {0:0.##}℃ · 总液量 {1:0.###} L": "Liquid network {0:0.##}°C · Total {1:0.###} L",

@@ -9083,6 +9083,22 @@ MonoBehaviour:
     m_Localized: No matching log entries.
     m_Metadata:
       m_Items: []
+  - m_Id: 28103100000100002
+    m_Localized: "Tinder"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100003
+    m_Localized: "Ignite"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100004
+    m_Localized: "Extinguish"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28103100000100005
+    m_Localized: "Place tinder in the slot and click Ignite. Drag fuel to replenish it."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
