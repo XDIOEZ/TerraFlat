@@ -9039,6 +9039,42 @@ MonoBehaviour:
       automatically.'
     m_Metadata:
       m_Items: []
+  - m_Id: 14485975177617408
+    m_Localized: Collapse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485976993751040
+    m_Localized: Logs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485978583392256
+    m_Localized: Errors
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641664
+    m_Localized: Search messages and stack traces...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641665
+    m_Localized: Log Entries
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641666
+    m_Localized: Select an entry to inspect its message and stack trace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641667
+    m_Localized: Details / Stack Trace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641668
+    m_Localized: Select a log entry to see its message and stack trace.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14485979430641669
+    m_Localized: No matching log entries.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

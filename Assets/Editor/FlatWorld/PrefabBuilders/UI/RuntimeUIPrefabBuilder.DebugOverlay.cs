@@ -12,6 +12,11 @@ public static partial class RuntimeUIPrefabBuilder
     /// <summary>构建独立运行的日志悬浮窗，折叠入口和展开页都约束在设备安全区内。</summary>
     private static GameObject BuildRuntimeDebugOverlay()
     {
+        // 先校验全部双语文案，避免构建中断后留下临时 Canvas。
+        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
+            "折叠", "日志", "警告", "错误", "搜索日志、堆栈...", "日志列表",
+            "选择日志查看完整消息与调用堆栈", "详细信息 / Stack Trace",
+            "选择上方日志以查看消息和调用堆栈。", "没有匹配的日志。");
         GameObject root = new GameObject(
             RuntimeUIPrefabKeys.RuntimeDebugOverlay,
             typeof(RectTransform),
@@ -58,89 +63,160 @@ public static partial class RuntimeUIPrefabBuilder
         shadow.effectColor = new Color(0f, 0f, 0f, 0.7f);
         shadow.effectDistance = new Vector2(6f, -8f);
 
-        // 独立背景、标题、统计、过滤、正文、底部操作形成清晰的信息层级。
-        Image headerBackground = CreateImage("日志顶部栏背景", panel.transform, new Color(0.09f, 0.12f, 0.16f, 1f));
-        SetTopLeft(headerBackground.rectTransform, 2f, 2f, 956f, 92f);
+        // 仿 Unity Console：紧凑工具栏、可虚拟化日志列表、选中消息的堆栈详情。
+        Image headerBackground = CreateImage("日志顶部栏背景", panel.transform,
+            new Color(0.11f, 0.12f, 0.135f, 1f));
+        SetTopLeft(headerBackground.rectTransform, 2f, 2f, 956f, 62f);
         headerBackground.raycastTarget = false;
 
-        Image headerAccent = CreateImage("日志标题AccentRail", panel.transform, Teal);
-        SetTopLeft(headerAccent.rectTransform, 26f, 24f, 4f, 52f);
-        headerAccent.raycastTarget = false;
-
-        TextMeshProUGUI eyebrow = CreateText(
-            "诊断英文标识", panel.transform, "TERRAFLAT  /  DEVELOPER CONSOLE", 12f, Muted);
-        SetTopLeft(eyebrow.rectTransform, 43f, 16f, 405f, 24f);
-        eyebrow.enableWordWrapping = false;
-
-        TextMeshProUGUI title = CreateText("调试页标题", panel.transform, "运行日志", 27f, Cream);
+        TextMeshProUGUI title = CreateText("调试页标题", panel.transform, "Console", 23f, Cream);
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
-        SetTopLeft(title.rectTransform, 43f, 42f, 240f, 38f);
+        SetTopLeft(title.rectTransform, 26f, 10f, 154f, 44f);
 
-        Image liveDot = CreateImage("实时指示灯", panel.transform, Teal);
-        SetTopLeft(liveDot.rectTransform, 278f, 54f, 8f, 8f);
-        liveDot.raycastTarget = false;
-        TextMeshProUGUI liveLabel = CreateText("运行状态", panel.transform, "LIVE", 12f, Muted);
-        SetTopLeft(liveLabel.rectTransform, 292f, 45f, 72f, 27f);
-
-        Button openGmButton = CreateButton("打开GM面板按钮", panel.transform, "GM 控制台", 150f, 44f, false);
-        SetTopRight(openGmButton.GetComponent<RectTransform>(), 123f, 26f, 150f, 44f);
-        Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 88f, 44f, false);
-        SetTopRight(closeButton.GetComponent<RectTransform>(), 22f, 26f, 88f, 44f);
-
-        Image headerDivider = CreateImage("日志页头分隔线", panel.transform, Border);
-        headerDivider.raycastTarget = false;
-        SetTopLeft(headerDivider.rectTransform, 24f, 94f, 912f, 1f);
-
-        Image summaryBackground = CreateImage("日志统计栏背景", panel.transform,
-            new Color(0.07f, 0.10f, 0.13f, 0.95f));
-        SetTopLeft(summaryBackground.rectTransform, 24f, 104f, 912f, 56f);
-        summaryBackground.raycastTarget = false;
-
-        TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform, "总计 0 条     警告 0     错误 0", 17f, Cream);
+        TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform,
+            "总计 0 条     警告 0     错误 0", 14f, Muted);
         summary.enableWordWrapping = false;
         summary.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(summary.rectTransform, 42f, 115f, 560f, 34f);
+        SetTopLeft(summary.rectTransform, 207f, 15f, 466f, 36f);
 
-        TextMeshProUGUI latestLabel = CreateText("日志统计说明", panel.transform, "内存日志  ·  实时更新", 13f, Muted);
-        latestLabel.alignment = TextAlignmentOptions.MidlineRight;
-        SetTopLeft(latestLabel.rectTransform, 658f, 116f, 254f, 32f);
+        Button openGmButton = CreateButton("打开GM面板按钮", panel.transform, "GM", 92f, 38f, false);
+        SetTopRight(openGmButton.GetComponent<RectTransform>(), 120f, 13f, 92f, 38f);
+        Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 84f, 38f, false);
+        SetTopRight(closeButton.GetComponent<RectTransform>(), 24f, 13f, 84f, 38f);
 
-        TextMeshProUGUI filterTitle = CreateText("类型筛选说明", panel.transform, "筛选 / FILTER", 14f, Muted);
-        SetTopLeft(filterTitle.rectTransform, 29f, 182f, 132f, 35f);
-        Toggle ordinaryLogs = CreateLogFilterToggle(panel.transform, "普通日志过滤", "普通日志", 169f, Teal);
-        Toggle warningLogs = CreateLogFilterToggle(panel.transform, "警告日志过滤", "警告日志", 377f, Amber);
-        Toggle errorLogs = CreateLogFilterToggle(panel.transform, "错误日志过滤", "错误日志", 585f,
-            new Color(0.93f, 0.46f, 0.42f, 1f));
+        Image toolbarBackground = CreateImage("控制台工具栏背景", panel.transform,
+            new Color(0.085f, 0.095f, 0.11f, 1f));
+        SetTopLeft(toolbarBackground.rectTransform, 2f, 65f, 956f, 49f);
+        toolbarBackground.raycastTarget = false;
 
-        TextMeshProUGUI streamTitle = CreateText("日志流标题", panel.transform, "LOG STREAM   /   日志详情", 14f, Cream);
-        SetTopLeft(streamTitle.rectTransform, 28f, 238f, 390f, 27f);
-        TextMeshProUGUI streamHint = CreateText("日志流说明", panel.transform, "最新日志在下方  ·  可滚动查看", 12f, Muted);
-        streamHint.alignment = TextAlignmentOptions.MidlineRight;
-        SetTopLeft(streamHint.rectTransform, 647f, 238f, 282f, 27f);
+        Button clearButton = CreateButton("清空日志按钮", panel.transform, "清空", 94f, 34f, false);
+        SetTopLeft(clearButton.GetComponent<RectTransform>(), 26f, 73f, 94f, 34f);
+        Toggle collapseToggle = CreateConsoleToolbarToggle(
+            panel.transform, "折叠重复日志", "折叠", 137f, 168f, Muted, false);
+        Toggle ordinaryLogs = CreateConsoleToolbarToggle(
+            panel.transform, "普通日志过滤", "日志", 580f, 110f, new Color(0.63f, 0.74f, 0.82f, 1f), true);
+        Toggle warningLogs = CreateConsoleToolbarToggle(
+            panel.transform, "警告日志过滤", "警告", 698f, 110f, Amber, true);
+        Toggle errorLogs = CreateConsoleToolbarToggle(
+            panel.transform, "错误日志过滤", "错误", 816f, 116f,
+            new Color(0.97f, 0.39f, 0.39f, 1f), true);
 
-        GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ItemStepScrollRect));
-        RectTransform scrollRootRect = scrollRoot.GetComponent<RectTransform>();
-        scrollRootRect.anchorMin = Vector2.zero;
-        scrollRootRect.anchorMax = Vector2.one;
-        scrollRootRect.offsetMin = new Vector2(24f, 110f);
-        scrollRootRect.offsetMax = new Vector2(-24f, -270f);
+        TMP_InputField searchInput = CreateInputField("日志搜索框", panel.transform, "搜索日志、堆栈...");
+        searchInput.lineType = TMP_InputField.LineType.SingleLine;
+        SetTopLeft(searchInput.GetComponent<RectTransform>(), 24f, 123f, 912f, 39f);
+        if (searchInput.placeholder is TMP_Text searchPlaceholder)
+            FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { searchPlaceholder });
+
+        TextMeshProUGUI listTitle = CreateText(
+            "日志列表标题", panel.transform, "日志列表", 13f, Muted);
+        SetTopLeft(listTitle.rectTransform, 27f, 170f, 180f, 22f);
+        TextMeshProUGUI listHint = CreateText(
+            "日志列表提示", panel.transform, "选择日志查看完整消息与调用堆栈", 12f, Muted);
+        listHint.alignment = TextAlignmentOptions.MidlineRight;
+        SetTopLeft(listHint.rectTransform, 576f, 170f, 352f, 22f);
+        FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { listTitle, listHint });
+
+        GameObject listRoot = CreateUIObject("控制台日志列表", panel.transform,
+            typeof(Image), typeof(ItemStepScrollRect));
+        SetTopLeft(listRoot.GetComponent<RectTransform>(), 24f, 196f, 912f, 260f);
+        Image listBackground = listRoot.GetComponent<Image>();
+        listBackground.color = new Color(0.11f, 0.12f, 0.135f, 1f);
+        listBackground.raycastTarget = true;
+        AddOutline(listBackground, Border);
+
+        GameObject listViewport = CreateUIObject("Viewport", listRoot.transform, typeof(RectMask2D));
+        RectTransform listViewportRect = listViewport.GetComponent<RectTransform>();
+        Stretch(listViewportRect);
+        listViewportRect.offsetMin = new Vector2(2f, 2f);
+        listViewportRect.offsetMax = new Vector2(-2f, -2f);
+
+        GameObject listContent = CreateUIObject("日志列表内容", listViewport.transform);
+        RectTransform listContentRect = listContent.GetComponent<RectTransform>();
+        listContentRect.anchorMin = new Vector2(0f, 1f);
+        listContentRect.anchorMax = Vector2.one;
+        listContentRect.pivot = new Vector2(0.5f, 1f);
+        listContentRect.anchoredPosition = Vector2.zero;
+        listContentRect.sizeDelta = new Vector2(0f, 1f);
+
+        GameObject rowTemplate = CreateUIObject("日志行模板", listContent.transform, typeof(Image), typeof(Button));
+        RectTransform rowRect = rowTemplate.GetComponent<RectTransform>();
+        rowRect.anchorMin = new Vector2(0f, 1f);
+        rowRect.anchorMax = Vector2.one;
+        rowRect.pivot = new Vector2(0.5f, 1f);
+        rowRect.anchoredPosition = Vector2.zero;
+        rowRect.sizeDelta = new Vector2(0f, 34f);
+        Image rowBackground = rowTemplate.GetComponent<Image>();
+        rowBackground.color = new Color(0.115f, 0.125f, 0.14f, 1f);
+        Button rowButton = rowTemplate.GetComponent<Button>();
+        rowButton.targetGraphic = rowBackground;
+        rowButton.navigation = new Navigation { mode = Navigation.Mode.None };
+        ColorBlock rowColors = rowButton.colors;
+        rowColors.normalColor = Color.white;
+        rowColors.highlightedColor = new Color(1.24f, 1.24f, 1.24f, 1f);
+        rowColors.pressedColor = new Color(0.8f, 0.9f, 1f, 1f);
+        rowButton.colors = rowColors;
+
+        Image rowLevel = CreateImage("级别标记", rowTemplate.transform, Teal);
+        SetTopLeft(rowLevel.rectTransform, 9f, 7f, 4f, 20f);
+        rowLevel.raycastTarget = false;
+        TextMeshProUGUI rowSummary = CreateText("日志摘要", rowTemplate.transform,
+            "日志消息", 14f, Cream);
+        SetTopLeft(rowSummary.rectTransform, 23f, 4f, 795f, 26f);
+        rowSummary.alignment = TextAlignmentOptions.MidlineLeft;
+        rowSummary.enableWordWrapping = false;
+        rowSummary.overflowMode = TextOverflowModes.Ellipsis;
+        rowSummary.richText = false;
+        rowSummary.raycastTarget = false;
+        TextMeshProUGUI rowRepeat = CreateText("重复计数", rowTemplate.transform, "", 13f, Muted);
+        SetTopRight(rowRepeat.rectTransform, 15f, 4f, 74f, 26f);
+        rowRepeat.alignment = TextAlignmentOptions.MidlineRight;
+        rowRepeat.enableWordWrapping = false;
+        rowRepeat.raycastTarget = false;
+        rowTemplate.SetActive(false);
+
+        TextMeshProUGUI emptyLabel = CreateText("日志空状态", listViewport.transform,
+            "暂无运行日志。", 15f, Muted);
+        Stretch(emptyLabel.rectTransform);
+        emptyLabel.alignment = TextAlignmentOptions.Center;
+        emptyLabel.raycastTarget = false;
+        FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { emptyLabel });
+
+        ScrollRect listScrollRect = listRoot.GetComponent<ScrollRect>();
+        listScrollRect.horizontal = false;
+        listScrollRect.vertical = true;
+        listScrollRect.movementType = ScrollRect.MovementType.Clamped;
+        listScrollRect.scrollSensitivity = 34f;
+        listScrollRect.viewport = listViewportRect;
+        listScrollRect.content = listContentRect;
+
+        Image splitLine = CreateImage("日志详情分隔线", panel.transform, Border);
+        splitLine.raycastTarget = false;
+        SetTopLeft(splitLine.rectTransform, 24f, 464f, 912f, 1f);
+        TextMeshProUGUI detailTitle = CreateText("日志详情标题", panel.transform,
+            "详细信息 / Stack Trace", 13f, Muted);
+        SetTopLeft(detailTitle.rectTransform, 27f, 470f, 400f, 24f);
+        FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { detailTitle });
+
+        GameObject scrollRoot = CreateUIObject("日志详情滚动区", panel.transform,
+            typeof(Image), typeof(ItemStepScrollRect));
+        SetTopLeft(scrollRoot.GetComponent<RectTransform>(), 24f, 499f, 912f, 170f);
         Image scrollBackground = scrollRoot.GetComponent<Image>();
-        scrollBackground.color = new Color(0.025f, 0.036f, 0.05f, 0.97f);
+        scrollBackground.color = new Color(0.075f, 0.085f, 0.10f, 1f);
         scrollBackground.raycastTarget = true;
         AddOutline(scrollBackground, Border);
 
         GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
         RectTransform viewportRect = viewport.GetComponent<RectTransform>();
         Stretch(viewportRect);
-        viewportRect.offsetMin = new Vector2(16f, 14f);
-        viewportRect.offsetMax = new Vector2(-16f, -14f);
+        viewportRect.offsetMin = new Vector2(12f, 8f);
+        viewportRect.offsetMax = new Vector2(-12f, -8f);
 
         TextMeshProUGUI logText = CreateText(
             "日志正文",
             viewport.transform,
-            "暂无运行日志。",
-            15f,
+            "选择上方日志以查看消息和调用堆栈。",
+            14f,
             new Color(0.84f, 0.87f, 0.90f, 1f));
         RectTransform logRect = logText.rectTransform;
         logRect.anchorMin = new Vector2(0f, 1f);
@@ -153,7 +229,7 @@ public static partial class RuntimeUIPrefabBuilder
         logText.enableAutoSizing = false;
         logText.overflowMode = TextOverflowModes.Overflow;
         logText.richText = false;
-        logText.lineSpacing = 5f;
+        logText.lineSpacing = 3f;
         ContentSizeFitter contentFitter = logText.gameObject.AddComponent<ContentSizeFitter>();
         contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
@@ -168,7 +244,7 @@ public static partial class RuntimeUIPrefabBuilder
         scrollRect.content = logRect;
 
         Image footerBackground = CreateImage("日志操作区背景", panel.transform,
-            new Color(0.075f, 0.10f, 0.135f, 1f));
+            new Color(0.085f, 0.095f, 0.11f, 1f));
         footerBackground.raycastTarget = false;
         footerBackground.rectTransform.anchorMin = new Vector2(0f, 0f);
         footerBackground.rectTransform.anchorMax = new Vector2(1f, 0f);
@@ -199,8 +275,6 @@ public static partial class RuntimeUIPrefabBuilder
         copyEntryCountInput.characterLimit = 3;
         SetBottomLeft(copyEntryCountInput.GetComponent<RectTransform>(), 566f, 24f, 78f, 48f);
 
-        Button clearButton = CreateButton("清空日志按钮", panel.transform, "清空", 112f, 48f, false);
-        SetBottomRight(clearButton.GetComponent<RectTransform>(), 182f, 24f, 112f, 48f);
         Button copyButton = CreateButton("复制日志按钮", panel.transform, "复制日志", 146f, 48f, true);
         SetBottomRight(copyButton.GetComponent<RectTransform>(), 24f, 24f, 146f, 48f);
         SetButtonLabelSize(copyButton, 16f);
@@ -244,6 +318,12 @@ public static partial class RuntimeUIPrefabBuilder
         serializedController.FindProperty("logText").objectReferenceValue = logText;
         serializedController.FindProperty("statusText").objectReferenceValue = status;
         serializedController.FindProperty("logScrollRect").objectReferenceValue = scrollRect;
+        serializedController.FindProperty("consoleListScrollRect").objectReferenceValue = listScrollRect;
+        serializedController.FindProperty("consoleListContent").objectReferenceValue = listContentRect;
+        serializedController.FindProperty("consoleRowTemplate").objectReferenceValue = rowTemplate;
+        serializedController.FindProperty("emptyListLabel").objectReferenceValue = emptyLabel;
+        serializedController.FindProperty("searchInput").objectReferenceValue = searchInput;
+        serializedController.FindProperty("collapseToggle").objectReferenceValue = collapseToggle;
         serializedController.FindProperty("copyEntryCountInput").objectReferenceValue = copyEntryCountInput;
         serializedController.FindProperty("ordinaryLogsToggle").objectReferenceValue = ordinaryLogs;
         serializedController.FindProperty("warningLogsToggle").objectReferenceValue = warningLogs;
@@ -259,22 +339,23 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>过滤器保持共享 Toggle 的交互和点击范围，彩色侧条帮助识别日志级别。</summary>
-    private static Toggle CreateLogFilterToggle(
-        Transform parent, string name, string caption, float left, Color accentColor)
+    /// <summary>紧凑过滤控件沿用共享 Toggle，级别由左侧色标区分。</summary>
+    private static Toggle CreateConsoleToolbarToggle(
+        Transform parent, string name, string caption, float left, float width, Color accentColor, bool enabled)
     {
-        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(caption);
-        Image filterBackground = CreateImage(name + "背景", parent, new Color(0.085f, 0.112f, 0.15f, 1f));
-        SetTopLeft(filterBackground.rectTransform, left, 174f, 190f, 54f);
+        Image filterBackground = CreateImage(name + "背景", parent, new Color(0.135f, 0.145f, 0.16f, 1f));
+        SetTopLeft(filterBackground.rectTransform, left, 74f, width, 33f);
         filterBackground.raycastTarget = false;
-        Image accentRail = CreateImage(name + "等级AccentRail", parent, accentColor);
-        SetTopLeft(accentRail.rectTransform, left, 180f, 3f, 42f);
+        Image accentRail = CreateImage(name + "等级标记", parent, accentColor);
+        SetTopLeft(accentRail.rectTransform, left, 80f, 3f, 21f);
         accentRail.raycastTarget = false;
         Toggle toggle = CreateToggle(name, parent);
-        SetTopLeft(toggle.GetComponent<RectTransform>(), left + 13f, 183f, 54f, 38f);
-        toggle.SetIsOnWithoutNotify(true);
-        TextMeshProUGUI label = CreateText(name + "标签", parent, caption, 16f, Cream);
-        SetTopLeft(label.rectTransform, left + 75f, 184f, 109f, 36f);
+        SetTopLeft(toggle.GetComponent<RectTransform>(), left + 9f, 78f, 42f, 27f);
+        toggle.SetIsOnWithoutNotify(enabled);
+        TextMeshProUGUI label = CreateText(name + "标签", toggle.transform, caption, 13f, Cream);
+        SetTopLeft(label.rectTransform, 44f, -1f, width - 56f, 29f);
+        label.enableWordWrapping = false;
+        label.raycastTarget = true;
         FlatWorldUIAutoLocalizer.BindStaticTexts(new TMP_Text[] { label });
         return toggle;
     }

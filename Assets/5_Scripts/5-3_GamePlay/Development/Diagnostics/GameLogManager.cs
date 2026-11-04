@@ -54,6 +54,7 @@ public sealed class GameLogManager : MonoBehaviour
     private static int runtimeLogVersion;
     private static int runtimeWarningCount;
     private static int runtimeErrorCount;
+    private static long nextRuntimeEntryId;
 
     #endregion
 
@@ -93,6 +94,50 @@ public sealed class GameLogManager : MonoBehaviour
             total = RuntimeEntries.Count;
             warnings = runtimeWarningCount;
             errors = runtimeErrorCount;
+        }
+    }
+
+    /// <summary>供控制台列表消费的轻量只读视图，详情沿用原有有界磁盘格式。</summary>
+    public readonly struct RuntimeConsoleEntry
+    {
+        public RuntimeConsoleEntry(long id, ulong contentKey, LogType type, string summary, string details, int count)
+        {
+            Id = id;
+            ContentKey = contentKey;
+            Type = type;
+            Summary = summary;
+            Details = details;
+            Count = count;
+        }
+
+        public long Id { get; }
+        public ulong ContentKey { get; }
+        public LogType Type { get; }
+        public string Summary { get; }
+        public string Details { get; }
+        public int Count { get; }
+    }
+
+    /// <summary>按 Unity Console 的过滤、搜索与折叠规则取得一份一致的日志列表。</summary>
+    public static void GetRuntimeConsoleEntries(List<RuntimeConsoleEntry> destination, bool collapse,
+        string search, bool includeLogs = true, bool includeWarnings = true, bool includeErrors = true)
+    {
+        lock (WriteLock)
+        {
+            destination.Clear();
+            if (collapse)
+            {
+                List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock(
+                    includeLogs, includeWarnings, includeErrors, search);
+                foreach (RuntimeLogCopyGroup group in groups)
+                    destination.Add(group.LatestEntry.ToConsoleEntry(group.RepeatCount));
+                return;
+            }
+
+            foreach (RuntimeLogEntry entry in RuntimeEntries)
+                if (MatchesRuntimeLogFilter(entry.Type, includeLogs, includeWarnings, includeErrors) &&
+                    MatchesRuntimeConsoleSearch(entry, search))
+                    destination.Add(entry.ToConsoleEntry(1));
         }
     }
 
@@ -136,12 +181,13 @@ public sealed class GameLogManager : MonoBehaviour
         out int copiedEntries,
         out int collapsedEntries,
         out bool truncated,
-        bool includeLogs = true, bool includeWarnings = true, bool includeErrors = true)
+        bool includeLogs = true, bool includeWarnings = true, bool includeErrors = true,
+        string search = null)
     {
         int boundedEntries = Math.Max(1, Math.Min(maxEntries, MaxRuntimeLogEntries));
         lock (WriteLock)
         {
-            List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock(includeLogs, includeWarnings, includeErrors);
+            List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock(includeLogs, includeWarnings, includeErrors, search);
             copiedEntries = Math.Min(boundedEntries, groups.Count);
             int skippedGroups = groups.Count - copiedEntries;
             truncated = skippedGroups > 0;
@@ -175,13 +221,14 @@ public sealed class GameLogManager : MonoBehaviour
 
     /// <summary>按最后出现顺序合并相同级别、正文和堆栈的日志，供复制快照按槽位截取。</summary>
     private static List<RuntimeLogCopyGroup> BuildRuntimeLogCopyGroupsNoLock(
-        bool includeLogs, bool includeWarnings, bool includeErrors)
+        bool includeLogs, bool includeWarnings, bool includeErrors, string search = null)
     {
         List<RuntimeLogCopyGroup> groups = new List<RuntimeLogCopyGroup>();
         int entryIndex = 0;
         foreach (RuntimeLogEntry entry in RuntimeEntries)
         {
-            if (!MatchesRuntimeLogFilter(entry.Type, includeLogs, includeWarnings, includeErrors))
+            if (!MatchesRuntimeLogFilter(entry.Type, includeLogs, includeWarnings, includeErrors) ||
+                !MatchesRuntimeConsoleSearch(entry, search))
                 continue;
             RuntimeLogCopyGroup matchedGroup = null;
             for (int i = 0; i < groups.Count; i++)
@@ -209,6 +256,12 @@ public sealed class GameLogManager : MonoBehaviour
 
         groups.Sort((left, right) => left.LatestIndex.CompareTo(right.LatestIndex));
         return groups;
+    }
+
+    private static bool MatchesRuntimeConsoleSearch(RuntimeLogEntry entry, string search)
+    {
+        return string.IsNullOrWhiteSpace(search) ||
+               entry.Text.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     /// <summary>查看和复制共享同一类型过滤规则，异常与断言归入错误。</summary>
@@ -269,6 +322,7 @@ public sealed class GameLogManager : MonoBehaviour
             runtimeLogVersion = 0;
             runtimeWarningCount = 0;
             runtimeErrorCount = 0;
+            nextRuntimeEntryId = 0;
         }
 
         Subscribe();
@@ -553,7 +607,8 @@ public sealed class GameLogManager : MonoBehaviour
         string limitedEntry = entry.Length <= MaxRuntimeEntryCharacters
             ? entry
             : entry.Substring(0, MaxRuntimeEntryCharacters) + "\n<单条日志已截断>\n\n";
-        RuntimeLogEntry runtimeEntry = new RuntimeLogEntry(limitedEntry, type, condition, stackTrace);
+        RuntimeLogEntry runtimeEntry = new RuntimeLogEntry(
+            ++nextRuntimeEntryId, limitedEntry, type, condition, stackTrace);
 
         while (RuntimeEntries.Count > 0 &&
                (RuntimeEntries.Count >= MaxRuntimeLogEntries ||
@@ -785,10 +840,12 @@ public sealed class GameLogManager : MonoBehaviour
     private readonly struct RuntimeLogEntry
     {
         /// <summary>创建一条已完成格式化的运行时日志记录。</summary>
-        public RuntimeLogEntry(string text, LogType type, string condition, string stackTrace)
+        public RuntimeLogEntry(long id, string text, LogType type, string condition, string stackTrace)
         {
+            Id = id;
             Text = text ?? string.Empty;
             Type = type;
+            Summary = CreateConsoleSummary(condition);
             ConditionLength = condition?.Length ?? 0;
             StackTraceLength = stackTrace?.Length ?? 0;
             ConditionHash = ComputeContentHash(condition);
@@ -798,6 +855,10 @@ public sealed class GameLogManager : MonoBehaviour
 
         /// <summary>已格式化的日志正文。</summary>
         public string Text { get; }
+
+        public long Id { get; }
+
+        public string Summary { get; }
 
         /// <summary>Unity 日志级别。</summary>
         public LogType Type { get; }
@@ -825,6 +886,26 @@ public sealed class GameLogManager : MonoBehaviour
                    StackTraceLength == other.StackTraceLength &&
                    ConditionHash == other.ConditionHash &&
                    StackTraceHash == other.StackTraceHash;
+        }
+
+        public RuntimeConsoleEntry ToConsoleEntry(int count)
+        {
+            // 内容键在重复日志更新最后出现时间时保持不变，UI 选择不会随刷新跳走。
+            ulong contentKey = ConditionHash ^ (StackTraceHash << 1 | StackTraceHash >> 63) ^
+                               ((ulong)Type * 0x9E3779B97F4A7C15UL);
+            return new RuntimeConsoleEntry(Id, contentKey, Type, Summary, Text, count);
+        }
+
+        private static string CreateConsoleSummary(string condition)
+        {
+            if (string.IsNullOrEmpty(condition))
+                return "<空日志>";
+
+            int length = 0;
+            while (length < condition.Length && length < 220 && condition[length] != '\r' && condition[length] != '\n')
+                length++;
+            return length == condition.Length ? condition :
+                condition.Substring(0, length) + (length == 220 ? "…" : string.Empty);
         }
 
         /// <summary>逐字符计算稳定散列，避免为去重长期保存完整正文和堆栈副本。</summary>

@@ -25,6 +25,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     private const float ToastVisibleSeconds = 2.2f;
     private const float ToastFadeSeconds = 0.3f;
+    private const float ConsoleRowHeight = 34f;
 
     #endregion
 
@@ -86,14 +87,21 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>调试页头部的日志级别摘要。</summary>
     [SerializeField] private TextMeshProUGUI summaryText;
 
-    /// <summary>滚动区域内的日志正文。</summary>
+    /// <summary>选中日志的消息与完整堆栈。</summary>
     [SerializeField] private TextMeshProUGUI logText;
 
     /// <summary>复制、清空等操作的结果反馈。</summary>
     [SerializeField] private TextMeshProUGUI statusText;
 
-    /// <summary>日志正文滚动视图。</summary>
+    /// <summary>选中日志的详情滚动视图。</summary>
     [SerializeField] private ScrollRect logScrollRect;
+
+    [SerializeField] private ScrollRect consoleListScrollRect;
+    [SerializeField] private RectTransform consoleListContent;
+    [SerializeField] private GameObject consoleRowTemplate;
+    [SerializeField] private TextMeshProUGUI emptyListLabel;
+    [SerializeField] private TMP_InputField searchInput;
+    [SerializeField] private Toggle collapseToggle;
 
     /// <summary>玩家输入的最近日志复制条数。</summary>
     [SerializeField] private TMP_InputField copyEntryCountInput;
@@ -125,6 +133,22 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     private float toastVisibleUntil;
     private Vector2 lastPanelBoundsSize;
+    private readonly List<GameLogManager.RuntimeConsoleEntry> consoleEntries = new List<GameLogManager.RuntimeConsoleEntry>();
+    private readonly List<ConsoleRowView> consoleRows = new List<ConsoleRowView>();
+    private long selectedEntryId;
+    private ulong selectedContentKey;
+    private LogType selectedEntryType;
+    private int selectedEntryIndex = -1;
+
+    private sealed class ConsoleRowView
+    {
+        public RectTransform Rect;
+        public Image Background;
+        public Image Level;
+        public TextMeshProUGUI Summary;
+        public TextMeshProUGUI RepeatCount;
+        public int EntryIndex = -1;
+    }
 
     #endregion
 
@@ -169,6 +193,12 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         BindFilter(ordinaryLogsToggle);
         BindFilter(warningLogsToggle);
         BindFilter(errorLogsToggle);
+        BindFilter(collapseToggle);
+        if (searchInput != null)
+        {
+            searchInput.onValueChanged.RemoveListener(HandleSearchChanged);
+            searchInput.onValueChanged.AddListener(HandleSearchChanged);
+        }
     }
 
     /// <summary>解除悬浮窗按钮事件，避免禁用或销毁后的重复回调。</summary>
@@ -184,6 +214,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         UnbindFilter(ordinaryLogsToggle);
         UnbindFilter(warningLogsToggle);
         UnbindFilter(errorLogsToggle);
+        UnbindFilter(collapseToggle);
+        if (searchInput != null)
+            searchInput.onValueChanged.RemoveListener(HandleSearchChanged);
     }
 
     /// <summary>清理跨场景单例引用。</summary>
@@ -199,6 +232,15 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         FitExpandedPanelToSafeArea();
         RefreshToast();
         RefreshPresentation(force: false);
+    }
+
+    private void LateUpdate()
+    {
+        if (debugPanel == null || !debugPanel.activeSelf || consoleListContent == null)
+            return;
+
+        EnsureConsoleRowPool();
+        RefreshVisibleConsoleRows();
     }
 
     #endregion
@@ -351,7 +393,8 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
             out bool truncated,
             ordinaryLogsToggle == null || ordinaryLogsToggle.isOn,
             warningLogsToggle == null || warningLogsToggle.isOn,
-            errorLogsToggle == null || errorLogsToggle.isOn);
+            errorLogsToggle == null || errorLogsToggle.isOn,
+            searchInput != null ? searchInput.text : null);
 
         if (copiedEntries == 0)
         {
@@ -432,6 +475,8 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     private void ClearLogs()
     {
         GameLogManager.ClearRuntimeLogBuffer();
+        selectedEntryId = 0;
+        selectedEntryIndex = -1;
         if (statusText != null)
             SetLocalizedText(statusText, "面板日志已清空，磁盘日志仍然保留。");
         ShowToast(true, "面板日志已清空");
@@ -539,10 +584,176 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
                 total, warnings, errors);
 
         if (debugPanel != null && debugPanel.activeSelf)
-            RefreshLogText();
+        {
+            if (consoleListContent != null)
+                RefreshConsoleEntries();
+            else
+                RefreshLogText();
+        }
     }
 
-    /// <summary>重建有界日志正文并把滚动位置移动到最新内容。</summary>
+    #region 控制台列表
+
+    /// <summary>仅在数据或过滤条件变化时取快照，列表行按视口虚拟化复用。</summary>
+    private void RefreshConsoleEntries()
+    {
+        float viewportHeight = consoleListScrollRect != null && consoleListScrollRect.viewport != null
+            ? consoleListScrollRect.viewport.rect.height : 0f;
+        float oldOffset = consoleListContent.anchoredPosition.y;
+        bool followTail = consoleEntries.Count == 0 ||
+                          consoleListContent.rect.height <= viewportHeight + 1f ||
+                          (consoleListScrollRect != null && consoleListScrollRect.verticalNormalizedPosition <= 0.02f);
+
+        GameLogManager.GetRuntimeConsoleEntries(
+            consoleEntries,
+            collapseToggle != null && collapseToggle.isOn,
+            searchInput != null ? searchInput.text : null,
+            ordinaryLogsToggle == null || ordinaryLogsToggle.isOn,
+            warningLogsToggle == null || warningLogsToggle.isOn,
+            errorLogsToggle == null || errorLogsToggle.isOn);
+
+        selectedEntryIndex = -1;
+        int sameContentIndex = -1;
+        for (int i = 0; i < consoleEntries.Count && selectedEntryId != 0; i++)
+        {
+            GameLogManager.RuntimeConsoleEntry entry = consoleEntries[i];
+            if (entry.Id == selectedEntryId)
+            {
+                selectedEntryIndex = i;
+                break;
+            }
+
+            if (entry.ContentKey == selectedContentKey && entry.Type == selectedEntryType)
+                sameContentIndex = i;
+        }
+
+        if (selectedEntryIndex < 0)
+            selectedEntryIndex = sameContentIndex;
+        if (selectedEntryIndex >= 0)
+            selectedEntryId = consoleEntries[selectedEntryIndex].Id;
+
+        float contentHeight = Mathf.Max(1f, consoleEntries.Count * ConsoleRowHeight);
+        consoleListContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, contentHeight);
+        Vector2 contentPosition = consoleListContent.anchoredPosition;
+        contentPosition.y = followTail ? Mathf.Max(0f, contentHeight - viewportHeight) :
+            Mathf.Clamp(oldOffset, 0f, Mathf.Max(0f, contentHeight - viewportHeight));
+        consoleListContent.anchoredPosition = contentPosition;
+
+        if (emptyListLabel != null)
+        {
+            emptyListLabel.gameObject.SetActive(consoleEntries.Count == 0);
+            if (consoleEntries.Count == 0)
+                SetLocalizedText(emptyListLabel,
+                    string.IsNullOrWhiteSpace(searchInput != null ? searchInput.text : null)
+                        ? "暂无运行日志。" : "没有匹配的日志。");
+        }
+
+        EnsureConsoleRowPool();
+        RefreshVisibleConsoleRows(force: true);
+        RefreshSelectedLogDetails();
+    }
+
+    private void EnsureConsoleRowPool()
+    {
+        if (consoleListScrollRect == null || consoleListContent == null || consoleRowTemplate == null ||
+            consoleListScrollRect.viewport == null)
+            return;
+
+        int requiredRows = Mathf.Clamp(
+            Mathf.CeilToInt(consoleListScrollRect.viewport.rect.height / ConsoleRowHeight) + 2, 1, 24);
+        while (consoleRows.Count < requiredRows)
+        {
+            GameObject rowObject = Instantiate(consoleRowTemplate, consoleListContent, false);
+            rowObject.SetActive(true);
+            ConsoleRowView row = new ConsoleRowView
+            {
+                Rect = rowObject.GetComponent<RectTransform>(),
+                Background = rowObject.GetComponent<Image>(),
+                Level = rowObject.transform.Find("级别标记").GetComponent<Image>(),
+                Summary = rowObject.transform.Find("日志摘要").GetComponent<TextMeshProUGUI>(),
+                RepeatCount = rowObject.transform.Find("重复计数").GetComponent<TextMeshProUGUI>()
+            };
+            rowObject.GetComponent<Button>().onClick.AddListener(() => SelectConsoleEntry(row.EntryIndex));
+            consoleRows.Add(row);
+        }
+    }
+
+    /// <summary>只更新可见行，避免一次生成数百个日志控件和重复排版。</summary>
+    private void RefreshVisibleConsoleRows(bool force = false)
+    {
+        if (consoleListContent == null || consoleRows.Count == 0)
+            return;
+
+        int firstIndex = Mathf.Max(0, Mathf.FloorToInt(
+            Mathf.Max(0f, consoleListContent.anchoredPosition.y) / ConsoleRowHeight));
+        for (int i = 0; i < consoleRows.Count; i++)
+        {
+            ConsoleRowView row = consoleRows[i];
+            int entryIndex = firstIndex + i;
+            if (entryIndex >= consoleEntries.Count)
+            {
+                row.Rect.gameObject.SetActive(false);
+                row.EntryIndex = -1;
+                continue;
+            }
+
+            if (!row.Rect.gameObject.activeSelf)
+                row.Rect.gameObject.SetActive(true);
+            if (!force && row.EntryIndex == entryIndex)
+                continue;
+
+            row.EntryIndex = entryIndex;
+            row.Rect.anchoredPosition = new Vector2(0f, -entryIndex * ConsoleRowHeight);
+            GameLogManager.RuntimeConsoleEntry entry = consoleEntries[entryIndex];
+            row.Summary.text = BuildDisplayLog(entry.Summary);
+            row.RepeatCount.text = entry.Count > 1 ? "×" + entry.Count : string.Empty;
+            row.Level.color = entry.Type == LogType.Warning
+                ? new Color(0.96f, 0.72f, 0.30f, 1f)
+                : entry.Type == LogType.Error || entry.Type == LogType.Exception || entry.Type == LogType.Assert
+                    ? new Color(0.97f, 0.39f, 0.39f, 1f)
+                    : new Color(0.63f, 0.74f, 0.82f, 1f);
+            row.Background.color = entryIndex == selectedEntryIndex
+                ? new Color(0.16f, 0.33f, 0.45f, 1f)
+                : entryIndex % 2 == 0
+                    ? new Color(0.115f, 0.125f, 0.14f, 1f)
+                    : new Color(0.13f, 0.14f, 0.155f, 1f);
+        }
+    }
+
+    private void SelectConsoleEntry(int entryIndex)
+    {
+        if (entryIndex < 0 || entryIndex >= consoleEntries.Count)
+            return;
+
+        GameLogManager.RuntimeConsoleEntry entry = consoleEntries[entryIndex];
+        selectedEntryIndex = entryIndex;
+        selectedEntryId = entry.Id;
+        selectedContentKey = entry.ContentKey;
+        selectedEntryType = entry.Type;
+        RefreshVisibleConsoleRows(force: true);
+        RefreshSelectedLogDetails();
+    }
+
+    private void RefreshSelectedLogDetails()
+    {
+        if (logText == null)
+            return;
+
+        string details = selectedEntryIndex >= 0
+            ? BuildDisplayLog(consoleEntries[selectedEntryIndex].Details)
+            : "选择上方日志以查看消息和调用堆栈。";
+        if (logText.text == details)
+            return;
+
+        logText.text = details;
+        LayoutRebuilder.MarkLayoutForRebuild(logText.rectTransform);
+        if (logScrollRect != null)
+            logScrollRect.verticalNormalizedPosition = 1f;
+    }
+
+    #endregion
+
+    /// <summary>兼容尚未按新构建器重建的旧版 Prefab。</summary>
     private void RefreshLogText()
     {
         if (logText == null)
@@ -652,6 +863,8 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     }
 
     private void HandleFilterChanged(bool _) => RefreshPresentation(force: true);
+
+    private void HandleSearchChanged(string _) => RefreshPresentation(force: true);
 
     /// <summary>幂等绑定按钮事件。</summary>
     private static void BindButton(Button button, UnityEngine.Events.UnityAction action)
