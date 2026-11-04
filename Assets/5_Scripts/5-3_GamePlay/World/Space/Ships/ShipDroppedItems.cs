@@ -79,7 +79,7 @@ namespace FlatWorld.Spaceflight
                 drop.Initialize(payload, this);
                 State.LooseItems.Add(state); looseViews.Add(state.Id, live); looseData[state.Id] = live.itemData;
                 live.SetInHand(false);
-                Rigidbody2D body = live.GetComponent<Rigidbody2D>();
+                Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(live);
                 if (body != null)
                 {
                     body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0f;

@@ -25,7 +25,7 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
         Mod_Cam camera = player.GetComponentInChildren<Mod_Cam>(true);
         Mod_ChunkLoader loader = player.GetComponentInChildren<Mod_ChunkLoader>(true);
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (chunks?.ActiveGenerationProfile == null || mover == null || camera?.ControllerCamera == null ||
             loader == null || controller == null || body == null || camera.HasFollowOverride)
             throw new InvalidOperationException("地表到达回归缺少正式玩家、相机或区块窗口。");

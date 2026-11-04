@@ -65,7 +65,7 @@ namespace FlatWorld.Networking.Gameplay
         private TextMeshPro nameLabel;
         private Player corePlayer;
         private Mod_Mover coreMover;
-        private Rigidbody2D coreBody;
+        private Rigidbody2D coreBody => WorldPhysicsService2D.GetItemRigidbody(corePlayer);
         private Mod_TurnBack coreTurnBack;
         private Mod_AnimatorController coreAnimator;
         private Mod_AnimatorController_Receiver coreAnimatorReceiver;
@@ -187,7 +187,6 @@ namespace FlatWorld.Networking.Gameplay
                 ItemMgr.Instance.ReleaseNetworkPlayer(corePlayer, persistData: isServer || NetworkServer.active);
                 corePlayer = null;
                 coreMover = null;
-                coreBody = null;
                 coreTurnBack = null;
                 coreAnimator = null;
                 coreAnimatorReceiver = null;
@@ -806,7 +805,6 @@ namespace FlatWorld.Networking.Gameplay
                 }
 
                 coreMover = corePlayer.GetComponentInChildren<Mod_Mover>(true);
-                coreBody = corePlayer.GetComponent<Rigidbody2D>();
                 coreTurnBack = corePlayer.itemMods?.GetMod_ByID<Mod_TurnBack>(ModText.TrunBody);
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
                 coreAnimatorReceiver = coreAnimator as Mod_AnimatorController_Receiver;

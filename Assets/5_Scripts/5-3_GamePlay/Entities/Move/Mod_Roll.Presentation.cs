@@ -13,9 +13,10 @@ public sealed partial class Mod_Roll
         if (visualRoot == null || item == null || visualRoot == item.transform || !visualRoot.IsChildOf(item.transform) ||
             visualRoot.GetComponentInChildren<Collider2D>(true) != null ||
             visualRoot.GetComponentInChildren<Rigidbody2D>(true) != null) return false;
-        if (bodyColliders == null) return false;
-        foreach (Collider2D collider in bodyColliders)
-            if (collider != null && !collider.isTrigger && collider.GetComponentInParent<Item>() == item &&
+        using var scope = UnityEngine.Pool.ListPool<Collider2D>.Get(out var colliders);
+        WorldPhysicsService2D.GetItemColliders(item, colliders);
+        foreach (Collider2D collider in colliders)
+            if (collider != null && collider.enabled && !collider.isTrigger && GameplayPhysics2D.ResolveComponent<Item>(collider) == item &&
                 collider is BoxCollider2D or CapsuleCollider2D or CircleCollider2D) return true;
         return false;
     }
@@ -27,10 +28,11 @@ public sealed partial class Mod_Roll
             FlatWorld.Audio.AudioService.Instance.PlayAttached("player.roll", item.transform);
         originalVisualRotation = visualRoot.localRotation;
         colliderShapes.Clear();
-        var captured = new HashSet<Collider2D>();
-        foreach (Collider2D collider in bodyColliders)
+        using var scope = UnityEngine.Pool.ListPool<Collider2D>.Get(out var colliders);
+        WorldPhysicsService2D.GetItemColliders(item, colliders);
+        foreach (Collider2D collider in colliders)
         {
-            if (collider == null || collider.isTrigger || collider.GetComponentInParent<Item>() != item || !captured.Add(collider)) continue;
+            if (collider == null || !collider.enabled || collider.isTrigger || GameplayPhysics2D.ResolveComponent<Item>(collider) != item) continue;
             RollColliderShape shape = RollColliderShape.Capture(collider);
             if (shape == null) continue;
             colliderShapes.Add(shape);

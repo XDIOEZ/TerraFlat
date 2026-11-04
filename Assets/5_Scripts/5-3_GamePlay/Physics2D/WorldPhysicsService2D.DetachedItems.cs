@@ -42,7 +42,7 @@ public sealed partial class WorldPhysicsService2D
             WorldPhysicsItemContactRelay2D relay = proxy.Shell.Root.GetComponent<WorldPhysicsItemContactRelay2D>();
             if (relay == null) relay = proxy.Shell.Root.gameObject.AddComponent<WorldPhysicsItemContactRelay2D>();
             ItemPhysicsProjection2D.Ensure(item);
-            relay.Bind(item.GetComponent<ItemPhysicsProjection2D>());
+            relay.Bind(item);
             NotifyItemPhysicsComponentsAvailable(item);
             SynchronizeDetachedItemProxy(item);
             ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);
@@ -56,10 +56,7 @@ public sealed partial class WorldPhysicsService2D
     {
         template = null;
         declared = null;
-        if (item == null || item is Player || item is Map) return false;
-        if (GameRes.ExistingInstance != null &&
-            GameRes.ExistingInstance.TryGetItemDefinition(item.itemData?.IDName, out RuntimeItemDefinition definition) &&
-            definition.IsActor) return false;
+        if (item == null || item is Map) return false;
         ItemPhysicsDefinitionRuntime.ItemPhysicsConfiguration configuration =
             ItemPhysicsDefinitionRuntime.GetItemPhysicsConfiguration(item);
         if (configuration.Regions.Count != 0) return false;
@@ -106,6 +103,7 @@ public sealed partial class WorldPhysicsService2D
         if (item == null) return null;
         if (TryGetRegisteredItemProxy(item, out WorldPhysicsEntityProxy2D proxy) && proxy.Shell.OwnsRoot)
         {
+            if (proxy.TemplateRegions.Count > 0) return GetItemCollider<T>(item);
             foreach (Collider2D shape in proxy.Colliders) if (shape is T typed) return typed;
             return null;
         }
@@ -122,10 +120,15 @@ public sealed partial class WorldPhysicsService2D
         WorldPhysicsEntityPose2D pose = proxy.CapturePose();
         Vector2 position = item.transform.position;
         float rotation = item.transform.eulerAngles.z;
-        if (pose.Position != position || Mathf.Abs(Mathf.DeltaAngle(pose.RotationDegrees, rotation)) > .0001f)
+        if (!proxy.HasSynchronizedSourcePose || proxy.SynchronizedSourcePosition != position ||
+            Mathf.Abs(Mathf.DeltaAngle(proxy.SynchronizedSourceRotation, rotation)) > .0001f)
             proxy.SetPose(new WorldPhysicsEntityPose2D(position, rotation, pose.Velocity, pose.AngularVelocity));
+        proxy.HasSynchronizedSourcePose = true;
+        proxy.SynchronizedSourcePosition = position;
+        proxy.SynchronizedSourceRotation = rotation;
         if (proxy.Shell.Root.localScale != item.transform.lossyScale)
             proxy.SetEntityScale(item.transform.lossyScale);
+        SynchronizeTemplateItemProxyRegions(proxy);
     }
 
     private static void ApplyDetachedItemPhysicsPose(Item item, WorldPhysicsEntityPose2D pose)

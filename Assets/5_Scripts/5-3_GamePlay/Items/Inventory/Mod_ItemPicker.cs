@@ -57,7 +57,7 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
     // 物理租借可以晚于模块加载；只在就绪通知时重新绑定拾取形状。
     public void OnItemPhysicsComponentsAvailable()
     {
-        droppedPickupCollider = GetComponent<Collider2D>();
+        droppedPickupCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(this);
         if (droppedPickupCollider != null && droppedPickupCollider.enabled) return;
         using var lease = UnityEngine.Pool.ListPool<Collider2D>.Get(out var shapes);
         GetComponentsInChildren(true, shapes);

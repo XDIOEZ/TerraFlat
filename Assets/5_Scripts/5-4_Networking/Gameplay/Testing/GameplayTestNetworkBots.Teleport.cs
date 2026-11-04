@@ -71,7 +71,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             Vector3 position = actor.AuthoritativeLogicalPosition;
             Vector3 body = WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position);
-            Rigidbody2D rigidbody = actor.CorePlayer.GetComponent<Rigidbody2D>();
+            Rigidbody2D rigidbody = WorldPhysicsService2D.GetItemRigidbody(actor.CorePlayer);
             Vector2 physics = WorldLocalPresentation.ToLogical(rigidbody.position);
             Vector3 saved = actor.CorePlayer.Data.transform.position;
             SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver observer);
@@ -142,7 +142,7 @@ namespace FlatWorld.Networking.Gameplay
                 SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver moved) &&
                 WorldTopologyRuntime.ShortestDelta(moved.Position.LocalMeters.ToVector2(), next).sqrMagnitude < .00001f &&
                 WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position), next).sqrMagnitude < .00001f &&
-                WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.GetComponent<Rigidbody2D>().position), next).sqrMagnitude < .00001f,
+                WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(WorldPhysicsService2D.GetItemRigidbody(actor.CorePlayer).position), next).sqrMagnitude < .00001f,
                 "传送后的普通移动沿新落点继续", 12d, () => $"已发包={movementSent}，目标={next}，发送后={movementImmediately}，" +
                     $"当前={TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None)}；" +
                     DescribeBotCommandAuthority(world, 92, actor, MotionCommandName, "lastServerTeleportRequest"));

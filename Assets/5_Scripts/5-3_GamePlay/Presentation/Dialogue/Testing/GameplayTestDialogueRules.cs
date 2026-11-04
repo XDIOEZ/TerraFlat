@@ -57,8 +57,8 @@ namespace FlatWorld.Dialogue
             Mod_TurnBack turning = prefab != null ? prefab.GetComponentInChildren<Mod_TurnBack>(true) : null;
             ScreenSpaceSpeechBubblePresenter speech = prefab != null
                 ? prefab.GetComponent<ScreenSpaceSpeechBubblePresenter>() : null;
-            BoxCollider2D body = prefab != null ? prefab.GetComponent<BoxCollider2D>() : null;
-            BoxCollider2D hitbox = receiver != null ? receiver.GetComponent<BoxCollider2D>() : null;
+            ItemPhysicsTemplate2D body = prefab != null ? prefab.GetComponent<ItemPhysicsTemplate2D>() : null;
+            ItemPhysicsTemplate2D hitbox = receiver != null ? receiver.GetComponent<ItemPhysicsTemplate2D>() : null;
             if (visual == null || receiver == null || heldAnchor == null || turning == null ||
                 speech == null ||
                 oxygenBarRect == null || oxygenBarRect.parent != prefab.transform ||
@@ -89,6 +89,9 @@ namespace FlatWorld.Dialogue
                 ["hitWidth"] = hitbox.size.x * receiver.lossyScale.x,
                 ["hitTrigger"] = hitbox.isTrigger,
                 ["bodyTrigger"] = body.isTrigger,
+                ["physicsTemplatesOnly"] = body.hasBody &&
+                    prefab.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+                    prefab.GetComponentsInChildren<Rigidbody2D>(true).Length == 0,
                 ["bodyBottom"] = body.offset.y - body.size.y * 0.5f,
                 ["bodyTop"] = body.offset.y + body.size.y * 0.5f,
                 ["bodyCenter"] = body.offset.y,

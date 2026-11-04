@@ -62,6 +62,11 @@ test.system("world_streaming", "world_physics_definition", {}, function(data)
 end, "普通Item JSON多区域、精确接收与重复配置回池基线")
 
 test.system("world_streaming", "world_physics_proxy_modes", {}, function(data)
+    local proxy = data.templateProxy
+    assert(proxy.logicHasNoPhysics and proxy.physicsOwnsBody and proxy.exactReceiver,
+        "模板角色未领取独立物理代理，或受击没有返回原始生命模块")
+    assert(proxy.leasePreserved and proxy.nativePosePreserved and proxy.teleportApplied and proxy.released,
+        "重复登记重建租约、原生运动被旧逻辑姿态覆盖，或传送/释放失效")
     assert(data.fixedMode == "WorldFixed" and data.dynamicMode == "IndependentDynamic"
         and data.massSource == "ItemStack" and data.rotationCanMove and data.unityModeRejected,
         "物理配置没有表达游戏代理模式、唯一质量来源或旋转约束，或直接接受Unity刚体类型")
@@ -99,11 +104,11 @@ test.system("world_streaming", "detached_item_projection", {}, function(data)
 end, "普通物品逻辑、纯视觉投影和独立物理代理生命周期")
 
 test.runtime("world_streaming", "prefab_creature_physics", {}, function(data)
-    assert(data.usesNativeBody and data.noProxy and data.bodyTypePreserved,
-        "移动生物被迁入物理代理，或重复登记修改了预制体原有刚体")
+    assert(data.usesNativeBody and data.ownsProxy and data.logicHasNoPhysics and data.bodyTypePreserved,
+        "移动生物没有领取独立物理代理，或重复登记修改了刚体表示")
     assert(data.hitboxRegistered and data.hitboxChannel and data.rootRegistered and data.collidersReused,
         "生物受击盒未按原预制体配置登记到物理管理器，或重复登记创建了多余碰撞体")
-end, "移动生物保留预制体碰撞并由世界物理管理器统一登记")
+end, "移动生物通过通用模板领取世界物理代理并复用碰撞体")
 
 test.runtime("world_streaming", "item_visual_ownership", {}, function(data)
     assert(data.actorSeparated, "GO 单图生物的 SpriteRenderer 未迁至独立 Rendering 节点")

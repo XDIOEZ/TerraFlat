@@ -152,7 +152,8 @@ namespace FlatWorld.AIECS.Gameplay
             Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (receiver == null) throw new InvalidOperationException("当前玩家没有生命接收器，无法建立双向战斗入口。");
             var proxy = new ExternalProxy { Item = player, Receiver = receiver, Group = group,
-                BodyCollider = player.GetComponent<Collider2D>(), HitCollider = receiver.GetComponent<Collider2D>(), Key = IdentityOf(player) };
+                BodyCollider = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(player),
+                HitCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver), Key = IdentityOf(player) };
             proxy.Faction = FactionRelationService.GetFactionId(player); proxy.FactionIndex = Faction(proxy.Faction);
             AiecsBody body = ExternalBody(proxy);
             var template = new AiecsActorTemplate { Definition = 0, Faction = proxy.FactionIndex, Body = body,
@@ -283,6 +284,8 @@ namespace FlatWorld.AIECS.Gameplay
                 if (!BelongsToWorld(proxy.Item) || proxy.Receiver == null || IdentityOf(proxy.Item) != proxy.Key)
                 { Simulation.Despawn(proxy.Entity); proxyLookup.Remove(proxy.Key); freePlayerGroups.Push(proxy.Group); proxies.RemoveAt(i); continue; }
                 string faction = FactionRelationService.GetFactionId(proxy.Item);
+                proxy.BodyCollider = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(proxy.Item);
+                proxy.HitCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(proxy.Receiver);
                 if (!string.Equals(faction, proxy.Faction, StringComparison.Ordinal))
                 { proxy.Faction = faction; proxy.FactionIndex = Faction(faction); }
                 Simulation.UpdateExternal(proxy.Entity, proxy.Key, (Vector2)proxy.Item.transform.position, ExternalBody(proxy),

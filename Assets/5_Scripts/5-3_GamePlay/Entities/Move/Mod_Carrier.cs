@@ -8,7 +8,7 @@ using UnityEngine;
 /// 船与未来车辆使用同一输入/力溯源契约；刚体负责接触，不改变乘员层级。
 /// 座位和速度是会话租约，不写存档；位置由 Item 快照保存，读档为空船且静止。
 /// </summary>
-public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTerrainContactPolicy, ICarrierBoostPolicy, IWorldHoldInteraction, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
+public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTerrainContactPolicy, ICarrierBoostPolicy, IWorldHoldInteraction, ISpatialInteractionShape, IItemModuleDependencyBinder, IBuildingPlacementCommitted, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem, IWorldPhysicsCollisionReceiver2D
 {
     #region 配置和状态
     public const string ModuleId = "Mod_Carrier";
@@ -54,8 +54,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     public Mod_Mover Rider { get; private set; } // 源持有的唯一乘员。
     private Mod_Building building;
     private Mod_DamageReceiver health;
-    private Rigidbody2D body;
-    private BoxCollider2D physicalCollider;
+    private Rigidbody2D body => WorldPhysicsService2D.GetItemRigidbody(item);
+    private BoxCollider2D physicalCollider => WorldPhysicsService2D.GetItemRootCollider<BoxCollider2D>(item);
     private Transform visualTransform;
     private SpriteRenderer visualRenderer;
     private ICarrierSeatOffsetResolver seatOffsetResolver;
@@ -110,8 +110,6 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
         CurrentVelocity = CurrentForce = DrivenVelocity = ExternalVelocity = Vector2.zero;
         facingHeading = Vector2.up;
         PushSource = null;
-        body = item.GetComponent<Rigidbody2D>();
-        physicalCollider = item.GetComponent<BoxCollider2D>();
         if (body == null || physicalCollider == null)
             throw new InvalidOperationException("载具外壳必须提供根 Rigidbody2D 与船体 Collider2D。");
         motionAllowed = WorldPhysicsService2D.CanItemUseIndependentMotion(item);
@@ -438,11 +436,14 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
            source.CarrierSource == null && source.RequestedMoveInput.sqrMagnitude > 0.001f &&
            (motionDriver is not ICarrierPushEligibilityPolicy eligibility || eligibility.CanReceiveCarrierPush(source));
 
+    public void ReceivePhysicsCollision(Collision2D collision, WorldPhysicsTriggerPhase2D phase)
+    {
+        if (phase != WorldPhysicsTriggerPhase2D.Exit) HandlePhysicalContact(collision);
+    }
+
     internal void HandlePhysicalContact(Collision2D collision)
     {
-        Mod_Mover source = collision.rigidbody != null
-            ? collision.rigidbody.GetComponentInChildren<Mod_Mover>()
-            : null;
+        Mod_Mover source = GameplayPhysics2D.ResolveComponent<Mod_Mover>(collision.collider);
         if (!CanReceivePush(source) || source.rb == null || body == null) return;
         Vector2 towardCarrier = WorldTopologyRuntime.ShortestDelta(source.rb.position, body.position);
         Vector2 intent = source.CarrierPushIntentVelocity;

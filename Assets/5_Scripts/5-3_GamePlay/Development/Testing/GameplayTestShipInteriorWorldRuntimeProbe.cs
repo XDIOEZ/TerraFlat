@@ -785,8 +785,8 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
             result["ordinaryChickenSpawned"] = true;
             result["ordinaryChickenHasWorldLedger"] = GameplayWorldRegistry.GetItemWorldKey(chicken) == world.WorldKey;
-            Rigidbody2D body = chicken.GetComponentInChildren<Rigidbody2D>(true);
-            Collider2D collider = chicken.GetComponentInChildren<Collider2D>(true);
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(chicken);
+            Collider2D collider = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(chicken);
             Physics2D.SyncTransforms();
             result["ordinaryChickenUsesShipNativePhysics"] = chicken.gameObject.scene == world.Scene &&
                 body != null && collider != null && body.gameObject.scene == world.Scene && body.simulated &&
@@ -934,7 +934,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             weapon.SetInHand(true);
             damage = weapon.GetComponentInChildren<Mod_Damage>(true);
             Mod_DamageReceiver receiver = target?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-            Collider2D receiverCollider = receiver != null ? receiver.GetComponent<Collider2D>() : null;
+            Collider2D receiverCollider = receiver != null ? WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver) : null;
             if (dataTarget != null) MachineWorld.WakeForInteraction(dataTarget);
             if (damage == null || damage.DamageCollider == null ||
                 (dataTarget != null ? dataTarget.State == null || dataTarget.ScopeKey != world.WorldKey :
@@ -1005,7 +1005,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             originalGround = GroundTileLayerSystem.Capture(sourceSample.Terrain, sourceSample.LocalCell);
             originalLiquid = LiquidCellSaveData.Capture(sourceSample.Terrain,
                 sourceSample.LocalCell.x, sourceSample.LocalCell.y);
-            if (originalGround.Covers.Count != 0 || sourceSample.Terrain.TryGetEnvironmentValue(
+            if (originalGround.PlayerCoverCount != 0 || sourceSample.Terrain.TryGetEnvironmentValue(
                     FarmlandSystem.SourceLayer, sourceSample.LocalCell.x, sourceSample.LocalCell.y, out float soilState) && soilState != 0f ||
                 HasAgricultureRecord(sourceSample))
                 throw new InvalidOperationException("测试土层格已有玩家覆盖或耕地记录。");

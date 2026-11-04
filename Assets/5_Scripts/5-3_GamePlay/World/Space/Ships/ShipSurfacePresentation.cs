@@ -128,7 +128,7 @@ namespace FlatWorld.Spaceflight
             if (body != null) body.position = position;
             if (presenter.passengerRise > 0f)
             {
-                root.GetComponentsInChildren(true, presenter.passengerColliders);
+                WorldPhysicsService2D.GetItemColliders(root.GetComponent<Item>(), presenter.passengerColliders);
                 foreach (Collider2D collider in presenter.passengerColliders)
                 {
                     if (collider.attachedRigidbody != body || collider.usedByComposite || collider.isTrigger) continue;

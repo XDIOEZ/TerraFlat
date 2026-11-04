@@ -335,7 +335,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
     private void BindDamageCollider()
     {
-        if (damageCollider == null) damageCollider = GetComponent<Collider2D>();
+        if (damageCollider == null || WorldPhysicsService2D.TryGetRegisteredItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
+            damageCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(this);
         if (damageCollider == null) return;
         if (!hasInitialDamageColliderState)
         {
@@ -753,7 +754,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (hitCollider != null)
             return hitCollider.ClosestPoint(hasExplicitImpactPoint ? explicitImpactPoint : (Vector2)transform.position);
 
-        Collider2D receiverCollider = receiver.GetComponent<Collider2D>();
+        Collider2D receiverCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver);
         if (receiverCollider == null)
             receiverCollider = receiver.GetComponentInChildren<Collider2D>(true);
         if (receiverCollider == null)

@@ -99,7 +99,7 @@ namespace FlatWorld.Networking.Gameplay
                     ItemMgr.Instance.MarkAsRemoteVisualOnly(item);
                     foreach (Module module in item.GetComponentsInChildren<Module>(true)) module.enabled = false;
                     foreach (Collider2D collider in item.GetComponentsInChildren<Collider2D>(true)) collider.enabled = false;
-                    Rigidbody2D body = item.GetComponent<Rigidbody2D>(); if (body != null) body.simulated = false;
+                    Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item); if (body != null) body.simulated = false;
                     Transform visual = item.Sprite != null ? item.Sprite.transform : item.GetComponentInChildren<SpriteRenderer>(true)?.transform;
                     projectileViews.Add(pose.Guid, view = new ProjectileView { Item = item, Generation = item.RuntimeGeneration,
                         Visual = visual, BaseVisualPosition = visual != null ? visual.localPosition : Vector3.zero });

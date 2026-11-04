@@ -111,13 +111,13 @@ public sealed class WorldNavigationAgent : MonoBehaviour, IItemPhysicsComponents
     private void Awake()
     {
         schedulingPhase = (GetInstanceID() & 15) / 16f;
-        Bind(GetComponent<Rigidbody2D>());
+        Bind(WorldPhysicsService2D.GetItemRigidbody(GetComponent<Item>()));
         nextRequestTime = Time.unscaledTime + schedulingPhase * Mathf.Max(0.05f, repathInterval);
     }
 
     void IItemPhysicsComponentsReceiver2D.OnItemPhysicsComponentsAvailable()
     {
-        body = GetComponent<Rigidbody2D>();
+        body = WorldPhysicsService2D.GetItemRigidbody(GetComponent<Item>());
     }
 
     private void OnEnable()
@@ -161,7 +161,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour, IItemPhysicsComponents
     /// <summary>无 Mod_Mover 的生物仍以 Actor 身份读取统一水流配置；有 Mod_Mover 时由其结算主动和被动速度。</summary>
     public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager, Mod_Mover mover, Item actor)
     {
-        body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
+        body = rigidbody2D != null ? rigidbody2D : WorldPhysicsService2D.GetItemRigidbody(GetComponent<Item>());
         surfaceMover = mover;
         waterActor = actor;
         if (manager != null)

@@ -8,7 +8,7 @@ using FlatWorld.NaturalEntities;
 /// <summary>
 /// Mod_Mover —— 处理游戏对象的移动逻辑
 /// </summary>
-public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem
+public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D, IGameplayFixedStepSimulationSystem, IItemPhysicsComponentsReceiver2D
 {
     #region 保存数据类
     [System.Serializable]
@@ -80,6 +80,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
     private readonly List<IWindMotionOwner> windMotionOwners = new();
     private int windSuppressionLeases;
     public Rigidbody2D rb;
+    public void OnItemPhysicsComponentsAvailable() => rb = WorldPhysicsService2D.GetItemRigidbody(item);
     private bool physicsAllowsIndependentMotion = true;
     public bool RequiresIndependentWorldMotion => true;
 

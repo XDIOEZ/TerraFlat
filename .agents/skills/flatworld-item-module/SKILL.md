@@ -42,6 +42,8 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 
 ## 装配、加载与回收
 
+- 根 `ItemPhysicsTemplate2D.hasBody` 的可动外壳在模块加载前领取世界物理代理，玩家控制器与行为树复用同一路径。原生组件位于 Physics 分类，业务通过 `GetItemRigidbody/GetItemCollider/GetItemColliders` 按逻辑来源领取；跨世界重建租约时以 `IItemPhysicsComponentsReceiver2D` 重绑缓存，模块只接收所属区域的接触事实。回归 `world_streaming/world_physics_proxy_modes`。
+
 `当前定义 → ItemData → 全模块登记 → ModuleInit → 依赖绑定 → OnLoad → Tick/Save → OnUnload → Despawn/Pool`
 
 - Item.Load/LoadInSteps 共用该顺序；跨帧保留生命周期切换态，释放枚举器清理已加载模块。InstantiateItemInSteps 复用壳池，冷壳 InstantiateAsync，完成前不进世界/保存/网络索引，Profiler 作用域不跨让帧。

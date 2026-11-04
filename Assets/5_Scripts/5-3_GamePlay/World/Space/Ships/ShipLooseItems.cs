@@ -290,12 +290,12 @@ namespace FlatWorld.Spaceflight
                 {
                     existing.transform.position = position;
                     existing.transform.rotation = Quaternion.Euler(0f, 0f, (float)state.RotationDegrees);
-                    Rigidbody2D body = existing.GetComponent<Rigidbody2D>();
+                    Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(existing);
                     if (body != null) { body.bodyType = RigidbodyType2D.Kinematic; body.gravityScale = 0; body.position = position; }
                 }
                 else
                 {
-                    Rigidbody2D body = existing.GetComponent<Rigidbody2D>();
+                    Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(existing);
                     if (body != null) body.bodyType = RigidbodyType2D.Dynamic;
                     existing.transform.position = position;
                 }

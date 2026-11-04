@@ -547,7 +547,7 @@ public static partial class GameplayTestSystemProbe
             catch (InvalidOperationException) { unknownTypeRejected = true; }
 
             physics.RegisterItem(item);
-            root.GetComponent<BoxCollider2D>().size = new Vector2(10f, 12f);
+            WorldPhysicsService2D.GetItemRootCollider<BoxCollider2D>(item).size = new Vector2(10f, 12f);
             PerceptionShape2D[] rented = ActorPerceptionShapeCompiler.Compile(root);
             return new JObject
             {

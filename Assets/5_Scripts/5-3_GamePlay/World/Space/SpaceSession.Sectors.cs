@@ -134,7 +134,7 @@ namespace FlatWorld.Spaceflight
                 if (!IsPlayerInShipInteriorWorld(player))
                 {
                     player.transform.position += (Vector3)shift;
-                    Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+                    Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
                     if (body != null) body.position = player.transform.position;
                 }
                 else if (passengerProjections.TryGetValue(player, out WorldPresentationProjection projection) && projection != null)

@@ -16,7 +16,7 @@ public partial class Mod_Mover
     /// <summary>只绑定已有刚体与正式配置，不改变远端的物理归属或开启模拟。</summary>
     public void InitializeDrivenMotion(Rigidbody2D body)
     {
-        if (body == null || item == null || body.gameObject != item.gameObject)
+        if (body == null || item == null || body != WorldPhysicsService2D.GetItemRigidbody(item))
             throw new ArgumentException("主动移动需要本物品已有的刚体。", nameof(body));
         if (!IsRuntimeLoaded) ModDataMemoryPack.ReadData(ref Data);
         rb = body;

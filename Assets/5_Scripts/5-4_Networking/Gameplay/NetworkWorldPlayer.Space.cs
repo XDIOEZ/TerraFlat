@@ -449,7 +449,7 @@ namespace FlatWorld.Networking.Gameplay
                     foreach (Canvas canvas in corePlayer.GetComponentsInChildren<Canvas>(true))
                     { if (!hiddenCanvases.ContainsKey(canvas)) hiddenCanvases.Add(canvas, canvas.enabled); canvas.enabled = false; }
                     // 远区副本不占用本机物理空间，服务器仍按纯数据结算碰撞。
-                    foreach (Collider2D collider in corePlayer.GetComponentsInChildren<Collider2D>(true))
+                    foreach (Collider2D collider in WorldPhysicsService2D.GetItemColliders(corePlayer))
                     {
                         if (isServer) continue;
                         if (!hiddenColliders.ContainsKey(collider)) hiddenColliders.Add(collider, collider.enabled); collider.enabled = false;

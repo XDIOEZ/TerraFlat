@@ -166,9 +166,14 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         return true;
     }
 
-    internal void RegisterItem(Item item, bool requestIndependent = false)
+    internal void RegisterItem(Item item, bool requestIndependent = false, bool rebuildTemplateProxy = false)
     {
         if (item == null || disposed) return;
+        if (!rebuildTemplateProxy && TryGetItemProxy(item, out var currentProxy) && currentProxy.TemplateRegions.Count > 0)
+        {
+            SynchronizeDetachedItemProxy(item);
+            return;
+        }
         ItemData originalData = item.itemData;
         ItemMgr manager = ItemMgr.GetExistingInstance();
         bool wasRuntimeRegistered = manager != null && manager.IsRuntimeItemRegistered(item);
@@ -198,15 +203,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         itemOwners[item] = this;
         try
         {
-        if (UsesPrefabCreaturePhysics(item))
-        {
-            // 生物沿用自身刚体和碰撞模板，世界物理管理器只登记已有形状。
-            RentItemPhysicsComponents(item);
-            RegisterItemColliders(item, registered);
-            ItemPhysicsProjection2D.Ensure(item);
-            ItemMgr.GetExistingInstance()?.RefreshPhysicsWorldResidentOwnership(item);
-            return;
-        }
+        if (TryRegisterTemplateItemPhysicsProxy(item, registered,
+                hadPreviousProxy ? previousRepresentation : null, previousVelocity, previousAngularVelocity)) return;
         if (TryRegisterDetachedRootItemPhysics(item, registered,
                 hadPreviousProxy && previousMode == WorldPhysicsProxyMode2D.IndependentDynamic,
                 requestIndependent, previousRepresentation)) return;
@@ -275,10 +273,6 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         }
         catch { ReleaseItem(item); throw; }
     }
-
-    private static bool UsesPrefabCreaturePhysics(Item item)
-        => item is not Player && item?.itemData != null && GameRes.ExistingInstance != null &&
-           GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out var definition) && definition.IsActor;
 
     private void RegisterItemColliders(Item item, List<Collider2D> registered)
     {

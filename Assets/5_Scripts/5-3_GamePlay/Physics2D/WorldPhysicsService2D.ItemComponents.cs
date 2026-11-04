@@ -7,12 +7,12 @@ using UnityEngine.Pool;
 public sealed partial class WorldPhysicsService2D
 {
     #region 物品物理组件租借
-    internal static void PreparePrefabCreaturePhysicsBeforeModuleLoad(Item item)
+    internal static void PrepareItemPhysicsProxyBeforeModuleLoad(Item item)
     {
-        if (!UsesPrefabCreaturePhysics(item) || itemOwners.ContainsKey(item)) return;
+        if (FindItemRootBodyTemplate(item) == null || itemOwners.ContainsKey(item)) return;
         WorldPhysicsService2D physics = GameplayWorldRegistry.CurrentPhysics;
-        // 出生候选只预租组件，正式物理登记仍由世界交付阶段完成。
-        physics?.RentItemPhysicsComponents(item);
+        // 控制器与行为树加载前统一领取物理代理，不在逻辑外壳生成原生组件。
+        physics?.RegisterItem(item);
     }
 
     private sealed class ItemPhysicsComponentCache
@@ -50,14 +50,15 @@ public sealed partial class WorldPhysicsService2D
         return parent is IWorldPhysicsTriggerReceiver2D || parent is IWorldPhysicsCollisionReceiver2D ? parent : null;
     }
 
-    internal static bool HasRentedItemTemplateCollider(ItemPhysicsTemplate2D template)
+    internal static Collider2D GetRentedItemTemplateCollider(ItemPhysicsTemplate2D template)
     {
         Item item = template != null ? template.GetComponentInParent<Item>(true) : null;
-        if (item != null && template.transform == item.transform &&
+        if (item != null &&
             TryGetRegisteredItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
-            return proxy.Colliders.Count > 0;
+            foreach (ItemTemplateProxyRegion region in proxy.TemplateRegions)
+                if (region.Template == template) return region.Shape;
         return item != null && itemComponentCaches.TryGetValue(item, out var cache) &&
-            cache.Leased && cache.Templates.TryGetValue(template, out Collider2D collider) && collider != null;
+            cache.Leased && cache.Templates.TryGetValue(template, out Collider2D collider) ? collider : null;
     }
 
     private void RentItemPhysicsComponents(Item item)
@@ -256,7 +257,12 @@ public sealed partial class WorldPhysicsService2D
             target is Module module && (!module.enabled || !module.Enabled)) return;
         if (owner.TryGetItemProxy(item, out var proxy) && proxy.Shell.OwnsRoot)
         {
-            owner.RegisterItem(item);
+            if (GetItemCollider<Collider2D>(target) is { } shape)
+            {
+                ItemPhysicsDefinitionRuntime.ApplyColliderParameters(shape, definition);
+                return;
+            }
+            owner.RegisterItem(item, rebuildTemplateProxy: true);
             return;
         }
         ItemPhysicsComponentCache cache = itemComponentCaches.GetOrCreateValue(item);
@@ -280,7 +286,11 @@ public sealed partial class WorldPhysicsService2D
         using var scope = ListPool<ItemPhysicsTemplate2D>.Get(out var templates);
         module.GetComponents(templates);
         foreach (ItemPhysicsTemplate2D template in templates)
-            if (template.owningModule == module) { owner.RegisterItem(item); return; }
+            if (template.owningModule == module)
+            {
+                owner.RegisterItem(item, rebuildTemplateProxy: module.Enabled && GetItemCollider<Collider2D>(module) == null);
+                return;
+            }
         ItemPhysicsDefinitionRuntime.ItemPhysicsConfiguration configuration = ItemPhysicsDefinitionRuntime.GetItemPhysicsConfiguration(item);
         if (configuration.Colliders.ContainsKey(module)) { owner.RegisterItem(item); return; }
         foreach (var entry in configuration.Regions)

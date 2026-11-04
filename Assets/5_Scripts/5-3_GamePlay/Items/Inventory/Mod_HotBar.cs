@@ -487,7 +487,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             }
 
             if (!StillHeldCurrent()) return;
-            Rigidbody2D body = held.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(held);
             if (body != null)
                 body.simulated = false;
         }

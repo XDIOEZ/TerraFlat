@@ -50,7 +50,7 @@ public static class PlayerTeleportService
         logical = WorldTopologyRuntime.NormalizePosition(logical);
         Vector3 previous = player.transform.position;
         Vector3 presentation = WorldLocalPresentation.ProjectPosition(logical);
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (body != null)
         {
             body.velocity = Vector2.zero;

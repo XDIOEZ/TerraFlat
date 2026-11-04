@@ -27,7 +27,7 @@ public interface IAquaticPredatorThreat
 
 /// <summary>水生移动、潮湿状态和接管能力由行为树动作组合。</summary>
 public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyBinder, IAnimalTemperatureSafetyExecutor, IItemIndependentWorldMotionCapability2D,
-    IAquaticPredatorCarryTarget, IFishingLineCatchTarget
+    IAquaticPredatorCarryTarget, IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AquaticMovement";
@@ -136,27 +136,17 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
 
     protected override void OnLoad()
     {
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
         // 回池重用同一筛选委托，停用外壳加载时也不依赖 Awake 的执行顺序。
         reachableFoodFilter ??= IsReachableFood;
         if (fishRenderer == null) fishRenderer = item.Sprite;
         if (fishRenderer == null) throw new InvalidOperationException("小鱼外壳缺少独立的水下 SpriteRenderer。");
         state = Data.GetData<LifeState>() ?? new LifeState();
         if (!float.IsFinite(state.DryElapsed) || state.DryElapsed < 0f) state.DryElapsed = 0f;
-        body = item.GetComponent<Rigidbody2D>();
         if (body == null) throw new InvalidOperationException("小鱼外壳缺少位置同步刚体。");
         originalBodyRepresentation = WorldPhysicsService2D.CaptureItemBodyRepresentation(body);
         canUseIndependentMotion = WorldPhysicsService2D.ConfigureItemBodyForExternallyPositionedMotion(item, body);
-        if (WorldPhysicsService2D.UsesLegacyItemPhysicsDefaults(item))
-        {
-            colliders = item.GetComponentsInChildren<Collider2D>(true);
-            originalColliderEnabled = new bool[colliders.Length];
-            for (int index = 0; index < colliders.Length; index++)
-            {
-                originalColliderEnabled[index] = colliders[index].enabled;
-                // 旧鱼保留受击 Trigger，新配置的物理形状由世界服务决定。
-                if (!colliders[index].isTrigger) colliders[index].enabled = false;
-            }
-        }
+        BindAquaticPhysicsColliders();
         presentation = new AquaticActorPresentation(item, fishRenderer);
         target = default;
         targetTag = null;
@@ -183,6 +173,27 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     }
 
     protected override void OnSave() => Data.WriteData(state);
+
+    public void OnItemPhysicsComponentsAvailable()
+    {
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
+        if (!IsRuntimeLoaded) return;
+        canUseIndependentMotion = WorldPhysicsService2D.ConfigureItemBodyForExternallyPositionedMotion(item, body);
+        BindAquaticPhysicsColliders();
+    }
+
+    private void BindAquaticPhysicsColliders()
+    {
+        if (!WorldPhysicsService2D.UsesLegacyItemPhysicsDefaults(item)) return;
+        colliders = WorldPhysicsService2D.GetItemColliders(item);
+        originalColliderEnabled = new bool[colliders.Length];
+        for (int index = 0; index < colliders.Length; index++)
+        {
+            originalColliderEnabled[index] = colliders[index].enabled;
+            // 水生移动只关闭实体阻挡，受击 Trigger 继续参与查询。
+            if (!colliders[index].isTrigger) colliders[index].enabled = false;
+        }
+    }
 
     protected override void OnUnload()
     {

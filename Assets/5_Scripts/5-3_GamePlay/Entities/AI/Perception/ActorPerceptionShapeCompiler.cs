@@ -26,14 +26,16 @@ public static class ActorPerceptionShapeCompiler
                 applied |= matches;
                 if (config?.Enabled ?? collider.enabled) shapes.Add(CompileShape(collider, config));
             }
-            else if (component is ItemPhysicsTemplate2D template && !string.IsNullOrWhiteSpace(template.colliderType) &&
-                !WorldPhysicsService2D.HasRentedItemTemplateCollider(template))
+            else if (component is ItemPhysicsTemplate2D template && !string.IsNullOrWhiteSpace(template.colliderType))
             {
+                Collider2D leased = WorldPhysicsService2D.GetRentedItemTemplateCollider(template);
+                if (leased != null && leased.transform == template.transform) continue;
                 bool matches = rootOverride && !applied &&
                     (string.IsNullOrWhiteSpace(declaration.Type) || template.colliderType == declaration.Type);
-                ItemColliderDefinitionDto config = CreateTemplateShapeDefinition(template, matches ? declaration : null);
+                ItemColliderDefinitionDto config = leased != null ? matches ? declaration : null :
+                    CreateTemplateShapeDefinition(template, matches ? declaration : null);
                 applied |= matches;
-                if (config.Enabled != false) shapes.Add(CompileShape(null, config));
+                if (config?.Enabled ?? (leased != null ? leased.enabled : true)) shapes.Add(CompileShape(leased, config));
             }
         }
         if (rootOverride && !applied)

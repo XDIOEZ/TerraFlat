@@ -314,7 +314,7 @@ local function roll_restored(sample)
     roll_near(sample.width, .4, "身体宽度没有恢复")
     roll_near(sample.height, .3, "身体高度没有恢复")
     roll_near(sample.visualAngle, 0, "贴图旋转没有归零")
-    roll_near(sample.offsetY, -.07, "翻滚改动了碰撞偏移")
+    roll_near(sample.offsetY, .15, "翻滚改动了碰撞偏移")
 end
 
 for _, case in ipairs({
@@ -341,8 +341,9 @@ test.system("player", "collider_visual_alignment", {}, function(data)
         "玩家锚点没有落在脚底，或翻滚旋转轴脱离角色中心")
     assert(near(data.hitBottom, data.spriteBottom) and near(data.hitTop, data.spriteTop) and
         near(data.hitWidth, data.spriteWidth), "受击框未跟随人物画布上下对齐")
-    assert(data.bodyBottom < 0 and data.bodyTop > 0 and
-        near(data.bodyCenter, -.07) and near(data.bodyWidth, .4), "玩家实体阻挡框不再跨脚底占地")
+    assert(data.physicsTemplatesOnly, "玩家逻辑外壳仍持有原生碰撞体或刚体")
+    assert(near(data.bodyBottom, 0) and near(data.bodyTop, .3) and
+        near(data.bodyCenter, .15) and near(data.bodyWidth, .4), "玩家实体阻挡框没有从脚底向上对齐")
     assert(near(data.heldAnchorY, .453125) and near(data.turnMirrorY, data.heldAnchorY),
         "玩家手持挂点与转身目标未跟随脚底锚点调整")
     assert(near(data.bubbleY - data.spriteTop, .017), "玩家头顶气泡未跟随新的脚底锚点")
@@ -356,7 +357,7 @@ test.system("player", "roll_input", {}, function(data)
 end, "翻滚输入：默认空格、可重绑、按住不连续触发")
 
 for _, running in ipairs({false, true}) do
-    test.system("player", "roll_action", {running = running, duplicateBody = true, steps = {
+    test.system("player", "roll_action", {running = running, steps = {
         {action = "start", x = 3, y = 4}, {action = "start"}, {seconds = .2}, {seconds = .2},
         {action = "start"}, {action = "cancel"}
     }}, function(data)

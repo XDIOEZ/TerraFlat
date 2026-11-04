@@ -286,7 +286,7 @@ public partial class ItemMgr
     {
         Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
         Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (body != null)
         {
             WorldPhysicsService2D.ConfigureItemBodyForIndependentMotion(player, body);
@@ -332,7 +332,7 @@ public partial class ItemMgr
             controller.enabled = false;
             controller.SetGameplayInputLocked(false);
         }
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (body != null) WorldPhysicsService2D.ConfigureItemBodyForNetworkRepresentation(player, body, true);
         Mod_ItemPicker picker = player.GetComponentInChildren<Mod_ItemPicker>(true);
         if (picker != null)
@@ -371,7 +371,7 @@ public partial class ItemMgr
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(true);
 
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (body != null)
         {
             body.position = presentationSpawnPosition;

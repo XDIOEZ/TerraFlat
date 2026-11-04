@@ -68,7 +68,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
             original = WorldTopologyRuntime.NormalizePosition(player.transform.position);
             camera = player.GetComponentInChildren<Mod_Cam>(true);
             mover = player.GetComponentInChildren<Mod_Mover>(true);
-            body = player.GetComponent<Rigidbody2D>();
+            body = WorldPhysicsService2D.GetItemRigidbody(player);
         }
 
         public void Begin()

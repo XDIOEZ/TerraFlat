@@ -280,7 +280,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     private static JObject DimensionRequestProtectionSample(Player player)
     {
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
-        Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
         double observerDistance = -1d;
         if (FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out var observer) == true &&
             !observer.InSpace && observer.WorldKey == player.gameObject.scene.name)

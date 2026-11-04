@@ -110,7 +110,7 @@ public class Player : Item
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         // 初始化移动模块前同步刚体，避免首个物理帧把原点回写为角色存档位置。
-        Rigidbody2D body = GetComponent<Rigidbody2D>();
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(this);
         if (body != null)
         {
             body.position = transform.position;

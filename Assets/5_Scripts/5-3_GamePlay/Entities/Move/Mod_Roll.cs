@@ -19,7 +19,6 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     [Min(0f)] public float Cooldown = 0f;
     [Min(0f)] public float StaminaCost = DefaultStaminaCost;
     public Transform visualRoot;
-    public Collider2D[] bodyColliders = Array.Empty<Collider2D>();
     public bool IsRolling { get; private set; }
     public Vector2 Direction { get; private set; } = Vector2.right;
     public float Elapsed { get; private set; }

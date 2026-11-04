@@ -16,7 +16,7 @@ public enum BirdFlightPhase { Ground, RunUp, TakingOff, Flying, Landing }
 public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
     IWaterCurrentExposure, IWindMotionOwner, IAnimalTemperatureSafetyExecutor, IDamageSender,
-    IFishingLineCatchTarget
+    IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D
 {
     #region 配置与独立存档
     public const string ModuleId = "Mod_AnimalFlightMovement"; // 飞行能力 ID 与具体 Prefab 名分别维护。
@@ -103,6 +103,14 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
     private bool[] flightSolidColliderOriginalStates = Array.Empty<bool>();
     private bool flightSolidCollidersBound;
     private bool loaded;
+    public void OnItemPhysicsComponentsAvailable()
+    {
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
+        if (!loaded) return;
+        flightSolidCollidersBound = false;
+        BindFlightHitbox();
+        EnsureFlightSolidColliders();
+    }
     private bool stoppedForDeath;
     private Vector3 liftOrigin;
     private Vector2 runUpLastPosition; // 上次助跑位移采样位置。
@@ -156,7 +164,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
 
     protected override void OnLoad()
     {
-        body = item.GetComponent<Rigidbody2D>();
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
         if (body == null)
             throw new InvalidOperationException("鸟外壳缺少根刚体。");
         // 依赖装配阶段尚未执行 Module.LoadMod，item 只在 Load 阶段保证已绑定。
@@ -629,7 +637,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         if (flightSolidCollidersBound || item == null)
             return;
 
-        Collider2D[] rootColliders = item.GetComponents<Collider2D>();
+        Collider2D[] rootColliders = { WorldPhysicsService2D.GetItemRootCollider<Collider2D>(item) };
         int solidCount = 0;
         for (int i = 0; i < rootColliders.Length; i++)
             if (rootColliders[i] != null && !rootColliders[i].isTrigger)
@@ -1218,12 +1226,12 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         hasFlightGeometry = false;
         if (!health.transform.IsChildOf(liftRoot))
             throw new InvalidOperationException("鸟的生命模块必须位于 BirdLift 下，随贴图一起升高。");
-        flightHitbox = health.GetComponent<BoxCollider2D>();
+        flightHitbox = WorldPhysicsService2D.GetItemCollider<BoxCollider2D>(health);
         if (flightHitbox == null)
             throw new InvalidOperationException("鸟的生命模块缺少专用 BoxCollider2D 受击盒。");
         flightHitboxOriginalOffset = flightHitbox.offset;
         flightHitboxOriginalSize = flightHitbox.size;
-        CombatPhysicsChannels.AssignDamageReceiver(health);
+        CombatPhysicsChannels.AssignDamageReceiverCollider(flightHitbox);
         flightHitboxBody = WorldPhysicsService2D.ConfigureItemAttachedDamageSensorBody(item, flightHitbox, health);
     }
 
@@ -1238,6 +1246,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         SpriteRenderer renderer = item != null ? item.Sprite : null;
         if (flightHitbox == null || flightHitboxBody == null || renderer == null || renderer.sprite == null)
             return;
+        WorldPhysicsService2D.SynchronizeItemColliderSourceTransform(item, health.transform, flightHitbox);
         Sprite sprite = renderer.sprite;
         Matrix4x4 spriteMatrix = renderer.transform.localToWorldMatrix;
         if (animationBody != null && animationBody.TryGetBaseVisualMatrix(renderer.transform, out Matrix4x4 baseMatrix))

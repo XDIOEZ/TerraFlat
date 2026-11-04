@@ -54,6 +54,10 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
     internal readonly Action<WorldPhysicsEntityPose2D> PoseReceiver;
     internal readonly ItemPhysicsDefinitionDto Definition;
     internal readonly bool StateAuthority;
+    internal readonly List<WorldPhysicsService2D.ItemTemplateProxyRegion> TemplateRegions = new();
+    internal bool HasSynchronizedSourcePose;
+    internal Vector2 SynchronizedSourcePosition;
+    internal float SynchronizedSourceRotation;
     internal bool Released;
     internal bool MassDirty = true;
     internal Vector2 LogicalOrigin;
@@ -144,16 +148,25 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
 
     internal void PublishSimulationResult()
     {
-        if (!IsParticipatingInWorldPhysics || !StateAuthority || Mode != WorldPhysicsProxyMode2D.IndependentDynamic) return;
+        if (!IsParticipatingInWorldPhysics || (!StateAuthority && TemplateRegions.Count == 0) || Mode != WorldPhysicsProxyMode2D.IndependentDynamic) return;
         WorldPhysicsEntityPose2D pose = CapturePose();
         if (hasPublishedPose && publishedPose.Position == pose.Position &&
             publishedPose.RotationDegrees == pose.RotationDegrees && publishedPose.Velocity == pose.Velocity &&
             publishedPose.AngularVelocity == pose.AngularVelocity) return;
         publishedPose = pose; hasPublishedPose = true;
-        Snapshot.PhysicsState ??= new ItemPhysicsRuntimeState();
-        Snapshot.PhysicsState.Velocity = pose.Velocity;
-        Snapshot.PhysicsState.AngularVelocity = pose.AngularVelocity;
+        if (StateAuthority)
+        {
+            Snapshot.PhysicsState ??= new ItemPhysicsRuntimeState();
+            Snapshot.PhysicsState.Velocity = pose.Velocity;
+            Snapshot.PhysicsState.AngularVelocity = pose.AngularVelocity;
+        }
         PoseReceiver?.Invoke(pose);
+        if (Item != null && Shell.OwnsRoot)
+        {
+            HasSynchronizedSourcePose = true;
+            SynchronizedSourcePosition = Item.transform.position;
+            SynchronizedSourceRotation = Item.transform.eulerAngles.z;
+        }
     }
 
     private void MarkEntityMassDirty(ItemData _) => MassDirty = true;

@@ -136,10 +136,10 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         Vector2 point = WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + new Vector2(7f, 3f);
         Item creature = fixture.SpawnItem("Chicken", point);
         Mod_DamageReceiver health = creature.GetComponentInChildren<Mod_DamageReceiver>(true);
-        Collider2D hitbox = health != null ? health.GetComponent<Collider2D>() : null;
-        Rigidbody2D body = creature.GetComponent<Rigidbody2D>();
-        Collider2D rootShape = creature.GetComponent<Collider2D>();
-        int colliderCount = creature.GetComponentsInChildren<Collider2D>(true).Length;
+        Collider2D hitbox = health != null ? WorldPhysicsService2D.GetItemCollider<Collider2D>(health) : null;
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(creature);
+        Collider2D rootShape = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(creature);
+        int colliderCount = WorldPhysicsService2D.GetItemColliders(creature).Length;
         RigidbodyType2D bodyType = body != null ? body.bodyType : RigidbodyType2D.Static;
         if (!GameplayWorldRegistry.TryGetPhysics(world, out var physics))
             throw new InvalidOperationException("正式生物未进入所属世界的物理管理器。");
@@ -150,7 +150,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             rootBinding.World == physics && rootBinding.Item == creature;
         bool hasProxy = physics.TryGetItemProxy(creature, out _);
 
-        // 重复登记必须保留生物原生组件与受击区域的准确归属。
+        // 重复登记保留同一物理租约和准确的受击区域归属。
         physics.RegisterItem(creature);
         bool rebound = hitbox != null && WorldPhysicsService2D.TryResolveCollider(hitbox, out var reboundBinding) &&
             reboundBinding.Item == creature && reboundBinding.Receiver == health &&
@@ -158,14 +158,16 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
         return new JObject
         {
             ["usesNativeBody"] = body != null && WorldPhysicsService2D.GetItemRigidbody(creature) == body,
-            ["noProxy"] = !hasProxy && !physics.TryGetItemProxy(creature, out _),
+            ["ownsProxy"] = hasProxy && physics.TryGetItemProxy(creature, out var proxy) && proxy.Shell.OwnsRoot,
+            ["logicHasNoPhysics"] = creature.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+                creature.GetComponentsInChildren<Rigidbody2D>(true).Length == 0,
             ["bodyTypePreserved"] = body != null && body.bodyType == bodyType,
             ["hitboxRegistered"] = hitboxRegistered && rebound,
             ["hitboxChannel"] = hitbox != null && hitbox.isTrigger && CombatPhysicsChannels.IsDamageReceiverCollider(hitbox),
             ["rootRegistered"] = rootRegistered,
-            ["collidersReused"] = creature.GetComponentsInChildren<Collider2D>(true).Length == colliderCount &&
-                                  (health == null || health.GetComponent<Collider2D>() == hitbox) &&
-                                  creature.GetComponent<Collider2D>() == rootShape
+            ["collidersReused"] = WorldPhysicsService2D.GetItemColliders(creature).Length == colliderCount &&
+                                  (health == null || WorldPhysicsService2D.GetItemCollider<Collider2D>(health) == hitbox) &&
+                                  WorldPhysicsService2D.GetItemRootCollider<Collider2D>(creature) == rootShape
         };
     }
     #endregion
@@ -196,7 +198,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             rendering.OwnsActorVisual(creature, actorSprite.transform) &&
             !actorSprite.transform.IsChildOf(creature.transform) &&
             actorSprite.gameObject.scene == creature.gameObject.scene &&
-            creature.GetComponent<Rigidbody2D>() != null &&
+            WorldPhysicsService2D.GetItemRigidbody(creature) != null &&
             creature.GetComponentInChildren<Mod_DamageReceiver>(true) != null;
         bool playerProjected = rendering.TryGetItemPresentation(player, out var playerView);
         bool ordinaryBorrowed = ordinary.Sprite != null &&

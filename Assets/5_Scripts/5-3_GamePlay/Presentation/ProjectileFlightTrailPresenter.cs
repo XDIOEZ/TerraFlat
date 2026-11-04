@@ -37,7 +37,6 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
 
     private Mod_Projectile projectile;
     private Item ownerItem;
-    private Rigidbody2D ownerBody;
     private SpriteRenderer sourceRenderer;
     private GameObject trailObject;
     private TrailRenderer trailRenderer;
@@ -102,7 +101,6 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
 
         DestroyRuntimeTrail();
         ownerItem = resolved;
-        ownerBody = ownerItem != null ? ownerItem.GetComponent<Rigidbody2D>() : null;
         sourceRenderer = ownerItem != null
             ? ownerItem.Sprite ?? ownerItem.GetComponentInChildren<SpriteRenderer>(true)
             : null;
@@ -117,7 +115,7 @@ public sealed class ProjectileFlightTrailPresenter : MonoBehaviour
             GameplayWorldRegistry.GetItemWorldKey(ownerItem) != GameplayWorldRegistry.LocalPresentationWorldKey)
             return false;
 
-        ownerBody ??= ownerItem.GetComponent<Rigidbody2D>();
+        Rigidbody2D ownerBody = WorldPhysicsService2D.GetItemRigidbody(ownerItem);
         return ownerBody != null &&
                ownerBody.bodyType == RigidbodyType2D.Dynamic &&
                ownerBody.velocity.sqrMagnitude > MinimumFlightSpeedSqr &&

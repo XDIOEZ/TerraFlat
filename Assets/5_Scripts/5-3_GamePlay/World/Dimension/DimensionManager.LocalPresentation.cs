@@ -18,7 +18,7 @@ public sealed partial class DimensionManager
         public readonly bool RequiresConnection;
         public readonly Mod_GameController Controller;
         public readonly Mod_Mover Mover;
-        public readonly Rigidbody2D Body;
+        public Rigidbody2D Body => WorldPhysicsService2D.GetItemRigidbody(Actor);
         public readonly bool WasSimulated;
         public readonly bool WasRunning;
         public readonly bool ShowsLoadingPresentation;
@@ -36,7 +36,6 @@ public sealed partial class DimensionManager
             RequiresConnection = GameNetwork.IsOnline;
             Controller = actor.GetComponentInChildren<Mod_GameController>(true);
             Mover = actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-            Body = actor.GetComponent<Rigidbody2D>();
             WasSimulated = Body != null && Body.simulated;
             WasRunning = Mover != null && Mover.RunPreference;
         }

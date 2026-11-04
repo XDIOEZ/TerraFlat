@@ -72,7 +72,7 @@ namespace FlatWorld.Networking.Gameplay
             Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-            Rigidbody2D body = player.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(player);
             stamina.modData.ReadData(ref stamina.Data);
             health.ApplyRemoteNetworkData(player, health._Data);
             stamina.CurrentValue = stamina.MaxValue;

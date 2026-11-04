@@ -70,7 +70,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     private Mod_Temperature _temperature; // 体温模块
     private Mod_GameController _gameController; // 输入控制器
     private Mod_Mover _mover; // 移动模块
-    private Rigidbody2D _rb; // 刚体缓存
+    private Rigidbody2D _rb => WorldPhysicsService2D.GetItemRigidbody(item);
     private Mod_PlayerAdminController _adminController; // 管理员无敌状态
 
     private bool _isInDyingState; // 是否已进入濒死
@@ -128,7 +128,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         _temperature = item.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         _mover = item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-        _rb = item.GetComponent<Rigidbody2D>();
         _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         // 标准世界进入期间的新玩家由 GameManager 确认最终陆地后写入；其它路径仍需补齐。

@@ -15,9 +15,8 @@ internal sealed class PerceptionColliderBridge
     {
         // 声明式交互区域位于独立节点，冻结时仍严格排除子物品的形状。
         using var scratch = UnityEngine.Pool.ListPool<Collider2D>.Get(out var shapes);
-        item.GetComponentsInChildren(true, shapes);
-        shapes.RemoveAll(collider => collider.GetComponentInParent<Item>(true) != item ||
-            collider.transform != item.transform && collider.GetComponent<ItemPhysicsRegion2D>() == null);
+        WorldPhysicsService2D.GetItemColliders(item, shapes);
+        shapes.RemoveAll(collider => GameplayPhysics2D.ResolveComponent<Item>(collider) != item);
         colliders = shapes.ToArray();
     }
 

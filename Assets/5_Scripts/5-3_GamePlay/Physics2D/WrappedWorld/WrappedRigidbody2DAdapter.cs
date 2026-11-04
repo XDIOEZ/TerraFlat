@@ -15,7 +15,7 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour, IGameplayFixedSte
         if (target == null || target is Player || target is Map)
             return;
         WrappedRigidbody2DAdapter topologyBody = target.GetComponent<WrappedRigidbody2DAdapter>();
-        Rigidbody2D rigidbody = target.GetComponent<Rigidbody2D>();
+        Rigidbody2D rigidbody = WorldPhysicsService2D.GetItemRigidbody(target);
         if (rigidbody == null || rigidbody.bodyType == RigidbodyType2D.Static)
         {
             topologyBody?.Suspend();
@@ -30,7 +30,7 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour, IGameplayFixedSte
     private void Awake()
     {
         item = GetComponent<Item>();
-        body = GetComponent<Rigidbody2D>();
+        body = WorldPhysicsService2D.GetItemRigidbody(item);
     }
 
     private void Bind(Item target, Rigidbody2D rigidbody)

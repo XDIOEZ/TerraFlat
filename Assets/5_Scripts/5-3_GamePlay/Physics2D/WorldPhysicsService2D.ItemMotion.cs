@@ -193,7 +193,7 @@ public sealed partial class WorldPhysicsService2D
 
     internal static Rigidbody2D ConfigureItemAttachedDamageSensorBody(Item item, Collider2D sensor, Component receiver)
     {
-        if (item == null || sensor == null || sensor.GetComponentInParent<Item>(true) != item ||
+        if (item == null || sensor == null || GameplayPhysics2D.ResolveComponent<Item>(sensor) != item ||
             !itemOwners.TryGetValue(item, out var owner))
             throw new InvalidOperationException("物品受击传感器必须属于已登记的世界物品。");
         bool wasEnabled = sensor.enabled;
@@ -201,6 +201,9 @@ public sealed partial class WorldPhysicsService2D
         try
         {
             Rigidbody2D body = owner.RentItemRigidbody(item, sensor.transform);
+            if (owner.TryGetItemProxy(item, out var proxy))
+                foreach (ItemTemplateProxyRegion region in proxy.TemplateRegions)
+                    if (region.Shape == sensor) region.Body = body;
             body.simulated = false;
             body.bodyType = RigidbodyType2D.Kinematic;
             body.gravityScale = 0f;

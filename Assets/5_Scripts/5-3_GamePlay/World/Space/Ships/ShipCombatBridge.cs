@@ -165,7 +165,7 @@ namespace FlatWorld.Spaceflight
                         if (identity == context.Credit || identity == context.Attack.Source) continue;
                         Mod_DamageReceiver receiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
                         if (receiver == null || receiver.Hp <= 0f) continue;
-                        BoxCollider2D collider = receiver.GetComponent<BoxCollider2D>();
+                        BoxCollider2D collider = WorldPhysicsService2D.GetItemCollider<BoxCollider2D>(receiver);
                         if (collider == null) continue;
                         Vector2 relative = SpaceSectorCoordinates.Difference(observer.Position, canonicalOrigin).ToVector2();
                         if (attackerShip != null)

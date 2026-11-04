@@ -24,11 +24,12 @@ public static class WorldLocalPresentation
     /// <summary>本地玩家是唯一表现锚点；重复绑定同一 Transform 不产生额外工作。</summary>
     public static void SetAnchor(Transform target)
     {
-        if (target == null || anchor == target)
+        if (target == null)
             return;
 
         anchor = target;
-        anchorBody = target.GetComponent<Rigidbody2D>();
+        anchorBody = target.TryGetComponent<Item>(out var item)
+            ? WorldPhysicsService2D.GetItemRigidbody(item) : target.GetComponent<Rigidbody2D>();
     }
 
     public static void ClearAnchor(Transform target)

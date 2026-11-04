@@ -49,8 +49,61 @@ public static partial class GameplayTestSystemProbe
             ["immutableDynamicBoxRejected"] = !ValidatePhysicsDefinitionRules(mutableDynamicBox),
             ["immutableModuleBoxRejected"] = !ValidatePhysicsDefinitionRules(immutableModuleBox),
             ["moduleIdentityContract"] = CaptureWorldPhysicsModuleIdentityContract(),
+            ["templateProxy"] = CaptureTemplateActorPhysicsProxy(),
             ["defaultInteraction"] = CaptureDefaultNaturalEntityInteractionRegionRules()
         };
+    }
+
+    // 直接使用通用 Item 模板验证代理，避免测试依赖玩家控制器。
+    private static JObject CaptureTemplateActorPhysicsProxy()
+    {
+        string identity = "probe:template-proxy:" + Guid.NewGuid().ToString("N");
+        using var space = WorldPhysicsScene2D.CreateIsolated(identity);
+        using var world = new WorldPhysicsService2D(identity, WorldPhysicsScene2D.Borrow(space.Scene));
+        var root = new GameObject("Template actor");
+        root.SetActive(false);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, space.Scene);
+        GameItem item = root.AddComponent<GameItem>();
+        try
+        {
+            item.BindData(new Data_GeneralItem { IDName = identity });
+            ItemPhysicsTemplate2D template = root.AddComponent<ItemPhysicsTemplate2D>();
+            template.hasBody = true;
+            template.bodyGravityScale = 0f;
+            template.bodyConstraints = RigidbodyConstraints2D.FreezeRotation;
+            template.colliderType = nameof(BoxCollider2D);
+            template.size = new Vector2(.4f, .3f);
+            template.offset = new Vector2(0f, .15f);
+            Mod_DamageReceiver receiver = CreateWorldPhysicsProbeReceiver(item, "health:template", Vector2.zero);
+            receiver.GetComponent<ItemPhysicsTemplate2D>().owningModule = receiver;
+            world.RegisterItem(item);
+            world.TryGetItemProxy(item, out var proxy);
+            Collider2D hit = WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver);
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(item);
+            root.SetActive(true);
+            world.RegisterItem(item);
+            bool leasePreserved = world.TryGetItemProxy(item, out var same) && ReferenceEquals(proxy, same);
+            body.position = Vector2.right * 2f;
+            world.Simulate(.02f);
+            bool nativePosePreserved = Mathf.Abs(root.transform.position.x - 2f) < .001f;
+            root.transform.position = Vector3.right * 5f;
+            world.Simulate(.02f);
+            bool teleportApplied = Mathf.Abs(body.position.x - 5f) < .001f;
+            var result = new JObject
+            {
+                ["logicHasNoPhysics"] = root.GetComponentsInChildren<Collider2D>(true).Length == 0 &&
+                    root.GetComponentsInChildren<Rigidbody2D>(true).Length == 0,
+                ["physicsOwnsBody"] = body != null && body.gameObject != root && proxy.Shell.OwnsRoot,
+                ["exactReceiver"] = GameplayCombatBridge.ResolvePhysicsDamageReceiver(hit) == receiver,
+                ["leasePreserved"] = leasePreserved,
+                ["nativePosePreserved"] = nativePosePreserved,
+                ["teleportApplied"] = teleportApplied
+            };
+            WorldPhysicsService2D.ReleaseItem(item);
+            result["released"] = !proxy.IsValid && !body.simulated && !WorldPhysicsService2D.TryResolveCollider(hit, out _);
+            return result;
+        }
+        finally { WorldPhysicsService2D.ReleaseItem(item); UnityEngine.Object.DestroyImmediate(root); }
     }
 
     // 校验模板旧别名、正式绑定、重绑和两种克隆都不串运行态身份。

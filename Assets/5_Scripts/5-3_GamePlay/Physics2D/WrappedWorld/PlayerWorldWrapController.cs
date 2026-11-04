@@ -5,7 +5,7 @@ using UnityEngine;
 /// 保留 Prefab 脚本身份；不是数学核心，不能复制到 Jobs。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player), typeof(Rigidbody2D))]
+[RequireComponent(typeof(Player))]
 public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
     private Player player;
@@ -17,7 +17,6 @@ public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedSte
     private void Awake()
     {
         player = GetComponent<Player>();
-        body = GetComponent<Rigidbody2D>();
         chunkLoader = GetComponentInChildren<Mod_ChunkLoader>(true);
     }
 
@@ -43,6 +42,7 @@ public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedSte
     /// <summary>检测局部平面跨周并刷新逻辑世界；不会搬动 Rigidbody。保留公开入口供聚焦测试。</summary>
     public bool TryWrapNow()
     {
+        body = WorldPhysicsService2D.GetItemRigidbody(player);
         if (player == null || body == null || !player.IsLocalProfile ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {

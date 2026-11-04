@@ -321,10 +321,25 @@ public sealed partial class WorldPhysicsService2D
         {
             UnregisterCollider(collider);
             if (collider != null) collider.GetComponent<WorldPhysicsRegionTriggerRelay2D>()?.ClearBinding();
+            if (collider != null) collider.GetComponent<ItemPhysicsRegion2D>()?.BindRegion(null, 0, null);
             if (shell.OwnsRoot && collider != null)
-            { collider.enabled = false; collider.gameObject.SetActive(false); }
+            {
+                collider.enabled = false;
+                collider.gameObject.SetActive(false);
+                if (collider.TryGetComponent<Rigidbody2D>(out var regionBody))
+                {
+                    if (proxy.Item != null && itemComponentCaches.TryGetValue(proxy.Item, out var cache))
+                    {
+                        cache.Bodies.Remove(collider.transform);
+                        cache.OwnedBodies.Remove(regionBody);
+                    }
+                    shell.AllColliders.Remove(collider);
+                    DestroyPhysicsObject(collider.gameObject);
+                }
+            }
         }
         shell.ActiveColliders.Clear();
+        proxy.TemplateRegions.Clear();
         foreach (BoxCollider2D collider in shell.FixedProjectionColliders) ReturnObstacleBox(collider);
         shell.FixedProjectionColliders.Clear();
         foreach (Collider2D source in shell.DisabledSourceColliders)
@@ -369,8 +384,11 @@ public sealed partial class WorldPhysicsService2D
     private void PrepareEntityProxySimulation()
     {
         foreach (WorldPhysicsEntityProxy2D proxy in movingEntityProxies)
+        {
+            if (proxy.TemplateRegions.Count > 0) SynchronizeDetachedItemProxy(proxy.Item);
             if (proxy.IsParticipatingInWorldPhysics && proxy.MassDirty)
             { proxy.Body.mass = ResolveEntityMass(proxy.Snapshot); proxy.MassDirty = false; }
+        }
     }
 
     private void PublishEntityProxySimulation()

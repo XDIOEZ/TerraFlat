@@ -33,7 +33,7 @@ namespace FlatWorld.Networking.Gameplay
                     throw new InvalidOperationException("本地主角缺少正式输入控制器。");
                 mover = local.GetComponentInChildren<Mod_Mover>(true) ??
                     throw new InvalidOperationException("本地主角缺少正式移动模块。");
-                body = local.GetComponent<Rigidbody2D>() ??
+                body = WorldPhysicsService2D.GetItemRigidbody(local) ??
                     throw new InvalidOperationException("本地主角缺少正式物理刚体。");
                 priorVelocity = body.velocity;
                 // 测试期间屏蔽玩家设备输入、风和水流，仍保留动态刚体检测假人误碰撞。

@@ -395,8 +395,8 @@ public sealed partial class Mod_ColonyResident
             StingDistance * StingDistance)
             return true;
 
-        Collider2D selfCollider = item.GetComponent<Collider2D>();
-        Collider2D targetCollider = receiver.GetComponent<Collider2D>();
+        Collider2D selfCollider = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(item);
+        Collider2D targetCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver);
         if (selfCollider == null || targetCollider == null || !selfCollider.enabled || !targetCollider.enabled)
             return false;
 

@@ -62,7 +62,7 @@ public static partial class GameplayTestSystemProbe
             body.simulated = false;
             BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
             collider.size = new Vector2(.4f, .3f);
-            collider.offset = new Vector2(0f, -.07f);
+            collider.offset = new Vector2(0f, .15f);
             Mod_Mover mover = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<Mod_Mover>());
             mover.ModuleInit(player, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             mover.rb = body;
@@ -83,8 +83,7 @@ public static partial class GameplayTestSystemProbe
             roll = EnableGameplayTestProbeLifecycleCallbacks(root.AddComponent<Mod_Roll>());
             roll.ModuleInit(player, new Ex_ModData { ID = Mod_Roll.ModuleId, Enabled = true });
             roll.visualRoot = visual.transform;
-            roll.bodyColliders = Flag(args, "missingBody", false) ? Array.Empty<Collider2D>() :
-                Flag(args, "duplicateBody", false) ? new Collider2D[] { collider, collider } : new Collider2D[] { collider };
+            collider.enabled = !Flag(args, "missingBody", false);
             collider.isTrigger = Flag(args, "triggerOnly", false);
             player.itemMods.AddMod(roll);
             float requestedCost = 0f;

@@ -18,7 +18,7 @@ public partial class DarkNavigationSaveData
 /// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除；视觉子节点以低幅度正弦曲线上下浮动，
 /// 浮动只作用于 Sprite，不改变根物体、碰撞体、寻路位置和伤害判定。
 /// </summary>
-public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAware
+public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAware, IItemPhysicsComponentsReceiver2D
 {
     public const string ModuleId = "Mod_LightSensitiveNavigation";
     [SerializeField] private string lightExposureBuffId = "光耀";
@@ -72,6 +72,7 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
     private Mod_BuffManager _buffManager;
     private WorldNavigationAgent _pathAgent;
     private Rigidbody2D _rigidbody;
+    public void OnItemPhysicsComponentsAvailable() => _rigidbody = WorldPhysicsService2D.GetItemRigidbody(item);
     private Vector3 _visualBaseLocalPosition;
     private float _bobPhase;
     private bool _hasVisualBasePosition;
@@ -123,7 +124,7 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
             _bobPhase = ((GetInstanceID() & int.MaxValue) % 97) / 97f * Mathf.PI * 2f;
         }
 
-        _rigidbody = item.GetComponent<Rigidbody2D>();
+        OnItemPhysicsComponentsAvailable();
         EnsureNavigationAgent();
         _moveTarget = Data.WanderTarget;
         _hasMoveTarget = Data.HasWanderTarget;
@@ -145,7 +146,7 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
         if (_pathAgent == null)
             _pathAgent = item.gameObject.AddComponent<WorldNavigationAgent>();
 
-        _pathAgent.Bind(item.GetComponent<Rigidbody2D>(), null, null, item);
+        _pathAgent.Bind(WorldPhysicsService2D.GetItemRigidbody(item), null, null, item);
         _pathAgent.Configure(0.05f, 0.1f, stuckRepathDelay, 0.01f);
         _pathAgent.Stop(clearDestination: true);
     }
