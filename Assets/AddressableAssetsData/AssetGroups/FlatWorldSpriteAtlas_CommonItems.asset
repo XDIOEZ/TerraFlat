@@ -1077,6 +1077,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26319aeadd9945f595315c109719628b
+    m_Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 64a3a03e261b4bf39470b79fbec2a753
     m_Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png
     m_ReadOnly: 0
