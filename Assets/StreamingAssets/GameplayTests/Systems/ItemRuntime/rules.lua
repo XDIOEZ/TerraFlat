@@ -16,6 +16,12 @@ test.system("item_runtime", "torch_ignition", {}, function(data)
         "缺氧点火失败仍然扣除火种")
     assert(data.unloadedRejected and data.restoredAmount == 2,
         "卸载后仍可操作，或火种槽保存恢复丢失物品")
+    assert(data.belowThresholdRejected and data.hotItemAccepted and data.hotInsertionStayedOut,
+        "普通物品没有按499.9℃/500℃界限接收，或入槽便自动点火")
+    assert(data.cooledItemRejected and data.hotOxygenRejected and data.hotItemCannotSupplyFuel,
+        "高温点火没有复核当前温度、氧气或火把燃料")
+    assert(data.hotItemIgnited and data.hotItemRetained and data.hotItemReused,
+        "500℃普通物品无法点火，或点火消耗/改变了高温物品")
 end, "火把默认熄灭、火种单槽、显式点火熄灭与库存恢复")
 
 -- 分包以后继续沿正式目录校验跨文件继承，避免公共模板改变未声明的姿态或覆盖食物配方。

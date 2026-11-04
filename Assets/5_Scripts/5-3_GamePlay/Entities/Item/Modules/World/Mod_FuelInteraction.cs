@@ -11,6 +11,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
     #region 数据与依赖
 
     public const string ModuleId = "Mod_FuelInteraction";
+    public const float MinimumHotItemIgnitionTemperatureCelsius = 500f;
     private const float FuelEpsilon = 0.01f;
 
     public Ex_ModData_MemoryPackable ModData = new() { ID = ModuleId };
@@ -72,7 +73,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
             InventoryModuleDataPersistence.TryRead(ModData), "火种");
         IgnitionInventory.InitData();
         IgnitionInventory.RuntimeAccessGuard = () => false;
-        IgnitionInventory.Data.SetItemAcceptancePolicy((source, _) => IsIgnitionSource(source));
+        IgnitionInventory.Data.SetItemAcceptancePolicy((source, _) => CanUseItemForIgnition(source));
         IgnitionInventory.Data.Event_OnDataChanged += HandleIgnitionInventoryChanged;
         item.OnAct -= Act;
         item.OnAct += Act;
@@ -186,7 +187,7 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
 
         bool taggedFuel = source.Tags?.ContainsTag(Tag.CombustionFuel) == true;
         FuelData sourceFuel = null;
-        bool hasFuelData = taggedFuel && !IsIgnitionSource(source) &&
+        bool hasFuelData = taggedFuel && !IsSpecialIgnitionSource(source) &&
                            Mod_Fuel.TryResolveItemData(source, out sourceFuel);
 
         if (!hasFuelData || sourceFuel.Fuel.x <= FuelEpsilon)
@@ -213,14 +214,14 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         return true;
     }
 
-    // 点火只消费槽内一份火种，熄灭保留燃料和其余火种。
-    public bool TryIgniteFromStoredTinder(Item actor)
+    // 特殊火种消耗一份，高温物品仅提供点火且按点击时的真实温度判定。
+    public bool TryIgniteFromStoredItem(Item actor)
     {
         if (!CanOperate(actor) || IsBurning || MachineInventory.IsBeingDragged(IgnitionInventory))
             return false;
         ItemSlot slot = IgnitionInventory.Data.GetItemSlot(0);
         ItemData source = slot.itemData;
-        if (!IsIgnitionSource(source) || source.Stack.Amount < 1f)
+        if (!CanUseItemForIgnition(source) || source.Stack.Amount < 1f)
             return false;
         if (!combustion.CanCombustNow())
         {
@@ -228,16 +229,18 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
             return false;
         }
 
+        bool specialIgnitionSource = IsSpecialIgnitionSource(source);
         float starterFuel = 0f;
         if (!fuel.HasFuel())
         {
-            if (!Mod_Fuel.TryResolveItemData(source, out FuelData sourceFuel) || sourceFuel.Fuel.x <= FuelEpsilon)
+            if (!specialIgnitionSource || !Mod_Fuel.TryResolveItemData(source, out FuelData sourceFuel) ||
+                sourceFuel.Fuel.x <= FuelEpsilon)
                 return false;
             starterFuel = Mathf.Min(Mathf.Max(0f, ignitionFuelValueOverride), sourceFuel.Fuel.x);
             if (starterFuel <= FuelEpsilon)
                 return false;
         }
-        if (!IgnitionInventory.Data.TryConsumeFromSlot(slot, 1, out _))
+        if (specialIgnitionSource && !IgnitionInventory.Data.TryConsumeFromSlot(slot, 1, out _))
             return false;
         fuel.AddFuel(starterFuel);
         return combustion.Ignite();
@@ -251,7 +254,13 @@ public sealed class Mod_FuelInteraction : Module, IInteractable, IItemModuleDepe
         return true;
     }
 
-    private bool IsIgnitionSource(ItemData source)
+    private bool CanUseItemForIgnition(ItemData source) =>
+        IsSpecialIgnitionSource(source) ||
+        source?.MatterState?.Initialized == true &&
+        float.IsFinite(source.MatterState.TemperatureCelsius) &&
+        source.MatterState.TemperatureCelsius >= MinimumHotItemIgnitionTemperatureCelsius;
+
+    private bool IsSpecialIgnitionSource(ItemData source)
     {
         if (source == null)
             return false;

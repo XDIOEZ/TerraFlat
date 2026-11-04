@@ -9099,6 +9099,10 @@ MonoBehaviour:
     m_Localized: "Place tinder in the slot and click Ignite. Drag fuel to replenish it."
     m_Metadata:
       m_Items: []
+  - m_Id: 28103100000100006
+    m_Localized: "Place tinder or an item at 500\u00b0C or hotter in the slot, then click Ignite. Drag fuel to replenish it."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

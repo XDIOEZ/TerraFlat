@@ -67,7 +67,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameObject tinderSlot = (GameObject)PrefabUtility.InstantiatePrefab(slotPrefab, slotRow.transform);
         tinderSlot.name = "火种插槽";
         ((RectTransform)tinderSlot.transform).sizeDelta = new Vector2(128f, 128f);
-        CreateSettingsHint(content, "放入火种后点击点燃；拖入燃料可补充燃料。", 58f);
+        CreateSettingsHint(content, "放入火种或温度达到500℃的物品后点击点燃；拖入燃料可补充燃料。", 58f);
 
         GameObject actions = CreateUIObject("操作列表", content);
         actions.AddComponent<LayoutElement>().preferredHeight = 76f;
@@ -97,7 +97,7 @@ public static partial class RuntimeUIPrefabBuilder
             "火种",
             "点燃",
             "熄灭",
-            "放入火种后点击点燃；拖入燃料可补充燃料。",
+            "放入火种或温度达到500℃的物品后点击点燃；拖入燃料可补充燃料。",
             "没有燃料，火种无法点燃。",
             "已重新点燃。",
             "这个物品不能作为燃料。",

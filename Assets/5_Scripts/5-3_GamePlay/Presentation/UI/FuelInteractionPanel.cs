@@ -84,7 +84,7 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
         ignitionSlot = FindNamedComponent<ItemSlot_UI>("火种插槽");
         igniteButton = panel.GetButton("点燃按钮");
         extinguishButton = panel.GetButton("熄灭按钮");
-        igniteButton.onClick.AddListener(() => interaction?.TryIgniteFromStoredTinder(actor));
+        igniteButton.onClick.AddListener(() => interaction?.TryIgniteFromStoredItem(actor));
         extinguishButton.onClick.AddListener(() => interaction?.TryExtinguish(actor));
 
         panel.GetButton("关闭按钮").onClick.AddListener(Close);
@@ -160,7 +160,7 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
             interaction.CurrentFuel,
             interaction.MaxFuel);
         hint.text = FlatWorldLocalizationService.GetUiText(
-            "放入火种后点击点燃；拖入燃料可补充燃料。");
+            "放入火种或温度达到500℃的物品后点击点燃；拖入燃料可补充燃料。");
 
         fuelBar.SetValueWithoutNotify(interaction.FuelRatio);
         MechanicalPanelView.SetButtonCaption(igniteButton, "点燃");

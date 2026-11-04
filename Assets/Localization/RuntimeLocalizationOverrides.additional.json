@@ -1,5 +1,6 @@
 {
   "ui": {
+    "放入火种或温度达到500℃的物品后点击点燃；拖入燃料可补充燃料。": "Place tinder or an item at 500°C or hotter in the slot, then click Ignite. Drag fuel to replenish it.",
     "火种": "Tinder",
     "点燃": "Ignite",
     "熄灭": "Extinguish",

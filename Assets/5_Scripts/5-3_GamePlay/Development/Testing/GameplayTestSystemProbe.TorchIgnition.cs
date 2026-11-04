@@ -68,24 +68,48 @@ public static partial class GameplayTestSystemProbe
             interaction.Load();
 
             Inventory inventory = interaction.IgnitionInventory;
-            bool emptyRejected = !interaction.TryIgniteFromStoredTinder(actor);
+            bool emptyRejected = !interaction.TryIgniteFromStoredItem(actor);
             bool fuelRejected = !inventory.Data.TryAddItem(EntityProbeData("Log", 1f), false);
             inventory.Data.TryAddItem(EntityProbeData("FireSeed", 3f), true);
             bool insertionStayedOut = !interaction.IsBurning;
-            bool ignited = interaction.TryIgniteFromStoredTinder(actor);
+            bool ignited = interaction.TryIgniteFromStoredItem(actor);
             float afterIgnite = inventory.Data.GetItemSlot(0).itemData.Stack.Amount;
-            bool duplicateRejected = !interaction.TryIgniteFromStoredTinder(actor);
+            bool duplicateRejected = !interaction.TryIgniteFromStoredItem(actor);
             bool extinguished = interaction.TryExtinguish(actor) && !interaction.IsBurning;
             float retainedFuel = fuel.Data.Fuel.x;
             environment.Allowed = false;
-            bool oxygenRejected = !interaction.TryIgniteFromStoredTinder(actor);
+            bool oxygenRejected = !interaction.TryIgniteFromStoredItem(actor);
             float afterOxygenFailure = inventory.Data.GetItemSlot(0).itemData.Stack.Amount;
             interaction.Save();
             interaction.Unload();
-            bool unloadedRejected = !interaction.TryIgniteFromStoredTinder(actor) && !inventory.CanAccessRuntime;
+            bool unloadedRejected = !interaction.TryIgniteFromStoredItem(actor) && !inventory.CanAccessRuntime;
             inventory.Data.GetItemSlot(0).itemData = null;
             interaction.Load();
             float restoredAmount = inventory.Data.GetItemSlot(0).itemData.Stack.Amount;
+
+            inventory.Data.TryConsumeFromSlot(inventory.Data.GetItemSlot(0), 2, out _);
+            ItemData iron = EntityProbeData("probe:hot-iron", 2f);
+            iron.MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 499.9f };
+            bool belowThresholdRejected = !inventory.Data.TryAddItem(iron, false);
+            iron.MatterState.TemperatureCelsius = 500f;
+            bool hotItemAccepted = inventory.Data.TryAddItem(iron, true);
+            ItemData storedIron = inventory.Data.GetItemSlot(0).itemData;
+            bool hotInsertionStayedOut = !interaction.IsBurning;
+            environment.Allowed = true;
+            storedIron.MatterState.TemperatureCelsius = 499.9f;
+            bool cooledItemRejected = !interaction.TryIgniteFromStoredItem(actor);
+            storedIron.MatterState.TemperatureCelsius = 500f;
+            environment.Allowed = false;
+            bool hotOxygenRejected = !interaction.TryIgniteFromStoredItem(actor);
+            environment.Allowed = true;
+            fuel.Data.Fuel.x = 0f;
+            bool hotItemCannotSupplyFuel = !interaction.TryIgniteFromStoredItem(actor) && fuel.Data.Fuel.x == 0f;
+            fuel.Data.Fuel.x = 100f;
+            bool hotItemIgnited = interaction.TryIgniteFromStoredItem(actor);
+            bool hotItemRetained = ReferenceEquals(storedIron, inventory.Data.GetItemSlot(0).itemData) &&
+                storedIron.Stack.Amount == 2f && storedIron.MatterState.TemperatureCelsius == 500f;
+            interaction.TryExtinguish(actor);
+            bool hotItemReused = interaction.TryIgniteFromStoredItem(actor) && storedIron.Stack.Amount == 2f;
 
             return new JObject
             {
@@ -95,7 +119,12 @@ public static partial class GameplayTestSystemProbe
                 ["duplicateRejected"] = duplicateRejected, ["extinguished"] = extinguished,
                 ["retainedFuel"] = retainedFuel, ["oxygenRejected"] = oxygenRejected,
                 ["afterOxygenFailure"] = afterOxygenFailure,
-                ["unloadedRejected"] = unloadedRejected, ["restoredAmount"] = restoredAmount
+                ["unloadedRejected"] = unloadedRejected, ["restoredAmount"] = restoredAmount,
+                ["belowThresholdRejected"] = belowThresholdRejected, ["hotItemAccepted"] = hotItemAccepted,
+                ["hotInsertionStayedOut"] = hotInsertionStayedOut, ["cooledItemRejected"] = cooledItemRejected,
+                ["hotOxygenRejected"] = hotOxygenRejected, ["hotItemCannotSupplyFuel"] = hotItemCannotSupplyFuel,
+                ["hotItemIgnited"] = hotItemIgnited, ["hotItemRetained"] = hotItemRetained,
+                ["hotItemReused"] = hotItemReused
             };
         }
         finally

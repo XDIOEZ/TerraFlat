@@ -859,7 +859,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u653E\u5165\u706B\u79CD\u540E\u70B9\u51FB\u70B9\u71C3\uFF1B\u62D6\u5165\u71C3\u6599\u53EF\u8865\u5145\u71C3\u6599\u3002"
+  m_text: "\u653e\u5165\u706b\u79cd\u6216\u6e29\u5ea6\u8fbe\u5230500\u2103\u7684\u7269\u54c1\u540e\u70b9\u51fb\u70b9\u71c3\uff1b\u62d6\u5165\u71c3\u6599\u53ef\u8865\u5145\u71c3\u6599\u3002"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}
   m_sharedMaterial: {fileID: 4795396880416652781, guid: e46c8ef214b33b4408cf60be5c29141c, type: 2}
