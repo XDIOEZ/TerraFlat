@@ -32,7 +32,7 @@ public class Inventory_Furnace : Inventory
     public Slider temperatureSlider;
     [Tooltip("按百位截断后的粗略炉温文本，不显示十位和个位")]
     public TextMeshProUGUI TemperatureText;
-    #endregion      
+    #endregion
     #region Unity生命周期
 
     public override void OnValidate()
@@ -183,6 +183,12 @@ public class Inventory_Furnace : Inventory
         TemperatureText = base.basePanel.GetText("FWUI_FurnaceTemperatureValue");
         fuelSlider = base.basePanel.GetSlider("燃料显示条");
         WorkButton = base.basePanel.GetButton("合成按钮");
+        basePanel.BindPhysicalDeviceArtwork(item.itemData.IDName, () =>
+            new PhysicalDeviceArtworkView.OperatingState
+            {
+                Heat = Mathf.InverseLerp(20f, 1000f, _Data.Temperature),
+                Burning = _Data.IsSmelting && mod_Fuel != null && mod_Fuel.Data.Fuel.x > 0f
+            });
 
         // 按钮事件
         WorkButton.onClick.AddListener(OnButtonClick);
