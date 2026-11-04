@@ -501,10 +501,10 @@ public static partial class RuntimeUIPrefabBuilder
     /// <summary>构建铺满主内容区的内嵌按键绑定页。</summary>
     private static GameObject BuildInputBindingSettings()
     {
-        GameObject root = CreateFixedSettingsPageRoot(RuntimeUIPrefabKeys.InputBindingSettings);
-        Transform content = root.transform;
+        GameObject root = CreateSettingsPageRoot(
+            RuntimeUIPrefabKeys.InputBindingSettings, out Transform content);
 
-        // 统一标题与行距，绑定列表保留弹性高度和独立滚动。
+        // 标题、设备页签与绑定行共用整页滚动，列表只负责按内容展开。
         CreateSettingsHeader(content, "按键绑定");
         CreateSettingsHint(content, "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。", 34f);
         CreateInputBindingControlModeRow(content);
@@ -522,8 +522,14 @@ public static partial class RuntimeUIPrefabBuilder
         CreateButton("手柄分页按钮", deviceTabs.transform, "手柄", 132f, 34f, false);
         CreateButton("触屏布局按钮", deviceTabs.transform, "触屏布局", 150f, 34f, false);
 
-        Transform bindingContent = CreateBindingScrollView(content);
-        CreateGameplayInputOptions(bindingContent);
+        GameObject bindingContent = CreateUIObject("绑定列表", content);
+        VerticalLayoutGroup bindingLayout = bindingContent.AddComponent<VerticalLayoutGroup>();
+        bindingLayout.spacing = SettingsPageRowSpacing;
+        bindingLayout.childControlWidth = true;
+        bindingLayout.childControlHeight = true;
+        bindingLayout.childForceExpandWidth = true;
+        bindingLayout.childForceExpandHeight = false;
+        CreateGameplayInputOptions(bindingContent.transform);
         CreateCompactInputBindingFooter(content);
         return root;
     }

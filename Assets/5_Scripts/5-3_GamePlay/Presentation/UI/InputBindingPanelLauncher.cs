@@ -137,11 +137,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         controlsBound = true;
         pageRect = transform as RectTransform;
-        Transform bindingList = FindTransform(transform, "绑定列表");
-        ScrollRect bindingScrollRect = bindingList != null
-            ? bindingList.GetComponent<ScrollRect>()
-            : null;
-        content = bindingScrollRect != null ? bindingScrollRect.content : null;
+        content = FindTransform(transform, "绑定列表");
         gameplayOptions = content != null ? content.Find("操作选项") : null;
         statusText = FindText(transform, "状态文本");
         controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
@@ -162,7 +158,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         touchLayoutButton?.onClick.AddListener(OpenTouchLayoutEditor);
         resetButton?.onClick.AddListener(ResetToDefaults);
 
-        if (bindingList == null || bindingScrollRect == null || content == null ||
+        if (content == null ||
             statusText == null || controlModeDropdown == null ||
             preciseInteractionToggle == null || preciseInteractionSetting == null ||
             gameplayOptions == null || flickSpeedSlider == null || flickDistanceSlider == null ||

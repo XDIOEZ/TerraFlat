@@ -161,6 +161,7 @@ test.runtime("ui_settings", "new_game_window_close", {}, function(data)
 end, "关闭难度浮层仍留在名称页；世界页右上关闭回名称页并保留参数，名称页右上关闭窗口")
 
 test.runtime("ui_settings", "flick_settings_controls", {}, function(data)
+    assert(data.wholePageScroll, "按键绑定没有使用整页滚动，或仍有内嵌绑定滚动框")
     assert(data.active and data.scrollContainsOptions and data.wholeNumbers
         and data.speedMin == 25 and data.speedMax == 200 and data.distanceMin == 25 and data.distanceMax == 200,
         "游戏操作页缺少正式可滚动滑条/开关，或范围与整数步进错误")

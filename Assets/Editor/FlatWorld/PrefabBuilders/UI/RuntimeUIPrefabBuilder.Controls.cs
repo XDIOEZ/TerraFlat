@@ -130,25 +130,6 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>创建由纵向布局直接铺满内容区的可嵌入设置页。</summary>
-    private static GameObject CreateFixedSettingsPageRoot(string name)
-    {
-        GameObject root = new GameObject(
-            name,
-            typeof(RectTransform),
-            typeof(CanvasRenderer),
-            typeof(Image));
-        Stretch(root.GetComponent<RectTransform>());
-
-        Image image = root.GetComponent<Image>();
-        image.color = Canvas;
-        image.raycastTarget = true;
-
-        VerticalLayoutGroup layout = root.AddComponent<VerticalLayoutGroup>();
-        ConfigureSettingsPageVerticalLayout(layout);
-        return root;
-    }
-
     /// <summary>创建无可见蒙板的居中模态面板；透明根节点只负责拦截背景输入。</summary>
     private static GameObject CreateModalPanelRoot(string name, Vector2 size)
     {
@@ -590,66 +571,6 @@ public static partial class RuntimeUIPrefabBuilder
         description.rectTransform.anchorMax = new Vector2(1f, 0f);
         description.rectTransform.offsetMin = new Vector2(18f, 8f);
         description.rectTransform.offsetMax = new Vector2(-18f, 42f);
-    }
-
-    private static Transform CreateBindingScrollView(Transform parent)
-    {
-        GameObject scrollRoot = CreateUIObject("绑定列表", parent, typeof(Image), typeof(ItemStepScrollRect));
-        LayoutElement scrollElement = scrollRoot.AddComponent<LayoutElement>();
-        scrollElement.minHeight = 140f;
-        scrollElement.flexibleHeight = 1f;
-        scrollRoot.GetComponent<Image>().color = Surface;
-
-        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(Image), typeof(RectMask2D));
-        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
-        Stretch(viewportRect);
-        viewportRect.offsetMax = new Vector2(-18f, 0f);
-        viewport.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.001f);
-
-        GameObject content = CreateUIObject("Content", viewport.transform);
-        RectTransform contentRect = content.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
-        contentLayout.padding = new RectOffset(8, 8, 8, 8);
-        contentLayout.spacing = SettingsPageRowSpacing;
-        contentLayout.childControlWidth = true;
-        contentLayout.childControlHeight = true;
-        contentLayout.childForceExpandWidth = true;
-        contentLayout.childForceExpandHeight = false;
-        content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        GameObject scrollbarObject = CreateUIObject("Scrollbar Vertical", scrollRoot.transform, typeof(Image), typeof(Scrollbar));
-        RectTransform scrollbarRect = scrollbarObject.GetComponent<RectTransform>();
-        scrollbarRect.anchorMin = new Vector2(1f, 0f);
-        scrollbarRect.anchorMax = Vector2.one;
-        scrollbarRect.pivot = new Vector2(1f, 0.5f);
-        scrollbarRect.offsetMin = new Vector2(-14f, 2f);
-        scrollbarRect.offsetMax = new Vector2(-2f, -2f);
-        scrollbarObject.GetComponent<Image>().color = SurfaceRaised;
-        GameObject slidingArea = CreateUIObject("Sliding Area", scrollbarObject.transform);
-        Stretch(slidingArea.GetComponent<RectTransform>());
-        Image handle = CreateImage("Handle", slidingArea.transform, Muted);
-        Stretch(handle.rectTransform);
-        Scrollbar scrollbar = scrollbarObject.GetComponent<Scrollbar>();
-        scrollbar.handleRect = handle.rectTransform;
-        scrollbar.targetGraphic = handle;
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-        scrollbar.size = 0.35f;
-
-        ScrollRect scroll = scrollRoot.GetComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 28f;
-        scroll.viewport = viewportRect;
-        scroll.content = contentRect;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-        scroll.verticalScrollbarSpacing = 4f;
-        return content.transform;
     }
 
     private static Transform CreateFooter(Transform parent)

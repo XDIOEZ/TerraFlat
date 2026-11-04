@@ -182,6 +182,14 @@ public static class GameplayTestInventoryFlickSettingsProbe
             TMP_Text distanceText = launcher.GetComponentsInChildren<TMP_Text>(true).Single(value => value.name == "甩动转移距离_数值");
             ScrollRect scroll = speed.GetComponentInParent<ScrollRect>();
             result = new JObject { ["initial"] = ControlSnapshot(speed, distance, angle, speedText, distanceText),
+                ["wholePageScroll"] = scroll != null &&
+                    scroll.transform == launcher.transform.Find(RuntimeUIPrefabKeys.InputBindingSettings) &&
+                    launcher.GetComponentsInChildren<ScrollRect>(true).All(value =>
+                        value == scroll || value.GetComponentInParent<TMP_Dropdown>() != null) &&
+                    launcher.GetComponentsInChildren<Button>(true).Where(value =>
+                        value.name == "键鼠分页按钮" || value.name == "手柄分页按钮" ||
+                        value.name == "触屏布局按钮" || value.name == "恢复默认按钮")
+                        .All(value => value.transform.IsChildOf(scroll.content)),
                 ["scrollContainsOptions"] = scroll != null && speed.transform.IsChildOf(scroll.content) &&
                     distance.transform.IsChildOf(scroll.content) && angle.transform.IsChildOf(scroll.content),
                 ["wholeNumbers"] = speed.wholeNumbers && distance.wholeNumbers,
