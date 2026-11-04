@@ -123,6 +123,9 @@ public static class NewGamePrefabBuilder
         foreach (Transform child in children)
             child.SetParent(contentRect, false);
         content.SetActive(true);
+        foreach (Toggle checkbox in content.GetComponentsInChildren<Toggle>(true))
+            foreach (Component component in checkbox.GetComponents<Component>())
+                PrefabUtility.RecordPrefabInstancePropertyModifications(component);
         RuntimeUIPrefabBuilder.ClearSharedVisualOverrides(contentRect);
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(content, path);
         Object.DestroyImmediate(content);
@@ -342,7 +345,7 @@ public static class NewGamePrefabBuilder
             "越过上下左右边界后从对侧返回；关闭则使用原有无限世界。",
             Vector2.zero,
             new Vector2(ContentInnerWidth, 86f));
-        LayoutElement topologyLayout = topologyToggle.gameObject.AddComponent<LayoutElement>();
+        LayoutElement topologyLayout = topologyToggle.GetComponent<LayoutElement>();
         topologyLayout.preferredHeight = 86f;
         topologyToggle.isOn = true;
 
@@ -760,24 +763,13 @@ public static class NewGamePrefabBuilder
         string title,
         float top)
     {
-        GameObject toggleObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle));
-        toggleObject.layer = LayerMask.NameToLayer("UI");
-        toggleObject.transform.SetParent(parent, false);
+        Toggle toggle = CreateSharedCheckboxRowWithBackground(parent, name, new Vector2(12f, -12f));
+        GameObject toggleObject = toggle.gameObject;
         SetRect(toggleObject.GetComponent<RectTransform>(), new Vector2(12f, -top), new Vector2(496f, 56f), new Vector2(0f, 1f));
-
-        Image background = toggleObject.GetComponent<Image>();
-        background.color = InkSoft;
-        Image box = CreateImage("选择框", toggleObject.transform, new Color(0.02f, 0.04f, 0.05f, 1f));
-        SetRect(box.rectTransform, new Vector2(12f, -12f), new Vector2(30f, 30f), new Vector2(0f, 1f));
-        Image mark = CreateImage("勾选标记", box.transform, Amber);
-        Stretch(mark.rectTransform, 5f, 5f, 5f, 5f);
 
         TMP_Text label = CreateText(name + "_标题", toggleObject.transform, title, font, 18f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(label.rectTransform, new Vector2(58f, -10f), new Vector2(420f, 34f), new Vector2(0f, 1f));
 
-        Toggle toggle = toggleObject.GetComponent<Toggle>();
-        toggle.targetGraphic = box;
-        toggle.graphic = mark;
         toggle.isOn = false;
         toggle.navigation = new Navigation { mode = Navigation.Mode.None };
     }
@@ -883,27 +875,13 @@ public static class NewGamePrefabBuilder
         SetRect(arrow.rectTransform, new Vector2(-14f, 0f), new Vector2(30f, 58f), new Vector2(1f, 0.5f));
     }
 
+    #region 共享复选框行
+
     private static Toggle CreateToggle(Transform parent, TMP_FontAsset font, string name, string title, string description, Vector2 position, Vector2 size)
     {
-        GameObject toggleObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle));
-        toggleObject.layer = LayerMask.NameToLayer("UI");
-        toggleObject.transform.SetParent(parent, false);
+        Toggle toggle = CreateSharedCheckboxRowWithBackground(parent, name, new Vector2(16f, -20f));
+        GameObject toggleObject = toggle.gameObject;
         SetRect(toggleObject.GetComponent<RectTransform>(), position, size, new Vector2(0f, 1f));
-
-        Image row = toggleObject.GetComponent<Image>();
-        row.color = InkSoft;
-        Outline outline = toggleObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.24f);
-        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
-
-        Image box = CreateImage("选择框", toggleObject.transform, new Color(0.02f, 0.04f, 0.05f, 1f));
-        SetRect(box.rectTransform, new Vector2(16f, -20f), new Vector2(30f, 30f), new Vector2(0f, 1f));
-        Outline boxOutline = box.gameObject.AddComponent<Outline>();
-        boxOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.55f);
-        boxOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
-
-        Image mark = CreateImage("勾选标记", box.transform, Amber);
-        Stretch(mark.rectTransform, 6f, 6f, 6f, 6f);
 
         TMP_Text titleText = CreateText(name + "_标题", toggleObject.transform, title, font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(titleText.rectTransform, new Vector2(62f, -10f), new Vector2(Mathf.Max(120f, size.x - 78f), 30f), new Vector2(0f, 1f));
@@ -912,13 +890,24 @@ public static class NewGamePrefabBuilder
         descriptionText.enableWordWrapping = true;
         descriptionText.overflowMode = TextOverflowModes.Ellipsis;
 
-        Toggle toggle = toggleObject.GetComponent<Toggle>();
-        toggle.targetGraphic = box;
-        toggle.graphic = mark;
         toggle.isOn = false;
         toggle.navigation = new Navigation { mode = Navigation.Mode.None };
         return toggle;
     }
+
+    /// <summary>行背景归业务布局，方框、边框和选中填充继承公共复选框。</summary>
+    private static Toggle CreateSharedCheckboxRowWithBackground(Transform parent, string name, Vector2 boxPosition)
+    {
+        Toggle toggle = RuntimeUIPrefabBuilder.CreateSharedCheckboxRow(name, parent, boxPosition, Vector2.one * 30f);
+        Image background = CreateImage("行背景", toggle.transform, InkSoft);
+        Stretch(background.rectTransform);
+        background.transform.SetAsFirstSibling();
+        background.raycastTarget = false;
+        background.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        return toggle;
+    }
+
+    #endregion
 
     private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, Vector2 position, float width)
     {

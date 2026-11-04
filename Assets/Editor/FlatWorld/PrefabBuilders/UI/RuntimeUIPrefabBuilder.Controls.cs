@@ -395,14 +395,19 @@ public static partial class RuntimeUIPrefabBuilder
         LayoutElement element = root.AddComponent<LayoutElement>();
         element.preferredWidth = 58f;
         element.preferredHeight = 30f;
-        Image background = root.GetComponent<Image>();
-        background.color = SurfaceRaised;
+        root.GetComponent<Image>().color = Color.clear;
+        Image background = CreateImage("Box", root.transform, SurfaceRaised);
+        Stretch(background.rectTransform);
+        background.raycastTarget = false;
         AddOutline(background, Border);
 
-        Image checkmark = CreateImage("Checkmark", root.transform, Teal);
+        Image checkmark = CreateImage("Checkmark", background.transform, Color.white);
         RectTransform checkmarkRect = checkmark.rectTransform;
-        checkmarkRect.anchorMin = checkmarkRect.anchorMax = new Vector2(0.5f, 0.5f);
-        checkmarkRect.sizeDelta = new Vector2(42f, 18f);
+        // 选中块跟随方框缩放，只留统一的四像素内边距。
+        Stretch(checkmarkRect);
+        checkmarkRect.offsetMin = Vector2.one * 4f;
+        checkmarkRect.offsetMax = Vector2.one * -4f;
+        checkmark.raycastTarget = false;
 
         Toggle toggle = root.GetComponent<Toggle>();
         toggle.targetGraphic = background;

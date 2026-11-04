@@ -88,6 +88,15 @@ public static partial class RuntimeUIPrefabBuilder
         return control;
     }
 
+    /// <summary>组合行复用同一复选框，只由行决定方框的位置和尺寸。</summary>
+    public static Toggle CreateSharedCheckboxRow(string name, Transform parent, Vector2 boxPosition, Vector2 boxSize)
+    {
+        Toggle toggle = InstantiateSharedControl<Toggle>("UI_Toggle", name, parent);
+        SetTopLeft(toggle.targetGraphic.rectTransform, boxPosition.x, -boxPosition.y, boxSize.x, boxSize.y);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(toggle.targetGraphic.rectTransform);
+        return toggle;
+    }
+
     /// <summary>首次创建基础控件并登记稳定 Addressables 键。</summary>
     private static void CreateSharedAsset(string key, Func<GameObject> factory)
     {
@@ -175,6 +184,8 @@ public static partial class RuntimeUIPrefabBuilder
             ConfigureSharedSlider(slider);
         if (root.TryGetComponent(out Toggle toggle))
         {
+            root.GetComponent<Image>().color = Color.clear;
+            toggle.graphic.color = Color.white;
             rect.sizeDelta = new Vector2(76f, 60f);
             LayoutElement element = root.GetComponent<LayoutElement>();
             element.preferredWidth = 76f;
@@ -670,7 +681,7 @@ public static partial class RuntimeUIPrefabBuilder
             return slider.interactable && slider.handleRect != null && slider.handleRect.gameObject.activeSelf ? "UI_SliderControl" : "UI_ProgressBar";
         }
         if (control is Toggle)
-            return root.childCount == 1 && root.Find("Checkmark") != null ? "UI_Toggle" : null;
+            return root.childCount == 1 && root.Find("Box/Checkmark") != null ? "UI_Toggle" : null;
         if (control is Button)
         {
             if (root.childCount != 1 || root.Find("Text (TMP)") == null ||
@@ -716,7 +727,7 @@ public static partial class RuntimeUIPrefabBuilder
         if (target is GameObject gameObject)
             return path == "m_Name" || (path == "m_IsActive" && (gameObject == source || gameObject.name == "Template"));
         if (target is RectTransform rect)
-            return rect.gameObject == source;
+            return rect.gameObject == source || rect == source.GetComponent<Toggle>()?.targetGraphic?.rectTransform;
         if (target is LayoutElement element)
             return element.gameObject == source;
         if (target is TMP_Text)
