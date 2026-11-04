@@ -1,0 +1,2203 @@
+{
+  "thresholdPixelsExclusive": 250000,
+  "targetLongestEdge": 64,
+  "assetCount": 53,
+  "beforeBytes": 18639281,
+  "afterBytes": 214835,
+  "algorithm": "Existing center-sampled nearest-neighbor rule. One-step resize from a hash-verified corresponding high-resolution backup when available, otherwise current source; no palette or alpha rewrite.",
+  "scope": "Active ordinary item sprites only; buildings, machines, vehicles and their shared sprites, natural resources, characters, UI, atlases and reference samples excluded.",
+  "visualReview": {
+    "pages": 5,
+    "reviewedAssets": 53,
+    "knownQuantizationLoss": [
+      {
+        "id": "Spear_Copper",
+        "description": "Very thin shaft has local discontinuities at 64x21. Explicit uniform64 selection retained without drawing new pixels or falling back to higher resolution."
+      }
+    ],
+    "readableFoods": [
+      "Apple",
+      "Peach"
+    ],
+    "foodNote": "Read/Write retained; sampled food particle tint may change slightly."
+  },
+  "runtimeValidation": "Not run: Unity remains in PlayMode and concurrent changes are active. No forced import, tests or APK build.",
+  "apkReduction": "Not measured; PNG source reduction does not equal APK reduction.",
+  "assets": [
+    {
+      "path": "Assets/6_Art/Food/Item_Food_013.png",
+      "ids": [
+        "Apple"
+      ],
+      "names": [
+        "苹果"
+      ],
+      "guid": "1b6dd32ba60554e4b9129e54cd9c8f6a",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "c62ac764a30ec081dfa285fdf5473f44c39ed35041ea13e010270abcddb2bb91",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "1",
+      "beforeBytes": 808690,
+      "afterBytes": 5089,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/1b6dd32ba60554e4b9129e54cd9c8f6a/20261104T143322409_c132889529b74b2fbd8ae0054d8b5f7a/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/1b6dd32ba60554e4b9129e54cd9c8f6a/20261104T143322409_c132889529b74b2fbd8ae0054d8b5f7a",
+      "beforeHash": "c62ac764a30ec081dfa285fdf5473f44c39ed35041ea13e010270abcddb2bb91",
+      "afterHash": "8353b18a2180274f3ff35a5ec7b418394d0f25d8b3e70782c5856879ba3f8344"
+    },
+    {
+      "path": "Assets/6_Art/Food/Item_Jam.png",
+      "ids": [
+        "Jam"
+      ],
+      "names": [
+        "果酱"
+      ],
+      "guid": "f13690be3a27421baae9c13245c6e68d",
+      "sourceDimensions": [
+        1448,
+        1086
+      ],
+      "sourceHash": "7b6b7952135cc560c7b7203ea63498fcb2593d04a3479b7e71d2b3547286d083",
+      "beforeDimensions": [
+        1448,
+        1086
+      ],
+      "afterDimensions": [
+        64,
+        48
+      ],
+      "beforePpu": 1448.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 529624,
+      "afterBytes": 2870,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/f13690be3a27421baae9c13245c6e68d/20261104T143322442_1274812e969a493eae83eb1a70e589c8/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/f13690be3a27421baae9c13245c6e68d/20261104T143322442_1274812e969a493eae83eb1a70e589c8",
+      "beforeHash": "7b6b7952135cc560c7b7203ea63498fcb2593d04a3479b7e71d2b3547286d083",
+      "afterHash": "c06472976e0787721d16632feaef715409b449a11abe3ebfecf561f8b6999235"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Atmosphere/AtmosphereAnalyzer/AtmosphereAnalyzer.png",
+      "ids": [
+        "AtmosphereAnalyzer"
+      ],
+      "names": [
+        "大气检测仪"
+      ],
+      "guid": "2e7793a2b86e4695aa10a95712d1c2a2",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "345b0a81c33097ab97ee7602dbf4c9206c9dab63eaf57c714fa83d70067bf07e",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 461.3716,
+      "afterPpu": 57.67145,
+      "readable": "0",
+      "beforeBytes": 201037,
+      "afterBytes": 5109,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/2e7793a2b86e4695aa10a95712d1c2a2/20261102T175817582_2235b95967d5458182a827ce63298c7b/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/2e7793a2b86e4695aa10a95712d1c2a2/20261104T143322492_d5e401597f364d5988a5c319e576076b",
+      "beforeHash": "700f9028e86756a012145a62fb59066c863a71348678edbba7eab6e0e5cee231",
+      "afterHash": "6a41046fd43c1c0dcf2c61ed3011808e9898042baf2ff78929484c42c50884e1"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png",
+      "ids": [
+        "FilterResidue"
+      ],
+      "names": [
+        "杂质"
+      ],
+      "guid": "92ea84c9727393e40b0ac0d167838713",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "f0c55378ccd06adfff85471e8691d37670e3fa469378b3d847d6dca04b039475",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 76210,
+      "afterBytes": 2388,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/92ea84c9727393e40b0ac0d167838713/20261102T184414399_cbb2e8b096be4f3693ef7a6e25f084a7/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/92ea84c9727393e40b0ac0d167838713/20261104T143322551_4958644560484140a7367c014e1722d4",
+      "beforeHash": "2333768ffa1475cb55ade81537456cc3dadb0d2c60fd1414bc4b68e583ec3b07",
+      "afterHash": "2a73ed493f876c44fffdea6555554951f929fa226dda4c89c0b2884cd26cc2a9"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png",
+      "ids": [
+        "Arrow_Copper"
+      ],
+      "names": [
+        "铜箭"
+      ],
+      "guid": "877cf282663109243952565edb137b36",
+      "sourceDimensions": [
+        1316,
+        1195
+      ],
+      "sourceHash": "7f8f96214b41ca801cf33f7dce75b124de3c62116e18f44032cea1df459c9b80",
+      "beforeDimensions": [
+        1316,
+        1195
+      ],
+      "afterDimensions": [
+        64,
+        58
+      ],
+      "beforePpu": 1259.2593,
+      "afterPpu": 61.240573860182366,
+      "readable": "0",
+      "beforeBytes": 274957,
+      "afterBytes": 1956,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/877cf282663109243952565edb137b36/20261104T143322604_570330b2de9d49d59e83812da47a914c/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/877cf282663109243952565edb137b36/20261104T143322604_570330b2de9d49d59e83812da47a914c",
+      "beforeHash": "7f8f96214b41ca801cf33f7dce75b124de3c62116e18f44032cea1df459c9b80",
+      "afterHash": "8d60f5def6771e97b0a2274d7a342300d67e7999a84197612e640c07715694a1"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Arrow_Iron_Icon.png",
+      "ids": [
+        "Arrow_Iron"
+      ],
+      "names": [
+        "铁箭"
+      ],
+      "guid": "65a146c3ad866a44d8c9dcf0bbeabc25",
+      "sourceDimensions": [
+        1316,
+        1195
+      ],
+      "sourceHash": "3be83a0cb5f4c1962e858055412cf3265e2731247cd79b0d0799cfebeb95fb27",
+      "beforeDimensions": [
+        1316,
+        1195
+      ],
+      "afterDimensions": [
+        64,
+        58
+      ],
+      "beforePpu": 1243.8518,
+      "afterPpu": 60.491272948328266,
+      "readable": "0",
+      "beforeBytes": 257200,
+      "afterBytes": 1950,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/65a146c3ad866a44d8c9dcf0bbeabc25/20261104T143322633_ae8228e87ec2434794b96c7e62389786/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/65a146c3ad866a44d8c9dcf0bbeabc25/20261104T143322633_ae8228e87ec2434794b96c7e62389786",
+      "beforeHash": "3be83a0cb5f4c1962e858055412cf3265e2731247cd79b0d0799cfebeb95fb27",
+      "afterHash": "a3b4baa158828ea4d9d1f4b8501e0bf0037bedc704c8012b4a11fcb0ca11776c"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Arrow_Stone_Icon.png",
+      "ids": [
+        "Arrow_Stone"
+      ],
+      "names": [
+        "石箭"
+      ],
+      "guid": "a9a36fbedc8d09047b08323781bf7f47",
+      "sourceDimensions": [
+        1316,
+        1195
+      ],
+      "sourceHash": "fec6d2c581a632ca0e702124f3dcc05ff48a8998d1b15072ce08c6827f347f99",
+      "beforeDimensions": [
+        1316,
+        1195
+      ],
+      "afterDimensions": [
+        64,
+        58
+      ],
+      "beforePpu": 1222.5186,
+      "afterPpu": 59.45379209726444,
+      "readable": "0",
+      "beforeBytes": 247554,
+      "afterBytes": 1749,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/a9a36fbedc8d09047b08323781bf7f47/20261104T143322661_026508da8f3e409d9a36601a0fddc8f8/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/a9a36fbedc8d09047b08323781bf7f47/20261104T143322661_026508da8f3e409d9a36601a0fddc8f8",
+      "beforeHash": "fec6d2c581a632ca0e702124f3dcc05ff48a8998d1b15072ce08c6827f347f99",
+      "afterHash": "17ef595dce132d76080811ab2b23d92aaab86a5de1352ccbf5a96a534044a55b"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Arrow_Wood_Icon.png",
+      "ids": [
+        "Arrow_Wood"
+      ],
+      "names": [
+        "木箭"
+      ],
+      "guid": "5df34798b64bbb447961dd7d6c665129",
+      "sourceDimensions": [
+        1316,
+        1195
+      ],
+      "sourceHash": "ffcb0db9da5eb6147f39d79500c7d88b2db34b74d83e3da9d179ad705eea008e",
+      "beforeDimensions": [
+        1316,
+        1195
+      ],
+      "afterDimensions": [
+        64,
+        58
+      ],
+      "beforePpu": 1216.5927,
+      "afterPpu": 59.165602431610935,
+      "readable": "0",
+      "beforeBytes": 266928,
+      "afterBytes": 1999,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/5df34798b64bbb447961dd7d6c665129/20261104T143322691_129fab2fa57f4e6c9a29e3c922b6b2c5/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/5df34798b64bbb447961dd7d6c665129/20261104T143322691_129fab2fa57f4e6c9a29e3c922b6b2c5",
+      "beforeHash": "ffcb0db9da5eb6147f39d79500c7d88b2db34b74d83e3da9d179ad705eea008e",
+      "afterHash": "b987d40ad9740d783ac283dd4ae3efed29f28189b51dd93d8b091ec4c7af6d51"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Blowgun_Wood_Icon.png",
+      "ids": [
+        "Blowgun_Wood"
+      ],
+      "names": [
+        "吹箭"
+      ],
+      "guid": "876147967aee9784ba6f54dd341ecf64",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "0d6130e121f5cf17e98ea05ce278fb943e26c73dcf57c28aa8e5840e1d3d5fa1",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 215645,
+      "afterBytes": 1768,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/876147967aee9784ba6f54dd341ecf64/20261104T143322716_78b9ab79374848688efe022902a19631/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/876147967aee9784ba6f54dd341ecf64/20261104T143322716_78b9ab79374848688efe022902a19631",
+      "beforeHash": "0d6130e121f5cf17e98ea05ce278fb943e26c73dcf57c28aa8e5840e1d3d5fa1",
+      "afterHash": "9173bfffa8a2d029c7692b1a257577e68195c307078d4d701cf593b042acc1f7"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Archery/Crossbow_Wood_Icon.png",
+      "ids": [
+        "Crossbow_Wood"
+      ],
+      "names": [
+        "弩"
+      ],
+      "guid": "ffd05e4c2a3d434f8b7fa5d8b7a55eb6",
+      "sourceDimensions": [
+        1672,
+        941
+      ],
+      "sourceHash": "1a2b1a888eb48f3f944eb9252ef45652e3963c5c542f26610751af36295d09fd",
+      "beforeDimensions": [
+        1672,
+        941
+      ],
+      "afterDimensions": [
+        64,
+        36
+      ],
+      "beforePpu": 1672.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 441335,
+      "afterBytes": 1994,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/ffd05e4c2a3d434f8b7fa5d8b7a55eb6/20261104T143322749_5383bc8f30d945428f5bc0bb7b3aa103/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/ffd05e4c2a3d434f8b7fa5d8b7a55eb6/20261104T143322749_5383bc8f30d945428f5bc0bb7b3aa103",
+      "beforeHash": "1a2b1a888eb48f3f944eb9252ef45652e3963c5c542f26610751af36295d09fd",
+      "afterHash": "e4578a90212a3f76edb844acbccc786120f0f6a1af400b97536f1d9739b3b0f3"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Sling/Sling_Icon.png",
+      "ids": [
+        "StoneThrowingRope"
+      ],
+      "names": [
+        "投石索"
+      ],
+      "guid": "b2ff97fe3e0e44a7a8db664f387ffa5e",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "8a0dcbb56e32b37be8d1aae571f2d03c50bea834dc090f9708b9f27ac71104d9",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 365848,
+      "afterBytes": 2838,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/b2ff97fe3e0e44a7a8db664f387ffa5e/20261104T143322783_88f843c6253a453791a8fd86d972f696/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/b2ff97fe3e0e44a7a8db664f387ffa5e/20261104T143322783_88f843c6253a453791a8fd86d972f696",
+      "beforeHash": "8a0dcbb56e32b37be8d1aae571f2d03c50bea834dc090f9708b9f27ac71104d9",
+      "afterHash": "0e424f4ffe868c6165693b91a397db9fcdeae9089bc28d324b5011daa9095ac5"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Combat/Spear_Copper/Spear_Copper_Icon.png",
+      "ids": [
+        "Spear_Copper"
+      ],
+      "names": [
+        "铜矛"
+      ],
+      "guid": "4d5ff58aeca6469a846edaefa4d37685",
+      "sourceDimensions": [
+        2172,
+        724
+      ],
+      "sourceHash": "2360cb9008ef9cc1eed9675078b8d9c31eb4599fd6b2680dc8814716870a2472",
+      "beforeDimensions": [
+        2172,
+        724
+      ],
+      "afterDimensions": [
+        64,
+        21
+      ],
+      "beforePpu": 1770.8049,
+      "afterPpu": 52.17841325966851,
+      "readable": "0",
+      "beforeBytes": 331821,
+      "afterBytes": 830,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/4d5ff58aeca6469a846edaefa4d37685/20261104T143322806_c178a9003985440b8405bd9d1294769e/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/4d5ff58aeca6469a846edaefa4d37685/20261104T143322806_c178a9003985440b8405bd9d1294769e",
+      "beforeHash": "2360cb9008ef9cc1eed9675078b8d9c31eb4599fd6b2680dc8814716870a2472",
+      "afterHash": "a6838a1ee843cb1916cce07841b2a6151b6adc5f03130284397a5ae4fb05b3af"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/Engineering_Goggles/Engineering_Goggles_Icon.png",
+      "ids": [
+        "Engineering_Goggles"
+      ],
+      "names": [
+        "工程护目镜"
+      ],
+      "guid": "d76af03ac022435ab15766f6331cacc3",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "8ef1a17fbe2c18d0b186b0e2f5a8de9d81958319760f133fd8c95bbba12134fe",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 147402,
+      "afterBytes": 4374,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/d76af03ac022435ab15766f6331cacc3/20261102T184424261_d9194b37cf354f18a8d51bf16297e8c8/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/d76af03ac022435ab15766f6331cacc3/20261104T143322876_dae8f94db18640b281116a3342614a54",
+      "beforeHash": "1eeb986b62833fdec5709905978f436f2e6e549efe9ff732c0481cc5683c6814",
+      "afterHash": "3f61cbcd499573cce3f42586ddac15ab0f94dc38d284e6c991b9740d60311ed0"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/IronGuard_Gauntlets/IronGuard_Gauntlets_Icon.png",
+      "ids": [
+        "IronGuard_Gauntlets"
+      ],
+      "names": [
+        "铁护手"
+      ],
+      "guid": "8e370944c06a4adba713924b11fcf203",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "7d6c1cf8fa6f8ba506534ad72ec0baf7db1b306998c12088c9d8af72a9564647",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 206227,
+      "afterBytes": 6229,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/8e370944c06a4adba713924b11fcf203/20261102T184425786_a348cb80679a45a5a217db5e8df75cd9/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/8e370944c06a4adba713924b11fcf203/20261104T143322921_c62cd27249f94287a2c3561625aac313",
+      "beforeHash": "0038691ce284465a6cfbb3460b1d0eaceeb026815d9e2fb940fbc13e91ff6ab9",
+      "afterHash": "7e7691964e40886f5bf180082ef33a1a3255bbd81032c6be6e50d6940302f398"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/IronGuard_Helmet/IronGuard_Helmet_Icon.png",
+      "ids": [
+        "IronGuard_Helmet"
+      ],
+      "names": [
+        "铁头盔"
+      ],
+      "guid": "44e82b7f4f7f414ea5fa55dd9018c53b",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "bf401dfe7efa9522ec536a3f95957caa09ead9e4a0e372148056b6dff3ffb558",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 149511,
+      "afterBytes": 4330,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/44e82b7f4f7f414ea5fa55dd9018c53b/20261102T184428115_1ebab276b24e46c0a154eef1b7c67419/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/44e82b7f4f7f414ea5fa55dd9018c53b/20261104T143322981_0d7e03f80f6c4df5a02479dd949b83e1",
+      "beforeHash": "92fd30cb97eca103a175ad398b99df0d8c75d5942449438a402b737f2ccf2fee",
+      "afterHash": "f65623f5c9da7909c7da109eae278744312e4f5e22ac62d3dd27a76528e3b981"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png",
+      "ids": [
+        "Spacesuit_Hands"
+      ],
+      "names": [
+        "宇航服手套"
+      ],
+      "guid": "521d8d2a09ed4fbe895fc1afbc3da874",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "67d488732d51256ee4792c5760a466e23331921c25d1ee14ece27c97e6b3db15",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 215664,
+      "afterBytes": 6447,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/521d8d2a09ed4fbe895fc1afbc3da874/20261102T184430381_6a2030b1d7f6452bbc1cc21da0f75d31/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/521d8d2a09ed4fbe895fc1afbc3da874/20261104T143323042_58c17b2934e54ddc99760e14d34bc252",
+      "beforeHash": "8b784ee368ae2fcd8142423f61fee280a1ff00e0750c29114d6b833638da1423",
+      "afterHash": "e1a692cc12332eb4eb11bd391206702ba6547b923b401352b8052482d4dd2e67"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png",
+      "ids": [
+        "Spacesuit_Legs"
+      ],
+      "names": [
+        "宇航服裤子"
+      ],
+      "guid": "b0a6d4159f38462da26d8e5a6046c98f",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "e2eec756bc8274c04b9dafe247bfbf8fb8152d11c25e752c0ec4ab0ca741e179",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 204380,
+      "afterBytes": 6015,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/b0a6d4159f38462da26d8e5a6046c98f/20261102T184432394_2c59b7fe347c4cab860ef0dc09eadbce/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/b0a6d4159f38462da26d8e5a6046c98f/20261104T143323088_b204dbb18e674c57995345d767d78c3d",
+      "beforeHash": "95340d4e696e5894d1ecb91a1ab99996f0983d19dc1426ff9fa58607e7b3548c",
+      "afterHash": "ae81b0518f05c2587377f48bf62bcfe7adcaecc046acd1492351bd566057cdce"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png",
+      "ids": [
+        "Steel_Gauntlets"
+      ],
+      "names": [
+        "钢手套"
+      ],
+      "guid": "a8c1d79b299b49baa1f710b47ad52382",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "8461c9c2eece68b51e7d93f125b17882549b83f64d0ecf55f843efb38bf642b7",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 204327,
+      "afterBytes": 6060,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/a8c1d79b299b49baa1f710b47ad52382/20261102T184433710_b0d356afb964456ea00367911fc9df1e/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/a8c1d79b299b49baa1f710b47ad52382/20261104T143323146_e76814c10b00413a9f8579037892ab00",
+      "beforeHash": "562519e38fc18cfd2a3ab9cc610c65bf22eda7ba2a784779d91fc9e74476e29b",
+      "afterHash": "67b5d7f9cdbc8f49cada201ca09bd4680bda31a18bc7db0729958e88a6521719"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/Mushroom/Item_Mushroom.png",
+      "ids": [
+        "Mushroom"
+      ],
+      "names": [
+        "蘑菇"
+      ],
+      "guid": "2ede27bbfd3cd8d4091b0184b9807686",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "49b0e38ccc429ba8ccd79f9acd936714ee5ae4f39cb034fcd8874eb75f954c48",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 182654,
+      "afterBytes": 5599,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/2ede27bbfd3cd8d4091b0184b9807686/20261102T180036345_3078a6f06bf545c284c721440c47e50c/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/2ede27bbfd3cd8d4091b0184b9807686/20261104T143323209_fcc56701d10e45628eaed33e47230032",
+      "beforeHash": "8ce821a601779d65078b4327c265e3db80b03963382240ff36737d6e1f993921",
+      "afterHash": "2befdce938ca99548cd4a3f4e5fb582fd7f2a57f5dc1ab38a7dd1bb7ea4ed775"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
+      "ids": [
+        "Peach"
+      ],
+      "names": [
+        "桃子"
+      ],
+      "guid": "2e1970801c1dd2b45a096e6ebf2be981",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "8759a11e454c7861032085a6843c135258410c88cc17545e40bc26b5ede34ca6",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "1",
+      "beforeBytes": 988301,
+      "afterBytes": 6355,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/2e1970801c1dd2b45a096e6ebf2be981/20261104T143323297_ecb018484d6945e79cfa2e8aecb12ac8/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/2e1970801c1dd2b45a096e6ebf2be981/20261104T143323297_ecb018484d6945e79cfa2e8aecb12ac8",
+      "beforeHash": "8759a11e454c7861032085a6843c135258410c88cc17545e40bc26b5ede34ca6",
+      "afterHash": "848548e3fcbddd0429b41f838b9901b1fa25b3fc629aecd87507aa1a03c4330a"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/BirdEgg/BirdEgg_Icon.png",
+      "ids": [
+        "BirdEgg"
+      ],
+      "names": [
+        "鸟蛋"
+      ],
+      "guid": "1147a44b2cf3431c924e68b81c06624e",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "489f6457050c4ab78780a66beceb3fe3732c951bd43ae0a75394d38c8f75dc54",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 408.29346,
+      "afterPpu": 51.0366825,
+      "readable": "0",
+      "beforeBytes": 48074,
+      "afterBytes": 1414,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/1147a44b2cf3431c924e68b81c06624e/20261102T184438188_b19339cc47f64e6b89c7f70b22b1c01a/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/1147a44b2cf3431c924e68b81c06624e/20261104T143323346_0e347343be0040999c9607f224d42af3",
+      "beforeHash": "85ab31bd844179c7c452573be81ea215680144766aa653dc98d84c5944c6bb9b",
+      "afterHash": "bdfc246afb6805354051f20da600bdf3b23d19ea565b77d2a5de3b864531da31"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png",
+      "ids": [
+        "Meat_Cured"
+      ],
+      "names": [
+        "腌肉"
+      ],
+      "guid": "b4806a56d8c892148add45ca6c765561",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "74164448209462ae4183af14d82b7524b87928347c25ae52fe906863010f7986",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 559.47864,
+      "afterPpu": 69.93483,
+      "readable": "0",
+      "beforeBytes": 190001,
+      "afterBytes": 5805,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/b4806a56d8c892148add45ca6c765561/20261102T184438685_90c9c74feba64146988cabeb3dc501c5/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/b4806a56d8c892148add45ca6c765561/20261104T143323388_0b02c378c2084e4cb35eb92a7e6979eb",
+      "beforeHash": "0275cc4a6638e1dd8775084ee8f06d43bb124d43b615a2f4cbb8468d9b128245",
+      "afterHash": "a7fbe819724c6500888fc282cc8246e8226b8814758750d173e60400a69ca106"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png",
+      "ids": [
+        "Boron"
+      ],
+      "names": [
+        "硼"
+      ],
+      "guid": "223620dbeba041de9da16761ff1578f9",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "a162c240a93f9e5fd4096a7d377bddd7bad2e2dadb3b8f105a49d4bfa3903478",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 581.8182,
+      "afterPpu": 72.727275,
+      "readable": "0",
+      "beforeBytes": 119385,
+      "afterBytes": 3426,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/223620dbeba041de9da16761ff1578f9/20261102T184439228_49131051b890440e9ca2ef25024f7184/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/223620dbeba041de9da16761ff1578f9/20261104T143323419_a834b35f0250458a8e321b10d5a66b87",
+      "beforeHash": "df8185f9291af977f2de28b687bc730463813f3cde3a603a0027e289219f47ac",
+      "afterHash": "3bb55d33bfeb6658fd0e63540420c9d5029e1d1a35490ea55422ea1d274cb285"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png",
+      "ids": [
+        "CarbonFiber"
+      ],
+      "names": [
+        "碳纤维"
+      ],
+      "guid": "b11967dd27bf4a0dbf46644d436e336a",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "b1d664170c1b65161d17040d91791f70b76e59ccda5db45c009c0c1a74a83e91",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 583.45135,
+      "afterPpu": 72.93141875,
+      "readable": "0",
+      "beforeBytes": 183666,
+      "afterBytes": 4832,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/b11967dd27bf4a0dbf46644d436e336a/20261102T184439900_e5d96262d253492cbba86055f9a45a62/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/b11967dd27bf4a0dbf46644d436e336a/20261104T143323454_f8a87b09911f483b9f7d32b0e0a6eadf",
+      "beforeHash": "490cc0fec7acfe911ecc6fcd1f5c3ef3a0d6c5deec264b9772dee1dab21877d7",
+      "afterHash": "a45cc3f2bb263b49e045738f4c3b2c51e01258e160b607565fd6b893499eb217"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png",
+      "ids": [
+        "Fertilizer_Phosphate"
+      ],
+      "names": [
+        "磷肥"
+      ],
+      "guid": "40eae45bd2f84b9f9061bd715bf0b7a8",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "9c23a8ebc5ae826ae987fadafc22292e32543fba7609d86b8c5af5d20b6afacd",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 556.9123,
+      "afterPpu": 69.6140375,
+      "readable": "0",
+      "beforeBytes": 124893,
+      "afterBytes": 3594,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/40eae45bd2f84b9f9061bd715bf0b7a8/20261102T184440658_527d0310beb146c4b8ebf26ba9a71870/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/40eae45bd2f84b9f9061bd715bf0b7a8/20261104T143323486_3bda31b0b43b426ca2b1cc4c1cfe55bb",
+      "beforeHash": "accf0dbbdcdc058fe1534561988d097fa203c680a9c8b16d738c78b1cfdb3129",
+      "afterHash": "b9c4c81efdff50cc5760af08c2cdd49b51e05834836ddcb172982ff06dd1f32f"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ore_Mica/Ore_Mica_Icon.png",
+      "ids": [
+        "Ore_Mica"
+      ],
+      "names": [
+        "云母矿石"
+      ],
+      "guid": "a85d241ecc7647098c153e7468e98645",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "1f38ccb54197110c97a8ab85e9436d7b8563ef1ba8187269937d493b53efd452",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 595.2919,
+      "afterPpu": 74.4114875,
+      "readable": "0",
+      "beforeBytes": 350174,
+      "afterBytes": 8800,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/a85d241ecc7647098c153e7468e98645/20261102T184441393_53bbb48f8aac47eda704ab0339551197/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/a85d241ecc7647098c153e7468e98645/20261104T143323542_93f658cf69ea4dda92adf9d17d49b741",
+      "beforeHash": "f9c3d8fdcd144b4837e7a1e1c50a9f4e8aff6e86b4389d02f8f764bc6a508fdc",
+      "afterHash": "5defb5f38a8cc66c5835ef3e502d58e28480548f38c9944f8fba4462658a5bc3"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Phosphorus/Phosphorus_Icon.png",
+      "ids": [
+        "Phosphorus"
+      ],
+      "names": [
+        "磷"
+      ],
+      "guid": "2c253515814d413db71c01b8b4fe5fbf",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "a16986d87ec851d099bb578c7a4e7f3a0984fa7f41d2e809dcd2fa6d9b0d4236",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1387.0,
+      "afterPpu": 70.78787878787878,
+      "readable": "0",
+      "beforeBytes": 514475,
+      "afterBytes": 3493,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/2c253515814d413db71c01b8b4fe5fbf/20261104T143323572_9ce27be565854893b476d3f96e9437a5/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/2c253515814d413db71c01b8b4fe5fbf/20261104T143323572_9ce27be565854893b476d3f96e9437a5",
+      "beforeHash": "a16986d87ec851d099bb578c7a4e7f3a0984fa7f41d2e809dcd2fa6d9b0d4236",
+      "afterHash": "92363d3b7b5a006387391795e81508da4416debdbb747c526d648bcf284559cc"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
+      "ids": [
+        "FireSeed"
+      ],
+      "names": [
+        "火种"
+      ],
+      "guid": "08868ceb1c31f6341a0be7a5d3d8bf50",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "e04e559bd65255f9fb17d60319de28b1487cfef1b17b3d9d9284d729dc9ce55a",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 77287,
+      "afterBytes": 2552,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/08868ceb1c31f6341a0be7a5d3d8bf50/20261102T184442248_0c981967f6b54b7caf473b8a972d297f/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/08868ceb1c31f6341a0be7a5d3d8bf50/20261104T143323631_284d56dc194e47eeac7999093a6b972e",
+      "beforeHash": "4625538ef54be53dceb531b8960a8b3996ca29fdfe01d2c2c648e715cc9a324a",
+      "afterHash": "7bb1725de95df19268715122c74f3dacaf000ca9b2ec68c440b15d9256035ab0"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png",
+      "ids": [
+        "Nail"
+      ],
+      "names": [
+        "熟铁钉"
+      ],
+      "guid": "119c344607df4b00a2909c0e5d62b999",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "9eaedfcbfb7279b3810e594eb07106ca8f97da16ccb98d1d7fb2cf44e3698e5d",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 147202,
+      "afterBytes": 4253,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/119c344607df4b00a2909c0e5d62b999/20261102T184452988_5288d544288f4042b93ad0c6eb3c7c46/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/119c344607df4b00a2909c0e5d62b999/20261104T143323681_b75541f850b34263a4bab678ce719a03",
+      "beforeHash": "9522ee9265679e467c7154c210ec808544bf1318636cdb006ef5b9e5cd8b0e97",
+      "afterHash": "eed3fe7bd2595752565e241988fb3c293cdf4983dcc1f0b4837623ef4b2c1a61"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/SilkFiber/SilkFiber_Icon.png",
+      "ids": [
+        "SilkFiber"
+      ],
+      "names": [
+        "蚕丝"
+      ],
+      "guid": "16d8806f858e4bebac8b42c0a4e71fbc",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "1951f651a4496c3c5777d00f5c05c805dcac5cb360f0ea5a068e1408185ac276",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 143152,
+      "afterBytes": 4448,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/16d8806f858e4bebac8b42c0a4e71fbc/20261102T184453615_ee376a18d5be46dfad1a32040bf3e2c2/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/16d8806f858e4bebac8b42c0a4e71fbc/20261104T143323716_a374138e594c417f86a108a35b509491",
+      "beforeHash": "c43447c8f882b5744b3624328f8ea0ac85a6518a4b2e1b2ee2e7ce698451ee46",
+      "afterHash": "f41e74fab56e3379ead10abf37abc8992a8ea809836112dc2d466bcc24fdff10"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Tea/Tea_Icon.png",
+      "ids": [
+        "Tea"
+      ],
+      "names": [
+        "茶"
+      ],
+      "guid": "67e20d87a6524ce0a6c096dc729ffeac",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "cc16e520d56d0e26c461e1bb110056d48f6e30948ea4f32b90ef3b8942433372",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 536.14764,
+      "afterPpu": 67.018455,
+      "readable": "0",
+      "beforeBytes": 199998,
+      "afterBytes": 5891,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/67e20d87a6524ce0a6c096dc729ffeac/20261102T184455343_e16324a0bd0541d392133872acf04275/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/67e20d87a6524ce0a6c096dc729ffeac/20261104T143323757_23f98c15b9f54659803fb98fe591efbb",
+      "beforeHash": "0022eeb12be45335209ee717cf73f086887ddb4d0f76ba1d2c9a759108534f5b",
+      "afterHash": "dff6371b495c358a3713f49317dc65888c6710d945ff325fecb4d1614bd4dfaf"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Thread/Thread_Icon.png",
+      "ids": [
+        "Thread"
+      ],
+      "names": [
+        "线"
+      ],
+      "guid": "76ca5871924243c484ee2ec935600bcb",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "f17190a47d09fc680b18eccb6ab9e67e8df44fdd41d3a9b203131e77f6378bc0",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 491.81863,
+      "afterPpu": 61.47732875,
+      "readable": "0",
+      "beforeBytes": 229838,
+      "afterBytes": 7132,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/76ca5871924243c484ee2ec935600bcb/20261102T184456284_df2fa4c3594844e8bd481ed16f6843ac/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/76ca5871924243c484ee2ec935600bcb/20261104T143323796_ac9b49a1b37e4637acd77783104af4f2",
+      "beforeHash": "db76ef3e8a9b37a53369c702fda613e5c4d1478a3c6f59f6e9d1ac9950340389",
+      "afterHash": "41b486e9715eab6387d567fb640ead72236368f43f5d83f6890021f12af7e9a1"
+    },
+    {
+      "path": "Assets/6_Art/Generated/InventoryCrafting/Twine/Twine_Icon.png",
+      "ids": [
+        "Twine"
+      ],
+      "names": [
+        "藤蔓"
+      ],
+      "guid": "67eebfb848ca4d95bd5b567e2f9f0e39",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "80657553cf3cc8407737d4c499b3ed922460817a28d8660d39103e20c308d035",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1411.5555,
+      "afterPpu": 72.04111004784689,
+      "readable": "0",
+      "beforeBytes": 926220,
+      "afterBytes": 6864,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/67eebfb848ca4d95bd5b567e2f9f0e39/20261104T143323830_f4c8a323a2154e95a14f8178688a8a29/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/67eebfb848ca4d95bd5b567e2f9f0e39/20261104T143323830_f4c8a323a2154e95a14f8178688a8a29",
+      "beforeHash": "80657553cf3cc8407737d4c499b3ed922460817a28d8660d39103e20c308d035",
+      "afterHash": "1bc1ef94b792b5dcc76218c9fab2ea549475dc0d1654ef38fa27e92834b53b8e"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Items/Berry/Item_Berry.png",
+      "ids": [
+        "Berry"
+      ],
+      "names": [
+        "浆果"
+      ],
+      "guid": "9ac7bb4886396bf4faec3bf7d1e9fe88",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "f8c37fe1d542f6929c0e894a721cf669a9ede18e5dc79abd56f54074bdf127a4",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 512.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 199870,
+      "afterBytes": 6207,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/9ac7bb4886396bf4faec3bf7d1e9fe88/20261102T180102701_962619082df24668be306984a9b61293/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/9ac7bb4886396bf4faec3bf7d1e9fe88/20261104T143323872_51812e7c26d044128bf3257eed322781",
+      "beforeHash": "176a9a088912cf0e9530253e808b993bea0125a64ca668b258a3a07a22c801e6",
+      "afterHash": "4b928e9bfcc6d8c61ae887155cd0bddd88233f70fedf991c54479ee89bba22ce"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png",
+      "ids": [
+        "FishingHook_Bone"
+      ],
+      "names": [
+        "骨质鱼钩"
+      ],
+      "guid": "a24e86abf0bf498d81b64cd55a4f5430",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "7a45f0355cedefaf66676336013c41e9396afc1099db8ae2b418cbb06187c4c9",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1024.0,
+      "afterPpu": 128.0,
+      "readable": "0",
+      "beforeBytes": 72847,
+      "afterBytes": 2076,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/a24e86abf0bf498d81b64cd55a4f5430/20261102T180103225_fe5578c5e1034436bd663582a0917dcb/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/a24e86abf0bf498d81b64cd55a4f5430/20261104T143323897_5654e5f1da074454862ac1fcef5e0ec0",
+      "beforeHash": "e08834dc679924299c3eeb0bf467359892402265ed7b5f4052cadaba613e6983",
+      "afterHash": "4a24d59bd08c80cac605ec9451d5fb8f91a1b5b1a08914b81350aa4146daa721"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png",
+      "ids": [
+        "FishingHook_Gold"
+      ],
+      "names": [
+        "金鱼钩"
+      ],
+      "guid": "ab2690cbc1594fbaa3ba63b90463ec41",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "01e915b95b5f01501d1e5de9c536eaf2fe0795f6eaf0d179236ea1729e6ab790",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 2508.0,
+      "afterPpu": 128.0,
+      "readable": "0",
+      "beforeBytes": 246727,
+      "afterBytes": 1798,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/ab2690cbc1594fbaa3ba63b90463ec41/20261104T143323918_03752055c5ef43609490adfa22177099/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/ab2690cbc1594fbaa3ba63b90463ec41/20261104T143323918_03752055c5ef43609490adfa22177099",
+      "beforeHash": "01e915b95b5f01501d1e5de9c536eaf2fe0795f6eaf0d179236ea1729e6ab790",
+      "afterHash": "3e3ec1398687bdee900f5ebe53f90d976cadd3cfde4fc8ff2e70f8e4a20eea46"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png",
+      "ids": [
+        "FishingHook_Iron"
+      ],
+      "names": [
+        "铁质鱼钩"
+      ],
+      "guid": "d1530e6053594a4fa6c1a171ae495429",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "03bafb2ae2a3d4c783623291203991360f4a7483ae039e99ed3eb06316c1109a",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 2508.0,
+      "afterPpu": 128.0,
+      "readable": "0",
+      "beforeBytes": 233133,
+      "afterBytes": 1605,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/d1530e6053594a4fa6c1a171ae495429/20261104T143323941_5b42ba3f65b744eebf3ec1476caca411/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/d1530e6053594a4fa6c1a171ae495429/20261104T143323941_5b42ba3f65b744eebf3ec1476caca411",
+      "beforeHash": "03bafb2ae2a3d4c783623291203991360f4a7483ae039e99ed3eb06316c1109a",
+      "afterHash": "5460a26995278885d15a0b0affe71996834932baa2faf46d307595303c90b23b"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Bronze/Shovel_Bronze_Icon.png",
+      "ids": [
+        "Shovel_Bronze"
+      ],
+      "names": [
+        "青铜铲"
+      ],
+      "guid": "4433633a11a14807bb218131d803dd36",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "57a1d27648f096e7646024ac19e7c7f6f1e480b43f977aa90047167ea5204522",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1164.5352,
+      "afterPpu": 59.43401339712919,
+      "readable": "0",
+      "beforeBytes": 360840,
+      "afterBytes": 2456,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/4433633a11a14807bb218131d803dd36/20261104T143324045_eab75646367b497e97b37a207d8ce528/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/4433633a11a14807bb218131d803dd36/20261104T143324045_eab75646367b497e97b37a207d8ce528",
+      "beforeHash": "57a1d27648f096e7646024ac19e7c7f6f1e480b43f977aa90047167ea5204522",
+      "afterHash": "8a9831a7eeadaffe1078af35ea6615d2c147ee0abfd2e3a4d9edb191006da246"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Copper/Shovel_Copper_Icon.png",
+      "ids": [
+        "Shovel_Copper"
+      ],
+      "names": [
+        "铜铲"
+      ],
+      "guid": "ea3ecc24900e417f99f9d6a5edaca108",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "170b8cc36e8ff1a85eb99776cf8ff0134ced42adca8123b22dd9311b975868b5",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 504.42648,
+      "afterPpu": 63.05331,
+      "readable": "0",
+      "beforeBytes": 82996,
+      "afterBytes": 2474,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/ea3ecc24900e417f99f9d6a5edaca108/20261102T184506552_d9e3e39c9c474abd971270a3d69b9633/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/ea3ecc24900e417f99f9d6a5edaca108/20261104T143324076_152addf6b65b4ab9b3662a9f8615f91e",
+      "beforeHash": "562afb28512b4e42977ca59b972b375254479dd3b00a6d0b0adbc31b226d2f6f",
+      "afterHash": "fecd88531c37e56aa65e8a9d723fb3ea8ca9a8a08f8fe3b1dbaccbbbc321e1d2"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Iron/Shovel_Iron_Icon.png",
+      "ids": [
+        "Shovel_Iron"
+      ],
+      "names": [
+        "铁铲"
+      ],
+      "guid": "5d3ae22d259a471faa23c4752de35a3f",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "1635b909cc085dea6eda8178d3d0459710e5ea0fede8c94d29349bd23b1f3725",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 488.22992,
+      "afterPpu": 61.02874,
+      "readable": "0",
+      "beforeBytes": 82587,
+      "afterBytes": 2461,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/5d3ae22d259a471faa23c4752de35a3f/20261102T184507442_cd35618b9d1a4c6cb179136d1ed80076/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/5d3ae22d259a471faa23c4752de35a3f/20261104T143324103_4202fbb4aee74cccb0c08bb10fd2f0f4",
+      "beforeHash": "c2d05aecc51f864ac89d6d6f71dc879c4d12951a2e63f390a1605338068c7a7b",
+      "afterHash": "7b795d5e16c600dbe0ff1212056fc48a56783747b456b55f5872e6534eb5d0a0"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_RawIron/Shovel_RawIron_Icon.png",
+      "ids": [
+        "Shovel_RawIron"
+      ],
+      "names": [
+        "粗铁铲"
+      ],
+      "guid": "2abf93390def4fbdaa92c759bcb45230",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "33f0be649bdfa71f2dec0908b80b92907bc3b13ff5869a52aedc27d39c369c91",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 479.5344,
+      "afterPpu": 59.9418,
+      "readable": "0",
+      "beforeBytes": 88973,
+      "afterBytes": 2606,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/2abf93390def4fbdaa92c759bcb45230/20261102T184508011_345256f7c91c47809cb59412134e9a8d/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/2abf93390def4fbdaa92c759bcb45230/20261104T143324134_0111591b886446deb0f2b0cc61683d75",
+      "beforeHash": "ba892de47f19b7601788748126f267215d6b2698a42e847e9f7285d58d288ef4",
+      "afterHash": "caef61dd7e3af774d4936c8077ffb2f344ccb51f2cfdf916155965a97a563224"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Stone/Shovel_Stone_Icon.png",
+      "ids": [
+        "Shovel_Stone"
+      ],
+      "names": [
+        "石铲"
+      ],
+      "guid": "8f6d7ad2162c4b7aad8a6cddd5c111a0",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "49684c2c0336f2f892b53ac02db1583d9d62067c346ed1100b873d1725d30f80",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1252.418,
+      "afterPpu": 63.91925996810207,
+      "readable": "0",
+      "beforeBytes": 414951,
+      "afterBytes": 2748,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/8f6d7ad2162c4b7aad8a6cddd5c111a0/20261104T143324160_d99dba3e86584628b4f1b453ec0218e4/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/8f6d7ad2162c4b7aad8a6cddd5c111a0/20261104T143324160_d99dba3e86584628b4f1b453ec0218e4",
+      "beforeHash": "49684c2c0336f2f892b53ac02db1583d9d62067c346ed1100b873d1725d30f80",
+      "afterHash": "edb3c5f82ac619322aa51f665a2d259b4e817ba292c6a3be932685b561d5a859"
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Shovel_Wood/Shovel_Wood_Icon.png",
+      "ids": [
+        "Shovel_Wood"
+      ],
+      "names": [
+        "木铲"
+      ],
+      "guid": "4ae7b460a7ae499e9e47062f5f90659d",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "30636cc068fc48ee9965294d9f3f7a3c68c7f39dda0282b05cb75298771eb159",
+      "beforeDimensions": [
+        512,
+        512
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 479.87872,
+      "afterPpu": 59.98484,
+      "readable": "0",
+      "beforeBytes": 90833,
+      "afterBytes": 2599,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/4ae7b460a7ae499e9e47062f5f90659d/20261102T184508529_6cd9105e52284e88b6c96fd035d258fd/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/4ae7b460a7ae499e9e47062f5f90659d/20261104T143324195_9010e95894874134ac400ca50d6bf61c",
+      "beforeHash": "5cf4d8da755d5e1d35006b88009d78a54bb8fddce95170b635704a164f009f57",
+      "afterHash": "9ea2038d6e01486c437f3bd09a62d6307eff993b343228aa017e9e8c47526846"
+    },
+    {
+      "path": "Assets/6_Art/Items/Plants/Tree/item299.png",
+      "ids": [
+        "Plank"
+      ],
+      "names": [
+        "木板"
+      ],
+      "guid": "239704e336f808945b1d8fc10dc29fbd",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "4491680e60d82973b399bddae2b70b8c4671e04b5cde3da1a473d19d002c499f",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 836809,
+      "afterBytes": 5851,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/239704e336f808945b1d8fc10dc29fbd/20261104T143324243_54695b852afe40fbaaf3dd83130d1519/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/239704e336f808945b1d8fc10dc29fbd/20261104T143324243_54695b852afe40fbaaf3dd83130d1519",
+      "beforeHash": "4491680e60d82973b399bddae2b70b8c4671e04b5cde3da1a473d19d002c499f",
+      "afterHash": "145d411c537bbbefb261ba44b31b131e3ac725f429cb37e4566b154c92e61b7d"
+    },
+    {
+      "path": "Assets/6_Art/Items/RawHide.png",
+      "ids": [
+        "RawHide"
+      ],
+      "names": [
+        "生皮"
+      ],
+      "guid": "9f21e9d2ca9c26d46a1df78bda87f035",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "a3d81bfaf37a56072707025dbf3b46fcd58f1d6d3eb40928f0d1500120aae331",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 707301,
+      "afterBytes": 4848,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/9f21e9d2ca9c26d46a1df78bda87f035/20261104T143324280_57dbf76983c3437a9e1fa7e5a45b82d6/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/9f21e9d2ca9c26d46a1df78bda87f035/20261104T143324280_57dbf76983c3437a9e1fa7e5a45b82d6",
+      "beforeHash": "a3d81bfaf37a56072707025dbf3b46fcd58f1d6d3eb40928f0d1500120aae331",
+      "afterHash": "3d8f3c24b5c001b8a84266638a5c83680b213aebb22206ff3839a6554f580fde"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_229.png",
+      "ids": [
+        "Ore_Coal"
+      ],
+      "names": [
+        "煤矿石"
+      ],
+      "guid": "43a4f364b6845db4ba5ee4ea6676cd92",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "bf374ffa643d7c37dc2ed5d665deaadc88f28894d995b67d5b258ce0d31d51bc",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1645.875,
+      "afterPpu": 84.0,
+      "readable": "0",
+      "beforeBytes": 722677,
+      "afterBytes": 4957,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/43a4f364b6845db4ba5ee4ea6676cd92/20261104T143324319_8d85f3d76c8048f0bba4505858bd1f4e/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/43a4f364b6845db4ba5ee4ea6676cd92/20261104T143324319_8d85f3d76c8048f0bba4505858bd1f4e",
+      "beforeHash": "bf374ffa643d7c37dc2ed5d665deaadc88f28894d995b67d5b258ce0d31d51bc",
+      "afterHash": "66fd9283bd0927ef8e13ddb034b1b23297ff8cca1f1172f622017c0daafe01bb"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_231.png",
+      "ids": [
+        "Earth"
+      ],
+      "names": [
+        "泥土"
+      ],
+      "guid": "e831a9eb194325143b7e7e1a10f84b45",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "ae0e9d59e374cd80732a5f2098bbcf5c001f3623436a609238a4da9e4bc298fd",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 534652,
+      "afterBytes": 3699,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/e831a9eb194325143b7e7e1a10f84b45/20261104T143324355_2f93c30466fe4776983d4a43ca77ef0f/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/e831a9eb194325143b7e7e1a10f84b45/20261104T143324355_2f93c30466fe4776983d4a43ca77ef0f",
+      "beforeHash": "ae0e9d59e374cd80732a5f2098bbcf5c001f3623436a609238a4da9e4bc298fd",
+      "afterHash": "e466e412df370c332ae3625df668213cf5d9b2dfc8cf568528f8c5090214a72a"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_327.png",
+      "ids": [
+        "Bone"
+      ],
+      "names": [
+        "骨头"
+      ],
+      "guid": "81b4dc488d6e9914596d43f5ebd2e6a0",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "1fc6b17b7cd2c015dee3e6568e2df59c453e5ddc44a2495a9469245789ad138a",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 468278,
+      "afterBytes": 3566,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/81b4dc488d6e9914596d43f5ebd2e6a0/20261104T143324389_1bce0567581f4caa9f676c963b78a2e7/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/81b4dc488d6e9914596d43f5ebd2e6a0/20261104T143324389_1bce0567581f4caa9f676c963b78a2e7",
+      "beforeHash": "1fc6b17b7cd2c015dee3e6568e2df59c453e5ddc44a2495a9469245789ad138a",
+      "afterHash": "d1a1b4c41c3b8cfbc49f2787a9b24cbfa056ae61dcf9dcade517c050169de239"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_391.png",
+      "ids": [
+        "Ore_Iron"
+      ],
+      "names": [
+        "铁矿石"
+      ],
+      "guid": "87098d23f0b9ec442afa8b16f5662ef4",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "9204faa785825f12a05ece6f3d2ac614f0475c29fb6b0139974b485a39b21600",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 1075952,
+      "afterBytes": 7224,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/87098d23f0b9ec442afa8b16f5662ef4/20261104T143324428_0a7db353867643fb858c5f2e3f2c0427/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/87098d23f0b9ec442afa8b16f5662ef4/20261104T143324428_0a7db353867643fb858c5f2e3f2c0427",
+      "beforeHash": "9204faa785825f12a05ece6f3d2ac614f0475c29fb6b0139974b485a39b21600",
+      "afterHash": "72366e018bfb06a38762d302d9b9764e608469310c5fa75579d487f9eb349832"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_393.png",
+      "ids": [
+        "Ore_Tin"
+      ],
+      "names": [
+        "锡矿石"
+      ],
+      "guid": "c422e4cb7f4f5c540a5f83256abdceaf",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "f6eeeb93bcf39a014f3a754a07d46dd78d0b1d56fbe8837bcd4f0f63921cff8a",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 954365,
+      "afterBytes": 6071,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/c422e4cb7f4f5c540a5f83256abdceaf/20261104T143324474_682be5b831ef42a6a8112fac4625572a/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/c422e4cb7f4f5c540a5f83256abdceaf/20261104T143324474_682be5b831ef42a6a8112fac4625572a",
+      "beforeHash": "f6eeeb93bcf39a014f3a754a07d46dd78d0b1d56fbe8837bcd4f0f63921cff8a",
+      "afterHash": "c9f99270c34247d24d883dc6e6b3faf70acf351d44204a8a9860193743cea263"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_399.png",
+      "ids": [
+        "Ore_Copper"
+      ],
+      "names": [
+        "孔雀石"
+      ],
+      "guid": "f4b1ad2c128ff8f47919ef031ff61bb7",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "4d37dbbdd8c50cad8a7b3f596fb6223f1ee52af7a2e6e5c404865fb850afcb14",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 890334,
+      "afterBytes": 6630,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/f4b1ad2c128ff8f47919ef031ff61bb7/20261104T143324517_3c21fd96063b42b7aabe12b565c0c921/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/f4b1ad2c128ff8f47919ef031ff61bb7/20261104T143324517_3c21fd96063b42b7aabe12b565c0c921",
+      "beforeHash": "4d37dbbdd8c50cad8a7b3f596fb6223f1ee52af7a2e6e5c404865fb850afcb14",
+      "afterHash": "7c629e9706ba6b8c176dc9bbd0503d1bad306d028751d2c67acde3dc33deac09"
+    },
+    {
+      "path": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+      "ids": [
+        "Ore_Stone"
+      ],
+      "names": [
+        "石头"
+      ],
+      "guid": "f69b47e3c1c7a5b439c32e928803befd",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "0bc5fd37b74cafbfd81c27d781b8fa262e67b6a33ab272545162c21d8a0ed151",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 692320,
+      "afterBytes": 4136,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/f69b47e3c1c7a5b439c32e928803befd/20261104T143324551_51339b3337a34d3bb7ff20091b8abe0e/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/f69b47e3c1c7a5b439c32e928803befd/20261104T143324551_51339b3337a34d3bb7ff20091b8abe0e",
+      "beforeHash": "0bc5fd37b74cafbfd81c27d781b8fa262e67b6a33ab272545162c21d8a0ed151",
+      "afterHash": "d3ac7b8d603ed5cbc122b258a2e917e689db27d73f58f67fcdfa5514f77573e2"
+    },
+    {
+      "path": "Assets/6_Art/Items/Weapons/Item_Weapon_017.png",
+      "ids": [
+        "Needle_Bone"
+      ],
+      "names": [
+        "骨针"
+      ],
+      "guid": "81191579e8ccd6841b113aaa97cb3890",
+      "sourceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceHash": "a2353c85251dab6d37310512f83a602eed8632085144ba212affb3207368aaa6",
+      "beforeDimensions": [
+        1254,
+        1254
+      ],
+      "afterDimensions": [
+        64,
+        64
+      ],
+      "beforePpu": 1254.0,
+      "afterPpu": 64.0,
+      "readable": "0",
+      "beforeBytes": 313156,
+      "afterBytes": 2370,
+      "highResolutionSource": "ArtSourceBackups/PixelArtTextures/81191579e8ccd6841b113aaa97cb3890/20261104T143324581_4c70c2a3684b42ddb955708eeb417d27/original.png",
+      "backupDirectory": "ArtSourceBackups/PixelArtTextures/81191579e8ccd6841b113aaa97cb3890/20261104T143324581_4c70c2a3684b42ddb955708eeb417d27",
+      "beforeHash": "a2353c85251dab6d37310512f83a602eed8632085144ba212affb3207368aaa6",
+      "afterHash": "d211163592d5b0640f90a11e0db74bc3043704920bc2ea1a13aa3158465bd5fd"
+    }
+  ],
+  "excluded": [
+    {
+      "path": "Assets/6_Art/Building/Door_Stone_Close.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Door_Stone_Summoner",
+        "Door_Stone"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Building/Door_Wood_Close.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Door_Wood_Summoner",
+        "Door_Wood"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Food/堆肥桶.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "CompostBin_Summoner",
+        "CompostBin"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "BlastFurnace_Summoner",
+        "BlastFurnace"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Building/Chest_Wood/Chest_Wood_Closed.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Chest_Wood_Summoner",
+        "Chest_Wood"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "MineEntrance_Summoner",
+        "MineEntrance"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Building/ToolCabinet/ToolCabinet_Building.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ToolCabinet",
+        "ToolCabinet_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "InductionStove",
+        "InductionStove_Summoner",
+        "ElectricHeater",
+        "ElectricHeater_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FluidOutlet",
+        "FluidOutlet_Summoner",
+        "LiquidOutlet",
+        "LiquidOutlet_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasSelector",
+        "GasSelector_Summoner",
+        "LiquidPipe",
+        "LiquidPipe_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FluidPipe",
+        "FluidPipe_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FluidValve",
+        "FluidValve_Summoner",
+        "LiquidValve",
+        "LiquidValve_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasFiller",
+        "GasFiller_Summoner",
+        "LiquidFiller",
+        "LiquidFiller_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasEngine",
+        "GasEngine_Summoner",
+        "FuelEngine",
+        "FuelEngine_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasPump_Mechanical"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasPump_Mechanical"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasPump_Mechanical",
+        "GasPump_Mechanical_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasSelector",
+        "GasSelector_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasTankBlock_Iron",
+        "GasTankBlock_Iron_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "GasTankBlock_Steel",
+        "GasTankBlock_Steel_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "LiquidPump_Electric",
+        "LiquidPump_Electric_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "LiquidStorageTank",
+        "LiquidStorageTank_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "LiquidTankBlock_Iron",
+        "LiquidTankBlock_Iron_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "LiquidTankBlock_Steel",
+        "LiquidTankBlock_Steel_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Battery_Basic",
+        "Battery_Basic_Summoner",
+        "Creative_Power_Source",
+        "Creative_Power_Source_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ElectricLightBulb",
+        "ElectricLightBulb_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Generator_Basic"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Generator_Basic_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Generator_Basic",
+        "Generator_Basic_Summoner",
+        "Wire_Copper",
+        "Wire_Copper_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Diamond/Mine_Diamond_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Mine_Diamond"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Cactus/Cactus_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Cactus"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Growing.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ChiliTree"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ChiliTree"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/ChiliTree/ChiliTree_Seedling.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ChiliTree"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Growing.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "CottonCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "CottonCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/CottonCrop/CottonCrop_Seedling.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "CottonCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/Flower/Flower_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Flower"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Growing.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FoxtailCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FoxtailCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/FoxtailCrop/FoxtailCrop_Seedling.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "FoxtailCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RadishCrop/RadishCrop_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "RadishCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Growing.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "RiceCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "RiceCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "RiceCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/TwineCrop/TwineCrop_Mature.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "TwineCrop"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "MechanicalLoom",
+        "MechanicalLoom_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipChemicalEngine",
+        "ShipChemicalEngine_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipConsole",
+        "ShipConsole_Summoner",
+        "SpaceElevatorTerminal",
+        "SpaceElevatorTerminal_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipDockingPort/ShipDockingPort_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipDockingPort",
+        "ShipDockingPort_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipDoor",
+        "ShipDoor_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipFiber/ShipFiber_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipFiber",
+        "ShipFiber_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipGravityGenerator",
+        "ShipGravityGenerator_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "ShipNavigation",
+        "ShipNavigation_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "SpaceCultivator",
+        "SpaceCultivator_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/HandDrill_Summoner/HandDrill_Summoner_Icon.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "HandDrill",
+        "HandDrill_Summoner"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/SparkMaker_Summoner/SparkMaker_Summoner_Icon.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "SparkMaker_Summoner",
+        "SparkMaker"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Wheelbarrow",
+        "Wheelbarrow_Building"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "Bicycle",
+        "Bicycle_Building"
+      ]
+    },
+    {
+      "path": "Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png",
+      "reason": "World resource, building, machine, vehicle or shared world-body texture",
+      "ids": [
+        "IronBucket",
+        "IronBucket_Building"
+      ]
+    }
+  ]
+}
