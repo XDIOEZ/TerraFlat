@@ -17,6 +17,8 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/aim_cursor", InteractionAimCursor);
         operations.Add("player/focus_aim_batch", InteractionFocusAimBatch);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
+        operations.Add("terrain/ground_strata", TerrainGroundStrataRules);
+        operations.Add("terrain/ground_strata_legacy", TerrainLegacyGroundStrataRules);
         operations.Add("terrain/ground_cover_work", InteractionGroundCoverWork);
         operations.Add("player/interaction_query_context", InteractionQueryContext);
         operations.Add("player/interaction_registry_prefilter", InteractionRegistryPrefilter);
@@ -520,20 +522,20 @@ public static partial class GameplayTestSystemProbe
             bool lavaStillRejected = !FarmlandSystem.IsOpen(sample, allowSurfaceWater:
                 GroundTileHarvestSystem.IsWaterDiggingAllowed(ResourceToolKind.Shovel, sample.LiquidDepth, "molten"));
             int depth = (int)Number(args, "depth", 2d);
-            GroundTileLayerSystem.WriteDepth(terrain, local, depth);
-            terrain.SetGrass(0, 0, 4);
+            SetTerrainProbeExcavatedLevels(terrain, 0, 0, depth);
+            terrain.SetGrass(0, 0, ChunkTerrainData.GrassPresent);
             GroundLayerCellSaveData snapshot = GroundTileLayerSystem.Capture(terrain, local);
-            GroundTileLayerSystem.WriteDepth(terrain, local, 9);
+            SetTerrainProbeExcavatedLevels(terrain, 0, 0, 9);
             terrain.SetGrass(0, 0, 0);
             GroundTileLayerSystem.Restore(terrain, snapshot);
             bool invalidDepthRejected = false;
             try { GroundTileLayerSystem.Restore(terrain, new GroundLayerCellSaveData { LocalPosition = local, ExcavatedLayers = 101 }); }
             catch (InvalidOperationException) { invalidDepthRejected = true; }
-            terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, 0, 0, (float)Number(args, "progress", .4d));
+            terrain.SetGroundHarvestProgress(0, 0, (float)Number(args, "progress", .4d));
             float progress = GroundTileHarvestSystem.ReadProgress(sample);
-            terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, 0, 0, 5f);
+            terrain.SetGroundHarvestProgress(0, 0, 5f);
             float highProgress = GroundTileHarvestSystem.ReadProgress(sample);
-            terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, 0, 0, -1f);
+            terrain.SetGroundHarvestProgress(0, 0, -1f);
             float lowProgress = GroundTileHarvestSystem.ReadProgress(sample);
             return new JObject
             {
@@ -551,7 +553,7 @@ public static partial class GameplayTestSystemProbe
                 ["tier"] = tool.HarvestTier, ["efficiency"] = tool.HarvestEfficiency,
                 ["readOnlyParameterRejected"] = readOnlyParameterRejected,
                 ["interval"] = definition?.GroundHarvest.UseInterval, ["layers"] = definition?.GroundHarvest.NaturalLayerCount,
-                ["restoredDepth"] = GroundTileLayerSystem.ReadDepth(terrain, local), ["restoredGrass"] = terrain.GetGrass(0, 0),
+                ["restoredDepth"] = TerrainSurfaceHeightLayer.GetExcavatedLevels(terrain, 0, 0), ["restoredGrass"] = terrain.GetGrass(0, 0),
                 ["invalidDepthRejected"] = invalidDepthRejected, ["progress"] = progress,
                 ["highProgress"] = highProgress, ["lowProgress"] = lowProgress
             };

@@ -36,29 +36,54 @@ public partial class SaveDataMgr
     #endregion
 
     #region 地层差量
-    /// <summary>单格立即记录天然采挖层数和玩家覆盖栈，同图不同区块及维度独立保存。</summary>
+    /// <summary>立即捕获真实三维列，旧计数仅在兼容导入时读取。</summary>
     public void RecordGroundLayerCell(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
-        GroundLayerCellSaveData state = GroundTileLayerSystem.Capture(sample.Terrain, sample.LocalCell);
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
-        record.GroundLayerCells ??= new List<GroundLayerCellSaveData>();
-        record.GroundLayerCells.RemoveAll(cell => cell.LocalPosition == sample.LocalCell);
-        if (state.ExcavatedLayers != 0 || state.ExcavatedSurfaceLevels != 0 || state.Covers.Count != 0)
-            record.GroundLayerCells.Add(state);
+        RecordGroundColumnSnapshot(record, sample.Terrain, sample.LocalCell);
     }
 
-    /// <summary>完整地形与草层恢复后，再恢复隐藏地块和已采层数。</summary>
+    private static void RecordGroundColumnSnapshot(ChunkSaveRecord record, ChunkTerrainData terrain, Vector2Int local)
+    {
+        record.GroundColumns ??= new();
+        record.GroundColumns.RemoveAll(cell => cell.LocalPosition == local);
+        record.GroundColumns.Add(GroundTileLayerSystem.Capture(terrain, local));
+        record.GroundLayerCells?.RemoveAll(cell => cell.LocalPosition == local);
+        record.GrassDeltas?.RemoveAll(cell => cell.LocalPosition == local);
+    }
+
+    /// <summary>先恢复完整列，再让表面、农业与支撑面恢复各自的独立状态。</summary>
     private static void RestoreGroundLayerTerrain(ChunkRuntime chunk, ChunkSaveRecord record)
     {
-        if (record.GroundLayerCells == null) return;
+        record.GroundColumns ??= new();
         var seen = new HashSet<Vector2Int>();
-        foreach (GroundLayerCellSaveData cell in record.GroundLayerCells)
+        foreach (GroundLayerCellSaveData cell in record.GroundColumns)
         {
-            if (cell == null || !seen.Add(cell.LocalPosition))
-                throw new InvalidOperationException("地层存档包含空值或重复格子。");
+            if (cell == null || !seen.Add(cell.LocalPosition) || !cell.BottomZ.HasValue)
+                throw new InvalidOperationException("三维地层存档包含无效或重复列。");
             GroundTileLayerSystem.Restore(chunk.Terrain, cell);
         }
+        foreach (GroundLayerCellSaveData cell in record.GroundLayerCells ?? new())
+        {
+            if (cell == null) throw new InvalidOperationException("旧地层存档包含空值。");
+            if (!seen.Add(cell.LocalPosition)) continue;
+            GrassCellSaveDelta grass = record.GrassDeltas?.Find(value => value.LocalPosition == cell.LocalPosition);
+            if (grass != null && (grass.State == GrassCellState.Removed || grass.State == GrassCellState.Empty))
+                cell.SurfaceGrass = ChunkTerrainData.GrassEmpty;
+            GroundTileLayerSystem.Restore(chunk.Terrain, cell);
+            record.GroundColumns.Add(GroundTileLayerSystem.Capture(chunk.Terrain, cell.LocalPosition));
+        }
+        record.GroundLayerCells?.Clear();
+        foreach (RuntimeTileCellSaveDelta cell in record.RuntimeTileDeltas ?? new())
+        {
+            if (!seen.Add(cell.LocalPosition) || cell.BlockingTileId != 0 ||
+                (uint)cell.LocalPosition.x >= (uint)chunk.Terrain.Width || (uint)cell.LocalPosition.y >= (uint)chunk.Terrain.Height) continue;
+            GroundTileLayerSystem.Restore(chunk.Terrain, new GroundLayerCellSaveData { LocalPosition = cell.LocalPosition,
+                SurfaceGrass = chunk.Terrain.GetGrass(cell.LocalPosition.x, cell.LocalPosition.y) });
+            record.GroundColumns.Add(GroundTileLayerSystem.Capture(chunk.Terrain, cell.LocalPosition));
+        }
+        record.GrassDeltas?.RemoveAll(grass => record.GroundColumns.Exists(column => column.LocalPosition == grass.LocalPosition));
     }
     #endregion
 
@@ -283,6 +308,27 @@ public partial class GroundLayerCellSaveData
     [MemoryPack.MemoryPackOrder(2)] public int ExcavatedSurfaceLevels; // 地表实际降低的层数，包含土层且不影响五层石头的产量。
     [MemoryPack.MemoryPackOrder(4)] public byte SurfaceGrass;
     [MemoryPack.MemoryPackOrder(0)] public List<GroundCoverLayerSaveData> Covers = new();
+    [MemoryPack.MemoryPackOrder(5)] public int? BottomZ;
+    [MemoryPack.MemoryPackOrder(6)] public List<GroundStratumSaveData> Strata;
+
+    public static GroundLayerCellSaveData CaptureColumn(ChunkTerrainData terrain, Vector2Int local)
+    {
+        GroundColumnSnapshot column = terrain.CaptureGroundColumn(local.x, local.y);
+        return new GroundLayerCellSaveData { LocalPosition = local, BottomZ = column.BottomZ,
+            Strata = new List<GroundStratum>(column.Layers).ConvertAll(GroundStratumSaveData.Capture) };
+    }
+    public GroundColumnSnapshot ToGroundColumn() => new() { BottomZ = BottomZ.Value,
+        Layers = Strata?.ConvertAll(layer => layer.ToRuntime()).ToArray() };
+    [MemoryPack.MemoryPackIgnore] public int PlayerCoverCount
+    {
+        get
+        {
+            if (Strata == null) return Covers?.Count ?? 0;
+            int count = 0;
+            for (int i = Strata.Count - 1; i >= 0 && Strata[i].PlayerPlaced; i--) count++;
+            return count;
+        }
+    }
     #endregion
 }
 
@@ -353,4 +399,42 @@ public partial class ContaminationValueSaveData
 {
     [MemoryPack.MemoryPackOrder(0)] public string ContaminationId;
     [MemoryPack.MemoryPackOrder(1)] public float Value;
+}
+
+[Serializable, MemoryPack.MemoryPackable(MemoryPack.GenerateType.VersionTolerant)]
+public partial class GroundStratumSaveData
+{
+    #region 地层固定字段
+    [MemoryPack.MemoryPackOrder(0)] public int TileId;
+    [MemoryPack.MemoryPackOrder(1)] public float HarvestProgress;
+    [MemoryPack.MemoryPackOrder(2)] public byte Grass;
+    [MemoryPack.MemoryPackOrder(3)] public bool PlayerPlaced;
+    [MemoryPack.MemoryPackOrder(4)] public short NavigationCost;
+    [MemoryPack.MemoryPackOrder(5)] public bool Walkable;
+    public static GroundStratumSaveData Capture(GroundStratum layer) => new() { TileId = layer.TileId,
+        HarvestProgress = layer.HarvestProgress, Grass = layer.Grass, PlayerPlaced = layer.PlayerPlaced,
+        NavigationCost = layer.NavigationCost, Walkable = layer.Walkable };
+    public GroundStratum ToRuntime() => new() { TileId = TileId, HarvestProgress = HarvestProgress,
+        Grass = Grass, PlayerPlaced = PlayerPlaced, NavigationCost = NavigationCost, Walkable = Walkable };
+    #endregion
+}
+
+/// <summary>旧地下记录保留到基线就绪后物化，迁移器不读取运行世界。</summary>
+internal sealed class WorldGroundStrataSaveMigration : FlatWorld.Persistence.ISaveArchivePayloadMigration
+{
+    #region 三维地层记录迁移
+    public string SchemaId => "flatworld.chunk";
+    public int FromVersion => 2;
+    public int ToVersion => 3;
+    public byte[] Migrate(byte[] payload)
+    {
+        if (payload == null) return null;
+        var snapshot = MemoryPackSerializer.Deserialize<SqliteChunkSnapshot>(payload);
+        if (snapshot?.Terrain == null) return payload;
+        var terrain = MemoryPackSerializer.Deserialize<ChunkSaveRecord>(snapshot.Terrain);
+        terrain.GroundColumns ??= new();
+        snapshot.Terrain = MemoryPackSerializer.Serialize(terrain);
+        return MemoryPackSerializer.Serialize(snapshot);
+    }
+    #endregion
 }

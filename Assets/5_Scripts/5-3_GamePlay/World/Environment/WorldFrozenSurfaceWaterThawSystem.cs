@@ -25,7 +25,7 @@ public static class WorldFrozenSurfaceWaterThawSystem
                     !(change.Kind == TerrainChangeKind.Environment &&
                       (change.AffectsEnvironmentLayer(FrozenSurfaceWaterLayer.IceTileLayer) ||
                        change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) ||
-                       change.AffectsEnvironmentLayer(GroundTileLayerSystem.DepthLayerId)))) return;
+                       change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId)))) return;
                 foreach (int index in change.GetCellIndices(terrain.Width)) Refresh(index);
             };
         }
@@ -50,8 +50,8 @@ public static class WorldFrozenSurfaceWaterThawSystem
             cell.BlockingTileId == source.Bed.BlockingTileId && cell.Flags == source.Bed.Flags &&
             cell.NavigationCost == Math.Min(short.MaxValue, source.Bed.NavigationCost + 1) &&
             TerrainSupportLayer.GetTileId(terrain, x, y) == 0 &&
-            GroundTileLayerSystem.ReadDepth(terrain, new Vector2Int(x, y)) == 0 &&
-            !GroundTileLayerSystem.TryGetUnderlying(terrain, new Vector2Int(x, y), out _);
+            TerrainSurfaceHeightLayer.GetExcavatedLevels(terrain, x, y) == 0 &&
+            !terrain.GetGroundStratum(x, y, terrain.GetTopGroundZ(x, y)).PlayerPlaced;
     }
     #endregion
 

@@ -27,6 +27,7 @@ namespace FlatWorld.Networking.Gameplay
             GameplayTestSystemProbe.Register("networking", "terrain_liquid_replication", _ => JObject.FromObject(CaptureLiquidReplication()));
             GameplayTestSystemProbe.Register("networking", "terrain_wire", CaptureWire);
             GameplayTestSystemProbe.Register("networking", "terrain_packet_splitting", CaptureTerrainPacketSplitting);
+            GameplayTestSystemProbe.Register("networking", "terrain_column_parts", CaptureTerrainColumnParts);
             GameplayTestSystemProbe.Register("networking", "weather_surface_ice_merge",
                 NetworkWeatherStateCoordinator.CaptureWeatherSurfaceIceMerge);
         }
@@ -34,6 +35,8 @@ namespace FlatWorld.Networking.Gameplay
         private static JObject CaptureWire(JObject args)
         {
             using ChunkTerrainData terrain = CreateTerrain();
+            terrain.PushGroundStratum(1, 0, 18);
+            terrain.SetGroundHarvestProgress(1, 0, .35f);
             TerrainSupportLayer.Set(terrain, 0, 0, 91, 1);
             terrain.SetFireStatesBatch(new[]
             {
@@ -59,6 +62,9 @@ namespace FlatWorld.Networking.Gameplay
             NetworkTerrainChunkMessage decoded = reader.Read<NetworkTerrainChunkMessage>();
             return new JObject
             {
+                ["columnLayers"] = decoded.Cells[1].GroundColumn.Layers.Length,
+                ["columnTop"] = decoded.Cells[1].GroundColumn.TopZ,
+                ["columnProgress"] = decoded.Cells[1].GroundColumn.Layers[1].HarvestProgress,
                 ["protocol"] = NetworkGameplayProtocol.CurrentVersion, ["remainingBytes"] = reader.Remaining,
                 ["world"] = decoded.WorldKey, ["dimension"] = decoded.DimensionId,
                 ["realm"] = decoded.RealmRevision, ["token"] = decoded.RequestToken,
@@ -71,6 +77,36 @@ namespace FlatWorld.Networking.Gameplay
                 ["liquidLevel"] = decoded.LiquidCells[0].Level,
                 ["explicitZeroLiquid"] = decoded.LiquidCells[1].Level == 0 && string.IsNullOrEmpty(decoded.LiquidCells[1].LiquidId)
             };
+        }
+
+        private static JObject CaptureTerrainColumnParts(JObject args)
+        {
+            using ChunkTerrainData server = CreateTerrain();
+            using ChunkTerrainData client = CreateTerrain();
+            for (int i = 0; i < 80; i++) server.PushGroundStratum(0, 0, 18);
+            server.SetGroundHarvestProgress(0, 0, .6f);
+            var message = new NetworkTerrainChunkMessage { WorldKey = "probe-world", DimensionId = "surface",
+                RealmRevision = 7, Revision = 9, TotalCells = 2, Cells = new[] { TerrainBuildingCellState.Capture(server, 0) } };
+            var parts = new List<NetworkTerrainChunkPart>(NetworkItemStateCoordinator.CreateTerrainMessageParts(message, 512));
+            var accumulator = new NetworkItemStateCoordinator.TerrainMessagePartAccumulator();
+            var cursor = new NetworkTerrainChunkCursor(client);
+            bool fits = true, atomic = true, duplicateRejected = true;
+            int applies = 0;
+            for (int i = parts.Count - 1; i >= 0; i--)
+            {
+                using NetworkWriterPooled writer = NetworkWriterPool.Get();
+                NetworkMessages.Pack(parts[i], writer);
+                fits &= writer.Position + Batcher.MaxMessageOverhead(writer.Position) <= 512;
+                bool complete = accumulator.TryAccept(parts[i], out var decoded);
+                if (i > 0) duplicateRejected &= !accumulator.TryAccept(parts[i], out _);
+                if (complete) { applies++; cursor.Apply(decoded.Revision, 0, decoded.TotalCells, decoded.Cells); }
+                else atomic &= client.GetTopGroundZ(0, 0) == 0;
+            }
+            accumulator.Clear();
+            return new JObject { ["parts"] = parts.Count, ["fits"] = fits, ["atomic"] = atomic,
+                ["duplicateRejected"] = duplicateRejected, ["applies"] = applies,
+                ["topZ"] = client.GetTopGroundZ(0, 0), ["progress"] = client.GetGroundHarvestProgress(0, 0),
+                ["layers"] = client.CaptureGroundColumn(0, 0).Layers.Length };
         }
 
         private static JObject CaptureTerrainPacketSplitting(JObject args)

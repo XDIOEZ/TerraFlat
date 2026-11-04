@@ -566,7 +566,7 @@ for _, case in ipairs(harvestCases) do
         assert(data.shallowWaterAllowed and data.seaWaterAllowed and not data.dryRejected and
             not data.pickaxeRejected and not data.oilRejected,
             "水深、工具类别、液体种类的水底采挖许可错误")
-        assert(data.restoredDepth == (case.args.depth or 2) and data.restoredGrass == 4 and data.invalidDepthRejected, "地层深度快照恢复或非法层数保护错误")
+        assert(data.restoredDepth == (case.args.depth or 2) and data.restoredGrass == 2 and data.invalidDepthRejected, "地层深度快照恢复或非法层数保护错误")
         assert(math.abs(data.progress - .4) < .00001 and data.highProgress == 1 and data.lowProgress == 0, "权威采挖进度读取未钳制")
         if case.rule then
             assert(math.abs(data.interval - .2) < .00001 and data.layers == (case.args.layers or 1), "采挖间隔或天然层数配置丢失")
@@ -587,3 +587,23 @@ for _, case in ipairs(harvestCases) do
         if not case.tool then assert(type(data.toolError) == "string" and #data.toolError > 0, "无效工具没有拒绝原因") end
     end, "地表采挖规则：" .. case.name)
 end
+
+
+test.system("terrain", "ground_strata", {}, function(data)
+    assert(data.initialLayers == 7, "草地、五层石头与基岩必须各占真实槽位")
+    assert(data.fillDelta == 2 and data.intermediate == 4, "填土按z逐层堆叠并逆序挖出")
+    assert(math.abs(data.progress - 0.4) < 0.0001 and data.grass == 2, "隐藏层保留自己的进度和草")
+    assert(data.removed == 6 and data.depth == 6, "挖掉草和五层石头后基岩不可再移除")
+    assert(data.reloaded and data.replicated, "存档及实时联机恢复完整地层")
+    assert(data.hiddenHash and data.replacement and data.clearGuarded, "地下参与指纹且顶层替换不改变z")
+    assert(data.emptyCoverRemoved and data.emptyUnallocated and data.filledWalkable and data.emptyNotWalkable, "空列不得预分配，单层填土须能挖回空列")
+    assert(data.growth and data.rollback, "扩容保留邻列，列回滚恢复进度与高度")
+end, "三维地层挖填、持久化、复制与扩容")
+
+
+test.system("terrain", "ground_strata_legacy", {}, function(data)
+    assert(data.schema == 3 and data.deferred, "SQLite v2迁移必须等待生成基线再导入真实地层")
+    assert(data.topZ == -3 and data.remainingLayers == 4 and data.topTile and data.bedrock,
+        "旧档两层石头采挖记录未还原剩余三层石头与基岩")
+    assert(math.abs(data.progress - 0.3) < 0.0001 and data.frozen, "旧采挖进度或冻结地层规则丢失")
+end, "SQLite三维地层迁移与生成规则冻结")

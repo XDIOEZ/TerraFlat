@@ -112,6 +112,7 @@ namespace FlatWorld.Networking.Gameplay
         private void StartTerrainClientBridge()
         {
             NetworkClient.RegisterHandler<NetworkTerrainChunkMessage>(OnClientTerrainChunkMessage, true);
+            NetworkClient.RegisterHandler<NetworkTerrainChunkPart>(OnClientTerrainChunkPart, true);
             NetworkClient.RegisterHandler<NetworkPersistedChunkPart>(OnClientPersistedChunkPart, true);
             NetworkClient.RegisterHandler<NetworkChunkEntityBaselineComplete>(OnClientChunkEntityBaselineComplete, true);
             ChunkMgr.PrepareNetworkChunkPersistenceAsync = PrepareNetworkPersistedChunkAsync;
@@ -121,6 +122,7 @@ namespace FlatWorld.Networking.Gameplay
         private void StopTerrainClientBridge()
         {
             NetworkClient.UnregisterHandler<NetworkTerrainChunkMessage>();
+            NetworkClient.UnregisterHandler<NetworkTerrainChunkPart>();
             NetworkClient.UnregisterHandler<NetworkPersistedChunkPart>();
             NetworkClient.UnregisterHandler<NetworkChunkEntityBaselineComplete>();
             if (ChunkMgr.PrepareNetworkChunkPersistenceAsync == PrepareNetworkPersistedChunkAsync)
@@ -135,6 +137,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ResetTerrainClient()
         {
+            incomingTerrainParts.Clear();
             terrainCursors.Clear();
             terrainPruneBuffer.Clear();
             clientEntityBaselines.Clear();
@@ -324,7 +327,7 @@ namespace FlatWorld.Networking.Gameplay
                     if (fireCount > 0) Array.Copy(fireCells, offset, message.FireCells, 0, fireCount);
                     if (liquidCount > 0) Array.Copy(liquidCells, offset, message.LiquidCells, 0, liquidCount);
                     if (TerrainMessageFitsTransport(message, limit)) break;
-                    if (count == 1) throw new InvalidOperationException("单格地形液体消息超过传输上限。");
+                    if (count == 1) break; // 单根高列由字节分片处理。
                     count /= 2;
                 }
                 offset += count;
@@ -352,7 +355,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!IsChunkInsideObserverWindow(message.WorldKey, new Vector2Int(message.ChunkX, message.ChunkY),
                 realm.Position.LocalMeters.ToVector2(), distance)) return;
             message.RealmRevision = realm.RealmRevision;
-            connection.Send(message, Channels.Reliable);
+            SendTerrainMessageOrParts(connection, message);
         }
         #endregion
 

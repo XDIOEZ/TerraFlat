@@ -64,18 +64,18 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
     {
         private static readonly string[] layers =
         {
-            TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId,
-            TerrainSurfaceHeightLayer.CoverLevelsLayerId,
             TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId
         };
         public readonly RuntimeTerrainTileSample Sample;
         private readonly TerrainCell cell;
+        private readonly GroundColumnSnapshot groundColumn;
         private readonly string liquid;
         private readonly int level;
         private readonly float[] values = new float[layers.Length];
         public TerrainCellSnapshot(RuntimeTerrainTileSample sample)
         {
             Sample = sample; cell = sample.Cell; liquid = sample.LiquidId; level = sample.LiquidLevel;
+            groundColumn = sample.Terrain.CaptureGroundColumn(sample.LocalCell.x, sample.LocalCell.y);
             for (int i = 0; i < layers.Length; i++)
                 sample.Terrain.TryGetEnvironmentValue(layers[i], sample.LocalCell.x, sample.LocalCell.y, out values[i]);
         }
@@ -84,15 +84,19 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
             var terrain = Sample.Terrain; int x = Sample.LocalCell.x, y = Sample.LocalCell.y;
             terrain.SetCell(x, y, new TerrainCell(cell.GroundTileId, 0, 0, cell.BiomeId,
                 cell.NavigationCost, TerrainCellFlags.Walkable));
-            terrain.SetEnvironmentValue(layers[0], x, y, water ? 1 : 0);
-            terrain.SetEnvironmentValue(layers[1], x, y, 0);
-            terrain.SetEnvironmentValue(layers[2], x, y, 0);
+            terrain.SetEnvironmentValue(layers[0], x, y, 0);
+            var column = new GroundColumnSnapshot { Layers = (GroundStratum[])groundColumn.Layers.Clone(), BottomZ = groundColumn.BottomZ };
+            int top = TerrainSurfaceHeightLayer.GetBaseLevel(terrain, x, y, terrain.GenerationMode == ChunkGenerationMode.Surface) - (water ? 1 : 0);
+            column.BottomZ += top - column.TopZ;
+            for (int n = 0; n < column.Layers.Length; n++) column.Layers[n].PlayerPlaced = false;
+            terrain.RestoreGroundColumn(x, y, column);
             WorldLiquidSystem.TrySet(Sample, "core:dirty_water", water ? LiquidCellValue.MaximumLevel : 0);
         }
         public void Restore()
         {
             if (Sample.Terrain == null || Sample.Terrain.IsDisposed) return;
             var terrain = Sample.Terrain; int x = Sample.LocalCell.x, y = Sample.LocalCell.y;
+            terrain.RestoreGroundColumn(x, y, groundColumn);
             terrain.SetCell(x, y, cell);
             for (int i = 0; i < layers.Length; i++) terrain.SetEnvironmentValue(layers[i], x, y, values[i]);
             WorldLiquidSystem.TrySet(Sample, liquid, level);

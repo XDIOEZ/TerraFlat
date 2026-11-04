@@ -107,11 +107,7 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         surface = default;
         if (terrain == null || terrain.IsDisposed || (uint)x >= (uint)terrain.Width ||
             (uint)y >= (uint)terrain.Height) return false;
-        int minimumDepth = 0;
-        if (GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(
-                terrain.GetCell(x, y).GroundTileId, out RuntimeTileDefinition definition))
-            minimumDepth = definition.MinimumSurfaceDepth;
-        return TerrainSurfaceHeightLayer.TryGetSurface(terrain, x, y, useGeneratedHeight, out surface, minimumDepth);
+        return TerrainSurfaceHeightLayer.TryGetSurface(terrain, x, y, useGeneratedHeight, out surface);
     }
 
     /// <summary>以已加载区块为起点查询邻格，跨区块和环绕边界共用绘制时的解析入口。</summary>
@@ -249,8 +245,6 @@ public sealed class TerrainHeightShadowManager : MonoBehaviour, IChunkViewRender
         change.Kind == TerrainChangeKind.Cell || change.Kind == TerrainChangeKind.Liquid ||
         change.Kind == TerrainChangeKind.TileStack || change.AffectsEnvironmentLayer("height") ||
         change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId) ||
-        change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId) ||
-        change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId) ||
         change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer);
 
     private void HandleChanged(ChunkTerrainChanged change)

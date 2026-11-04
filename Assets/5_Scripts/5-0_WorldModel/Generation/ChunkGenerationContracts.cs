@@ -310,6 +310,8 @@ namespace FlatWorld.WorldModel
                 EcologyGlobalMultiplier, EcologyRules, CaveResourceRules, PortalPairing,
                 out ulong climateFingerprint);
             ClimateFingerprint = climateFingerprint;
+            GroundStrata = new GroundStrataCatalog(this.textParameters.TryGetValue(
+                GroundStrataCatalog.ParameterId, out string strata) ? strata : null);
             Settings = new ChunkGenerationSettingsSnapshot(this.numericParameters, this.textParameters,
                 UsesPairedPortalExits);
         }
@@ -348,6 +350,7 @@ namespace FlatWorld.WorldModel
         public bool UsesPairedPortalExits { get; }
         /// <summary>游戏自带生成器使用的、已经整理和检查过的设置。</summary>
         public ChunkGenerationSettingsSnapshot Settings { get; }
+        public GroundStrataCatalog GroundStrata { get; }
 
         /// <summary>复制 Profile 并覆盖一个数字参数；用于把当前世界级设置安全传给后台任务。</summary>
         public ChunkGenerationProfileSnapshot WithNumericParameter(string id, double value)
@@ -692,7 +695,7 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class ChunkGenerationResult : IDisposable
     {
-        private ChunkTerrainBuffer terrain;
+        private ChunkTerrainData terrain;
         private ChunkEcologyData ecology;
         private bool disposed;
 
@@ -700,7 +703,9 @@ namespace FlatWorld.WorldModel
             ChunkEcologyData ecology = null)
         {
             Request = request;
-            this.terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
+            this.terrain = (terrain ?? throw new ArgumentNullException(nameof(terrain))).Seal();
+            try { this.terrain.InitializeGroundStrata(request.Profile.GroundStrata); }
+            catch { this.terrain.Dispose(); throw; }
             this.ecology = ecology ?? ChunkEcologyData.Empty;
         }
 
@@ -721,7 +726,7 @@ namespace FlatWorld.WorldModel
                 throw new InvalidOperationException("Generation result was already consumed.");
             // 把临时草稿变成正式地形并交出去，然后清掉包裹里的引用，防止被取第二次。
             WasConsumed = true;
-            ChunkTerrainData result = terrain.Seal();
+            ChunkTerrainData result = terrain;
             terrain = null;
             return result;
         }

@@ -81,6 +81,7 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
         riverConfigs.ApplyTo(profileId, numbers, texts);
         DiscreteProbabilityConfiguration.Capture().WriteGenerationParameters(numbers);
         AppendNaturalPlantableGroundTileIds(texts);
+        AppendFrozenGroundStrataCatalog(texts);
 
         var ecologySnapshots = new List<EcologySpawnRuleSnapshot>(ecologyRuleIds.Count);
         var ruleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -121,6 +122,26 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
 
         if (tileIds.Count > 0)
             texts["ecology.naturalPlantableGroundTileIds"] = string.Join(",", tileIds);
+    }
+
+    /// <summary>把天然地层规则编码进已有冻结文本，克隆、存档与指纹共用同一配置契约。</summary>
+    public static void AppendFrozenGroundStrataCatalog(Dictionary<string, string> texts)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || texts.ContainsKey(GroundStrataCatalog.ParameterId)) return;
+        var definitions = new List<RuntimeTileDefinition>(resources.TileBlockDict.Values);
+        definitions.Sort((a, b) => a.RuntimeTileId.CompareTo(b.RuntimeTileId));
+        var rows = new List<string>(definitions.Count);
+        foreach (RuntimeTileDefinition definition in definitions)
+        {
+            GroundTileHarvestRule rule = definition.GroundHarvest;
+            int replacement = rule == null ? 0 : resources.TileBlockDict[rule.ReplacementTileId].RuntimeTileId;
+            int exhausted = rule == null || rule.NaturalLayerCount <= 1 ? 0 : resources.TileBlockDict[rule.ExhaustedTileId].RuntimeTileId;
+            rows.Add(string.Join(",", definition.RuntimeTileId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                (rule?.NaturalLayerCount ?? 0).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                replacement.ToString(System.Globalization.CultureInfo.InvariantCulture), exhausted.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        texts[GroundStrataCatalog.ParameterId] = string.Join(";", rows);
     }
 
     /// <summary>独立读取地块 ID 等文本参数，供编辑器校验使用且不依赖自然物目录。</summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -277,6 +278,7 @@ public partial class SaveDataMgr
             terrain.ContaminationCells = record.ContaminationCells;
             terrain.LiquidCells = record.LiquidCells;
             terrain.GroundLayerCells = record.GroundLayerCells;
+            terrain.GroundColumns = record.GroundColumns;
             terrain.SnowCells = record.SnowCells;
             terrain.FireCells = record.FireCells;
             terrain.CombustibilityCells = record.CombustibilityCells;
@@ -299,6 +301,7 @@ public partial class SaveDataMgr
         foreach (RuntimeTileCellSaveDelta cell in record.RuntimeTileDeltas)
         {
             int x = cell.LocalPosition.x, y = cell.LocalPosition.y;
+            terrain.ClearGroundColumn(x, y);
             terrain.SetCell(x, y, default);
             WriteRuntimeBuildingDamage(terrain, x, y, 0f);
         }
@@ -322,8 +325,9 @@ public partial class SaveDataMgr
             }
         foreach (LiquidCellSaveData cell in record.LiquidCells)
             terrain.SetLiquid(cell.LocalPosition.x, cell.LocalPosition.y, 0, 0);
-        foreach (GroundLayerCellSaveData cell in record.GroundLayerCells)
-            GroundTileLayerSystem.Restore(terrain, new GroundLayerCellSaveData { LocalPosition = cell.LocalPosition });
+        foreach (GroundLayerCellSaveData cell in (record.GroundColumns ?? new()).Concat(record.GroundLayerCells ?? new()))
+            terrain.RestoreGroundColumn(cell.LocalPosition.x, cell.LocalPosition.y,
+                new GroundColumnSnapshot { BottomZ = 1, Layers = Array.Empty<GroundStratum>() });
         foreach (SnowCellSaveData cell in record.SnowCells)
             WorldSnowInteraction.Restore(terrain, new SnowCellSaveData { LocalPosition = cell.LocalPosition });
         foreach (GrassCellSaveDelta cell in record.GrassDeltas)

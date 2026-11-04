@@ -2,13 +2,11 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>统一查询地表的逻辑高低；不改生成高度、二维坐标或物理碰撞。</summary>
+    /// <summary>从真实地层顶层投影固体、液面与独立支撑面的逻辑高程。</summary>
     public static class TerrainSurfaceHeightLayer
     {
         #region 高度层与查询
 
-        public const string ExcavatedLevelsLayerId = "terrain.surface.excavatedLevels";
-        public const string CoverLevelsLayerId = "terrain.surface.coverLevels";
         public const string NaturalDepthLevelsLayerId = "terrain.surface.naturalDepthLevels";
         public const int GeneratedHeightLevels = 20;
 
@@ -22,31 +20,16 @@ namespace FlatWorld.WorldModel
                 (int)Math.Floor(Math.Clamp(height, 0f, 1f) * GeneratedHeightLevels));
         }
 
-        public static int GetExcavatedLevels(ChunkTerrainData terrain, int x, int y) =>
-            ReadLevels(terrain, ExcavatedLevelsLayerId, x, y);
+        /// <summary>采挖凹陷只从真实顶层与生成底床的差派生，不再保存计数。</summary>
+        public static int GetExcavatedLevels(ChunkTerrainData terrain, int x, int y) => Math.Max(0,
+            GetBaseLevel(terrain, x, y, terrain.GenerationMode == ChunkGenerationMode.Surface) -
+            GetNaturalDepthLevels(terrain, x, y) - terrain.GetTopGroundZ(x, y));
 
-        /// <summary>天然底床凹陷属于生成地形，取水或倒水不会改写。</summary>
         public static int GetNaturalDepthLevels(ChunkTerrainData terrain, int x, int y) =>
             ReadLevels(terrain, NaturalDepthLevelsLayerId, x, y);
 
-        /// <summary>每次真正采掉天然地层才降低表面，独立于石头的剩余产量。</summary>
-        public static void SetExcavatedLevels(ChunkTerrainData terrain, int x, int y, int levels)
-        {
-            if (levels < 0) throw new ArgumentOutOfRangeException(nameof(levels));
-            if (GetExcavatedLevels(terrain, x, y) != levels)
-                terrain.SetEnvironmentValue(ExcavatedLevelsLayerId, x, y, levels);
-        }
-
-        /// <summary>普通填土覆盖按堆栈抬升；地板与平台另读支撑层，不冒充填土。</summary>
-        public static void SetCoverLevels(ChunkTerrainData terrain, int x, int y, int levels)
-        {
-            if (levels < 0) throw new ArgumentOutOfRangeException(nameof(levels));
-            if (ReadLevels(terrain, CoverLevelsLayerId, x, y) != levels)
-                terrain.SetEnvironmentValue(CoverLevelsLayerId, x, y, levels);
-        }
-
         public static bool TryGetSurface(ChunkTerrainData terrain, int x, int y, bool useGeneratedHeight,
-            out TerrainSurfaceHeight surface, int minimumDepth = 0)
+            out TerrainSurfaceHeight surface)
         {
             surface = default;
             if (terrain == null || terrain.IsDisposed || (uint)x >= (uint)terrain.Width ||
@@ -62,10 +45,9 @@ namespace FlatWorld.WorldModel
             int baseline = GetBaseLevel(terrain, x, y, useGeneratedHeight);
             int naturalDepth = GetNaturalDepthLevels(terrain, x, y);
             // 天然水面只低于同地势河岸一层，抽干后才显示底床的真实深浅。
-            int surfaceDepth = liquid ? (naturalDepth > 0 ? 1 : -1) : naturalDepth;
-            int level = support ? baseline : baseline - surfaceDepth -
-                Math.Max(GetExcavatedLevels(terrain, x, y), minimumDepth) +
-                ReadLevels(terrain, CoverLevelsLayerId, x, y);
+            int solidZ = terrain.GetTopGroundZ(x, y) + baseline -
+                GetBaseLevel(terrain, x, y, terrain.GenerationMode == ChunkGenerationMode.Surface);
+            int level = support ? baseline : liquid ? solidZ + naturalDepth - (naturalDepth > 0 ? 1 : -1) : solidZ;
             surface = new TerrainSurfaceHeight(level, blocking ? level + 1 : level, !blocking);
             return true;
         }

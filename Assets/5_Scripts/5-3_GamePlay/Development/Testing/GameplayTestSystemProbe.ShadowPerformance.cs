@@ -198,6 +198,7 @@ public static partial class GameplayTestSystemProbe
 
         TerrainSupportLayer.Set(terrain, 0, 0, 2, 1);
         Compare(0, 0);
+        terrain.ClearGroundColumn(1, 0);
         terrain.SetCell(1, 0, default);
         Compare(1, 0);
 

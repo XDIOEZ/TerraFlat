@@ -114,6 +114,7 @@ public static partial class GameplayTestSystemProbe
                     uploadEarlyReady = renderer.IsBatchPresentationComplete;
                     uploadInvalidated = renderer.InvalidateBindingVisuals();
                     ChunkBatchRendererGroupService.UnregisterOwner(renderer);
+                    chunk.Terrain.ClearGroundColumn(1, 0);
                     chunk.Terrain.SetCell(1, 0, new TerrainCell(0, 0, 0, 1, 3, TerrainCellFlags.Walkable));
                 }
                 if (++count > 128) throw new InvalidOperationException("基础地形绑定没有在有界步数内完成。");
@@ -132,6 +133,7 @@ public static partial class GameplayTestSystemProbe
             bool partialReady = renderer.IsBatchPresentationComplete;
             Vector2Int neighbourOrigin = WorldTopologyRuntime.NormalizeCell(origin + new Vector2Int(profile.Width, 0));
             ChunkRuntime neighbour = Commit(new Int2(neighbourOrigin.x, neighbourOrigin.y));
+            chunk.Terrain.ClearGroundColumn(0, 0);
             chunk.Terrain.SetCell(0, 0, new TerrainCell(0, 0, 0, 1, 2, TerrainCellFlags.Walkable));
             bool neighbourEvicted = world.EvictChunk(neighbour.Address);
             bool invalidated = renderer.InvalidateBindingVisuals();
@@ -197,6 +199,7 @@ public static partial class GameplayTestSystemProbe
                 renderer.IncrementalFullTerrainCellWrites == fullWritesBeforeLiquid;
 
             // 非液体的正式 Cell 修改仍必须走四层完整重提路径。
+            chunk.Terrain.ClearGroundColumn(5, 4);
             chunk.Terrain.SetCell(5, 4, new TerrainCell(0, 0, 0, 1, 7, TerrainCellFlags.Walkable));
             bool terrainRefreshPreserved = renderer.IncrementalFullTerrainCellWrites > fullWritesBeforeLiquid;
 

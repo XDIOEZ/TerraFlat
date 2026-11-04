@@ -347,6 +347,13 @@ public partial class WorldGenerationProfileSaveData
             if (parameter != null && !string.IsNullOrWhiteSpace(parameter.Id))
                 texts[parameter.Id] = parameter.Value ?? string.Empty;
         }
+        // 旧世界首次补齐地层规则，随后始终读取本档冻结值。
+        if (!texts.ContainsKey(GroundStrataCatalog.ParameterId) && profile.TextParameters.TryGetValue(
+                GroundStrataCatalog.ParameterId, out string strata))
+        {
+            texts.Add(GroundStrataCatalog.ParameterId, strata);
+            TextParameters.Add(new WorldGenerationTextParameterSaveData { Id = GroundStrataCatalog.ParameterId, Value = strata });
+        }
         var resources = new List<CaveResourceRuleSnapshot>(CaveResourceRules.Count);
         for (int i = 0; i < CaveResourceRules.Count; i++)
         {

@@ -357,8 +357,9 @@ public partial class SaveDataMgr
     {
         var registry = new SaveArchiveSchemaRegistry();
         foreach (string id in new[] { "core", "planet", "player", "mods", "space", "chunk", "weather", "machine-metadata", "machine", "drop" })
-            registry.RegisterSchema("flatworld." + id, id == "chunk" ? 2 : 1);
+            registry.RegisterSchema("flatworld." + id, id == "chunk" ? 3 : 1);
         registry.RegisterMigration(new WorldCombustibilitySaveMigration());
+        registry.RegisterMigration(new WorldGroundStrataSaveMigration());
         return registry;
     }
 

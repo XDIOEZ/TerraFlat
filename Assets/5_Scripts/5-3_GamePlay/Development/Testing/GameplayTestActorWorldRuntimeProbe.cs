@@ -70,12 +70,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         if (fixture is TerrainFixture terrain)
         {
             result["terrainRestored"] = terrain.Sample.Terrain.GetCell(terrain.Sample.LocalCell.x, terrain.Sample.LocalCell.y).Equals(terrain.Original);
-            result["layersRestored"] = GroundTileLayerSystem.Capture(terrain.Sample.Terrain, terrain.Sample.LocalCell).Covers.Count == terrain.OriginalLayers.Covers.Count;
+            result["layersRestored"] = GroundTileLayerSystem.Capture(terrain.Sample.Terrain, terrain.Sample.LocalCell).PlayerCoverCount == terrain.OriginalLayers.PlayerCoverCount;
             result["resourceRemoved"] = !NaturalEntityEcsService.Contains(terrain.Resource);
             result["habitatCleaned"] = CountTreeHabitatAt(new Vector2(terrain.Sample.WorldCell.x + .5f,
                 terrain.Sample.WorldCell.y + .5f)) == terrain.OriginalHabitatTreeCount;
             result["inputIndexesCleaned"] = NaturalEntityEcsService.GetInputIndexCounts() == terrain.OriginalInputIndexes;
-            result["grassRestored"] = terrain.Sample.Terrain.GetGrass(terrain.Sample.LocalCell.x, terrain.Sample.LocalCell.y) == terrain.OriginalLayers.SurfaceGrass;
+            result["grassRestored"] = terrain.Sample.Terrain.GetGrass(terrain.Sample.LocalCell.x, terrain.Sample.LocalCell.y) == (terrain.OriginalLayers.Strata.LastOrDefault()?.Grass ?? 0);
         }
         return result;
     }
@@ -559,8 +559,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             Sample = sample;
             Original = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
             OriginalLayers = GroundTileLayerSystem.Capture(sample.Terrain, sample.LocalCell);
-            if (OriginalLayers.Covers.Count != 0 || OriginalLayers.ExcavatedLayers != 0 ||
-                OriginalLayers.ExcavatedSurfaceLevels != 0)
+            if (OriginalLayers.PlayerCoverCount != 0 || TerrainSurfaceHeightLayer.GetExcavatedLevels(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0)
                 throw new InvalidOperationException("地形生态测试要求天然空地，拒绝覆盖先前案例的地层修改。");
             OriginalDamage = GroundTileHarvestSystem.ReadProgress(sample);
             OriginalLiquidDepth = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y);
@@ -583,7 +582,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
                     throw new InvalidOperationException("测试空地出现其他来源的建筑，拒绝覆盖。");
                 GroundTileLayerSystem.Restore(Sample.Terrain, OriginalLayers);
                 Sample.Terrain.SetCell(Sample.LocalCell.x, Sample.LocalCell.y, Original);
-                Sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, Sample.LocalCell.x, Sample.LocalCell.y, OriginalDamage);
+                Sample.Terrain.SetGroundHarvestProgress(Sample.LocalCell.x, Sample.LocalCell.y, OriginalDamage);
                 SaveDataMgr saves = SaveDataMgr.TestExistingInstance;
                 saves.RecordGroundLayerCell(Sample);
                 if (!saves.RestoreTestRuntimeGrassDelta(player, Sample, grassDelta))
@@ -614,7 +613,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         GroundLayerCellSaveData two = GroundTileLayerSystem.Capture(sample.Terrain, sample.LocalCell);
         SaveDataMgr.TestExistingInstance.TryGetChunkDelta(SceneManager.GetActiveScene().name,
             new Vector2Int(sample.Address.ChunkOrigin.X, sample.Address.ChunkOrigin.Y).ToString(), out var delta);
-        GroundLayerCellSaveData saved = delta?.GroundLayerCells.FirstOrDefault(value => value.LocalPosition == sample.LocalCell);
+        GroundLayerCellSaveData saved = delta?.GroundColumns.FirstOrDefault(value => value.LocalPosition == sample.LocalCell);
         WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
         bool walkableBefore = navigation.TryGetCell(center, out _, out bool before) && before;
         RuntimeItemDefinition resourceDefinition = resources.ItemDefinitions["Tree_Pine"];
@@ -671,15 +670,15 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         {
             ["firstCoverAccepted"] = first, ["firstReason"] = firstReason,
             ["secondCoverAccepted"] = second, ["secondReason"] = secondReason,
-            ["originalCoverCount"] = own.OriginalLayers.Covers.Count,
-            ["oneCoverCount"] = one.Covers.Count, ["twoCoverCount"] = two.Covers.Count,
-            ["bottomGround"] = two.Covers.FirstOrDefault()?.UnderlyingCell.GroundTileId,
+            ["originalCoverCount"] = own.OriginalLayers.PlayerCoverCount,
+            ["oneCoverCount"] = one.PlayerCoverCount, ["twoCoverCount"] = two.PlayerCoverCount,
+            ["bottomGround"] = two.Strata[two.Strata.Count - 3].TileId,
             ["expectedBottomGround"] = own.Original.GroundTileId,
-            ["topUnderlyingGround"] = two.Covers.LastOrDefault()?.UnderlyingCell.GroundTileId,
+            ["topUnderlyingGround"] = two.Strata[two.Strata.Count - 2].TileId,
             ["expectedTopUnderlyingGround"] = soil.RuntimeTileId,
             ["currentGround"] = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y).GroundTileId,
             ["expectedCurrentGround"] = grass.RuntimeTileId,
-            ["savedCoverCount"] = saved?.Covers.Count,
+            ["savedCoverCount"] = saved?.PlayerCoverCount,
             ["liquidBefore"] = own.OriginalLiquidDepth,
             ["liquidAfter"] = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y),
             ["entityRegistered"] = registered, ["entityCaptured"] = captured,

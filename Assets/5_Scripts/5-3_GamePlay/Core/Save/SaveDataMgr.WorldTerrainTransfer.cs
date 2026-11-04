@@ -54,7 +54,7 @@ public partial class SaveDataMgr
                         int liquid = localSource || baselineLiquid.LiquidTypeIndex != chunk.Terrain.GetLiquidTypeIndex(x, y)
                             ? state.Liquid.LiquidLevel : Math.Max(0, state.Liquid.LiquidLevel - baselineLiquid.LiquidLevel);
                         bool ground = localSource ? state.Cell.GroundTileId != 0 || state.Cell.BackTileId != 0
-                            : state.Ground.Covers.Count != 0;
+                            : state.Ground.PlayerCoverCount != 0;
                         bool support = state.Support.TileId != 0 && !state.ExternallyOwned;
                         if (!ground && liquid == 0 && !support &&
                             (!localSource || state.Agriculture == null && state.Contamination == null && state.Snow == null)) continue;
@@ -189,21 +189,18 @@ public partial class SaveDataMgr
                 return;
             }
             TerrainCell sourceCell = source.Cell.ToTerrainCell(), destinationCell = target.Cell.ToTerrainCell();
-            TerrainCell under = localSource ? default : source.Ground.Covers[0].UnderlyingCell.ToTerrainCell();
-            var covers = target.Ground.Covers;
-            var incoming = source.Ground.Covers;
-            covers.Add(new GroundCoverLayerSaveData { UnderlyingCell = RuntimeTileCellSaveDelta.Capture(move.DestinationLocal,
-                new TerrainCell(destinationCell.GroundTileId, destinationCell.BackTileId, 0, destinationCell.BiomeId,
-                    destinationCell.NavigationCost, destinationCell.Flags & TerrainCellFlags.Walkable),
-                destinationCell.BlockingTileId == 0 ? target.Cell.AccumulatedDamage : 0), UnderlyingGrass = target.Ground.SurfaceGrass });
-            for (int i = 1; i < incoming.Count; i++) covers.Add(incoming[i]);
-            source.Ground.Covers = new List<GroundCoverLayerSaveData>();
-            source.Ground.SurfaceGrass = localSource || incoming.Count == 0 ? (byte)0 : incoming[0].UnderlyingGrass;
-            source.Cell = WithGround(move.SourceLocal, source.Cell, under,
-                !localSource && incoming.Count != 0 ? incoming[0].UnderlyingCell.AccumulatedDamage : 0);
-            target.Cell = WithGround(move.DestinationLocal, target.Cell, sourceCell,
-                sourceCell.BlockingTileId == 0 ? move.OriginalSource.Cell.AccumulatedDamage : 0);
-            target.Ground.SurfaceGrass = move.OriginalSource.Ground.SurfaceGrass;
+            var incoming = source.Ground.Strata;
+            int first = localSource ? 0 : incoming.FindLastIndex(layer => !layer.PlayerPlaced) + 1;
+            var moved = incoming.GetRange(first, incoming.Count - first);
+            incoming.RemoveRange(first, incoming.Count - first);
+            foreach (GroundStratumSaveData layer in moved) layer.PlayerPlaced = true;
+            target.Ground.Strata.AddRange(moved);
+            int exposedId = incoming.Count == 0 ? 0 : incoming[incoming.Count - 1].TileId;
+            TerrainCell under = incoming.Count == 0 ? default : new TerrainCell(exposedId, localSource ? 0 : sourceCell.BackTileId, 0,
+                sourceCell.BiomeId, incoming[incoming.Count - 1].NavigationCost,
+                incoming[incoming.Count - 1].Walkable ? TerrainCellFlags.Walkable : TerrainCellFlags.None);
+            source.Cell = WithGround(move.SourceLocal, source.Cell, under, 0);
+            target.Cell = WithGround(move.DestinationLocal, target.Cell, sourceCell, 0);
             MoveSoilSurfaceState(source, target);
         }
 
@@ -290,13 +287,12 @@ public partial class SaveDataMgr
         var terrain = chunk.Terrain;
         var record = GetRuntimeChunkRecord(chunk.Address, true);
         data.Cell.LocalPosition = data.Ground.LocalPosition = data.Liquid.LocalPosition = data.Support.LocalPosition = local;
-        foreach (GroundCoverLayerSaveData cover in data.Ground.Covers) cover.UnderlyingCell.LocalPosition = local;
         if (data.Agriculture != null) data.Agriculture.LocalPosition = local;
         if (data.Snow != null) data.Snow.LocalPosition = local;
         if (data.Contamination != null) data.Contamination.LocalPosition = local;
+        GroundTileLayerSystem.Restore(terrain, data.Ground);
         terrain.SetCell(local.x, local.y, data.Cell.ToTerrainCell());
         WriteRuntimeBuildingDamage(terrain, local.x, local.y, data.Cell.AccumulatedDamage);
-        GroundTileLayerSystem.Restore(terrain, data.Ground);
         data.Liquid.Apply(terrain);
         TerrainSupportLayer.Set(terrain, local.x, local.y, data.Support.TileId, data.Support.NavigationCost,
             data.ExternalVisual, data.ExternallyOwned);

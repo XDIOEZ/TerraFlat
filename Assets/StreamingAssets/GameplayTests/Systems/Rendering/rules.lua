@@ -467,7 +467,7 @@ for _, row in ipairs({
     { args = { depth = 1 }, level = 10, neighbour = 11, inner = 1, outer = 0, label = "挖掉第一层后向内凹" },
     { args = { depth = 2 }, level = 9, neighbour = 11, inner = 2, outer = 0, label = "每挖一层继续降低" },
     { args = { depth = 6 }, level = 5, neighbour = 11, inner = 6, outer = 0, label = "五层石头及土层采尽后基岩最低" },
-    { args = { minimumDepth = 5 }, level = 6, neighbour = 11, inner = 5, outer = 0, label = "基岩底材至少向内凹五层" },
+    { args = { minimumDepth = 5 }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "地块材质不再二次钳制真实z高度" },
     { args = { depth = 6, neighbourDepth = 6 }, level = 5, neighbour = 5, inner = 0, outer = 0, label = "成片基岩内部没有接缝阴影" },
     { args = { neighbourDepth = 1 }, level = 11, neighbour = 10, inner = 0, outer = 1, label = "较高地块只向外侧投影" },
     { args = { depth = 6, support = true }, level = 11, neighbour = 11, inner = 0, outer = 0, label = "地板跨过挖坑回到地面齐平" },
@@ -523,8 +523,8 @@ test.system("rendering", "terrain_height", { wall = true }, function(data)
 end, "墙脚接入同一套高低阴影规则")
 
 test.system("rendering", "terrain_height_save", {}, function(data)
-    assert(data.resourceDepth == 5 and data.surfaceDepth == 6 and data.savedDepth == 6,
-        "地表深度与五层石头产量混用，或保存恢复丢失新高度层")
+    assert(data.surfaceDepth == 6 and data.savedDepth == 6,
+        "真实三维列保存恢复丢失顶层z")
     assert(data.level == 5 and math.abs(data.rawHeight - 0.55) < 0.0001, "采挖高差污染生成高度")
     assert(data.negativeRejected, "非法负采挖深度没有被拒绝")
 end, "地表高低层保存恢复且不改生成高度和石头产量")

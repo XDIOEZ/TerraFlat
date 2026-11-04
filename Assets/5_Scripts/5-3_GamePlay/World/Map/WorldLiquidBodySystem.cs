@@ -103,8 +103,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
         {
             bool topology = change.Kind == TerrainChangeKind.Cell ||
                             change.Kind == TerrainChangeKind.TileStack ||
-                            change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId) ||
-                            change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId);
+                            change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId);
             if (!topology && change.Kind != TerrainChangeKind.Liquid) return;
             foreach (int index in change.GetCellIndices(Terrain.Width))
             {
@@ -297,8 +296,7 @@ public sealed partial class WorldLiquidBodySystem : IDisposable
 
     private static bool CanHoldChannelWater(ChunkState state, int x, int y) =>
         TerrainSurfaceHeightLayer.GetExcavatedLevels(state.Terrain, x, y) > 0 &&
-        (!state.Terrain.TryGetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId,
-            x, y, out float cover) || cover <= 0f);
+        !state.Terrain.GetGroundStratum(x, y, state.Terrain.GetTopGroundZ(x, y)).PlayerPlaced;
 
     private static int EligibleType(ChunkState state, int x, int y)
     {

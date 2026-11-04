@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
@@ -73,11 +74,9 @@ public static class GroundTileHarvestSystem
             reason = "采挖工具等级不足。";
             return false;
         }
-        if (rule.NaturalLayerCount > 1 &&
-            !GroundTileLayerSystem.TryGetUnderlying(sample.Terrain, sample.LocalCell, out _) &&
-            GroundTileLayerSystem.ReadDepth(sample.Terrain, sample.LocalCell) >= rule.NaturalLayerCount)
+        if (!sample.Terrain.CanRemoveTopGroundStratum(sample.LocalCell.x, sample.LocalCell.y))
         {
-            reason = "天然石层已经采尽。";
+            reason = "天然地层已经采尽。";
             return false;
         }
         if (!FarmlandSystem.IsWithinReach(actor.transform.position, sample.WorldCell, rule.Reach))
@@ -140,21 +139,14 @@ public static class GroundTileHarvestSystem
         GameRes resources = GameRes.ExistingInstance;
         GroundTileHarvestRule rule = source?.GroundHarvest;
         if (resources == null || rule == null) return false;
-        if (GroundTileLayerSystem.TryGetUnderlying(sample.Terrain, sample.LocalCell, out GroundCoverLayerSaveData layer))
-            return resources.TryGetTileDefinition(layer.UnderlyingCell.GroundTileId, out result);
-        int depth = GroundTileLayerSystem.ReadDepth(sample.Terrain, sample.LocalCell);
-        string id = rule.NaturalLayerCount > 1 && depth + 1 >= rule.NaturalLayerCount
-            ? rule.ExhaustedTileId : rule.ReplacementTileId;
-        return resources.TryGetTileDefinition(id, out result);
+        if (sample.Terrain.TryGetUnderlyingGroundStratum(sample.LocalCell.x, sample.LocalCell.y, out GroundStratum underlying))
+            return resources.TryGetTileDefinition(underlying.TileId, out result);
+        return sample.Terrain.CanRemoveTopGroundStratum(sample.LocalCell.x, sample.LocalCell.y);
     }
 
-    /// <summary>读取地格已积累的采挖比例，供裂纹表现使用。</summary>
-    public static float ReadProgress(RuntimeTerrainTileSample sample)
-    {
-        Vector2Int local = sample.LocalCell;
-        return sample.Terrain.TryGetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-            local.x, local.y, out float value) ? Mathf.Clamp01(value) : 0f;
-    }
+    /// <summary>采挖进度属于当前z层，覆盖后隐藏进度仍留在原层。</summary>
+    public static float ReadProgress(RuntimeTerrainTileSample sample) =>
+        sample.Terrain.GetGroundHarvestProgress(sample.LocalCell.x, sample.LocalCell.y);
 
     /// <summary>一次有效挥动只增加一次工作量；完成时才产出物品并替换地块。</summary>
     public static bool TryWork(Mod_ResourceToolBase tool, out bool completed, out Vector2Int worldCell,
@@ -174,7 +166,7 @@ public static class GroundTileHarvestSystem
 
         GameRes resources = GameRes.ExistingInstance;
         if (!TryResolveHarvestResult(sample, definition, out RuntimeTileDefinition replacement) ||
-            replacement.RuntimeTileId <= 0 ||
+            replacement != null && replacement.RuntimeTileId <= 0 ||
             !resources.TryGetItemDefinition(rule.ItemId, out RuntimeItemDefinition product) ||
             product.IsActor ||
             !ChunkMgr.ExistingInstance.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk))
@@ -190,15 +182,14 @@ public static class GroundTileHarvestSystem
         {
             try
             {
-                sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-                    local.x, local.y, progress);
+                sample.Terrain.SetGroundHarvestProgress(local.x, local.y, progress);
                 SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(
                     chunk, sample.WorldCell, local, definition.RuntimeTileId, definition.Id));
             }
             catch (Exception exception)
             {
-                sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-                    local.x, local.y, previousProgress);
+                sample.Terrain.SetGroundHarvestProgress(local.x, local.y, previousProgress);
+                SaveDataMgr.Instance.RecordGroundLayerCell(sample);
                 Debug.LogError($"[地表采挖] {definition.Id} 进度保存失败：{exception}");
                 failureReason = "挖掘进度保存失败。";
                 return false;
@@ -208,7 +199,7 @@ public static class GroundTileHarvestSystem
         }
 
         GroundLayerCellSaveData previousLayers = GroundTileLayerSystem.Capture(sample.Terrain, local);
-        bool hasPlayerCover = GroundTileLayerSystem.TryGetUnderlying(sample.Terrain, local, out GroundCoverLayerSaveData underlying);
+        bool hasPlayerCover = sample.Terrain.GetGroundStratum(local.x, local.y, sample.Terrain.GetTopGroundZ(local.x, local.y)).PlayerPlaced;
         Vector2 position = (Vector2)sample.WorldCell + Vector2.one * 0.5f;
         DroppedItemHandle drop = DroppedItemService.SpawnLoot(rule.ItemId, position, rule.Amount);
         if (!drop.IsValid)
@@ -220,37 +211,17 @@ public static class GroundTileHarvestSystem
 
         try
         {
-            TerrainCell previous = sample.Cell;
-            sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-                local.x, local.y, 0f);
-            if (hasPlayerCover)
-            {
-                GroundTileLayerSystem.PopCover(sample.Terrain, local);
-                sample.Terrain.SetCell(local.x, local.y, underlying.UnderlyingCell.ToTerrainCell());
-                sample.Terrain.SetGrass(local.x, local.y, underlying.UnderlyingGrass);
-                sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-                    local.x, local.y, underlying.UnderlyingCell.AccumulatedDamage);
-            }
-            else
-            {
-                TerrainSurfaceHeightLayer.SetExcavatedLevels(sample.Terrain, local.x, local.y,
-                    Math.Max(previousLayers.ExcavatedSurfaceLevels, definition.MinimumSurfaceDepth) + 1);
-                if (rule.NaturalLayerCount > 1)
-                    GroundTileLayerSystem.WriteDepth(sample.Terrain, local, previousLayers.ExcavatedLayers + 1);
-                sample.Terrain.SetCell(local.x, local.y, new TerrainCell(
-                    replacement.RuntimeTileId, 0, 0, previous.BiomeId,
-                    previous.NavigationCost, previous.Flags));
-            }
+            if (!sample.Terrain.TryRemoveTopGroundStratum(local.x, local.y))
+                throw new InvalidOperationException("目标地层已经变化，无法采挖。");
             SaveDataMgr.Instance.RecordGroundLayerCell(sample);
             SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(
-                chunk, sample.WorldCell, local, replacement.RuntimeTileId, replacement.Id));
+                chunk, sample.WorldCell, local, replacement?.RuntimeTileId ?? 0, replacement?.Id));
         }
         catch (Exception exception)
         {
             GroundTileLayerSystem.Restore(sample.Terrain, previousLayers);
             sample.Terrain.SetCell(local.x, local.y, sample.Cell);
-            sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId,
-                local.x, local.y, previousProgress);
+            sample.Terrain.SetGroundHarvestProgress(local.x, local.y, previousProgress);
             DroppedItemService.Remove(drop);
             SaveDataMgr.Instance.RecordGroundLayerCell(sample);
             SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(
@@ -269,11 +240,11 @@ public static class GroundTileHarvestSystem
         // 泥土是常规采挖结果，不再用角色自言自语气泡播报。
         if (!string.Equals(rule.ItemId, "Earth", StringComparison.OrdinalIgnoreCase))
         {
+            int remaining = sample.Terrain.CaptureGroundColumn(local.x, local.y).Layers.Count(
+                layer => layer.TileId == definition.RuntimeTileId);
             string layerFeedback = !hasPlayerCover && rule.NaturalLayerCount > 1
-                ? previousLayers.ExcavatedLayers + 1 >= rule.NaturalLayerCount
-                    ? FlatWorldLocalizationService.GetUiText(" 已露出无法开采的基岩。")
-                    : FlatWorldLocalizationService.GetUiFormat(" 下方还剩 {0} 层。",
-                        rule.NaturalLayerCount - previousLayers.ExcavatedLayers - 1)
+                ? remaining == 0 ? FlatWorldLocalizationService.GetUiText(" 已露出无法开采的基岩。")
+                    : FlatWorldLocalizationService.GetUiFormat(" 下方还剩 {0} 层。", remaining)
                 : string.Empty;
             ItemActionFeedback.Show(tool.item.Owner, FlatWorldLocalizationService.GetUiFormat(
                 "挖掘完成，获得{0} ×{1}。{2}",

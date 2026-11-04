@@ -45,8 +45,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
     private void HandleChanged(ChunkTerrainChanged change)
     {
         if (change.Kind != TerrainChangeKind.Cell && !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) &&
-            !change.AffectsEnvironmentLayer(TerrainSupportLayer.ExternalVisualLayer) &&
-            !change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId)) return;
+            !change.AffectsEnvironmentLayer(TerrainSupportLayer.ExternalVisualLayer)) return;
         int width = chunk.Terrain.Width;
         foreach (int index in change.GetCellIndices(width)) Refresh(index % width, index / width);
     }

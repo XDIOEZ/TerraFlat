@@ -179,7 +179,7 @@ internal static class GameplayTestFluidSurface
         using var far = new LiquidCell(f.SurfacePoint(2));
         LiquidCell[] cells = { inlet, middle, far };
         bool sharedCacheContract = args.Value<bool?>("sharedCacheContract") == true;
-        float[] excavated = new float[3], covered = new float[3];
+        var columns = new GroundColumnSnapshot[3];
         var barrier = new object();
         var boundary = new List<Vector2Int>();
         Vector2Int first = inlet.Sample.WorldCell;
@@ -190,10 +190,7 @@ internal static class GameplayTestFluidSurface
             boundary.Add(first + new Vector2Int(x, -1));
             boundary.Add(first + new Vector2Int(x, 1));
             var sample = cells[x].Sample;
-            sample.Terrain.TryGetEnvironmentValue(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId,
-                sample.LocalCell.x, sample.LocalCell.y, out excavated[x]);
-            sample.Terrain.TryGetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId,
-                sample.LocalCell.x, sample.LocalCell.y, out covered[x]);
+            columns[x] = sample.Terrain.CaptureGroundColumn(sample.LocalCell.x, sample.LocalCell.y);
         }
         try
         {
@@ -201,10 +198,13 @@ internal static class GameplayTestFluidSurface
             for (int x = 0; x < 3; x++)
             {
                 var sample = cells[x].Sample;
-                sample.Terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId,
-                    sample.LocalCell.x, sample.LocalCell.y, 1);
-                sample.Terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId,
-                    sample.LocalCell.x, sample.LocalCell.y, 0);
+                var column = sample.Terrain.CaptureGroundColumn(sample.LocalCell.x, sample.LocalCell.y);
+                int top = TerrainSurfaceHeightLayer.GetBaseLevel(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y,
+                    sample.Terrain.GenerationMode == ChunkGenerationMode.Surface) -
+                    TerrainSurfaceHeightLayer.GetNaturalDepthLevels(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) - 1;
+                column.BottomZ += top - column.TopZ;
+                for (int n = 0; n < column.Layers.Length; n++) column.Layers[n].PlayerPlaced = false;
+                sample.Terrain.RestoreGroundColumn(sample.LocalCell.x, sample.LocalCell.y, column);
                 cells[x].Set(sharedCacheContract ? (x == 2 ? 2 : 1) : x == 0 ? 0 : x == 1 ? 7 : 5);
             }
             if (sharedCacheContract) return CaptureSharedPumpSelections(cells);
@@ -247,10 +247,7 @@ internal static class GameplayTestFluidSurface
             for (int x = 0; x < 3; x++)
             {
                 var sample = cells[x].Sample;
-                sample.Terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.ExcavatedLevelsLayerId,
-                    sample.LocalCell.x, sample.LocalCell.y, excavated[x]);
-                sample.Terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId,
-                    sample.LocalCell.x, sample.LocalCell.y, covered[x]);
+                sample.Terrain.RestoreGroundColumn(sample.LocalCell.x, sample.LocalCell.y, columns[x]);
             }
             WorldLiquidFlowObstacles.Unregister(barrier);
         }

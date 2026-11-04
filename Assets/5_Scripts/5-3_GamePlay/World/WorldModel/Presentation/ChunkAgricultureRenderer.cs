@@ -669,7 +669,7 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
         // 渐显读取采挖损伤与已挖层数，水肥变化由作物模拟自身消费。
         if (change.Kind == TerrainChangeKind.Environment &&
             !change.AffectsEnvironmentLayer(TileBuildingSystem.RuntimeDamageLayerId) &&
-            !change.AffectsEnvironmentLayer(GroundTileLayerSystem.DepthLayerId))
+            !change.AffectsEnvironmentLayer(ChunkTerrainData.GroundHarvestProgressLayerId))
             return;
         if (change.Kind == TerrainChangeKind.Cell || change.Kind == TerrainChangeKind.TileStack ||
             change.Kind == TerrainChangeKind.Environment)
@@ -908,9 +908,9 @@ public sealed class ChunkAgricultureRenderer : MonoBehaviour, IChunkViewRenderer
                 source, out RuntimeTileDefinition target))
             return false;
 
-        if (!TryResolveTileVisual(target, out sprite, out color, out tileTransform)) return false;
+        if (!TryResolveTileVisual(target ?? source, out sprite, out color, out tileTransform)) return false;
         // 连续石层使用深色开采痕迹，避免上下层同图时看不出工作进度。
-        if (source.RuntimeTileId == target.RuntimeTileId)
+        if (target == null || source.RuntimeTileId == target.RuntimeTileId)
             color = new Color(color.r * 0.6f, color.g * 0.6f, color.b * 0.6f, color.a);
         return true;
     }

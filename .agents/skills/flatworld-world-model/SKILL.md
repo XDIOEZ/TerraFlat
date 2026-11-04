@@ -25,6 +25,8 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `GameplayWorldRegistry.UseWorld/UseSpaceScene` 返回具体 `WorldExecutionScope` 值类型，机器作用域也保持具体 `ScopeLease`；局部用 `using var`，可选作用域用 `default`，包装入口返回具体类型，避免 `IDisposable` 装箱。每份租约按 LIFO 唯一释放，不复制到多个独立持有者；销毁借用仍只恢复已有机器状态，不触发 EnsureScope。快速规则 `world_streaming/runtime_owner_identity`，真实嵌套/异常恢复与预热1024轮GC采样见 `incremental_world_scope`、`networking/world_scope`。
 
 - `WorldSceneBindingIndex` 记录世界与 Scene 的绑定；同场景存在多个世界时必须提供明确上下文。`GameplayWorldRegistry` 按 WorldKey 持有纯 `WorldRuntime`，一个区块管理器借用调度；飞船 `ship:<id>` 经 `CreateLocalWorld` 拥有独立 Scene/PhysicsScene2D、16×16 空区块和普通 ChunkView。`UsesLocalCoordinates` 禁止星球环绕，`SimulateWithoutObservers` 保持无人船运行；切地表/太空只撤投影，正式结束才清退世界。
+- `ChunkTerrainData.GroundStrata` 用 ArrayPool 连续内存提供三维索引，绝对 z、区块 MinZ/Depth 和逐列顶层；空区块不租地层数组，填土越界翻倍扩容。GetCell/SetCell 是表面投影，天然层按冻结文本目录纯数据展开；ChunkRuntimeSnapshot、内容指纹和世界地形移交均携带有效列，不包含池余量。采挖进度只发虚拟环境层通知，不创建 XY 数组或触发整格导航重建。
+
 - `ChunkRuntime + ChunkTerrainData` 是权威；Tilemap/Collider/Renderer 是投影。后台与 Burst 只接收冻结值，不访问 Unity 对象；`RuntimeTileDefinition/Behaviour` 留在主线程资源层。
 - 本机可见性与投影源恢复使用 `LocalPresentationWorldKey`，不能用角色所属船内世界替换实际显示场景。
 - 提交核对世界 Epoch 和请求版本；生成与持久数据读取并行，两者成功后才能提交。持久化准备按生成并发限流，排队项随观察者优先级重排；单 caller 取消只撤自己的等待，最后无窗口、等待者和租约时才取消共享工作。`Seal` 将池化 Liquid 深度/类型和环境数组唯一所有权交给区块，Dispose 归还；`height` 随区块存活，只作原生成高度。生成结束一次汇总固定湿度/两层降水/风力，`ChunkTerrainData.WeatherProfile` 持有不可变天气概率/强度/持续时间，运行时不随环境层差量重算。

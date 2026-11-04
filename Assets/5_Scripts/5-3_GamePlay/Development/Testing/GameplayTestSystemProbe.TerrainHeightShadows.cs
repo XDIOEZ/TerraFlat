@@ -167,8 +167,8 @@ public static partial class GameplayTestSystemProbe
                 bool blocking = kind == 1;
                 terrain.SetCell(x, y, new TerrainCell(1, 0, blocking ? 2 : 0, 0, 1,
                     blocking ? TerrainCellFlags.Blocking : TerrainCellFlags.Walkable));
-                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, random.Next(4));
-                TerrainSurfaceHeightLayer.SetCoverLevels(terrain, x, y, random.Next(4));
+                SetTerrainProbeExcavatedLevels(terrain, x, y, random.Next(4));
+                SetTerrainProbeCoverLevels(terrain, x, y, random.Next(4));
             }
             if (random.Next(6) == 0)
                 terrain.SetLiquid(x, y, waterType, random.Next(1, 11));
@@ -289,15 +289,15 @@ public static partial class GameplayTestSystemProbe
         {
             if ((mask & (1 << index)) == 0) continue;
             int x = 1 + offsets[index].X, y = 1 + offsets[index].Y;
-            TerrainSurfaceHeightLayer.SetCoverLevels(terrain, x, y, Math.Max(0, difference));
-            TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, Math.Max(0, -difference));
+            SetTerrainProbeCoverLevels(terrain, x, y, Math.Max(0, difference));
+            SetTerrainProbeExcavatedLevels(terrain, x, y, Math.Max(0, -difference));
             if (Flag(args, "wallCaster", false))
                 terrain.SetCell(x, y, new TerrainCell(1, 0, 2, 0, 1, TerrainCellFlags.Blocking));
-            if (Flag(args, "missingCaster", false)) terrain.SetCell(x, y, default);
+            if (Flag(args, "missingCaster", false)) { terrain.ClearGroundColumn(x, y); terrain.SetCell(x, y, default); }
         }
         if (Flag(args, "wallReceiver", false))
             terrain.SetCell(1, 1, new TerrainCell(1, 0, 2, 0, 1, TerrainCellFlags.Blocking));
-        if (Flag(args, "missingReceiver", false)) terrain.SetCell(1, 1, default);
+        if (Flag(args, "missingReceiver", false)) { terrain.ClearGroundColumn(1, 1); terrain.SetCell(1, 1, default); }
         return SampleTerrainShadowMasks(null,
             new FlatWorld.WorldModel.WorldAddress("probe:terrain_height", default), terrain, 1, 1);
     }
@@ -327,13 +327,13 @@ public static partial class GameplayTestSystemProbe
             terrain.SetEnvironmentValue("height", 0, 0, height);
             terrain.SetEnvironmentValue("height", 1, 0, (float)Number(args, "neighbourHeight", height));
         }
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 0, 0, (int)Number(args, "depth", 0));
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 1, 0, (int)Number(args, "neighbourDepth", 0));
-        TerrainSurfaceHeightLayer.SetCoverLevels(terrain, 0, 0, (int)Number(args, "covers", 0));
         terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, 0, 0,
             (float)Number(args, "naturalDepth", 0));
         terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, 1, 0,
             (float)Number(args, "neighbourNaturalDepth", 0));
+        SetTerrainProbeExcavatedLevels(terrain, 0, 0, (int)Number(args, "depth", 0));
+        SetTerrainProbeExcavatedLevels(terrain, 1, 0, (int)Number(args, "neighbourDepth", 0));
+        SetTerrainProbeCoverLevels(terrain, 0, 0, (int)Number(args, "covers", 0));
         if (Flag(args, "liquid", false))
             terrain.SetLiquid(0, 0, LiquidTypeCatalog.BuiltIn.GetIndex(LiquidTypeCatalog.DirtyWaterId),
                 (int)Number(args, "liquidLevel", 5));
@@ -342,8 +342,7 @@ public static partial class GameplayTestSystemProbe
                 (int)Number(args, "neighbourLiquidLevel", 5));
         if (Flag(args, "support", false)) TerrainSupportLayer.Set(terrain, 0, 0, 23, 1);
         bool useGeneratedHeight = Flag(args, "surface", true);
-        TerrainSurfaceHeightLayer.TryGetSurface(terrain, 0, 0, useGeneratedHeight, out TerrainSurfaceHeight current,
-            (int)Number(args, "minimumDepth", 0));
+        TerrainSurfaceHeightLayer.TryGetSurface(terrain, 0, 0, useGeneratedHeight, out TerrainSurfaceHeight current);
         TerrainSurfaceHeightLayer.TryGetSurface(terrain, 1, 0, useGeneratedHeight, out TerrainSurfaceHeight neighbour);
         bool outside = TerrainSurfaceHeightLayer.TryGetSurface(terrain, -1, 0, useGeneratedHeight, out _);
         return new JObject
@@ -437,24 +436,21 @@ public static partial class GameplayTestSystemProbe
         terrain.SetEnvironmentValue("height", 0, 0, .55f);
         terrain.SetEnvironmentValue(TerrainSurfaceHeightLayer.NaturalDepthLevelsLayerId, 0, 0,
             (float)Number(args, "naturalDepth", 0));
-        GroundTileLayerSystem.WriteDepth(terrain, Vector2Int.zero, 5);
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 0, 0, 6);
+        SetTerrainProbeExcavatedLevels(terrain, 0, 0, 6);
         GroundLayerCellSaveData snapshot = GroundTileLayerSystem.Capture(terrain, Vector2Int.zero);
         GroundLayerCellSaveData serialized = MemoryPackSerializer.Deserialize<GroundLayerCellSaveData>(
             MemoryPackSerializer.Serialize(snapshot));
-        GroundTileLayerSystem.WriteDepth(terrain, Vector2Int.zero, 1);
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 0, 0, 1);
+        SetTerrainProbeExcavatedLevels(terrain, 0, 0, 1);
         GroundTileLayerSystem.Restore(terrain, serialized);
         terrain.TryGetEnvironmentValue("height", 0, 0, out float rawHeight);
         TerrainSurfaceHeightLayer.TryGetSurface(terrain, 0, 0, true, out TerrainSurfaceHeight surface);
         bool negativeRejected = false;
-        try { TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, 0, 0, -1); }
+        try { SetTerrainProbeExcavatedLevels(terrain, 0, 0, -1); }
         catch (ArgumentOutOfRangeException) { negativeRejected = true; }
         return new JObject
         {
-            ["resourceDepth"] = GroundTileLayerSystem.ReadDepth(terrain, Vector2Int.zero),
             ["surfaceDepth"] = TerrainSurfaceHeightLayer.GetExcavatedLevels(terrain, 0, 0),
-            ["savedDepth"] = serialized.ExcavatedSurfaceLevels, ["level"] = surface.Level,
+            ["savedDepth"] = 11 - TerrainSurfaceHeightLayer.GetNaturalDepthLevels(terrain, 0, 0) - serialized.ToGroundColumn().TopZ, ["level"] = surface.Level,
             ["naturalDepth"] = TerrainSurfaceHeightLayer.GetNaturalDepthLevels(terrain, 0, 0),
             ["rawHeight"] = rawHeight, ["negativeRejected"] = negativeRejected
         };
@@ -487,10 +483,10 @@ public static partial class GameplayTestSystemProbe
             for (int x = 0; x < 16; x++)
             {
                 terrain.SetCell(x, y, new TerrainCell(1, 0, 0, 0, 1, TerrainCellFlags.Walkable));
-                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, x, y, 1);
+                SetTerrainProbeExcavatedLevels(terrain, x, y, 1);
             }
             if (target == neighbourAddress)
-                TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, neighbourX, neighbourY, 0);
+                SetTerrainProbeExcavatedLevels(terrain, neighbourX, neighbourY, 0);
             return terrain;
         }
         ChunkTerrainData current = Commit(address);
@@ -500,7 +496,7 @@ public static partial class GameplayTestSystemProbe
         ChunkTerrainData neighbour = Commit(neighbourAddress);
         bool available = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out var first);
         JObject loadedMasks = Masks();
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(neighbour, neighbourX, neighbourY, 3);
+        SetTerrainProbeExcavatedLevels(neighbour, neighbourX, neighbourY, 3);
         bool changed = TerrainHeightShadowManager.TryGetSurfaceHeight(world, address, sample, out var lowered);
         JObject changedMasks = Masks();
         bool evicted = world.EvictChunk(neighbourAddress);

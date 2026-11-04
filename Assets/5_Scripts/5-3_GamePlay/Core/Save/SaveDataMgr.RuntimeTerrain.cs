@@ -72,6 +72,7 @@ public partial class SaveDataMgr
             if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
                 continue;
 
+            if (cell.GroundTileId == 0) terrain.ClearGroundColumn(x, y);
             terrain.SetCell(x, y, cell.ToTerrainCell());
 
             // 同一格的建筑损伤与裸露泥炭采挖互斥；保留后者的部分进度以便读档续挖。
@@ -80,18 +81,22 @@ public partial class SaveDataMgr
                 ? Mathf.Max(0f, cell.AccumulatedDamage) : 0f;
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
-        RestoreAgricultureTerrain(chunk, delta);
         foreach (GrassCellSaveDelta grass in delta.GrassDeltas)
+            if ((uint)grass.LocalPosition.x < (uint)terrain.Width && (uint)grass.LocalPosition.y < (uint)terrain.Height &&
+                (grass.State == GrassCellState.Removed || grass.State == GrassCellState.Empty) &&
+                !(delta.GroundColumns?.Exists(column => column.LocalPosition == grass.LocalPosition) ?? false))
+                terrain.SetGrass(grass.LocalPosition.x, grass.LocalPosition.y, ChunkTerrainData.GrassEmpty);
+        RestoreGroundLayerTerrain(chunk, delta);
+        foreach (RuntimeTileCellSaveDelta legacy in delta.RuntimeTileDeltas ?? new())
         {
-            int x = grass.LocalPosition.x, y = grass.LocalPosition.y;
-            if ((uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height &&
-                (grass.State == GrassCellState.Removed || grass.State == GrassCellState.Empty))
-                terrain.SetGrass(x, y, 0);
+            int x = legacy.LocalPosition.x, y = legacy.LocalPosition.y;
+            if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height || legacy.BlockingTileId != 0) continue;
+            WriteRuntimeBuildingDamage(terrain, x, y, 0f);
         }
+        RestoreAgricultureTerrain(chunk, delta);
         RestoreSupportTerrain(chunk, delta);
         RestoreContaminationTerrain(chunk, delta);
         RestoreLiquidTerrain(chunk, delta);
-        RestoreGroundLayerTerrain(chunk, delta);
         RestoreSnowTerrain(chunk, delta);
         RestoreRuntimeFireStates(chunk, delta);
         baseline.PersistenceRestored = true;
@@ -125,6 +130,8 @@ public partial class SaveDataMgr
         if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
             return;
 
+        if (terrain.IsGroundColumnModified(x, y))
+            RecordGroundColumnSnapshot(GetRuntimeChunkRecord(chunk.Address, true), terrain, placedCell.LocalPosition);
         TerrainCell currentCell = terrain.GetCell(x, y);
         float accumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
         SetRuntimeTileDelta(key, planetName, chunk.Address, placedCell.LocalPosition,
@@ -291,6 +298,13 @@ public partial class SaveDataMgr
         MarkChunkDifferenceChanged(key);
         ChunkTerrainData terrain = chunk.Terrain;
         chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta);
+        if (terrain.ModifiedGroundColumns.Count > 0)
+        {
+            delta ??= CreateRuntimeChunkDelta(planetName, address);
+            foreach (int index in terrain.ModifiedGroundColumns)
+                RecordGroundColumnSnapshot(delta, terrain, new Vector2Int(index % terrain.Width, index / terrain.Width));
+            chunkDeltas[key] = delta;
+        }
 
         List<RuntimeTileCellSaveDelta> changes = new List<RuntimeTileCellSaveDelta>();
         for (int x = 0; x < terrain.Width; x++)
@@ -325,7 +339,7 @@ public partial class SaveDataMgr
         chunkDeltas[key] = delta;
     }
 
-    /// <summary>读取一格建筑损伤或裸露资源采挖进度；两者在同一格互斥。</summary>
+    /// <summary>读取独立建筑损伤；地表采挖进度由真实z层保存。</summary>
     private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)
     {
         return terrain != null &&

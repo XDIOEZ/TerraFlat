@@ -11,6 +11,7 @@ namespace FlatWorld.WorldModel
     {
         // 数组和字典都会重新复制一份，外面也只能查看，不能改掉这张“照片”。
         private readonly TerrainCell[] terrainCells;
+        private readonly GroundColumnSnapshot[] groundColumns;
         private readonly Dictionary<string, float[]> environmentLayers;
         private readonly byte[] grass;
         private readonly int[] liquidLevel;
@@ -23,12 +24,13 @@ namespace FlatWorld.WorldModel
             TerrainCell[] terrainCells, Dictionary<string, float[]> environmentLayers,
             byte[] grass, IReadOnlyDictionary<int, int[]> extendedTileStacks,
             IReadOnlyDictionary<Int2, int> occupancy,
-            NaturalItemPlacement[] ecologyPlacements, int[] liquidLevel, string[] liquidIds, ulong stableHash)
+            NaturalItemPlacement[] ecologyPlacements, int[] liquidLevel, string[] liquidIds, ulong stableHash, GroundColumnSnapshot[] groundColumns)
         {
             Address = address;
             Width = width;
             Height = height;
             this.terrainCells = terrainCells;
+            this.groundColumns = groundColumns;
             this.environmentLayers = environmentLayers;
             this.grass = grass ?? Array.Empty<byte>();
             this.extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
@@ -47,6 +49,7 @@ namespace FlatWorld.WorldModel
         public int Height { get; }
         /// <summary>所有地形格子的副本；二维地图被按行排成了一个长列表。</summary>
         public IReadOnlyList<TerrainCell> TerrainCells => terrainCells;
+        public IReadOnlyList<GroundColumnSnapshot> GroundColumns => groundColumns;
         /// <summary>温度、降水和视觉高度等环境数据的副本；高度不参与玩法内容指纹。</summary>
         public IReadOnlyDictionary<string, float[]> EnvironmentLayers => environmentLayers;
         /// <summary>每个格子的草地数据。</summary>
@@ -84,7 +87,7 @@ namespace FlatWorld.WorldModel
                 chunk.Ecology?.Placements == null
                     ? Array.Empty<NaturalItemPlacement>()
                     : new List<NaturalItemPlacement>(chunk.Ecology.Placements).ToArray(),
-                terrain.LiquidLevel.ToArray(), ids, terrain.ComputeStableHash());
+                terrain.LiquidLevel.ToArray(), ids, terrain.ComputeStableHash(), terrain.CopyGroundColumns());
         }
     }
 

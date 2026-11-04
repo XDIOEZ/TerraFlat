@@ -742,6 +742,8 @@ public partial class ChunkSaveRecord
     [MemoryPack.MemoryPackOrder(15)] public List<FireCellSaveData> FireCells = new(); // 活火与表面燃烧进度的稀疏差量。
     [MemoryPack.MemoryPackOrder(16)] public List<CombustibilityCellSaveData> CombustibilityCells = new(); // 保留烧尽格与可燃性基础编辑。
 
+    [MemoryPack.MemoryPackOrder(17)] public List<GroundLayerCellSaveData> GroundColumns = new(); // 真实三维列差量。
+
     [MemoryPackIgnore]
     public bool HasChanges =>
         ((ChangedItems?.Count ?? 0) > 0 ||
@@ -754,6 +756,7 @@ public partial class ChunkSaveRecord
          (ContaminationCells?.Count ?? 0) > 0 ||
          (LiquidCells?.Count ?? 0) > 0 ||
          (GroundLayerCells?.Count ?? 0) > 0 ||
+         (GroundColumns?.Count ?? 0) > 0 ||
          (SnowCells?.Count ?? 0) > 0 ||
          (FireCells?.Count ?? 0) > 0 ||
          (CombustibilityCells?.Count ?? 0) > 0);

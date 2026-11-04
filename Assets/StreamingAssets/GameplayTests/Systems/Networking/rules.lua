@@ -140,12 +140,14 @@ test.system("networking", "terrain_replication", {}, function(data)
 end, "格子建筑：平台/墙体、底液保留、乱序、坏包、区块重载")
 
 test.system("networking", "terrain_wire", {}, function(data)
-    assert(data.protocol >= 36 and data.remainingBytes == 0 and data.cellCount == 2,
+    assert(data.protocol >= 37 and data.remainingBytes == 0 and data.cellCount == 2,
         "格子建筑 Mirror 协议未完整往返")
     assert(data.world == "probe-world" and data.dimension == "surface" and data.realm == 7 and data.token == 3,
         "地形消息丢失世界身份或补拉令牌")
     assert(data.chunkX == -16 and data.chunkY == 32 and data.revision == 1234567890123,
         "负区块坐标或地形版本被截断")
+    assert(data.columnLayers == 2 and data.columnTop == 1 and math.abs(data.columnProgress - .35) < .0001,
+        "Mirror地形协议未保存地下列与每层采挖进度")
     assert(data.support == 91 and data.baseGround == 17, "地形协议混淆支撑层和原地面")
     assert(data.fireRevision == 1234567890124 and data.fireCellCount == 2
         and math.abs(data.fireIntensity - .75) < .0001 and data.explicitZeroFire,
@@ -277,3 +279,11 @@ test.system("networking", "weather_surface_ice_merge", {}, function(data)
         and math.abs(data.rollbackDepth - .2) < .0001, "完整快照后的融冰回滚没有被保留")
     assert(data.queuedCells == 2 and data.snapshotCells == 1, "完整快照没有清除旧格")
 end, "联机天气：融冰进度、旧消息与回滚合并")
+
+
+test.system("networking", "terrain_column_parts", {}, function(data)
+    assert(data.parts > 1 and data.fits, "单根高地层列未按真实Mirror包长跨包拆分")
+    assert(data.atomic and data.duplicateRejected and data.applies == 1, "乱序分片或重复包造成地层半提交")
+    assert(data.topZ == 80 and data.layers == 81 and math.abs(data.progress - .6) < .0001,
+        "地层列重组后丢失z、地下槽位或采挖进度")
+end, "真实三维列跨包重组与一次修订提交")

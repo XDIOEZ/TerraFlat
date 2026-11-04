@@ -463,6 +463,10 @@
         "Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_ResourceTool.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/MapMaker/*",
         "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/*",
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/ChunkTerrainData.GroundStrata.cs",
+        "Assets/5_Scripts/5-0_WorldModel/Terrain/GroundStrataCatalog.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Planting/GroundTileLayerSystem.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GroundStrata.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.GenerationStages.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.SharedHydrologyHeightSampling.cs"
       ],

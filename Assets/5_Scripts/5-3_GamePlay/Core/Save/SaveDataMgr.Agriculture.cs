@@ -38,13 +38,7 @@ public partial class SaveDataMgr
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null) return;
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
-        GrassCellSaveDelta delta = record.GrassDeltas.Find(c => c.LocalPosition == sample.LocalCell);
-        if (delta == null)
-        {
-            delta = new GrassCellSaveDelta { LocalPosition = sample.LocalCell };
-            record.GrassDeltas.Add(delta);
-        }
-        delta.State = GrassCellState.Removed;
+        RecordGroundColumnSnapshot(record, sample.Terrain, sample.LocalCell);
     }
 
     /// <summary>作物生成、保存及收获后更新对应格的独立快照。</summary>

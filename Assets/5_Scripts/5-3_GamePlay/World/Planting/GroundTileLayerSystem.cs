@@ -1,69 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
-/// <summary>伪 Z 轴只记录采掉的天然层数和玩家覆盖前的快照，不移动世界坐标。</summary>
+/// <summary>玩家填土事务及旧二维地层存档的单次导入。</summary>
 public static class GroundTileLayerSystem
 {
-    #region 地层状态
-    public const string DepthLayerId = "flatworld.ground.excavatedLayers";
-    private static readonly ConditionalWeakTable<ChunkTerrainData, Dictionary<int, List<GroundCoverLayerSaveData>>> covers = new();
-
-    public static int ReadDepth(ChunkTerrainData terrain, Vector2Int local) =>
-        terrain.TryGetEnvironmentValue(DepthLayerId, local.x, local.y, out float value) ? (int)value : 0;
-
-    internal static void WriteDepth(ChunkTerrainData terrain, Vector2Int local, int value)
-    {
-        if (ReadDepth(terrain, local) != value)
-            terrain.SetEnvironmentValue(DepthLayerId, local.x, local.y, value);
-    }
-
-    private static int CellKey(ChunkTerrainData terrain, Vector2Int local) => local.y * terrain.Width + local.x;
-
-    private static List<GroundCoverLayerSaveData> GetCovers(ChunkTerrainData terrain, Vector2Int local, bool create)
-    {
-        if (!covers.TryGetValue(terrain, out var cells))
-        {
-            if (!create) return null;
-            cells = covers.GetOrCreateValue(terrain);
-        }
-        int key = CellKey(terrain, local);
-        if (!cells.TryGetValue(key, out var layers) && create)
-            cells.Add(key, layers = new List<GroundCoverLayerSaveData>());
-        return layers;
-    }
-
-    internal static bool TryGetUnderlying(ChunkTerrainData terrain, Vector2Int local, out GroundCoverLayerSaveData layer)
-    {
-        var layers = GetCovers(terrain, local, false);
-        layer = layers?.Count > 0 ? layers[layers.Count - 1] : null;
-        return layer != null;
-    }
-
-    internal static void PopCover(ChunkTerrainData terrain, Vector2Int local)
-    {
-        var layers = GetCovers(terrain, local, false);
-        if (layers == null || layers.Count == 0)
-            throw new InvalidOperationException("目标地格没有玩家覆盖层。");
-        layers.RemoveAt(layers.Count - 1);
-        TerrainSurfaceHeightLayer.SetCoverLevels(terrain, local.x, local.y, layers.Count);
-        if (layers.Count == 0 && covers.TryGetValue(terrain, out var cells))
-            cells.Remove(CellKey(terrain, local));
-    }
-    #endregion
-
-    #region 后续地形工具入口
-    /// <summary>后续玩家改地形工具必须走此入口，先压栈原地表再覆盖，挖掉时才能准确还原。</summary>
+    #region 填土地层事务
     public static bool TryApplyPlayerCover(RuntimeTerrainTileSample sample, RuntimeTileDefinition target, out string reason)
     {
         reason = null;
-        // 提交前重新采样，不能让缓存的旧地格绕过当前占用和液体约束。
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || !manager.TryGetRuntimeTerrainTile(
-                (Vector2)sample.WorldCell + Vector2.one * 0.5f, out RuntimeTerrainTileSample current) ||
+                (Vector2)sample.WorldCell + Vector2.one * .5f, out RuntimeTerrainTileSample current) ||
             !ReferenceEquals(current.Terrain, sample.Terrain))
         {
             reason = "目标地格已经卸载或变更。";
@@ -71,38 +21,19 @@ public static class GroundTileLayerSystem
         }
         sample = current;
         if (!GameNetwork.HasStateAuthority || SaveDataMgr.Instance?.SaveData == null ||
-            sample.Terrain == null || sample.Terrain.IsDisposed || target == null || target.RuntimeTileId <= 0 ||
-            !target.TileDataTemplate.IsWalkable || BlockingTilemapLayer.IsBlockingTile(target.TileDataTemplate) ||
+            target == null || target.RuntimeTileId <= 0 || !target.TileDataTemplate.IsWalkable ||
+            BlockingTilemapLayer.IsBlockingTile(target.TileDataTemplate) ||
             !FarmlandSystem.IsOpen(sample, allowCoveringSupport: true) || FarmlandSystem.HasWorldPlant(sample.WorldCell) ||
-            ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk))
+            !manager.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk))
         {
             reason = "当前地格无法覆盖地表。";
             return false;
         }
-
         Vector2Int local = sample.LocalCell;
-        TerrainCell previous = sample.Terrain.GetCell(local.x, local.y);
-        float previousProgress = GroundTileHarvestSystem.ReadProgress(sample);
-        GroundLayerCellSaveData previousLayers = Capture(sample.Terrain, local);
-        GetCovers(sample.Terrain, local, true).Add(new GroundCoverLayerSaveData
-        {
-            UnderlyingCell = RuntimeTileCellSaveDelta.Capture(local, previous, previousProgress),
-            UnderlyingGrass = sample.Terrain.GetGrass(local.x, local.y)
-        });
+        GroundLayerCellSaveData previous = Capture(sample.Terrain, local);
         try
         {
-            // 先固化原底材的最低深度，填土换材质后仍从原坑底逐层回填。
-            if (GameRes.ExistingInstance.TryGetTileDefinition(sample.Cell.GroundTileId,
-                    out RuntimeTileDefinition original))
-                TerrainSurfaceHeightLayer.SetExcavatedLevels(sample.Terrain, local.x, local.y,
-                    Math.Max(previousLayers.ExcavatedSurfaceLevels, original.MinimumSurfaceDepth));
-            TerrainSurfaceHeightLayer.SetCoverLevels(sample.Terrain, local.x, local.y,
-                GetCovers(sample.Terrain, local, false).Count);
-            sample.Terrain.SetGrass(local.x, local.y, 0);
-            sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, local.x, local.y, 0f);
-            sample.Terrain.SetCell(local.x, local.y, new TerrainCell(target.RuntimeTileId, 0, 0,
-                previous.BiomeId, sample.Cell.NavigationCost, previous.Flags | TerrainCellFlags.Walkable));
+            sample.Terrain.PushGroundStratum(local.x, local.y, target.RuntimeTileId, sample.Cell.NavigationCost);
             SaveDataMgr.Instance.RecordGroundLayerCell(sample);
             SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(chunk, sample.WorldCell, local,
                 target.RuntimeTileId, target.Id));
@@ -110,14 +41,10 @@ public static class GroundTileLayerSystem
         }
         catch (Exception exception)
         {
-            Restore(sample.Terrain, previousLayers);
-            sample.Terrain.SetCell(local.x, local.y, previous);
-            sample.Terrain.SetEnvironmentValue(TileBuildingSystem.RuntimeDamageLayerId, local.x, local.y,
-                previousProgress);
-            // 回滚持久化快照，防止一次失败的覆盖在重进后生效。
+            Restore(sample.Terrain, previous);
             SaveDataMgr.Instance.RecordGroundLayerCell(sample);
             SaveDataMgr.Instance.RecordRuntimeTerrainChange(new TileBuildingCell(chunk, sample.WorldCell, local,
-                previous.GroundTileId, FarmlandSystem.GetBlockId(previous.GroundTileId)));
+                sample.Cell.GroundTileId, FarmlandSystem.GetBlockId(sample.Cell.GroundTileId)));
             Debug.LogError($"[地表覆盖] 提交失败：{exception}");
             reason = "地表覆盖保存失败。";
             return false;
@@ -125,54 +52,69 @@ public static class GroundTileLayerSystem
     }
     #endregion
 
-    #region 快照与恢复
-    internal static GroundLayerCellSaveData Capture(ChunkTerrainData terrain, Vector2Int local)
-    {
-        var snapshot = new GroundLayerCellSaveData
-        {
-            LocalPosition = local,
-            ExcavatedLayers = ReadDepth(terrain, local),
-            ExcavatedSurfaceLevels = TerrainSurfaceHeightLayer.GetExcavatedLevels(terrain, local.x, local.y),
-            SurfaceGrass = terrain.GetGrass(local.x, local.y)
-        };
-        var layers = GetCovers(terrain, local, false);
-        if (layers != null)
-            foreach (var layer in layers) snapshot.Covers.Add(Clone(layer));
-        return snapshot;
-    }
+    #region 列快照与旧地层导入
+    internal static GroundLayerCellSaveData Capture(ChunkTerrainData terrain, Vector2Int local) =>
+        GroundLayerCellSaveData.CaptureColumn(terrain, local);
 
     internal static void Restore(ChunkTerrainData terrain, GroundLayerCellSaveData snapshot)
     {
         Vector2Int local = snapshot.LocalPosition;
-        if ((uint)local.x >= (uint)terrain.Width || (uint)local.y >= (uint)terrain.Height ||
-            snapshot.ExcavatedLayers < 0 || snapshot.ExcavatedLayers > 100 || snapshot.ExcavatedSurfaceLevels < 0)
-            throw new InvalidOperationException("地层快照的坐标或天然采挖层数无效。");
-        // 未覆盖的天然地格不创建覆盖栈；先校验全部下层，再替换现有运行态。
-        if (snapshot.Covers != null)
+        if (snapshot.BottomZ.HasValue)
         {
-            foreach (var layer in snapshot.Covers)
-                if (layer?.UnderlyingCell == null || layer.UnderlyingCell.LocalPosition != local ||
-                    layer.UnderlyingCell.GroundTileId != 0 &&
-                    !GameRes.ExistingInstance.TryGetTileDefinition(layer.UnderlyingCell.GroundTileId, out _))
-                    throw new InvalidOperationException("覆盖层下方的地块快照缺失或未登记。");
+            terrain.RestoreGroundColumn(local.x, local.y, snapshot.ToGroundColumn());
+            return;
         }
-        var layers = GetCovers(terrain, local, snapshot.Covers?.Count > 0);
-        layers?.Clear();
-        if (snapshot.Covers != null && layers != null)
-            foreach (var layer in snapshot.Covers) layers.Add(Clone(layer));
-        if ((layers == null || layers.Count == 0) && covers.TryGetValue(terrain, out var cells))
-            cells.Remove(CellKey(terrain, local));
-        WriteDepth(terrain, local, snapshot.ExcavatedLayers);
-        TerrainSurfaceHeightLayer.SetExcavatedLevels(terrain, local.x, local.y, snapshot.ExcavatedSurfaceLevels);
-        TerrainSurfaceHeightLayer.SetCoverLevels(terrain, local.x, local.y, layers?.Count ?? 0);
-        terrain.SetGrass(local.x, local.y, snapshot.SurfaceGrass);
+        ImportLegacyGroundColumn(terrain, snapshot);
     }
 
-    private static GroundCoverLayerSaveData Clone(GroundCoverLayerSaveData layer) => new()
+    // 旧档仅有计数和覆盖前快照，在生成基线就绪后一次物化实际地层。
+    private static void ImportLegacyGroundColumn(ChunkTerrainData terrain, GroundLayerCellSaveData snapshot)
     {
-        UnderlyingCell = RuntimeTileCellSaveDelta.Capture(layer.UnderlyingCell.LocalPosition,
-            layer.UnderlyingCell.ToTerrainCell(), layer.UnderlyingCell.AccumulatedDamage),
-        UnderlyingGrass = layer.UnderlyingGrass
-    };
+        Vector2Int local = snapshot.LocalPosition;
+        if (snapshot.ExcavatedLayers < 0 || snapshot.ExcavatedLayers > 100 || snapshot.ExcavatedSurfaceLevels < 0)
+            throw new InvalidOperationException("旧地层采挖记录无效。");
+        int count = snapshot.Covers?.Count ?? 0;
+        TerrainCell surface = terrain.GetCell(local.x, local.y);
+        int naturalId = count > 0 ? snapshot.Covers[0].UnderlyingCell.GroundTileId : surface.GroundTileId;
+        TerrainCell naturalCell = count > 0 ? snapshot.Covers[0].UnderlyingCell.ToTerrainCell() : surface;
+        var down = new List<GroundStratum>();
+        IReadOnlyList<int> natural = terrain.GetNaturalGroundTileIds(naturalId);
+        int skip = natural.Count > 1 && natural[0] == natural[1] ? snapshot.ExcavatedLayers : 0;
+        for (int i = Math.Min(skip, Math.Max(0, natural.Count - 1)); i < natural.Count; i++)
+            down.Add(new GroundStratum { TileId = natural[i], Grass = ChunkTerrainData.GrassEmpty,
+                NavigationCost = naturalCell.NavigationCost, Walkable = (naturalCell.Flags & TerrainCellFlags.Walkable) != 0 });
+        if (down.Count == 0 && naturalId > 0) down.Add(new GroundStratum { TileId = naturalId, NavigationCost = naturalCell.NavigationCost,
+            Walkable = (naturalCell.Flags & TerrainCellFlags.Walkable) != 0 });
+        if (down.Count > 0)
+        {
+            GroundStratum naturalTop = down[0];
+            naturalTop.TileId = naturalId;
+            naturalTop.Grass = count > 0 ? snapshot.Covers[0].UnderlyingGrass : snapshot.SurfaceGrass;
+            naturalTop.HarvestProgress = count > 0 ? NormalizeLegacyProgress(terrain, naturalId, snapshot.Covers[0].UnderlyingCell.AccumulatedDamage) : ReadLegacyProgress(terrain, local);
+            down[0] = naturalTop;
+        }
+        down.Reverse();
+        for (int i = 1; i <= count; i++)
+        {
+            GroundCoverLayerSaveData hidden = i < count ? snapshot.Covers[i] : null;
+            TerrainCell coveredCell = hidden?.UnderlyingCell.ToTerrainCell() ?? surface;
+            down.Add(new GroundStratum { TileId = hidden?.UnderlyingCell.GroundTileId ?? surface.GroundTileId,
+                Grass = hidden?.UnderlyingGrass ?? snapshot.SurfaceGrass,
+                HarvestProgress = hidden == null ? ReadLegacyProgress(terrain, local) : NormalizeLegacyProgress(terrain, hidden.UnderlyingCell.GroundTileId, hidden.UnderlyingCell.AccumulatedDamage), PlayerPlaced = true, NavigationCost = coveredCell.NavigationCost,
+                Walkable = (coveredCell.Flags & TerrainCellFlags.Walkable) != 0 });
+        }
+        int minimumDepth = GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(
+            surface.GroundTileId, out RuntimeTileDefinition definition) ? definition.MinimumSurfaceDepth : 0;
+        int top = TerrainSurfaceHeightLayer.GetBaseLevel(terrain, local.x, local.y,
+                terrain.GenerationMode == ChunkGenerationMode.Surface) - TerrainSurfaceHeightLayer.GetNaturalDepthLevels(terrain, local.x, local.y) -
+            Math.Max(snapshot.ExcavatedSurfaceLevels, minimumDepth) + count;
+        terrain.RestoreGroundColumn(local.x, local.y, new GroundColumnSnapshot { BottomZ = top - down.Count + 1, Layers = down.ToArray() });
+    }
+    private static float ReadLegacyProgress(ChunkTerrainData terrain, Vector2Int local) =>
+        terrain.GetCell(local.x, local.y).BlockingTileId == 0 && terrain.TryGetEnvironmentValue(
+            TileBuildingSystem.RuntimeDamageLayerId, local.x, local.y, out float value) ?
+            NormalizeLegacyProgress(terrain, terrain.GetCell(local.x, local.y).GroundTileId, value) : 0f;
+    private static float NormalizeLegacyProgress(ChunkTerrainData terrain, int tileId, float progress) =>
+        terrain.IsGroundTileHarvestable(tileId) ? Mathf.Clamp01(progress) : 0f;
     #endregion
 }

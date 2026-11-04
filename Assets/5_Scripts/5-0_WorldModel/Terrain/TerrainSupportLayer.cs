@@ -17,7 +17,7 @@ namespace FlatWorld.WorldModel
         // 铺在支撑面上的真实地层优先参与普通采样，挖掉覆盖后重新露出支撑面。
         public static int GetExposedTileId(ChunkTerrainData terrain, int x, int y) =>
             terrain.GetCell(x, y).GroundTileId != 0 &&
-            terrain.TryGetEnvironmentValue(TerrainSurfaceHeightLayer.CoverLevelsLayerId, x, y, out float covers) && covers > 0
+            terrain.GetGroundStratum(x, y, terrain.GetTopGroundZ(x, y)).PlayerPlaced
                 ? 0 : GetTileId(terrain, x, y);
 
         /// <summary>生成供通行和交互使用的有效表面；不修改基础地形数据。</summary>

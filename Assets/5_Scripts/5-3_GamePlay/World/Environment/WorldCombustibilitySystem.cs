@@ -128,7 +128,6 @@ public static class WorldCombustibilitySystem
                 if (change.Kind == TerrainChangeKind.Fire || change.Kind == TerrainChangeKind.Combustibility ||
                     change.Kind == TerrainChangeKind.Occupancy) return;
                 if (change.Kind == TerrainChangeKind.Environment && !change.AffectsEnvironmentLayer(TerrainSupportLayer.TileIdLayer) &&
-                    !change.AffectsEnvironmentLayer(TerrainSurfaceHeightLayer.CoverLevelsLayerId) &&
                     !change.AffectsEnvironmentLayer(TerrainSupportLayer.ExternalOwnershipLayer)) return;
                 foreach (int index in change.GetCellIndices(terrain.Width)) terrain.InvalidateCombustibilityBase(index);
             };

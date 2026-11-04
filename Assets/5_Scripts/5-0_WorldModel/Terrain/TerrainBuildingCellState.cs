@@ -15,6 +15,7 @@ namespace FlatWorld.WorldModel
         public short SupportCost;
         public float Damage;
         public byte Grass;
+        public GroundColumnSnapshot GroundColumn;
         #endregion
 
         #region 捕获与应用
@@ -30,20 +31,26 @@ namespace FlatWorld.WorldModel
                 BlockingTileId = cell.BlockingTileId, BiomeId = cell.BiomeId,
                 NavigationCost = cell.NavigationCost, Flags = cell.Flags,
                 SupportTileId = TerrainSupportLayer.GetTileId(terrain, x, y), SupportCost = (short)cost,
-                Damage = damage, Grass = terrain.GetGrass(x, y)
+                Damage = damage, Grass = terrain.GetGrass(x, y), GroundColumn = terrain.CaptureGroundColumn(x, y)
             };
         }
 
         public bool IsValid(int cellCount) => (uint)Index < (uint)cellCount &&
             GroundTileId >= 0 && BackTileId >= 0 && BlockingTileId >= 0 && SupportTileId >= 0 &&
             (SupportTileId == 0 ? SupportCost == 0 : SupportCost > 0) &&
-            !float.IsNaN(Damage) && !float.IsInfinity(Damage) && Damage >= 0f && Grass <= ChunkTerrainData.GrassPresent;
+            !float.IsNaN(Damage) && !float.IsInfinity(Damage) && Damage >= 0f && Grass <= ChunkTerrainData.GrassPresent && (GroundColumn == null || GroundColumn.IsValid &&
+                (GroundColumn.Layers.Length == 0 ? GroundTileId == 0 :
+                 GroundColumn.Layers[GroundColumn.Layers.Length - 1].TileId == GroundTileId &&
+                 GroundColumn.Layers[GroundColumn.Layers.Length - 1].Grass == Grass &&
+                 GroundColumn.Layers[GroundColumn.Layers.Length - 1].NavigationCost == NavigationCost &&
+                 GroundColumn.Layers[GroundColumn.Layers.Length - 1].Walkable == ((Flags & TerrainCellFlags.Walkable) != 0)));
 
         public void Apply(ChunkTerrainData terrain)
         {
             if (!IsValid(checked(terrain.Width * terrain.Height)))
                 throw new ArgumentException("格子建筑网络状态无效。");
             int x = Index % terrain.Width, y = Index / terrain.Width;
+            if (GroundColumn != null) terrain.RestoreGroundColumn(x, y, GroundColumn);
             terrain.SetCell(x, y, new TerrainCell(GroundTileId, BackTileId, BlockingTileId,
                 BiomeId, NavigationCost, Flags));
             terrain.SetEnvironmentValue(DamageLayerId, x, y, Damage);

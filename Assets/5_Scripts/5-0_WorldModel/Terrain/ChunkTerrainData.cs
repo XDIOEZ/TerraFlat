@@ -516,6 +516,8 @@ namespace FlatWorld.WorldModel
                     compact.Add(tileIds[i]);
             }
 
+            if (compact.Count == 0 && groundStrataInitialized && groundTopZ[index] >= groundBottomZ[index])
+                throw new InvalidOperationException("清空地格必须显式调用 ClearGroundColumn。");
             if (compact.Count > 3)
                 _extendedTileStacks[index] = compact.ToArray();
             else
@@ -549,6 +551,7 @@ namespace FlatWorld.WorldModel
             if (_grass[index] == value)
                 return;
             _grass[index] = value;
+            SynchronizeGroundSurfaceGrass(index, value);
             MarkChanged(x, y, TerrainChangeKind.Grass);
         }
 
@@ -561,6 +564,7 @@ namespace FlatWorld.WorldModel
                 return false;
 
             _grass[index] = GrassEmpty;
+            SynchronizeGroundSurfaceGrass(index, GrassEmpty);
             MarkChanged(x, y, TerrainChangeKind.Grass);
             return true;
         }
@@ -728,6 +732,22 @@ namespace FlatWorld.WorldModel
                     Hash(ref hash, BitConverter.SingleToInt32Bits(values[valueIndex]), prime);
             }
 
+            InitializeGroundStrata();
+            for (int i = 0; i < CellCount; i++)
+            {
+                Hash(ref hash, groundBottomZ[i], prime);
+                Hash(ref hash, groundTopZ[i], prime);
+                for (int z = groundBottomZ[i]; z <= groundTopZ[i]; z++)
+                {
+                    GroundStratum layer = groundStrata[(z - MinZ) * CellCount + i];
+                    Hash(ref hash, layer.TileId, prime);
+                    Hash(ref hash, BitConverter.SingleToInt32Bits(layer.HarvestProgress), prime);
+                    Hash(ref hash, layer.Grass, prime);
+                    Hash(ref hash, layer.PlayerPlaced ? 1 : 0, prime);
+                    Hash(ref hash, layer.NavigationCost, prime);
+                    Hash(ref hash, layer.Walkable ? 1 : 0, prime);
+                }
+            }
             return hash;
         }
 
@@ -736,6 +756,7 @@ namespace FlatWorld.WorldModel
         {
             if (publishingEnvironmentBatches)
                 throw new InvalidOperationException("环境批次回调期间不能释放地形数据。");
+            ReleaseGroundStrata();
             liquid.Dispose();
             liquidBaselines.Clear();
             if (_cells != null)
@@ -810,6 +831,7 @@ namespace FlatWorld.WorldModel
         {
             bool wasBlocking = _cells[index].BlocksLineOfSight;
             bool isBlocking = value.BlocksLineOfSight;
+            SynchronizeGroundSurfaceCell(index, value);
             _cells[index] = value;
             if (wasBlocking != isBlocking)
             {

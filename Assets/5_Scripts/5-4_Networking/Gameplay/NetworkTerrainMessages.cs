@@ -26,6 +26,14 @@ namespace FlatWorld.Networking.Gameplay
         public NetworkTerrainLiquidCellState[] LiquidCells;
     }
 
+    // 超大三维列按字节分片，重组后仍通过原地形修订游标一次提交。
+    public struct NetworkTerrainChunkPart : NetworkMessage
+    {
+        public uint TransferId, RealmRevision;
+        public int Index, Count, TotalBytes, PartBytes;
+        public byte[] Data;
+    }
+
     public struct NetworkPersistedChunkRequest : NetworkMessage
     {
         public string WorldKey, DimensionId;
