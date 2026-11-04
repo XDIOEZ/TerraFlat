@@ -116,6 +116,7 @@ public static class FluidDeviceOperations
     public static void AdvanceLiquidPump(MachineEntity node, float seconds)
     {
         var state = GetFluidState(node); var workspace = workspaces.GetOrCreateValue(node);
+        state.LastFlowPhase = ""; // 界面只在本轮真实交付液体后显示流动反馈。
         double remaining = Rate(node, seconds);
         if (remaining <= 0 || !Powered(node))
         { ResetLiquidPumpBatchCredit(state, workspace); state.Status = "没有动力或流量关闭"; return; }
@@ -181,6 +182,7 @@ public static class FluidDeviceOperations
                 state.Status = "十升批次接收失败，来源已恢复"; return;
             }
             state.WorldLiquidPumpLiters = 0d; movedAny = true;
+            state.LastFlowPhase = "liquid";
             StateChanged(receiver.Node); StateChanged(node);
         }
         state.Status = movedAny ? "正在抽液体" : "累计十升抽水量";

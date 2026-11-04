@@ -295,6 +295,7 @@ internal static class GameplayTestFluidSurface
         var pump = f.Add("LiquidPump_Electric",1); var tank = f.Add("LiquidStorageTank",2);
         f.Begin(); pump.ElectricalSuppliedWatts=0; FluidDeviceOperations.AdvanceLiquidPump(pump,f.Seconds);
         int unpowered=cell.Level;
+        string unpoweredArtworkFlow = GetFluidState(pump).LastFlowPhase;
         var source=GetFluidInventory(pump);var target=GetFluidInventory(tank);
         double stepLiters = pump.Definition.Fluid.ThroughputLitersPerSecond * f.Seconds;
         int steps = (int)Math.Ceiling(LiquidCellValue.LitersPerUnit / stepLiters - .000001d);
@@ -311,6 +312,7 @@ internal static class GameplayTestFluidSurface
         int restartedLevel = cell.Level;
         for (int i = 1; i < steps; i++) PumpStep();
         int firstBatchLevel = cell.Level; double firstBatchLiters = target.GetLiquidLiters();
+        string deliveredArtworkFlow = GetFluidState(pump).LastFlowPhase;
         double firstBatchTemperature = target.GetTemperatureKelvin() - 273.15d;
         FluidInventoryState firstBatchState = target.State.Clone();
         FluidDefinition water = FluidCatalog.Default.Find("core:dirty_water");
@@ -320,10 +322,13 @@ internal static class GameplayTestFluidSurface
         double blockedBefore = target.GetLiquidLiters();
         for (int i = 0; i < steps + 1; i++) PumpStep();
         bool blockedStable = cell.Level == firstBatchLevel && Near(blockedBefore, target.GetLiquidLiters());
+        string blockedArtworkFlow = GetFluidState(pump).LastFlowPhase;
         target.Restore(firstBatchState);
         PumpStep(); int reopenedLevel = cell.Level;
         for (int i = 1; i < steps; i++) PumpStep();
         return new JObject { ["unpoweredLevel"]=unpowered,["level"]=cell.Level,["initialLevel"]=100,
+            ["unpoweredArtworkFlow"] = unpoweredArtworkFlow, ["deliveredArtworkFlow"] = deliveredArtworkFlow,
+            ["blockedArtworkFlow"] = blockedArtworkFlow,
             ["stepsPerBatch"] = steps, ["beforeBatchLevel"] = beforeBatchLevel, ["beforeBatchLiters"] = beforeBatchLiters,
             ["restartedLevel"] = restartedLevel, ["firstBatchLevel"] = firstBatchLevel, ["firstBatchLiters"] = firstBatchLiters,
             ["inputTemperature"] = inputTemperature, ["firstBatchTemperature"] = firstBatchTemperature,

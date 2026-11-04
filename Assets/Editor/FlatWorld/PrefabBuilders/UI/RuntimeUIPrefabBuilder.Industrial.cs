@@ -21,6 +21,7 @@ public static partial class RuntimeUIPrefabBuilder
             GameObject root = PrefabUtility.LoadPrefabContents(IndustrialBasePath);
             try
             {
+                PhysicalDeviceArtworkPrefabBuilder.RemoveBeforeRebuildingControls(root);
                 ConfigureIndustrialPanel(root, name);
                 if (name == "UI_FluidTank") ConfigurePortableTankActions(root, root.GetComponent<MechanicalPanelView>());
                 if (name != "UI_Spacesuit") EnsureGasCapacityGauge(root.GetComponent<MechanicalPanelView>());
@@ -31,6 +32,7 @@ public static partial class RuntimeUIPrefabBuilder
                     view.SetFluidLayout(true, true, true);
                 }
                 string path = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + name + ".prefab";
+                PhysicalDeviceArtworkPrefabBuilder.Configure(root);
                 PrefabUtility.SaveAsPrefabAsset(root, path); EnsureRuntimePrefabAddressable(path);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }

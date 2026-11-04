@@ -50,6 +50,8 @@ public sealed class FuelInteractionPanel : MonoBehaviour, IInventoryDragDropTarg
 
         current.ClearTarget();
         current.interaction = target;
+        current.panel.BindPhysicalDeviceArtwork(target.item.itemData.IDName, () =>
+            new PhysicalDeviceArtworkView.OperatingState { Burning = target.IsBurning, Heat = target.IsBurning ? 1f : 0f, Fuel = target.FuelRatio });
         current.actor = owner;
         target.Changed += current.Refresh;
         Inventory tinder = target.IgnitionInventory;

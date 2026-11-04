@@ -10,6 +10,8 @@ test.runtime("industrial_fluids", "combined_tank_pump_tick", {}, function(d)
         "下一步未恢复抽液或泵和组合罐总量不守恒")
 end, "双泵接12格组合罐：完整Tick拓扑稳定、通知合并、连续输送与守恒")
 test.runtime("industrial_fluids", "pump", {}, function(d)
+    assert(d.unpoweredArtworkFlow == "" and d.deliveredArtworkFlow == "gas" and d.fullArtworkFlow == "",
+        "气泵器物反馈未随真实抽气开启，或断电、满罐后仍假装运转")
     assert(d.unpowered==0 and d.unpoweredSourceStable, "无动力气泵抽了环境")
     assert(math.abs(d.full-d.capacity)<.000001 and d.fullSourceStable, "普通气泵未充满或满后仍抽")
     assert(math.abs(d.sourceTaken-d.full)<.000001, "气泵未扣真实气源")
@@ -25,6 +27,8 @@ test.runtime("industrial_fluids", "atmosphere_quantized_source", {}, function(d)
         "抽取批次与剩余大气的总摩尔量不守恒")
 end, "气泵非量子请求按最小大气单位抽取并守恒")
 test.runtime("industrial_fluids", "surface_pump", {}, function(d)
+    assert(d.unpoweredArtworkFlow == "" and d.deliveredArtworkFlow == "liquid" and d.blockedArtworkFlow == "",
+        "抽液器物反馈未随真实交付开启，或断电、堵塞后仍假装流动")
     assert(d.unpoweredLevel==100, "无电水泵扣了地表水")
     assert(d.stepsPerBatch > 1 and d.beforeBatchLevel == 100 and d.beforeBatchLiters == 0,
         "未累计到十升就提前抽地表或向储罐慢慢送水")

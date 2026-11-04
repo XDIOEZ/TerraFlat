@@ -20,11 +20,15 @@ internal static class GameplayTestFluidDevices
         f.Atmosphere.Gases.Add(new AtmosphereGasAmount { FluidId=FluidIds.Nitrogen,Moles=79 });
         decimal initial=f.Atmosphere.CurrentMoles;f.Begin();Power(pump,false);FluidDeviceOperations.AdvanceGasPump(pump,f.Seconds);
         double unpowered=GameplayTestFluidNetworks.Gas(tank);decimal unpoweredSource=f.Atmosphere.CurrentMoles;
+        string unpoweredArtworkFlow=GetFluidState(pump).LastFlowPhase;
         for(int i=0;i<2000 && GameplayTestFluidNetworks.Gas(tank)<99.999999;i++)
         { f.Begin();Power(pump,true);FluidDeviceOperations.AdvanceGasPump(pump,f.Seconds); }
         double full=GameplayTestFluidNetworks.Gas(tank);decimal beforeFull=f.Atmosphere.CurrentMoles;
+        string deliveredArtworkFlow=GetFluidState(pump).LastFlowPhase;
         f.Begin();Power(pump,true);FluidDeviceOperations.AdvanceGasPump(pump,f.Seconds);
         return new JObject { ["unpowered"]=unpowered,["unpoweredSourceStable"]=unpoweredSource==initial,
+            ["unpoweredArtworkFlow"]=unpoweredArtworkFlow,["deliveredArtworkFlow"]=deliveredArtworkFlow,
+            ["fullArtworkFlow"]=GetFluidState(pump).LastFlowPhase,
             ["full"]=full,["capacity"]=tank.Definition.Fluid.GasCapacityStandardLiters,["fullSourceStable"]=f.Atmosphere.CurrentMoles==beforeFull,
             ["sourceTaken"]=(double)FluidUnits.MolToStandardLiters(initial-f.Atmosphere.CurrentMoles),
             ["oxygen"]=(double)FluidUnits.MolToStandardLiters(GetFluidInventory(tank).GetGasMoles(FluidIds.Oxygen)),

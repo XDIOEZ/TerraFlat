@@ -29,6 +29,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         this.logic = logic;
         panel = UIManager.Instance.CreatePanelFromGameObject(logic.PanelPrefab);
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("工业正式面板缺少 MechanicalPanelView。");
+        panel.BindPhysicalDeviceArtwork(logic.Entity);
         primary = FindField("FWUI_FluidSettingPrimary"); secondary = FindField("FWUI_FluidSettingSecondary");
         apply = panel.GetButton("FWUI_ApplyFluidSettings"); phase = panel.GetButton("FWUI_FluidPhase"); rotate = panel.GetButton("FWUI_RotateFluid");
         if (primary == null || secondary == null || apply == null || phase == null || rotate == null)

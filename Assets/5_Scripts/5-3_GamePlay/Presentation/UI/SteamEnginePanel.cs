@@ -25,6 +25,8 @@ public sealed class SteamEnginePanel : MonoBehaviour
             current = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(PrefabKey),
                 initializeClosed: true).GetComponent<SteamEnginePanel>();
         current.engine = target; current.actor = player; current.panel.Open(); current.Refresh();
+        current.panel.BindPhysicalDeviceArtwork(target.item.itemData.IDName, () =>
+            new PhysicalDeviceArtworkView.OperatingState { Open = target.State.Enabled, Progress = target.State.OutputLevel / 3f });
     }
     private void Awake()
     {
