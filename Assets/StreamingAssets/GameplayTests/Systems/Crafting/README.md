@@ -1,5 +1,7 @@
 # 制作加工测试
 
+2026-11-04：`drilled_stick_substitution` 读取正式钻孔木棍定义与石斧配方，覆盖全替代、混料、普通木棍、闲置钻孔木棍不施加损耗、非工具、皮带品质后固定扣点、满输出/缺料拒绝、事务回滚、预览不改变随机状态，以及手钻共享模块耐久恢复。32份固定随机种子采样检查整数1～10且存在变化。当前Unity处于PlayMode，新增规则未编译、未执行；工作台实际UI及保存重进仍待现场验收。
+
 2026-11-01：`stone_material_substitution` 用正式石料标签、打制石器和石斧配方调用制作匹配与库存事务，覆盖两块打制石器自合成、普通石头混搭、纯打制石器合成石斧，以及石板/石矛/缺料拒绝。由于游戏可能正在 PlayMode，本轮仅静态检查，尚未执行 Unity Lua。
 
 2026-10-27：电子材料已独立为 `electronic-materials.lua`，案例 `crafting_electronic_materials_rules`；原 `rules.lua` 不重复执行这些断言。可在总规则清单用 `--cases crafting_electronic_materials_rules` 单独选择，避免被旧强化/UI 失败提前中断；拆分保持原断言，执行结果以实际报告为准。

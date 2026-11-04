@@ -6,7 +6,9 @@ using System.Collections.Generic;
 /// </summary>
 public static class CraftingIngredientMatcher
 {
+    #region 配方材料身份与数量
     public const float AmountEpsilon = 0.0001f;
+    public const string SubstituteItemTagPrefix = "CraftingSubstitute:";
 
     /// <summary>判断配方槽是否为空槽占位。</summary>
     public static bool IsEmpty(RuntimeRecipeIngredient ingredient)
@@ -45,10 +47,19 @@ public static class CraftingIngredientMatcher
             return false;
         }
 
-        return string.Equals(
+        if (string.Equals(
             actual.IDName?.Trim(),
             required.ItemName?.Trim(),
-            StringComparison.OrdinalIgnoreCase);
+            StringComparison.OrdinalIgnoreCase)) return true;
+
+        // 替代资格由材料声明，普通材料不能反向满足加工材料的专用配方。
+        string requiredItem = required.ItemName?.Trim();
+        if (string.IsNullOrEmpty(requiredItem) || actual.Tags == null) return false;
+        foreach (string tag in actual.Tags)
+            if (tag?.StartsWith(SubstituteItemTagPrefix, StringComparison.OrdinalIgnoreCase) == true &&
+                string.Equals(tag.Substring(SubstituteItemTagPrefix.Length), requiredItem, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
     }
 
     /// <summary>判断单个槽位是否完整满足有序配方槽。</summary>
@@ -61,6 +72,7 @@ public static class CraftingIngredientMatcher
         return required.amount <= 0 ||
                actual.Stack != null && actual.Stack.Amount + AmountEpsilon >= required.amount;
     }
+    #endregion
 }
 
 /// <summary>

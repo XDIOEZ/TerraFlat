@@ -9,7 +9,7 @@ public sealed class FoodFreshnessCraftingRule : ICraftingOutputRule
     private static void Register() => CraftingOutputRules.Register("food.preserve_freshness", new FoodFreshnessCraftingRule());
 
     /// <summary>只处理带保鲜标签的产物，读取实际扣除的原料而不是整个背包。</summary>
-    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error)
+    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error, bool isCommit = false)
     {
         error = null;
         bool applies = false;

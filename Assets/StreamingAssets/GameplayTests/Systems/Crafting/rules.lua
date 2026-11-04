@@ -1,3 +1,51 @@
+-- 钻孔木棍单向兼容木棍，实际消耗才使工具成品随机损失1～10点当前耐久。
+for _, row in ipairs({
+    {args = {}, wear = true},
+    {args = {wood = 1, drilled = 1}, wear = true},
+    {args = {wood = 2, drilled = 0}},
+    {args = {wood = 2, drilled = 1}},
+    {args = {leather = true}, wear = true, multiplier = 1.3},
+    {args = {output = "Rope"}},
+    {args = {full = true}, wear = true, reject = true},
+    {args = {drilled = 1}, reject = true},
+    {args = {rollback = true}, wear = true}
+}) do
+    test.system("crafting", "drilled_stick_substitution", row.args, function(d)
+        assert(not d.reverseMatched and d.previewStable, "替代方向错误，或预览改变了输入、耐久、随机状态")
+        assert(d.invalidPlanRejected and d.catalystUnchanged, "过期扣料计划未拒绝，或零消耗材料仍施加损耗")
+        if row.reject then
+            assert(not d.committed and d.inputsUnchanged and d.outputUnchanged, "缺料或满输出仍扣料/产出")
+            assert(d.matched == (row.args.full == true), "满输出应匹配，材料不足必须拒绝匹配")
+        else
+            assert(d.matched and d.prepared and d.committed, "普通木棍、钻孔木棍或混料无法完成正式配方")
+            if row.args.rollback then assert(d.rollbackRestored, "钻孔木棍制作回滚丢失输入或产物") end
+            if row.args.wood == 2 then assert(d.drilledRemaining == (row.args.drilled or 0), "未参与扣料的钻孔木棍被消耗") end
+        end
+        local distinct = {}
+        for _, sample in ipairs(d.samples) do
+            local loss = sample.maximum - sample.durability
+            if sample.handDrill then
+                assert(sample.restored == sample.durability, "手钻共享状态恢复时抹掉制作损耗")
+                assert(d.consumedDrilled and loss >= 1 and loss <= 10 or not d.consumedDrilled and loss == 0,
+                    "手钻制作损耗范围或普通木棍行为错误")
+            else
+                local expectedMaximum = d.baseMaximum * (row.multiplier or 1)
+                assert(math.abs(sample.maximum - expectedMaximum) < .001, "固定点数损耗错误降低最大耐久或破坏皮带品质")
+                if row.wear then
+                    assert(loss >= 1 and loss <= 10 and math.abs(loss - math.floor(loss + .5)) < .001,
+                        "工具成品损耗必须是随机整数1～10，不能按木棍根数叠加")
+                    distinct[math.floor(loss + .5)] = true
+                else assert(loss == 0, "普通木棍、未消耗的钻孔木棍或非工具成品受到损耗") end
+            end
+        end
+        if row.wear and d.matched then
+            local count = 0
+            for _ in pairs(distinct) do count = count + 1 end
+            assert(count > 1, "工具损耗没有随机变化")
+        end
+    end, "钻孔木棍替代、混料、随机损耗及事务边界")
+end
+
 -- 灯泡两条正式配方各自完成事务，逐种缺料和输出满时保留库存。
 test.system("crafting", "handmade_catalog", {
     package = "crafting/electrical.json", definitionIds = {"Thread", "CarbonFilament", "Ingot_Tungsten"}

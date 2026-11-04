@@ -17,7 +17,7 @@ public sealed class BindingMaterialCraftingRule : ICraftingOutputRule
 #endif
     private static void Register() => CraftingOutputRules.Register("materials.binding", new BindingMaterialCraftingRule());
 
-    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error)
+    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error, bool isCommit = false)
     {
         error = null;
         if (match?.Recipe?.inputs?.RowItems_List == null || input?.Data?.itemSlots == null || outputs == null)

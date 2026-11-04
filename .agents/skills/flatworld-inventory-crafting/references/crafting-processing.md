@@ -1,5 +1,7 @@
 # 配方、加工与冷调度
 
+- 材料用 `CraftingSubstitute:<物品ID>` 声明单向配方替代；钻孔木棍可替木棍，反向不成立。真实扣料含钻孔木棍时，`DrilledStickCraftingDurabilityRule` 在品质结算后随机扣工具/手钻成品1～10点当前耐久，最大耐久不变；输出规则的 `isCommit` 区分预览，预览不抽随机。手钻同步共享模块耐久；回归 `crafting/drilled_stick_substitution`。
+
 - 配方普通产物也可用 `addTag` 声明实例品质；`CraftedQuality.WorkEfficiency:<倍率>` 只提高机器实际加工效率，标记随实例封包和建筑放置/拆回迁移。锻锤/锯木机的四种板材与钉子组合中，只有钢板+钢钉为1.2倍。
 - `LinkedCraftingInput` 只合并真实槽引用，事务锁同时覆盖工作台和工具柜；工作台只保存自己的五格，工具柜独立保存唯一共享格。柜子可供多台工作台共用，每台最多接一个，不能复制第六格物品或重复推进库存调度。
 

@@ -124,7 +124,7 @@ public static class CraftingService
                         Moisture = definition.Matter?.InitialMoisture ?? 0f
                     };
                 outputs.Add(output);
-                if (!CraftingOutputRules.Prepare(inventory, match, outputs, out string error))
+                if (!CraftingOutputRules.Prepare(inventory, match, outputs, out string error, isCommit: true))
                     return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, recipe);
                 if (!CraftingTransaction.TryCreate(inventory, outputInventory, match, outputs,
                         ReferenceEquals(inventory, outputInventory), out transaction, out failure)) return failure;
@@ -156,7 +156,7 @@ public static class CraftingService
                     return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "材料产物无效", match.Recipe);
                 outputs.Add(FastCloner.FastCloner.DeepClone(value));
             }
-            if (!CraftingOutputRules.Prepare(input, match, outputs, out string error))
+            if (!CraftingOutputRules.Prepare(input, match, outputs, out string error, isCommit: true))
                 return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, match.Recipe);
             if (!CraftingTransaction.TryCreate(input, output, match, outputs, ReferenceEquals(input, output),
                     out var transaction, out var failure)) return failure;
@@ -285,7 +285,7 @@ public static class CraftingService
             }
         }
 
-        if (!CraftingOutputRules.Prepare(inputInventory, match, outputs, out string stateError))
+        if (!CraftingOutputRules.Prepare(inputInventory, match, outputs, out string stateError, isCommit: createTransaction))
             return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, stateError, match.Recipe);
 
         CraftingResult transactionFailure;

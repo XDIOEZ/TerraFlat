@@ -15,7 +15,7 @@ public sealed class BuildingMaterialCraftingRule : ICraftingOutputRule
 #endif
     private static void Register() => CraftingOutputRules.Register("building.materials", new BuildingMaterialCraftingRule());
 
-    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error)
+    public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error, bool isCommit = false)
     {
         error = null;
         if (match?.Recipe?.inputs?.recipeType != RecipeType.Crafting || outputs == null) return true;

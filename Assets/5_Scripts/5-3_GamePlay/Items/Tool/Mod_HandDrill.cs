@@ -127,7 +127,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
     /// <summary>金属手钻继承实际消耗矿锭声明的耐久上限。</summary>
     private sealed class HandDrillMaterialDurabilityRule : ICraftingOutputRule
     {
-        public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error)
+        public bool Prepare(Inventory input, CraftingRecipeMatch match, IReadOnlyList<ItemData> outputs, out string error, bool isCommit = false)
         {
             error = null;
             if (match?.Recipe == null || !string.Equals(match.Recipe.Id, MetalRecipeId, StringComparison.Ordinal))
@@ -228,6 +228,16 @@ public sealed class Mod_HandDrill : Module, IInteractable
 
         HandDrillRuntimeState state = ReadRuntimeState(moduleData, itemData);
         ApplyRuntimeDurability(itemData, state);
+    }
+
+    // 制作材料改变当前耐久后，同步共享模块，避免放置或读档恢复为旧值。
+    public static void SaveRuntimeDurabilityFromItemData(ItemData itemData)
+    {
+        if (!TryGetRuntimeModuleData(itemData, out Ex_ModData_MemoryPackable moduleData)) return;
+        HandDrillRuntimeState state = ReadRuntimeState(moduleData, itemData);
+        state.Durability = itemData.Durability;
+        state.MaxDurability = itemData.MaxDurability;
+        moduleData.WriteData(state);
     }
 
     /// <summary>读取当前运行态，并兼容旧版只序列化 RecipeProcessingState 的载荷。</summary>

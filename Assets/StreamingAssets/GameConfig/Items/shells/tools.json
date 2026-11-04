@@ -292,7 +292,7 @@
       "id": "DrilledStick",
       "parent": "WoodTool_Base",
       "gameName": "钻孔木棍",
-      "description": "在木棍上加工出贯穿孔的机械木料，主要用于机械扭矩装置的轴心与连接。",
+      "description": "带有贯穿孔的机械木料，合成时可替代木棍；用于制作工具时，成品随机损失1～10点耐久。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -302,6 +302,7 @@
       "canBePickedUp": true,
       "tags": [
         "Wood",
+        "CraftingSubstitute:Stick_Wood",
         "Combustion.Fuel",
         "InventoryCategory.Material"
       ],
