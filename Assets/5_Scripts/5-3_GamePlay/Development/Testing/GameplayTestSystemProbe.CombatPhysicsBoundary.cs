@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
+using FlatWorld.Geometry;
+using Unity.Mathematics;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -19,6 +21,116 @@ public static partial class GameplayTestSystemProbe
         Register("combat", "damage_number_ownership", CombatDamageNumberOwnershipRules);
         Register("combat", "physics_region_delivery", CombatPhysicsRegionDelivery);
         Register("combat", "attack_window_order", CombatAttackWindowOrder);
+        Register("combat", "hit_contact_positions", CombatHitContactPositions);
+    }
+
+    private static JObject CombatHitContactPositions(JObject args)
+    {
+        using var space = WorldPhysicsScene2D.CreateIsolated("Combat contact points " + Guid.NewGuid().ToString("N"));
+        using var physics = new WorldPhysicsService2D(space.Scene.name, WorldPhysicsScene2D.Borrow(space.Scene));
+        var root = new GameObject("Contact geometry fixture");
+        SceneManager.MoveGameObjectToScene(root, space.Scene);
+        root.transform.position = new Vector3(30f, 30f);
+        var attack = root.AddComponent<BoxCollider2D>();
+        attack.isTrigger = true;
+        attack.size = new Vector2(.2f, 2f);
+        var samples = new JArray();
+        try
+        {
+            foreach (float angle in new[] { 0f, 45f })
+            foreach (bool circle in new[] { false, true })
+            {
+                root.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                var targets = new Collider2D[2];
+                using var query = physics.RentCombatDamageQuery();
+                for (int i = 0; i < targets.Length; i++)
+                {
+                    var target = new GameObject("Contact target " + i);
+                    target.transform.SetParent(root.transform, false);
+                    target.transform.localPosition = new Vector3(0f, i == 0 ? .55f : -.55f);
+                    float2 center = (float2)(Vector2)target.transform.position;
+                    if (circle)
+                    {
+                        var collider = target.AddComponent<CircleCollider2D>();
+                        collider.radius = .7f;
+                        targets[i] = collider;
+                        query.Add(i, PerceptionShape2D.Circle(center, .7f));
+                    }
+                    else
+                    {
+                        var collider = target.AddComponent<BoxCollider2D>();
+                        collider.size = new Vector2(1f, 1.3f);
+                        targets[i] = collider;
+                        query.Add(i, PerceptionShape2D.Aabb(center, new float2(.5f, .65f)), angle);
+                    }
+                    targets[i].isTrigger = true;
+                }
+                Physics2D.SyncTransforms();
+                var shape = new AttackShape2D { Center = (float2)(Vector2)root.transform.position,
+                    HalfExtents = new float2(.1f, 1f), Rotation = angle * Mathf.Deg2Rad };
+                foreach (bool initialSweep in new[] { false, true })
+                {
+                    shape.SweepDelta = initialSweep ? new float2(.01f, 0f) : float2.zero;
+                    var hits = new List<CombatColliderHit2D>();
+                    query.Query(shape, hits);
+                    var points = new JArray();
+                    foreach (CombatColliderHit2D hit in hits)
+                    {
+                        Vector2 direct = CombatColliderQuery2D.CalculateOverlapContactPoint(attack, targets[hit.CandidateId]);
+                        points.Add(new JObject { ["target"] = hit.CandidateId,
+                            ["localY"] = root.transform.InverseTransformPoint(hit.Point).y,
+                            ["directLocalY"] = root.transform.InverseTransformPoint(direct).y,
+                            ["targetPointError"] = Vector2.Distance(hit.Point, targets[hit.CandidateId].ClosestPoint(hit.Point)),
+                            ["attackPointError"] = Vector2.Distance(hit.Point + (Vector2)shape.SweepDelta,
+                                attack.ClosestPoint(hit.Point + (Vector2)shape.SweepDelta)),
+                            ["fraction"] = hit.Fraction });
+                    }
+                    samples.Add(new JObject { ["angle"] = angle, ["circle"] = circle,
+                        ["initialSweep"] = initialSweep, ["points"] = points });
+                }
+                foreach (Collider2D target in targets) UnityEngine.Object.DestroyImmediate(target.gameObject);
+            }
+            var castHits = new List<CombatColliderHit2D>();
+            var rawCastHits = new List<RaycastHit2D>();
+            using (var query = physics.RentCombatDamageQuery())
+            {
+                query.Add(9, PerceptionShape2D.Aabb(new float2(30f, 30f), new float2(.5f)));
+                query.Query(new AttackShape2D { Center = new float2(32f, 30f), HalfExtents = new float2(.1f),
+                    SweepDelta = new float2(4f, 0f) }, castHits);
+                GameplayPhysics2D.BoxCast(space, new Vector2(28f, 30f), new Vector2(.2f, .2f), 0f,
+                    Vector2.right, new ContactFilter2D { useTriggers = true, useLayerMask = true,
+                        layerMask = CombatPhysicsChannels.DamageReceiverMask }, rawCastHits, 4f);
+            }
+            using var receiver = new GameplayTestInvulnerabilityFixture();
+            receiver.Health.Data.DamageInterval = -1f;
+            receiver.Sender.DamageValues = new CombatDamage();
+            receiver.Health.transform.position = new Vector3(8f, 9f);
+            DamageReceiverDamageInfo info = null;
+            receiver.Health.OnHitReceived += hit => info = hit;
+            Vector2 contactPoint = new Vector2(7.75f, 9.3f);
+            float received = receiver.Health.HurtAtHitPoint(receiver.Sender, contactPoint);
+            float receiverError = info == null ? -1f : Vector2.Distance(info.HitPosition, contactPoint);
+            float contextError = info == null ? -1f : Vector2.Distance((Vector2)info.Context.HitPoint, contactPoint);
+            info = null;
+            receiver.Health.Hurt(receiver.Sender);
+            float legacyError = info == null ? -1f : Vector2.Distance(info.HitPosition, receiver.Health.transform.position);
+            info = null;
+            receiver.Health.HurtEnvironmentalDamage(1, Vector2.zero, new CombatDamage());
+            float environmentalError = info == null ? -1f : Vector2.Distance(info.HitPosition, receiver.Health.transform.position);
+            info = null;
+            CombatDamageContext dataContext = receiver.Context(GameplayFixedStepSimulation.CurrentTime);
+            dataContext.HitPoint = new float2(100f, 100f);
+            receiver.Health.Hurt(dataContext);
+            float dataDefaultError = info == null ? -1f : Vector2.Distance(info.HitPosition, receiver.Health.transform.position);
+            return new JObject { ["samples"] = samples, ["received"] = received,
+                ["receiverError"] = receiverError, ["contextError"] = contextError,
+                ["legacyError"] = legacyError, ["environmentalError"] = environmentalError,
+                ["dataDefaultError"] = dataDefaultError, ["castCount"] = castHits.Count,
+                ["castFraction"] = castHits.Count == 1 ? castHits[0].Fraction : -1f,
+                ["castPointError"] = castHits.Count == 1 && rawCastHits.Count == 1
+                    ? Vector2.Distance(castHits[0].Point, rawCastHits[0].point) : -1f };
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 
     private static JObject CombatHitWindowIdentity(JObject args)

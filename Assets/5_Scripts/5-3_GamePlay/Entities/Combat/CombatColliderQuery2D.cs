@@ -74,6 +74,7 @@ public sealed class CombatColliderQuery2D : IDisposable
     private readonly WorldPhysicsService2D owner;
     private WorldPhysicsScene2D Space => owner.PrimarySpace;
     private readonly List<Projection> projections = new();
+    private Projection attackProjection;
     private readonly Dictionary<Collider2D, int> candidateIds = new();
     private readonly List<Collider2D> overlaps = new();
     private readonly List<RaycastHit2D> casts = new();
@@ -94,6 +95,12 @@ public sealed class CombatColliderQuery2D : IDisposable
             else UnityEngine.Object.DestroyImmediate(root);
         }
         projections.Clear();
+        if (attackProjection != null)
+        {
+            if (Application.isPlaying) UnityEngine.Object.Destroy(attackProjection.Root);
+            else UnityEngine.Object.DestroyImmediate(attackProjection.Root);
+            attackProjection = null;
+        }
     }
 
     internal void BeginLease() => rented = true;
@@ -119,6 +126,7 @@ public sealed class CombatColliderQuery2D : IDisposable
     private void Clear()
     {
         for (int i = 0; i < activeCount; i++) projections[i].Clear();
+        attackProjection?.Clear();
         activeCount = 0;
         candidateIds.Clear();
         overlaps.Clear();
@@ -137,6 +145,14 @@ public sealed class CombatColliderQuery2D : IDisposable
 
     #region Unity 几何查询
 
+    /// <summary>优先使用重叠区域内的武器表面点，目标被武器包含时使用目标表面点。</summary>
+    internal static Vector2 CalculateOverlapContactPoint(Collider2D attackCollider, Collider2D targetCollider)
+    {
+        ColliderDistance2D contact = attackCollider.Distance(targetCollider);
+        Vector2 attackPoint = attackCollider.ClosestPoint(contact.pointA);
+        return targetCollider.OverlapPoint(attackPoint) ? attackPoint : targetCollider.ClosestPoint(contact.pointB);
+    }
+
     /// <summary>一次 Overlap/BoxCast 返回真实接触候选，调用方再判断身份和伤害规则。</summary>
     public void Query(AttackShape2D attack, List<CombatColliderHit2D> results)
     {
@@ -146,7 +162,6 @@ public sealed class CombatColliderQuery2D : IDisposable
         results.Clear();
         if (activeCount == 0) return;
 
-        Physics2D.SyncTransforms();
         var filter = new ContactFilter2D
         {
             useTriggers = true,
@@ -158,6 +173,12 @@ public sealed class CombatColliderQuery2D : IDisposable
         float angle = attack.Rotation * Mathf.Rad2Deg;
         Vector2 travel = (Vector2)attack.SweepDelta;
         float distance = travel.magnitude;
+        Vector2 start = (Vector2)(attack.Center - attack.SweepDelta);
+        attackProjection ??= new Projection(CombatPhysicsChannels.DamageSenderLayer, Space);
+        attackProjection.Bind(new PerceptionShape2D {
+            Center = (float2)start, Extents = (float2)(size * 0.5f) });
+        attackProjection.Root.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        Physics2D.SyncTransforms();
         if (distance <= 0.0001f)
         {
             overlaps.Clear();
@@ -166,20 +187,20 @@ public sealed class CombatColliderQuery2D : IDisposable
             {
                 Collider2D collider = overlaps[i];
                 if (collider != null && candidateIds.TryGetValue(collider, out int id))
-                    results.Add(new CombatColliderHit2D(id, 0f, collider.ClosestPoint((Vector2)attack.Center)));
+                    results.Add(new CombatColliderHit2D(id, 0f,
+                        CalculateOverlapContactPoint(attackProjection.ActiveCollider, collider)));
             }
             return;
         }
 
         casts.Clear();
-        Vector2 start = (Vector2)(attack.Center - attack.SweepDelta);
         GameplayPhysics2D.BoxCast(Space, start, size, angle, travel / distance, filter, casts, distance);
         for (int i = 0; i < casts.Count; i++)
         {
             RaycastHit2D hit = casts[i];
             if (hit.collider != null && candidateIds.TryGetValue(hit.collider, out int id))
                 results.Add(new CombatColliderHit2D(id, Mathf.Clamp01(hit.distance / distance),
-                    hit.fraction <= 0f ? hit.collider.ClosestPoint(start) : hit.point));
+                    hit.fraction <= 0f ? CalculateOverlapContactPoint(attackProjection.ActiveCollider, hit.collider) : hit.point));
         }
     }
 

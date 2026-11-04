@@ -22,6 +22,29 @@ test.system("combat", "attack_window_order", {}, function(data)
     assert(data.closed and data.reopened and data.nextAttack, "关闭、动画重开或下一次攻击遗留旧窗口")
 end, "攻击时序：先开窗再命中，绑定与观察不重复开窗")
 
+test.system("combat", "hit_contact_positions", {}, function(data)
+    assert(#data.samples == 8, "缺少矩形、圆形、旋转或起始重叠扫掠采样")
+    for _, sample in ipairs(data.samples) do
+        assert(#sample.points == 2, "细长武器没有同时命中上下两个目标")
+        for _, point in ipairs(sample.points) do
+            local direction = point.target == 0 and 1 or -1
+            assert(point.localY * direction > .05 and point.directLocalY * direction > .05,
+                "不同目标的接触点仍挤在武器中心")
+            assert(point.targetPointError < .0001 and point.attackPointError < .0001 and point.fraction == 0,
+                "重叠接触点不在攻击框与对应受击框的交集内")
+        end
+    end
+    near(data.received, 0, "有效零伤结算")
+    near(data.receiverError, 0, "接收侧伤害数字位置")
+    near(data.contextError, 0, "结算上下文接触点")
+    near(data.legacyError, 0, "无碰撞点旧调用的默认位置")
+    near(data.environmentalError, 0, "环境伤害的表现坐标")
+    near(data.dataDefaultError, 0, "无显式表现点的数据伤害默认位置")
+    assert(data.castCount == 1 and data.castFraction > 0 and data.castFraction < 1,
+        "正常扫掠被误当作起始重叠")
+    near(data.castPointError, 0, "正常扫掠原始物理接触点")
+end, "命中位置：上下目标分别冒字，覆盖旋转、圆形与起始重叠扫掠")
+
 test.system("combat", "physics_hit_ownership", {}, function(data)
     assert(data.noHierarchyGuess and data.exactReceiver and data.mirrorReceiver, "受击接收方被层级猜测或镜像覆盖")
     assert(data.nonDamageRejected and data.nativeMapped and data.noFakeHealth and data.nativeInteractionRejected,

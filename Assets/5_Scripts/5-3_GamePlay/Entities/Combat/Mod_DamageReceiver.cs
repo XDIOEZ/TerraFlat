@@ -682,23 +682,33 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     /// <summary>先校验阵营及可组合受击规则，再统一结算伤害、耐久与死亡。</summary>
     public virtual float Hurt(IDamageSender damageSender)
+        => Hurt(damageSender, ResolvePreferredBodyPart(damageSender));
+
+    /// <summary>碰撞发送方提供冻结接触点，同时保留来源指定的身体部位。</summary>
+    public virtual float HurtAtHitPoint(IDamageSender damageSender, Vector2 hitPoint)
+        => HurtAtHitPoint(damageSender, ResolvePreferredBodyPart(damageSender), hitPoint);
+
+    private BodyPartType? ResolvePreferredBodyPart(IDamageSender damageSender)
     {
         BodyPartType? preferred = null;
         if (UsesBodyPartHealth && damageSender is IPreferredBodyPartDamageSource source &&
             TryGetBodyPart(source.PreferredBodyPart, out _))
             preferred = source.PreferredBodyPart;
-        return Hurt(damageSender, preferred);
+        return preferred;
     }
 
     /// <summary>定向部位入口；null 使用随机部位，仍通过阵营、受击规则及统一结算。</summary>
     public virtual float Hurt(IDamageSender damageSender, BodyPartType? targetPart)
+        => HurtAtHitPoint(damageSender, targetPart, null);
+
+    private float HurtAtHitPoint(IDamageSender damageSender, BodyPartType? targetPart, Vector2? hitPoint)
     {
         if (IsTemporarilyInvulnerable || !CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
         if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
         var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
             Tick = GameplayFixedStepSimulation.TickIndex, Time = GameplayFixedStepSimulation.CurrentTime,
             DeltaTime = GameplayFixedStepSimulation.TickDeltaTime });
-        context.HitPoint = (Vector2)transform.position;
+        context.HitPoint = (Unity.Mathematics.float2)(hitPoint ?? (Vector2)transform.position);
         float ruleMultiplier = 1f;
         foreach (IIncomingDamageRule rule in incomingDamageRules)
         {
@@ -710,7 +720,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             ruleMultiplier *= multiplier;
         }
 
-        return HurtContext(context, ruleMultiplier, damageSender, targetPart, ignoreInterval: damageSender is IPeriodicDamageSource);
+        return HurtContext(context, ruleMultiplier, damageSender, targetPart,
+            ignoreInterval: damageSender is IPeriodicDamageSource, presentationHitPosition: hitPoint);
     }
 
     /// <summary>数据后端的正式入口；使用真实来源身份与模拟时钟，不伪造 Item 或 IDamageSender。</summary>
@@ -773,12 +784,14 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
     }
 
     /// <summary>新旧攻击共享间隔、物理伤害、战斗参数、归因和原有生命提交/反馈链。</summary>
-    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false, DeathCauseRecord deathCause = null)
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null, bool ignoreInterval = false, DeathCauseRecord deathCause = null,
+        Vector2? presentationHitPosition = null)
     {
         if (IsTemporarilyInvulnerable) return -1f;
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
-        DispatchAttacked(CreateDamageInfo(legacySender, 0f, Hp, Hp, context: context));
+        DispatchAttacked(CreateDamageInfo(legacySender, 0f, Hp, Hp,
+            context: context, presentationHitPosition: presentationHitPosition));
         if (!ignoreInterval && context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         if (!ignoreInterval) lastDamageTime = context.Clock.Time;
         bool targetIsPlayer = ActorIdentity.IsPlayer(item);
@@ -807,7 +820,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             }
         }
         return ResolveDamage(damage, legacySender,
-            GameplayCombatBridge.LegacyValues(values, context.ImpactKind), context, preparedHits, deathCause);
+            GameplayCombatBridge.LegacyValues(values, context.ImpactKind), context, preparedHits, deathCause, presentationHitPosition);
     }
 
     #region 统一伤害结算
@@ -831,7 +844,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         CombatDamage resolvedDamageValues = null,
         FlatWorld.Combat.CombatDamageContext? context = null,
         List<BodyPartDamageInfo> preparedHits = null,
-        DeathCauseRecord deathCause = null)
+        DeathCauseRecord deathCause = null,
+        Vector2? presentationHitPosition = null)
     {
         if (IsTemporarilyInvulnerable) return -1f;
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
@@ -845,7 +859,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             hpBefore,
             bodyPartHits: preparedHits,
             resolvedDamageValues: resolvedDamageValues,
-            context: context);
+            context: context, presentationHitPosition: presentationHitPosition);
         _resolvingDamage = true;
         try
         {
@@ -1635,7 +1649,8 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         float hpAfter,
         List<BodyPartDamageInfo> bodyPartHits = null,
         CombatDamage resolvedDamageValues = null,
-        FlatWorld.Combat.CombatDamageContext? context = null)
+        FlatWorld.Combat.CombatDamageContext? context = null,
+        Vector2? presentationHitPosition = null)
     {
         return new DamageReceiverDamageInfo
         {
@@ -1651,7 +1666,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
             HpBefore = hpBefore,
             HpAfter = hpAfter,
             IsFatal = hpAfter <= 0f,
-            HitPosition = transform.position,
+            HitPosition = presentationHitPosition.HasValue ? (Vector3)presentationHitPosition.Value : transform.position,
             Time = context.HasValue ? (float)context.Value.Clock.Time : Time.time,
             BodyPartHits = bodyPartHits ?? new List<BodyPartDamageInfo>()
         };

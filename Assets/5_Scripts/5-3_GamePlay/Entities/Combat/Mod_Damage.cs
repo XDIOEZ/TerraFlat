@@ -635,13 +635,13 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
 
         // 命中判定通过后先磨损武器，再由目标裁定伤害或格挡。
         ConsumeWeaponDurabilityForHit();
+        Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
         bool receiverOwnsNumber = CombatDamageNumberOwnership.HasPresenter(receiver);
-        float acDamage = receiver.Hurt(this);
+        float acDamage = receiver.HurtAtHitPoint(this, hitPoint);
 
         // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
         if (acDamage >= 0f)
         {
-            Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
             SpawnEffect(hitPoint, acDamage, !(receiverOwnsNumber && acDamage > 0f));
         }
 
@@ -747,20 +747,21 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         return false;
     }
 
-    /// <summary>解析稳定的命中特效位置；缺少碰撞体时回退到受击对象中心。</summary>
+    /// <summary>显式接触点优先，其余命中使用武器与本次受击框的实际接触区域。</summary>
     private Vector2 ResolveHitPoint(Mod_DamageReceiver receiver, Collider2D hitCollider)
     {
-        if (hitCollider != null)
-            return hitCollider.ClosestPoint(hasExplicitImpactPoint ? explicitImpactPoint : (Vector2)transform.position);
+        if (hasExplicitImpactPoint) return explicitImpactPoint;
 
-        Collider2D receiverCollider = WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver);
+        Collider2D receiverCollider = hitCollider ?? WorldPhysicsService2D.GetItemCollider<Collider2D>(receiver);
         if (receiverCollider == null)
             receiverCollider = receiver.GetComponentInChildren<Collider2D>(true);
         if (receiverCollider == null)
             receiverCollider = receiver.GetComponentInParent<Collider2D>();
 
         return receiverCollider != null
-            ? receiverCollider.ClosestPoint(transform.position)
+            ? damageCollider != null
+                ? CombatColliderQuery2D.CalculateOverlapContactPoint(damageCollider, receiverCollider)
+                : receiverCollider.ClosestPoint(transform.position)
             : (Vector2)receiver.transform.position;
     }
 
