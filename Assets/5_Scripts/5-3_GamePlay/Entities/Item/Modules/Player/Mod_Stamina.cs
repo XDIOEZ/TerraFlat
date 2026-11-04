@@ -14,7 +14,6 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     #endregion
 
     private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
-    private Mod_PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
 
     /// <summary>任意体力消费完成后发布；仅用于运行时观察和调试，不进入存档。</summary>
     public event Action<StaminaConsumptionRecord> StaminaConsumed;
@@ -31,11 +30,9 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     public void BindModuleDependencies(ItemMods modules)
     {
         capacityModifiers.Clear();
-        adminController = null;
         foreach (Module module in modules.Mods.Values)
         {
             if (module is IStaminaCapacityModifier modifier) capacityModifiers.Add(modifier);
-            if (module is Mod_PlayerAdminController controller) adminController = controller;
         }
     }
     /// <summary>容量变化后限制当前值，并通知现有 HUD。</summary>
@@ -138,7 +135,6 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
         hotbarHudRect = null;
         hotbarItemNameHud = null;
         capacityModifiers.Clear();
-        adminController = null;
     }
     #endregion
 
@@ -245,7 +241,7 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     /// <summary>管理员身份本身即拥有无限体力，不依赖额外的无敌开关。</summary>
     private bool HasAdministratorUnlimitedStamina()
     {
-        return adminController != null && adminController.IsAdministrator;
+        return Mod_Administrator.GetLoadedAdministratorModule(item) != null;
     }
 
     /// <summary>管理员首次进入无限体力状态时立即补满，避免低体力阈值继续阻止奔跑或攻击。</summary>

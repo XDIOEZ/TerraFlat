@@ -172,10 +172,9 @@ public static class GameplayTestGm
                 passed = admin != null && admin.IsAdministrator && !admin.IsAdminInvincibilityEnabled;
                 return true;
             case "gm_damage_blocked":
-                passed = admin != null && Mathf.Approximately(admin.GetDamageMultiplier((IDamageSender)null), 0f);
-                return true;
             case "gm_damage_normal":
-                passed = admin != null && Mathf.Approximately(admin.GetDamageMultiplier((IDamageSender)null), 1f);
+                Mod_DamageReceiver damageReceiver = player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+                passed = damageReceiver != null && damageReceiver.IsTemporarilyInvulnerable == (name == "gm_damage_blocked");
                 return true;
             case "gm_health_full":
             case "gm_health_partial":

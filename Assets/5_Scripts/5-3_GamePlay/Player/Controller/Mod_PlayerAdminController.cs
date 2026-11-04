@@ -3,22 +3,17 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 管理员相关输入与时间控制模块。
-/// 只挂在玩家的 Module_Player 子节点上，通过引用 Player 来操作玩家数据。
+/// 玩家管理员输入、时间和快捷栏适配；权限由独立通用模块提供。
 /// </summary>
-public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingDamageContextRule
+public class Mod_PlayerAdminController : Module
 {
     #region 常量与字段
 
-    private const string AdminName = "管理员";
     public const float MinAdminMoveSpeedMultiplier = 0.1f;
     public const float MaxAdminMoveSpeedMultiplier = 100f;
     private static readonly float[] AdminMoveSpeedPresets = { 1f, 2f, 3f, 5f };
 
     public static bool TeleportToMouseShortcutEnabled { get; private set; } = true;
-
-    /// <summary>本次运行中管理员无敌开关；默认关闭，不写入玩家存档。</summary>
-    public static bool AdminInvincibilityEnabled { get; private set; } = false;
 
     [Header("核心引用")]
     [Tooltip("要控制的玩家组件")]
@@ -29,18 +24,6 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
 
     [Tooltip("玩家快捷栏，用于操作手持物品")]
     public Mod_HotBar hotbar;
-
-    [Tooltip("生命模块（管理员模式维持不死）")]
-    public Mod_DamageReceiver damageReceiver;
-
-    [Tooltip("理智模块（管理员模式维持不死）")]
-    public Mod_San sanMod;
-
-    [Tooltip("食物模块（管理员模式维持不饿）")]
-    public Mod_Food foodMod;
-
-    [Tooltip("体力模块（管理员身份拥有无限体力）")]
-    public Mod_Stamina staminaMod;
 
     [Header("时间控制")]
     [Tooltip("时间流逝速度")]
@@ -67,7 +50,6 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
     private Mod_GameController gameController;
     private Mod_Mover playerMover;
     private Mod_Mover adminMoveSpeedTarget;
-    private Mod_DamageReceiver boundDamageReceiver;
     private float appliedAdminMoveSpeedMultiplier = 1f;
 
     public float AdminMoveSpeedMultiplier { get; private set; } = 1f;
@@ -83,7 +65,6 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
     private static void ResetRuntimeSettings()
     {
         TeleportToMouseShortcutEnabled = true;
-        AdminInvincibilityEnabled = false;
     }
 
     private void Start()
@@ -117,28 +98,13 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
                 hotbar = hotbarMod?.GetComponent<Mod_HotBar>();
             }
 
-            if (damageReceiver == null)
-                damageReceiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-
-            if (sanMod == null)
-                sanMod = player.itemMods.GetMod_ByID<Mod_San>(Mod_San.ModuleId);
-
-            if (foodMod == null)
-                foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-
-            if (staminaMod == null)
-                staminaMod = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-
             if (playerMover == null)
                 playerMover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         }
-
-        BindAdminDamageReceiver();
     }
 
     private void OnDestroy()
     {
-        UnbindAdminDamageReceiver();
         Time.timeScale = initialUnityTimeScale;
     }
 
@@ -161,19 +127,17 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
         if (gameController != null && gameController.IsGameplayInputLocked)
             return;
 
-        // Ctrl+F1：切换管理员权限；裸 F1 由 UIManager 用于宣传片录制模式。
+        // Ctrl+F1：启用管理员权限；裸 F1 由 UIManager 用于宣传片录制模式。
         if (keyboard?.f1Key.wasPressedThisFrame == true &&
             (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
         {
-            Debug.Log("Ctrl+F1 被按下，切换管理员身份");
+            Debug.Log("Ctrl+F1 被按下，启用管理员权限");
             TryEnableAdministrator();
         }
 
         // 非管理员不执行后续逻辑
-        if (!IsAdmin()) return;
+        if (!IsAdministrator) return;
 
-        KeepAdminStaminaFull();
-        KeepAdminAlive();
         HandleTimeScaleControl(keyboard);
     }
 
@@ -189,67 +153,32 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
 
     #region 管理员核心逻辑
 
-    private bool IsAdmin()
-    {
-        return player?.Data?.Name_User == AdminName;
-    }
+    /// <summary>权限由角色持有的通用管理员模块提供。</summary>
+    public bool IsAdministrator => Mod_Administrator.GetLoadedAdministratorModule(item ?? player) != null;
+    public bool IsAdminInvincibilityEnabled => Mod_Administrator.GetLoadedAdministratorModule(item ?? player)?.IsInvincibilityEnabled == true;
 
-    /// <summary>当前玩家是否拥有管理员权限。</summary>
-    public bool IsAdministrator => IsAdmin();
-
-    /// <summary>管理员权限与无敌开关同时开启时，玩家才受无敌保护。</summary>
-    public bool IsAdminInvincibilityEnabled => IsAdministrator && AdminInvincibilityEnabled;
-
-    // 无敌在统一受击入口拒绝伤害，避免先触发出血、骨折与装备损耗再回血。
-    public float GetDamageMultiplier(IDamageSender sender) => IsAdminInvincibilityEnabled ? 0f : 1f;
-    public float GetDamageMultiplier(in FlatWorld.Combat.CombatDamageContext context)
-        => IsAdminInvincibilityEnabled ? 0f : 1f;
-
-    /// <summary>为当前本地玩家开启管理员权限，供 Ctrl+F1 与 GM 面板复用。</summary>
+    /// <summary>Ctrl+F1 与 GM 共用正式动态模块装配，不修改角色名字。</summary>
     public bool TryEnableAdministrator()
     {
-        ResolveAdminSurvivalReferences();
-        if (player?.Data == null)
-        {
-            return false;
-        }
-
-        player.Data.Name_User = AdminName;
-        KeepAdminStaminaFull();
-        return true;
+        ResolveAdminRuntimeReferences();
+        if (player == null) return false;
+        return Mod_Administrator.EnsureAdministratorModule(player) != null;
     }
 
-    /// <summary>仅管理员可切换无敌；重新开启时立即恢复生存状态。</summary>
     public bool TrySetAdminInvincibilityEnabled(bool enabled)
     {
-        if (!IsAdministrator)
-        {
-            return false;
-        }
-
-        AdminInvincibilityEnabled = enabled;
-        if (!enabled)
-        {
-            return true;
-        }
-
-        ResolveAdminSurvivalReferences();
-        RestoreAdminVitalStats();
-        damageReceiver?.ResetBodyPartDurability();
-        ResumeDyingStateForAdminInvincibility();
+        Mod_Administrator administrator = Mod_Administrator.GetLoadedAdministratorModule(item ?? player);
+        if (administrator == null) return false;
+        administrator.SetInvincibilityEnabled(enabled);
+        if (enabled)
+            player?.itemMods?.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId)
+                ?.TryResumeFromAdminInvincibility();
         return true;
     }
 
-    /// <summary>切换当前管理员玩家的无敌状态。</summary>
     public bool TryToggleAdminInvincibility(out bool enabled)
     {
-        enabled = AdminInvincibilityEnabled;
-        if (!IsAdministrator)
-        {
-            return false;
-        }
-
-        enabled = !AdminInvincibilityEnabled;
+        enabled = !IsAdminInvincibilityEnabled;
         return TrySetAdminInvincibilityEnabled(enabled);
     }
 
@@ -309,27 +238,6 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
         }
     }
 
-    /// <summary>懒获取无敌恢复所需的生存模块，并保持伤害事件绑定有效。</summary>
-    private void ResolveAdminSurvivalReferences()
-    {
-        if (player == null)
-            player = GetComponentInParent<Player>();
-
-        if (player?.itemMods == null)
-            return;
-
-        if (damageReceiver == null)
-            damageReceiver = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
-
-        if (sanMod == null)
-            sanMod = player.itemMods.GetMod_ByID<Mod_San>(Mod_San.ModuleId);
-
-        if (foodMod == null)
-            foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-
-        BindAdminDamageReceiver();
-    }
-
     public bool TryCycleAdminMoveSpeedMultiplier(out float selectedMultiplier)
     {
         int nextIndex = 0;
@@ -384,97 +292,6 @@ public class Mod_PlayerAdminController : Module, IIncomingDamageRule, IIncomingD
         appliedMultiplier = multiplier;
         Debug.Log($"[Admin] Player move speed multiplier set to {multiplier:0.##}x.");
         return true;
-    }
-
-    private void KeepAdminAlive()
-    {
-        if (!IsAdminInvincibilityEnabled)
-            return;
-
-        ResolveAdminSurvivalReferences();
-        RestoreAdminVitalStats();
-    }
-
-    /// <summary>管理员身份始终保持满体力；实际消耗拦截仍由 Mod_Stamina 统一负责。</summary>
-    private void KeepAdminStaminaFull()
-    {
-        if (staminaMod == null)
-            staminaMod = player?.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
-
-        if (staminaMod == null || staminaMod.MaxValue <= 0f ||
-            Mathf.Approximately(staminaMod.CurrentValue, staminaMod.MaxValue))
-            return;
-
-        staminaMod.CurrentValue = staminaMod.MaxValue;
-    }
-
-    /// <summary>无敌开启时把生命、理智与饥饿恢复到满值。</summary>
-    private void RestoreAdminVitalStats()
-    {
-        if (damageReceiver != null && damageReceiver.MaxHp > 0f && damageReceiver.Hp < damageReceiver.MaxHp)
-        {
-            damageReceiver.Hp = damageReceiver.MaxHp;
-        }
-
-        if (sanMod != null && sanMod.MaxValue > 0f && sanMod.CurrentValue < sanMod.MaxValue)
-        {
-            sanMod.CurrentValue = sanMod.MaxValue;
-        }
-
-        KeepAdminNotHungry();
-    }
-
-    /// <summary>伤害结算后立刻回满生命，避免致死伤害进入玩家濒死流程。</summary>
-    private void HandleAdminDamageReceived(DamageReceiverDamageInfo damageInfo)
-    {
-        _ = damageInfo;
-        if (!IsAdminInvincibilityEnabled)
-            return;
-
-        RestoreAdminVitalStats();
-    }
-
-    /// <summary>绑定生命模块事件，生命模块替换时自动解除旧监听。</summary>
-    private void BindAdminDamageReceiver()
-    {
-        if (boundDamageReceiver == damageReceiver)
-            return;
-
-        UnbindAdminDamageReceiver();
-        boundDamageReceiver = damageReceiver;
-        if (boundDamageReceiver != null)
-            boundDamageReceiver.OnDamageReceived += HandleAdminDamageReceived;
-    }
-
-    /// <summary>解除生命模块事件，避免场景重建后遗留监听。</summary>
-    private void UnbindAdminDamageReceiver()
-    {
-        if (boundDamageReceiver != null)
-            boundDamageReceiver.OnDamageReceived -= HandleAdminDamageReceived;
-
-        boundDamageReceiver = null;
-    }
-
-    /// <summary>重新开启无敌时，若玩家已处于濒死则立即恢复操作。</summary>
-    private void ResumeDyingStateForAdminInvincibility()
-    {
-        Mod_PlayerDeathState deathState = player?.itemMods?
-            .GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
-        deathState?.TryResumeFromAdminInvincibility();
-    }
-
-    private void KeepAdminNotHungry()
-    {
-        if (foodMod == null)
-            foodMod = player?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
-
-        if (foodMod == null)
-            return;
-
-        foodMod.Data.nutrition.Carbohydrates = foodMod.Data.nutrition.Max_Carbohydrates;
-        foodMod.Data.nutrition.Fat = foodMod.Data.nutrition.Max_Fat;
-        foodMod.Data.nutrition.Protein = foodMod.Data.nutrition.Max_Protein;
-        foodMod.Data.nutrition.Water = foodMod.Data.nutrition.Max_Water;
     }
 
     #endregion

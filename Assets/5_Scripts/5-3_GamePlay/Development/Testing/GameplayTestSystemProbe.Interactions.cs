@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
     {
         operations.Add("player/physics_source", InteractionPhysicsSource);
         operations.Add("player/aim_cursor", InteractionAimCursor);
+        operations.Add("player/administrator_identity", PlayerAdministratorIdentity);
         operations.Add("player/focus_aim_batch", InteractionFocusAimBatch);
         operations.Add("terrain/harvest_rules", InteractionHarvestRules);
         operations.Add("terrain/ground_strata", TerrainGroundStrataRules);
@@ -26,6 +27,94 @@ public static partial class GameplayTestSystemProbe
         operations.Add("player/grid_interaction_bands", InteractionGridBands);
         operations.Add("inventory/discard_hover_query", InventoryDiscardHoverQuery);
         operations.Add("terrain/contact_query_context", TerrainContactQueryContext);
+    }
+
+    #endregion
+
+    #region 管理员权限与显示名解耦
+
+    // 权限与无敌通过通用角色模块和正式租约采样，不依赖 Player 控制器。
+    private static JObject PlayerAdministratorIdentity(JObject args)
+    {
+        using var fixture = new GameplayTestInvulnerabilityFixture();
+        Item actor = fixture.Health.item;
+        var playerRoot = new GameObject("[AdministratorNamedPlayer]");
+        playerRoot.SetActive(false);
+        var adminRoot = new GameObject("[AdministratorModules]") { hideFlags = HideFlags.HideAndDontSave };
+        Mod_Administrator administrator = null;
+        try
+        {
+            var namedPlayer = playerRoot.AddComponent<Player>();
+            namedPlayer.BindData(new Data_Player { IDName = "test:player", Name_User = "管理员" });
+            var result = new JObject
+            {
+                ["nameGrantsPermission"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) != null,
+                ["nonPlayer"] = actor is not Player,
+                ["initialPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null
+            };
+            var stamina = actor.gameObject.AddComponent<Mod_Stamina>();
+            stamina.ModuleInit(actor, new Ex_ModData_MemoryPackable { ModuleId = ModText.Stamina, StableName = "stamina" });
+            stamina.Data = new Mod_Stamina.StaminaData { CurrentStamina = 5f, MaxStamina = 100f };
+            actor.itemMods.AddMod(stamina);
+            administrator = EnableGameplayTestProbeLifecycleCallbacks(adminRoot.AddComponent<Mod_Administrator>());
+            administrator.ModuleInit(actor, new Ex_ModData_MemoryPackable
+                { ModuleId = Mod_Administrator.ModuleId, StableName = "administrator" });
+            actor.itemMods.AddMod(administrator);
+            administrator.Load();
+            result["moduleGrantsPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) == administrator;
+            result["ensureReusesModule"] = Mod_Administrator.EnsureAdministratorModule(actor) == administrator;
+            result["defaultInvincibility"] = administrator.IsInvincibilityEnabled;
+            result["staminaFilled"] = stamina.CurrentValue;
+            result["staminaConsumed"] = stamina.ConsumeStamina("test:admin", 20f);
+            administrator.SetInvincibilityEnabled(true);
+            result["invulnerable"] = fixture.Health.IsTemporarilyInvulnerable;
+            administrator.enabled = false;
+            result["disabledPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null;
+            result["disabledInvulnerability"] = fixture.Health.IsTemporarilyInvulnerable;
+            stamina.CurrentValue = 5f;
+            administrator.ModUpdate(0f);
+            result["disabledStamina"] = stamina.CurrentValue;
+            administrator.enabled = true;
+            result["componentRestored"] = Mod_Administrator.GetLoadedAdministratorModule(actor) == administrator &&
+                fixture.Health.IsTemporarilyInvulnerable;
+            adminRoot.SetActive(false);
+            result["inactivePermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null;
+            result["inactiveInvulnerability"] = fixture.Health.IsTemporarilyInvulnerable;
+            adminRoot.SetActive(true);
+            result["objectRestored"] = Mod_Administrator.GetLoadedAdministratorModule(actor) == administrator &&
+                fixture.Health.IsTemporarilyInvulnerable;
+            using (var otherSource = fixture.Health.AcquireTemporaryInvulnerability())
+            {
+                administrator.SetInvincibilityEnabled(false);
+                result["otherSourcePreserved"] = fixture.Health.IsTemporarilyInvulnerable;
+            }
+            result["releasedInvulnerability"] = fixture.Health.IsTemporarilyInvulnerable;
+            administrator.SetInvincibilityEnabled(true);
+            administrator.Unload();
+            result["unloadedPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null;
+            result["unloadedInvulnerability"] = fixture.Health.IsTemporarilyInvulnerable;
+            result["normalStaminaConsumed"] = stamina.ConsumeStamina("test:normal", 5f);
+            namedPlayer.Data.Name_User = "改名玩家";
+            result["unrelatedPlayerPermission"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) != null;
+            var playerAdministratorRoot = new GameObject("PlayerAdministrator");
+            playerAdministratorRoot.transform.SetParent(adminRoot.transform, false);
+            var playerAdministrator = playerAdministratorRoot.AddComponent<Mod_Administrator>();
+            playerAdministrator.ModuleInit(namedPlayer, new Ex_ModData_MemoryPackable
+                { ModuleId = Mod_Administrator.ModuleId, StableName = "administrator" });
+            namedPlayer.itemMods.AddMod(playerAdministrator);
+            playerAdministrator.Load();
+            result["nameAfterEnable"] = namedPlayer.Data.Name_User;
+            namedPlayer.Data.Name_User = "再次改名";
+            result["permissionAfterRename"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) == playerAdministrator;
+            playerAdministrator.Unload();
+            return result;
+        }
+        finally
+        {
+            administrator?.Unload();
+            UnityEngine.Object.DestroyImmediate(adminRoot);
+            UnityEngine.Object.DestroyImmediate(playerRoot);
+        }
     }
 
     #endregion

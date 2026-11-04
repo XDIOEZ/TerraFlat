@@ -1,3 +1,20 @@
+test.system("player", "administrator_identity", {}, function(data)
+    assert(not data.nameGrantsPermission and not data.initialPermission, "名字或普通角色自动获得了管理员权限")
+    assert(data.nonPlayer and data.moduleGrantsPermission and data.ensureReusesModule,
+        "非Player角色持有模块未获权，或重复启用重复装配")
+    assert(not data.defaultInvincibility, "管理员模块不应默认开启无敌")
+    assert(data.staminaFilled == 100 and data.staminaConsumed == 0, "非Player管理员没有无限体力")
+    assert(data.invulnerable and data.otherSourcePreserved and not data.releasedInvulnerability,
+        "管理员无敌未接入正式租约，或关闭影响了其他来源")
+    assert(not data.disabledPermission and not data.disabledInvulnerability and data.disabledStamina == 5 and
+        not data.inactivePermission and not data.inactiveInvulnerability and data.componentRestored and data.objectRestored,
+        "组件或模块对象停用后仍授权/恢复数值，或重新启用未恢复权限与无敌租约")
+    assert(not data.unloadedPermission and not data.unloadedInvulnerability and data.normalStaminaConsumed > 0,
+        "模块卸载没有撤销权限、无敌和无限体力")
+    assert(not data.unrelatedPlayerPermission, "其他角色的模块或改名污染了玩家权限")
+    assert(data.nameAfterEnable == "改名玩家" and data.permissionAfterRename, "模块授权修改名字或改名撤销了权限")
+end, "通用管理员模块：非Player授权、无限体力、无敌租约与卸载")
+
 -- 自行车和木筏共用生产移动规则；独立表现按实际距离转轮，停住不空转。
 test.system("player", "bicycle_carrier", {}, function(data)
     local bike, boat = data.Bicycle_Building, data.Boat_Building

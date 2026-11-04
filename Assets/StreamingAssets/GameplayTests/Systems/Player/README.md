@@ -1,5 +1,6 @@
 # 玩家控制测试
 
+- 2026-11-05：`administrator_identity` 复用通用生命夹具，检查非 Player 角色加载管理员模块自动获权、无限体力、无敌租约与其他来源隔离、组件/模块GO停用撤权与恢复、卸载撤权、名字不授权/不覆盖/改名保权。Ctrl+F1/GM 复用动态装配，临时模块不跨角色重建保留，固定能力由角色 Prefab/JSON 组合。Unity 处于 PlayMode，本轮未编译、未运行 Lua；真实狗角色、资源装配与实际伤害待现场验收。
 - 2026-11-04：玩家碰撞迁至通用世界物理代理，阻挡框底边对齐脚底（Y=0.15，高0.3）。`collider_visual_alignment` 检查纯模板外壳，翻滚/传送/联机探针通过服务领取组件。当前 PlayMode 未执行 Lua；外部 C# 静态编译与现场验收分开报告。
 
 - 2026-11-02 低 TPS 玩家表现：`Mod_Cam` 默认跟随逐帧显示锚点，气泡共享世界视觉插值；传送与星区重定位时清旧轨迹、修正 Cinemachine Warp 后的镜头位移。`player_gameplay` 隔离 PlayMode 回归 `20261102T154543000Z_29b11f55` 通过，`surface_arrival` 的 `cameraShiftError=0`、`poseMatches=true`，玩家移动与其余真实流程均通过，零错误/零警告。仅一张结束画面截图，不能据此保证所有显示帧在30TPS下无视觉抖动。

@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: fbeea6764bc547cda0e9a1d4940613a4
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Administrator.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab
     m_ReadOnly: 0

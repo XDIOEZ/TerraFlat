@@ -557,17 +557,7 @@ public sealed partial class GMReflectionConsole
             return;
         }
 
-        Component controller = adminController;
-        object player = ReadMember(controller, "player") ?? FindFirstComponent("Player");
-        object playerData = ReadMember(player, "Data");
-        if (playerData == null || !WriteMember(playerData, "Name_User", AdministratorName))
-        {
-            SetStatus("未找到本地玩家数据，无法设置管理员。", Color.yellow);
-            return;
-        }
-
-        RefreshAdminInvincibilityButton();
-        SetStatus("管理员已启用。", new Color(0.35f, 0.95f, 0.85f));
+        SetStatus("未找到本地玩家管理员控制器或数据，无法设置管理员。", Color.yellow);
     }
 
     private Transform GetLocalPlayerTransform()

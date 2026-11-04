@@ -21,6 +21,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - `IsLocalProfile/ProfileContext` 区分本地档案；远程副本无本地保存、教程或语音。`ProfileName/ProfileId` 是角色槽位身份，`Name_User` 仅为显示名。
 - 来源无关的玩家身份共用 `ActorIdentity.IsPlayer`，角色数值修正共用 `ActorRuleModifiers` 与 `GameRuleConfiguration`；业务不引用难度服务或借难度工具识别玩家。
 - 创建模板在新档案 `Player.Load()` 前解析注入；MOD 使用 `playerCreationTemplates` 或 `playerTemplate:ID` Patch。管理员控制器唯一位于 `Module_Player`。
+- 管理员权限来自通用 `Mod_Administrator`，任意 Item/动物加载模块即获权；`Mod_PlayerAdminController` 仅适配玩家输入，Ctrl+F1/GM 临时装配模块，不读写名字。角色定义通过 `modules` 的 `prefab/id: Module_Administrator` 固定组合；临时模块不改变定义，重建后需重新装配。回归 `player/administrator_identity`。
 - 单机 F5 资源发布保存本地 Data、注销旧 Player、清理运行时 UI、从最新 Prefab 重建同一档案；世界/区块/存档会话保留，引用重绑事件为 `Event_LocalPlayerRuntimeReloaded`。
 - Wrapped 世界的本地刚体/Transform 在局部平面连续移动，`PlayerWorldWrapController` 规范化 Data 并发布跨周重投影；存档权威坐标与表现坐标分离。实体非 Trigger 碰撞体为 Player 层，模块 Trigger 保留专用层。
 

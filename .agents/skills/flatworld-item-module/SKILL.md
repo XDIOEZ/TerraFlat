@@ -34,6 +34,7 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 - 轻量掉落模拟按 WorldKey 持有，Scene 解绑只释放显示，重绑沿用原载荷与句柄；`TransferWorldItems` 批量移交保留旧句柄转发和回滚。`SimulateWithoutObservers` 的局部世界持续运行，不按本机视距停更物品；其它未加载世界仍按实际宿主能力处理。
 - 子定义模块声明 `inherit:false` 时整体替换父模块，同 Prefab 也不深合并；其余模块正常继承。该作者标记在 JObject 解析后移除，不扩展运行时 DTO。
 - 能力由 Prefab/JSON 显式组合。StableName 是 Item 内唯一实例槽键；ModuleId 是可共享能力 ID；PrefabId/JSON prefab 是实现地址，不进存档。JSON 键定 StableName，Prefab-only 用确定性对象名；同能力多实现的内嵌节点显式填与 JSON 一致的 StableName。
+- `Mod_Administrator` 是通用角色权限模块，Prefab/能力 ID 为 `Module_Administrator`；加载即授权，不识别 Player 或名字，无敌复用生命模块临时租约，体力在消费点查询此能力。运行时添加仍遵循当前定义重建边界，不复活孤立快照模块。
 - 默认能力通过 CanonicalModuleId 由统一绑定入口写入，不在 Awake 改空模板 ID。JSON 显式 ID 仍符合依赖契约；来源模板与当前定义身份的编译约束见定义参考。
 - 编译/绑定/额外组件清退只归最近 Item，不穿子物品；独立模块 Prefab 不含 Item。独立模块拥有 Prefab 根，内嵌模块只拥有组件。
 - IItemModuleDependencyBinder 在配置完成后解析唯一 ID/接口。ItemMods 只读视图经 AddMod/RemoveMod/BeginMutation 更新结构版本/能力缓存，可变 ModuleData 不跨宿主共享。

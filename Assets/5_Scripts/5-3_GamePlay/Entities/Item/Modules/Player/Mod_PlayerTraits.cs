@@ -23,7 +23,6 @@ public class Mod_PlayerTraits : Module
     }
 
     private Player player;
-    private Mod_PlayerAdminController adminController;
     private Mod_GameController gameController;
 
     protected override void OnLoad()
@@ -485,18 +484,12 @@ public class Mod_PlayerTraits : Module
         return false;
     }
 
-    /// <summary>读取管理员控制器的无敌状态；旧存档缺失控制器时兼容原管理员行为。</summary>
+    /// <summary>管理员无敌统一读取角色能力模块，不从显示名推断权限。</summary>
     private bool HasAdminInvincibility()
     {
         if (player == null)
             TryGetPlayer(out _);
 
-        if (adminController == null)
-            adminController = player?.GetComponentInChildren<Mod_PlayerAdminController>(true);
-
-        if (adminController != null)
-            return adminController.IsAdminInvincibilityEnabled;
-
-        return player?.Data?.Name_User == "管理员";
+        return Mod_Administrator.GetLoadedAdministratorModule(player)?.IsInvincibilityEnabled == true;
     }
 }

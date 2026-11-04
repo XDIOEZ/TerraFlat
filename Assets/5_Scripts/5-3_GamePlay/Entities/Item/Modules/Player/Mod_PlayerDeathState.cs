@@ -71,7 +71,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     private Mod_GameController _gameController; // 输入控制器
     private Mod_Mover _mover; // 移动模块
     private Rigidbody2D _rb => WorldPhysicsService2D.GetItemRigidbody(item);
-    private Mod_PlayerAdminController _adminController; // 管理员无敌状态
 
     private bool _isInDyingState; // 是否已进入濒死
     private bool _forceSuicideRequested; // 设置页强制自杀请求，绕过管理员无敌
@@ -128,7 +127,6 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         _buffManager = item.itemMods.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);
         _temperature = item.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         _mover = item.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
-        _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
 
         // 标准世界进入期间的新玩家由 GameManager 确认最终陆地后写入；其它路径仍需补齐。
         EnsureMainWorldSpawnPoint();
@@ -693,10 +691,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     /// <summary>判断当前玩家是否处于管理员无敌状态。</summary>
     private bool HasAdminInvincibility()
     {
-        if (_adminController == null && _player != null)
-            _adminController = _player.GetComponentInChildren<Mod_PlayerAdminController>(true);
-
-        return _adminController != null && _adminController.IsAdminInvincibilityEnabled;
+        return Mod_Administrator.GetLoadedAdministratorModule(item)?.IsInvincibilityEnabled == true;
     }
 
     /// <summary>把生命恢复到满值并清理本次死亡攻击者记录。</summary>

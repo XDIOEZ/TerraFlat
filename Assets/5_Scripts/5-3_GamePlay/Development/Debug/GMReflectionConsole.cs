@@ -42,7 +42,6 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     #endregion
 
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-    private const string AdministratorName = "管理员";
     private const int MaxDiscoveredCommands = 36;
     private const float CatalogBrowserHeaderHeight = 42f;
     private const float CatalogBrowserToolbarHeight = 34f;
