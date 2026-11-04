@@ -356,6 +356,13 @@ public static partial class GameplayTestPresentationRuntimeProbe
             bool unsaved = SettingsProviderRegistry.HasEditSessionChanges();
             saveButton.onClick.Invoke();
             bool committedClean = !SettingsProviderRegistry.HasEditSessionChanges();
+            UIToastPresenter toast = fixture.Ui.RootCanvas.GetComponentInChildren<UIToastPresenter>(true);
+            bool saveKeptSettingsOpen = panel.IsOpen();
+            bool saveToastVisible = toast != null && toast.IsVisible &&
+                toast.Message == FlatWorldLocalizationService.GetUiText("保存成功");
+            saveButton.onClick.Invoke();
+            bool repeatedSaveReusedToast = toast == fixture.Ui.RootCanvas.GetComponentInChildren<UIToastPresenter>(true) &&
+                toast.IsVisible && !SettingsProviderRegistry.HasEditSessionChanges();
             volume.value = .7f;
             yield return ChangeSettingsLocale(language, saveText, languageStatus, zh, "zh-CN", expectedZh, discardedChinese);
             bool changedAfterSave = SettingsProviderRegistry.HasEditSessionChanges();
@@ -414,6 +421,39 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["fallback"] = FlatWorldLocalizationService.Get("lua.missing.translation", "Lua 缺项回退", FlatWorldLocalizationService.UiTable),
                 ["currentVolume"] = fixture.Audio.UserSettings.Master
             };
+
+            // 从正式底栏退出，再检查持久提示没有随设置窗口关闭。
+            Button footerExit = panel.GetButton(SettingsEditSessionController.SaveAndExitButtonName);
+            footerExit.onClick.Invoke();
+            while (panel.IsVisualTransitioning)
+                yield return null;
+            result["saveKeptSettingsOpen"] = saveKeptSettingsOpen;
+            result["saveToastVisible"] = saveToastVisible;
+            result["repeatedSaveReusedToast"] = repeatedSaveReusedToast;
+            result["saveAndExitClosedSettings"] = !panel.IsOpen();
+            result["saveAndExitToastSurvived"] = toast.IsVisible &&
+                toast.Message == FlatWorldLocalizationService.GetUiText("保存成功");
+            CanvasGroup toastGroup = toast.GetComponent<CanvasGroup>();
+            result["toastInputTransparent"] = !toastGroup.interactable && !toastGroup.blocksRaycasts &&
+                toast.GetComponentsInChildren<Graphic>(true).All(graphic => !graphic.raycastTarget);
+            result["toastAboveSettings"] = toast.GetComponent<Canvas>().sortingOrder >
+                panel.GetComponent<Canvas>().sortingOrder && toast.GetComponent<Canvas>().sortingOrder <
+                UIManager.GlobalOverlaySortingOrder;
+            float previousTimeScale = Time.timeScale;
+            try
+            {
+                Time.timeScale = 0f;
+                fixture.Ui.ShowToast(FlatWorldLocalizationService.GetUiText("保存失败"), .05f);
+                result["toastReplacedMessage"] = toast.IsVisible &&
+                    toast.Message == FlatWorldLocalizationService.GetUiText("保存失败");
+                float deadline = Time.realtimeSinceStartup + 1f;
+                while (toast.IsVisible && Time.realtimeSinceStartup < deadline)
+                    yield return null;
+                result["toastExpiredWhilePaused"] = !toast.IsVisible;
+            }
+            finally { Time.timeScale = previousTimeScale; }
+            manager.OpenMainMenuSettings();
+            yield return WaitForPanel(panel);
             retained = true;
             complete(result);
         }

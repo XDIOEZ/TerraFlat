@@ -233,7 +233,19 @@ public class UIManager : MonoBehaviour
 
     #endregion
 
+    #region 全局提示
+
+    // 通用提示始终使用持久根，避免随业务窗口关闭或场景卸载而消失。
+    public void ShowToast(string message, float durationSeconds = 2.5f)
+    {
+        EnsurePanelRootExists();
+        rootCanvas.GetComponentInChildren<UIToastPresenter>(true).ShowToast(message, durationSeconds);
+    }
+
+    #endregion
+
     #region 初始化
+
     private void Awake()
     {
         // 退出播放模式后即使有迟到的对象回调，也不能再创建新的 UIManager。

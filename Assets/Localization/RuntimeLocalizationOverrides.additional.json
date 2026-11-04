@@ -1,5 +1,7 @@
 {
   "ui": {
+    "保存并退出": "Save & Exit",
+    "保存成功": "Saved successfully",
     "液网温度 {0:0.##}℃ · 总液量 {1:0.###} L": "Liquid network {0:0.##}°C · Total {1:0.###} L",
     "大气检测仪": "Atmosphere Analyzer",
     "星球大气总量 · 标准 m³": "TOTAL ATMOSPHERE · STANDARD m³",

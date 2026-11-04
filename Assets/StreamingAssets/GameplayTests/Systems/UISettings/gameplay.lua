@@ -132,6 +132,12 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.observedEnglish == data.expectedEnglish and data.nodeNamePreserved, "语言下拉没有驱动真实文本或改了绑定节点身份")
     assert(data.sameBoundText and data.textInstanceId == data.currentTextInstanceId and data.binderInstanceId == data.currentBinderInstanceId, "语言切换替换了原 TMP 节点或翻译 Binder")
     assert(data.unsavedBeforeCommit and data.commitClearedChanges and data.changedAfterCommit, "保存按钮没有建立新的正式设置基线")
+    assert(data.saveKeptSettingsOpen and data.saveToastVisible and data.repeatedSaveReusedToast,
+        "保存应保留设置窗口、提示成功且重复保存复用同一吐司")
+    assert(data.saveAndExitClosedSettings and data.saveAndExitToastSurvived,
+        "保存并退出应关闭设置窗口，且主界面仍显示保存结果")
+    assert(data.toastInputTransparent and data.toastAboveSettings and data.toastReplacedMessage
+        and data.toastExpiredWhilePaused, "通用吐司应置顶、不挡输入、替换消息并在暂停时自动隐藏")
     assert(data.discardedToCommittedLocale and math.abs(data.discardedToCommittedVolume - 0.4) < 0.0001 and data.cleanAfterClose, "关闭没有放弃保存之后的语言与音量修改")
     assert(data.duplicateOpenEvents == 0 and data.unexpectedCloseEvents == 0, "重复打开触发了额外业务事件")
     assert(not data.invalidLocaleAccepted and data.currentLocale == "en", "非法语言改变了有效 Locale")

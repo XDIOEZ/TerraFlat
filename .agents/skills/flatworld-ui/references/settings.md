@@ -5,7 +5,7 @@
 - 单项浮点偏好共用 `PlayerPrefsFloatValueCommitter` 的缓存比较/持久化；校验、惰性初始化和保存后通知归各领域。画质/动画的重应用及批量重置保留专属流程，不改成逐项保存。
 - Data契约只含元数据/读写能力；功能管理器实现 `ISettingsProvider` 与 Toggle/Slider/Dropdown/Switch能力并在自身生命周期注册。UI按稳定 ProviderId/Key 绑定，选项身份为 SettingOption.Id，写入返回校验结果；Provider不创建视觉。
 - `SettingsEditSessionController` 持保存基线，非控件偏好用 `ISettingsEditSessionParticipant` 快照/还原，按键独立会话，分页器收集 `ISettingsPageLifecycle`。关闭只恢复偏离基线值，扩展状态用 `ISettingsEditSessionChangeTracker` 跳过无变化恢复（未实现者仍恢复）；仅可能写回时保存。按键放弃仅在覆盖改变时重载/通知，避免无改动关闭重建输入/画质/写盘。
-- 主菜单设置底部的保存按钮固定节点名 `SettingsEditSessionController.SaveButtonName`（`保存设置`）、文案“保存”；正式 `UI_MainMenuSettings.prefab` 与 `ConfigureMainMenuSettingsActionList` 同步维护，并给保存、恢复默认和提示文案预留互不重叠的空间。
+- 主菜单设置底栏为「恢复默认／保存／保存并退出」，节点名使用 `SettingsEditSessionController.SaveButtonName/SaveAndExitButtonName`；保存保留窗口，底栏保存退出在尝试保存后返回主菜单并报告成功/失败，原未保存确认仍只在保存成功时关闭。`UI_MainMenuSettings.prefab` 与 `ConfigureMainMenuSettingsActionList` 同步预留三按钮及提示区。结果统一调用 `UIManager.ShowToast`，使用 `UIRoot.prefab` 内嵌 `UIToastPresenter`：居中、非交互、真实时间隐藏、连续提示替换计时，排序高于设置低于全屏覆盖层，随持久 UI 根保留且不随业务资源重载销毁。
 - 左侧分类可直接进入显示、画质、镜头和语言；不再保留「视觉特效」第三分页或画质跳转快捷入口。`SettingsActionListPagination` 保生命周期/Provider，仅手柄切页自动焦点；恢复不替鼠标/触屏选输入框。
 - 甩动选项由 InputBindingPanelLauncher 绑定 InventoryFlickUserSettings（inventory_flick），速度/距离25～200%、步长1、默认100，方向默认开；固定首项`操作选项`不随动态按键行回收，复用保存/放弃/默认会话。
 - 三模拟半径为设备级PlayerPrefs、整组严格递增，Item/AIECS共用，镜头独立。特效范围来自default-rendering.json，玩家值由Provider存；关太阳不关脚底阴影。

@@ -279,7 +279,7 @@ public static partial class RuntimeUIPrefabBuilder
         Button resetButton = CreateButton(
             "恢复所有设置",
             root.transform,
-            "恢复所有设置",
+            "恢复默认",
             190f,
             60f,
             false);
@@ -287,7 +287,7 @@ public static partial class RuntimeUIPrefabBuilder
         resetRect.anchorMin = new Vector2(1f, 0f);
         resetRect.anchorMax = new Vector2(1f, 0f);
         resetRect.pivot = new Vector2(1f, 0f);
-        resetRect.anchoredPosition = new Vector2(-168f, 8f);
+        resetRect.anchoredPosition = new Vector2(-344f, 8f);
         resetRect.sizeDelta = new Vector2(190f, 60f);
         LayoutElement resetLayout = resetButton.GetComponent<LayoutElement>();
         if (resetLayout != null)
@@ -308,17 +308,35 @@ public static partial class RuntimeUIPrefabBuilder
         saveRect.anchorMin = new Vector2(1f, 0f);
         saveRect.anchorMax = new Vector2(1f, 0f);
         saveRect.pivot = new Vector2(1f, 0f);
-        saveRect.anchoredPosition = new Vector2(-24f, 8f);
+        saveRect.anchoredPosition = new Vector2(-200f, 8f);
         saveRect.sizeDelta = new Vector2(132f, 60f);
         LayoutElement saveLayout = saveButton.GetComponent<LayoutElement>();
         if (saveLayout != null)
             saveLayout.ignoreLayout = true;
         SetButtonLabelSize(saveButton, 17f);
         saveButton.transform.SetAsLastSibling();
+
+        // 底栏三按钮共占 510 像素，保留独立保存和保存退出两个入口。
+        DestroyTransformIfPresent(root.transform, SettingsEditSessionController.SaveAndExitButtonName);
+        Button saveAndExitButton = CreateButton(
+            SettingsEditSessionController.SaveAndExitButtonName,
+            root.transform,
+            "保存并退出",
+            164f,
+            60f,
+            false);
+        RectTransform saveAndExitRect = saveAndExitButton.GetComponent<RectTransform>();
+        saveAndExitRect.anchorMin = saveAndExitRect.anchorMax = new Vector2(1f, 0f);
+        saveAndExitRect.pivot = new Vector2(1f, 0f);
+        saveAndExitRect.anchoredPosition = new Vector2(-24f, 8f);
+        saveAndExitRect.sizeDelta = new Vector2(164f, 60f);
+        saveAndExitButton.GetComponent<LayoutElement>().ignoreLayout = true;
+        SetButtonLabelSize(saveAndExitButton, 17f);
+        saveAndExitButton.transform.SetAsLastSibling();
         if (footerHint != null)
         {
             RectTransform hintRect = footerHint.rectTransform;
-            hintRect.offsetMax = new Vector2(-382f, hintRect.offsetMax.y);
+            hintRect.offsetMax = new Vector2(-558f, hintRect.offsetMax.y);
         }
 
         Transform close = FindTransform(root.transform, GameManager.MainMenuSettingsCloseButtonKey);

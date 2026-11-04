@@ -1,5 +1,7 @@
 # UI与设置
 
+- 2026-11-04：`settings_locale_open` 增补正式保存保留窗口、重复保存复用 Toast、保存退出后持久提示、射线透明、置顶、消息替换与暂停时按真实时间消失；用户 PlayMode 保留，本轮未编译或执行。真实磁盘失败分支、多分辨率画面与物理点击尚未验收。
+
 - 2026-11-01：`new_game_window_close` 通过正式 GameManager/UIManager 面板按钮，先检查关闭难度浮层仍留在名称页，再检查世界设置页右上“关闭”回到名称页并保留名称/种子输入、底部返回按钮隐藏，以及名称页右上仍关闭窗口；保留用户 PlayMode，本轮未运行。测试通过 `Button.onClick` 验证回调，不覆盖物理射线、手柄输入或最终画面。
 
 - 食物合并 HUD：layout-rules.lua 的 food_segmented_bar 覆盖正式五行布局、三段总容量比例、耗尽/全空/零容量、平滑消耗与途中补充、主题色和输入透明；gameplay.lua 的 status_hud_readability 检查营养图例隐藏、蛋白质/脂肪/碳水分段顺序、水蓝与血红配色及文字对比度。用户 PlayMode 保持运行，本轮未执行 Lua。

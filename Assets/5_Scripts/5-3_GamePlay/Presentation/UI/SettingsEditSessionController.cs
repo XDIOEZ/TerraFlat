@@ -1,3 +1,4 @@
+using System.Collections;
 using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
@@ -12,6 +13,7 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     #region 节点命名契约
 
     public const string SaveButtonName = "保存设置";
+    public const string SaveAndExitButtonName = "保存设置并退出";
     private const string CloseButtonName = GameManager.MainMenuSettingsCloseButtonKey;
     private const string UnsavedConfirmationPanelName = "UI_SettingsUnsavedExitConfirmation";
     private const string ConfirmationPromptName = "退出确认提示";
@@ -25,6 +27,7 @@ public sealed class SettingsEditSessionController : MonoBehaviour
 
     /// <summary>底部保存按钮。</summary>
     private Button saveButton;
+    private Button footerSaveAndExitButton;
 
     /// <summary>设置窗口右上角关闭按钮。</summary>
     private Button closeButton;
@@ -66,6 +69,8 @@ public sealed class SettingsEditSessionController : MonoBehaviour
         Unbind();
         basePanel = panel;
         saveButton = FindButton(basePanel.transform, SaveButtonName);
+        footerSaveAndExitButton = FindButton(basePanel.transform, SaveAndExitButtonName);
+        footerSaveAndExitButton.onClick.AddListener(SaveSettingsAndReturnToMainMenu);
         closeButton = FindButton(basePanel.transform, CloseButtonName);
         inputBindingLauncher =
             basePanel.GetComponentInChildren<InputBindingPanelLauncher>(true);
@@ -135,8 +140,16 @@ public sealed class SettingsEditSessionController : MonoBehaviour
             out string error,
             out bool restoreAttempted);
         // 按键放弃只恢复内存覆盖；只有设置恢复可能写入偏好时才同步保存。
-        if (restoreAttempted)
-            PlayerPrefs.Save();
+        try
+        {
+            if (restoreAttempted)
+                PlayerPrefs.Save();
+        }
+        catch (System.Exception exception)
+        {
+            restored = false;
+            error += "\n" + exception.Message;
+        }
         sessionActive = false;
         if (!restored && !string.IsNullOrEmpty(error))
         {
@@ -164,19 +177,42 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     /// <summary>保存当前设置值并以此建立后续放弃修改的新基线。</summary>
     private void CommitChanges()
     {
-        TryCommitChanges();
+        ShowSaveResultToast(TryCommitChanges());
     }
 
-    /// <summary>尝试提交当前设置；只有全部保存成功才允许“保存退出”继续关闭。</summary>
+    // 保存结果交给持久 UI 根展示，关闭设置窗口后仍可见。
+    private static void ShowSaveResultToast(bool saved)
+    {
+        UIManager.Instance.ShowToast(FlatWorldLocalizationService.GetUiText(
+            saved ? "保存成功" : "保存失败"));
+    }
+
+    // 底栏明确要求保存后返回主界面，保存失败也在返回后报告结果。
+    private void SaveSettingsAndReturnToMainMenu()
+    {
+        bool saved = TryCommitChanges();
+        CloseUnsavedConfirmation();
+        basePanel.Close();
+        StartCoroutine(ShowSaveResultToastAfterSettingsClosed(saved));
+    }
+
+    private IEnumerator ShowSaveResultToastAfterSettingsClosed(bool saved)
+    {
+        while (basePanel.IsVisualTransitioning)
+            yield return null;
+        ShowSaveResultToast(saved);
+    }
+
+    /// <summary>尝试提交当前设置，返回实际保存结果。</summary>
     private bool TryCommitChanges()
     {
-        if (!sessionActive)
-            BeginSession();
-        if (!sessionActive)
-            return false;
-
         try
         {
+            if (!sessionActive)
+                BeginSession();
+            if (!sessionActive)
+                return false;
+
             inputBindingLauncher?.CommitSettingsEditSession();
             PlayerPrefs.Save();
             SettingsProviderRegistry.CommitEditSession();
@@ -332,11 +368,15 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     /// <summary>先提交本次修改，成功后再关闭设置面板。</summary>
     private void SaveAndExit()
     {
-        if (!TryCommitChanges())
-            return;
-
-        CloseUnsavedConfirmation();
-        basePanel?.Close();
+        bool saved = TryCommitChanges();
+        if (saved)
+        {
+            CloseUnsavedConfirmation();
+            basePanel?.Close();
+            StartCoroutine(ShowSaveResultToastAfterSettingsClosed(saved));
+        }
+        else
+            ShowSaveResultToast(saved);
     }
 
     private void CloseUnsavedConfirmation()
@@ -377,6 +417,8 @@ public sealed class SettingsEditSessionController : MonoBehaviour
     {
         if (saveButton != null)
             saveButton.onClick.RemoveListener(CommitChanges);
+        if (footerSaveAndExitButton != null)
+            footerSaveAndExitButton.onClick.RemoveListener(SaveSettingsAndReturnToMainMenu);
         if (closeButton != null)
             closeButton.onClick.RemoveListener(RequestClose);
 
