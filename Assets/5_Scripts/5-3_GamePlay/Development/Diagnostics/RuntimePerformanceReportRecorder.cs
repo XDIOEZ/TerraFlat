@@ -275,8 +275,7 @@ public sealed class RuntimePerformanceReportRecorder : MonoBehaviour
 
     private static void WriteTextEntry(ZipArchive archive, string name, string content)
     {
-        using var writer = new StreamWriter(
-            archive.CreateEntry(name, System.IO.Compression.CompressionLevel.Fastest).Open(), new UTF8Encoding(false));
+        using var writer = new StreamWriter(archive.CreateEntry(name, System.IO.Compression.CompressionLevel.Fastest).Open(), new UTF8Encoding(false));
         writer.Write(content);
     }
 

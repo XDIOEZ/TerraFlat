@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,7 +12,8 @@ namespace FlatWorld.Dialogue
     public sealed class ConfiguredSpeechProvider :
         MonoBehaviour,
         ICharacterSpeechProvider,
-        ICharacterSpeechTriggerSource
+        ICharacterSpeechTriggerSource,
+        IStartupRuntimeContentPrewarm
     {
         [SerializeField] private int providerOrder = 1000;
 
@@ -56,6 +58,7 @@ namespace FlatWorld.Dialogue
         public void ReloadConfiguration()
         {
             configLoaded = false;
+            CharacterSpeechConfigLoader.InvalidateResourceCache();
             EnsureConfigurationLoaded();
         }
 
@@ -253,6 +256,11 @@ namespace FlatWorld.Dialogue
         #endregion
 
         #region 配置加载
+
+        public IEnumerator PrewarmStartupContent(Func<bool> shouldYield)
+        {
+            return CharacterSpeechConfigLoader.PrewarmResourceDocuments(shouldYield);
+        }
 
         private void EnsureConfigurationLoaded()
         {

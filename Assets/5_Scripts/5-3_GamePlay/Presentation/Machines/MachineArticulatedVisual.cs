@@ -19,6 +19,8 @@ internal sealed class MachineArticulatedVisual
         public int Order;
     }
     private sealed class Declaration { public MachineArticulatedVisual Articulation; }
+    // 装配坐标始终按源画布像素换算，不依赖纹理导入缩放。
+    public float CanvasPixelsPerUnit;
     public Vector2 CanvasPivotPixels;
     public Vector2 CrankCenterPixels;
     public float CrankRadiusPixels, ConnectingRodLengthPixels;
@@ -38,6 +40,7 @@ internal sealed class MachineArticulatedVisual
         if (rig != null)
         {
             if (rig.Parts == null || rig.Parts.Length == 0 || rig.Parts.Length > 8 ||
+                !float.IsFinite(rig.CanvasPixelsPerUnit) || rig.CanvasPixelsPerUnit <= 0f ||
                 !float.IsFinite(rig.CrankRadiusPixels) || rig.CrankRadiusPixels <= 0f ||
                 !float.IsFinite(rig.ConnectingRodLengthPixels) || rig.ConnectingRodLengthPixels <= 0f)
                 throw new InvalidOperationException("机器关节装配定义无效：" + definition.Id);
@@ -87,9 +90,9 @@ internal sealed class MachineArticulatedVisual
     {
         PartDefinition part = Parts[index];
         item.TryGetVisualStateSprite(part.SpriteState, out Sprite sprite);
-        float pixelsPerUnit = item.Sprite.pixelsPerUnit;
+        float canvasPixelsPerUnit = CanvasPixelsPerUnit;
         // 每个零件只作固定尺寸校准，连杆运动时长度不变。
-        float sourceScale = part.Scale * sprite.pixelsPerUnit / pixelsPerUnit;
+        float sourceScale = part.Scale * sprite.pixelsPerUnit / canvasPixelsPerUnit;
         Vector2 anchor = part.PivotPixels;
         int mode = 0;
         float phaseOffset = 0f;
@@ -100,7 +103,7 @@ internal sealed class MachineArticulatedVisual
         {
             mode = part.Motion == "slider" ? SliderMode : ConnectingRodMode;
             anchor = part.Motion == "slider" ? new Vector2(part.SliderAxisPixelsX, CrankCenterPixels.y) : CrankCenterPixels;
-            float unit = pixelsPerUnit * sourceScale;
+            float unit = canvasPixelsPerUnit * sourceScale;
             stroke = CrankRadiusPixels / unit;
             payload = new Vector4((part.SliderAxisPixelsX - CrankCenterPixels.x) / unit,
                 ConnectingRodLengthPixels / unit, part.SourceAngleRadians, 0f);
@@ -115,8 +118,8 @@ internal sealed class MachineArticulatedVisual
             mode = NeedleMode;
             stroke = working ? NeedlePulseDegrees * Mathf.Deg2Rad : 0f;
         }
-        Vector3 offset = new((anchor.x - CanvasPivotPixels.x) / pixelsPerUnit * fit,
-            (CanvasPivotPixels.y - anchor.y) / pixelsPerUnit * fit, 0f);
+        Vector3 offset = new((anchor.x - CanvasPivotPixels.x) / canvasPixelsPerUnit * fit,
+            (CanvasPivotPixels.y - anchor.y) / canvasPixelsPerUnit * fit, 0f);
         float radians = (float)(clock.SignedRpm * Math.PI / 30d);
         Vector4 animation = new(mode, radians,
             (float)(clock.PhaseRadians - clock.SampleTimeSeconds * radians) + phaseOffset, stroke);

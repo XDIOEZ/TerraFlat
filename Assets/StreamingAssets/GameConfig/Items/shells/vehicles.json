@@ -266,7 +266,7 @@
               "y": 0.66
             },
             "SeatOffset": {
-              "x": -0.16,
+              "x": 0,
               "y": -0.20
             },
             "AllowsWater": true,

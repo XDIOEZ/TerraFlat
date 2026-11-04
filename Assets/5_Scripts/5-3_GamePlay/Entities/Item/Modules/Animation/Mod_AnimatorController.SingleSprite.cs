@@ -524,6 +524,10 @@ public partial class Mod_AnimatorController
         return pose.TransformPoint(localPoint);
     }
 
+    internal Transform PresentedBodyPoseRoot =>
+        isActiveAndEnabled && IsSingleSpriteMode && _bodyLayer != null && _bodyLayer.IsBound
+            ? _bodyLayer.PoseRoot : null;
+
     public bool TryGetBaseVisualMatrix(Transform visual, out Matrix4x4 localToWorld)
     {
         localToWorld = default;

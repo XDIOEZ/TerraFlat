@@ -80,4 +80,37 @@ public static partial class GameplayTestPresentationRuntimeProbe
         };
     }
     #endregion
+
+    #region 机械气泵零件装配换算
+    // 用正式物品定义与GetPartPose核验拆件PPU和源画布坐标的换算。
+    private static JObject CaptureMechanicalPumpArticulatedSpritePose(Player player, JObject args)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null || !resources.TryGetItemDefinition("GasPump_Mechanical", out RuntimeItemDefinition item) ||
+            item.Sprite == null)
+            throw new InvalidOperationException("机械气泵关节贴图采样缺少正式物品定义。");
+        MachineArticulatedVisual rig = MachineArticulatedVisual.Resolve(item);
+        if (rig == null) throw new InvalidOperationException("机械气泵没有正式关节装配定义。");
+        const string state = "articulatedPistonLeft";
+        int index = Array.FindIndex(rig.Parts, part => part != null && part.SpriteState == state);
+        if (index < 0 || !item.TryGetVisualStateSprite(state, out Sprite sprite) || sprite == null)
+            throw new InvalidOperationException("机械气泵左活塞贴图缺失。");
+        MachineArticulatedVisual.PartPose pose = rig.GetPartPose(item, index, 1f, new MachineArticulatedMotionClock());
+        MachineArticulatedVisual.PartDefinition part = rig.Parts[index];
+        return new JObject
+        {
+            ["canvasPixelsPerUnit"] = rig.CanvasPixelsPerUnit,
+            ["itemPixelsPerUnit"] = item.Sprite.pixelsPerUnit,
+            ["partPixelsPerUnit"] = sprite.pixelsPerUnit,
+            ["partScale"] = part.Scale,
+            ["actualScale"] = pose.Scale.x,
+            ["anchorX"] = part.SliderAxisPixelsX,
+            ["anchorY"] = rig.CrankCenterPixels.y,
+            ["canvasPivotX"] = rig.CanvasPivotPixels.x,
+            ["canvasPivotY"] = rig.CanvasPivotPixels.y,
+            ["actualOffsetX"] = pose.Offset.x,
+            ["actualOffsetY"] = pose.Offset.y
+        };
+    }
+    #endregion
 }

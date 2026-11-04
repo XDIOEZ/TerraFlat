@@ -181,8 +181,8 @@ namespace FlatWorld.NaturalEntities
                 EntityManager manager = owner.Manager;
                 manager.CompleteDependencyBeforeRW<EntityWeatherInput>();
                 manager.CompleteDependencyBeforeRW<EntityClimate>();
-                weatherType = manager.GetComponentTypeHandle<EntityWeatherInput>(false);
-                climateType = manager.GetComponentTypeHandle<EntityClimate>(false);
+                weatherType = manager.GetComponentTypeHandle<EntityWeatherInput>(isReadOnly: false);
+                climateType = manager.GetComponentTypeHandle<EntityClimate>(isReadOnly: false);
                 cachedChunk = default;
                 weatherInputs = default;
                 climates = default;
@@ -212,8 +212,8 @@ namespace FlatWorld.NaturalEntities
 
                 // 保留旧定义缺少组件时的补装行为，结构变化后重新领取访问器。
                 owner.Set(id, value, notifyChanged: false);
-                weatherType = owner.Manager.GetComponentTypeHandle<EntityWeatherInput>(false);
-                climateType = owner.Manager.GetComponentTypeHandle<EntityClimate>(false);
+                weatherType = owner.Manager.GetComponentTypeHandle<EntityWeatherInput>(isReadOnly: false);
+                climateType = owner.Manager.GetComponentTypeHandle<EntityClimate>(isReadOnly: false);
                 cachedChunk = default;
                 storage = Locate(id);
             }

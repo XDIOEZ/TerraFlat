@@ -31,9 +31,15 @@ test.system("player", "bicycle_carrier", {}, function(data)
     assert(data.wheels.mirrored and data.wheels.rearMirrored and data.wheels.sameRotation, "转向后轮轴或前后轮不同步")
     assert(data.wheels.pedalTurned and data.wheels.pedalStill and data.wheels.pedalMirrored,
         "曲柄没有随车轮转动、静止时仍在转动或左右翻面没有同步")
-    near(data.wheels.seatLeftX, -data.wheels.seatRightX, "向左骑时座位没有随着车架翻面")
+    near(data.wheels.seatLeftX, -data.wheels.seatRightX, "向左骑时座位横向镜像错误")
     near(data.wheels.seatLeftY, bike.seatY, "车架翻面错误移动了座位高度")
-    assert(bike.seatX < -.1 and bike.seatY <= -.2, "Q版低座自行车乘坐锚点退回旧版")
+    near(bike.seatX, 0, "骑手脚底没有对齐自行车水平中心")
+    assert(bike.seatY <= -.2, "Q版低座自行车乘坐高度回归")
+    assert(data.wheels.groundAnchorCentered and data.wheels.groundAnchorAtWheelBottom,
+        "车头判向锚点没有落在双轮底部中点，或者翻面改变了锚点")
+    assert(data.wheels.centeredPointerKeepsFacing and data.wheels.deadZonePixels >= 32 and
+        data.wheels.centerDeadZoneHolds and data.wheels.anchorDeadZoneHolds and data.wheels.outsideDeadZoneTurns,
+        "屏幕中心或车底死区没有锁定方向，或者离开死区后仍无法转身")
     near(data.wheels.frameAngle, 0, "轮子转动带着车架转圈")
     near(data.wheels.fullTurn, -360, "滚动一周不是转动360度")
     local shadow = data.groundShadow

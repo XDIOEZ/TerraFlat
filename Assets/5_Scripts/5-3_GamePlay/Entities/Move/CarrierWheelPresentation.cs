@@ -13,6 +13,7 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     public Transform PedalCrank;
     [Min(.01f)] public float WheelRadius = .28f;
     [Min(0f)] public float PedalTurnsPerWheelTurn = .55f;
+    [Min(0f)] public float FacingDeadZonePixels = 48f;
     public float WheelAngle { get; private set; }
     public float PedalAngle { get; private set; }
     private Vector2 previousPosition;
@@ -81,6 +82,23 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
         ApplyWheelPose();
     }
 
+    /// <summary>双轮落地点的中点固定为车头判向锚点，不再使用偏移的座位或车体原点。</summary>
+    public Vector2 FacingGroundAnchorWorldPosition
+    {
+        get
+        {
+            Vector3 rear = RearWheel.position;
+            Vector3 front = FrontWheel.position;
+            return new Vector2((rear.x + front.x) * .5f, Mathf.Min(rear.y, front.y) - WheelRadius);
+        }
+    }
+
+    /// <summary>屏幕中央与车底锚点各有死区，镜头跟随偏移时也不能反复翻面。</summary>
+    public static bool IsPointerInsideFacingDeadZone(float pointerScreenX, float anchorScreenX,
+        float screenCenterX, float deadZonePixels)
+        => Mathf.Abs(pointerScreenX - screenCenterX) <= deadZonePixels ||
+           Mathf.Abs(pointerScreenX - anchorScreenX) <= deadZonePixels;
+
     /// <summary>只在有本地骑手时读取统一光标；空车保持最后朝向，不随惯性或推动翻面。</summary>
     private void RefreshFacingFromRiderPointer()
     {
@@ -88,10 +106,19 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
         if (carrier == null || carrier.Rider?.item is not Player rider || !rider.IsLocalProfile) return;
         Mod_GameController controller = rider.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller != null && controller.TryGetMouseWorldPosition(out Vector3 pointerWorld))
-            SetFacingFromPointerDirection(WorldTopologyRuntime.ShortestDelta(transform.position, pointerWorld));
+        {
+            Vector2 anchor = FacingGroundAnchorWorldPosition;
+            Vector2 direction = WorldTopologyRuntime.ShortestDelta(anchor, pointerWorld);
+            Camera camera = controller._mainCamera;
+            if (camera != null && IsPointerInsideFacingDeadZone(
+                    camera.WorldToScreenPoint(anchor + direction).x,
+                    camera.WorldToScreenPoint(anchor).x,
+                    camera.pixelRect.center.x, FacingDeadZonePixels)) return;
+            SetFacingFromPointerDirection(direction);
+        }
     }
 
-    /// <summary>光标在车体左右侧时立即翻面，光标与车头水平重合时保持上一次朝向。</summary>
+    /// <summary>光标越过死区后才按水平侧别翻面，光标重合时沿用上一朝向。</summary>
     public void SetFacingFromPointerDirection(Vector2 pointerDirection)
     {
         if (Mathf.Abs(pointerDirection.x) <= .001f) return;

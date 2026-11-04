@@ -32,6 +32,8 @@ test.system("rendering", "visual_motion_interpolation", {}, function(data)
     assert(data.pureReads, "多次读取显示位置改变了模拟快照或表现结果")
     assert(data.externalPosePreserved and data.snapPosePreserved, "逐帧外部姿态或显式瞬移被旧轨迹覆盖")
     assert(data.rateChangeKeepsRemainder and data.rateChangeAdvances, "切换 TPS 丢失时间余量或让显示时间倒退")
+    assert(data.heldPositionFollowsParent and data.heldRotationStillInterpolated and data.heldSourceUnchanged,
+        "载具移动时手持挂点位置被固定步插值拉回，或改动了逻辑旋转")
     assert(data.childPoseInterpolated and data.childSourceUnchanged and data.rootRotationApplied,
         "局部动作/根旋转没有只在绘制副本中插值，或反向修改了逻辑姿态")
     assert(data.sourceUnchanged and data.projectionTranslated and data.projectionRestored,

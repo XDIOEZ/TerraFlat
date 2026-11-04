@@ -13,6 +13,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     #region 伤害相关数据
 
     private static readonly Unity.Profiling.ProfilerMarker HitEffectsMarker = new("FlatWorld.Combat.HitEffects");
+    private static readonly Unity.Profiling.ProfilerMarker WeaponHitboxGeometryMarker = new("FlatWorld.Combat.WeaponHitboxGeometry");
 
     /// <summary>只收集当前武器真实配置的特效引用，不实例化武器或触发伤害。</summary>
     public void CollectHitEffectPrefabs(ISet<GameEffect> prefabs)
@@ -99,6 +100,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private float boundWeaponHitboxAngle;
     private readonly List<Vector2> boundWeaponShapePoints = new List<Vector2>(32);
     private readonly List<Vector2> boundWeaponShapeBuffer = new List<Vector2>(32);
+    private readonly List<Vector2> boundWeaponHullPoints = new List<Vector2>(32);
 
     // 定时伤害相关
     [SerializeField]
@@ -952,6 +954,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         if (forceShapeSync || sprite != boundWeaponSprite || flipX != boundWeaponFlipX || flipY != boundWeaponFlipY ||
             weaponHitboxRegion != boundWeaponHitboxRegion)
         {
+            using var geometryMarker = WeaponHitboxGeometryMarker.Auto();
             if (weaponHitboxRegion == WeaponHitboxRegion.UpperRightQuadrant)
             {
                 CalculateUpperRightQuadrantWeaponBox(sprite, rendererTransform, damageParent, flipX, flipY,
@@ -989,8 +992,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
                 DivideScale(rendererWorldScale.z, parentWorldScale.z));
         }
 
-        boxCollider.offset = Vector2.zero;
-        boxCollider.size = boundWeaponHitboxSize * damageRangeMultiplier;
+        if (boxCollider.offset != Vector2.zero) boxCollider.offset = Vector2.zero;
+        Vector2 hitboxSize = boundWeaponHitboxSize * damageRangeMultiplier;
+        if (boxCollider.size != hitboxSize) boxCollider.size = hitboxSize;
     }
 
     /// <summary>优先使用 Sprite 物理轮廓计算最小包围矩形，避免透明画布把细长武器伤害盒撑成大方框。</summary>
@@ -1095,57 +1099,80 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         boundWeaponShapeBuffer.Add(new Vector2(rendererPoint.x, rendererPoint.y));
     }
 
-    /// <summary>从轮廓点计算二维最小面积包围盒，使 BoxCollider 尽量贴住实际武器轮廓。</summary>
-    private static bool TryCalculateMinimumAreaBox(List<Vector2> points, out Vector2 center, out Vector2 size, out float angle)
+    /// <summary>从凸包边计算最小面积包围盒，避免高顶点数武器的三重循环。</summary>
+    private bool TryCalculateMinimumAreaBox(List<Vector2> points, out Vector2 center, out Vector2 size, out float angle)
     {
         center = Vector2.zero;
         size = Vector2.zero;
         angle = 0f;
+        if (points.Count < 2) return false;
+
+        // 最小面积矩形必有一条边平行于凸包边，只需检查这些方向。
+        points.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+        boundWeaponHullPoints.Clear();
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vector2 point = points[i];
+            while (boundWeaponHullPoints.Count >= 2 &&
+                   WeaponHullCross(boundWeaponHullPoints[boundWeaponHullPoints.Count - 2],
+                       boundWeaponHullPoints[boundWeaponHullPoints.Count - 1], point) <= 0f)
+                boundWeaponHullPoints.RemoveAt(boundWeaponHullPoints.Count - 1);
+            boundWeaponHullPoints.Add(point);
+        }
+
+        int lowerHullCount = boundWeaponHullPoints.Count;
+        for (int i = points.Count - 2; i >= 0; i--)
+        {
+            Vector2 point = points[i];
+            while (boundWeaponHullPoints.Count > lowerHullCount &&
+                   WeaponHullCross(boundWeaponHullPoints[boundWeaponHullPoints.Count - 2],
+                       boundWeaponHullPoints[boundWeaponHullPoints.Count - 1], point) <= 0f)
+                boundWeaponHullPoints.RemoveAt(boundWeaponHullPoints.Count - 1);
+            boundWeaponHullPoints.Add(point);
+        }
+        boundWeaponHullPoints.RemoveAt(boundWeaponHullPoints.Count - 1);
+
         float bestArea = float.PositiveInfinity;
         bool found = false;
-
-        for (int i = 0; i < points.Count - 1; i++)
+        for (int i = 0; i < boundWeaponHullPoints.Count; i++)
         {
-            for (int j = i + 1; j < points.Count; j++)
+            Vector2 edge = boundWeaponHullPoints[(i + 1) % boundWeaponHullPoints.Count] - boundWeaponHullPoints[i];
+            if (edge.sqrMagnitude <= 0.000001f) continue;
+
+            Vector2 axisX = edge.normalized;
+            Vector2 axisY = new Vector2(-axisX.y, axisX.x);
+            float minX = float.PositiveInfinity;
+            float maxX = float.NegativeInfinity;
+            float minY = float.PositiveInfinity;
+            float maxY = float.NegativeInfinity;
+            for (int pointIndex = 0; pointIndex < boundWeaponHullPoints.Count; pointIndex++)
             {
-                Vector2 edge = points[j] - points[i];
-                if (edge.sqrMagnitude <= 0.000001f)
-                    continue;
-
-                Vector2 axisX = edge.normalized;
-                Vector2 axisY = new Vector2(-axisX.y, axisX.x);
-                float minX = float.PositiveInfinity;
-                float maxX = float.NegativeInfinity;
-                float minY = float.PositiveInfinity;
-                float maxY = float.NegativeInfinity;
-
-                for (int pointIndex = 0; pointIndex < points.Count; pointIndex++)
-                {
-                    Vector2 point = points[pointIndex];
-                    float projectionX = Vector2.Dot(point, axisX);
-                    float projectionY = Vector2.Dot(point, axisY);
-                    minX = Mathf.Min(minX, projectionX);
-                    maxX = Mathf.Max(maxX, projectionX);
-                    minY = Mathf.Min(minY, projectionY);
-                    maxY = Mathf.Max(maxY, projectionY);
-                }
-
-                float width = maxX - minX;
-                float height = maxY - minY;
-                float area = width * height;
-                if (area >= bestArea)
-                    continue;
-
-                bestArea = area;
-                center = axisX * ((minX + maxX) * 0.5f) + axisY * ((minY + maxY) * 0.5f);
-                size = new Vector2(width, height);
-                angle = Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg;
-                found = true;
+                Vector2 point = boundWeaponHullPoints[pointIndex];
+                float projectionX = Vector2.Dot(point, axisX);
+                float projectionY = Vector2.Dot(point, axisY);
+                minX = Mathf.Min(minX, projectionX);
+                maxX = Mathf.Max(maxX, projectionX);
+                minY = Mathf.Min(minY, projectionY);
+                maxY = Mathf.Max(maxY, projectionY);
             }
+
+            float width = maxX - minX;
+            float height = maxY - minY;
+            float area = width * height;
+            if (area >= bestArea) continue;
+
+            bestArea = area;
+            center = axisX * ((minX + maxX) * 0.5f) + axisY * ((minY + maxY) * 0.5f);
+            size = new Vector2(width, height);
+            angle = Mathf.Atan2(axisX.y, axisX.x) * Mathf.Rad2Deg;
+            found = true;
         }
 
         return found;
     }
+
+    private static float WeaponHullCross(Vector2 a, Vector2 b, Vector2 c) =>
+        (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 
     /// <summary>把 SpriteRenderer 的翻转直接折算进局部轮廓点。</summary>
     private static Vector2 ApplySpriteFlip(Vector2 point, bool flipX, bool flipY)

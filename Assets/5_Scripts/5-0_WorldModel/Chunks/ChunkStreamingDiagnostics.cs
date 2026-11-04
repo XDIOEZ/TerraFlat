@@ -22,9 +22,6 @@ namespace FlatWorld.WorldModel
         private int pauseRevision;
         private bool suspended;
 
-        /// <summary>主线程完成慢区块提交时通知 Unity 宿主输出一次阶段日志。</summary>
-        public event Action<ChunkGenerationDiagnostic> SlowGenerationCompleted;
-
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool Enabled => true;
 #else
@@ -117,9 +114,6 @@ namespace FlatWorld.WorldModel
                 if (recent.Count == RecentCapacity) recent.Dequeue();
                 recent.Enqueue(snapshot);
             }
-            if (!snapshot.PauseAffected &&
-                (snapshot.GenerationWorkMs >= 500d || snapshot.GenerationQueueMs >= 2000d))
-                SlowGenerationCompleted?.Invoke(snapshot);
         }
 
         /// <summary>仅查询时复制/排序，正常帧不分配诊断 JSON 或日志字符串。</summary>

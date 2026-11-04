@@ -120,6 +120,9 @@ namespace FlatWorld.Automation
                     ["loadedChunkCount"] = chunks.Count,
                     ["bySource"] = Counts("sources", true), ["byDefinition"] = Counts("definitionId", false)
                 },
+                // 慢区块明细改为导出时按需保存，不再逐块写入 Console。
+                ["streamingDiagnostics"] = EditorApplication.isPlaying && chunkManager?.WorldRuntime != null
+                    ? JToken.FromObject(chunkManager.WorldRuntime.StreamingDiagnostics.Capture()) : null,
                 ["chunks"] = chunks,
                 ["items"] = items,
                 ["itemData"] = itemData,

@@ -19,6 +19,7 @@ description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性
 
 - 玩家台词仅由 `Player.IsLocalProfile` 调度；一次性标记存入 `ItemSpecialDataJsonStore` 命名空间并保留其他系统字段。
 - Provider 产请求，调度器管理时序，Presenter 显示。玩法语义事件由 `FlatWorld.Dialogue` 独立桥接筛选本地玩家、完成本地化并 `Say`；GamePlay 无 Dialogue 反向依赖。
+- `ConfiguredSpeechProvider` 通过 `IStartupRuntimeContentPrewarm` 在完整资源 Ready 前分帧加载台词，按 GameRes 实例及重载版本共享缓存；再次完整预热与手动重新加载会刷新缓存，避免首个状态触发同步解析 JSON。
 - 配置支持 `External`，由 `ConfiguredSpeechProvider.TrySpeakEntry(id)` 点名，复用条件、本地化与成功显示后的冷却；仅外部触发条目可留空条件。`Mod_Stamina.ConsumptionRejected` 经 `StaminaSpeechFeedback` 触发 `need_stamina.json`，工作体力不足随机提示、冷却8秒；持续环境消耗不触发。
 - `FoodConsumptionSpeechFeedback` 订阅 `FoodConsumptionService.ConsumptionCompleted`：临期阈值为腐败剩余时间≤总时长20%，临期提醒显示成功后才记录；临期优先但不消耗首次口味标记。完整物品饮用纳入食用事件，容器通用饮水不纳入。
 - `ScreenSpaceSpeechBubblePresenter` 可见时逐帧在镜头更新后，读取 `WorldRenderingManager.GetItemRenderedWorldPosition` 的同源插值位置与真实镜头、安全区重投影；`SetActive` 与 `RectTransform.anchoredPosition` 只在结果变化时提交。离屏、恢复、模态面板遮挡与透明度淡出沿原生命周期运行，不能降低跟随采样频率。

@@ -32,6 +32,23 @@ public partial class GameRes
             if (ShouldYieldResourceWork()) yield return null;
         }
 
+        // 玩家不是普通 Actor 定义，直接从正式玩家 Prefab 收集实际运行的脚本。
+        MonoBehaviour[] playerComponents = GetPrefab("Player", logError: false)?
+            .GetComponentsInChildren<MonoBehaviour>(true) ?? Array.Empty<MonoBehaviour>();
+        foreach (MonoBehaviour component in playerComponents)
+        {
+            if (component == null) continue;
+            for (Type type = component.GetType(); type != null && typeof(MonoBehaviour).IsAssignableFrom(type);
+                 type = type.BaseType)
+            {
+                string assemblyName = type.Assembly.GetName().Name;
+                if (assemblyName == "GamePlay" || assemblyName == "UI" ||
+                    assemblyName.StartsWith("FlatWorld.", StringComparison.Ordinal))
+                    types.Add(type);
+            }
+            if (ShouldYieldResourceWork()) yield return null;
+        }
+
         int prepared = 0, unsupported = 0;
         foreach (MethodBase method in ResourceRuntimeMethodPrewarmer.EnumerateClosedMethods(types))
         {
@@ -47,6 +64,16 @@ public partial class GameRes
                 Count(ResourceRuntimeMethodPrewarmer.PrepareMethod(method));
                 if (ShouldYieldResourceWork()) yield return null;
             }
+        }
+
+        // 预先加载玩家 Prefab 声明的纯内容，避免首帧创建角色时解析配置。
+        foreach (MonoBehaviour component in playerComponents)
+        {
+            if (component is not IStartupRuntimeContentPrewarm prewarmer) continue;
+            IEnumerator steps = prewarmer.PrewarmStartupContent(ShouldYieldResourceWork);
+            if (steps == null) continue;
+            while (steps.MoveNext())
+                yield return steps.Current;
         }
 
         // 仅初始化空的私有集合，提前完成首只动物才会触发的泛型容器初始化。
@@ -91,6 +118,12 @@ public partial class GameRes
         yield return typeof(Item);
         yield return typeof(ItemMods);
         yield return typeof(Module);
+        yield return typeof(Player);
+        yield return typeof(ItemMgr);
+        yield return typeof(ItemTickScheduler);
+        yield return typeof(WorldPresentationProjection);
+        yield return typeof(GameManager);
+        yield return typeof(SaveDataMgr);
         foreach (Type type in typeof(AnimalBehaviorTreeNode).Assembly.GetTypes())
             if (typeof(AnimalBehaviorTreeNode).IsAssignableFrom(type) ||
                 typeof(AnimalBehaviorTreeCapability).IsAssignableFrom(type)) yield return type;
@@ -122,4 +155,10 @@ public partial class GameRes
     }
 
     #endregion
+}
+
+/// <summary>Prefab 声明需要在世界 Ready 前完成的纯资源预热，不执行玩法生命周期。</summary>
+public interface IStartupRuntimeContentPrewarm
+{
+    IEnumerator PrewarmStartupContent(Func<bool> shouldYield);
 }

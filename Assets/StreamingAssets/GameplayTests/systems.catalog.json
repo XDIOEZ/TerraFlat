@@ -710,6 +710,14 @@
       "group": "工业与能源",
       "sourcePaths": [
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Machines/MachineArticulat*.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MachineArticulation.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestPresentationRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestPresentationRuntimeProbe.Machines.cs",
+        "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/*",
+        "Assets/Resources/Config/Mechanical/*",
+        "Assets/StreamingAssets/GameConfig/Items/shells/chemical_machines.json",
+        "Assets/StreamingAssets/GameplayTests/Systems/Mechanical/*",
+        "Assets/StreamingAssets/GameplayTests/mechanical-suite.json",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Mechanical*",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineWorld.Facilities.cs",
@@ -722,9 +730,8 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.cs",
         "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs",
         "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/WorldItemWaterRuntime.cs",
-        "Assets/Resources/Config/Mechanical/*",
-        "Assets/StreamingAssets/GameplayTests/Systems/Mechanical/*",
-        "Assets/StreamingAssets/GameplayTests/mechanical-suite.json"
+        "Tools/Art/GasPumpArticulatedRig/*",
+        "Tools/Tests/MachineArticulation/*"
       ],
       "dependsOn": [],
       "ruleCaseIds": [

@@ -76,6 +76,7 @@ public static partial class GameplayTestSystemProbe
             wheels.FrontWheel.localPosition = new Vector3(.7f, -.3f);
             wheels.PedalCrank.localPosition = new Vector3(-.09f, -.09f);
             wheels.ResetWheelPresentationMotionBaseline();
+            Vector2 rightGroundAnchor = wheels.FacingGroundAnchorWorldPosition;
             wheels.AdvanceWheelRotationByDisplacement(Vector2.right * .1f);
             float rightAngle = wheels.WheelAngle;
             float rightPedal = wheels.PedalAngle;
@@ -84,6 +85,7 @@ public static partial class GameplayTestSystemProbe
             bool still = wheels.WheelAngle == rightAngle;
             bool pedalStill = wheels.PedalAngle == rightPedal && wheels.PedalCrank.localRotation == rightPedalRotation;
             wheels.SetFacingFromPointerDirection(Vector2.left);
+            Vector2 leftGroundAnchor = wheels.FacingGroundAnchorWorldPosition;
             bool pointerLeftWhileStill = frame.flipX && wheels.WheelAngle == rightAngle;
             wheels.AdvanceWheelRotationByDisplacement(Vector2.right * .1f);
             bool movingRightKeepsLeft = frame.flipX;
@@ -92,6 +94,9 @@ public static partial class GameplayTestSystemProbe
             wheels.AdvanceWheelRotationByDisplacement(Vector2.left * .1f);
             bool movingLeftKeepsRight = !frame.flipX;
             wheels.SetFacingFromPointerDirection(Vector2.left);
+            wheels.SetFacingFromPointerDirection(Vector2.zero);
+            bool centeredPointerKeepsFacing = frame.flipX;
+            float deadZone = wheels.FacingDeadZonePixels;
             samples["wheels"] = new JObject
             {
                 ["rightAngle"] = rightAngle, ["still"] = still, ["mirrored"] = frame.flipX,
@@ -102,6 +107,15 @@ public static partial class GameplayTestSystemProbe
                 ["pedalStill"] = pedalStill, ["pedalMirrored"] = wheels.PedalCrank.localPosition.x > 0f,
                 ["seatRightX"] = configuredSeat.x, ["seatLeftX"] = wheels.ResolveSeatOffset(configuredSeat).x,
                 ["seatLeftY"] = wheels.ResolveSeatOffset(configuredSeat).y,
+                ["groundAnchorCentered"] = Mathf.Abs(rightGroundAnchor.x - root.transform.position.x) < .0001f &&
+                    Mathf.Abs(leftGroundAnchor.x - rightGroundAnchor.x) < .0001f,
+                ["groundAnchorAtWheelBottom"] = rightGroundAnchor.y < wheels.RearWheel.position.y &&
+                    Mathf.Abs(leftGroundAnchor.y - rightGroundAnchor.y) < .0001f,
+                ["centeredPointerKeepsFacing"] = centeredPointerKeepsFacing,
+                ["deadZonePixels"] = deadZone,
+                ["centerDeadZoneHolds"] = CarrierWheelPresentation.IsPointerInsideFacingDeadZone(500f, 600f, 500f, deadZone),
+                ["anchorDeadZoneHolds"] = CarrierWheelPresentation.IsPointerInsideFacingDeadZone(620f, 600f, 500f, deadZone),
+                ["outsideDeadZoneTurns"] = !CarrierWheelPresentation.IsPointerInsideFacingDeadZone(700f, 600f, 500f, deadZone),
                 ["sameRotation"] = wheels.RearWheel.localRotation == wheels.FrontWheel.localRotation,
                 ["frameAngle"] = frame.transform.localEulerAngles.z,
                 ["fullTurn"] = CarrierWheelPresentation.CalculateWheelRotationDegrees(Mathf.PI * 2f * wheels.WheelRadius, wheels.WheelRadius, false)

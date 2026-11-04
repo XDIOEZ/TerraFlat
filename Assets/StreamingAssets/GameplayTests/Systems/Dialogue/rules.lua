@@ -29,6 +29,8 @@ end
 
 test.system("dialogue", "builtin_locales", {}, function(data)
     assert(data.entries > 0 and data.lines > 0, "没有加载到正式自言自语资源")
+    assert(data.prewarmSlices > 0 and data.cacheReused and data.startupPrewarmSupported,
+        "台词配置没有在玩家出生前分帧预热并共享缓存")
     assert(data.issues == 0, "正式自言自语资源存在无效配置")
     assert(#data.incompleteIds == 0 and data.translatedLines == data.lines,
         "正式台词仍缺英文或中英文句数不一致：" .. table.concat(data.incompleteIds, ", "))

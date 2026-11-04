@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Newtonsoft.Json;
@@ -15,6 +16,9 @@ namespace FlatWorld.Dialogue
     {
         public const int SupportedSchemaVersion = 1;
         public const string ResourcePath = "Dialogue/Soliloquy";
+        private static CharacterSpeechConfigLoadResult cachedResourceResult;
+        private static GameRes cachedResourceOwner;
+        private static int cachedResourceVersion = -1;
 
         private static readonly HashSet<string> KnownFacts = new(StringComparer.Ordinal)
         {
@@ -46,7 +50,30 @@ namespace FlatWorld.Dialogue
 
         public static CharacterSpeechConfigLoadResult LoadFromResources(bool logIssues = true)
         {
-            return LoadResourceDocuments(logIssues);
+            GameRes resources = GameRes.ExistingInstance;
+            if (cachedResourceResult != null && ReferenceEquals(cachedResourceOwner, resources) &&
+                cachedResourceVersion == (resources?.ResourceReloadVersion ?? -1))
+                return cachedResourceResult;
+            CharacterSpeechConfigLoadResult result = LoadResourceDocuments(logIssues);
+            SetResourceCache(result);
+            return result;
+        }
+
+        public static IEnumerator PrewarmResourceDocuments(Func<bool> shouldYield)
+        {
+            // 每次完整资源预热重新获取台词内容，避免返回菜单后沿用旧配置。
+            IEnumerator steps = LoadResourceDocumentsInSteps(true, shouldYield,
+                SetResourceCache);
+            while (steps.MoveNext()) yield return steps.Current;
+        }
+
+        public static void InvalidateResourceCache() => cachedResourceResult = null;
+
+        private static void SetResourceCache(CharacterSpeechConfigLoadResult result)
+        {
+            cachedResourceResult = result;
+            cachedResourceOwner = GameRes.ExistingInstance;
+            cachedResourceVersion = cachedResourceOwner?.ResourceReloadVersion ?? -1;
         }
 
         [BuiltInContentBake]
@@ -98,6 +125,15 @@ namespace FlatWorld.Dialogue
         }
 
         private static CharacterSpeechConfigLoadResult LoadResourceDocuments(bool logIssues)
+        {
+            CharacterSpeechConfigLoadResult loaded = null;
+            IEnumerator steps = LoadResourceDocumentsInSteps(logIssues, null, result => loaded = result);
+            while (steps.MoveNext()) { }
+            return loaded;
+        }
+
+        private static IEnumerator LoadResourceDocumentsInSteps(bool logIssues,
+            Func<bool> shouldYield, Action<CharacterSpeechConfigLoadResult> completed)
         {
             CharacterSpeechConfigLoadResult result = new();
             Dictionary<string, CharacterSpeechConfigEntry> entriesById = new(StringComparer.Ordinal);
@@ -153,10 +189,11 @@ namespace FlatWorld.Dialogue
                     if (entry.Enabled)
                         result.Entries.Add(entry);
                 }
+                if (shouldYield?.Invoke() == true) yield return null;
             }
 
             result.Entries.Sort(CompareEntries);
-            return result;
+            completed(result);
         }
 
         private static CharacterSpeechConfigResourceDocument ParseResourceDocument(string path, string text)

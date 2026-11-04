@@ -81,6 +81,7 @@ public static partial class GameplayTestSystemProbe
         clock.AdvanceFrame(.001f, 1f, 120, _ => sampleTicks++);
         bool rateChangeAdvances = sampleTicks == 2 && clock.PresentationTime >= presentationBeforeRateChange;
         bool childPoseInterpolated = false, childSourceUnchanged = false, rootRotationApplied = false;
+        bool heldPositionFollowsParent = false, heldRotationStillInterpolated = false, heldSourceUnchanged = false;
         double oldSimulationTime = FlatWorld.Simulation.GameplaySimulationTime.CurrentTime;
         double oldPresentationTime = FlatWorld.Simulation.GameplaySimulationTime.PresentationTime;
         Scene scene = default;
@@ -92,25 +93,45 @@ public static partial class GameplayTestSystemProbe
             SceneManager.MoveGameObjectToScene(source, scene);
             source.transform.position = new Vector3(7f, 3f, 0f);
             source.AddComponent<SpriteRenderer>();
+            GameItem owner = source.AddComponent<GameItem>();
+            owner.BindData(EntityProbeData("test:visual_owner", 1f));
             var child = new GameObject("LogicalActionPose");
             child.transform.SetParent(source.transform, false);
             child.AddComponent<SpriteRenderer>();
+            var held = new GameObject("HeldFramePose");
+            held.transform.SetParent(source.transform, false);
+            GameItem heldItem = held.AddComponent<GameItem>();
+            heldItem.BindData(EntityProbeData("test:visual_held", 1f));
+            heldItem.Owner = owner;
+            heldItem.SetInHand(true);
+            held.AddComponent<SpriteRenderer>();
             projection = WorldPresentationProjection.Create(source.transform);
             projection.Synchronize(Matrix4x4.identity, true);
             projection.CaptureSimulationPoses(0d);
             child.transform.localPosition = Vector3.right;
             child.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            held.transform.localPosition = Vector3.right;
+            held.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            source.transform.position += Vector3.right * .6f;
             projection.CaptureSimulationPoses(.1d);
             FlatWorld.Simulation.GameplaySimulationTime.Publish(.1d, .15d);
             projection.Synchronize(Matrix4x4.identity, true);
             Transform childView = projection.transform.Find("LogicalActionPose");
+            Transform heldView = projection.transform.Find("HeldFramePose");
             childPoseInterpolated = childView != null && Mathf.Abs(childView.localPosition.x - .5f) < .0001f &&
                 Quaternion.Angle(childView.localRotation, Quaternion.Euler(0f, 0f, 45f)) < .001f;
+            // 乘员根随车平移时，手持物的逐帧挂点位置不能再落回前一逻辑步。
+            heldPositionFollowsParent = heldView != null && Mathf.Abs(heldView.localPosition.x - 1f) < .0001f &&
+                Mathf.Abs(heldView.position.x - source.transform.position.x - 1f) < .0001f;
+            heldRotationStillInterpolated = heldView != null &&
+                Quaternion.Angle(heldView.localRotation, Quaternion.Euler(0f, 0f, 45f)) < .001f;
+            heldSourceUnchanged = held.transform.localPosition == Vector3.right &&
+                Quaternion.Angle(held.transform.localRotation, Quaternion.Euler(0f, 0f, 90f)) < .001f;
             childSourceUnchanged = child.transform.localPosition == Vector3.right &&
                 Quaternion.Angle(child.transform.localRotation, Quaternion.Euler(0f, 0f, 90f)) < .001f;
             Vector3 original = projection.transform.position;
             projection.ApplyVisualMotionTranslation(new Vector3(-0.5f, 0.25f, 0f));
-            sourceUnchanged = source.transform.position == new Vector3(7f, 3f, 0f);
+            sourceUnchanged = Vector3.Distance(source.transform.position, new Vector3(7.6f, 3f, 0f)) < .0001f;
             projectionTranslated = projection.transform.position == original + new Vector3(-0.5f, 0.25f, 0f);
             projection.Synchronize(Matrix4x4.identity, true);
             projectionRestored = projection.transform.position == original;
@@ -156,6 +177,9 @@ public static partial class GameplayTestSystemProbe
             , ["childPoseInterpolated"] = childPoseInterpolated
             , ["childSourceUnchanged"] = childSourceUnchanged
             , ["rootRotationApplied"] = rootRotationApplied
+            , ["heldPositionFollowsParent"] = heldPositionFollowsParent
+            , ["heldRotationStillInterpolated"] = heldRotationStillInterpolated
+            , ["heldSourceUnchanged"] = heldSourceUnchanged
         };
     }
 
