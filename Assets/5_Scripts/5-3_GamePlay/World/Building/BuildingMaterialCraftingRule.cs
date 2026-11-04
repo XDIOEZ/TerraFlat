@@ -33,7 +33,8 @@ public sealed class BuildingMaterialCraftingRule : ICraftingOutputRule
             buildings.Add(output);
             quantity += output.Stack.Amount;
         }
-        if (buildings.Count == 0) return true;
+        // 混合副产物不能把整批成本归给建筑，保留目录声明的标准回收材料。
+        if (buildings.Count == 0 || buildings.Count != outputs.Count) return true;
         if (!float.IsFinite(quantity) || quantity <= 0f || input?.Data?.itemSlots == null)
         { error = "建筑制作缺少有效库存或产物数量"; return false; }
 
@@ -102,13 +103,17 @@ public static partial class BuildingMaterialSalvage
             hash.ComputeHash(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(sorted)))).Replace("-", string.Empty);
     }
 
-    /// <summary>有真实记录时直接使用；没有制作历史的建筑才尝试唯一精确配方。</summary>
+    /// <summary>优先实例材料；无历史时读当前定义的标准单件材料，最后尝试唯一精确配方。</summary>
     public static bool TryGetMaterialAmounts(string summonerId, ItemData buildingData,
         out IReadOnlyDictionary<string, float> materials, out string reason)
     {
         materials = null;
         reason = null;
-        if (Mod_Building.TryReadBuildingData(buildingData, out _, out var state) && state.CraftingMaterials != null)
+        Mod_Building.TryReadBuildingData(buildingData, out _, out var state);
+        if (state?.CraftingMaterials == null && GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetItemDefinition(summonerId, out var definition))
+            Mod_Building.TryReadBuildingData(definition.CreateItemData(), out _, out state);
+        if (state?.CraftingMaterials != null)
         {
             foreach (var material in state.CraftingMaterials)
                 if (string.IsNullOrWhiteSpace(material.Key) || !float.IsFinite(material.Value) ||

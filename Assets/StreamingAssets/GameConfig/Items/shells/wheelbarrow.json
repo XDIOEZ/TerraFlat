@@ -38,7 +38,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Wheelbarrow_Building\",\"SummonerPrefabId\":\"Wheelbarrow\",\"SharedModuleIds\":[\"Mod_WheelbarrowInventory\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Wheelbarrow_Building\",\"SummonerPrefabId\":\"Wheelbarrow\",\"SharedModuleIds\":[\"Mod_WheelbarrowInventory\"],\"CraftingMaterials\":{\"Plank\":6,\"Rope\":2,\"Stick_Wood\":4}}",
             "Type": 0
           },
           "parameters": {

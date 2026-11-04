@@ -108,7 +108,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\",\"CraftingMaterials\":{\"Clay\":6,\"Ingot_WroughtIron\":2,\"Ore_Stone\":12}}",
             "Type": 0
           }
         }
@@ -356,7 +356,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\",\"CraftingMaterials\":{\"Plank\":6,\"Rope\":4}}",
             "Type": 0
           }
         },
@@ -491,7 +491,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1,\"CraftingMaterials\":{\"Ore_Stone\":6}}",
             "Type": 0
           }
         }
@@ -616,7 +616,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\",\"AllowQuarterTurnPlacement\":true,\"FootprintWidth\":1,\"FootprintHeight\":1,\"CraftingMaterials\":{\"Plank\":4,\"Rope\":1}}",
             "Type": 0
           }
         },
@@ -751,7 +751,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Mod_Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\",\"CraftingMaterials\":{\"Rope\":2,\"Stick_Wood\":6}}",
             "Type": 0
           }
         }
@@ -880,7 +880,7 @@
             "CastSunShadow": false
           },
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\",\"CraftingMaterials\":{\"Log\":1,\"Ore_Stone\":8}}",
             "Type": 0
           }
         }
@@ -1003,7 +1003,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\",\"CraftingMaterials\":{\"Rope\":2,\"Stick_Wood\":3,\"Straw\":6}}",
             "Type": 0
           }
         }
@@ -1126,7 +1126,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\",\"CraftingMaterials\":{\"Ore_Stone\":8}}",
             "Type": 0
           }
         }
@@ -1385,7 +1385,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Stone\",\"SummonerPrefabId\":\"Wall_Stone_Summoner\",\"TileBlockId\":\"TileBase_BuiltStoneWall\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Stone\",\"SummonerPrefabId\":\"Wall_Stone_Summoner\",\"TileBlockId\":\"TileBase_BuiltStoneWall\",\"CraftingMaterials\":{\"Ore_Stone\":4}}",
             "Type": 0
           }
         }
@@ -1681,8 +1681,8 @@
       "parent": "BuildingSummoner_Base",
       "gameName": "钻木取火工具",
       "description": "通过摩擦产生火种的生火工具。",
-      "durability": 30,
-      "maxDurability": 30,
+      "durability": 300,
+      "maxDurability": 300,
       "amount": 1.0,
       "weight": 6.0,
       "volume": 16.0,
@@ -1770,7 +1770,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"]}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\",\"SharedModuleIds\":[\"钻木取火模块\"],\"CraftingMaterials\":{\"Log\":1,\"Rope\":1,\"Stick_Wood\":2}}",
             "Type": 0
           },
           "parameters": {
@@ -1918,7 +1918,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"]}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"],\"CraftingMaterials\":{\"Ore_Coal\":1,\"Stick_Wood\":1}}",
             "Type": 0
           },
           "parameters": {
@@ -2044,7 +2044,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\",\"CraftingMaterials\":{\"Plank\":6,\"Rope\":2,\"Stick_Wood\":2}}",
             "Type": 0
           }
         }

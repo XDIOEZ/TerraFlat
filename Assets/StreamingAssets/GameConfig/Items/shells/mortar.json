@@ -43,7 +43,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"StoneMortar_Building\",\"SummonerPrefabId\":\"StoneMortar\",\"SharedModuleIds\":[\"Mod_Mortar\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"StoneMortar_Building\",\"SummonerPrefabId\":\"StoneMortar\",\"SharedModuleIds\":[\"Mod_Mortar\"],\"CraftingMaterials\":{\"Ore_Stone\":1,\"StoneSlab\":1}}",
             "Type": 0
           },
           "parameters": {

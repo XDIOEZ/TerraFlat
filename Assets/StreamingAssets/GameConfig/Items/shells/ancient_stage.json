@@ -856,7 +856,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Stone\",\"SummonerPrefabId\":\"Platform_Stone_Summoner\",\"TileBlockId\":\"Tile_Platform_Stone\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Stone\",\"SummonerPrefabId\":\"Platform_Stone_Summoner\",\"TileBlockId\":\"Tile_Platform_Stone\",\"CraftingMaterials\":{\"Ore_Stone\":4}}",
             "Type": 0
           }
         }
@@ -943,7 +943,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Iron\",\"SummonerPrefabId\":\"Platform_Iron_Summoner\",\"TileBlockId\":\"Tile_Platform_Iron\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Platform_Iron\",\"SummonerPrefabId\":\"Platform_Iron_Summoner\",\"TileBlockId\":\"Tile_Platform_Iron\",\"CraftingMaterials\":{\"Ingot_RawIron\":2}}",
             "Type": 0
           }
         }
@@ -972,7 +972,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Iron\",\"SummonerPrefabId\":\"Wall_Iron_Summoner\",\"TileBlockId\":\"Tile_Wall_Iron\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Iron\",\"SummonerPrefabId\":\"Wall_Iron_Summoner\",\"TileBlockId\":\"Tile_Wall_Iron\",\"CraftingMaterials\":{\"Ingot_RawIron\":2}}",
             "Type": 0
           }
         }
@@ -1099,7 +1099,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ClayJar_Building\",\"SummonerPrefabId\":\"ClayJar\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ClayJar_Building\",\"SummonerPrefabId\":\"ClayJar\",\"SharedModuleIds\":[\"Mod_WaterVessel\"],\"CraftingMaterials\":{\"Clay\":4}}",
             "Type": 0
           },
           "parameters": {

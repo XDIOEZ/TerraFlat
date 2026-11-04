@@ -603,7 +603,7 @@
         "建筑模块": {
           "prefab": "Module_Building", "id": "建筑模块", "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Creative_Power_Source\",\"SummonerPrefabId\":\"Creative_Power_Source_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Creative_Power_Source\",\"SummonerPrefabId\":\"Creative_Power_Source_Summoner\",\"CraftingMaterials\":{}}",
             "Type": 0
           }
         },
@@ -793,7 +793,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricLightBulb\",\"SummonerPrefabId\":\"ElectricLightBulb_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ElectricLightBulb\",\"SummonerPrefabId\":\"ElectricLightBulb_Summoner\",\"CraftingMaterials\":{\"CarbonFilament\":1,\"CopperPlate\":1,\"Glass\":1,\"Ingot_WroughtIron\":1}}",
             "Type": 0
           }
         },

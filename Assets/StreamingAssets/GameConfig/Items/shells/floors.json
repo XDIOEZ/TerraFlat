@@ -41,7 +41,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Stone\",\"SummonerPrefabId\":\"Floor_Stone_Summoner\",\"TileBlockId\":\"Tile_Floor_Stone\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Stone\",\"SummonerPrefabId\":\"Floor_Stone_Summoner\",\"TileBlockId\":\"Tile_Floor_Stone\",\"CraftingMaterials\":{\"Ore_Stone\":4}}",
             "Type": 0
           }
         }
@@ -87,7 +87,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Iron\",\"SummonerPrefabId\":\"Floor_Iron_Summoner\",\"TileBlockId\":\"Tile_Floor_Iron\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Iron\",\"SummonerPrefabId\":\"Floor_Iron_Summoner\",\"TileBlockId\":\"Tile_Floor_Iron\",\"CraftingMaterials\":{\"Ingot_RawIron\":2}}",
             "Type": 0
           }
         }

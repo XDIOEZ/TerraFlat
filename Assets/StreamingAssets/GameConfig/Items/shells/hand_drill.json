@@ -149,7 +149,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandDrill\",\"SummonerPrefabId\":\"HandDrill_Summoner\",\"SharedModuleIds\":[\"手钻模块\"]}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandDrill\",\"SummonerPrefabId\":\"HandDrill_Summoner\",\"SharedModuleIds\":[\"手钻模块\"],\"CraftingMaterials\":{\"DrilledLog\":1,\"Ore_Flint\":1,\"Rope\":2,\"Stick_Wood\":1}}",
             "Type": 0
           },
           "parameters": {

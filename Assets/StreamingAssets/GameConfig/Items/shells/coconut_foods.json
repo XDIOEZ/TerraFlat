@@ -350,7 +350,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Coconut_Shell_Building\",\"SummonerPrefabId\":\"Coconut_Shell\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Coconut_Shell_Building\",\"SummonerPrefabId\":\"Coconut_Shell\",\"SharedModuleIds\":[\"Mod_WaterVessel\"],\"CraftingMaterials\":{\"Fiber\":1}}",
             "Type": 0
           },
           "parameters": {

@@ -126,7 +126,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Conveyor_Wood\",\"SummonerPrefabId\":\"Conveyor_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Conveyor_Wood\",\"SummonerPrefabId\":\"Conveyor_Wood_Summoner\",\"CraftingMaterials\":{\"Plank\":2,\"Rope\":2,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },

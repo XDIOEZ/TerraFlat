@@ -32,8 +32,8 @@ description: "FlatWorld 建造预览、放置与拆除事务、召唤器快照�
 - 拆回先捕获快照、成功生成返还物再删除原建筑。堆叠身份取规范化快照（去放置重写的 GUID/Transform）；IBuildingSnapshotRepackPolicy 可省默认快照，损伤/共享状态继续保留。
 - `BuildingSnapshotRepacking` 统一普通建筑、机器与轻量掉落载体的快照规范化、封包和共享状态装配，后端各自提交删除；`BuildingGroundPlacementRules` 提供地表承重与通行校验。Mod_Building 分为 Placement/Dismantling/Preview/Configuration 与生命周期壳；规则 `building/snapshot_repacking`。
 - SnapshotBase64 统一由 ItemNetworkStateSerialization.TrySerializeItemData 写入带 FWI1 包头的实例封包；船部件回收也复用此入口，不能直接写裸 MemoryPack。放置与 ShipMassReader 使用同一恢复契约，Tools/Tests/ShipMass 覆盖回收载体库存。
-- 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏优先按实际制作材料记录随机返料，无记录才查唯一精确配方。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
-- Item/机器建筑的制作材料由 `BuildingMaterialCraftingRule` 接入正式产物规则，读取真实扣料并按实际产量分摊到 `Building_Data.CraftingMaterials`；绳子/皮带等替代料保留实际 ID，零扣量工具和额外料不计。材料随 `BuildingModuleStateTransfer.Copy`、实例快照及回收载体深拷贝，不同材料用独立堆叠身份。战斗随机回收、磨损固定返料、船体/地表冲击共用记录；无制作历史及格子建筑才回退唯一精确配方，不猜替代料。规则 `building/material_provenance`。
+- 主动完整拆回与受伤摧毁分开：锤类致命伤返 Summoner，其它破坏优先按实例材料记录随机返料，无记录用当前标准材料或唯一精确配方。拆平台先检查上下层、设施和对象占用，返还装配成功才撤支撑。
+- Item/机器建筑的纯建筑制作由 `BuildingMaterialCraftingRule` 按真实扣料/实际产量写入 `Building_Data.CraftingMaterials`；替代料保留实际 ID，零扣量工具和额外料不计。具体 Summoner 定义可用同字段声明标准单件材料，空字典表示合法不返料；含非建筑副产物的制作不把整批成本归给建筑。回收优先实例记录，再读当前载体定义标准表，最后回退唯一精确单产物配方；格子建筑不保存逐格历史，用标准表。记录随状态转移/快照深拷贝，不同材料独立堆叠。战斗、磨损及冲击共用，规则 `building/material_provenance、material_defaults`。
 
 ## 占地、碰撞与支撑
 

@@ -28,7 +28,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WoodenBarrel_Building\",\"SummonerPrefabId\":\"WoodenBarrel\",\"SharedModuleIds\":[\"Mod_WaterVessel\",\"Mod_VesselContents\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WoodenBarrel_Building\",\"SummonerPrefabId\":\"WoodenBarrel\",\"SharedModuleIds\":[\"Mod_WaterVessel\",\"Mod_VesselContents\"],\"CraftingMaterials\":{\"Plank\":8,\"Resin\":4,\"Rope\":4}}",
             "Type": 0
           },
           "parameters": {

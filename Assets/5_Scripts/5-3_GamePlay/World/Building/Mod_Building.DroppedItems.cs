@@ -164,33 +164,22 @@ public static partial class BuildingMaterialSalvage
         if (recipe != null)
             return true;
 
-        reason = $"建筑 {buildingSummonerItemId} 未记录实际制作材料，也找不到唯一的精确材料配方";
+        reason = $"建筑 {buildingSummonerItemId} 未记录制作材料、未配置标准材料，也找不到唯一的精确单产物配方";
         return false;
     }
 
-    private static bool IsExactSingleBuildingRecipe(RuntimeRecipe recipe, string buildingSummonerItemId)
+    internal static bool IsExactSingleBuildingRecipe(RuntimeRecipe recipe, string buildingSummonerItemId)
     {
         if (recipe?.inputs?.recipeType != RecipeType.Crafting ||
-            recipe.outputs?.results == null ||
+            recipe.outputs?.results == null || recipe.outputs.results.Count != 1 ||
             recipe.inputs.RowItems_List == null)
         {
             return false;
         }
 
-        bool producesOneBuilding = false;
-        for (int i = 0; i < recipe.outputs.results.Count; i++)
-        {
-            RuntimeRecipeResult result = recipe.outputs.results[i];
-            if (result != null &&
-                result.amount == 1 &&
-                string.Equals(result.ItemName, buildingSummonerItemId, StringComparison.OrdinalIgnoreCase))
-            {
-                producesOneBuilding = true;
-                break;
-            }
-        }
-
-        if (!producesOneBuilding)
+        RuntimeRecipeResult result = recipe.outputs.results[0];
+        if (result == null || result.amount != 1 ||
+            !string.Equals(result.ItemName, buildingSummonerItemId, StringComparison.OrdinalIgnoreCase))
             return false;
 
         bool hasConsumedMaterial = false;

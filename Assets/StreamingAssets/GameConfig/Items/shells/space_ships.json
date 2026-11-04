@@ -1443,7 +1443,7 @@
       "modules": {
         "建筑模块": {
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Creative_Ship_Engine\",\"SummonerPrefabId\":\"Creative_Ship_Engine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Creative_Ship_Engine\",\"SummonerPrefabId\":\"Creative_Ship_Engine_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1,\"CraftingMaterials\":{}}"
           }
         },
         "ship-part": {
@@ -1494,7 +1494,7 @@
       "modules": {
         "建筑模块": {
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipChemicalEngine_GM\",\"SummonerPrefabId\":\"ShipChemicalEngine_GM_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1}"
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ShipChemicalEngine_GM\",\"SummonerPrefabId\":\"ShipChemicalEngine_GM_Summoner\",\"FootprintWidth\":1,\"FootprintHeight\":1,\"CraftingMaterials\":{}}"
           }
         },
         "ship-part": {

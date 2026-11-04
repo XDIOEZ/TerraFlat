@@ -13,7 +13,7 @@
       "modules": {
         "建筑模块": {
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WaterTrough_Building\",\"SummonerPrefabId\":\"WaterTrough\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WaterTrough_Building\",\"SummonerPrefabId\":\"WaterTrough\",\"SharedModuleIds\":[\"Mod_WaterVessel\"],\"CraftingMaterials\":{\"Plank\":12,\"Resin\":4,\"Rope\":4}}",
             "Type": 0
           }
         },

@@ -65,7 +65,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
         public string SnapshotBase64;
         public string BuildingPrefabId;
         public string SummonerPrefabId;
-        // 保存单件建筑实际消耗的材料，替代料不再靠配方反推。
+        // 定义声明标准单件材料；纯建筑制作覆盖为实际扣料，替代料不再靠配方反推。
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public SortedDictionary<string, float> CraftingMaterials;
         // 手持物与建筑共同持有的状态模块；放置/拆回时按稳定 ID 转移当前数据。

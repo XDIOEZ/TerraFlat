@@ -59,7 +59,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"RailTrack\",\"SummonerPrefabId\":\"RailTrack_Summoner\",\"SharedModuleIds\":[]}",
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"RailTrack\",\"SummonerPrefabId\":\"RailTrack_Summoner\",\"SharedModuleIds\":[],\"CraftingMaterials\":{\"Ingot_RawIron\":0.25,\"Plank\":0.5}}",
             "Type": 0
           },
           "parameters": {

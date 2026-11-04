@@ -154,3 +154,75 @@ test.system("building", "bitumen_floor_definition", {}, function(d)
         and d.placementTile == "Tile_Floor_Bitumen" and d.loadCapacity == 10,
         "沥青地板铺设、承重或拆回配对错误")
 end, "沥青地板正式内容、地面支撑与拆回定义")
+
+local expected_material_defaults = {
+    RailTrack_Summoner = { Ingot_RawIron = 0.25, Plank = 0.5 },
+    Wheelbarrow = { Plank = 6, Rope = 2, Stick_Wood = 4 },
+    StoneMortar = { Ore_Stone = 1, StoneSlab = 1 },
+    Coconut_Shell = { Fiber = 1 },
+    HandCrank_Summoner = { DrilledPlank = 2, DrilledStick = 2, Gear_Wood_Summoner = 1, Rope = 1 },
+    Windmill_Summoner = { DrilledPlank = 6, DrilledStick = 4, Fiber = 8, Gear_Wood_Summoner = 2, Rope = 4 },
+    Shaft_Wood_Summoner = { DrilledStick = 0.5 },
+    Gear_Wood_Summoner = { DrilledPlank = 1, DrilledStick = 0.5 },
+    Clutch_Summoner = { DrilledPlank = 2, Gear_Wood_Summoner = 1, Rope = 1, Shaft_Wood_Summoner = 1 },
+    CrossShaft_Summoner = { DrilledPlank = 2, DrilledStick = 2, Rope = 1, Shaft_Wood_Summoner = 2 },
+    Millstone_Summoner = { DrilledPlank = 2, Gear_Wood_Summoner = 2, Ore_Stone = 6, Shaft_Wood_Summoner = 1 },
+    MechanicalBellows_Summoner = { DrilledPlank = 4, DrilledStick = 2, Gear_Wood_Summoner = 1, Leather = 2, Rope = 2 },
+    Sawmill_Summoner = { DrilledPlank = 4, DrilledStick = 2, Gear_Wood_Summoner = 2, IronPlate = 3, Nail = 4, Shaft_Wood_Summoner = 1 },
+    MechanicalLoom_Summoner = { DrilledPlank = 4, DrilledStick = 2, Gear_Wood_Summoner = 1, Rope = 2, Shaft_Wood_Summoner = 1 },
+    MechanicalHammer_Summoner = { DrilledPlank = 4, DrilledStick = 2, Gear_Wood_Summoner = 2, IronPlate = 3, Nail = 4, Shaft_Wood_Summoner = 1 },
+    ToolCabinet_Summoner = { DrilledPlank = 4, Nail = 4 },
+    Creative_Power_Source_Summoner = {  },
+    ElectricLightBulb_Summoner = { CarbonFilament = 1, CopperPlate = 1, Glass = 1, Ingot_WroughtIron = 1 },
+    HandDrill_Summoner = { DrilledLog = 1, Ore_Flint = 1, Rope = 2, Stick_Wood = 1 },
+    BlastFurnace_Summoner = { Clay = 6, Ingot_WroughtIron = 2, Ore_Stone = 12 },
+    Chest_Wood_Summoner = { Plank = 6, Rope = 4 },
+    Door_Stone_Summoner = { Ore_Stone = 6 },
+    Door_Wood_Summoner = { Plank = 4, Rope = 1 },
+    Meatrack_Summoner = { Rope = 2, Stick_Wood = 6 },
+    MineEntrance_Summoner = { Log = 1, Ore_Stone = 8 },
+    Scarecrow_Summoner = { Rope = 2, Stick_Wood = 3, Straw = 6 },
+    Smelter_Summoner = { Ore_Stone = 8 },
+    Wall_Stone_Summoner = { Ore_Stone = 4 },
+    SparkMaker_Summoner = { Log = 1, Rope = 1, Stick_Wood = 2 },
+    Torch_Summoner = { Ore_Coal = 1, Stick_Wood = 1 },
+    CompostBin_Summoner = { Plank = 6, Rope = 2, Stick_Wood = 2 },
+    GrassBed_Summoner = { Rope = 1, Straw = 6 },
+    Platform_Stone_Summoner = { Ore_Stone = 4 },
+    Platform_Iron_Summoner = { Ingot_RawIron = 2 },
+    Wall_Iron_Summoner = { Ingot_RawIron = 2 },
+    ClayJar = { Clay = 4 },
+    Floor_Stone_Summoner = { Ore_Stone = 4 },
+    Floor_Iron_Summoner = { Ingot_RawIron = 2 },
+    WoodenBarrel = { Plank = 8, Resin = 4, Rope = 4 },
+    Conveyor_Wood_Summoner = { Plank = 2, Rope = 2, Shaft_Wood_Summoner = 1 },
+    Creative_Gas_Tank_Summoner = {  },
+    WaterTrough = { Plank = 12, Resin = 4, Rope = 4 },
+    Creative_Ship_Engine_Summoner = {  },
+    ShipChemicalEngine_GM_Summoner = {  },
+    Floor_Bitumen_Summoner = { Bitumen = 2, Ore_Stone = 4 },
+}
+
+test.system("building", "material_defaults", {}, function(data)
+    assert(#data.items == 109, "可放置物品目录数量变化，请重新审计材料来源")
+    local configured = 0
+    for _, item in ipairs(data.items) do
+        local expected = expected_material_defaults[item.id]
+        if expected then
+            configured = configured + 1
+            assert(item.hasDefault and item.resolved, item.id .. " 缺少标准回收材料或无法解析")
+            for id, amount in pairs(expected) do
+                assert(item.materials[id] == amount, item.id .. " 的单件标准材料错误：" .. id)
+            end
+            for id, amount in pairs(item.materials) do
+                assert(expected[id] == amount, item.id .. " 多出未声明的标准材料：" .. id)
+            end
+        else
+            assert(not item.hasDefault and #item.exactRecipes == 1, item.id .. " 没有唯一精确材料来源")
+        end
+    end
+    assert(configured == 45, "未覆盖全部45种缺少或错误的标准材料来源")
+    assert(data.coproductPrepared and data.coproductError == nil and
+        data.shellMaterials.Fiber == 1 and data.shellMaterials.Coconut_Half == nil,
+        "椰壳副产物错误分摊整批投入，拆除后可重复取出椰肉")
+end, "全109种可放置物品材料覆盖、批量单件成本与椰壳副产物隔离")

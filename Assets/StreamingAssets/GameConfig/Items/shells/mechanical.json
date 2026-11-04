@@ -131,7 +131,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandCrank\",\"SummonerPrefabId\":\"HandCrank_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandCrank\",\"SummonerPrefabId\":\"HandCrank_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":2,\"DrilledStick\":2,\"Gear_Wood_Summoner\":1,\"Rope\":1}}",
             "Type": 0
           }
         },
@@ -433,7 +433,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Windmill\",\"SummonerPrefabId\":\"Windmill_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Windmill\",\"SummonerPrefabId\":\"Windmill_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":6,\"DrilledStick\":4,\"Fiber\":8,\"Gear_Wood_Summoner\":2,\"Rope\":4}}",
             "Type": 0
           }
         },
@@ -586,7 +586,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Wood\",\"SummonerPrefabId\":\"Shaft_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Shaft_Wood\",\"SummonerPrefabId\":\"Shaft_Wood_Summoner\",\"CraftingMaterials\":{\"DrilledStick\":0.5}}",
             "Type": 0
           }
         },
@@ -734,7 +734,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Wood\",\"SummonerPrefabId\":\"Gear_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Gear_Wood\",\"SummonerPrefabId\":\"Gear_Wood_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":1,\"DrilledStick\":0.5}}",
             "Type": 0
           }
         },
@@ -1040,7 +1040,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Clutch\",\"SummonerPrefabId\":\"Clutch_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Clutch\",\"SummonerPrefabId\":\"Clutch_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":2,\"Gear_Wood_Summoner\":1,\"Rope\":1,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },
@@ -1187,7 +1187,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CrossShaft\",\"SummonerPrefabId\":\"CrossShaft_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CrossShaft\",\"SummonerPrefabId\":\"CrossShaft_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":2,\"DrilledStick\":2,\"Rope\":1,\"Shaft_Wood_Summoner\":2}}",
             "Type": 0
           }
         },
@@ -1331,7 +1331,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Millstone\",\"SummonerPrefabId\":\"Millstone_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Millstone\",\"SummonerPrefabId\":\"Millstone_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":2,\"Gear_Wood_Summoner\":2,\"Ore_Stone\":6,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },
@@ -1478,7 +1478,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalBellows\",\"SummonerPrefabId\":\"MechanicalBellows_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalBellows\",\"SummonerPrefabId\":\"MechanicalBellows_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":4,\"DrilledStick\":2,\"Gear_Wood_Summoner\":1,\"Leather\":2,\"Rope\":2}}",
             "Type": 0
           }
         },
@@ -1624,7 +1624,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Sawmill\",\"SummonerPrefabId\":\"Sawmill_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Sawmill\",\"SummonerPrefabId\":\"Sawmill_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":4,\"DrilledStick\":2,\"Gear_Wood_Summoner\":2,\"IronPlate\":3,\"Nail\":4,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },
@@ -1764,7 +1764,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalLoom\",\"SummonerPrefabId\":\"MechanicalLoom_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalLoom\",\"SummonerPrefabId\":\"MechanicalLoom_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":4,\"DrilledStick\":2,\"Gear_Wood_Summoner\":1,\"Rope\":2,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },
@@ -1904,7 +1904,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalHammer\",\"SummonerPrefabId\":\"MechanicalHammer_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MechanicalHammer\",\"SummonerPrefabId\":\"MechanicalHammer_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":4,\"DrilledStick\":2,\"Gear_Wood_Summoner\":2,\"IronPlate\":3,\"Nail\":4,\"Shaft_Wood_Summoner\":1}}",
             "Type": 0
           }
         },
@@ -2112,7 +2112,7 @@
           "id": "建筑模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ToolCabinet\",\"SummonerPrefabId\":\"ToolCabinet_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"ToolCabinet\",\"SummonerPrefabId\":\"ToolCabinet_Summoner\",\"CraftingMaterials\":{\"DrilledPlank\":4,\"Nail\":4}}",
             "Type": 0
           }
         }
