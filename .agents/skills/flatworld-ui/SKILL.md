@@ -47,6 +47,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 
 | 任务 | 参考 |
 | --- | --- |
+| UI 名称、Prefab 路径、嵌入页与关联入口总索引 | [UI 资源索引](references/ui-catalog.md) |
 | 安全区/缩放、列表、动画、加载/睡眠幕、HUD | [布局与动画](references/layout-animation.md) |
 | Provider、保存/放弃/默认、画质/帧率、新世界 | [设置会话](references/settings.md) |
 | 库存/提示、机器/装备/飞船/状态HUD、水容器 | [业务视图](references/business-views.md) |
