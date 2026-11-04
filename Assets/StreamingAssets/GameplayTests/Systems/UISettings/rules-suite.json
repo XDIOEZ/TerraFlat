@@ -17,6 +17,12 @@
       "enabled": true
     },
     {
+      "id": "ui_main_menu_background_rules",
+      "name": "主菜单十二图背景轮播",
+      "luaPath": "GameplayTests/Systems/UISettings/main-menu-background.lua",
+      "enabled": true
+    },
+    {
       "id": "anvil_ui_rules",
       "name": "砧工具与制作布局规则",
       "luaPath": "GameplayTests/Systems/UISettings/anvil.lua",

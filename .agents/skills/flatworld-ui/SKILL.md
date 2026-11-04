@@ -11,6 +11,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - Prefab `Assets/2_Prefabs/2-1_UI/{Common,Gameplay,MainMenu,Settings}/`；根 `Assets/Resources/UI/UIRoot.prefab`；构建器 `Assets/Editor/FlatWorld/PrefabBuilders/UI/`。
 - 构建器主文件只留入口；`RuntimeUIPrefabBuilder` 的设置页/设置导航、HUD、手机、加载、库存、对话分别维护，`GameUIPrefabRebuilder` 按库存、槽位快捷栏、制作、状态菜单和窗口外观拆分。字体加载、矩形定位、描边、无数组分配的深度优先节点查询共用 `FlatWorldEditorUiLayout`，新增 partial 用静态导入复用，不再复制。
 - 主题 `Assets/Resources/GameConfig/UI/ui-theme.json`；动画 `Assets/Resources/Config/UIAnimations.json`；设置契约 `Assets/5_Scripts/5-1_Data/Settings/SettingsContracts.cs`。
+- 主菜单背景由 `MainMenuBackgroundSlideshowController` 持十二张显式 Sprite 引用，两层 Image 按非缩放时间停留12秒、淡化1.5秒；监听 BasePanel 开关并在 Start 同步初始化状态，关闭取消淡化、重开保留底图。`MainMenuPrefabBuilder` 的接入、换肤和重建共用装配，旧六图不改导入，新增图在 `Generated/MainMenuBackgrounds/PixelCarousel/`；规则 `ui_settings/main_menu_background_slideshow`。
 
 ## 公共控件与布局
 

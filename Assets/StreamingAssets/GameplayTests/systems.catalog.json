@@ -1343,6 +1343,9 @@
         "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Anvil.prefab",
         "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MakerTable.prefab",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.UiPolish.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MainMenuBackground.cs",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/MainMenuPrefabBuilder.cs",
+        "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MultiSelectDropdown.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.InventoryBagWindowLayout.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Debug/GmHoverPropertyInspector*.cs",
@@ -1355,6 +1358,7 @@
       "ruleCaseIds": [
         "ui_settings_rules",
         "ui_layout_rules",
+        "ui_main_menu_background_rules",
         "anvil_ui_rules",
         "atmosphere_analyzer_ui_rules",
         "ui_structure_refactor_rules"

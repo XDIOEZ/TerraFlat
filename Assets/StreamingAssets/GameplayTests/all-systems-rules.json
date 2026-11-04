@@ -407,6 +407,12 @@
       "enabled": true
     },
     {
+      "id": "ui_main_menu_background_rules",
+      "name": "主菜单十二图背景轮播",
+      "luaPath": "GameplayTests/Systems/UISettings/main-menu-background.lua",
+      "enabled": true
+    },
+    {
       "id": "atmosphere_analyzer_ui_rules",
       "name": "大气检测仪屏幕布局与读数",
       "luaPath": "GameplayTests/Systems/UISettings/atmosphere-analyzer.lua",

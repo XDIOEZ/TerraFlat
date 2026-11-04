@@ -112,3 +112,9 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共
 2026-10-24 砧新增共享 `anvil_ui_rules`（`anvil.lua`）：读取手工/工作台/砧正式 Prefab 的槽数、缩放层归属、边界及底栏按钮间距，采样铜铁砧正式工具配置；独立加工器经真实 BeginWork 回调与正式耐久事务检查逐击磨损、最后一点耐久、预检拒绝不扣，以及 ManualProcessingState 工具/进度封包往返。回调夹具不等同于真实 ManualProcessingRuntime 的材料/容量/拖拽/网络门禁，工具能力解析、完整配方产出、放置拆回和实际多分辨率窗口仍由用户验收。本轮保持 PlayMode，未编译或运行 Lua。
 
 2026-10-24 新增 `ui_settings/text_fitting_assets`：只读扫描 UI 目录及 UIRoot 的全部正式 Prefab（含嵌套公共控件），Lua 检查普通文字已启用自动缩放、最大字号不超过设计值、最小字号足够低且使用省略/截断，并特别覆盖存档页返回和批量删除按钮；同时检查输入正文、自动长高正文和分页内容的尺寸归属。此处检查资产设置，不代表多语言真实字形、多分辨率和实际画面通过。本轮用户自行验收且 Unity 保持 PlayMode，未编译、未运行 Lua。
+
+2026-11-04：`main_menu_background_slideshow` 从正式 Prefab 引用构造独立预览场景，通过真实 BasePanel 开关与组件启停采样十二图循环、1.5秒交叉淡化、关闭复位及 timeScale=0 下显式注入非缩放时间步的推进（不替代真实 Update 时钟验证）；固定反射仅推进正式控制器。实际菜单与宽屏/竖屏画面另行视觉复核。
+
+本轮轮播专项规则 `20261104T075120236Z_cecb7ef7` 通过（未进入 PlayMode）。UI 其余快速规则有既有通用滚轮与 new_game 缩放失败；总索引同步脚本因 space 域 Lua 超过十份而中止，本轮仅手工同步 UI 的案例、总规则入口与索引计数。
+
+随后补强正式 Prefab 的面板/双图层绑定检查与 InitClosed 首次打开断言；Unity 被其它任务连续 Android 构建占用，这部分尚未复跑，真实菜单截图、跨帧 Update 和三种屏幕比例视觉验收也未完成。

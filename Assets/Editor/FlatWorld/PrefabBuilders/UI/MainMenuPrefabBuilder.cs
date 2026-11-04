@@ -8,8 +8,15 @@ using UnityEngine.UI;
 public static class MainMenuPrefabBuilder
 {
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
-    private const string BackgroundSourcePath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background.png";
-    private const string BackgroundPath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background_BlueGreen.png";
+    private const string BackgroundRoot = "Assets/6_Art/Generated/MainMenuBackgrounds/";
+    private static readonly string[] BackgroundFiles =
+    {
+        "01_morning_grassland.png", "02_orbital_world.png", "03_space_launch.png",
+        "04_night_base.png", "05_rain_forest.png", "06_volcanic_land.png",
+        "PixelCarousel/01_morning_grassland.png", "PixelCarousel/02_rain_forest.png",
+        "PixelCarousel/03_snow_aurora.png", "PixelCarousel/04_lava_cavern.png",
+        "PixelCarousel/05_night_base.png", "PixelCarousel/06_orbital_stars.png"
+    };
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
     #region 主菜单专属配色
@@ -27,22 +34,16 @@ public static class MainMenuPrefabBuilder
 
     #region 原位换肤
 
-    /// <summary>只改正式 Prefab 的颜色与背景引用，不重建节点，不触碰布局、文字或事件。</summary>
+    /// <summary>同步菜单配色与背景轮播，保留菜单布局、文字和事件。</summary>
     [MenuItem("FlatWorld/其他工具/UI/应用主菜单参考图风格（保持布局）")]
     public static void ApplyReferenceStyle()
     {
-        MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);
-        ConfigureBackgroundImporter();
-        Sprite background = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
-        if (background == null)
-            throw new System.InvalidOperationException("[MainMenu] 无法加载蓝绿背景。");
+        Sprite[] backgrounds = LoadBackgroundSlideshowSprites();
 
         GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
         try
         {
-            Image world = RequireComponent<Image>(root, "全屏背景/世界远景");
-            world.sprite = background;
-            world.color = Color.white;
+            ConfigureBackgroundSlideshow(root, backgrounds);
             RequireComponent<Image>(root, "全屏背景/氛围压暗").color = Atmosphere;
             RequireComponent<Image>(root, "品牌区/标题分隔线").color = Accent;
 
@@ -78,7 +79,7 @@ public static class MainMenuPrefabBuilder
 
         // 只保存目标资源，避免写入当前项目中无关的脏资源。
         AssetDatabase.SaveAssetIfDirty(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath));
-        Debug.Log("[MainMenu] 参考图风格已应用：灰色按钮、灰白文字与点缀、柔焦蓝绿背景；布局与功能保持不变。");
+        Debug.Log("[MainMenu] 参考图风格已应用，保留十二图轮播与现有布局。");
     }
 
     /// <summary>路径失配时直接停止，避免对错误节点或半套结构静默换肤。</summary>
@@ -110,14 +111,12 @@ public static class MainMenuPrefabBuilder
     [MenuItem("FlatWorld/其他工具/UI/重建主界面美术")]
     public static void RebuildMainMenu()
     {
-        MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);
-        ConfigureBackgroundImporter();
+        Sprite[] backgrounds = LoadBackgroundSlideshowSprites();
 
         TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-        Sprite backgroundSprite = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
-        if (font == null || backgroundSprite == null)
+        if (font == null)
         {
-            Debug.LogError($"[MainMenu] 缺少字体或背景图。Font={font != null}, Background={backgroundSprite != null}");
+            Debug.LogError("[MainMenu] 缺少字体。");
             return;
         }
 
@@ -126,7 +125,7 @@ public static class MainMenuPrefabBuilder
         {
             ClearChildren(root.transform);
             ConfigureRoot(root);
-            BuildBackground(root.transform, backgroundSprite);
+            BuildBackground(root.transform, backgrounds);
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
             BuildSettingsButton(root.transform, font);
@@ -141,43 +140,86 @@ public static class MainMenuPrefabBuilder
             PrefabUtility.UnloadPrefabContents(root);
         }
 
-        AssetDatabase.SaveAssets();
-        AssetDatabase.Refresh();
-        Debug.Log("[MainMenu] 主界面美术已重建：蓝绿柔焦远景、灰白文字与点缀、灰色菜单与联机入口。");
+        Debug.Log("[MainMenu] 主界面美术已重建：十二图轮播、灰白文字与灰色菜单。");
     }
 
-    private static void ConfigureBackgroundImporter()
+    #region 背景轮播装配
+    private static Sprite[] LoadBackgroundSlideshowSprites()
     {
-        AssetDatabase.ImportAsset(BackgroundPath, ImportAssetOptions.ForceSynchronousImport);
-        TextureImporter importer = AssetImporter.GetAtPath(BackgroundPath) as TextureImporter;
-        if (importer == null)
-            throw new System.InvalidOperationException("[MainMenu] 无法取得蓝绿背景的纹理导入器。");
-
-        // 检查所有将写入的设置，避免仅颜色空间或压缩发生变化时跳过保存，导致配色无法复现。
-        bool changed = importer.textureType != TextureImporterType.Sprite ||
-                       importer.spriteImportMode != SpriteImportMode.Single ||
-                       importer.mipmapEnabled ||
-                       importer.alphaIsTransparency ||
-                       !importer.sRGBTexture ||
-                       importer.maxTextureSize != 2048 ||
-                       importer.textureCompression != TextureImporterCompression.Uncompressed ||
-                       importer.filterMode != FilterMode.Bilinear ||
-                       importer.wrapMode != TextureWrapMode.Clamp;
-
-        importer.textureType = TextureImporterType.Sprite;
-        importer.spriteImportMode = SpriteImportMode.Single;
-        importer.mipmapEnabled = false;
-        importer.alphaIsTransparency = false;
-        importer.sRGBTexture = true;
-        importer.maxTextureSize = 2048;
-        // 柔焦背景包含大面积蓝灰渐变，关闭块压缩，保留参考图的配色和连续色阶。
-        importer.textureCompression = TextureImporterCompression.Uncompressed;
-        importer.filterMode = FilterMode.Bilinear;
-        importer.wrapMode = TextureWrapMode.Clamp;
-
-        if (changed)
-            importer.SaveAndReimport();
+        var sprites = new Sprite[BackgroundFiles.Length];
+        for (int i = 0; i < BackgroundFiles.Length; i++)
+        {
+            string path = BackgroundRoot + BackgroundFiles[i];
+            if (BackgroundFiles[i].StartsWith("PixelCarousel/", System.StringComparison.Ordinal))
+            {
+                var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                bool changed = importer.textureType != TextureImporterType.Sprite ||
+                    importer.spriteImportMode != SpriteImportMode.Single || settings.spriteMeshType != SpriteMeshType.FullRect ||
+                    importer.filterMode != FilterMode.Point || importer.wrapMode != TextureWrapMode.Clamp ||
+                    importer.mipmapEnabled || importer.isReadable || importer.alphaIsTransparency ||
+                    importer.npotScale != TextureImporterNPOTScale.None || importer.maxTextureSize != 2048;
+                settings.spriteMeshType = SpriteMeshType.FullRect;
+                importer.SetTextureSettings(settings);
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.filterMode = FilterMode.Point;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.mipmapEnabled = false;
+                importer.isReadable = false;
+                importer.alphaIsTransparency = false;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.maxTextureSize = 2048;
+                if (changed)
+                    importer.SaveAndReimport();
+            }
+            sprites[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprites[i] == null)
+                throw new System.InvalidOperationException("[MainMenu] 缺少轮播背景：" + path);
+        }
+        return sprites;
     }
+
+    /// <summary>只接入背景轮播，保留正式菜单的人工布局与控件。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/接入主菜单十二图轮播（保持布局）")]
+    public static void ApplyBackgroundSlideshowKeepingLayout()
+    {
+        Sprite[] sprites = LoadBackgroundSlideshowSprites();
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            ConfigureBackgroundSlideshow(root, sprites);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
+    private static void ConfigureBackgroundSlideshow(GameObject root, Sprite[] sprites)
+    {
+        Transform backgroundRoot = root.transform.Find("全屏背景");
+        Image bottom = RequireComponent<Image>(root, "全屏背景/世界远景");
+        Transform existingTop = backgroundRoot.Find("世界远景交叉淡化");
+        Image top = existingTop != null ? existingTop.GetComponent<Image>()
+            : CreateImage("世界远景交叉淡化", backgroundRoot, Color.white);
+        foreach (Image layer in new[] { bottom, top })
+        {
+            Center(layer.rectTransform);
+            layer.type = Image.Type.Simple;
+            layer.raycastTarget = false;
+            AspectRatioFitter fitter = layer.GetComponent<AspectRatioFitter>();
+            if (fitter == null)
+                fitter = layer.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        }
+        bottom.transform.SetSiblingIndex(0);
+        top.transform.SetSiblingIndex(1);
+        var controller = backgroundRoot.GetComponent<MainMenuBackgroundSlideshowController>();
+        if (controller == null)
+            controller = backgroundRoot.gameObject.AddComponent<MainMenuBackgroundSlideshowController>();
+        controller.ConfigureBackgroundSlideshow(root.GetComponent<BasePanel>(), sprites, bottom, top);
+    }
+    #endregion
 
     private static void ConfigureRoot(GameObject root)
     {
@@ -208,25 +250,16 @@ public static class MainMenuPrefabBuilder
         RuntimeUIPrefabBuilder.ConfigureScaleAnimation(panel);
     }
 
-    private static void BuildBackground(Transform root, Sprite sprite)
+    private static void BuildBackground(Transform root, Sprite[] sprites)
     {
         RectTransform fullScreenBackground = CreateRect("全屏背景", root);
         Stretch(fullScreenBackground);
         fullScreenBackground.gameObject.AddComponent<FullScreenRectController>();
-
-        Image background = CreateImage("世界远景", fullScreenBackground, Color.white);
-        Center(background.rectTransform);
-        background.sprite = sprite;
-        background.type = Image.Type.Simple;
-        background.raycastTarget = false;
-
-        AspectRatioFitter backgroundFitter = background.gameObject.AddComponent<AspectRatioFitter>();
-        backgroundFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-        backgroundFitter.aspectRatio = sprite.rect.width / sprite.rect.height;
-
+        CreateImage("世界远景", fullScreenBackground, Color.white);
         Image atmosphere = CreateImage("氛围压暗", fullScreenBackground, Atmosphere);
         Stretch(atmosphere.rectTransform);
         atmosphere.raycastTarget = false;
+        ConfigureBackgroundSlideshow(root.gameObject, sprites);
     }
 
     private static void BuildBrand(Transform root, TMP_FontAsset font)
