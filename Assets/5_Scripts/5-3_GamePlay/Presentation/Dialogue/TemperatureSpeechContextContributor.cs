@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Globalization;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -9,13 +10,18 @@ namespace FlatWorld.Dialogue
     /// 独立读取本地玩家最终体温与既有冷/热伤阈值，向 JSON 台词提供进入、离开事件事实。
     /// 默认连续稳定 3 秒、双向共用 20 秒冷却、恢复滞回 0.5℃；不修改体温或伤害。
     /// </summary>
-    public sealed class TemperatureSpeechContextContributor : ICharacterSpeechContextContributor
+    public sealed class TemperatureSpeechContextContributor : ICharacterSpeechContextContributor,
+        ICharacterSpeechStateChangeSource
     {
         #region 配置与注册
 
         public const string SettingsResourcePath = "Dialogue/TemperatureFeedback";
         private readonly TemperatureSpeechTransitionTracker tracker = new();
         private readonly TemperatureSpeechSettings settings;
+        private CharacterSoliloquyController observingController;
+        private Mod_Temperature observedTemperature;
+        private Coroutine confirmationRoutine;
+        private float confirmationAt = float.PositiveInfinity;
         public int ContextOrder => 170;
 
         private TemperatureSpeechContextContributor(TemperatureSpeechSettings settings)
@@ -52,6 +58,71 @@ namespace FlatWorld.Dialogue
 
         #region 权威状态观察
 
+        public void BeginObserving(CharacterSoliloquyController controller)
+        {
+            EndObserving();
+            observingController = controller;
+            Player player = controller.GetComponentInParent<Player>();
+            observedTemperature = player?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
+            if (observedTemperature == null)
+                return;
+
+            observedTemperature.OnTemperatureChanged += HandleTemperatureChanged;
+            HandleTemperatureChanged(observedTemperature.Data.CurrentTemperature);
+        }
+
+        public void EndObserving()
+        {
+            if (observedTemperature != null)
+                observedTemperature.OnTemperatureChanged -= HandleTemperatureChanged;
+            if (confirmationRoutine != null && observingController != null)
+                observingController.StopCoroutine(confirmationRoutine);
+            observingController = null;
+            observedTemperature = null;
+            confirmationRoutine = null;
+            confirmationAt = float.PositiveInfinity;
+        }
+
+        private void HandleTemperatureChanged(float currentTemperature)
+        {
+            if (observingController == null || observedTemperature == null)
+                return;
+
+            string previousTransition = tracker.ActiveTransition;
+            bool transitioned = tracker.Tick(currentTemperature,
+                    observedTemperature.SafeTemperatureMin + settings.ColdThresholdOffset,
+                    observedTemperature.SafeTemperatureMax + settings.HotThresholdOffset,
+                    Time.unscaledTime, settings);
+            if (transitioned || previousTransition != tracker.ActiveTransition)
+                observingController.NotifySpeechStateChanged();
+
+            float nextCheckAt = tracker.PendingReadyAt;
+            if (float.IsPositiveInfinity(nextCheckAt))
+            {
+                if (confirmationRoutine != null)
+                    observingController.StopCoroutine(confirmationRoutine);
+                confirmationRoutine = null;
+                confirmationAt = float.PositiveInfinity;
+                return;
+            }
+
+            if (confirmationRoutine != null && Mathf.Abs(confirmationAt - nextCheckAt) < 0.01f)
+                return;
+            if (confirmationRoutine != null)
+                observingController.StopCoroutine(confirmationRoutine);
+            confirmationAt = nextCheckAt;
+            confirmationRoutine = observingController.StartCoroutine(ConfirmTemperatureAt(nextCheckAt));
+        }
+
+        private IEnumerator ConfirmTemperatureAt(float confirmAt)
+        {
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.01f, confirmAt - Time.unscaledTime));
+            confirmationRoutine = null;
+            confirmationAt = float.PositiveInfinity;
+            if (observedTemperature != null)
+                HandleTemperatureChanged(observedTemperature.Data.CurrentTemperature);
+        }
+
         /// <summary>只消费本地角色已有体温状态；客户端由复制模块数据驱动，不另算玩法。</summary>
         public void Contribute(CharacterSpeechContext context)
         {
@@ -64,11 +135,12 @@ namespace FlatWorld.Dialogue
             // 直接提供角色实际体温，让台词配置自行判断温度条件。
             context.SetFact(CharacterSpeechFacts.TemperatureCurrent,
                 temperature.Data.CurrentTemperature.ToString("R", CultureInfo.InvariantCulture));
-            tracker.Tick(temperature.Data.CurrentTemperature,
-                temperature.SafeTemperatureMin + settings.ColdThresholdOffset,
-                temperature.SafeTemperatureMax + settings.HotThresholdOffset,
-                context.RequestedAt, settings);
-            context.SetFact(CharacterSpeechFacts.TemperatureTransition, tracker.Transition);
+            if (observingController == null)
+                tracker.Tick(temperature.Data.CurrentTemperature,
+                    temperature.SafeTemperatureMin + settings.ColdThresholdOffset,
+                    temperature.SafeTemperatureMax + settings.HotThresholdOffset,
+                    context.RequestedAt, settings);
+            context.SetFact(CharacterSpeechFacts.TemperatureTransition, tracker.ActiveTransition);
         }
 
         #endregion
@@ -111,11 +183,14 @@ namespace FlatWorld.Dialogue
         private float candidateSince;
         private float nextAllowedAt = float.NegativeInfinity;
         public string Transition { get; private set; } = string.Empty;
+        public string ActiveTransition => candidate == state ? Transition : string.Empty;
+        public float PendingReadyAt { get; private set; } = float.PositiveInfinity;
 
         /// <summary>显式时间输入，不依赖 Unity 帧、真实等待或随机数。</summary>
         public bool Tick(float temperature, float coldThreshold, float hotThreshold,
             float now, TemperatureSpeechSettings settings)
         {
+            PendingReadyAt = float.PositiveInfinity;
             ThermalState next = ResolveState(temperature, coldThreshold, hotThreshold, settings.Hysteresis);
             if (next == state)
             {
@@ -127,10 +202,15 @@ namespace FlatWorld.Dialogue
             {
                 candidate = next;
                 candidateSince = now;
+                PendingReadyAt = Mathf.Max(now + settings.DebounceSeconds, nextAllowedAt);
                 return false;
             }
-            if (now - candidateSince < settings.DebounceSeconds || now < nextAllowedAt)
+            float readyAt = Mathf.Max(candidateSince + settings.DebounceSeconds, nextAllowedAt);
+            if (now < readyAt)
+            {
+                PendingReadyAt = readyAt;
                 return false;
+            }
 
             Transition = next == ThermalState.Cold ? "ColdEnter" :
                 next == ThermalState.Hot ? "HotEnter" :

@@ -16,7 +16,6 @@ namespace FlatWorld.Dialogue
         [SerializeField, Min(0f)] private float initialDelay = 5f;
         [SerializeField, Min(1f)] private float minIdleInterval = 18f;
         [SerializeField, Min(1f)] private float maxIdleInterval = 32f;
-        [SerializeField, Min(0.1f)] private float statePollInterval = 0.5f;
         [SerializeField, Min(0.5f)] private float providerTimeout = 8f;
         [SerializeField] private bool suppressLowerPriorityWhileVisible = true;
 
@@ -26,11 +25,16 @@ namespace FlatWorld.Dialogue
             new List<ICharacterSpeechProvider>();
         private readonly List<ICharacterSpeechTriggerSource> triggerSources =
             new List<ICharacterSpeechTriggerSource>();
+        private readonly List<ICharacterSpeechStateChangeSource> changeSources =
+            new List<ICharacterSpeechStateChangeSource>();
 
         private ICharacterSpeechPresenter presenter;
         private Item actorItem;
         private Coroutine startupRoutine;
-        private Coroutine stateRoutine;
+        private Coroutine stateEvaluationRoutine;
+        private Coroutine stateRetryRoutine;
+        private float stateRetryAt = float.PositiveInfinity;
+        private bool observingStateChanges;
         private Coroutine idleRoutine;
         private Coroutine providerRoutine;
         private bool started;
@@ -68,9 +72,12 @@ namespace FlatWorld.Dialogue
         /// </summary>
         public void RebuildExtensions()
         {
+            bool resumeObserving = observingStateChanges;
+            EndObservingStateChanges();
             contributors.Clear();
             providers.Clear();
             triggerSources.Clear();
+            changeSources.Clear();
             presenter = null;
 
             MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(true);
@@ -93,6 +100,14 @@ namespace FlatWorld.Dialogue
             CharacterSpeechContributorRegistry.AppendTo(contributors);
             contributors.Sort((left, right) => left.ContextOrder.CompareTo(right.ContextOrder));
             providers.Sort((left, right) => right.ProviderOrder.CompareTo(left.ProviderOrder));
+            for (int i = 0; i < contributors.Count; i++)
+                if (contributors[i] is ICharacterSpeechStateChangeSource source)
+                    changeSources.Add(source);
+            if (resumeObserving)
+            {
+                BeginObservingStateChanges();
+                NotifySpeechStateChanged();
+            }
         }
 
         /// <summary>
@@ -155,18 +170,23 @@ namespace FlatWorld.Dialogue
         private void StopController()
         {
             requestGeneration++;
+            EndObservingStateChanges();
 
             if (startupRoutine != null)
                 StopCoroutine(startupRoutine);
-            if (stateRoutine != null)
-                StopCoroutine(stateRoutine);
+            if (stateEvaluationRoutine != null)
+                StopCoroutine(stateEvaluationRoutine);
+            if (stateRetryRoutine != null)
+                StopCoroutine(stateRetryRoutine);
             if (idleRoutine != null)
                 StopCoroutine(idleRoutine);
             if (providerRoutine != null)
                 StopCoroutine(providerRoutine);
 
             startupRoutine = null;
-            stateRoutine = null;
+            stateEvaluationRoutine = null;
+            stateRetryRoutine = null;
+            stateRetryAt = float.PositiveInfinity;
             idleRoutine = null;
             providerRoutine = null;
             presenter?.HideImmediate();
@@ -181,7 +201,8 @@ namespace FlatWorld.Dialogue
             if (!isActiveAndEnabled)
                 yield break;
 
-            stateRoutine = StartCoroutine(StateTriggerLoop());
+            BeginObservingStateChanges();
+            EvaluateStateTriggersOnce();
 
             if (initialDelay > 0f)
                 yield return new WaitForSecondsRealtime(initialDelay);
@@ -190,16 +211,67 @@ namespace FlatWorld.Dialogue
                 idleRoutine = StartCoroutine(IdleSpeechLoop());
         }
 
-        private IEnumerator StateTriggerLoop()
-        {
-            WaitForSecondsRealtime wait =
-                new WaitForSecondsRealtime(Mathf.Max(0.1f, statePollInterval));
+        #region 状态事件调度
 
-            while (isActiveAndEnabled)
-            {
+        private void BeginObservingStateChanges()
+        {
+            observingStateChanges = true;
+            for (int i = 0; i < changeSources.Count; i++)
+                try { changeSources[i].BeginObserving(this); }
+                catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        private void EndObservingStateChanges()
+        {
+            observingStateChanges = false;
+            for (int i = 0; i < changeSources.Count; i++)
+                try { changeSources[i].EndObserving(); }
+                catch (Exception exception) { Debug.LogException(exception, this); }
+        }
+
+        /// <summary>各来源上报状态变化，同一帧仅匹配一次 JSON 条件。</summary>
+        public void NotifySpeechStateChanged()
+        {
+            if (!observingStateChanges || !isActiveAndEnabled || !CanRunForActor() ||
+                stateEvaluationRoutine != null)
+                return;
+            stateEvaluationRoutine = StartCoroutine(EvaluateStateChangeNextFrame());
+        }
+
+        private IEnumerator EvaluateStateChangeNextFrame()
+        {
+            yield return null;
+            stateEvaluationRoutine = null;
+            if (observingStateChanges)
                 EvaluateStateTriggersOnce();
-                yield return wait;
+        }
+
+        private void ScheduleStateRetry(float retryAt)
+        {
+            if (float.IsPositiveInfinity(retryAt))
+            {
+                if (stateRetryRoutine != null)
+                    StopCoroutine(stateRetryRoutine);
+                stateRetryRoutine = null;
+                stateRetryAt = float.PositiveInfinity;
+                return;
             }
+
+            if (stateRetryRoutine != null && Mathf.Abs(stateRetryAt - retryAt) < 0.01f)
+                return;
+            if (stateRetryRoutine != null)
+                StopCoroutine(stateRetryRoutine);
+            stateRetryAt = retryAt;
+            stateRetryRoutine = StartCoroutine(RetryStateAt(retryAt));
+        }
+
+        private IEnumerator RetryStateAt(float retryAt)
+        {
+            yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, retryAt - Time.unscaledTime));
+            stateRetryRoutine = null;
+            stateRetryAt = float.PositiveInfinity;
+            if (observingStateChanges)
+                EvaluateStateTriggersOnce();
         }
 
         private void EvaluateStateTriggersOnce()
@@ -210,6 +282,7 @@ namespace FlatWorld.Dialogue
             CharacterSpeechContext context =
                 BuildContext(CharacterSpeechTrigger.StateChanged);
             CharacterSpeechRequest best = null;
+            float retryAt = float.PositiveInfinity;
 
             for (int i = 0; i < triggerSources.Count; i++)
             {
@@ -217,6 +290,8 @@ namespace FlatWorld.Dialogue
                 {
                     CharacterSpeechRequest candidate =
                         triggerSources[i].PollTriggeredSpeech(context);
+                    if (triggerSources[i] is ICharacterSpeechStateRetrySource retrySource)
+                        retryAt = Mathf.Min(retryAt, retrySource.NextStateRetryAt);
                     if (candidate != null &&
                         candidate.IsValid &&
                         (best == null || candidate.Priority > best.Priority))
@@ -230,9 +305,12 @@ namespace FlatWorld.Dialogue
                 }
             }
 
-            if (best != null)
-                TryPresent(best);
+            if (best != null && !TryPresent(best) && best.RetryWhileMatched)
+                retryAt = Mathf.Min(retryAt, Time.unscaledTime + 1f);
+            ScheduleStateRetry(retryAt);
         }
+
+        #endregion
 
         private IEnumerator IdleSpeechLoop()
         {

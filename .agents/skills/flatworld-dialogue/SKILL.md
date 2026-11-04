@@ -19,6 +19,9 @@ description: "FlatWorld 角色台词、Facts、请求调度、冷却、一次性
 
 - 玩家台词仅由 `Player.IsLocalProfile` 调度；一次性标记存入 `ItemSpecialDataJsonStore` 命名空间并保留其他系统字段。
 - Provider 产请求，调度器管理时序，Presenter 显示。玩法语义事件由 `FlatWorld.Dialogue` 独立桥接筛选本地玩家、完成本地化并 `Say`；GamePlay 无 Dialogue 反向依赖。
+- `StateChanged` 不再每 0.5 秒统一扫描：`CharacterSoliloquyController` 在角色就绪时调用一次初始化匹配，随后订阅贡献者的 `ICharacterSpeechStateChangeSource`，同帧多次状态通知合并为下一帧一次匹配；世界退出、资料切换及扩展重建时解绑。随机 `Idle` 计时照旧。JSON `retryWhileMatched` 在气泡阻挡时定向延迟重试，在组冷却中预约到期检查，不恢复全局轮询。
+- `HungerSpeechProvider` 订阅 `Mod_Food.DataUpdate`，仅饥饿/水分等级真正改变才通知；`TemperatureSpeechContextContributor` 订阅 `Mod_Temperature.OnTemperatureChanged` 并用一次性协程确认既有三秒去抖、冷热滞回与共享冷却。教程由 `QuestChanged`，冶金由成功里程碑，季节由 `TimeAdvanced` 通知，均只在相关语义改变时匹配。
+- `WeatherExposureSpeechProvider` 仍每 0.5 秒对玩家位置与附近燃烧源进行必需的局部空间采样（不可凭天气全局事件替代），但仅在天气阶段、雨雪、暴露或热源状态变化时通知调度器；不再额外由 Controller 固定采样整份 Facts。
 - `ConfiguredSpeechProvider` 通过 `IStartupRuntimeContentPrewarm` 在完整资源 Ready 前分帧加载台词，按 GameRes 实例及重载版本共享缓存；再次完整预热与手动重新加载会刷新缓存，避免首个状态触发同步解析 JSON。
 - 配置支持 `External`，由 `ConfiguredSpeechProvider.TrySpeakEntry(id)` 点名，复用条件、本地化与成功显示后的冷却；仅外部触发条目可留空条件。`Mod_Stamina.ConsumptionRejected` 经 `StaminaSpeechFeedback` 触发 `need_stamina.json`，工作体力不足随机提示、冷却8秒；持续环境消耗不触发。
 - `FoodConsumptionSpeechFeedback` 订阅 `FoodConsumptionService.ConsumptionCompleted`：临期阈值为腐败剩余时间≤总时长20%，临期提醒显示成功后才记录；临期优先但不消耗首次口味标记。完整物品饮用纳入食用事件，容器通用饮水不纳入。

@@ -1,4 +1,48 @@
 -- 正式条件求值器接收不同 Facts，不创建气泡或驱动真实角色。
+-- 事件化温度提醒只安排一次确认；阈值抖动不得抢跑，冷却期间不能丢失候选转换。
+test.system("dialogue", "temperature_transition", { samples = {
+    { time = 0, temperature = 25 },
+    { time = 1, temperature = 9 },
+    { time = 3.99, temperature = 9 },
+    { time = 4, temperature = 9 },
+    { time = 5, temperature = 10.4 },
+    { time = 7, temperature = 10.6 },
+    { time = 23, temperature = 10.6 },
+    { time = 24, temperature = 10.6 }
+} }, function(data)
+    local samples = data.samples
+    assert(not samples[2].changed and math.abs(samples[2].pendingAt - 4) < 0.001,
+        "低温首次越界未预约 3 秒确认")
+    assert(not samples[3].changed and samples[3].active == "", "低温稳定不足时提前发言")
+    assert(samples[4].changed and samples[4].active == "ColdEnter", "稳定低温没有触发进入事件")
+    assert(samples[5].active == "ColdEnter", "滞回范围内错误地退出低温")
+    assert(samples[6].active == "" and math.abs(samples[6].pendingAt - 24) < 0.001,
+        "开始恢复时未撤销旧提示或未遵守共享冷却")
+    assert(not samples[7].changed and samples[8].changed and samples[8].active == "ColdExit",
+        "恢复事件没有在冷却到期后触发")
+end, "温度事件进入、滞回、撤销与冷却后恢复")
+
+test.system("dialogue", "temperature_transition", { samples = {
+    { time = 0, temperature = 25 },
+    { time = 1, temperature = 41 },
+    { time = 2, temperature = 39.4 },
+    { time = 3, temperature = 25 },
+    { time = 4, temperature = 41 },
+    { time = 7, temperature = 41 },
+    { time = 8, temperature = 39.4 },
+    { time = 11, temperature = 39.4 },
+    { time = 27, temperature = 39.4 }
+} }, function(data)
+    local s = data.samples
+    assert(not s[3].changed and s[3].active == "" and s[3].pendingAt == -1,
+        "未满足三秒的高温候选恢复正常后仍被保留")
+    assert(s[4].pendingAt == -1 and s[4].active == "", "温度恢复正常后仍保留待确认的高温")
+    assert(s[6].changed and s[6].active == "HotEnter", "持续高温未触发进入事件")
+    assert(s[7].active == "" and not s[7].changed, "高温恢复候选期间旧事件未撤销")
+    assert(not s[8].changed and s[9].changed and s[9].active == "HotExit",
+        "高温退出应受去抖和冷却共同约束")
+end, "温度事件抖动取消、再次确认与热恢复")
+
 for _, row in ipairs({
     { actual = "0.5", expected = "0.3", operator = "Greater", matched = true },
     { actual = "0.5", expected = "0.5", operator = "Greater", matched = false },

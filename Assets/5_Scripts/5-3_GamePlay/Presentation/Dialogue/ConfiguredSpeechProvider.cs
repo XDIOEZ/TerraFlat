@@ -13,6 +13,7 @@ namespace FlatWorld.Dialogue
         MonoBehaviour,
         ICharacterSpeechProvider,
         ICharacterSpeechTriggerSource,
+        ICharacterSpeechStateRetrySource,
         IStartupRuntimeContentPrewarm
     {
         [SerializeField] private int providerOrder = 1000;
@@ -32,6 +33,7 @@ namespace FlatWorld.Dialogue
         private bool configLoaded;
 
         public int ProviderOrder => providerOrder;
+        public float NextStateRetryAt { get; private set; } = float.PositiveInfinity;
 
         #region 生命周期
 
@@ -128,6 +130,7 @@ namespace FlatWorld.Dialogue
         public CharacterSpeechRequest PollTriggeredSpeech(CharacterSpeechContext context)
         {
             EnsureConfigurationLoaded();
+            NextStateRetryAt = float.PositiveInfinity;
             List<CharacterSpeechConfigEntry> candidates = CollectCandidates(
                 context,
                 CharacterSpeechTrigger.StateChanged,
@@ -167,6 +170,18 @@ namespace FlatWorld.Dialogue
 
                 if (IsAvailable(entry, context.RequestedAt))
                     candidates.Add(entry);
+                else if (updateStateCache && entry.RetryWhileMatched &&
+                         (!entry.Once || !completionStore.IsCompleted(entry.CompletionFlag)))
+                {
+                    float eligibleAt = context.RequestedAt;
+                    if (nextAllowedSpeechAt.TryGetValue(entry.Id, out float entryAt))
+                        eligibleAt = Mathf.Max(eligibleAt, entryAt);
+                    if (!string.IsNullOrEmpty(entry.CooldownGroup) &&
+                        nextAllowedGroupAt.TryGetValue(entry.CooldownGroup, out float groupAt))
+                        eligibleAt = Mathf.Max(eligibleAt, groupAt);
+                    if (eligibleAt > context.RequestedAt)
+                        NextStateRetryAt = Mathf.Min(NextStateRetryAt, eligibleAt);
+                }
             }
 
             return candidates;
@@ -227,7 +242,8 @@ namespace FlatWorld.Dialogue
                 entry.Duration)
             {
                 SourceId = entry.Id,
-                CompletionFlag = entry.Once ? entry.CompletionFlag : string.Empty
+                CompletionFlag = entry.Once ? entry.CompletionFlag : string.Empty,
+                RetryWhileMatched = entry.RetryWhileMatched
             };
         }
 

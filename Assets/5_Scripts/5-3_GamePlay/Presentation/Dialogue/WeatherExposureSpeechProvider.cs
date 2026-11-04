@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using UnityEngine;
 
 namespace FlatWorld.Dialogue
@@ -7,7 +7,8 @@ namespace FlatWorld.Dialogue
     /// 读取角色所在地天气与附近燃烧源，只贡献自言自语 Facts。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class WeatherExposureSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor
+    public sealed class WeatherExposureSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor,
+        ICharacterSpeechStateChangeSource
     {
 #region 配置
 
@@ -26,10 +27,30 @@ namespace FlatWorld.Dialogue
         private float nextScanAt;
         private float localRainIntensity;
         private Collider2D[] heatSourceHits; // 复用碰撞查询结果，密集热源按需扩容。
+        private CharacterSoliloquyController observingController;
+        private bool hasObservedWeather;
+        private WeatherPhase observedPhase;
+        private bool observedRain;
+        private bool observedSnow;
+        private bool observedExposure;
+        private bool observedHeat;
 
         public bool IsRainExposed { get; private set; }
         public bool HasNearbyHeatSource { get; private set; }
         public int ContextOrder => 150;
+
+        public void BeginObserving(CharacterSoliloquyController controller)
+        {
+            observingController = controller;
+            hasObservedWeather = false;
+            RefreshExposureState();
+        }
+
+        public void EndObserving()
+        {
+            observingController = null;
+            hasObservedWeather = false;
+        }
 
 #endregion
 
@@ -45,6 +66,7 @@ namespace FlatWorld.Dialogue
 
         private void OnDisable()
         {
+            EndObserving();
             IsRainExposed = false;
             HasNearbyHeatSource = false;
         }
@@ -95,10 +117,31 @@ namespace FlatWorld.Dialogue
             nextScanAt = Time.unscaledTime + Mathf.Max(0.1f, scanInterval);
             actorItem ??= GetComponentInParent<Item>();
             WeatherMgr weather = WeatherMgr.ExistingInstance;
-            localRainIntensity = weather != null && weather.TryGetPrecipitationAt(transform.position, out float rainIntensity, out _)
-                ? rainIntensity : 0f;
+            float rainIntensity = 0f;
+            float snowIntensity = 0f;
+            bool hasPrecipitation = weather != null &&
+                                    weather.TryGetPrecipitationAt(transform.position, out rainIntensity, out snowIntensity);
+            localRainIntensity = hasPrecipitation ? rainIntensity : 0f;
             HasNearbyHeatSource = FindNearbyIgnitedHeatSource();
             IsRainExposed = localRainIntensity > 0f && !HasNearbyHeatSource;
+
+            // 保留空间热源采样，只在天气或暴露语义改变时通知台词匹配。
+            var snapshot = default(FlatWorld.WorldModel.RegionalWeatherSnapshot);
+            bool hasWeather = weather != null && weather.TryGetWeatherAt(transform.position, out snapshot);
+            WeatherPhase phase = hasWeather ? WeatherMgr.DescribeWeatherPhase(in snapshot) : WeatherPhase.Clear;
+            bool rain = hasWeather && snapshot.PrecipitationIntensity > 0f;
+            bool snow = hasWeather && hasPrecipitation && snowIntensity > 0f;
+            bool changed = hasObservedWeather &&
+                           (observedPhase != phase || observedRain != rain || observedSnow != snow ||
+                            observedExposure != IsRainExposed || observedHeat != HasNearbyHeatSource);
+            hasObservedWeather = true;
+            observedPhase = phase;
+            observedRain = rain;
+            observedSnow = snow;
+            observedExposure = IsRainExposed;
+            observedHeat = HasNearbyHeatSource;
+            if (changed)
+                observingController?.NotifySpeechStateChanged();
         }
 
         private bool FindNearbyIgnitedHeatSource()

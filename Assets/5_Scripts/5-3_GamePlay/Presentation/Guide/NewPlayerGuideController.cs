@@ -12,7 +12,8 @@ namespace FlatWorld.Guide
     /// 本组件只贡献教程 Facts 并消费玩法成功事件，所有文字和显示时机由既有自言自语系统负责。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class NewPlayerGuideController : MonoBehaviour, ICharacterSpeechContextContributor
+    public sealed class NewPlayerGuideController : MonoBehaviour, ICharacterSpeechContextContributor,
+        ICharacterSpeechStateChangeSource
     {
         #region 状态
 
@@ -23,6 +24,9 @@ namespace FlatWorld.Guide
         private PlayerQuestRuntime questRuntime;
         private readonly HashSet<string> pendingMilestones = new(StringComparer.Ordinal);
         private bool isActiveForPlayer;
+        private CharacterSoliloquyController observingController;
+        private bool observedEligibility;
+        private NewPlayerGuideStage observedStage;
         private const string TrueFact = "True";
         private const string FalseFact = "False";
 
@@ -42,6 +46,41 @@ namespace FlatWorld.Guide
                     ? stage
                     : NewPlayerGuideStage.OpenInventory;
             }
+        }
+
+        public void BeginObserving(CharacterSoliloquyController controller)
+        {
+            EndObserving();
+            observingController = controller;
+            observedEligibility = isActiveForPlayer;
+            observedStage = CurrentStage;
+            if (questRuntime != null)
+                questRuntime.QuestChanged += HandleQuestChanged;
+        }
+
+        public void EndObserving()
+        {
+            if (questRuntime != null)
+                questRuntime.QuestChanged -= HandleQuestChanged;
+            observingController = null;
+        }
+
+        private void HandleQuestChanged(QuestSnapshot snapshot)
+        {
+            if (snapshot != null && string.Equals(snapshot.QuestId, NewPlayerGuideIds.QuestId, StringComparison.Ordinal))
+                NotifyIfGuideFactsChanged();
+        }
+
+        private void NotifyIfGuideFactsChanged()
+        {
+            if (observingController == null)
+                return;
+            NewPlayerGuideStage stage = CurrentStage;
+            if (observedEligibility == isActiveForPlayer && observedStage == stage)
+                return;
+            observedEligibility = isActiveForPlayer;
+            observedStage = stage;
+            observingController.NotifySpeechStateChanged();
         }
 
         #endregion
@@ -82,6 +121,7 @@ namespace FlatWorld.Guide
 
         private void OnDisable()
         {
+            EndObserving();
             if (actor != null)
                 actor.ProfileContextChanged -= HandleProfileContextChanged;
 
@@ -91,7 +131,7 @@ namespace FlatWorld.Guide
                 questManager.RuntimeRemoving -= HandleQuestRuntimeRemoving;
             }
             questManager = null;
-            questRuntime = null;
+            UnbindQuestRuntime();
 
             GameplayProgressEvents.InventoryOpened -= HandleInventoryOpened;
             GameplayProgressEvents.PickupSucceeded -= HandlePickupSucceeded;
@@ -204,6 +244,7 @@ namespace FlatWorld.Guide
         private void HandleProfileContextChanged()
         {
             RefreshEligibility();
+            NotifyIfGuideFactsChanged();
         }
 
         private void HandleQuestRuntimeReady(Player player, PlayerQuestRuntime runtime)
@@ -212,13 +253,17 @@ namespace FlatWorld.Guide
             {
                 RefreshEligibility();
                 RefreshMaterialMilestone();
+                NotifyIfGuideFactsChanged();
             }
         }
 
         private void HandleQuestRuntimeRemoving(Player player)
         {
             if (ReferenceEquals(actor, player))
-                questRuntime = null;
+            {
+                UnbindQuestRuntime();
+                NotifyIfGuideFactsChanged();
+            }
         }
 
         private void ResolveActor()
@@ -232,10 +277,11 @@ namespace FlatWorld.Guide
             if (actor == null || !actor.IsLocalProfile || actor.Data == null)
             {
                 isActiveForPlayer = false;
-                questRuntime = null;
+                UnbindQuestRuntime();
                 loadedPlayerData = null;
                 loadedProfileId = null;
                 pendingMilestones.Clear();
+                NotifyIfGuideFactsChanged();
                 return;
             }
 
@@ -244,12 +290,13 @@ namespace FlatWorld.Guide
             if (profileChanged || !isActiveForPlayer)
             {
                 pendingMilestones.Clear();
-                questRuntime = null;
+                UnbindQuestRuntime();
                 isActiveForPlayer = actor.IsNewProfile || NewPlayerGuideProgressStore.HasEligibility(actor.Data);
                 if (!isActiveForPlayer)
                 {
                     loadedPlayerData = null;
                     loadedProfileId = null;
+                    NotifyIfGuideFactsChanged();
                     return;
                 }
 
@@ -259,10 +306,19 @@ namespace FlatWorld.Guide
                     NewPlayerGuideProgressStore.EstablishEligibility(actor.Data);
                 BindQuestRuntimeWhenReady();
                 RefreshMaterialMilestone();
+                NotifyIfGuideFactsChanged();
                 return;
             }
 
             BindQuestRuntimeWhenReady();
+            NotifyIfGuideFactsChanged();
+        }
+
+        private void UnbindQuestRuntime()
+        {
+            if (questRuntime != null)
+                questRuntime.QuestChanged -= HandleQuestChanged;
+            questRuntime = null;
         }
 
         // 只绑定管理器已有的运行时，等待期间的里程碑仅暂存于当前角色。
@@ -271,7 +327,7 @@ namespace FlatWorld.Guide
             if (questRuntime != null && questRuntime.IsEnabled &&
                 ReferenceEquals(questRuntime.PlayerData, loadedPlayerData))
                 return;
-            questRuntime = null;
+            UnbindQuestRuntime();
             if (questManager == null || !questManager.TryGetRuntime(actor, out PlayerQuestRuntime runtime) ||
                 !runtime.IsEnabled || !ReferenceEquals(runtime.PlayerData, loadedPlayerData))
                 return;
@@ -284,6 +340,8 @@ namespace FlatWorld.Guide
             }
 
             questRuntime = runtime;
+            if (observingController != null)
+                questRuntime.QuestChanged += HandleQuestChanged;
             foreach (string milestone in pendingMilestones)
                 PublishMilestoneToQuestRuntime(milestone);
             pendingMilestones.Clear();

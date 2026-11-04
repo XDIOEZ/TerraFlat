@@ -31,6 +31,7 @@ namespace FlatWorld.Dialogue
             GameplayTestSystemProbe.Register("dialogue", "help_catalog", CaptureHelpCatalog);
             GameplayTestSystemProbe.Register("dialogue", "help_command", CaptureHelpCommand);
             GameplayTestSystemProbe.Register("dialogue", "stamina_rejection", CaptureStaminaRejection);
+            GameplayTestSystemProbe.Register("dialogue", "temperature_transition", CaptureTemperatureTransition);
 #if UNITY_EDITOR
             GameplayTestSystemProbe.Register("player", "collider_visual_alignment", PlayerColliderVisualAlignment);
 #endif
@@ -99,6 +100,40 @@ namespace FlatWorld.Dialogue
 #endif
 
         #region 正式条件与配置采样
+
+        /// <summary>用真实温度阈值状态机验证事件确认、去抖和冷却预约，不依赖墙钟等待。</summary>
+        private static JObject CaptureTemperatureTransition(JObject args)
+        {
+            var settings = new TemperatureSpeechSettings
+            {
+                DebounceSeconds = (float)GameplayTestSystemProbe.Number(args, "debounce", 3),
+                CooldownSeconds = (float)GameplayTestSystemProbe.Number(args, "cooldown", 20),
+                Hysteresis = (float)GameplayTestSystemProbe.Number(args, "hysteresis", 0.5),
+                ColdThresholdOffset = 0f,
+                HotThresholdOffset = 0f
+            };
+            settings.Validate();
+            var tracker = new TemperatureSpeechTransitionTracker();
+            var results = new JArray();
+            if (args["samples"] is JArray samples)
+            {
+                foreach (JObject sample in samples)
+                {
+                    float time = (float)GameplayTestSystemProbe.Number(sample, "time", 0);
+                    float temperature = (float)GameplayTestSystemProbe.Number(sample, "temperature", 25);
+                    bool changed = tracker.Tick(temperature, 10f, 40f, time, settings);
+                    results.Add(new JObject
+                    {
+                        ["changed"] = changed,
+                        ["active"] = tracker.ActiveTransition,
+                        ["pendingAt"] = float.IsPositiveInfinity(tracker.PendingReadyAt)
+                            ? -1f
+                            : tracker.PendingReadyAt
+                    });
+                }
+            }
+            return new JObject { ["samples"] = results };
+        }
 
         private static JObject CaptureCondition(JObject args)
         {

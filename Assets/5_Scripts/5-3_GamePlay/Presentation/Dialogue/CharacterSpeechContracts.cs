@@ -47,6 +47,9 @@ namespace FlatWorld.Dialogue
         /// <summary>一次性台词的完成标记；仅在成功显示后写入玩家存档。</summary>
         public string CompletionFlag;
 
+        /// <summary>状态台词被阻挡时可在条件仍成立期间重试。</summary>
+        public bool RetryWhileMatched;
+
         #endregion
 
         public bool IsValid => !string.IsNullOrWhiteSpace(Text);
@@ -134,6 +137,19 @@ namespace FlatWorld.Dialogue
     public interface ICharacterSpeechTriggerSource
     {
         CharacterSpeechRequest PollTriggeredSpeech(CharacterSpeechContext context);
+    }
+
+    /// <summary>事实贡献者只在语义状态变化时通知调度器，不让玩法模块依赖对话系统。</summary>
+    public interface ICharacterSpeechStateChangeSource
+    {
+        void BeginObserving(CharacterSoliloquyController controller);
+        void EndObserving();
+    }
+
+    /// <summary>仅为等待冷却的状态台词提供下一次到期时间，不启动持续轮询。</summary>
+    public interface ICharacterSpeechStateRetrySource
+    {
+        float NextStateRetryAt { get; }
     }
 
     public interface ICharacterSpeechPresenter

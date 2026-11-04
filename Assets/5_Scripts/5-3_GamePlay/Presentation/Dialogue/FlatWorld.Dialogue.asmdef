@@ -9,6 +9,7 @@
         "FlatWorld.Localization",
         "FlatWorld.Utilities",
         "UI",
+        "Kybernetik.UltEvents",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

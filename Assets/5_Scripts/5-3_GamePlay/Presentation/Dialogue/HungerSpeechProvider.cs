@@ -8,7 +8,8 @@ namespace FlatWorld.Dialogue
     /// 台词、优先级、显示时间和冷却均由 JSON 配置负责。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class HungerSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor
+    public sealed class HungerSpeechProvider : MonoBehaviour, ICharacterSpeechContextContributor,
+        ICharacterSpeechStateChangeSource
     {
         #region 饥饿等级
 
@@ -40,10 +41,52 @@ namespace FlatWorld.Dialogue
 
         private Item actorItem;
         private Mod_Food food;
+        private CharacterSoliloquyController observingController;
+        private HungerTier observedHungerTier;
+        private HydrationTier observedHydrationTier;
 
         #endregion
 
         public int ContextOrder => 100;
+
+        #region 状态变化监听
+
+        public void BeginObserving(CharacterSoliloquyController controller)
+        {
+            EndObserving();
+            food = null;
+            observingController = controller;
+            if (!TryResolveFood())
+                return;
+
+            observedHungerTier = GetTier(GetHungerRate());
+            observedHydrationTier = GetHydrationTier(GetHydrationRate());
+            food.DataUpdate += HandleFoodDataUpdated;
+        }
+
+        public void EndObserving()
+        {
+            if (food != null)
+                food.DataUpdate -= HandleFoodDataUpdated;
+            observingController = null;
+        }
+
+        private void HandleFoodDataUpdated()
+        {
+            if (observingController == null || !TryResolveFood())
+                return;
+
+            HungerTier hungerTier = GetTier(GetHungerRate());
+            HydrationTier hydrationTier = GetHydrationTier(GetHydrationRate());
+            if (hungerTier == observedHungerTier && hydrationTier == observedHydrationTier)
+                return;
+
+            observedHungerTier = hungerTier;
+            observedHydrationTier = hydrationTier;
+            observingController.NotifySpeechStateChanged();
+        }
+
+        #endregion
 
         #region Fact 贡献
 

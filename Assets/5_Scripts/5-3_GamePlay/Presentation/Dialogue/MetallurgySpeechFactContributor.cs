@@ -9,15 +9,20 @@ namespace FlatWorld.Dialogue
     /// Resources/Dialogue/Soliloquy 下的 JSON 统一控制，避免玩法状态与表现层文字耦合。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class MetallurgySpeechFactContributor : MonoBehaviour, ICharacterSpeechContextContributor
+    public sealed class MetallurgySpeechFactContributor : MonoBehaviour, ICharacterSpeechContextContributor,
+        ICharacterSpeechStateChangeSource
     {
         #region 状态
 
         private Player actor;
         private Data_Player loadedPlayerData;
         private PlayerMetallurgyProgressStore progress;
+        private CharacterSoliloquyController observingController;
 
         public int ContextOrder => 220;
+
+        public void BeginObserving(CharacterSoliloquyController controller) => observingController = controller;
+        public void EndObserving() => observingController = null;
 
         #endregion
 
@@ -41,6 +46,7 @@ namespace FlatWorld.Dialogue
 
         private void OnDisable()
         {
+            EndObserving();
             if (actor != null)
                 actor.ProfileContextChanged -= HandleProfileContextChanged;
 
@@ -69,14 +75,14 @@ namespace FlatWorld.Dialogue
 
         private void HandleSmeltSucceeded(Player eventActor, string outputItemId)
         {
-            if (CanHandle(eventActor))
-                progress.RecordSmeltedOutput(outputItemId);
+            if (CanHandle(eventActor) && progress.RecordSmeltedOutput(outputItemId))
+                observingController?.NotifySpeechStateChanged();
         }
 
         private void HandleCraftSucceeded(Player eventActor, string outputItemId)
         {
-            if (CanHandle(eventActor))
-                progress.RecordCraftedOutput(outputItemId);
+            if (CanHandle(eventActor) && progress.RecordCraftedOutput(outputItemId))
+                observingController?.NotifySpeechStateChanged();
         }
 
         #endregion
