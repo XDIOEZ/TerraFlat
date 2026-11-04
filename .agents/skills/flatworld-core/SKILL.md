@@ -33,7 +33,7 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 - 业务只读 `GameRuleConfiguration.Current` 或订阅 `Changed`，不查询难度；外部通过 `SetModifier(source, callback, priority)` / `RemoveModifier` 修改候选。每次从独立基础值重建，来源按优先级和首次注册顺序执行；失败不替换来源或快照，通知期不允许重入写入。难度为优先级 -1000 的来源，机制可由后续外部来源或业务自身公开开关覆盖。难度定义复用分域只读 RuleSet 复制倍率，草稿、规则候选和最终发布各自独立。`SaveDataMgr.SaveData` 换根时由 `GameWorldRuleSession` 一次装配，退出设空档撤销会话来源；新建难度写入完成后再发布。
 
 - GameManager 是新建、继续、运行、退出的权威。动态维度以 WorldKey 创建 Scene 并复用 RunWorld，不入 Build Settings；离线太空恢复使用静态 SpaceScene 引导，再按 SpaceSector__X__Y 创建星区场景。
-- `SaveAndRestart → BackToHelloScene_Coroutine(requireSuccessfulSave:true)` 在撤除世界/网络前同步写盘，失败保留会话；成功清理后由等待旧 PID 退出的助手重开 Windows/Linux 运行包。MOD 菜单复用 `TryRestartApplication`；Editor/其它平台明确不支持自动重启，不能把角色死亡当重启。
+- `SaveAndRestart → BackToHelloScene_Coroutine(requireSuccessfulSave:true)` 在撤除世界/网络前同步写盘，失败保留会话；成功清理后由等待旧 PID 退出的助手重开 Windows/Linux 运行包。MOD 菜单的“重启”及关闭确认统一复用 `TryRestartApplication`，所有 MOD 类型均退出旧进程并由新进程完整加载资源，不再调用菜单原位重载，也不等待后台预热完成；Editor/其它平台明确不支持自动重启，不能把角色死亡当重启。
 - 迁移开始、等待加载页之前冻结源显示 Scene，再传给 `LoadPresentationSceneAndInvokeWhenReady`；乘员先退出太空时，星区租约会在等待加载页期间回收。复用或 Additive 加载目标后只卸载该源 Scene，失败恢复也只清理本次明确指定的目标 Scene。不能误用回退激活的船内 Scene；船内世界及物理岛保持原实例，不能用 Single 连带卸载或因显示切换重建。
 - 联机本机 realm 切换走 GameManager.Space 的观察者接口，只改变本机显示与动态场景归属；不全局迁移、释放地表或重锁输入。换星区保留浮动原点，退出世界清本机显示缓存；地表恢复必须对应已保留的真实 ChunkMgr 运行时，缺目标时拒绝并提示。太空玩家关闭默认 Rigidbody2D 模拟，运动和跨界接触用纯数据，回地表恢复原值。
 - 地表/太空往返保留会话纯数据 `WorldRuntime`，回程重新建立场景侧区块调度器并绑定视图；表现缓存开关只决定显示壳和星区实例复用，不能据此销毁会话模型。正式退出才释放会话模型。

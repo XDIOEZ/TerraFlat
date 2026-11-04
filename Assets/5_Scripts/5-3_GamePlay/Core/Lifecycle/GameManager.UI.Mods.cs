@@ -81,7 +81,7 @@ public partial class GameManager
         });
         panel.SetButtonOnClick("打开目录", () => OpenModsFolder(state));
         panel.SetButtonOnClick("启用切换", () => ToggleSelectedMod(state));
-        panel.SetButtonOnClick("应用重载", () => ReloadMainMenuMods(state));
+        BindModRestartButton(panel, "应用重载", "重启", () => RestartApplicationForModChanges(state));
         panel.SetButtonOnClick("上一页", () => { state.Page--; RenderModMenu(state); });
         panel.SetButtonOnClick("下一页", () => { state.Page++; RenderModMenu(state); });
         for (int slot = 0; slot < ModRowsPerPage; slot++)
@@ -191,7 +191,7 @@ public partial class GameManager
                 confirmation.Close();
                 state.Panel.Close();
             });
-            BindModRestartButton(confirmation, MainMenuExitConfirmationConfirmButtonKey, "重启", () => RestartForModSelection(state, confirmation));
+            BindModRestartButton(confirmation, MainMenuExitConfirmationConfirmButtonKey, "重启", () => RestartApplicationForModChanges(state, confirmation));
             confirmation.PrepareForGamepadNavigation(MainMenuExitConfirmationCancelButtonKey);
             confirmation.Open();
         }
@@ -210,19 +210,21 @@ public partial class GameManager
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(callback);
         if (label != null && button.GetComponentInChildren<TextMeshProUGUI>(true) is { } text)
-            text.text = FlatWorldLocalizationService.GetUiText(label);
+            LocalizedTextRuntime.SetText(text, label);
     }
 
     /// <summary>仅运行包启动当前可执行文件；编辑器不停止玩家正在运行的会话。</summary>
-    private static void RestartForModSelection(ModMenuState state, BasePanel confirmation)
+    private static void RestartApplicationForModChanges(ModMenuState state, BasePanel confirmation = null)
     {
+        state.DragController?.CancelDrag();
         if (TryRestartApplication(out string error))
         {
-            confirmation.Close();
+            confirmation?.Close();
+            state.Panel.Close();
             return;
         }
         state.Notice = error;
-        confirmation.Close();
+        confirmation?.Close();
         RenderModMenu(state);
     }
 
@@ -298,17 +300,13 @@ public partial class GameManager
         if (state.Panel == null) return;
         state.Page = Mathf.Clamp(state.Page, 0, Math.Max(0, (state.Mods.Count - 1) / ModRowsPerPage));
         ModRuntimeManager manager = GetModManager();
-        bool managedRestartRequired = manager.HasManagedMods ||
-            state.Mods.Any(value => value.Valid && value.Enabled && value.HasManagedCode);
         SetModText(state.Panel, "加载状态", manager.IsSafeModeActive
             ? "安全模式：本次启动已跳过全部 MOD"
             : $"当前加载 {manager.LoadedManifests.Count} 个 MOD · {manager.State}");
         SetModText(state.Panel, "目录路径", manager.ModsRootPath);
         SetModText(state.Panel, "页码", $"{state.Page + 1} / {Math.Max(1, (state.Mods.Count + ModRowsPerPage - 1) / ModRowsPerPage)}");
         SetModText(state.Panel, "操作提示", string.IsNullOrWhiteSpace(state.Notice)
-            ? managedRestartRequired
-                ? "当前启用了 C# MOD：配置保存后请重启游戏，不能在进程内热替换补丁。"
-                : "启停与顺序保存到本机配置；加载中的修改需等本次完成后重载。"
+            ? "启停与顺序保存到本机配置；点击“重启”后重新加载全部资源。"
             : state.Notice);
 
         for (int slot = 0; slot < ModRowsPerPage; slot++)
@@ -350,10 +348,6 @@ public partial class GameManager
         SetModButton(state.Panel, "启用切换", selected != null);
         SetModButton(state.Panel, "上一页", state.Page > 0);
         SetModButton(state.Panel, "下一页", (state.Page + 1) * ModRowsPerPage < state.Mods.Count);
-        bool resourcesCanReload = GameRes.Instance != null &&
-            GameRes.Instance.LoadState != ResourceLoadState.Loading &&
-            GameRes.Instance.LoadState != ResourceLoadState.Disposed;
-        SetModButton(state.Panel, "应用重载", resourcesCanReload && !managedRestartRequired);
         state.Panel.RefreshGamepadNavigationState();
     }
 
@@ -562,8 +556,7 @@ public partial class GameManager
                 if (enable && info.DisabledByFile)
                     GetModManager().SetPackageFolderDisabled(info.FolderPath, false);
                 ModProfileStore.SetEnabled(info.Id, enable);
-                state.Notice = $"已{(enable ? "启用" : "禁用")} {info.Id}。" +
-                    (info.HasManagedCode ? "C# MOD 需重启游戏后生效。" : "可在加载完成后点“应用并重载”。");
+                state.Notice = $"已{(enable ? "启用" : "禁用")} {info.Id}。重启游戏后生效。";
             }
             RefreshModMenu(state);
         }
@@ -602,24 +595,6 @@ public partial class GameManager
         {
             state.Notice = "保存顺序失败：" + error.Message;
             RefreshModMenu(state);
-        }
-    }
-
-    private static void ReloadMainMenuMods(ModMenuState state)
-    {
-        ModRuntimeManager manager = GetModManager();
-        if (manager.HasManagedMods || state.Mods.Any(value => value.Valid && value.Enabled && value.HasManagedCode))
-        {
-            state.Notice = "已启用 C# MOD，请重启游戏应用；运行中的补丁不能安全热替换。";
-            RenderModMenu(state);
-            return;
-        }
-        state.Panel.Close();
-        if (!GameRes.Instance.TryReloadResources())
-        {
-            state.Notice = "现在无法重载资源，请等加载结束后重试。";
-            state.Panel.Open();
-            RenderModMenu(state);
         }
     }
 
