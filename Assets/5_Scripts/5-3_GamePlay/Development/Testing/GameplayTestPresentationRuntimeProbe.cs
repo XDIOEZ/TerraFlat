@@ -128,7 +128,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         yield return null;
     }
 
-    private static IEnumerator ChangeSettingsLocale(TMP_Dropdown language, TMP_Text text,
+    private static IEnumerator ChangeSettingsLocale(TMP_Dropdown language, TMP_Text text, TMP_Text languageStatus,
         int index, string localeCode, string expectedText, JObject sample)
     {
         string beforeLocale = FlatWorldLocalizationService.CurrentLocaleCode;
@@ -154,6 +154,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
             sample["changeRequested"] = changeRequested;
             sample["languageEventReceived"] = received;
             sample["dropdownIndex"] = language != null ? language.value : -1;
+            sample["nativeOptionLabels"] = language != null
+                ? new JArray(language.options.Select(option => option.text)) : null;
+            sample["visibleLanguage"] = language?.captionText != null ? language.captionText.text : null;
+            sample["languageStatus"] = languageStatus != null ? languageStatus.text : null;
             sample["text"] = text != null ? text.text : null;
             sample["textInstanceId"] = text != null ? text.GetInstanceID() : 0;
             sample["elapsedSeconds"] = Time.realtimeSinceStartup - started;
@@ -324,8 +328,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
             var binder = saveText != null ? saveText.GetComponent<LocalizedTextBinder>() : null;
             var language = panel.GetComponentsInChildren<TMP_Dropdown>(true)
                 .SingleOrDefault(value => value.name == GameManager.MainMenuSettingsLanguageDropdownKey);
+            TMP_Text languageStatus = panel.GetText(GameManager.MainMenuSettingsLanguageStatusTextKey);
             var volume = panel.GetComponentsInChildren<Slider>(true).SingleOrDefault(value => value.name == "MasterVolume");
-            if (saveButton == null || saveText == null || binder == null || !binder.HasBinding || language == null || volume == null)
+            if (saveButton == null || saveText == null || binder == null || !binder.HasBinding ||
+                language == null || languageStatus == null || volume == null)
                 throw new InvalidOperationException("正式设置窗口缺少保存按钮、语言下拉、音量滑块或正式 TMP 翻译绑定。");
             yield return WaitForPanel(panel);
 
@@ -342,16 +348,16 @@ public static partial class GameplayTestPresentationRuntimeProbe
             var chinese = new JObject();
             var english = new JObject();
             var discardedChinese = new JObject();
-            yield return ChangeSettingsLocale(language, saveText, zh, "zh-CN", expectedZh, chinese);
+            yield return ChangeSettingsLocale(language, saveText, languageStatus, zh, "zh-CN", expectedZh, chinese);
             string observedZh = saveText.text;
             volume.value = .4f;
-            yield return ChangeSettingsLocale(language, saveText, en, "en", expectedEn, english);
+            yield return ChangeSettingsLocale(language, saveText, languageStatus, en, "en", expectedEn, english);
             string observedEn = saveText.text;
             bool unsaved = SettingsProviderRegistry.HasEditSessionChanges();
             saveButton.onClick.Invoke();
             bool committedClean = !SettingsProviderRegistry.HasEditSessionChanges();
             volume.value = .7f;
-            yield return ChangeSettingsLocale(language, saveText, zh, "zh-CN", expectedZh, discardedChinese);
+            yield return ChangeSettingsLocale(language, saveText, languageStatus, zh, "zh-CN", expectedZh, discardedChinese);
             bool changedAfterSave = SettingsProviderRegistry.HasEditSessionChanges();
             panel.Close();
             bool discardedLocale = FlatWorldLocalizationService.CurrentLocaleCode == "en";

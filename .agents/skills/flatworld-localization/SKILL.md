@@ -25,4 +25,5 @@ description: "FlatWorld 多语言服务、文本绑定、内容/UI 字符串表�
 - `RuntimeLocalizationOverrides.additional.json` 保存补充运行时 UI 与物品说明译文，由 Setup 定向同步菜单读入。
 - 英文 UI 翻译先匹配完整文本覆盖，再做关键词回退；中文为 fallback。玩家自由输入与开发日志独立于正式表，节点名保持绑定身份。
 - 语言选项由服务的 `SettingsProvider` 以 `ISettingsDropdown` 提供，主菜单和游戏内共用 `LanguageSettingsPanelLauncher` 及语言页；Locale 代码为稳定 `SettingOption.Id`，语言资源由 Locale、String Table、同步工具和 Addressables 共同组成。
+- 语言下拉选项的 `SettingOption.DisplayName` 固定为该语言的原生名称（如 `简体中文`、`English`），不经过 `GetUiText`；提示文字可翻译，但语言名称不能跟随界面语言变化。
 - 菜单 `FlatWorld/Localization/Sync Item Names` 只同步物品名；`Setup Default Tables` 同步全部内容与 UI。

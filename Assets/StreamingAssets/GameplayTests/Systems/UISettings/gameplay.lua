@@ -120,6 +120,14 @@ test.runtime("ui_settings", "settings_locale_open", {}, function(data)
     assert(data.expectedChinese == "保存" and data.observedChinese == data.expectedChinese, "正式中文字符串表或 TMP Binder 没有刷新")
     assert(data.expectedEnglish ~= nil and #data.expectedEnglish > 0 and data.expectedEnglish ~= data.expectedChinese, "英文正式表缺项或仍是中文回退")
     assert(data.chineseSwitch.completed and data.englishSwitch.completed and data.discardedChineseSwitch.completed, "正式语言事件或 TMP 刷新没有在有界等待内完成")
+    for _, state in ipairs({ data.chineseSwitch, data.englishSwitch, data.discardedChineseSwitch }) do
+        assert(#state.nativeOptionLabels == 2 and state.nativeOptionLabels[1] == "简体中文"
+            and state.nativeOptionLabels[2] == "English", "语言选项名称不应随当前界面语言翻译")
+    end
+    assert(data.chineseSwitch.visibleLanguage == "简体中文" and data.englishSwitch.visibleLanguage == "English"
+        and data.discardedChineseSwitch.visibleLanguage == "简体中文", "语言下拉当前显示名称未保留原生写法")
+    assert(data.chineseSwitch.languageStatus == "游戏语言: 简体中文"
+        and data.englishSwitch.languageStatus == "Language: English", "语言状态未正确组合本地化提示和原生名称")
     assert(data.englishSwitch.changeRequested and data.englishSwitch.languageEventReceived and data.englishSwitch.actualLocale == "en", "语言下拉没有通过正式语言事件完成英语切换")
     assert(data.observedEnglish == data.expectedEnglish and data.nodeNamePreserved, "语言下拉没有驱动真实文本或改了绑定节点身份")
     assert(data.sameBoundText and data.textInstanceId == data.currentTextInstanceId and data.binderInstanceId == data.currentBinderInstanceId, "语言切换替换了原 TMP 节点或翻译 Binder")

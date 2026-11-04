@@ -49,6 +49,9 @@ public sealed class LanguageSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         }
 
         FlatWorldLocalizationService.Initialize();
+        // 运行时绑定防止自动本地化扫描把下拉标题和语言状态重新翻译。
+        LocalizedTextRuntime.SetProvider(languageDropdown.captionText, GetSelectedLanguageNativeName);
+        LocalizedTextRuntime.SetProvider(statusText, GetSelectedLanguageStatusText);
         languageDropdown.onValueChanged.AddListener(OnLanguageSelected);
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
         RefreshView();
@@ -84,7 +87,7 @@ public sealed class LanguageSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         if (options != null)
         {
             for (int index = 0; index < options.Count; index++)
-                labels.Add(FlatWorldLocalizationService.GetUiText(options[index]?.DisplayName ?? string.Empty));
+                labels.Add(options[index]?.DisplayName ?? string.Empty);
         }
 
         languageDropdown.ClearOptions();
@@ -92,9 +95,21 @@ public sealed class LanguageSettingsPanelLauncher : MonoBehaviour, ISettingsPage
         int selectedIndex = Mathf.Clamp(languageSetting.SelectedIndex, 0, Mathf.Max(0, labels.Count - 1));
         languageDropdown.SetValueWithoutNotify(selectedIndex);
         languageDropdown.RefreshShownValue();
-        statusText.text = selectedIndex == 0
-            ? FlatWorldLocalizationService.GetUiText("当前语言：简体中文")
-            : FlatWorldLocalizationService.GetUiText("当前语言：English");
+        statusText.text = GetSelectedLanguageStatusText();
+    }
+
+    private string GetSelectedLanguageNativeName()
+    {
+        IReadOnlyList<SettingOption> options = languageSetting?.Options;
+        int index = languageSetting?.SelectedIndex ?? -1;
+        return options != null && index >= 0 && index < options.Count
+            ? options[index]?.DisplayName ?? string.Empty
+            : string.Empty;
+    }
+
+    private string GetSelectedLanguageStatusText()
+    {
+        return FlatWorldLocalizationService.GetUiText("游戏语言") + ": " + GetSelectedLanguageNativeName();
     }
 
     private void OnLanguageSelected(int selectedIndex)
