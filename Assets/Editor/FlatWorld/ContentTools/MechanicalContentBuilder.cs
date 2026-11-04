@@ -57,6 +57,7 @@ public static class MechanicalContentBuilder
         try
         {
             root.SetActive(false); root.name = name;
+            PhysicalDeviceArtworkPrefabBuilder.RemoveBeforeRebuildingControls(root);
             var view = root.GetComponent<MechanicalPanelView>() ?? root.AddComponent<MechanicalPanelView>();
             view.Title = Find<TMP_Text>(root, "FWUI_标题");
             view.Status = Find<TMP_Text>(root, "FWUI_FooterHint");
@@ -97,6 +98,7 @@ public static class MechanicalContentBuilder
                 if (text.name == "FWUI_眉题" || text.name.StartsWith("FWUI_SectionEyebrow", StringComparison.Ordinal))
                     text.gameObject.SetActive(false);
             root.SetActive(true);
+            PhysicalDeviceArtworkPrefabBuilder.Configure(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally { PrefabUtility.UnloadPrefabContents(root); }

@@ -37,6 +37,15 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         this.gasCapacity01 = gasCapacity01;
         panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(prefabId));
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException(prefabId + " 缺少正式视图绑定。");
+        Mod_MechanicalNode artworkModule = owner?.itemMods?.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId);
+        panel.BindPhysicalDeviceArtwork(owner?.itemData?.IDName, () =>
+        {
+            MachineEntity node = artworkModule != null ? artworkModule.Node : null;
+            if (node != null) return PhysicalDeviceArtworkBindings.ReadMachine(node, view);
+            var state = PhysicalDeviceArtworkBindings.ReadGauges(view);
+            state.Progress = processor?.Progress01 ?? 0f;
+            return state;
+        });
         view.SetProcessingVisible(processor != null);
         view.SetBatteryVisible(batteryCharge01 != null);
         view.SetGasCapacityVisible(gasCapacity01 != null);
@@ -64,6 +73,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically, batteryCharge01, gasCapacity01)
     {
         mechanicalOwner = owner;
+        panel.BindPhysicalDeviceArtwork(owner);
         // 世界设备面板不能锁住自身交互，否则发送器会立即取消交互并关窗。
         panel.SetGameplayInputBlocking(false);
         panel.PrepareForGamepadNavigation(closeOnCancel: true);

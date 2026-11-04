@@ -25,6 +25,9 @@ public sealed class ManualProcessingItemPanelSession : IMachinePanelSession
         {
             panel = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab("UI_Anvil"));
             panel.InitClosed();
+            panel.BindPhysicalDeviceArtwork(owner.itemData.IDName, () =>
+                new PhysicalDeviceArtworkView.OperatingState { Progress = runtime.Processor.Progress01,
+                    InputAttachment = PhysicalDeviceArtworkBindings.ReadInstalledToolSprite(runtime.Tool) });
             panel.PrepareForGameplayWindow();
             panel.Closed += ClearInteraction;
             InventoryPanelLayout.ApplyDefaultCraftingPosition(panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform);

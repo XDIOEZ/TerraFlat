@@ -958,6 +958,9 @@ public sealed partial class Mod_FishingRod : Module
             if (prefab == null) throw new InvalidOperationException("钓竿缺少正式配置面板 UI_FishingRod。");
             panel = UIManager.Instance.CreatePanelFromGameObject(prefab);
             panelBindings = panel.GetComponent<FishingRodPanelBindings>();
+            panel.BindPhysicalDeviceArtwork(item.itemData.IDName, () =>
+                new PhysicalDeviceArtworkView.OperatingState { Open = HookSlot.itemData != null, Progress = BaitSlot.itemData != null ? 1f : 0f,
+                    InputAttachment = HookSlot.itemData != null && panelBindings != null ? panelBindings.HookSlot.image.sprite : null });
             if (panelBindings == null) throw new InvalidOperationException("钓竿面板缺少序列化控件引用。");
             rig.basePanel = panel;
             rig.BindSlotUI(panelBindings.HookSlot, 0);

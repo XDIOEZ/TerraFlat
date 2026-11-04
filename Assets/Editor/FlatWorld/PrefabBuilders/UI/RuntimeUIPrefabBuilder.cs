@@ -486,6 +486,7 @@ public static partial class RuntimeUIPrefabBuilder
             SetUILayerRecursively(root);
             FlatWorldUITheme.Apply(root.transform);
             PrepareSharedControlsForSave(root);
+            PhysicalDeviceArtworkPrefabBuilder.Configure(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally

@@ -67,6 +67,7 @@ public class MachinePanelSession : IMachinePanelSession
         panels.Add(panel);
         panel.InitClosed();
         panel.PrepareForGameplayWindow();
+        panel.BindPhysicalDeviceArtwork(Entity);
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panel.Dragger != null ? panel.Dragger.rectTransform : panel.rectTransform);
         panel.Closed += OnPanelClosed;
         return panel;

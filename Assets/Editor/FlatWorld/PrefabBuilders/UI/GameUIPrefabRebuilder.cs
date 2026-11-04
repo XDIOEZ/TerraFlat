@@ -166,6 +166,7 @@ public static partial class GameUIPrefabRebuilder
                 GameObject root = PrefabUtility.LoadPrefabContents(target.Path);
                 try
                 {
+                    PhysicalDeviceArtworkPrefabBuilder.RemoveBeforeRebuildingControls(root);
                     if (target.Build != BuildFlintStrikeArtworkWindow) RemoveGeneratedArt(root.transform);
                     target.Build(root);
                     SetUILayerRecursively(root);
@@ -178,6 +179,7 @@ public static partial class GameUIPrefabRebuilder
                     if (string.Equals(target.Path, PlayerStatusRoot + "UI_Food.prefab", StringComparison.Ordinal))
                         FinalizeNutritionHud(root);
                     EditorUtility.SetDirty(root);
+                    PhysicalDeviceArtworkPrefabBuilder.Configure(root);
                     PrefabUtility.SaveAsPrefabAsset(root, target.Path);
                     rebuilt++;
                 }

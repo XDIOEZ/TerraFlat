@@ -156,6 +156,7 @@ public partial class Inventory
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         basePanel = createdPanel.GetComponentInChildren<BasePanel>();
+        basePanel.BindPhysicalDeviceArtwork(item?.itemData?.IDName, null);
         basePanel.Opened += PositionBagAfterFirstOpen;
         bool usesTogglePanelLifecycle = UsesTogglePanelLifecycle();
         // 可开关窗口统一配置，快捷栏和手部只保留常驻 HUD 行为。

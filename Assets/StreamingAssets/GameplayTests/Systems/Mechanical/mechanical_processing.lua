@@ -21,6 +21,7 @@ for _, kind in ipairs({ "drill", "flint" }) do
             "显式锁未阻止新开窗口，或阻止关闭已有窗口")
         assert(data.closedTargetsCleared and data.eventDetached and data.panelReleased, "取火面板卸载没有清理转移目标、事件或面板")
         if expectedKind == "drill" then
+            assert(data.drillStrokeAnimated, "真实钻木按钮未触发器具动画或重复触发")
             assert(data.inputAmount == 1 and math.abs(data.temperature - 30) < .001 and data.outputId == "", "钻木按钮没有只加热一次材料")
             assert(#data.drillDefinitionDurability == 2, "钻木器缺少手持或落地定义")
             assert(data.toolDurability == 299, "钻木器有效摩擦未恰好扣除一点耐久")

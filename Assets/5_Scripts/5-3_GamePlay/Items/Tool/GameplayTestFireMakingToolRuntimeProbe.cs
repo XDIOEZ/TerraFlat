@@ -126,7 +126,10 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         panel.Close();
         bool closedByPanel = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Receiver.OnAction_Start.Invoke(player);
+        PhysicalDeviceArtworkView drillArtwork = drill ? panel.GetComponentInChildren<PhysicalDeviceArtworkView>(true) : null;
+        int strokeBefore = drillArtwork != null ? drillArtwork.StrokeRevision : 0;
         scope.ActionButton.onClick.Invoke();
+        bool drillStrokeAnimated = drillArtwork != null && drillArtwork.StrokeRevision == strokeBefore + 1;
         FlintStrikeToolGraphic artwork = panel.GetComponentInChildren<FlintStrikeToolGraphic>(true);
         bool artworkBound = artwork != null && artwork.ArtworkAtlas != null;
         bool successAnimated = artworkBound && artwork.StrikeRevision == 1 && artwork.LastStrikeSucceeded;
@@ -175,6 +178,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         return new JObject
         {
             ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
+            ["drillStrokeAnimated"] = drillStrokeAnimated,
             ["gameplayWindow"] = gameplayWindow,
             ["ownPanelPrefab"] = prefab.name == (drill ? "UI_FireDrill" : Mod_FlintStrike.PanelPrefabKey),
             ["formalFlintModules"] = !drill && scope.Host.itemData.ModuleDataDic.ContainsKey("打火石模块") &&

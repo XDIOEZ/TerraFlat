@@ -105,6 +105,7 @@ public class Mod_FireDrill : FireMakingInventoryPanelModule
 
     protected override void ConfigureFireMakingPanel()
     {
+        basePanel.BindPhysicalDeviceArtwork(item.itemData.IDName, () => PhysicalDeviceArtworkBindings.ReadHeating(Heater));
         _temperatureLabel = basePanel.GetText("FWUI_FooterHint");
         var frictionText = FrictionButton.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
         if (frictionText != null)
