@@ -314,7 +314,7 @@ MonoBehaviour:
         _PersistentCalls: []
     itemSlot_UI: []
   basePanel: {fileID: 0}
-  UI_Prefab: {fileID: 2639614329428065687, guid: 5b952bf558866bc499d7e8c320ea5530, type: 3}
+  UI_Prefab: {fileID: 2639614329428065687, guid: d57908da393bf244fa8d5a4ed5f9f261, type: 3}
   StrikeButton: {fileID: 0}
   CloseButton: {fileID: 0}
   InputSlotUI: {fileID: 0}

@@ -2843,6 +2843,18 @@
       "tags": ["InventoryCategory.Tool"],
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/FlintStrike.prefab",
       "shellPrefab": "FlintStrike",
+      "modules": {
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": true
+        },
+        "打火石模块": {
+          "prefab": "打火石模块",
+          "id": "打火石模块",
+          "enabled": true
+        }
+      },
       "gameName": "打火石",
       "description": "用于生火的打火石。",
       "weight": 0.25,

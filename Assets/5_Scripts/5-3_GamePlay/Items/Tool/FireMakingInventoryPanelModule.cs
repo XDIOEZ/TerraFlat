@@ -25,6 +25,7 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
     protected CraftingOutputPreview _outputPreview;
     private bool isActBound;
     protected abstract Button FireMakingActionButton { get; set; }
+    protected virtual string FireMakingPanelPrefabKey => "UI_FireDrill";
     protected virtual bool ObserveOutputInventoryForPreview => false;
     protected virtual bool SuppressOutputPreviewRefresh => false;
 
@@ -125,9 +126,9 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
 
     public void OpenUI()
     {
-        if (UI_Prefab == null) UI_Prefab = GameRes.Instance.GetPrefab("UI_FireDrill");
+        if (UI_Prefab == null) UI_Prefab = GameRes.Instance.GetPrefab(FireMakingPanelPrefabKey);
         if (UI_Prefab == null)
-            throw new InvalidOperationException($"[{GetType().Name}] 无法获取共用取火面板 UI_FireDrill。");
+            throw new InvalidOperationException($"[{GetType().Name}] 无法获取取火面板 {FireMakingPanelPrefabKey}。");
         basePanel = UIManager.Instance.CreatePanelFromGameObject(UI_Prefab);
         basePanel.PrepareForGameplayWindow();
         basePanel.Closed += OnFireMakingPanelClosed;

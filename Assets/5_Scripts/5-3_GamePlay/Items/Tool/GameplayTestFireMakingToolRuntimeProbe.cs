@@ -73,16 +73,15 @@ public static class GameplayTestFireMakingToolRuntimeProbe
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         bool drill = (string)args["kind"] == "drill";
-        using var scope = new Fixture(drill, 1, configure: false, scene: player.gameObject.scene);
-        GameObject prefab = GameRes.ExistingInstance?.GetPrefab("UI_FireDrill") ??
-            throw new InvalidOperationException("正式取火面板未加载。");
+        using var scope = new Fixture(drill, 1, configure: false, scene: player.gameObject.scene, player: player);
         GameObject source = GameRes.ExistingInstance.GetPrefab(drill ? "BuildingFeature_SparkMaker_Mod_FireDrill" : "FlintStrike");
         FireMakingInventoryPanelModule prototype = source != null ? source.GetComponentInChildren<FireMakingInventoryPanelModule>(true) : null;
+        GameObject prefab = prototype?.UI_Prefab ?? throw new InvalidOperationException("正式取火工具未引用自身面板。");
         bool prefabFields = prototype != null && prototype.ModSaveData != null && prototype.InputInventory?.Data != null &&
                             prototype.OutputInventory?.Data != null && prototype.UI_Prefab != null &&
                             prototype.ModSaveData.ID == (drill ? "钻木取火模块" : "打火石模块");
         if (scope.Drill != null) scope.Drill.UI_Prefab = prefab;
-        else scope.Flint.UI_Prefab = prefab;
+        else scope.Flint.UI_Prefab = null;
         Inventory hand = player.GetComponentInChildren<Mod_Hand>()?.HandInventory ??
             throw new InvalidOperationException("本地主角手部库存尚未就绪。");
         ItemData material = GameRes.ExistingInstance.CreateItemData(drill ? "Cotton" : "Leaf");
@@ -113,6 +112,14 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         bool targetsCleared = scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Host.OnAct.Invoke();
         bool reopened = panel.IsOpen();
+        bool localUseToggled = false;
+        if (!drill)
+        {
+            scope.Flint.PresentLocalUse();
+            bool localUseClosed = !panel.IsOpen();
+            scope.Flint.PresentLocalUse();
+            localUseToggled = localUseClosed && panel.IsOpen();
+        }
         scope.Receiver.OnAction_Start.Invoke(player);
         bool closedByToggle = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Receiver.OnAction_Start.Invoke(player);
@@ -120,6 +127,9 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         bool closedByPanel = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Receiver.OnAction_Start.Invoke(player);
         scope.ActionButton.onClick.Invoke();
+        FlintStrikeToolGraphic artwork = panel.GetComponentInChildren<FlintStrikeToolGraphic>(true);
+        bool artworkBound = artwork != null && artwork.ArtworkAtlas != null;
+        bool successAnimated = artworkBound && artwork.StrikeRevision == 1 && artwork.LastStrikeSucceeded;
         ItemData after = scope.Input.Data.GetItemSlot(0)?.itemData;
         ItemData output = scope.Output.Data.GetItemSlot(0)?.itemData;
         float inputAmount = after?.Stack?.Amount ?? 0f;
@@ -128,6 +138,8 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         float outputAmount = output?.Stack?.Amount ?? 0f;
         float blockedInput = 0f;
         string blockedOutput = string.Empty;
+        bool blockedAnimationUnchanged = false;
+        bool failedStrikeAnimated = false;
         var drillDefinitionDurability = new JArray();
         var drillBreakMaterials = new JObject();
         if (drill)
@@ -150,6 +162,13 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             scope.ActionButton.onClick.Invoke();
             blockedInput = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
             blockedOutput = scope.Output.Data.GetItemSlot(0)?.itemData?.IDName ?? string.Empty;
+            blockedAnimationUnchanged = artworkBound && artwork.StrikeRevision == 1;
+            scope.Output.Data.RemoveItemAll(scope.Output.Data.GetItemSlot(0), 0);
+            scope.Flint.SuccessChancePerClick = 0f;
+            scope.ActionButton.onClick.Invoke();
+            failedStrikeAnimated = artworkBound && artwork.StrikeRevision == 2 && !artwork.LastStrikeSucceeded &&
+                scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount == inputAmount &&
+                scope.Output.Data.GetItemSlot(0)?.itemData == null;
         }
         JObject shortcuts = CapturePanelShortcutAdmission(player, panel);
         scope.Tool.Unload();
@@ -157,6 +176,12 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         {
             ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
             ["gameplayWindow"] = gameplayWindow,
+            ["ownPanelPrefab"] = prefab.name == (drill ? "UI_FireDrill" : Mod_FlintStrike.PanelPrefabKey),
+            ["formalFlintModules"] = !drill && scope.Host.itemData.ModuleDataDic.ContainsKey("打火石模块") &&
+                                      scope.Host.itemData.ModuleDataDic.ContainsKey(ModText.Interact),
+            ["localUseToggled"] = localUseToggled,
+            ["artworkBound"] = artworkBound, ["successAnimated"] = successAnimated,
+            ["blockedAnimationUnchanged"] = blockedAnimationUnchanged, ["failedStrikeAnimated"] = failedStrikeAnimated,
             ["shortcuts"] = shortcuts,
             ["preview"] = preview, ["previewEvents"] = previewEvents, ["prefabFields"] = prefabFields,
             ["closedByCancel"] = closedByCancel, ["reopened"] = reopened,
@@ -211,11 +236,12 @@ public static class GameplayTestFireMakingToolRuntimeProbe
     private sealed class Fixture : IDisposable
     {
         public readonly GameObject Root;
-        public readonly GameItem Host;
+        public readonly Item Host;
         public readonly Mod_InteractReciver Receiver;
         public readonly Mod_FireDrill Drill;
         public readonly Mod_FlintStrike Flint;
         public readonly Ex_ModData_MemoryPackable Data;
+        private readonly bool spawnedRuntimeItem;
         public Module Tool => Drill != null ? (Module)Drill : Flint;
         public Inventory Input => Drill != null ? Drill.InputInventory : Flint.InputInventory;
         public Inventory Output => Drill != null ? Drill.OutputInventory : Flint.OutputInventory;
@@ -226,8 +252,26 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         public bool EventsBound => Host.OnAct.HasCalls && Receiver.OnAction_Start.HasCalls && Receiver.OnAction_Stop.HasCalls;
         public bool EventsUnbound => !Host.OnAct.HasCalls && !Receiver.OnAction_Start.HasCalls && !Receiver.OnAction_Stop.HasCalls;
 
-        public Fixture(bool drill, int inputSlots, bool configure, Scene scene = default)
+        public Fixture(bool drill, int inputSlots, bool configure, Scene scene = default, Player player = null)
         {
+            if (!drill && !configure)
+            {
+                // 从正式定义装配，避免手工添加组件掩盖目录漏配能力。
+                Host = ItemMgr.Instance.InstantiateHeldItem(GameRes.ExistingInstance.CreateItemData("FlintStrike"), player, player.transform);
+                Root = Host.gameObject;
+                spawnedRuntimeItem = true;
+                try
+                {
+                    Host.Load();
+                    Flint = Host.itemMods.GetMod_ByID<Mod_FlintStrike>("打火石模块") ??
+                        throw new InvalidOperationException("正式打火石未装配取火模块。");
+                    Receiver = Host.itemMods.GetMod_ByID<Mod_InteractReciver>(ModText.Interact) ??
+                        throw new InvalidOperationException("正式打火石未装配交互模块。");
+                    Data = Flint.ModSaveData;
+                    return;
+                }
+                catch { Dispose(); throw; }
+            }
             Root = new GameObject("[FireMakingToolProbe]") { hideFlags = HideFlags.HideAndDontSave };
             Root.SetActive(false);
             if (scene.IsValid()) SceneManager.MoveGameObjectToScene(Root, scene);
@@ -262,6 +306,11 @@ public static class GameplayTestFireMakingToolRuntimeProbe
 
         public void Dispose()
         {
+            if (spawnedRuntimeItem)
+            {
+                ItemMgr.Instance.DespawnItem(Host, saveData: false);
+                return;
+            }
             if (Tool != null)
             {
                 Tool.Unload();

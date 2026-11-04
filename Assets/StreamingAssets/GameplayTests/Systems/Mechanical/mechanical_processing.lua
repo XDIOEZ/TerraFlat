@@ -32,6 +32,10 @@ for _, kind in ipairs({ "drill", "flint" }) do
             assert(kinds == 2 and data.drillBreakMaterials.Stick_Wood == 1 and data.drillBreakMaterials.Rope == 1,
                 "钻木器损毁残料必须恰好为一根木棍和一根绳子")
         else
+            assert(data.formalFlintModules and data.ownPanelPrefab and data.localUseToggled,
+                "正式打火石装配缺少能力、引用了钻木面板或本机使用无法开关UI")
+            assert(data.artworkBound and data.successAnimated and data.failedStrikeAnimated and data.blockedAnimationUnchanged,
+                "燧石贴图缺失、敲击成败表现错误或满输出仍播放敲击")
             assert(data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1, "打火石按钮没有只消费一次材料并产出火种")
             assert(data.blockedInputAmount == 1 and data.blockedOutputId == "Log", "满输出时打火石错误扣料或替换产物")
         end

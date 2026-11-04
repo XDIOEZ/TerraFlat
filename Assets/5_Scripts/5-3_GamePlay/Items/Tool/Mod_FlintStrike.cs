@@ -4,11 +4,12 @@ using FlatWorld.Localization;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_FlintStrike : FireMakingInventoryPanelModule
+public class Mod_FlintStrike : FireMakingInventoryPanelModule, ILocalItemUsePresentation
 {
 #region 基础参数
 
     public const float DefaultSuccessChancePerClick = 0.1f;
+    public const string PanelPrefabKey = "UI_FlintStrike";
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 1f;
 
@@ -22,6 +23,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
     [Range(0f, 1f)] public float SuccessChancePerClick = DefaultSuccessChancePerClick; // 每次点击独立判定，不累计保底进度。
 
     bool _isCommitting;
+    FlintStrikeToolGraphic _toolArtwork;
 
 #endregion
 
@@ -59,11 +61,21 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
 #region 打火石面板扩展
 
     protected override Button FireMakingActionButton { get => StrikeButton; set => StrikeButton = value; }
+    protected override string FireMakingPanelPrefabKey => PanelPrefabKey;
     protected override bool ObserveOutputInventoryForPreview => true;
     protected override bool SuppressOutputPreviewRefresh => _isCommitting;
 
+    // 联机右键转发 Act 后，本机仍通过相同交互入口打开工具窗口。
+    public void PresentLocalUse()
+    {
+        if (item.Owner is Player { IsLocalProfile: true } player) OnInteractStart(player);
+    }
+
+    protected override void OnFireMakingPanelDestroyed() => _toolArtwork = null;
+
     protected override void ConfigureFireMakingPanel()
     {
+        _toolArtwork = basePanel.GetComponentInChildren<FlintStrikeToolGraphic>(true);
         BindText(StrikeButton.GetComponentInChildren<TMPro.TMP_Text>(true),
             () => FlatWorldLocalizationService.GetUiText("打火"));
         BindText(basePanel.GetText("FWUI_标题"),
@@ -102,6 +114,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
         if (!OutputInventory.Data.TryAddItem(fireSeedData, false)) return;
         if (!IsSuccessfulRoll(UnityEngine.Random.value, SuccessChancePerClick))
         {
+            _toolArtwork?.PlayStrike(false);
             ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
             return;
         }
@@ -119,6 +132,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule
             InputInventory.RefreshUI();
             OutputInventory.RefreshUI();
             _outputPreview?.PlaySuccess();
+            _toolArtwork?.PlayStrike(true);
             ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
         }
         finally

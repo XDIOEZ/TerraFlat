@@ -126,7 +126,7 @@ public static partial class GameUIPrefabRebuilder
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", string.Empty, string.Empty, 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", string.Empty, 4)),
             new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", string.Empty, 1, true)),
-            new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", string.Empty, 1, true)),
+            new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", BuildFlintStrikeArtworkWindow),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
             new BuildTarget(CraftingRoot + "UI_Anvil.prefab", BuildAnvil),
             new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
@@ -166,7 +166,7 @@ public static partial class GameUIPrefabRebuilder
                 GameObject root = PrefabUtility.LoadPrefabContents(target.Path);
                 try
                 {
-                    RemoveGeneratedArt(root.transform);
+                    if (target.Build != BuildFlintStrikeArtworkWindow) RemoveGeneratedArt(root.transform);
                     target.Build(root);
                     SetUILayerRecursively(root);
                     NormalizeCanvasLayers(root.transform);
@@ -583,7 +583,7 @@ public static partial class GameUIPrefabRebuilder
         GameObject root = PrefabUtility.LoadPrefabContents(target.Path);
         try
         {
-            RemoveGeneratedArt(root.transform);
+            if (target.Build != BuildFlintStrikeArtworkWindow) RemoveGeneratedArt(root.transform);
             target.Build(root);
             SetUILayerRecursively(root);
             NormalizeCanvasLayers(root.transform);

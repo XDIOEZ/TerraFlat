@@ -31,7 +31,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 - 共用 `UI_Bag` 的容器标题绑定 `FWUI_标题`，通过 `LocalizedTextRuntime.SetProvider` 读取所属物品的 `RuntimeItemDefinition.DisplayName`；玩家行囊保留原名，不改作存档和端口键的 `Data.Name`。
 - 制作经 Matcher→Controller→CraftingService→CraftingTransaction；Save 不解绑，Unload 才清监听。显示、输入与数据生命周期分别管理。
 - 原石类合成耗材使用 `StoneCraftingMaterial` 标签，`Ore_Stone` 与 `ChippedTool` 均可投入；勿直接使用范围更广的 `Stone` 标签，石板和石矛等成品也含后者。
-- `FireMakingInventoryPanelModule` 共管钻木器与打火石的库存面板和交互；钻木加热、打火概率、保存格式及建筑资格分别由子模块负责。
+- `FireMakingInventoryPanelModule` 共管钻木器与打火石的库存面板和交互；子模块选择专属 Prefab，钻木加热、打火概率、保存格式及建筑资格分别负责。打火石 JSON 必须显式声明交互与取火两模块，使用 `UI_FlintStrike`，真实敲击驱动 `FlintStrikeToolGraphic`；回归 `processing/fire_tool_panel` 使用正式定义装配，不能只靠手工组件夹具。
 - 液体保留真实组分/尾量/预约，世界液层用整数级；播种、收获、装备供氧等通过各自公开接口提交，不把来源特例塞进通用模块。
 - 成长、燃料和制作只读取 `GameRuleConfiguration` 已发布的业务配置；`CraftingCapabilities.ApplyOutputMultiplier` 控制是否接受通用增产，业务不识别难度或其他修正来源。
 
