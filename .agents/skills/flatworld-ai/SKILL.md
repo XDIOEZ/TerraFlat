@@ -91,13 +91,13 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 - ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，原生主体批次与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
 
-- 狼普通攻击距离2.1米、前摇0.25秒，真实命中盒按原尺寸放大50%；`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。
+- 狼普通攻击与撕咬默认起手距离0.9米、前摇0.25秒；`combat.damageRangeMultiplier` 独立控制原命中盒倍率（默认及狼为1.5），不能扩大停步起手圈，ECS编译读取同一倍率。`biteAttackSkill` 组合通用撕咬。活动技能保留Attack状态并禁止普通攻击起手；继承狼外壳的Zombie/SnowLeopard显式移除该模块，由自身定义决定是否复用。
 
 - 狼 `ai` 槽位的能力 ID 必须为 `AI`，`Module_AnimalBehaviorTree` 为统一 Prefab 身份；组群、呼叫和编队只接纳已就绪、启用、存活且友好的狼，按持久 Guid 选同一头狼。两只起协同追击，独狼避让、双狼低血撤退规则保留；回归 `ai/wolf_pack` 使用正式定义注册身份后调用真实决策。
 - 狼的一轮状态评估先筛选有效同伴，再复用同一列表计算追击编队；新一轮和卸载时清空，支援呼叫仍实时复核资格。
 - 狼追击丢失视野进入 `Search`：只去 `AnimalTargetMemoryCapability` 保存的最后可见/同伴报告坐标，默认赶路上限15秒、到点搜索3秒，重见恢复追击；旧感知候选须重新核验LOS，不更新隐藏目标坐标或起手攻击。集火与有效支援呼叫立即允许保留追踪记忆，不能等待首次状态切换后才生效。未见目标的同伴不传播情报；目标身份/代际、卸载和指令取消清记忆。规则 `ai/wolf_target_memory`；离线入口/记忆回归 `python Tools/Tests/AiTargetMemory/verify.py`。
 - 狼群追击编队单次刷新冻结 `WorldTopologyDomain`，左右翼分配、同伴分离和站位归一化共用这份拓扑；同伴位置和路径可走性仍实时读取，回归 `ai/wolf_formation_topology`。
-- 狼在攻击距离内即可起手，编队点不作为攻击门槛；站位默认进入 0.3 米内停车、偏离 0.6 米才恢复，目标离开攻击范围立即追击。保持状态跨编队刷新和追击/攻击切换，脱战或换目标清除；只有中断未完成攻击才重计冷却。规则 `ai/wolf_combat_position` 通过正式节点检查出手、漂移、追击和冷却，真实惯性与伤害仍需现场验收。
+- 狼在起手距离内即可攻击，编队点不作为攻击门槛；群体能力直接复用Combat范围，不再配置`pack.attackRange`。狼近身编队半径0.65米、竖向间距0.16米，进入0.1米停车、偏离0.2米恢复，容差受起手圈剩余半径约束，出圈立即追击。保持状态跨编队刷新和追击/攻击切换，脱战或换目标清除；只有中断未完成攻击才重计冷却。`ai/wolf_attack_distance`覆盖起手边界与倍率独立，`ai/wolf_combat_position`覆盖漂移、追击和冷却；真实拥挤碰撞与伤害仍需现场验收。
 - 单图共用 `Mod_AnimatorController`；鸟、蜂、鱼、幽灵通过 `IActorAnimationMotionSource` 报告主动移动与已有外观高度/倾角，风、水流等被动位移不计迈步。单图模式下旧身体 Animator 与鱼独立游动摇摆让出姿态，Ghost/Fish 的纯控制器不附带 Renderer 或物理组件；目录与窄信号回归见 AI/ItemRuntime 测试说明。
 - 单图死亡由动画模块订阅生命 `DeathStarted`：冻结致死瞬间 Sprite，上抛并翻转 180° 后保持；`deathDuration/deathJumpHeight` 由 Actor 根定义并继承，正式 AI 统一 0.76 秒/0.35 米。生命 `Data.DestroyDelay=1.1` 留出落地停尸时间；死亡/掉落/回收仍归生命模块，动画不自行删物。
 - 尸体保留期间 树宿主停止行为并取消动物技能，行为树退出当前节点，幽灵停止主动直追；`Mod_Mover_AI` 清主动速度并拒绝普通/温度避险目标，继续原有被动风/水流。新生命经正式 `Load` 恢复 AI；`Mod_Damage` 只依本物品的生命立即关窗，不按 Owner 关闭已发射投射物。

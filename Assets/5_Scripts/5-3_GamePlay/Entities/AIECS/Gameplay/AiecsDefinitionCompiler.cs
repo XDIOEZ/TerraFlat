@@ -14,7 +14,7 @@ namespace FlatWorld.AIECS.Gameplay
     public struct AiecsBehaviorParameterSnapshot
     {
         public float SenseRange, ChaseRange, ChaseRetryDelay, PerceptionPeriod, DecisionPeriod, FleeHealthRatio, MemorySeconds;
-        public float WanderRadius, IdleSeconds, MoveSpeed, AttackRange, Windup, Active, Recovery, Cooldown;
+        public float WanderRadius, IdleSeconds, MoveSpeed, AttackRange, DamageRangeMultiplier, Windup, Active, Recovery, Cooldown;
         public float NutritionMaximum, NutritionDrain, FeedBelow, FeedGain, SleepDayStart, SleepDayEnd, SleepHealth;
         public float FlightHeight, FlightDrain, FlightSpeed, FlightStamina, FlightRecovery;
         public float ReproductionDays, DarknessThreshold, DarknessRetreatRadius;
@@ -71,7 +71,7 @@ namespace FlatWorld.AIECS.Gameplay
                 FleeSeconds = 3f, MemorySeconds = behavior.MemorySeconds, WanderRadius = behavior.WanderRadius,
                 WanderSeconds = 2.5f, IdleSeconds = behavior.IdleSeconds,
                 MoveSpeed = behavior.MoveSpeed, AttackStartRange = behavior.AttackRange,
-                HitRange = behavior.AttackRange * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
+                HitRange = behavior.AttackRange * behavior.DamageRangeMultiplier, AttackArcCos = 0f,
                 Windup = behavior.Windup, Active = behavior.Active, Recovery = behavior.Recovery, Cooldown = behavior.Cooldown,
                 // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
                 Damage = GameplayCombatBridge.Values(configuredDamage),
@@ -193,6 +193,7 @@ namespace FlatWorld.AIECS.Gameplay
                 IdleSeconds = idle, MoveSpeed = Number(ecs?["movement"], "speed",
                     Number(aquatic, "swimSpeed", Speed(mover?["Data"]?["Speed"]))),
                 AttackRange = Number(combat, "range", Number(colony, "StingDistance", 1.2f)),
+                DamageRangeMultiplier = math.max(1f, Number(combat, "damageRangeMultiplier", AI_AttackController.DefaultDamageRangeMultiplier)),
                 Windup = Number(combat, "windup", .5f), Active = Number(combat, "damageWindow", .2f),
                 Recovery = Number(combat, "recovery", .35f), Cooldown = Number(combat, "cooldown", Number(colony, "StingInterval", 2f)),
                 NutritionMaximum = maximum,

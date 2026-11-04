@@ -11,6 +11,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
     #region 群体成员和威胁
     private readonly AnimalBehaviorTreeContext context;
     private readonly AnimalTargetMemoryCapability memory;
+    private readonly AnimalCombatCapability combat;
     private readonly JObject config;
     private readonly string groupKey;
     private readonly string memoryKey;
@@ -57,6 +58,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         threatTags = AnimalLandTargetRules.Strings(config, "threatTags");
         memory = context.GetOrCreateCapability(memoryKey, data =>
             new AnimalTargetMemoryCapability(context, context.GetCapabilityConfiguration(memoryKey), data));
+        combat = AnimalLandActionSupport.Combat(context, config);
         float radius = Mathf.Max(AnimalLandTargetRules.Number(config, "chaseDistance", 28f),
             AnimalLandTargetRules.Number(config, "avoidSafeDistance", 30f));
         context.RequireMinimumDetectionRadius(radius);
@@ -258,7 +260,7 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         }
         // 同侧过多时竖向偏移会被钳到相同坐标，剩余成员改用自由接敌而非争抢重叠槽位。
         if (slot < 0 || slot / 2 >= MaximumFormationSlotsPerSide) { ClearFormation(); return; }
-        float attackRange = AnimalLandTargetRules.Number(config, "attackRange", 2.1f);
+        float attackRange = combat.AttackRange;
         float maxRadius = Mathf.Max(.05f, attackRange - Mathf.Max(.05f, AnimalLandTargetRules.Number(config, "formationAttackMargin", .18f)));
         float radius = Mathf.Clamp(AnimalLandTargetRules.Number(config, "formationRadius", 1.05f), .05f, maxRadius);
         Vector2 offset = CalculateChaseFormationSlotOffset(slot, radius,
@@ -340,6 +342,8 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         float arrival = Mathf.Max(AnimalLandTargetRules.Number(config, "formationArrival", .3f),
             context.Mod_Mover != null ? context.Mod_Mover.GetInteractionStopDistance(approachRange) : 0f);
         float tolerance = holdingPosition ? Mathf.Max(arrival, AnimalLandTargetRules.Number(config, "formationResume", .6f)) : arrival;
+        // 接近余量已扣除槽位偏移，守位容差不能再越过起手圈。
+        tolerance = Mathf.Min(tolerance, approachRange);
         if (WorldTopologyRuntime.SqrDistance(context.Position, formationPosition) <= tolerance * tolerance)
             return holdingPosition = true;
         float clearance = Mathf.Max(.05f, AnimalLandTargetRules.Number(config, "separationDistance", .85f) * .75f);

@@ -123,7 +123,6 @@
                   "separationDistance": 0.85,
                   "separationStrength": 0.7,
                   "separationMaxOffset": 0.2,
-                  "attackRange": 1.2,
                   "wanderCohesion": 1
                 },
                 "advance": {},

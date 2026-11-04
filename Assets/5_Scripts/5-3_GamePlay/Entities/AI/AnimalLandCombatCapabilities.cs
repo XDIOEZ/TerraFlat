@@ -12,6 +12,7 @@ public sealed class AnimalCombatCapability : AnimalBehaviorTreeCapability
     private readonly AI_AnimalSkillController skills = new();
     private readonly string animation;
     public float AttackRange { get; }
+    public float DamageRangeMultiplier => attack.DamageRangeMultiplier;
     public bool IsAttackLocked => attack.IsAttackLocked;
     public bool IsDamageWindowActive => attack.IsDamageWindowActive;
     public bool IsCooldownDone => attack.IsCooldownDone;
@@ -28,6 +29,8 @@ public sealed class AnimalCombatCapability : AnimalBehaviorTreeCapability
         attack.DamageWindow = AnimalLandTargetRules.Number(config, "damageWindow", 0.33333334f);
         attack.WindupDuration = AnimalLandTargetRules.Number(config, "windup", 0.25f);
         attack.RecoveryDuration = AnimalLandTargetRules.Number(config, "recovery", 0.35f);
+        // 命中盒容错独立于起手和追近距离。
+        attack.DamageRangeMultiplier = AnimalLandTargetRules.Number(config, "damageRangeMultiplier", AI_AttackController.DefaultDamageRangeMultiplier);
         attack.Bind(context.Actor);
         attack.Reset();
         attack.RestoreCooldown(saved?["cooldownRemaining"]?.Value<float>() ?? 0f);

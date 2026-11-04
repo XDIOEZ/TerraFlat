@@ -12,6 +12,12 @@ public static partial class GameplayTestSystemProbe
     private static void RegisterWolfPackOperations(Dictionary<string, Func<JObject, JObject>> operations)
     {
         operations.Add("ai/wolf_pack", EntityAiWolfPack);
+        operations.Add("ai/wolf_attack_distance", args => EntityAiWolfPack(new JObject
+        {
+            ["count"] = 3, ["probeAttackDistance"] = true,
+            ["distance"] = Number(args, "distance", .9),
+            ["damageRangeMultiplier"] = Number(args, "damageRangeMultiplier", 1.5)
+        }));
         operations.Add("ai/wolf_formation_topology", EntityWolfFormationTopology);
         operations.Add("ai/wolf_target_memory", _ => EntityAiWolfPack(
             new JObject { ["count"] = 3, ["probeMemory"] = true }));
@@ -107,6 +113,8 @@ public static partial class GameplayTestSystemProbe
         candidate.InCandidate(() => definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions());
         ItemDefinitionDto definition = definitions.Find(value => value.Id == "Wolf");
         ItemModuleDefinitionDto configuredAi = definition.Modules["ai"];
+        if (args["damageRangeMultiplier"] != null)
+            configuredAi.Parameters["behaviorTree"]["capabilities"]["combat"]["damageRangeMultiplier"] = args["damageRangeMultiplier"].DeepClone();
 #if UNITY_EDITOR
         GameObject shell = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(definition.SourcePrefab);
         GameObject treePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -198,6 +206,8 @@ public static partial class GameplayTestSystemProbe
                 wolves[index].RefreshProbe();
             }
             wolves[0].TriggerPackAttack(player);
+            if (Flag(args, "probeAttackDistance", false))
+                return SampleWolfAttackDistance(wolves, player, (float)Number(args, "distance", .9));
             if (Flag(args, "probeMemory", false))
                 return SampleWolfTargetMemory(wolves, detectors, player);
             if (probeCombat)
@@ -223,7 +233,7 @@ public static partial class GameplayTestSystemProbe
                     else free++;
                 }
                 GameplayTestWolfPackProbeAI overflow = wolves[wolves.Count - 1];
-                overflow.transform.position = player.transform.position + Vector3.left * 1.8f;
+                overflow.transform.position = player.transform.position + Vector3.left * .89f;
                 string overflowAttackState = overflow.TickCombatProbe(0f);
                 return new JObject
                 {
@@ -272,6 +282,30 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
+    // 相同起手边界配不同命中倍率，直接采样正式树的停步与攻击锁定。
+    private static JObject SampleWolfAttackDistance(List<GameplayTestWolfPackProbeAI> wolves, Item player, float distance)
+    {
+        GameplayTestWolfPackProbeAI wolf = wolves[0];
+        player.transform.position = Vector3.zero;
+        wolf.transform.position = Vector3.left * distance;
+        wolves[1].transform.position = new Vector3(4f, 2f);
+        wolves[2].transform.position = new Vector3(4f, -2f);
+        string state = wolf.TickCombatProbe(0f);
+        wolf.Host.Context.TryGetCapability("combat", out AnimalCombatCapability combat);
+        wolf.Host.Context.TryGetCapability("pack", out AnimalPackCapability pack);
+        Mod_Mover_AI mover = wolf.GetComponent<Mod_Mover_AI>();
+        return new JObject
+        {
+            ["state"] = state, ["attackStarted"] = wolf.IsAttackLocked,
+            ["moving"] = mover.CanMove && mover.HasActiveDestination,
+            ["attackRange"] = combat.AttackRange, ["damageRangeMultiplier"] = combat.DamageRangeMultiplier,
+            ["skillDefaultRange"] = ((IAnimalAttackRangeSource)wolf.Host).AttackRange,
+            ["heldFormation"] = pack.ShouldHoldFormationPosition(.25f, combat.AttackRange),
+            ["formationDistance"] = pack.FormationTarget is Vector3 formation
+                ? WorldTopologyRuntime.Distance(formation, player.transform.position) : -1f
+        };
+    }
+
     private static JObject SampleWolfAttackContinuity(List<GameplayTestWolfPackProbeAI> wolves,
         Item player, int ticksPerSecond)
     {
@@ -279,7 +313,7 @@ public static partial class GameplayTestSystemProbe
             throw new InvalidOperationException("狼连续攻击规则只允许在未加载世界的编辑态执行。");
         GameplayTestWolfPackProbeAI wolf = wolves[0];
         player.transform.position = Vector3.zero;
-        wolf.transform.position = new Vector3(-1.8f, 0f);
+        wolf.transform.position = new Vector3(-.89f, 0f);
         wolves[1].transform.position = new Vector3(4f, 2f);
         wolves[2].transform.position = new Vector3(4f, -2f);
         wolf.TickCombatProbe(0f);
@@ -337,17 +371,17 @@ public static partial class GameplayTestSystemProbe
         player.transform.position += Vector3.right * 1.1f;
         first.RefreshProbe();
         bool movedTargetAllowsRetry = first.PursuitTarget.HasValue;
-        Vector2 compact = new(-1.05f, 0f);
+        Vector2 compact = new(-.65f, 0f);
         Vector2 near = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
-            1, 4, Vector2.right, compact, 2.1f, 2.1f, 3.2f, Vector2.right * 100f, .6f, 2f);
+            1, 4, Vector2.right, compact, .9f, .9f, 3.2f, Vector2.right * 100f, .6f, 2f);
         Vector2 still = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
-            1, 4, Vector2.right, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+            1, 4, Vector2.right, compact, 20f, .9f, 3.2f, Vector2.zero, .6f, 2f);
         Vector2 moving = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
-            1, 4, Vector2.right, compact, 20f, 2.1f, 3.2f, Vector2.right * 100f, .6f, 2f);
+            1, 4, Vector2.right, compact, 20f, .9f, 3.2f, Vector2.right * 100f, .6f, 2f);
         Vector2 pairLeft = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
-            0, 2, Vector2.up, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+            0, 2, Vector2.up, compact, 20f, .9f, 3.2f, Vector2.zero, .6f, 2f);
         Vector2 pairRight = AnimalPackPursuitSteering.CalculateDispersedPursuitOffset(
-            1, 2, Vector2.up, compact, 20f, 2.1f, 3.2f, Vector2.zero, .6f, 2f);
+            1, 2, Vector2.up, compact, 20f, .9f, 3.2f, Vector2.zero, .6f, 2f);
         return new JObject
         {
             ["allAssigned"] = allAssigned, ["distinctSlots"] = distinctSlots.Count,
@@ -369,9 +403,9 @@ public static partial class GameplayTestSystemProbe
         GameplayTestWolfPackProbeAI wolf = wolves[0];
         Mod_Mover_AI mover = wolf.GetComponent<Mod_Mover_AI>();
         player.transform.position = Vector3.zero;
-        wolf.transform.position = new Vector3(-1.8f, 0f);
-        wolves[1].transform.position = new Vector3(1.05f, 0f);
-        wolves[2].transform.position = new Vector3(1.05f, -.42f);
+        wolf.transform.position = new Vector3(-.3f, .8f);
+        wolves[1].transform.position = new Vector3(.65f, 0f);
+        wolves[2].transform.position = new Vector3(.65f, -.16f);
         var result = new JObject { ["offSlotState"] = wolf.TickCombatProbe(0f).ToString() };
         Vector3? formation = wolf.ChaseFormationTarget;
         result["formationActive"] = formation.HasValue;
@@ -383,17 +417,18 @@ public static partial class GameplayTestSystemProbe
         wolf.TickTimersProbe(wolf.attackRecoveryDuration + .01f);
         float cooldown = wolf.AttackCooldownRemaining;
         result["cooldownBefore"] = cooldown;
-        wolf.transform.position = new Vector3(-1.05f, 0f);
+        wolf.transform.position = new Vector3(-.65f, 0f);
         wolf.TickCombatProbe(0f);
         result["arrivedStopped"] = !mover.CanMove && !mover.HasActiveDestination;
-        wolf.transform.position = new Vector3(-1.45f, 0f);
+        wolf.transform.position = new Vector3(-.75f, 0f);
         wolf.TickCombatProbe(0f);
         result["driftStopped"] = !mover.CanMove && !mover.HasActiveDestination;
-        player.transform.position = new Vector3(.1f, 0f);
+        player.transform.position = new Vector3(.03f, 0f);
         wolf.TickCombatProbe(0f);
         result["smallTargetMotionStopped"] = !mover.CanMove && !mover.HasActiveDestination;
 
-        wolf.transform.position = new Vector3(-1.75f, 0f);
+        player.transform.position = Vector3.zero;
+        wolf.transform.position = new Vector3(-.89f, 0f);
         result["repositionState"] = wolf.TickCombatProbe(0f).ToString();
         result["repositionResumed"] = mover.CanMove && mover.HasActiveDestination;
         player.transform.position = new Vector3(1.5f, 0f);
@@ -420,9 +455,9 @@ public static partial class GameplayTestSystemProbe
         GameplayTestWolfPackProbeAI wolf = wolves[0];
         Mod_Mover_AI mover = wolf.GetComponent<Mod_Mover_AI>();
         player.transform.position = Vector3.zero;
-        wolf.transform.position = new Vector3(-1.8f, 0f);
-        wolves[1].transform.position = new Vector3(1.05f, 0f);
-        wolves[2].transform.position = new Vector3(1.05f, -.42f);
+        wolf.transform.position = new Vector3(-.89f, 0f);
+        wolves[1].transform.position = new Vector3(.65f, 0f);
+        wolves[2].transform.position = new Vector3(.65f, -.16f);
         string attackState = wolf.TickCombatProbe(0f);
         Vector3? formation = wolf.ChaseFormationTarget;
         bool attackStarted = wolf.IsAttackLocked;
@@ -433,7 +468,7 @@ public static partial class GameplayTestSystemProbe
         string occupiedState = wolf.TickCombatProbe(0f);
         bool occupiedStopped = !mover.CanMove && !mover.HasActiveDestination;
 
-        wolves[1].transform.position = new Vector3(1.05f, 0f);
+        wolves[1].transform.position = new Vector3(.65f, 0f);
         string freeState = wolf.TickCombatProbe(0f);
         return new JObject
         {

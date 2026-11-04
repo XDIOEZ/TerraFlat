@@ -26,6 +26,12 @@ namespace FlatWorld.AIECS.Gameplay
                 if (id is not ("Wolf" or "SnowLeopard" or "Bear" or "Chicken" or "WildBoar")) continue;
                 AiecsBehaviorParameterSnapshot value = Compile(actor);
                 results[id] = Snapshot(value);
+                if (id == "Wolf")
+                {
+                    var widerHit = (JObject)actor.DeepClone();
+                    widerHit["ai"]["behaviorTree"]["capabilities"]["combat"]["damageRangeMultiplier"] = 2f;
+                    results["widerWolfHit"] = Snapshot(Compile(widerHit));
+                }
                 if (id == "SnowLeopard")
                 {
                     var prototype = new JObject { ["DamageValues"] = new JObject
@@ -65,6 +71,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             ["sense"] = value.SenseRange, ["chase"] = value.ChaseRange, ["retry"] = value.ChaseRetryDelay,
             ["attack"] = value.AttackRange, ["windup"] = value.Windup, ["active"] = value.Active,
+            ["damageRangeMultiplier"] = value.DamageRangeMultiplier,
             ["recovery"] = value.Recovery, ["cooldown"] = value.Cooldown,
             ["fleeHealth"] = value.FleeHealthRatio, ["speed"] = value.MoveSpeed,
             ["eggDays"] = value.ReproductionDays, ["eggItem"] = value.EggItemId

@@ -55,6 +55,25 @@ test.system("ai", "wolf_formation_topology", {}, function(data)
         "站位左右翼选择在环绕接缝、直线距离或近重合时改变")
 end, "狼群站位批次冻结拓扑，环绕位移、归一化和左右翼分配等价")
 
+-- 改变命中容错不能扩大停步起手圈，外圈站位也必须继续接近。
+for _, multiplier in ipairs({1, 1.5, 2}) do
+    for _, distance in ipairs({.89, .9, .91, 1.8, 2.1}) do
+        test.system("ai", "wolf_attack_distance", {distance = distance, damageRangeMultiplier = multiplier}, function(data)
+            local starts = distance <= .9
+            assert(math.abs(data.attackRange - .9) < .00001 and math.abs(data.skillDefaultRange - .9) < .00001,
+                "普通攻击或撕咬默认起手距离没有收紧到0.9米")
+            assert(math.abs(data.damageRangeMultiplier - multiplier) < .00001,
+                "独立命中倍率没有应用到攻击控制器")
+            assert(data.attackStarted == starts and data.state == (starts and "Attack" or "Chase"),
+                "狼在0.9米起手边界内外选择了错误的攻击状态")
+            assert(data.moving == (not starts) and (starts or not data.heldFormation),
+                "攻击圈外仍停步守位，或起手时没有停止移动")
+            assert(data.formationDistance >= 0 and data.formationDistance <= .72001,
+                "近身编队仍使用旧的宽攻击圈")
+        end, "狼近身起手与独立命中倍率：" .. distance .. "/" .. multiplier)
+    end
+end
+
 test.system("ai", "wolf_combat_position", {}, function(data)
     assert(data.formationActive and data.slotError > .6,
         "夹具没有真正启用编队或未覆盖偏离站位的攻击机会")
@@ -131,7 +150,7 @@ for _, case in ipairs({
     {name = "独狼保持避让", args = {count = 1}, members = 1, state = "Avoid"},
     {name = "双狼残血撤退", args = {count = 2, hpRate = .1}, members = 2, state = "Flee"},
     {name = "三狼残血仍成群作战", args = {count = 3, hpRate = .1}, members = 3, state = "Chase"},
-    {name = "攻击站位内选择攻击", args = {count = 4, playerX = 1.05}, members = 4, state = "Attack", firstOnly = true}
+    {name = "攻击站位内选择攻击", args = {count = 4, playerX = .89}, members = 4, state = "Attack", firstOnly = true}
 }) do
     test.system("ai", "wolf_pack", case.args, function(data)
         assert(data.declaredId == "AI" and data.prefabId == "Module_AnimalBehaviorTree" and data.identityBound,

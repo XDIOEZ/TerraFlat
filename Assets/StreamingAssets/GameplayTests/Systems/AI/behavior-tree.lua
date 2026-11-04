@@ -84,7 +84,7 @@ end, "模块默认继承与显式整体替换")
 test.system("ai", "aiecs_tree_parameters", {}, function(data)
     local function near(a, b) return math.abs(a - b) < .0001 end
     for id, expected in pairs({
-        Wolf = {sense = 28, chase = 44, attack = 2.1, windup = .25, active = 1 / 3, recovery = .35, cooldown = 2},
+        Wolf = {sense = 28, chase = 44, attack = .9, windup = .25, active = 1 / 3, recovery = .35, cooldown = 2},
         SnowLeopard = {sense = 24, chase = 30, attack = 1.2, windup = .35, active = .25, recovery = .25, cooldown = 1.2},
         Bear = {sense = 30, chase = 30, attack = 1.8, windup = .4, active = .2, recovery = .3, cooldown = 1.8}
     }) do
@@ -93,7 +93,10 @@ test.system("ai", "aiecs_tree_parameters", {}, function(data)
             assert(near(actual[key], value), "ECS 映射未保留正式树参数：" .. id .. "." .. key)
         end
         assert(near(actual.retry, 3), "ECS 追击重试没有读取正式能力：" .. id)
+        assert(near(actual.damageRangeMultiplier, 1.5), "显式或默认命中倍率发生变化：" .. id)
     end
+    assert(near(data.widerWolfHit.attack, .9) and near(data.widerWolfHit.damageRangeMultiplier, 2),
+        "ECS 调整命中倍率错误扩大了起手距离")
     assert(near(data.Chicken.eggDays, 2) and data.Chicken.eggItem == "Egg", "鸡的正式产蛋配置没有映射到 ECS")
     local snowDamage = data.SnowLeopard.damage
     assert(snowDamage.physical == 22 and snowDamage.fire == 0 and snowDamage.radiation == 0 and

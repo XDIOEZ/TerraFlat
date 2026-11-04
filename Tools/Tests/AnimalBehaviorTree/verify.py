@@ -81,10 +81,13 @@ def compile_and_capture():
     ecs_probe = (ROOT / "Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsBehaviorTreeParameterTestProbe.cs").read_text(encoding="utf-8-sig")
     combat_source = (ROOT / "Assets/5_Scripts/Shared/Combat/CombatContext.cs").read_text(encoding="utf-8-sig")
     combat_bridge = (ROOT / "Assets/5_Scripts/5-3_GamePlay/Entities/Combat/GameplayCombatBridge.cs").read_text(encoding="utf-8-sig")
+    attack_controller = (ROOT / "Assets/5_Scripts/5-3_GamePlay/Entities/AI/AI_AttackController.cs").read_text(encoding="utf-8-sig")
     ecs_generated = OUT / "ProductionAiecsMapping.cs"
     ecs_generated.write_text(
         "using System;\nusing System.Linq;\nusing System.Collections.Generic;\nusing Newtonsoft.Json;\n"
         "using Newtonsoft.Json.Linq;\nusing Unity.Mathematics;\n" +
+        "public static class AI_AttackController {\n" +
+        extract_expression(attack_controller, "public const float DefaultDamageRangeMultiplier") + "\n}\n" +
         "public sealed partial class ForagingDecisionFixture {\n" +
         extract_block(forage_source, "public bool TryChooseMeal(bool alreadyEating, out bool withinEatDistance)") + "\n}\n" +
         "public static partial class AnimalSpecialMovementBehaviorNodes {\n" +
