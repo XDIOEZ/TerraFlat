@@ -9,7 +9,7 @@ public partial class WeatherMgr
 
     private const float WeatherAudioThreshold = 0.001f;
     private const float WindAudioStartStrength = 0.5f;
-    private const float WindAudioMaximumVolume = 0.4f;
+    private const float WindAudioMaximumVolume = 0.2f;
     private const float WindAudioCrossFadeSeconds = 0.8f;
     private const float ThunderNearRadius = 64f;
     private const float ThunderPropagationSpeed = 64f;
