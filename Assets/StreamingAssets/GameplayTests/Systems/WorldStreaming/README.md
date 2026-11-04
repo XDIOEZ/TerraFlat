@@ -1,5 +1,7 @@
 # 世界模型与区块流送
 
+2026-11-05：`item_visual_ownership` 增补完整居民重复挂接原通知契约、三次平移仅三次通知、零位移不通知、移出根后恢复挂接与真实账本/父级一致性。新增现场断言未执行；`GamePlay` 隔离编译0错误/32警告，输出仅在 `Temp/LooseItemMotionCompile/`。用户 PlayMode 不退出、不强制编译，未以静态检查冒充 FPS 验收。
+
 2026-11-04：可动 Prefab 的根刚体模板统一领取独立物理代理；`world_physics_proxy_modes` 补充纯逻辑外壳、精确受击归属、幂等登记、原生姿态回写、传送与释放断言，`prefab_creature_physics` 按代理所有权验收动物。当前 PlayMode 未执行本轮 Lua，实际碰撞和跨世界现场仍待验收。
 
 世界执行作用域补充了值类型/默认值规则，以及 `incremental_world_scope` 中真实双世界嵌套、异常还原、同实例重复释放和预热1024轮零GC断言；联机 `world_scope` 复用同一采样。并行修改期间未执行本轮Lua与现场验收。

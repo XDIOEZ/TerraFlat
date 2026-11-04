@@ -92,13 +92,20 @@ public static class WorldItemWaterSystem
         => TryEnterWater(item, requirePickable, out _);
 
     // 已登记散物移动后直接复查入水，只有地形未就绪才重新排队生成检查。
-    internal static EntryResult TryEnterWater(Item item, bool requirePickable, out bool terrainResolved)
+    internal static EntryResult TryEnterWater(Item item, bool requirePickable, out bool terrainResolved,
+        ChunkMgr.RuntimeTerrainPresenceQuery? terrainQuery = null)
     {
         terrainResolved = true;
         if (item == null || item.DestructionHandled || item.itemData?.Stack == null)
             return EntryResult.None;
 
-        terrainResolved = TryResolveWaterAt(item.transform.position, out bool isWater);
+        bool isWater;
+        if (terrainQuery.HasValue)
+        {
+            terrainResolved = terrainQuery.Value.TrySample(item.transform.position, out RuntimeTerrainTileSample sample);
+            isWater = terrainResolved && sample.LiquidDepth > 0f;
+        }
+        else terrainResolved = TryResolveWaterAt(item.transform.position, out isWater);
         if (!terrainResolved)
             return EntryResult.None;
         // 普通陆地散物没有入水工作，避免每次风移动都扫描整棵模块组件树。

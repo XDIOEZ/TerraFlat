@@ -146,11 +146,11 @@ public static partial class GameplayTestSystemProbe
         WorldTopologyDomain topology = new(new int2(-4, -4), new int2(8, 8), true);
         var field = new LooseItemMotion.WorldField
         {
-            World = MotionTestWorld, SamplingInitialized = true, HasTerrainQuery = true, Topology = topology,
+            World = MotionTestWorld, SamplingInitialized = true, HasTerrainQuery = true, SurfaceWorld = true, Topology = topology,
             TerrainQuery = new ChunkMgr.RuntimeTerrainPresenceQuery(world, topology, dimension, 2, 2)
         };
         Vector2 origin = new(.25f, .25f);
-        var idle = new LooseItemMotion.WorldField { World = MotionTestWorld };
+        var idle = LooseItemMotion.CreateExternalMovementBatch(MotionTestWorld);
         Vector2 idlePosition = LooseItemMotion.Integrate(origin, .2f, ref idle);
         bool initialDry = !field.IsWater(origin);
         int water = first.Terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId);
@@ -185,8 +185,22 @@ public static partial class GameplayTestSystemProbe
         Vector2 evictedMove = field.Move(origin, Vector2.right * .1f);
         Commit(0);
         Vector2 reloaded = field.Move(origin, Vector2.right * .1f);
+        var firstItem = new Data_GeneralItem();
+        var secondItem = new Data_GeneralItem();
+        using var batchSource = LooseItemMotion.RegisterVelocitySource("test:motion-batch:" + Guid.NewGuid().ToString("N"),
+            value => value.WorldKey == MotionTestWorld
+                ? Vector2.right * (ReferenceEquals(value.Item, firstItem) ? .5f : 1f) : Vector2.zero);
+        field.ReceiveExternal = true;
+        bool firstAdvanced = LooseItemMotion.TryAdvanceExternal(ref field, firstItem, origin, .2f,
+            out Vector2 firstBatchPosition, Vector2.zero);
+        bool missingAdvanced = LooseItemMotion.TryAdvanceExternal(ref field, firstItem, new Vector2(.25f, 1.95f), .2f,
+            out Vector2 missingBatchPosition, Vector2.up * .5f);
+        bool secondAdvanced = LooseItemMotion.TryAdvanceExternal(ref field, secondItem, origin, .2f,
+            out Vector2 secondBatchPosition, Vector2.right * .5f);
         world.BeginNewEpoch(2);
         Vector2 oldEpoch = field.Move(origin, Vector2.right * .1f);
+        bool staleBatchAdvanced = LooseItemMotion.TryAdvanceExternal(ref field, secondItem, origin, .2f,
+            out Vector2 staleBatchPosition, Vector2.right * .5f);
         return new JObject
         {
             ["initialDry"] = initialDry, ["wet"] = wet, ["covered"] = covered,
@@ -197,7 +211,11 @@ public static partial class GameplayTestSystemProbe
             ["seamX"] = seam.x, ["seamDeltaX"] = seamDelta.x,
             ["independentMotionX"] = independentMotion.x, ["missingY"] = missing.y,
             ["evictedWater"] = evictedWater, ["evictedX"] = evictedMove.x,
-            ["reloadedX"] = reloaded.x, ["oldEpochX"] = oldEpoch.x
+            ["reloadedX"] = reloaded.x, ["oldEpochX"] = oldEpoch.x,
+            ["firstBatchAdvanced"] = firstAdvanced, ["firstBatchX"] = firstBatchPosition.x,
+            ["missingBatchAdvanced"] = missingAdvanced, ["missingBatchY"] = missingBatchPosition.y,
+            ["secondBatchAdvanced"] = secondAdvanced, ["secondBatchX"] = secondBatchPosition.x,
+            ["staleBatchAdvanced"] = staleBatchAdvanced, ["staleBatchX"] = staleBatchPosition.x
         };
     }
 #endif

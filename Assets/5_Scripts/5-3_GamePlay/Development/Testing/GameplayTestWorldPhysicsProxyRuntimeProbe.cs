@@ -245,8 +245,48 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             ["viewHasNoLogicOrPhysics"] = visualOnly,
             ["viewsUnderRendering"] = inRendering,
             ["repeatReusesView"] = reused,
-            ["releaseAndRebind"] = released && restored
+            ["releaseAndRebind"] = released && restored,
+            ["residentMovement"] = CaptureResidentMovementCommitNotifications(creature)
         };
+    }
+
+    // 通用挂接保留通知契约，已登记居民平移不重复挂接，零位移不发布通知。
+    private static JObject CaptureResidentMovementCommitNotifications(Item resident)
+    {
+        ItemMgr manager = ItemMgr.Instance;
+        Transform root = resident.transform.parent;
+        int notifications = 0;
+        void OnMoved(Item moved) { if (ReferenceEquals(moved, resident)) notifications++; }
+        ItemMgr.RuntimeItemMoved += OnMoved;
+        try
+        {
+            for (int i = 0; i < 3; i++)
+                ItemWorldPlacement.TryAttachWorldModelTransientItem(resident, resident.transform.position);
+            int unchangedNotifications = notifications;
+            notifications = 0;
+            int committedMoves = 0;
+            for (int i = 0; i < 3; i++)
+                if (LooseItemMotion.CommitItemPosition(resident, (Vector2)resident.transform.position + Vector2.right * .01f))
+                    committedMoves++;
+            int moveNotifications = notifications;
+            notifications = 0;
+            bool idleCommitted = LooseItemMotion.CommitItemPosition(resident, resident.transform.position);
+            int idleNotifications = notifications;
+            resident.transform.SetParent(null, true);
+            notifications = 0;
+            ItemWorldPlacement.AttachRuntimeWorldResident(resident, resident.gameObject);
+            ItemWorldPlacement.AttachRuntimeWorldResident(resident, resident.gameObject);
+            return new JObject
+            {
+                ["unchangedNotifications"] = unchangedNotifications,
+                ["committedMoves"] = committedMoves, ["moveNotifications"] = moveNotifications,
+                ["idleCommitted"] = idleCommitted, ["idleNotifications"] = idleNotifications,
+                ["reattachNotifications"] = notifications,
+                ["rootPreserved"] = root != null && resident.transform.parent == root,
+                ["registeredAtRoot"] = manager.IsRegisteredRuntimeWorldResidentInNeutralHierarchy(resident)
+            };
+        }
+        finally { ItemMgr.RuntimeItemMoved -= OnMoved; }
     }
     #endregion
 

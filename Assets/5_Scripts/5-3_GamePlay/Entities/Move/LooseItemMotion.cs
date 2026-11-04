@@ -107,7 +107,7 @@ public static partial class LooseItemMotion
                     ? terrainQuery.TrySample(destination, out RuntimeTerrainTileSample sample)
                     : chunks.TryGetRuntimeTerrainTile(destination, out sample);
                 if (!found) { waitingForSurface = surfaceWorld; return initial; }
-                if (!BuildingOccupancyRegistry.GetEffectiveWalkable(sample.WorldCell,
+                if (!BuildingOccupancyRegistry.GetEffectiveWalkableNormalized(sample.WorldCell,
                         sample.Cell.IsWalkable || sample.LiquidDepth > 0f)) break;
             }
             else if (surfaceWorld)
@@ -186,6 +186,21 @@ public static partial class LooseItemMotion
         result = position;
         if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return false;
         var field = CreateField(world, item, position, false, true, windVelocity);
+        return TryAdvanceExternal(ref field, item, position, seconds, out result, field.WindVelocity);
+    }
+
+    // 同轮散物只共用寻址和拓扑，每件载荷、风速、缺地形状态分别重置。
+    internal static WorldField CreateExternalMovementBatch(string world)
+        => CreateField(world, null, Vector2.zero, false, true, Vector2.zero);
+
+    internal static bool TryAdvanceExternal(ref WorldField field, ItemData item, Vector2 position, float seconds,
+        out Vector2 result, Vector2 windVelocity)
+    {
+        result = position;
+        field.Item = item;
+        field.WindVelocity = windVelocity;
+        field.WaitingForSurface = false;
+        if (!GameNetwork.HasStateAuthority || !Finite(position) || !Finite(seconds) || seconds <= 0f) return false;
         Vector2 advanced = Integrate(position, seconds, ref field);
         if (field.WaitingForSurface) return false;
         result = advanced;
@@ -204,7 +219,7 @@ public static partial class LooseItemMotion
         if (item == null || item.DestructionHandled || !Finite(position)) return false;
         if (WorldPhysicsService2D.GetConfiguredItemPhysics(item) != null)
             return WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, WorldPhysicsService2D.GetItemRigidbody(item), position);
-        string world = item.gameObject.scene.name;
+        string world = GameplayWorldRegistry.GetItemWorldKey(item) ?? item.gameObject.scene.name;
         Vector2 before = item.transform.position;
         Vector2 movement = PressureExplosionQueue.DeltaInWorld(world, before, position);
         if (movement.sqrMagnitude <= .00000001f) return false;
@@ -218,9 +233,11 @@ public static partial class LooseItemMotion
         }
         item.transform.position = display;
         item.itemData.transform.position = new Vector3(position.x, position.y, display.z);
-        if (world == GameplayWorldRegistry.ExecutionWorldKey)
+        ItemMgr manager = ItemMgr.GetExistingInstance();
+        if (world == GameplayWorldRegistry.ExecutionWorldKey &&
+            manager?.IsRegisteredRuntimeWorldResidentInNeutralHierarchy(item) != true)
             ItemWorldPlacement.TryAttachWorldModelTransientItem(item, position);
-        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+        manager?.NotifyRuntimeItemMoved(item);
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         WorldMotionSystem.MarkLooseItemMoved(item);
         return true;

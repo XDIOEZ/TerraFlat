@@ -201,6 +201,7 @@ public static class WorldMotionSystem
         looseWindScratch.Clear();
         looseWindScratch.AddRange(looseWindItems.Keys);
         string worldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        var movementBatch = LooseItemMotion.CreateExternalMovementBatch(worldKey);
         int motionFrame = Time.frameCount;
         foreach (Item item in looseWindScratch)
         {
@@ -219,10 +220,11 @@ public static class WorldMotionSystem
             Vector2 position = item.transform.position;
             Vector2 velocity = hasWind ? context.Sample(position, item.itemData.Stack.CurrentWeight) : Vector2.zero;
             if (velocity.sqrMagnitude <= 0f && !LooseItemMotion.HasVelocitySources) continue;
-            Vector2 destination = LooseItemMotion.AdvanceExternal(worldKey, item.itemData,
-                position, seconds, velocity);
+            if (!LooseItemMotion.TryAdvanceExternal(ref movementBatch, item.itemData,
+                    position, seconds, out Vector2 destination, velocity)) continue;
             if (!LooseItemMotion.CommitItemPosition(item, destination)) continue;
-            WorldItemWaterSystem.TryEnterWater(item, requirePickable: true, out bool terrainResolved);
+            WorldItemWaterSystem.TryEnterWater(item, requirePickable: true, out bool terrainResolved,
+                movementBatch.HasTerrainQuery ? movementBatch.TerrainQuery : null);
             if (!terrainResolved) WorldItemWaterSystem.ScheduleSpawnCheck(item);
         }
         looseWindScratch.Clear();

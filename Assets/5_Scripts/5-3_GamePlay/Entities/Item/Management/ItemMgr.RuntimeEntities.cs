@@ -196,6 +196,15 @@ public partial class ItemMgr
 
     public bool IsRuntimePersistentWorldEntity(Item item) => RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item);
 
+    // 平移只复用已完成登记的居民归属，首次挂接或世界迁移仍执行正式归属流程。
+    internal bool IsRegisteredRuntimeWorldResidentInNeutralHierarchy(Item item)
+        => runtimeAiOwnership.TryGetValue(item, out RuntimeAiOwnership owner) &&
+           owner.WorldKey == GameplayWorldRegistry.GetItemWorldKey(item) && owner.WorldKey != null &&
+           runtimeAiWorldStates.TryGetValue(owner.WorldKey, out RuntimeAiWorldState state) &&
+           state.ByItem.ContainsKey(item) && state.Root != null &&
+           state.Root.gameObject.scene == item.gameObject.scene &&
+           item.NaturalRuntimeOwner == null && item.transform.parent == state.Root;
+
     /// <summary>自然来源迁出后沿用通用居民存档，不再归出生区块回收。</summary>
     public void RegisterIndependentPhysicsNaturalItemPersistenceOwnership(Item item)
     {

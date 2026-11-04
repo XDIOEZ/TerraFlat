@@ -32,6 +32,7 @@
 - 新增推动注册 `LooseItemMotion.RegisterVelocitySource(id, context => velocity)`，返回单位/秒；可按 `WorldKey/Position/Item/Mass/InWater` 筛选，释放返回租约即撤销。采样须无副作用，不在回调里累计时间或修改物品；没有风但有注册来源时也会推动。
 - `MachineWorld.SampleLooseConveyorVelocity` 保留带形、转速和侧向收拢；水流仍读 `WorldItemWaterRules.ResolveDriftSpeed`。统一先合成载体、风及扩展速度，再过阻挡；水流自身受岸线限制，独立外力可推物上岸。
 - 轻量散物的水/带/风归 `CommitEnvironmentMotion` 提交，完整 Item 归 `CommitItemPosition`；后台存档复用同一内核且只查所属世界，不借用镜头物理场。保留原环境检查节奏、浮沉和入箱事务；外力不重复进入水/带物品的备用风循环。
+- 完整风散物同批复用 `WorldField` 地形寻址/拓扑，并供移动后入水采样；每件重置载荷、风速与缺地形状态，地块与建筑阻挡仍实时读。`CommitItemPosition` 仅对已在账本/地址索引和中性根下的居民跳过重复挂接，再统一通知一次移动；通用挂接保留原通知，首次/迁移/资格刷新沿原生命周期。
 - 回归 `mechanical/loose_item_motion`、`mechanical/loose_item_sources`；PlayMode 期间只运行 `Tools/Tests/LooseItemMotion` 离线纯规则，不把它当作 Unity 场景碰撞或联机验收。
 
 回归：`environment/tile_effect_reenable`、`environment/light_registry`、`environment/light_sampling`、`environment/wind_push_transition`。

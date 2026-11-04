@@ -118,4 +118,10 @@ test.runtime("world_streaming", "item_visual_ownership", {}, function(data)
         and data.viewsUnderRendering, "普通物品未移除逻辑树中的 Render，或显示管理混入逻辑与物理组件")
     assert(data.repeatReusesView and data.releaseAndRebind,
         "渲染重复登记创建副本，或取消登记后无法正常重绑")
+    local movement = data.residentMovement
+    assert(movement.unchangedNotifications == 3 and movement.committedMoves == 3
+        and movement.moveNotifications == 3, "居民平移重复挂接或重复发布移动通知")
+    assert(not movement.idleCommitted and movement.idleNotifications == 0, "居民零位移仍提交或发布通知")
+    assert(movement.reattachNotifications == 2 and movement.rootPreserved and movement.registeredAtRoot,
+        "居民显式迁回根节点未恢复归属，或通用挂接丢失原通知契约")
 end, "GO 生物、玩家、普通物品统一渲染所有权及复用")

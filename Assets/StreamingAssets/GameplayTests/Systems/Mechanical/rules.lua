@@ -229,6 +229,13 @@ test.system("mechanical", "loose_item_terrain_batch", {}, function(data)
     near(data.evictedX, .25, "区块卸载后禁止移动")
     near(data.reloadedX, .35, "同坐标重新加载后恢复移动")
     near(data.oldEpochX, .25, "旧世界代际不能继续推进")
+    assert(data.firstBatchAdvanced and data.secondBatchAdvanced, "同批散物没有分别完成推进")
+    near(data.firstBatchX, .35, "批量首件附加速度")
+    near(data.secondBatchX, .55, "批量后件复用了前件载荷或风速")
+    assert(not data.missingBatchAdvanced and not data.staleBatchAdvanced,
+        "批量推进没有拒绝未加载地形或旧世界代际")
+    near(data.missingBatchY, 1.95, "批量未加载地形保留原位")
+    near(data.staleBatchX, .25, "批量旧世界代际保留原位")
 end, "散物推进复用地形寻址并实时读取水态、阻挡、环绕与世界代际")
 
 test.system("mechanical", "loose_item_sources", {}, function(data)
