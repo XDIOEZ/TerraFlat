@@ -48,6 +48,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 工具长按由 `Mod_HotBar` 在首次 `Act` 后登记同一手持物的 `IContinuousHeldItemUse`，松开、换物、输入锁或 UI 遮挡即撤销，普通物品只单次使用。斧头复用武器动作，镐/铲/锄/打制石器各自结算。
 - 鼠标右键按下时由控制器冻结左右 Shift 汇总态；手持装备经 `Mod_HotBar → Mod_Equipment.TryEquipFromSlot` 穿戴或替换，旧件回当前快捷栏槽。该组合键独占按下、持续和松开，拒绝也不再执行普通 `Act`；非装备、普通右键和其他设备沿用现有使用链。
 - 本地玩家换手持物由 `Mod_HotBar.HeldItemDraw` 将 SpriteRenderer 子节点从 15% 缩放到原尺寸（0.25 秒 OutBack），动画期 `Mod_GameController.IsHeldItemDrawLocked` 拦截物品攻击/使用；切换时撤销旧按住，不改变 Item 根、物理和存档尺寸，重复选同件不重播。
+- 手持物的结构通知须使祖先 Item 的显示投影失效；纯视觉投影初建会省略空快捷栏挂点，不能只依赖挂点的层级监听。回归 `rendering/visual_motion_interpolation` 覆盖晚装入、换物、卸下及源 Renderer 恢复。
 - `PreciseInteraction` 默认关闭：光标命中优先，空命中按朝向/距离回退；开启后仅认落点。全部选择受距离约束，鼠标始终精确；手持 `Item.InHand` 排除于候选，包括同时实现世界目标接口的组件。手持建筑放置由右键使用提交，不阻断 F 交互和世界描边；放置态只暂停左键采集。
 - 发送器使用 Physics2D 查询，无交互 Trigger，`Module_Hand` 无 Collider2D，查询跳过伤害专用 Collider。无 Collider 目标及机器由 `SpatialInteractionRegistry.Query` 提供；逐帧描边只用 `QueryPreview` 的注册视觉，机械视觉以同一目标接入 `IWorldInteractionPreview`。
 - 中键 `PickWorldItem` 经正式输入仲裁后由 `WorldItemQuickPickService` 检索现有快捷栏/背包；先用发送器精确光标与同格分区，无光标目标才走可独立复用的世界格查询。数据目标通过 `IWorldInteractionTarget.ItemDefinitionId` 提供身份，建筑召唤器按建筑ID/TileBlockId匹配；空槽优先，满栏交换当前槽，网络事务确认后核对目标身份再切槽。

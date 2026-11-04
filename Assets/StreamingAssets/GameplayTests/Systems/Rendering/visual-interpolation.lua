@@ -34,6 +34,10 @@ test.system("rendering", "visual_motion_interpolation", {}, function(data)
     assert(data.rateChangeKeepsRemainder and data.rateChangeAdvances, "切换 TPS 丢失时间余量或让显示时间倒退")
     assert(data.heldPositionFollowsParent and data.heldRotationStillInterpolated and data.heldSourceUnchanged,
         "载具移动时手持挂点位置被固定步插值拉回，或改动了逻辑旋转")
+    assert(data.emptyAttachmentOmitted and data.lateHeldItemProjected,
+        "首次显示后装入空挂点的手持物没有接入持有者投影，仍按物理位置直接绘制")
+    assert(data.replacedHeldItemProjected and data.removedHeldItemRestored,
+        "切换或卸下手持物没有重建持有者投影并恢复旧源 Renderer")
     assert(data.childPoseInterpolated and data.childSourceUnchanged and data.rootRotationApplied,
         "局部动作/根旋转没有只在绘制副本中插值，或反向修改了逻辑姿态")
     assert(data.sourceUnchanged and data.projectionTranslated and data.projectionRestored,

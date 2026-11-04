@@ -82,6 +82,8 @@ public static partial class GameplayTestSystemProbe
         bool rateChangeAdvances = sampleTicks == 2 && clock.PresentationTime >= presentationBeforeRateChange;
         bool childPoseInterpolated = false, childSourceUnchanged = false, rootRotationApplied = false;
         bool heldPositionFollowsParent = false, heldRotationStillInterpolated = false, heldSourceUnchanged = false;
+        bool emptyAttachmentOmitted = false, lateHeldItemProjected = false, replacedHeldItemProjected = false,
+            removedHeldItemRestored = false;
         double oldSimulationTime = FlatWorld.Simulation.GameplaySimulationTime.CurrentTime;
         double oldPresentationTime = FlatWorld.Simulation.GameplaySimulationTime.PresentationTime;
         Scene scene = default;
@@ -98,15 +100,24 @@ public static partial class GameplayTestSystemProbe
             var child = new GameObject("LogicalActionPose");
             child.transform.SetParent(source.transform, false);
             child.AddComponent<SpriteRenderer>();
+            var attachment = new GameObject("LateHandAnchor").transform;
+            attachment.SetParent(source.transform, false);
+            projection = WorldPresentationProjection.Create(source.transform, visualHierarchyOnly: true);
+            projection.Synchronize(Matrix4x4.identity, true);
+            emptyAttachmentOmitted = !projection.TryGetProjectedTransform(attachment, out _);
+
+            // 首次投影后才在空挂点装入手持物，复现未被层级监听覆盖的子树。
             var held = new GameObject("HeldFramePose");
-            held.transform.SetParent(source.transform, false);
+            held.transform.SetParent(attachment, false);
             GameItem heldItem = held.AddComponent<GameItem>();
             heldItem.BindData(EntityProbeData("test:visual_held", 1f));
             heldItem.Owner = owner;
             heldItem.SetInHand(true);
-            held.AddComponent<SpriteRenderer>();
-            projection = WorldPresentationProjection.Create(source.transform);
+            SpriteRenderer heldRenderer = held.AddComponent<SpriteRenderer>();
+            heldItem.NotifyRuntimeStructureChanged();
             projection.Synchronize(Matrix4x4.identity, true);
+            lateHeldItemProjected = projection.TryGetProjectedTransform(held.transform, out _) &&
+                WorldPresentationProjection.IsSourceProjected(heldRenderer) && heldRenderer.forceRenderingOff;
             projection.CaptureSimulationPoses(0d);
             child.transform.localPosition = Vector3.right;
             child.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
@@ -117,7 +128,7 @@ public static partial class GameplayTestSystemProbe
             FlatWorld.Simulation.GameplaySimulationTime.Publish(.1d, .15d);
             projection.Synchronize(Matrix4x4.identity, true);
             Transform childView = projection.transform.Find("LogicalActionPose");
-            Transform heldView = projection.transform.Find("HeldFramePose");
+            projection.TryGetProjectedTransform(held.transform, out Transform heldView);
             childPoseInterpolated = childView != null && Mathf.Abs(childView.localPosition.x - .5f) < .0001f &&
                 Quaternion.Angle(childView.localRotation, Quaternion.Euler(0f, 0f, 45f)) < .001f;
             // 乘员根随车平移时，手持物的逐帧挂点位置不能再落回前一逻辑步。
@@ -139,6 +150,24 @@ public static partial class GameplayTestSystemProbe
                 Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, 45f)) * Matrix4x4.Translate(-original));
             rootRotationApplied = Quaternion.Angle(projection.transform.rotation, Quaternion.Euler(0f, 0f, 45f)) < .001f &&
                 source.transform.rotation == Quaternion.identity;
+
+            held.transform.SetParent(null, true);
+            var replacement = new GameObject("ReplacementHeldItem");
+            replacement.transform.SetParent(attachment, false);
+            GameItem replacementItem = replacement.AddComponent<GameItem>();
+            replacementItem.BindData(EntityProbeData("test:replacement_held", 1f));
+            replacementItem.Owner = owner;
+            replacementItem.SetInHand(true);
+            SpriteRenderer replacementRenderer = replacement.AddComponent<SpriteRenderer>();
+            replacementItem.NotifyRuntimeStructureChanged();
+            projection.Synchronize(Matrix4x4.identity, true);
+            replacedHeldItemProjected = projection.TryGetProjectedTransform(replacement.transform, out _) &&
+                replacementRenderer.forceRenderingOff && !heldRenderer.forceRenderingOff &&
+                !WorldPresentationProjection.IsSourceProjected(heldRenderer);
+            replacement.transform.SetParent(null, true);
+            projection.Synchronize(Matrix4x4.identity, true);
+            removedHeldItemRestored = !projection.TryGetProjectedTransform(attachment, out _) &&
+                !replacementRenderer.forceRenderingOff && !WorldPresentationProjection.IsSourceProjected(replacementRenderer);
         }
         finally
         {
@@ -180,6 +209,10 @@ public static partial class GameplayTestSystemProbe
             , ["heldPositionFollowsParent"] = heldPositionFollowsParent
             , ["heldRotationStillInterpolated"] = heldRotationStillInterpolated
             , ["heldSourceUnchanged"] = heldSourceUnchanged
+            , ["emptyAttachmentOmitted"] = emptyAttachmentOmitted
+            , ["lateHeldItemProjected"] = lateHeldItemProjected
+            , ["replacedHeldItemProjected"] = replacedHeldItemProjected
+            , ["removedHeldItemRestored"] = removedHeldItemRestored
         };
     }
 

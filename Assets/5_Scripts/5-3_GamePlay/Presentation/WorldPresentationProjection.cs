@@ -310,9 +310,12 @@ public sealed class WorldPresentationProjection : MonoBehaviour
 
     private static void OnItemStructureChanged(Item item)
     {
-        if (item == null || !itemProjectionOwners.TryGetValue(item, out var owners)) return;
-        foreach (WorldPresentationProjection owner in owners)
-            if (owner != null) owner.hierarchyDirty = true;
+        if (item == null) return;
+        // 纯视觉投影可能尚未包含空挂点，子物品结构变化也要通知祖先投影。
+        for (Transform source = item.transform; source != null; source = source.parent)
+            if (source.TryGetComponent(out Item ancestor) && itemProjectionOwners.TryGetValue(ancestor, out var owners))
+                foreach (WorldPresentationProjection owner in owners)
+                    if (owner != null) owner.hierarchyDirty = true;
     }
 
     // 先更新镜头可读取的根姿态，全部绘制数据留到渲染前统一读取一次。
