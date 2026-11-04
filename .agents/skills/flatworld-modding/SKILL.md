@@ -11,6 +11,7 @@ description: "FlatWorld MOD 清单、内容注册、Lua/C# 生命周期、资源
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`；资源接入：`Core/Lifecycle/GameRes.cs`；流体注册：`World/Fluids/Catalog/FluidContentRegistry.cs`。
 - 模板工具：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`；清单 schema：`Tools/FlatWorldModSDK/Schemas/manifest.schema.json`；示例：`ModSDK/Examples/`。
 - 安装根为 persistentDataPath/Mods/<包目录>/manifest.json；开发示例目录不自动扫描。UI_ModManager 管启停/拖拽排序，新包默认关闭，C# 启停/排序/代码变化重启生效。
+- Android 通过 `FlatWorldMods.androidlib` 的 DocumentsProvider 提供系统“FlatWorld MOD”文件入口；原目录不迁移，文件操作后手动刷新。入口、权限和真机验收见 [Android MOD 目录](references/android-mod-directory.md)。
 - 运行时 F10 IMGUI 管理窗口及其设置快捷编辑入口已移除，设置仍可经 `ModSettingsRegistry`/配置文件读写；主菜单 UI_ModManager 为正式管理入口。C# 包只读检查合并到编辑器“创作与打包工具”。
 - xLua 正式绑定配置为 `Assets/Plugins/XLua/Editor/RuntimeBindingsGenConfig.cs`；供应商示例归 `Tools/ReferenceSamples/XLua/`，不参与编译，重新导回时需重生成对应桥接。
 - API v2 开放 CS，Lua 直接调用游戏公开系统；物品回调传真实 Item。`mod` 仅保留身份、日志、权威提示、状态和 RegisterCleanup；包内 require 使用 scripts.helper → scripts/helper.lua，每包独立缓存。旧 v1 包须迁移，不保留业务兼容壳。

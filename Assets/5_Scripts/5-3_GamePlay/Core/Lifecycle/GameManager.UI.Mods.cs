@@ -244,6 +244,14 @@ public partial class GameManager
                 UseShellExecute = true
             });
             state.Notice = "已打开 MOD 安装目录。";
+#elif UNITY_ANDROID && !UNITY_EDITOR
+            if (AndroidModDirectoryLauncher.TryOpenModsDirectoryInNativeFileManager(path))
+                state.Notice = "已打开系统文件管理器，操作完成后请返回游戏点击刷新。";
+            else
+            {
+                GUIUtility.systemCopyBuffer = path;
+                state.Notice = "不支持直接打开，请在支持系统文档入口的文件管理器中选择 FlatWorld MOD。已复制 MOD 安装目录。";
+            }
 #else
             GUIUtility.systemCopyBuffer = path;
             state.Notice = "当前平台已复制 MOD 安装目录，请在文件管理器中粘贴。";

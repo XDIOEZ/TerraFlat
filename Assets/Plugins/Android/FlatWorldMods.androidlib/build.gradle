@@ -1,0 +1,24 @@
+apply plugin: 'com.android.library'
+
+evaluationDependsOn(':unityLibrary')
+def unityAndroid = project(':unityLibrary').android
+
+android {
+    namespace 'com.flatworld.mods'
+    compileSdkVersion unityAndroid.compileSdkVersion
+    buildToolsVersion unityAndroid.buildToolsVersion
+    defaultConfig {
+        minSdkVersion unityAndroid.defaultConfig.minSdkVersion.apiLevel
+        targetSdkVersion unityAndroid.defaultConfig.targetSdkVersion.apiLevel
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+    sourceSets.main {
+        manifest.srcFile 'AndroidManifest.xml'
+        java.srcDirs = ['src']
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+        encoding 'UTF-8'
+    }
+}
