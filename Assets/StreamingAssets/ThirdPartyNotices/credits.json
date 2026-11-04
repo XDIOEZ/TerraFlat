@@ -1051,31 +1051,6 @@
       ]
     },
     {
-      "id": "software-navmeshplus",
-      "category": "software",
-      "authors": [
-        "h8man",
-        "Unity Technologies"
-      ],
-      "works": [
-        {
-          "title": "NavMeshPlus",
-          "sourceUrl": "https://github.com/h8man/NavMeshPlus",
-          "usedFor": "Unity 2D NavMesh 扩展"
-        }
-      ],
-      "license": {
-        "name": "MIT",
-        "attribution": "retain copyright and license notice"
-      },
-      "status": "dependencies_declared",
-      "evidence": [
-        "Packages/manifest.json",
-        "Packages/com.h8man.2d.navmeshplus/LICENSE",
-        "Packages/com.h8man.2d.navmeshplus/Unity/LICENSE"
-      ]
-    },
-    {
       "id": "software-ultevents",
       "category": "software",
       "authors": [

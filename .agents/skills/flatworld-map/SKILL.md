@@ -27,6 +27,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 主链：配置 → 地形/气候/水文 → `ChunkTerrainData` → 结构/生态 → 差量 → 表现。生态规则 JSON 的概率字段保持 double，与生成快照一致，避免多矿种合计预算在读取时损失精度；回归 `ecology/shared_resources`。Chunk 生命周期由 WorldModel 管理。旧地图核心 Prefab、维度物品配置和物品管理器地图缓存已移除；遗迹编辑器安装器只维护目录/示例内容，不再挂旧生成器或提供强制生成开关。
 
+正式区块不创建 Unity `Tilemap`，用地形 Mesh/BRG 绘制并由固定物理代理处理碰撞；`ChunkTilemapRenderer` 是自定义渲染器。当前 `TileBase` 仍为地块 Sprite/颜色/变换资源入口，遗迹模板编辑器仍使用 Unity `Tilemap` 作为绘制工具，不可直接移除 Tilemap 模块。
+
 旧 `Map` 组件的生命周期与数据入口留在 `Map.cs`，阶段调度在 `Map.GenerationPipeline.cs`，纯排序规则由 `MapGenerationPipelinePlan` 管理，逐行缓冲与批写由每个 Map 独有的 `MapTilemapRowPresenter` 持有；同步/分帧入口在 `Map.TilemapPresentation.cs`。导航只走统一脏格队列，不再保留旧烘焙协程；计划规则为 `world_streaming/map_generation_plan`。
 
 生成热路径：河流每块冻结 `HydrologyOutputWindow`，宏观区域共享 `PrimaryUpstream`；湖泊按稀疏河格和湖盆范围合成。优化须保留环绕、外圈、盆地优先级和稳定取整，不能靠缩短降水影响距离提速。
