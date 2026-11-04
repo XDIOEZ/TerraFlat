@@ -243,12 +243,7 @@ public partial class GameRes
         }
 
         if (LoadState == ResourceLoadState.Loading && CanInterruptMenuWorldResourcePreload)
-        {
-            CancelWorldResourceLoadForMenuReturn();
-            ReleaseWorldResourcesAndRestoreStartup();
-            if (LoadState != ResourceLoadState.Loading || !IsIdleStartupMenu)
-                return false;
-        }
+            CancelWorldResourcePreloadForExplicitReload();
 
         LoadState = ResourceLoadState.Loading;
         LastResourceLoadMilliseconds = 0;
@@ -289,74 +284,15 @@ public partial class GameRes
         return true;
     }
 
-    /// <summary>世界对象与存档清理后释放世界目录，恢复菜单根资源和必要配置。</summary>
-    public void ReleaseWorldResourcesAndRestoreStartup()
+    /// <summary>退出世界只撤销绑定该世界的原位更新候选，初始加载和已发布资源继续复用。</summary>
+    public void CancelInPlaceResourceReloadForWorldExit()
     {
-        bool cancelQueuedOnly = worldResourceRequestQueued && !worldResourceSessionActive;
-        worldResourceRequestQueued = false;
         if (inGameReloadCoroutine != null) StopCoroutine(inGameReloadCoroutine);
         CancelInPlaceResourceReloadSafely();
-        if (cancelQueuedOnly && loadCoroutine != null)
-        {
-            worldResourceSessionStartedTimestamp = 0;
-            return;
-        }
-        bool hasWorldScope = resourceAssets != null && resourceAssets != startupRootResourceAssets;
-        if (!worldResourceSessionActive && !hasWorldScope)
-        {
-            worldResourceSessionStartedTimestamp = 0;
-            return;
-        }
-        if (worldResourceSessionActive && loadCoroutine != null)
-        {
-            StopCoroutine(loadCoroutine);
-            loadCoroutine = null;
-            DisposeResourceSessionSourceConfigurationLease();
-            loadPipeline?.Dispose();
-            loadPipeline = null;
-            GameplayTestResourceCache.Complete(false);
-        }
-
-        Exception cleanupError = null;
-        try { ClearWorldResourceSession(); }
-        catch (Exception exception) { cleanupError = exception; }
-        worldResourceSessionActive = false;
-        if (startupRootResourceAssets == null)
-        {
-            LoadState = ResourceLoadState.Failed;
-            IsStartupReady = false;
-            LastLoadError = "世界资源已释放，但主菜单资源根目录不存在。";
-            resourceLoadFailed = true;
-            showLoadingGUI = true;
-            return;
-        }
-
-        resourceAssets = startupRootResourceAssets;
-        if (cleanupError != null)
-        {
-            LoadState = ResourceLoadState.Failed;
-            IsStartupReady = true;
-            LastLoadError = $"世界资源已释放，但清理未完全成功：{cleanupError.Message}";
-            resourceLoadFailed = true;
-            showLoadingGUI = true;
-            Debug.LogException(cleanupError, this);
-            return;
-        }
-
-        LoadState = ResourceLoadState.Loading;
-        IsStartupReady = true;
-        LastLoadError = null;
-        resourceLoadFailed = false;
-        loadCoroutine = null;
-        loadPipeline = null;
-        loadingProgress = 1f;
-        loadingText = "启动必要资源已就绪";
-        showLoadingGUI = false;
-        RefreshResourceLoadingPriorityForCurrentInteraction();
     }
 
-    /// <summary>返回菜单时先撤销排队或正在执行的世界加载，实体清理完成后再释放 Scope。</summary>
-    public void CancelWorldResourceLoadForMenuReturn()
+    /// <summary>显式重载才能撤销旧世界资源预热，避免普通切档重新加载。</summary>
+    private void CancelWorldResourcePreloadForExplicitReload()
     {
         bool canceledQueuedRequest = worldResourceRequestQueued && !worldResourceSessionActive;
         worldResourceRequestQueued = false;

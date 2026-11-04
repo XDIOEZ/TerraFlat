@@ -222,7 +222,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 标记退出后再关闭网络身份，断线回调不得重复启动退出流程。
         IsInGameWorld = false;
-        GameRes.ExistingInstance?.CancelWorldResourceLoadForMenuReturn();
+        GameRes.ExistingInstance?.CancelInPlaceResourceReloadForWorldExit();
         ResetWorldEntryLifecycle();
         FlatWorld.Networking.GameNetwork.Session.Stop();
 
@@ -293,15 +293,6 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         yield return null;
         ItemMgr.Instance.CleanupNullItems();
 
-        // 等待 Unity 在主线程完成资源卸载。不在场景切换中强制执行托管终结器，
-        // 避免与 Unity 原生对象的延迟销毁发生重入。
-        AsyncOperation unloadUnusedAssets = Resources.UnloadUnusedAssets();
-        if (unloadUnusedAssets != null)
-        {
-            while (!unloadUnusedAssets.isDone)
-                yield return null;
-        }
-
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 4：场景切换阶段
         ////////////////////////////////////////////////////////////////////////////////////
@@ -334,15 +325,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         SaveDataMgr.Instance.ResetChunkDifferenceState();
         SaveDataMgr.Instance.SaveData = null;
 
-        try
-        {
-            GameRes.ExistingInstance?.ReleaseWorldResourcesAndRestoreStartup();
-        }
-        catch (Exception exception)
-        {
-            Debug.LogException(exception, this);
-        }
-
+        // 资源目录与 Addressables 句柄跨存档复用，退出只清理当前世界运行态。
+        ItemMgr.Instance.ClearResourcePools();
+        WorldRenderingManager.ClearExistingVisualEffectPool();
         // 触发退出结束事件
         BackToHelloScene_Event_End?.Invoke();
 
@@ -438,6 +423,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         try
         {
+            // MOD 代码与资源继续缓存，新世界写首档前只重置上一份存档的脚本状态。
+            ModRuntimeManager.Instance?.RestoreSaveMetadata(null);
             saveDataMgr.ResetChunkDifferenceState();
             saveDataMgr.SaveData = new GameSaveData();
             string newPlayerId = SaveDataMgr.CreatePlayerProfileId();

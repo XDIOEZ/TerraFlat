@@ -395,17 +395,8 @@ public partial class GameManager
             }
         }
 
-        if (!worldWasActivated)
-        {
-            GameRes resources = GameRes.ExistingInstance;
-            if (resources != null && resources.LoadState != ResourceLoadState.Failed &&
-                (resources.LoadState == ResourceLoadState.Ready || resources.IsStartupReady))
-            {
-                try { resources.ReleaseWorldResourcesAndRestoreStartup(); }
-                catch (Exception cleanupException) { Debug.LogException(cleanupException, this); }
-            }
-        }
-        else
+        // 入世失败不撤销已加载资源，也不打断仍可供下次入世复用的后台加载。
+        if (worldWasActivated)
         {
             SaveDataMgr.Instance?.ClearPendingModSaveMetadataAfterRuntimeRestore();
         }

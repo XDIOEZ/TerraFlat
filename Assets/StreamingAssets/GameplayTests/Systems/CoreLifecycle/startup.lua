@@ -198,6 +198,15 @@ for _, idle in ipairs({ true, false }) do
     end
 end
 
+for _, mode in ipairs({ "ready", "loading", "queued", "failed" }) do
+    test.system("core_lifecycle", "startup_cache_across_world_exit", { mode = mode }, function(data)
+        assert(data.statePreserved and data.scopePreserved and data.catalogPreserved,
+            "连续退出世界清空了资源、目录身份或 Ready/失败状态")
+        assert(data.queuedPreserved and data.activePreserved, "切档取消了可复用的在途或排队加载")
+        assert(data.requestReused, "下次入世没有复用已就绪资源")
+    end, "应用级资源缓存跨多次世界退出复用：" .. mode)
+end
+
 for _, mode in ipairs({ "startup", "world", "reload", "missing" }) do
     test.system("core_lifecycle", "startup_menu_snapshot_reuse", { mode = mode }, function(data)
         if mode == "world" then

@@ -16,6 +16,7 @@ public static partial class GameplayTestSystemProbe
         RegisterBakedDefinitionCompilationOperations(target);
         target.Add("core_lifecycle/startup_loading_policy", StartupLoadingPolicy);
         target.Add("core_lifecycle/startup_menu_preload", StartupMenuPreload);
+        target.Add("core_lifecycle/startup_cache_across_world_exit", StartupCacheAcrossWorldExit);
         target.Add("core_lifecycle/startup_menu_snapshot_reuse", StartupMenuSnapshotReuse);
         target.Add("core_lifecycle/startup_request_batch", StartupRequestBatch);
         target.Add("core_lifecycle/startup_editor_sprite_request_route", StartupEditorSpriteRequestRoute);
@@ -57,6 +58,55 @@ public static partial class GameplayTestSystemProbe
             args.Value<bool>("idle"), args.Value<bool>("inWorld"),
             args.Value<bool>("enteringWorld"), args.Value<bool>("reloading"))
     };
+
+    // 直接调用正式退出资源入口，检查已就绪目录和在途请求均不会被切档撤销。
+    private static JObject StartupCacheAcrossWorldExit(JObject args)
+    {
+        var root = new UnityEngine.GameObject("跨存档资源缓存规则");
+        root.SetActive(false);
+        ResourceAssetScope scope = null;
+        try
+        {
+            var resources = root.AddComponent<GameRes>();
+            string mode = Text(args, "mode", "ready");
+            ResourceLoadState state = mode == "ready" ? ResourceLoadState.Ready :
+                mode == "failed" ? ResourceLoadState.Failed : ResourceLoadState.Loading;
+            const System.Reflection.BindingFlags fields = System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic;
+            void SetField(string name, object value) => typeof(GameRes).GetField(name, fields).SetValue(resources, value);
+            void SetProperty(string name, object value) => typeof(GameRes).GetProperty(name).SetValue(resources, value);
+            SetProperty(nameof(GameRes.LoadState), state);
+            SetProperty(nameof(GameRes.IsStartupReady), true);
+            SetField("worldResourceSessionActive", mode != "queued" && mode != "failed");
+            SetField("worldResourceRequestQueued", mode == "queued");
+            scope = resources.ResourceAssets;
+            var definitions = resources.ItemDefinitions;
+            var definition = new RuntimeItemDefinition("cache-fixture", "", null,
+                new Data_GeneralItem { IDName = "cache-fixture" }, null, null, null, null, null, null, null, null, null);
+            definitions.Add("cache-fixture", definition);
+            ulong revision = resources.ItemDefinitionRevision;
+            resources.AllPrefabs.Add("cache-fixture", root);
+            for (int i = 0; i < 3; i++) resources.CancelInPlaceResourceReloadForWorldExit();
+            bool requestReused = mode != "ready" || resources.RequestWorldResources();
+            return new JObject
+            {
+                ["statePreserved"] = resources.LoadState == state && resources.IsStartupReady,
+                ["scopePreserved"] = ReferenceEquals(scope, resources.ResourceAssets),
+                ["catalogPreserved"] = ReferenceEquals(definitions, resources.ItemDefinitions) &&
+                    definitions.TryGetValue("cache-fixture", out RuntimeItemDefinition current) && ReferenceEquals(current, definition) &&
+                    resources.ItemDefinitionRevision == revision && resources.GetPrefab("cache-fixture", false) == root,
+                ["queuedPreserved"] = (bool)typeof(GameRes).GetField("worldResourceRequestQueued", fields).GetValue(resources) == (mode == "queued"),
+                ["activePreserved"] = (bool)typeof(GameRes).GetField("worldResourceSessionActive", fields).GetValue(resources) ==
+                    (mode != "queued" && mode != "failed"),
+                ["requestReused"] = requestReused
+            };
+        }
+        finally
+        {
+            scope?.Dispose();
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
 
     private static JObject StartupMenuSnapshotReuse(JObject args)
     {

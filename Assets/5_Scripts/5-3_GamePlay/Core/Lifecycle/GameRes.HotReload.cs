@@ -373,10 +373,8 @@ public partial class GameRes
     private void ReleaseRetiredWorldResources()
     {
         if (retiredResourceReleases.Count == 0) return;
-        ItemMgr.GetInstance()?.ClearResourcePools();
+        // 世界退出入口已清空实体和特效池，此处只回收旧代派生缓存与资源。
         SharedSpriteMeshCache.Clear();
-        // 旧代 Prefab 释放前清掉持久特效池，避免跨世界保留旧资源引用。
-        WorldRenderingManager.ClearExistingVisualEffectPool();
         ReleaseRetiredResourceSessions();
     }
 
