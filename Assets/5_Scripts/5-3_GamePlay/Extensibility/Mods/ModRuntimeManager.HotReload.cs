@@ -24,6 +24,8 @@ public sealed partial class ModRuntimeManager
         // Harmony 补丁影响进程全局方法，不能假装能在候选目录中隔离执行。
         if (HasManagedMods)
             throw new InvalidOperationException("当前启用了 C# / Harmony MOD，暂不支持世界内原位资源重载；请返回主菜单重载内容，更换 DLL 后须重启游戏。");
+        if (luaRuntimes.Values.Any(runtime => runtime.HasLoadedScripts))
+            throw new InvalidOperationException("当前 Lua MOD 可以直接访问 CS，无法隔离其世界副作用；请返回主菜单重载内容。");
         reloadSourcePackages = packagesById;
         reloadSourceWorldMutationAllowed = worldMutationAllowed;
         context.Add(() => preparingResourceReload, value => preparingResourceReload = value, true);
@@ -151,7 +153,7 @@ public sealed partial class ModRuntimeManager
     {
         foreach (ModLuaRuntime script in scripts)
         {
-            try { script.DisposeWithoutCallbacks(); }
+            try { script.DisposeWithoutUnloadCallback(); }
             catch (Exception exception) { Debug.LogException(exception); }
         }
         foreach (UnityEngine.Object asset in assets)

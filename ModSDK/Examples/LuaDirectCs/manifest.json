@@ -1,0 +1,8 @@
+{
+  "apiVersion": 2,
+  "id": "example.lua.directcs",
+  "name": "Lua 直接调用自言自语",
+  "version": "1.0.0",
+  "description": "进入世界后直接调用角色的 Say 方法，不经过业务 ModApi。",
+  "entryLua": "main.lua"
+}

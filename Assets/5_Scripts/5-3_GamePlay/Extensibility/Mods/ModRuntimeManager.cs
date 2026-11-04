@@ -10,7 +10,6 @@ using FlatWorld.Gameplay.Quests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public enum ModLoadState
@@ -26,7 +25,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     #region 常量与静态入口
 
     private const string ManifestFileName = "manifest.json";
-    public const int SupportedApiVersion = 1;
+    public const int SupportedApiVersion = 2;
     private const int MaximumPackageFileCount = 4096;
     private const long MaximumPackageBytes = 1024L * 1024L * 1024L;
     private const int MaximumJsonCharacters = 8 * 1024 * 1024;
@@ -72,8 +71,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
     private bool safeModeActive;
-    private GameManager boundGameManager;
-    private bool staticEventsBound;
     private bool worldMutationAllowed = true;
     private ContainerPortFactoryRegistry.CandidateScope containerPortCandidate;
 
@@ -83,6 +80,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     public string ModsRootPath => Path.Combine(Application.persistentDataPath, "Mods");
     public bool IsReady => State == ModLoadState.Ready;
     public bool IsSafeModeActive => safeModeActive;
+    public bool CanModifyWorld => worldMutationAllowed && !preparingResourceReload;
+    internal bool IsPreparingResourceReload => preparingResourceReload;
     public IReadOnlyList<ModManifest> LoadedManifests => loadedPackages.Select(package => package.Manifest).ToList();
     public IReadOnlyCollection<ModDefinitionInfo> DefinitionInfos => definitionInfos.Values;
 
@@ -103,8 +102,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private void Update()
     {
-        if (State == ModLoadState.Ready)
-            BindGameEvents();
+        if (State != ModLoadState.Ready)
+            return;
 
         foreach (ModPackage package in loadedPackages)
         {
@@ -242,13 +241,12 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     internal void PublishContentReady()
     {
         PublishManagedContentReady();
-        BindGameEvents();
-        DispatchEvent("content.ready", new
+        foreach (ModPackage package in loadedPackages)
         {
-            modCount = loadedPackages.Count,
-            modSetHash = ModSetHash,
-            safeMode = safeModeActive
-        });
+            if (!luaRuntimes.TryGetValue(package.Manifest.Id, out ModLuaRuntime runtime)) continue;
+            try { runtime.ContentReady(); }
+            catch (Exception error) { Debug.LogError($"[MOD:{package.Manifest.Id}] OnContentReady 执行失败：{error.Message}"); }
+        }
     }
 
     /// <summary>扩展端口只在整套候选资源通过校验后发布。</summary>
@@ -1353,7 +1351,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private void InitializeLua(ModPackage package)
     {
-        ModLuaRuntime runtime = new(package.Manifest.Id, package.RootPath, new ModApi(this, package.Manifest.Id));
+        ModLuaRuntime runtime = new(package.Manifest.Id, package.RootPath, this);
         try
         {
             if (!string.IsNullOrWhiteSpace(package.Manifest.EntryLua))
@@ -1362,7 +1360,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         }
         catch
         {
-            if (preparingResourceReload) runtime.DisposeWithoutCallbacks();
+            if (preparingResourceReload) runtime.DisposeWithoutUnloadCallback();
             else runtime.Dispose();
             throw;
         }
@@ -1660,28 +1658,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             : string.Empty;
     }
 
-    internal string GetDefinitionInfoJson(string contentId)
-    {
-        return definitionInfos.TryGetValue(contentId ?? string.Empty, out ModDefinitionInfo info)
-            ? JsonConvert.SerializeObject(info)
-            : string.Empty;
-    }
-
-    internal void EmitModEvent(string modId, string eventName, string payloadJson)
-    {
-        if (string.IsNullOrWhiteSpace(eventName) || eventName.Length > 96 ||
-            eventName.Any(character => !char.IsLetterOrDigit(character) && character is not '.' and not '_' and not '-'))
-        {
-            throw new InvalidDataException($"MOD 事件名无效：{eventName}");
-        }
-
-        if ((payloadJson?.Length ?? 0) > 256 * 1024)
-            throw new InvalidDataException("MOD 事件负载超过 256KB 限制");
-
-        string normalizedPayload = string.IsNullOrWhiteSpace(payloadJson) ? "{}" : JToken.Parse(payloadJson).ToString(Formatting.None);
-        DispatchSerializedEvent($"mod.{modId}.{eventName}", normalizedPayload);
-    }
-
     public void SetWorldMutationAuthority(bool allowed)
     {
         worldMutationAllowed = allowed;
@@ -1787,124 +1763,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         if (!File.Exists(manifestPath))
             throw new FileNotFoundException("MOD 包缺少 manifest.json", manifestPath);
         return ComputePackageHash(packageRoot, ReadLimitedText(manifestPath, MaximumJsonCharacters));
-    }
-
-    #endregion
-
-    #region 游戏事件桥接
-
-    private void BindGameEvents()
-    {
-        if (!staticEventsBound)
-        {
-            GameManager.Event_PlayerEnterWorld += OnPlayerEnteredWorld;
-            ItemMgr.RuntimeItemInstantiated += OnItemSpawned;
-            ItemMgr.RuntimeItemDespawning += OnItemDespawning;
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            staticEventsBound = true;
-        }
-
-        if (boundGameManager == GameManager.Instance)
-            return;
-
-        if (boundGameManager != null)
-        {
-            boundGameManager.Event_GameWorldEnter -= OnWorldEntered;
-            boundGameManager.Event_GameWorldExit -= OnWorldExiting;
-        }
-
-        boundGameManager = GameManager.Instance;
-        if (boundGameManager != null)
-        {
-            boundGameManager.Event_GameWorldEnter += OnWorldEntered;
-            boundGameManager.Event_GameWorldExit += OnWorldExiting;
-        }
-    }
-
-    private void UnbindGameEvents()
-    {
-        if (staticEventsBound)
-        {
-            GameManager.Event_PlayerEnterWorld -= OnPlayerEnteredWorld;
-            ItemMgr.RuntimeItemInstantiated -= OnItemSpawned;
-            ItemMgr.RuntimeItemDespawning -= OnItemDespawning;
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            staticEventsBound = false;
-        }
-
-        if (boundGameManager != null)
-        {
-            boundGameManager.Event_GameWorldEnter -= OnWorldEntered;
-            boundGameManager.Event_GameWorldExit -= OnWorldExiting;
-            boundGameManager = null;
-        }
-    }
-
-    private void OnWorldEntered()
-    {
-        DispatchEvent("world.entered", new { scene = SceneManager.GetActiveScene().name });
-    }
-
-    private void OnWorldExiting()
-    {
-        DispatchEvent("world.exiting", new { scene = SceneManager.GetActiveScene().name });
-    }
-
-    private void OnPlayerEnteredWorld(Player player)
-    {
-        DispatchEvent("player.entered", CreateItemEventPayload(player));
-    }
-
-    private void OnItemSpawned(Item item)
-    {
-        DispatchEvent("item.spawned", CreateItemEventPayload(item));
-    }
-
-    private void OnItemDespawning(Item item)
-    {
-        DispatchEvent("item.despawning", CreateItemEventPayload(item));
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        DispatchEvent("scene.loaded", new { name = scene.name, buildIndex = scene.buildIndex, mode = mode.ToString() });
-    }
-
-    private static object CreateItemEventPayload(Item item)
-    {
-        Vector3 position = item != null ? item.transform.position : Vector3.zero;
-        return new
-        {
-            id = item?.itemData?.IDName ?? string.Empty,
-            guid = item?.itemData?.Guid ?? 0,
-            x = position.x,
-            y = position.y,
-            z = position.z
-        };
-    }
-
-    private void DispatchEvent(string eventName, object payload)
-    {
-        string payloadJson = JsonConvert.SerializeObject(payload ?? new { });
-        DispatchSerializedEvent(eventName, payloadJson);
-    }
-
-    private void DispatchSerializedEvent(string eventName, string payloadJson)
-    {
-        foreach (ModPackage package in loadedPackages)
-        {
-            if (!luaRuntimes.TryGetValue(package.Manifest.Id, out ModLuaRuntime runtime))
-                continue;
-
-            try
-            {
-                runtime.InvokeEvent(eventName, payloadJson);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[MOD:{package.Manifest.Id}] 事件 {eventName} 执行失败：{ex.Message}");
-            }
-        }
     }
 
     #endregion
@@ -2197,8 +2055,16 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     private void UnloadAll(bool keepFailureState = false)
     {
         ReleaseContainerPortCandidate();
-        UnbindGameEvents();
 
+        // 先按依赖逆序退订 Lua，再撤销内容；单个 MOD 清理失败不能阻断其他包释放。
+        for (int i = loadedPackages.Count - 1; i >= 0; i--)
+        {
+            string modId = loadedPackages[i].Manifest.Id;
+            if (!luaRuntimes.TryGetValue(modId, out ModLuaRuntime runtime)) continue;
+            try { runtime.Dispose(); }
+            catch (Exception error) { Debug.LogError($"[MOD:{modId}] Lua 释放失败：{error}"); }
+        }
+        luaRuntimes.Clear();
         UnloadManaged();
 
         GameRes gameRes = GameRes.ExistingInstance;
@@ -2213,10 +2079,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         for (int index = registeredLiquidIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalLiquidDefinition(registeredLiquidIds[index]);
         registeredLiquidIds.Clear();
-
-        foreach (ModLuaRuntime runtime in luaRuntimes.Values)
-            runtime.Dispose();
-        luaRuntimes.Clear();
 
         foreach (UnityEngine.Object asset in clonedAssets)
         {

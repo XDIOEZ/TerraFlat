@@ -7,12 +7,15 @@ description: "FlatWorld MOD 清单、内容注册、Lua/C# 生命周期、资源
 
 ## 代码与安装入口
 
-- `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/`：ModRuntimeManager*、ModManifest、ModApi、ModLuaRuntime、Mod_LuaBehaviour、ModManagedAssemblyStore。
+- `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/`：ModRuntimeManager*、ModManifest、ModLuaRuntime（含精简 ModLuaContext）、Mod_LuaBehaviour、ModManagedAssemblyStore；业务 ModApi/ModItemApi 已删除。
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`；资源接入：`Core/Lifecycle/GameRes.cs`；流体注册：`World/Fluids/Catalog/FluidContentRegistry.cs`。
 - 模板工具：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`；清单 schema：`Tools/FlatWorldModSDK/Schemas/manifest.schema.json`；示例：`ModSDK/Examples/`。
 - 安装根为 persistentDataPath/Mods/<包目录>/manifest.json；开发示例目录不自动扫描。UI_ModManager 管启停/拖拽排序，新包默认关闭，C# 启停/排序/代码变化重启生效。
 - 运行时 F10 IMGUI 管理窗口及其设置快捷编辑入口已移除，设置仍可经 `ModSettingsRegistry`/配置文件读写；主菜单 UI_ModManager 为正式管理入口。C# 包只读检查合并到编辑器“创作与打包工具”。
 - xLua 正式绑定配置为 `Assets/Plugins/XLua/Editor/RuntimeBindingsGenConfig.cs`；供应商示例归 `Tools/ReferenceSamples/XLua/`，不参与编译，重新导回时需重生成对应桥接。
+- API v2 开放 CS，Lua 直接调用游戏公开系统；物品回调传真实 Item。`mod` 仅保留身份、日志、权威提示、状态和 RegisterCleanup；包内 require 使用 scripts.helper → scripts/helper.lua，每包独立缓存。旧 v1 包须迁移，不保留业务兼容壳。
+- 删除游戏事件→JSON→Lua 的重复转发；主 Lua 只保留 Load/ContentReady/Update/Save/LoadSave/Unload，玩法事件直接订阅 C# 并登记退订。
+- 构建保留器与 ModAuthoringWindow 同文件：按 Player 程序集的 Assets/5_Scripts 来源生成临时 link.xml，反射调用不为每个业务方法产生包装 CS；特殊 AOT 泛型/委托与第三方类型仍需专项验证。示例为 `ModSDK/Examples/LuaDirectCs/`。
 
 ## 加载与生命周期
 
@@ -30,13 +33,13 @@ description: "FlatWorld MOD 清单、内容注册、Lua/C# 生命周期、资源
 - definitionFiles 复用本体 DTO/严格校验，patchFiles 修改既有目标。C# 可存档物品同时注册 ItemDefinitions/AllPrefabs，释放按定义实例身份撤销。
 - tiles 使用 TileDefinitionDto/Factory，新增 runtimeTileId≥1000000 且稳定；tile:<id> Patch 不改身份/数字编号。逻辑目录局部校验后发布，卸载先恢复覆盖/移除映射再销毁资源；Bundle type=tile 只提供外观。
 - TileBehaviourRegistry 工厂返回独立定义，不持单格/角色状态。普通 JSON 配置已有算法；ResourceEntityCapabilityRegistry 在 Initialize 注册能力地址，实体持冻结计划，DLL 可变状态用 context.SetState/GetState，原生组件需要 Unity TypeManager 注册。
-- liquids 由 LiquidDefinitionFactory 注册稳定 ID/primaryColor，heatProcess/drinkEffects/worldWater 复用通用玩法。世界液体只持久化 LiquidId，会话数字编号不入档；Lua 容器端口/预检/转移调用服务真实事务，Add/Remove 是独立操作。
-- fluids/atmospheres 同 MOD 多文件汇总预检后 FluidContentRegistry 注册，液体映射/每份体积与 LiquidId 对齐；失败整批撤回，卸载按定义租约释放。contaminations 由 ContaminationSystem 持久化，Lua 通过污染 API 访问。
+- liquids 由 LiquidDefinitionFactory 注册稳定 ID/primaryColor，heatProcess/drinkEffects/worldWater 复用通用玩法。世界液体只持久化 LiquidId，会话数字编号不入档；Lua 经 CS 复用 ContainerTransferService 等正式事务，不直接改库存冒充转移。
+- fluids/atmospheres 同 MOD 多文件汇总预检后 FluidContentRegistry 注册，液体映射/每份体积与 LiquidId 对齐；失败整批撤回，卸载按定义租约释放。contaminations 由 ContaminationSystem 持久化，Lua 经 CS 直接调用，使用完整命名空间 ID。
 - ContainerPortFactoryRegistry 的 BeginCandidate/Publish 配合最终目录校验，旧租约不撤新代。Bundle 资源归 MOD 会话，本体地址归 GameRes；Sprite/Material 地址或 bundle/asset 成对字段互斥。
 - playerCreationTemplates 用 parent 继承，playerTemplate:<id>/playerTemplateCatalog Patch 修改模板/默认项，不入玩家存档；actors 可深度覆盖模块并继承本体/同批定义。
 
 ## 世界内候选更新
 
-- HotReload 隔离目录、设置、Lua 与资源所有权，复用正式管理器/事件。候选 OnLoad/OnLoadSave 只初始化隔离状态，发布后副作用由 OnContentReady 执行；提交前捕获最新正式全局状态。
+- 世界内候选仅保留纯数据路径：已运行 Lua 或启用 C#/Harmony 时拒绝原位重载，候选阶段也禁止首次读取执行新脚本。开放 CS 无法保证任意世界副作用回滚，返回主菜单重载；MOD 自己登记的事件退订在 LuaEnv 释放前逆序执行。
 - 未变 Bundle 按路径/SHA256 借用旧句柄，在用二进制变更回主菜单更新；回收转交仍被新目录引用的所有权，失败候选只释放自有句柄。
-- 候选模板在停用根下克隆/配置，不改共享 Bundle Prefab、不激活世界实体；失败/退役 Lua 用 DisposeWithoutCallbacks，避免旧回调修改现世界。
+- 候选模板在停用根下克隆/配置，不改共享 Bundle Prefab、不激活世界实体；退役 Lua 用 DisposeWithoutUnloadCallback 跳过 OnUnload，仍清理已登记订阅。

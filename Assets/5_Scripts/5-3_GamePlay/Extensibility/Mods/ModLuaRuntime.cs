@@ -1,8 +1,53 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 using XLua;
+
+/// <summary>只管理当前 MOD 的身份、存档与清理；玩法直接调用 CS 中的正式系统。</summary>
+public sealed class ModLuaContext
+{
+    #region MOD 会话
+    private readonly ModRuntimeManager manager;
+    private readonly List<Action> cleanup = new();
+    private bool disposed;
+    public string ModId { get; }
+    public bool CanModifyWorld => !disposed && manager != null && manager.CanModifyWorld;
+
+    internal ModLuaContext(ModRuntimeManager manager, string modId)
+    {
+        this.manager = manager;
+        ModId = modId;
+    }
+
+    public void Log(string message) => Debug.Log($"[MOD:{ModId}] {message}");
+    public string GetGlobalState() => manager?.GetGlobalState(ModId) ?? string.Empty;
+    public void SetGlobalState(string state)
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(ModLuaContext));
+        if (manager == null) throw new InvalidOperationException("MOD 管理器尚未就绪。");
+        manager.SetGlobalState(ModId, state);
+    }
+
+    // 订阅游戏事件后登记对应的退订动作，在销毁 LuaEnv 之前逆序释放。
+    public void RegisterCleanup(Action action)
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(ModLuaContext));
+        cleanup.Add(action ?? throw new ArgumentNullException(nameof(action)));
+    }
+
+    internal void ReleaseRegistrations()
+    {
+        if (disposed) return;
+        disposed = true;
+        for (int i = cleanup.Count - 1; i >= 0; i--)
+            try { cleanup[i](); }
+            catch (Exception error) { Debug.LogException(error); }
+        cleanup.Clear();
+    }
+    #endregion
+}
 
 internal sealed class ModLuaRuntime : IDisposable
 {
@@ -11,7 +56,8 @@ internal sealed class ModLuaRuntime : IDisposable
 
     private readonly string modId;
     private readonly string packageRoot;
-    private readonly ModApi api;
+    private readonly ModLuaContext context;
+    private readonly ModRuntimeManager manager;
     private readonly LuaEnv luaEnv;
     private readonly LuaTable mainEnvironment;
     private readonly Dictionary<string, LuaTable> moduleTables = new(StringComparer.OrdinalIgnoreCase);
@@ -19,20 +65,25 @@ internal sealed class ModLuaRuntime : IDisposable
     private readonly Dictionary<string, Dictionary<string, LuaFunction>> moduleCallbacks = new(StringComparer.OrdinalIgnoreCase);
     private readonly LuaFunction bindCallback;
     private LuaTable mainTable;
+    private bool disposed;
+    public bool HasLoadedScripts { get; private set; }
 
     #endregion
 
     #region 初始化
 
-    public ModLuaRuntime(string modId, string packageRoot, ModApi api)
+    public ModLuaRuntime(string modId, string packageRoot, ModRuntimeManager manager)
     {
         this.modId = modId;
         this.packageRoot = packageRoot;
-        this.api = api;
+        this.manager = manager;
+        context = new ModLuaContext(manager, modId);
         luaEnv = new LuaEnv();
 
-        // 首期定位为可信本地 MOD，但仍移除默认的高风险入口。
-        luaEnv.DoString("CS=nil; io=nil; os=nil; debug=nil; package=nil; require=nil; dofile=nil; loadfile=nil");
+        // 外部 Lua 是受信任代码；保留 CS，只把 require 的文件来源固定在当前包。
+        luaEnv.AddLoader(LoadPackageModule);
+        luaEnv.Global.Set("mod", context);
+        luaEnv.DoString("io=nil; os=nil; debug=nil; dofile=nil; loadfile=nil; package.path=''; package.cpath=''");
         // 每种回调只创建一次跨语言句柄，调用时仍读取表中的最新函数。
         bindCallback = (LuaFunction)luaEnv.DoString(@"
 return function(target, name)
@@ -50,10 +101,7 @@ end", "ModLuaCallbackBinder")[0];
         if (string.IsNullOrWhiteSpace(relativePath))
             return;
 
-        string fullPath = ModPathUtility.ResolvePackagePath(packageRoot, relativePath, true);
-        if (new FileInfo(fullPath).Length > MaximumLuaBytes)
-            throw new InvalidDataException($"MOD {modId} Lua 文件超过 2MB 限制：{relativePath}");
-        string source = File.ReadAllText(fullPath);
+        string source = ReadPackageScript(relativePath);
         object[] result = luaEnv.DoString(source, $"@{modId}/{relativePath.Replace('\\', '/')}", mainEnvironment);
         LuaTable nextTable = result != null && result.Length > 0 ? result[0] as LuaTable : null;
         nextTable ??= mainEnvironment;
@@ -61,7 +109,7 @@ end", "ModLuaCallbackBinder")[0];
         if (mainTable != null && !ReferenceEquals(mainTable, mainEnvironment) && !ReferenceEquals(mainTable, nextTable))
             mainTable.Dispose();
         mainTable = nextTable;
-        InvokeMain("OnLoad", api);
+        InvokeMain("OnLoad", context);
     }
 
     #endregion
@@ -70,13 +118,13 @@ end", "ModLuaCallbackBinder")[0];
 
     public string CaptureGlobalState(string currentState)
     {
-        object[] result = InvokeMain("OnSave", api, currentState ?? string.Empty);
+        object[] result = InvokeMain("OnSave", context, currentState ?? string.Empty);
         return GetReturnedString(result, currentState, 1);
     }
 
     public void RestoreGlobalState(string state)
     {
-        InvokeMain("OnLoadSave", api, state ?? string.Empty);
+        InvokeMain("OnLoadSave", context, state ?? string.Empty);
     }
 
     public string InvokeModule(string relativePath, string functionName, Item item, string state, float deltaTime = 0f)
@@ -86,55 +134,40 @@ end", "ModLuaCallbackBinder")[0];
         if (!moduleCallbacks.TryGetValue(normalizedPath, out Dictionary<string, LuaFunction> callbacks))
             moduleCallbacks.Add(normalizedPath, callbacks = new Dictionary<string, LuaFunction>(StringComparer.Ordinal));
         LuaFunction function = GetCallback(moduleTable, callbacks, functionName);
-        object[] result = function.Call(new ModItemApi(item), state ?? string.Empty, deltaTime, api);
+        object[] result = function.Call(item, state ?? string.Empty, deltaTime, context);
         return GetReturnedString(result, state, 1);
     }
 
     public void Tick(float deltaTime)
     {
-        InvokeMain("OnUpdate", api, deltaTime);
+        InvokeMain("OnUpdate", context, deltaTime);
         luaEnv.Tick();
     }
 
-    public void InvokeEvent(string eventName, string payloadJson)
-    {
-        InvokeMain("OnEvent", api, eventName ?? string.Empty, payloadJson ?? "{}");
-
-        string callbackName = eventName switch
-        {
-            "content.ready" => "OnContentReady",
-            "world.entered" => "OnWorldEntered",
-            "world.exiting" => "OnWorldExiting",
-            "player.entered" => "OnPlayerEntered",
-            "item.spawned" => "OnItemSpawned",
-            "item.despawning" => "OnItemDespawning",
-            "scene.loaded" => "OnSceneLoaded",
-            _ => null
-        };
-
-        if (!string.IsNullOrWhiteSpace(callbackName))
-            InvokeMain(callbackName, api, payloadJson ?? "{}");
-    }
+    public void ContentReady() => InvokeMain("OnContentReady", context);
 
     public void Dispose()
     {
         DisposeRuntime(notifyUnload: true);
     }
 
-    /// <summary>候选失败或旧代释放只回收 Lua，不让 OnUnload 修改仍在运行的新世界上下文。</summary>
-    internal void DisposeWithoutCallbacks() => DisposeRuntime(notifyUnload: false);
+    /// <summary>候选退役跳过 OnUnload，但仍释放已登记的订阅，不能让委托持有已销毁的 LuaEnv。</summary>
+    internal void DisposeWithoutUnloadCallback() => DisposeRuntime(notifyUnload: false);
 
     private void DisposeRuntime(bool notifyUnload)
     {
+        if (disposed) return;
+        disposed = true;
         try
         {
-            if (notifyUnload) InvokeMain("OnUnload", api);
+            if (notifyUnload) InvokeMain("OnUnload", context);
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"[MOD:{modId}] OnUnload 执行失败：{ex.Message}");
         }
 
+        context.ReleaseRegistrations();
         DisposeCallbacks(mainCallbacks);
         foreach (Dictionary<string, LuaFunction> callbacks in moduleCallbacks.Values)
             DisposeCallbacks(callbacks);
@@ -154,6 +187,29 @@ end", "ModLuaCallbackBinder")[0];
 
     #region 内部方法
 
+    private string ReadPackageScript(string relativePath)
+    {
+        if (disposed) throw new ObjectDisposedException(nameof(ModLuaRuntime));
+        if (manager != null && manager.IsPreparingResourceReload)
+            throw new InvalidOperationException("开放 CS 的 Lua 不能在世界内候选目录执行；请返回主菜单重载 MOD。");
+        string fullPath = ModPathUtility.ResolvePackagePath(packageRoot, relativePath, true);
+        if (new FileInfo(fullPath).Length > MaximumLuaBytes)
+            throw new InvalidDataException($"MOD {modId} Lua 文件超过 2MB 限制：{relativePath}");
+        HasLoadedScripts = true;
+        return File.ReadAllText(fullPath);
+    }
+
+    private byte[] LoadPackageModule(ref string moduleName)
+    {
+        foreach (string segment in moduleName.Split('.'))
+            if (string.IsNullOrWhiteSpace(segment) || segment.IndexOfAny(new[] { '/', '\\', ':' }) >= 0)
+                throw new InvalidDataException($"MOD require 名称无效：{moduleName}，请使用 scripts.helper 形式。");
+        string relativePath = moduleName.Replace('.', '/') + ".lua";
+        string source = ReadPackageScript(relativePath);
+        moduleName = $"@{modId}/{relativePath}";
+        return Encoding.UTF8.GetBytes(source);
+    }
+
     private LuaTable GetModuleTable(string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath))
@@ -163,10 +219,7 @@ end", "ModLuaCallbackBinder")[0];
         if (moduleTables.TryGetValue(normalizedPath, out LuaTable table))
             return table;
 
-        string fullPath = ModPathUtility.ResolvePackagePath(packageRoot, normalizedPath, true);
-        if (new FileInfo(fullPath).Length > MaximumLuaBytes)
-            throw new InvalidDataException($"MOD {modId} Lua 文件超过 2MB 限制：{normalizedPath}");
-        string source = File.ReadAllText(fullPath);
+        string source = ReadPackageScript(normalizedPath);
         LuaTable environment = CreateEnvironment();
         object[] result = luaEnv.DoString(source, $"@{modId}/{normalizedPath}", environment);
         table = result != null && result.Length > 0 ? result[0] as LuaTable : null;
@@ -182,7 +235,7 @@ end", "ModLuaCallbackBinder")[0];
     private LuaTable CreateEnvironment()
     {
         LuaTable environment = luaEnv.NewTable();
-        environment.Set("mod", api);
+        environment.Set("mod", context);
         environment.Set("_G", environment);
         luaEnv.Global.Set("__flatworld_mod_environment", environment);
         luaEnv.DoString("setmetatable(__flatworld_mod_environment, { __index = _G }); __flatworld_mod_environment = nil");

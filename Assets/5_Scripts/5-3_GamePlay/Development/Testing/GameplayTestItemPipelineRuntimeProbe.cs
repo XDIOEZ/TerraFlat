@@ -725,37 +725,37 @@ local value = 'new'
 local callbacks = {}
 callbacks.OnLoad = function(api) value = 'loaded' end
 callbacks.OnLoadSave = function(api, state) value = state end
-callbacks.OnEvent = function(api, name, payload)
-  value = value .. ':' .. name
-  callbacks.OnEvent = function(api, nextName, nextPayload)
-    value = value .. ':replacement:' .. nextName
+callbacks.OnUpdate = function(mod, dt)
+  value = value .. ':tick'
+  callbacks.OnUpdate = function(mod, nextDt)
+    value = value .. ':replacement:tick'
   end
 end
 callbacks.OnSave = function(api, previous) return value end
 return callbacks");
             File.WriteAllText(Path.Combine(directory, "module.lua"), @"
 local callbacks = {}
-callbacks.OnLoad = function(item, state, dt, api) item:AddDurability(-item.MaxDurability * .2); return 'loaded:' .. item.Id end
+callbacks.OnLoad = function(item, state, dt, mod) item.itemData:AddDurability(-item.itemData.MaxDurability * .2); return 'loaded:' .. item.itemData.IDName end
 callbacks.OnUpdate = function(item, state, dt, api)
-  item:AddDurability(-item.MaxDurability * dt)
+  item.itemData:AddDurability(-item.itemData.MaxDurability * dt)
   callbacks.OnUpdate = function(nextItem, nextState, nextDt, nextApi)
-    nextItem:AddDurability(-nextItem.MaxDurability * nextDt * .5)
+    nextItem.itemData:AddDurability(-nextItem.itemData.MaxDurability * nextDt * .5)
     return nextState .. ':updated_again'
   end
   return state .. ':updated'
 end
-callbacks.OnUnload = function(item, state, dt, api) item:AddDurability(item.MaxDurability * .05); return state .. ':unloaded' end
+callbacks.OnUnload = function(item, state, dt, mod) item.itemData:AddDurability(item.itemData.MaxDurability * .05); return state .. ':unloaded' end
 return callbacks");
             item = Spawn(player);
             item.itemData.Durability = item.itemData.MaxDurability;
             result["maximum"] = item.itemData.MaxDurability;
-            runtime = new ModLuaRuntime("lua-playmode-probe", directory, new ModApi(ModRuntimeManager.Instance, "lua-playmode-probe"));
+            runtime = new ModLuaRuntime("lua-playmode-probe", directory, ModRuntimeManager.Instance);
             runtime.LoadMain("main.lua");
             result["mainLoaded"] = runtime.CaptureGlobalState("");
             runtime.RestoreGlobalState("restored");
-            runtime.InvokeEvent("probe.event", "{}");
+            runtime.Tick(.1f);
             result["mainState"] = runtime.CaptureGlobalState("");
-            runtime.InvokeEvent("probe.second", "{}");
+            runtime.Tick(.1f);
             result["mainAfterReplacement"] = runtime.CaptureGlobalState("");
             string state = runtime.InvokeModule("module.lua", "OnLoad", item, "");
             result["afterLoad"] = item.itemData.Durability;

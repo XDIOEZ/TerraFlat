@@ -193,24 +193,24 @@ public static class ModTemplateCreator
     {
         return @"local M = {}
 
-function M.OnLoad(api)
-    if api:GetBoolSetting('verbose', true) then
-        api:Log('示例 MOD 已加载；新物品 ID：example.flatworld.mod:training_sword')
+function M.OnLoad(mod)
+    if CS.ModSettingsRegistry.GetBool(mod.ModId, 'verbose', true) then
+        mod:Log('示例 MOD 已加载；新物品 ID：example.flatworld.mod:training_sword')
     end
 end
 
-function M.OnEvent(api, eventName, payloadJson)
-    if api:GetBoolSetting('verbose', true) and eventName ~= 'item.spawned' then
-        api:Log('收到事件：' .. eventName .. ' / ' .. payloadJson)
+function M.OnContentReady(mod)
+    if CS.ModSettingsRegistry.GetBool(mod.ModId, 'verbose', true) then
+        mod:Log('内容已就绪；游戏事件直接通过 CS 订阅，并登记卸载退订。')
     end
 end
 
-function M.OnSave(api, state)
+function M.OnSave(mod, state)
     return state
 end
 
-function M.OnLoadSave(api, state)
-    api:Log('已恢复示例 MOD 的全局状态')
+function M.OnLoadSave(mod, state)
+    mod:Log('已恢复示例 MOD 的全局状态')
 end
 
 return M
@@ -221,18 +221,18 @@ return M
     {
         return @"local M = {}
 
-function M.OnLoad(actor, state, deltaTime, api)
-    api:Log('Actor loaded: ' .. actor.Id)
+function M.OnLoad(actor, state, deltaTime, mod)
+    mod:Log('Actor loaded: ' .. actor.itemData.IDName)
     return state
 end
 
-function M.OnUpdate(actor, state, deltaTime, api)
-    -- actor 提供 X/Y、Health/MaxHealth、MoveTo 与 StopMoving。
-    -- 保留本体 Wolf 状态机时，该状态机仍可能在后续 Tick 覆盖移动目标。
+function M.OnUpdate(actor, state, deltaTime, mod)
+    -- actor 就是真实 Item，使用 itemData、transform 或 GetComponent 获取现有游戏能力。
+    -- 修改世界前检查 mod.CanModifyWorld；本体状态机仍可能覆盖移动目标。
     return state
 end
 
-function M.OnSave(actor, state, deltaTime, api)
+function M.OnSave(actor, state, deltaTime, mod)
     return state
 end
 
@@ -252,14 +252,15 @@ return M
 - 单纯换皮不需要制作新 AI Prefab；自定义 Prefab 仍必须只使用游戏提供的组件。
 
 - `Defs/items.json`：物品 Def 和继承。
-- `contaminations`：注册自定义污染指标；ID 必须使用 MOD 命名空间，Lua 可调用 `Get/Set/AddContaminationValue`。
+- `contaminations`：注册自定义污染指标；使用完整命名空间 ID，通过 `CS.ContaminationSystem` 调用正式服务。
 - `Patches/balance.json`：set/add/remove/replace/merge/test Patch。
 - `Localization/`：按语言注册命名空间文本。
 - `Settings/settings.json`：client/world/server 设置 schema。
-- `Lua/main.lua`：OnLoad、OnUpdate、OnEvent、OnSave、OnLoadSave、OnUnload 生命周期。
-- `Lua/actor.lua`：Actor 实例级安全 Lua 扩展。
+- `Lua/main.lua`：OnLoad、OnContentReady、OnUpdate、OnSave、OnLoadSave、OnUnload 生命周期。
+- `Lua/actor.lua`：收到真实 Item 的实例级 Lua 扩展，外部 Lua 视为受信任代码。
 
-游戏主菜单按 F10 打开 MOD 管理器。修改启停或顺序后，在未进入世界时重载内容。
+从游戏主菜单打开 MOD 管理页。修改启停或顺序后，在未进入世界时重载内容。
+支持 require('scripts.helper') 加载包内 scripts/helper.lua；直接订阅 C# 事件后使用 mod:RegisterCleanup 登记退订。
 ";
     }
 

@@ -1,4 +1,12 @@
 -- Lua 提供补丁组合，C# 只调用 MOD 正式补丁实现。
+test.system("modding", "lua_direct_cs", {}, function(data)
+    local suffix = ":3:restored:ready:tick:replacement"
+    assert(data["probe.first"] == "probe.first" .. suffix and data["probe.second"] == "probe.second" .. suffix,
+        "CS 调用、require 包隔离或加载/恢复/更新/保存回调失败")
+    assert(data.scriptsLoaded and data.listenersAdded == 2, "Lua 生命周期没有登记真实 C# 事件")
+    assert(data.listenersRestored and data.packagesRemoved, "Lua 卸载残留事件订阅或测试文件")
+end, "开放 CS、包内 require 与 Lua 卸载清理")
+
 test.system("modding", "patch", { target = { count = 1, other = 9 }, path = "count", operation = "replace", value = 3, expect = 1 }, function(data)
     assert(data.accepted and data.target.count == 3 and data.target.other == 9, "带前置条件替换失败或污染旁支")
 end, "MOD 补丁替换与 expect 条件")

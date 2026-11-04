@@ -1,5 +1,5 @@
 {
-  "apiVersion": 1,
+  "apiVersion": 2,
   "id": "example.resourcecapabilities",
   "name": "资源 ECS 能力示例",
   "version": "1.0.0",

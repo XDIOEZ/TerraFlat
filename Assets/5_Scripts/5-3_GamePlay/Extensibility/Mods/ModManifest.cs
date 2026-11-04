@@ -8,8 +8,8 @@ using Newtonsoft.Json;
 [Serializable]
 public sealed partial class ModManifest
 {
-    [JsonProperty("apiVersion")]
-    public int ApiVersion = 1;
+    [JsonProperty("apiVersion", Required = Required.Always)]
+    public int ApiVersion = ModRuntimeManager.SupportedApiVersion;
 
     [JsonProperty("id", Required = Required.Always)]
     public string Id;

@@ -67,6 +67,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("modding/package_path", ServiceModPath);
         operations.Add("modding/candidate_patch", ServiceModCandidatePatch);
         operations.Add("modding/managed_runtime", ProbeManagedRuntime);
+        operations.Add("modding/lua_direct_cs", ServiceModLuaDirectCs);
         operations.Add("ui_settings/mobile_size", ServiceMobileSize);
         operations.Add("ui_settings/frame_rate", ServiceFrameRate);
         operations.Add("ui_settings/water_visual_provider", ServiceWaterVisualProvider);
@@ -821,6 +822,74 @@ public static partial class GameplayTestSystemProbe
     #endregion
 
     #region MOD 内容补丁与包路径
+
+    // 使用正式 Lua 运行时验证 CS、包内 require、虚拟机隔离与 C# 事件退订。
+    private static JObject ServiceModLuaDirectCs(JObject args)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "FlatWorldModLuaRules", Guid.NewGuid().ToString("N"));
+        var eventField = typeof(GameManager).GetField("Event_PlayerEnterWorld",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        int ListenerCount() => (eventField?.GetValue(null) as Delegate)?.GetInvocationList().Length ?? 0;
+        int before = ListenerCount();
+        var result = new JObject();
+        var runtimes = new List<ModLuaRuntime>();
+        try
+        {
+            foreach (string id in new[] { "probe.first", "probe.second" })
+            {
+                string package = Path.Combine(root, id);
+                Directory.CreateDirectory(Path.Combine(package, "scripts"));
+                File.WriteAllText(Path.Combine(package, "scripts", "helper.lua"),
+                    "return { owner = '" + id + "', value = CS.UnityEngine.Mathf.RoundToInt(2.6) }");
+                File.WriteAllText(Path.Combine(package, "main.lua"), @"
+local helper = require('scripts.helper')
+assert(helper == require('scripts.helper'), 'require must cache within one MOD')
+assert(helper.owner == mod.ModId and helper.value == 3, 'CS or package ownership failed')
+assert(CS.ModRuntimeManager.SupportedApiVersion == 2, 'game C# type unavailable')
+assert(typeof(CS.FlatWorld.Dialogue.CharacterSoliloquyController) ~= nil, 'dialogue type unavailable')
+assert(not pcall(require, '../outside'), 'require accepted path traversal')
+local M = {}
+local state = 'loaded'
+local function entered(player) end
+function M.OnLoad(context)
+    CS.GameManager.Event_PlayerEnterWorld('+', entered)
+    context:RegisterCleanup(function() CS.GameManager.Event_PlayerEnterWorld('-', entered) end)
+end
+function M.OnLoadSave(context, saved) state = saved end
+function M.OnContentReady(context) state = state .. ':ready' end
+function M.OnUpdate(context, dt)
+    state = state .. ':tick'
+    M.OnUpdate = function(context, nextDt) state = state .. ':replacement' end
+end
+function M.OnSave(context, previous) return helper.owner .. ':' .. helper.value .. ':' .. state end
+return M");
+                var runtime = new ModLuaRuntime(id, package, null);
+                runtimes.Add(runtime);
+                runtime.LoadMain("main.lua");
+                runtime.RestoreGlobalState("restored");
+                runtime.ContentReady();
+                runtime.Tick(.1f);
+                runtime.Tick(.1f);
+                result[id] = runtime.CaptureGlobalState("");
+                result["scriptsLoaded"] = runtime.HasLoadedScripts;
+            }
+            result["listenersAdded"] = ListenerCount() - before;
+        }
+        finally
+        {
+            try
+            {
+                foreach (ModLuaRuntime runtime in runtimes) runtime.Dispose();
+                result["listenersRestored"] = ListenerCount() == before;
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                result["packagesRemoved"] = !Directory.Exists(root);
+            }
+        }
+        return result;
+    }
 
     private static JObject ServiceModPatch(JObject args)
     {

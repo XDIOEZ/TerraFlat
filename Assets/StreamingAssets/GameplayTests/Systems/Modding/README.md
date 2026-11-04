@@ -14,6 +14,8 @@
 
 入口：[物品、MOD与网络副本测试集](../ItemRuntime/gameplay-suite.json)，Lua业务断言在 [共享脚本](../ItemRuntime/gameplay.lua)。三个系统按同一实际实例链路组合，目录表映射同一案例，不重复执行。
 
-已编写：同一隔离世界真实物品由正式 ModLuaRuntime 通过 ModItemApi 扣改耐久；覆盖主Lua加载/恢复/事件/保存与物品Lua Load/Update/Unload 状态传递。测试包仅写本轮 Library 隔离目录并清理。
+已编写：同一隔离世界真实物品由正式 ModLuaRuntime 直接接收 Item 并修改 itemData 耐久；覆盖主Lua加载/恢复/更新/保存与物品Lua Load/Update/Unload 状态传递。测试包仅写本轮 Library 隔离目录并清理。
+
+快速规则 `lua_direct_cs` 使用正式运行时验证 CS 游戏类型访问、包内 require 缓存/路径拒绝、两个 LuaEnv 的隔离、真实玩家入世事件订阅与 RegisterCleanup 退订。Android IL2CPP 真机和跨端联机不由编辑态规则代替。
 
 覆盖边界：直接驱动正式 Lua 生命周期接口，不扫描用户安装包，不覆盖管理器自动分派、依赖排序、托管DLL、内容发布及热更新。

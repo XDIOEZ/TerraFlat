@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Xml.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -392,6 +393,33 @@ public sealed class ModAuthoringWindow : EditorWindow
         return fullPath;
     }
 
+    #endregion
+}
+
+/// <summary>构建时自动保留游戏程序集，Lua 反射访问不再依赖逐项手写业务包装。</summary>
+public sealed class ModLuaLinkerPreservation : UnityEditor.Build.IUnityLinkerProcessor
+{
+    #region 构建期 Lua 反射支持
+    public int callbackOrder => 0;
+
+    public string GenerateAdditionalLinkXmlFile(UnityEditor.Build.Reporting.BuildReport report,
+        UnityEditor.UnityLinker.UnityLinkerBuildPipelineData data)
+    {
+        var assemblies = UnityEditor.Compilation.CompilationPipeline
+            .GetAssemblies(UnityEditor.Compilation.AssembliesType.Player)
+            .Where(assembly => assembly.sourceFiles.Any(path =>
+                path.Replace('\\', '/').StartsWith("Assets/5_Scripts/", StringComparison.Ordinal) ||
+                path.Replace('\\', '/').Contains("/Assets/5_Scripts/", StringComparison.Ordinal)))
+            .Select(assembly => assembly.name).Distinct().OrderBy(name => name, StringComparer.Ordinal);
+        var linker = new XElement("linker", assemblies.Select(name => new XElement("assembly",
+            new XAttribute("fullname", name), new XAttribute("preserve", "all"))));
+        linker.Add(new XElement("assembly", new XAttribute("fullname", "XLua.Runtime"),
+            new XElement("type", new XAttribute("fullname", "XLua.DelegateBridge"), new XAttribute("preserve", "all"))));
+        string output = Path.GetFullPath("Temp/FlatWorldModLua/link.xml");
+        Directory.CreateDirectory(Path.GetDirectoryName(output));
+        new XDocument(linker).Save(output);
+        return output;
+    }
     #endregion
 }
 #endif
