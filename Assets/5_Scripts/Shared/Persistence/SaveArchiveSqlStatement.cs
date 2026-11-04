@@ -11,11 +11,13 @@ namespace FlatWorld.Persistence
         private static readonly IntPtr Transient = new IntPtr(-1);
         private static readonly byte[] EmptyBlob = new byte[1];
         private readonly SQLiteConnection _database;
+        private readonly string _sql;
         private IntPtr _statement;
 
         public SaveArchiveSqlStatement(SQLiteConnection database, string sql)
         {
             _database = database;
+            _sql = sql;
             _statement = SQLite3.Prepare2(database.Handle, sql);
         }
 
@@ -66,7 +68,12 @@ namespace FlatWorld.Persistence
         private void Check(SQLite3.Result result)
         {
             if (result != SQLite3.Result.OK)
-                throw SQLiteException.New(result, SQLite3.GetErrmsg(_database.Handle));
+            {
+                // 在语句重置和事务回滚覆盖原生错误前保留扩展码，不记录绑定的存档内容。
+                int extendedCode = (int)SQLite3.ExtendedErrCode(_database.Handle);
+                throw SQLiteException.New(result,
+                    $"{SQLite3.GetErrmsg(_database.Handle)} [SQLite={extendedCode}, SQL={_sql}]");
+            }
         }
 
         [DllImport(SQLite3.LibraryPath, EntryPoint = "sqlite3_clear_bindings", CallingConvention = CallingConvention.Cdecl)]

@@ -18,7 +18,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject CaptureSqliteRecordRules(JObject args)
     {
-        string path = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Library", "FlatWorldGameplayTests",
+        string path = Path.Combine(Application.temporaryCachePath, "FlatWorldGameplayTests",
             "SqliteRules", Guid.NewGuid().ToString("N"), "save.sqlite");
         var terrain = new ChunkSaveRecord { PlanetName = "probe:sqlite", ChunkName = "(16, -32)" };
         terrain.RemovedItemGuids.Add(71);
@@ -27,7 +27,18 @@ public static partial class GameplayTestSystemProbe
         SaveArchiveRecord Chunk(byte[] payload) => new("chunk", "probe:sqlite", "chunk", 16, -32, "flatworld.chunk", 1, payload);
         using var store = new SqliteSaveArchiveStore(path, true);
         const string session = "lua-sqlite-records";
-        store.CommitSnapshotAsync(session, 1, "规则存档", new[] { Chunk(frozen) }).GetAwaiter().GetResult();
+        // 超过临时表缓存，覆盖真机临时文件目录及 INSERT SELECT 中间数据落盘。
+        byte[] largePayload = new byte[3 * 1024 * 1024];
+        largePayload[largePayload.Length - 1] = 73;
+        var largeRecord = new SaveArchiveRecord("global", "", "temp-file-probe", 0, 0, "probe", 1, largePayload);
+        store.CommitSnapshotAsync(session, 1, "规则存档", new[] { Chunk(frozen), largeRecord }).GetAwaiter().GetResult();
+        bool temporarySpillRoundtrip = store.ReadRecordAsync("global", "", "temp-file-probe")
+            .GetAwaiter().GetResult().Payload.SequenceEqual(largePayload);
+        bool nativeTemporaryDirectoryConfigured = true;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        using (var androidOs = new AndroidJavaClass("android.system.Os"))
+            nativeTemporaryDirectoryConfigured = androidOs.CallStatic<string>("getenv", "SQLITE_TMPDIR") == Application.temporaryCachePath;
+#endif
         store.StageRecordsAsync(session, 2, new[] { Chunk(new byte[] { 2 }) }).GetAwaiter().GetResult();
         bool formalIsolated = store.ReadChunkAsync("probe:sqlite", 16, -32).GetAwaiter().GetResult().Payload.SequenceEqual(frozen);
         bool stageVisible = store.ReadLiveChunkAsync(session, "probe:sqlite", 16, -32).GetAwaiter().GetResult().Payload[0] == 2;
@@ -62,6 +73,8 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["formalIsolated"] = formalIsolated, ["stageVisible"] = stageVisible,
+            ["temporarySpillRoundtrip"] = temporarySpillRoundtrip,
+            ["nativeTemporaryDirectoryConfigured"] = nativeTemporaryDirectoryConfigured,
             ["futureStageIsolated"] = futureStageIsolated, ["futureStageRetained"] = futureStageRetained,
             ["canceled"] = canceled, ["failurePreserved"] = failurePreserved, ["previousRestored"] = previous,
             ["frozenItemIds"] = new JArray(restored.RemovedItemGuids), ["futureSchemaRejected"] = unknownRejected,

@@ -1,4 +1,6 @@
 test.system("save", "sqlite_records", {}, function(data)
+    assert(data.nativeTemporaryDirectoryConfigured, "Android 原生 SQLite 临时目录没有指向应用缓存目录")
+    assert(data.temporarySpillRoundtrip, "超过临时表缓存的存档载荷未能提交并完整回读")
     assert(data.formalIsolated and data.stageVisible, "未提交暂存泄漏到正式进度，或实时回读看不到暂存")
     assert(data.futureStageIsolated and data.futureStageRetained, "冻结点之后的暂存混入旧保存或被旧提交删除")
     assert(data.canceled and data.failurePreserved, "失败提交改写了已提交进度")

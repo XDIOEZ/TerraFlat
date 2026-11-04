@@ -11,6 +11,16 @@ using UnityEngine;
 public partial class SaveDataMgr
 {
     #region SQLite 会话与独立记录
+#if UNITY_ANDROID && !UNITY_EDITOR
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void InitializeAndroidSqliteNativeTemporaryDirectory()
+    {
+        // SQLite 初始化时缓存原生环境变量，必须在任何存档连接打开前指定应用可写目录。
+        using var androidOs = new AndroidJavaClass("android.system.Os");
+        androidOs.CallStatic("setenv", "SQLITE_TMPDIR", Application.temporaryCachePath, true);
+    }
+#endif
+
     private ISaveArchiveStore archiveStore;
     private string archivePath, archiveSession;
     private ModSaveMetadata pendingModSaveMetadata;
