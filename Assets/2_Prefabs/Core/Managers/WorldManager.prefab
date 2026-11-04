@@ -117,6 +117,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   UserSavePath: 
   currentSaveData:
+    ArchiveId: 
     Mechanical:
       NextPressureExplosionId: 0
       PressureExplosions: []
@@ -148,7 +149,6 @@ MonoBehaviour:
     DimensionStateJson: '{}'
     GameEventData:
       ActiveEvents: []
-    WorldGenerationConfigMode: 0
     SpaceStateJson: 
   CurrentContrrolPlayerName: 
 --- !u!1 &2247533266257833999
@@ -395,6 +395,7 @@ MonoBehaviour:
       DefinitionId: 
       ReferencePressureKPa: 0
       TemperatureKelvin: 0
+      InitialCarbonDioxidePartialPressureKPa: 0
       Gases: []
     SeasonalSnow:
       Coverage:
@@ -588,6 +589,7 @@ MonoBehaviour:
       GlobalMultiplier: 1
       Rules: []
       Chunks: []
+      IndependentEntities: []
       Generation:
         DataVersion: 0
         ProfileId: 
@@ -598,12 +600,12 @@ MonoBehaviour:
     RegionalWeatherStates: []
     name: 
     BodyId: 
-    PrefabName: 
     SelfRotateSpeed: 20
-    SurfaceGenerationProfileId: 
+    GenerationPresetId: 
     PhysicalRadiusMeters: 2000
     SurfaceGravityMetersPerSecondSquared: 9.81
   ReadyGameSaveData:
+    ArchiveId: 
     Mechanical:
       NextPressureExplosionId: 0
       PressureExplosions: []
@@ -635,7 +637,6 @@ MonoBehaviour:
     DimensionStateJson: '{}'
     GameEventData:
       ActiveEvents: []
-    WorldGenerationConfigMode: 0
     SpaceStateJson: 
   spawnLandMaxSearchRadius: 512
   spawnTerrainSampleBudget: 4096
