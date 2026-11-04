@@ -450,7 +450,7 @@ public partial class GameRes
             showLoadingGUI = false;
             ResourceLoadPipeline completedStartupPlan = loadPipeline;
             loadPipeline = null;
-            Debug.Log($"[GameRes] 菜单必要资源就绪：{LastStartupLoadMilliseconds:F0} ms；世界资源将在菜单后台预加载。", this);
+            Debug.Log($"[GameRes] 菜单必要资源就绪：{LastStartupLoadMilliseconds:F0} ms；buildGUID={Application.buildGUID}；世界资源将在菜单后台预加载。", this);
             if (completedStartupPlan != null)
                 Debug.Log($"[GameRes] 菜单阶段推进 {completedStartupPlan.ExecutionMilliseconds:F1} ms，" +
                           $"帧间/异步等待 {completedStartupPlan.BetweenAdvancesMilliseconds:F1} ms，" +

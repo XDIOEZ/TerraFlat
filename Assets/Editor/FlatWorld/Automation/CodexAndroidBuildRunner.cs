@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
 using UnityEditor;
+using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -18,7 +19,7 @@ internal static class CodexAndroidBuildRunner
     private const string ResultPath = "Library/CodexAndroidBuild.result.json";
     private const string PatchRequestPath = "Library/CodexRunAndroidPatch.request";
     private const string PatchResultPath = "Library/CodexAndroidPatch.result.json";
-    private const int RunnerRevision = 9;
+    private const int RunnerRevision = 12;
     private static bool _scheduled;
 
     [MenuItem("Tools/Android/自动补丁并运行 (Patch And Run)")]
@@ -47,24 +48,34 @@ internal static class CodexAndroidBuildRunner
     private static void ScheduleIfRequested()
     {
         _ = RunnerRevision;
-        if (_scheduled || (!File.Exists(RequestPath) && !File.Exists(PatchRequestPath)))
+        if (_scheduled || EditorApplication.isCompiling || EditorApplication.isUpdating ||
+            EditorApplication.isPlayingOrWillChangePlaymode || BuildPipeline.isBuildingPlayer ||
+            (!File.Exists(RequestPath) && !File.Exists(PatchRequestPath)))
             return;
 
         _scheduled = true;
-        EditorApplication.delayCall += Run;
+        EditorApplication.update += Run;
     }
 
     /// <summary>使用当前启用场景生成 APK，且不传入跳过内容校验的命令行参数。</summary>
     private static void Run()
     {
-        _scheduled = false;
+        EditorApplication.update -= Run;
+        try { RunRequestedAndroidBuild(); }
+        finally { _scheduled = false; }
+    }
+
+    private static void RunRequestedAndroidBuild()
+    {
         bool patch = File.Exists(PatchRequestPath);
+        string[] patchRequestLines = patch ? File.ReadAllLines(PatchRequestPath) : Array.Empty<string>();
         bool scriptOnly = patch && string.Equals(
-            File.ReadAllText(PatchRequestPath).Trim(), "scripts", StringComparison.OrdinalIgnoreCase);
+            patchRequestLines.FirstOrDefault()?.Trim(), "scripts", StringComparison.OrdinalIgnoreCase);
+        string preferredDevice = patchRequestLines.Length > 1 ? patchRequestLines[1].Trim() : null;
         string requestPath = patch ? PatchRequestPath : RequestPath;
-        if (!File.Exists(requestPath) || EditorApplication.isCompiling || EditorApplication.isUpdating)
+        if (!File.Exists(requestPath) || EditorApplication.isCompiling || EditorApplication.isUpdating ||
+            EditorApplication.isPlayingOrWillChangePlaymode || BuildPipeline.isBuildingPlayer)
         {
-            ScheduleIfRequested();
             return;
         }
 
@@ -86,7 +97,10 @@ internal static class CodexAndroidBuildRunner
         {
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
                 throw new InvalidOperationException("当前 Unity 构建目标不是 Android。");
-            if (patch && !HasConnectedAndroidDevice())
+            // 菜单与文件请求共用 Build Settings 的明确目标，不允许默认设备枚举回退。
+            if (patch)
+                preferredDevice = SelectAndroidDeploymentDevice(preferredDevice);
+            if (patch && !HasConnectedAndroidDevice(preferredDevice))
                 throw new InvalidOperationException("无线/USB ADB 尚未连接已授权的 Android 手机，取消补丁构建。请先执行 adb devices -l。");
 
             string[] scenes = EditorBuildSettings.scenes
@@ -132,6 +146,8 @@ internal static class CodexAndroidBuildRunner
             {
                 runId,
                 runnerRevision = RunnerRevision,
+                deploymentDevice = preferredDevice,
+                buildOptions = buildOptions.ToString(),
                 mode = scriptOnly ? "ScriptsOnlyPatchAndRun" : patch ? "PatchAndRun" : "FullBuild",
                 startedAt = startedAt.ToString("O"),
                 completedAt = DateTimeOffset.Now.ToString("O"),
@@ -163,6 +179,7 @@ internal static class CodexAndroidBuildRunner
                 runId,
                 runnerRevision = RunnerRevision,
                 mode = scriptOnly ? "ScriptsOnlyPatchAndRun" : patch ? "PatchAndRun" : "FullBuild",
+                deploymentDevice = preferredDevice,
                 startedAt = startedAt.ToString("O"),
                 completedAt = DateTimeOffset.Now.ToString("O"),
                 wallDurationSeconds = buildClock.Elapsed.TotalSeconds,
@@ -178,7 +195,7 @@ internal static class CodexAndroidBuildRunner
     }
 
     /// <summary>未连接真机时直接拒绝耗时构建，不卸载现有 APK 或清理用户数据。</summary>
-    private static bool HasConnectedAndroidDevice()
+    private static bool HasConnectedAndroidDevice(string requiredSerial = null)
     {
         string editorDirectory = Path.GetDirectoryName(EditorApplication.applicationPath);
         string adbPath = Path.Combine(editorDirectory, "Data", "PlaybackEngines", "AndroidPlayer",
@@ -209,8 +226,28 @@ internal static class CodexAndroidBuildRunner
             .Any(line =>
             {
                 string[] columns = line.Split(new[] { ' ', '\t', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                return columns.Length >= 2 && columns[1] == "device";
+                return columns.Length >= 2 && columns[1] == "device" &&
+                       (string.IsNullOrWhiteSpace(requiredSerial) ||
+                        string.Equals(columns[0], requiredSerial, StringComparison.OrdinalIgnoreCase));
             });
+    }
+
+    /// <summary>按本机请求选择无线 ADB 目标，避免重复设备同时连接时部署到错误通道。</summary>
+    private static string SelectAndroidDeploymentDevice(string deviceSerial)
+    {
+        PropertyInfo property = typeof(EditorUserBuildSettings).GetProperty(
+            "androidCurrentDeploymentTargetId", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        if (property == null || !property.CanWrite)
+            throw new InvalidOperationException("当前 Unity Editor 不支持设置 Android 设备目标。");
+        if (string.IsNullOrWhiteSpace(deviceSerial))
+            deviceSerial = property.GetValue(null) as string;
+        if (string.IsNullOrWhiteSpace(deviceSerial))
+            throw new InvalidOperationException("请在 Android Build Settings 的 Run Device 中选择明确设备，或在补丁请求第二行填写 ADB 序列号。");
+        property.SetValue(null, deviceSerial);
+        if (!string.Equals(property.GetValue(null) as string, deviceSerial, StringComparison.Ordinal))
+            throw new InvalidOperationException("Unity 未接受指定的 Android 部署设备。");
+        Debug.Log($"[AndroidPatch] 已指定补丁部署设备：{deviceSerial}");
+        return deviceSerial;
     }
 
     #endregion
@@ -224,14 +261,35 @@ internal static class CodexAndroidBuildRunner
             "AutoOpenAddressablesReport", BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("无法读取 Addressables 自动报告窗口设置。");
         bool previousAutoOpen = (bool)autoOpenReport.GetValue(null);
+        var previousAddressablesBuilder = AddressablesPlayerBuildProcessor.BuildAddressablesOverride;
         try
         {
             autoOpenReport.SetValue(null, false);
+            // 记录正式资源构建边界，区分资源等待与 Player/设备部署耗时。
+            AddressablesPlayerBuildProcessor.BuildAddressablesOverride = settings =>
+            {
+                Debug.Log("[AndroidPatch] Addressables 构建开始。");
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                AddressablesPlayerBuildResult result = null;
+                try
+                {
+                    if (previousAddressablesBuilder != null)
+                        result = previousAddressablesBuilder(settings);
+                    else
+                        AddressableAssetSettings.BuildPlayerContent(out result);
+                    return result;
+                }
+                finally
+                {
+                    Debug.Log($"[AndroidPatch] Addressables 构建结束：{clock.Elapsed.TotalSeconds:F3}s，错误：{result?.Error}");
+                }
+            };
             return BuildPipeline.BuildPlayer(options);
         }
         finally
         {
             autoOpenReport.SetValue(null, previousAutoOpen);
+            AddressablesPlayerBuildProcessor.BuildAddressablesOverride = previousAddressablesBuilder;
         }
     }
 

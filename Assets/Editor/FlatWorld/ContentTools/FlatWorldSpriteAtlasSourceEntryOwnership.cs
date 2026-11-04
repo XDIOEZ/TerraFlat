@@ -69,9 +69,13 @@ internal static class FlatWorldSpriteAtlasSourceEntryOwnership
         {
             sources = source.OrderBy(entry => entry.guid, StringComparer.Ordinal).ToArray()
         };
+        string json = JsonUtility.ToJson(manifest, true);
+        // 归属未变化时复用清单，避免构建期间重复替换和触发资源刷新。
+        if (File.Exists(ManifestPath) && File.ReadAllText(ManifestPath, Encoding.UTF8) == json)
+            return;
         Directory.CreateDirectory(Path.GetDirectoryName(ManifestPath));
         string staging = ManifestPath + ".pending";
-        File.WriteAllText(staging, JsonUtility.ToJson(manifest, true), new UTF8Encoding(false));
+        File.WriteAllText(staging, json, new UTF8Encoding(false));
         if (File.Exists(ManifestPath)) File.Replace(staging, ManifestPath, null);
         else File.Move(staging, ManifestPath);
     }
