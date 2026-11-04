@@ -115,6 +115,6 @@ PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`，与本地化系统共
 
 2026-11-04：`main_menu_background_slideshow` 从正式 Prefab 引用构造独立预览场景，通过真实 BasePanel 开关与组件启停采样十二图循环、1.5秒交叉淡化、关闭复位及 timeScale=0 下显式注入非缩放时间步的推进（不替代真实 Update 时钟验证）；固定反射仅推进正式控制器。实际菜单与宽屏/竖屏画面另行视觉复核。
 
-本轮轮播专项规则 `20261104T075120236Z_cecb7ef7` 通过（未进入 PlayMode）。UI 其余快速规则有既有通用滚轮与 new_game 缩放失败；总索引同步脚本因 space 域 Lua 超过十份而中止，本轮仅手工同步 UI 的案例、总规则入口与索引计数。
+本轮最终专项规则 `20261104T081135231Z_56c98e85` 通过，包含正式 Prefab 面板/双图绑定与 InitClosed 首次打开断言；没有进入 PlayMode。实际正式菜单 Prefab 已在独立预览场景渲染十二张背景的 1920×1080、2560×1080、1080×1920 共36帧，并用正式控制器推进淡化前、中、后三帧，已逐页视觉复核。图片位于 `Library/MainMenuSlideshowReview/`，不替代 PlayMode 跨帧、真实手机与安全区验收。
 
-随后补强正式 Prefab 的面板/双图层绑定检查与 InitClosed 首次打开断言；Unity 被其它任务连续 Android 构建占用，这部分尚未复跑，真实菜单截图、跨帧 Update 和三种屏幕比例视觉验收也未完成。
+UI 其余快速规则有既有通用滚轮与 new_game 缩放失败；总索引同步脚本因 space 域 Lua 超过十份而中止，本轮仅手工同步 UI 的案例、总规则入口与索引计数。Unity Console 仍有既有英文覆盖、Android 连接及其它资源图集压缩报错/警告，本轮不将其报告为干净。
