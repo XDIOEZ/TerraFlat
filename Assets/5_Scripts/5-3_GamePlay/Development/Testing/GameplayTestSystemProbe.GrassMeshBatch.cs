@@ -8,6 +8,26 @@ public static partial class GameplayTestSystemProbe
 {
     #region 草地共享纹理网格回归
 
+    // 读取真实网格父级与世界姿态，覆盖普通批次和无排序域的独立投影。
+    private static JArray CaptureSharedMeshBatchSceneHierarchy(Scene scene, string batchPrefix)
+    {
+        var samples = new JArray();
+        foreach (GameObject sceneRoot in scene.GetRootGameObjects())
+        foreach (MeshRenderer renderer in sceneRoot.GetComponentsInChildren<MeshRenderer>(true))
+        {
+            Transform batch = renderer.transform.parent;
+            if (batch == null || !batch.name.StartsWith(batchPrefix, StringComparison.Ordinal)) continue;
+            samples.Add(new JObject
+            {
+                ["parent"] = batch.parent?.name,
+                ["sceneCorrect"] = batch.gameObject.scene == scene,
+                ["position"] = new JArray(batch.position.x, batch.position.y, batch.position.z),
+                ["unitRotationAndScale"] = batch.rotation == Quaternion.identity && batch.lossyScale == Vector3.one
+            });
+        }
+        return samples;
+    }
+
     private static JObject CaptureGrassMeshBatch(JObject args)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -51,6 +71,7 @@ public static partial class GameplayTestSystemProbe
                 Matrix4x4.Translate(new Vector3(3f, 1f, 0f)), Color.white);
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var merged = ChunkSharedSpriteMeshBatchService.GetStatsForTests();
+            JArray mergedHierarchy = CaptureSharedMeshBatchSceneHierarchy(scene, "GrassMeshRegion_");
             int ownerCount = ChunkSharedSpriteMeshBatchService.GetOwnerVisualCount(ownerA);
             ChunkSharedSpriteMeshBatchService.Clear(ownerA, 0);
             ChunkSharedSpriteMeshBatchService.FlushForTests();
@@ -69,6 +90,7 @@ public static partial class GameplayTestSystemProbe
                 Matrix4x4.Translate(new Vector3(20f, 0f, 0f)), false, null);
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var projected = ChunkSharedSpriteMeshBatchService.GetStatsForTests();
+            JArray projectedHierarchy = CaptureSharedMeshBatchSceneHierarchy(scene, "GrassMeshRegion_");
             ChunkSharedSpriteMeshBatchService.ClearOwnerExternalProjection(ownerB);
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var restored = ChunkSharedSpriteMeshBatchService.GetStatsForTests();
@@ -81,6 +103,7 @@ public static partial class GameplayTestSystemProbe
                 ["mergedBatches"] = merged.Batches, ["mergedPages"] = merged.Pages,
                 ["mergedVertices"] = merged.Vertices, ["nativeMaterials"] = merged.NativeMaterials,
                 ["ownerVisuals"] = ownerCount,
+                ["mergedHierarchy"] = mergedHierarchy, ["projectedHierarchy"] = projectedHierarchy,
                 ["removedVertices"] = removed.Vertices, ["shiftedBatches"] = shifted.Batches,
                 ["returnedBatches"] = returned.Batches,
                 ["projectedBatches"] = projected.Batches, ["restoredBatches"] = restored.Batches,
@@ -160,6 +183,7 @@ public static partial class GameplayTestSystemProbe
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var merged = ChunkSharedSpriteMeshBatchService.GetStatsForTests(
                 ChunkBatchRendererGroupService.VisualLayer.NaturalShadow);
+            JArray mergedHierarchy = CaptureSharedMeshBatchSceneHierarchy(scene, "NaturalShadowMeshRegion_");
             var grassSeparate = ChunkSharedSpriteMeshBatchService.GetStatsForTests();
             ChunkSharedSpriteMeshBatchService.ClearGrass(ownerA);
             var shadowSurvivedGrassClear = ChunkSharedSpriteMeshBatchService.GetStatsForTests(
@@ -215,6 +239,7 @@ public static partial class GameplayTestSystemProbe
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var projected = ChunkSharedSpriteMeshBatchService.GetStatsForTests(
                 ChunkBatchRendererGroupService.VisualLayer.NaturalShadow);
+            JArray projectedHierarchy = CaptureSharedMeshBatchSceneHierarchy(scene, "NaturalShadowMeshRegion_");
             ChunkSharedSpriteMeshBatchService.ClearOwnerExternalProjection(ownerB);
             ChunkSharedSpriteMeshBatchService.FlushForTests();
             var restored = ChunkSharedSpriteMeshBatchService.GetStatsForTests(
@@ -227,6 +252,7 @@ public static partial class GameplayTestSystemProbe
             {
                 ["mergedBatches"] = merged.Batches, ["mergedPages"] = merged.Pages,
                 ["mergedVertices"] = merged.Vertices, ["resourceShader"] = shaderReady,
+                ["mergedHierarchy"] = mergedHierarchy, ["projectedHierarchy"] = projectedHierarchy,
                 ["grassSeparate"] = grassSeparate.Batches == 1 && grassSeparate.Pages == 1,
                 ["grassClearKeepsShadow"] = shadowSurvivedGrassClear.Batches == 1 &&
                     shadowSurvivedGrassClear.Vertices == 12,

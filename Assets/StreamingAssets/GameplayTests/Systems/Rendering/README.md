@@ -1,5 +1,7 @@
 # 渲染、光照与特效
 
+2026-11-04 共享草/阴影网格和独立表现根归入所属 Scene 的 `Runtime Objects/Rendering`，落地机器准备归 `Preparation`。`grass_mesh_batch`、`natural_shadow_mesh_batch` 增加普通合批与无排序域投影的真实父级、Scene 和世界姿态断言；`presentation_sorting_domain` 增加分类父级和初始单位姿态检查。本轮保留正在运行的 PlayMode，未执行编译或 Lua；脚印、水花、闪电和熄灭烟汽仍需实际触发验收。
+
 `rendering_rules` 的 `rendering/post_process_styles` 从正式配置目录及设置 Provider 读取三套画风、默认索引、稳定选项 ID、Bloom/暗角等参数和阴影柔化值；不改真实 PlayerPrefs。默认自然柔光，清晰原色与电影氛围可独立于高/中/低特效质量切换。此规则不验证 GPU 像素、低档性能和设置面板实际点击，后者需现场验收。
 
 2026-11-02 `20261102T063400861Z_0a6378ee` 的 `rendering_rules` 专项通过（1/1）。完整渲染规则 `20261102T063142035Z_6e8fd41b` 为6通过、2失败：`item_sorting_configuration` 和 `unified_manager` 均在 `RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot` 的测试场景迁移抛出 `Destination scene is not valid`，不将其记录为通过；同轮未进入 PlayMode，也未验证三套画风的 GPU 实际画面。

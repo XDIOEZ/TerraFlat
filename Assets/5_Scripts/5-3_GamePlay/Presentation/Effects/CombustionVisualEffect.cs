@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 通用燃烧适配器：向独立 Shader 火焰和可选烟雾转发燃烧状态、锚点和排序。
@@ -90,8 +89,8 @@ public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransform
         effectRoot.transform.position = worldPosition;
         effectRoot.transform.rotation = Quaternion.identity;
         effectRoot.transform.localScale = Vector3.one;
-        if (gameObject.scene.IsValid() && gameObject.scene.isLoaded)
-            SceneManager.MoveGameObjectToScene(effectRoot, gameObject.scene);
+        effectRoot.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            gameObject.scene, RuntimeSceneObjectCategory.Rendering), true);
 
         ParticleSystem blackSmoke = CreateExtinguishBurstSystem(
             effectRoot.transform,

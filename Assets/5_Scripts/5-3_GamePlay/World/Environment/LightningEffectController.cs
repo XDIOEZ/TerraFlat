@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.SceneManagement;
 
 /// <summary>只消费单次雷电事件，通过程序化 Shader 将逻辑落点绘制为分叉闪电、电弧和屏幕闪光。</summary>
 [DisallowMultipleComponent]
@@ -251,7 +250,8 @@ public sealed class LightningEffectController : MonoBehaviour
         sharedQuad.RecalculateBounds();
         sharedQuad.UploadMeshData(true);
         effectsRoot = new GameObject("WeatherLightningEffects");
-        SceneManager.MoveGameObjectToScene(effectsRoot, player.gameObject.scene);
+        effectsRoot.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            player.gameObject.scene, RuntimeSceneObjectCategory.Rendering), false);
         presentationWorldKey = worldKey;
         return true;
     }

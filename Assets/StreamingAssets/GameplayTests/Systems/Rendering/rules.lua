@@ -1,5 +1,21 @@
 -- 渲染参数由正式 IsValid 规则判定，图像效果需场景验收。
+local function assertMeshBatchHierarchy(samples, expectedCount, projected)
+    assert(#samples == expectedCount, "实际网格页数量与层级采样不符")
+    local projectedCount = 0
+    for _, sample in ipairs(samples) do
+        assert(sample.parent == "Rendering" and sample.sceneCorrect and sample.unitRotationAndScale,
+            "共享网格没有归入所属Scene的Rendering，或归类改变了旋转/缩放")
+        local position = sample.position
+        assert(position[2] == 0 and position[3] == 0 and (position[1] == 0 or position[1] == 20),
+            "共享网格归类改变了世界坐标")
+        if position[1] == 20 then projectedCount = projectedCount + 1 end
+    end
+    assert(projectedCount == (projected and 1 or 0), "无排序域的独立投影没有保留世界位姿")
+end
+
 test.system("rendering", "natural_shadow_mesh_batch", {}, function(data)
+    assertMeshBatchHierarchy(data.mergedHierarchy, 1, false)
+    assertMeshBatchHierarchy(data.projectedHierarchy, 2, true)
     assert(data.mergedBatches == 1 and data.mergedPages == 1 and data.mergedVertices == 12,
         "自然物太阳阴影没有把跨区块同纹理的不同Sprite合并成一个Mesh")
     assert(data.resourceShader and data.differentUvs and data.shadowParams,
@@ -13,6 +29,8 @@ test.system("rendering", "natural_shadow_mesh_batch", {}, function(data)
 end, "自然物太阳阴影：共纹理网格、参数完整性、投影与回收")
 
 test.system("rendering", "grass_mesh_batch", {}, function(data)
+    assertMeshBatchHierarchy(data.mergedHierarchy, 1, false)
+    assertMeshBatchHierarchy(data.projectedHierarchy, 2, true)
     assert(data.mergedBatches == 1 and data.mergedPages == 1 and
         data.mergedVertices == 12 and data.ownerVisuals == 2,
         "同纹理不同Sprite与跨区块草未合并为一张网格")

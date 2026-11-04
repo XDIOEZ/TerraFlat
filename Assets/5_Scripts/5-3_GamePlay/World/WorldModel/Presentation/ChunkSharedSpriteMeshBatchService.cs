@@ -496,7 +496,9 @@ internal static class ChunkSharedSpriteMeshBatchService
                 {
                     hideFlags = HideFlags.DontSave, layer = unityLayer
                 };
-                SceneManager.MoveGameObjectToScene(root, scene);
+                // 跨区块批次归属场景表现分类，不跟随某一个区块回收。
+                root.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                    scene, RuntimeSceneObjectCategory.Rendering), false);
                 UpdateProjection();
             }
             catch
@@ -515,10 +517,10 @@ internal static class ChunkSharedSpriteMeshBatchService
             if (disposed || root == null || Key.ProjectedOwner == null) return;
             Owner owner = owners[Key.ProjectedOwner];
             WorldPresentationSortingDomain domain = owner.Domain;
-            Transform parent = domain?.Root;
+            Transform parent = domain?.Root ?? RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                root.scene, RuntimeSceneObjectCategory.Rendering);
             if (root.transform.parent != parent) root.transform.SetParent(parent, true);
-            Matrix4x4 local = parent != null
-                ? parent.worldToLocalMatrix * owner.Projection : owner.Projection;
+            Matrix4x4 local = parent.worldToLocalMatrix * owner.Projection;
             Vector3 position = local.GetColumn(3);
             Quaternion rotation = local.rotation;
             Vector3 scale = local.lossyScale;

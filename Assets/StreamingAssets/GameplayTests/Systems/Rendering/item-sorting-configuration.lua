@@ -114,6 +114,7 @@ test.system("rendering", "aiecs_sorting_bridge", {}, function(data)
 end, "ECS 生物排序桥接：物种配置与更新")
 
 test.system("rendering", "presentation_sorting_domain", {}, function(data)
+    assert(data.domainsGroupedInScene, "排序域没有归入所属Scene的Rendering，或初始单位姿态改变")
     assert(data.category == "projected-world" and data.keyMatchesCategory and data.backgroundBehind,
         "独立世界排序域没有读取正式类别键，或没有排在星体背景上方")
     assert(data.distinctDomains and data.allRenderersInside and data.nestedRootKeyApplied,

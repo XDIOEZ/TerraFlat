@@ -37,12 +37,9 @@ public sealed class WorldPresentationSortingDomain : IDisposable
         if (string.IsNullOrWhiteSpace(worldKey)) throw new ArgumentException("排序域缺少世界身份。", nameof(worldKey));
         WorldKey = worldKey;
         root = new GameObject("WorldSortingDomain_" + worldKey) { hideFlags = HideFlags.DontSave };
-        // 保留所属场景，但不继承宿主缩放或旋转。
-        if (parent != null)
-        {
-            root.transform.SetParent(parent, true);
-            root.transform.SetParent(null, true);
-        }
+        // 分类节点保持单位姿态，排序域只沿用宿主场景，不继承宿主变换。
+        root.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            parent != null ? parent.gameObject.scene : root.scene, RuntimeSceneObjectCategory.Rendering), false);
         root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         root.transform.localScale = Vector3.one;
         sorting = root.AddComponent<SortingGroup>();

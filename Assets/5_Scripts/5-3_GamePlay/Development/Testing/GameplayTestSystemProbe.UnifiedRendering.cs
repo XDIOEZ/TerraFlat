@@ -418,6 +418,7 @@ public static partial class GameplayTestSystemProbe
         WorldPresentationSortingDomain domainA = null, domainB = null;
         WorldPresentationProjection projectionA = null, projectionB = null, sharedProjectionA = null, sharedProjectionB = null;
         bool keyMatchesCategory = false, backgroundBehind = false, distinctDomains = false;
+        bool domainsGroupedInScene = false;
         bool allRenderersInside = false, nestedRootKeyApplied = false, localKeysPreserved = false;
         bool rendererTypesProjected = false, yAndPositionProjectedOnce = false, hiddenSourcesSuppressed = false;
         bool scheduledPoseImmediate = false, scheduledRendererDeferred = false, scheduledLatestRenderData = false;
@@ -439,6 +440,12 @@ public static partial class GameplayTestSystemProbe
                 WorldSortingManager.ProjectedWorldCategory);
             domainB = WorldPresentationSortingDomain.Create(fixture.Services.transform, worldB,
                 WorldSortingManager.ProjectedWorldCategory);
+            Transform rendering = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+                fixture.Services.scene, RuntimeSceneObjectCategory.Rendering);
+            domainsGroupedInScene = domainA.Root.parent == rendering && domainB.Root.parent == rendering &&
+                domainA.Root.gameObject.scene == fixture.Services.scene &&
+                domainB.Root.gameObject.scene == fixture.Services.scene &&
+                domainA.Root.localToWorldMatrix == Matrix4x4.identity && domainB.Root.localToWorldMatrix == Matrix4x4.identity;
             domainA.Synchronize(matrixA, true);
             domainB.Synchronize(matrixB, true);
             WorldPresentationTransformRegistry.Set(worldA, matrixA, true, domainA);
@@ -732,6 +739,7 @@ public static partial class GameplayTestSystemProbe
         return new JObject
         {
             ["category"] = WorldSortingManager.ProjectedWorldCategory,
+            ["domainsGroupedInScene"] = domainsGroupedInScene,
             ["domainOrder"] = expectedDomainOrder,
             ["keyMatchesCategory"] = keyMatchesCategory,
             ["backgroundBehind"] = backgroundBehind,

@@ -491,7 +491,8 @@ internal static class WorldItemWaterEntrySplashEffect
             return;
 
         GameObject emitterObject = new GameObject(EmitterName);
-        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(emitterObject, scene);
+        emitterObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            scene, RuntimeSceneObjectCategory.Rendering), false);
 
         splashParticles = emitterObject.GetComponent<ParticleSystem>();
         if (splashParticles == null)

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 雪地脚印表现组件：按步距在世界空间发射左右交替的独立矩形脚印。
@@ -143,9 +142,8 @@ public sealed class SnowFootprintTrail : MonoBehaviour
             hideFlags = HideFlags.DontSave
         };
 
-        Scene ownerScene = gameObject.scene;
-        if (ownerScene.IsValid() && ownerScene.isLoaded && footprintObject.scene != ownerScene)
-            SceneManager.MoveGameObjectToScene(footprintObject, ownerScene);
+        footprintObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
+            gameObject.scene, RuntimeSceneObjectCategory.Rendering), false);
 
         footprintObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         footprintObject.transform.localScale = Vector3.one;
