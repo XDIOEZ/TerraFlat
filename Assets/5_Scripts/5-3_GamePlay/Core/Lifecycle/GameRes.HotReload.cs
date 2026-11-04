@@ -248,6 +248,7 @@ public partial class GameRes
         context.Add(() => LoadState, value => LoadState = value, ResourceLoadState.Loading);
         context.AddDictionary(() => AllPrefabs, value => AllPrefabs = value);
         context.AddDictionary(() => ItemDefinitions, value => ItemDefinitions = value);
+        context.Add(() => MineralProperties, value => MineralProperties = value, (MineralPropertyCatalog)null);
         context.AddDictionary(() => itemDefinitionAliases, value => itemDefinitionAliases = value);
         context.AddDictionary(() => ActorDefinitions, value => ActorDefinitions = value);
         context.AddDictionary(() => LootTables, value => LootTables = value);

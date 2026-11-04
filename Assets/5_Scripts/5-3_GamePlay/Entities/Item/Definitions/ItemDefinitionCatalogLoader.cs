@@ -61,6 +61,7 @@ public static class ItemDefinitionCatalogLoader
         if (gameRes == null)
             throw new ArgumentNullException(nameof(gameRes));
 
+        gameRes.MineralProperties ??= MineralPropertyCatalog.LoadBuiltIn();
         List<ItemDefinitionDto> dtos = LoadBuiltInDefinitions();
         if (dtos.Any(dto => !string.IsNullOrWhiteSpace(dto.LootTableId)) && gameRes.LootTables.Count == 0)
         {
@@ -225,6 +226,12 @@ public static class ItemDefinitionCatalogLoader
         Action<float> progress = null, List<ItemDefinitionDto> preparedDefinitions = null)
     {
         if (gameRes == null) throw new ArgumentNullException(nameof(gameRes));
+        if (gameRes.MineralProperties == null)
+        {
+            Exception mineralError = null;
+            yield return MineralPropertyCatalog.LoadBuiltInAsync(value => gameRes.MineralProperties = value, value => mineralError = value);
+            if (mineralError != null) { failed?.Invoke(mineralError); yield break; }
+        }
         List<ItemDefinitionDto> dtos = preparedDefinitions;
         if (dtos == null)
         {
@@ -1340,7 +1347,7 @@ public static class ItemDefinitionCatalogLoader
             dto.Physics,
             dto.Combustibility,
             ResolveWorldLayerInfluences(dto.WorldLayerInfluences, id),
-            dto.TraversalSpeedMultiplier ?? 1f);
+            dto.TraversalSpeedMultiplier ?? 1f, dto.ImpactAudioHardness);
     }
 
     /// <summary>运行时和构建期共用模块默认数据、战利品注入与自动生命模块的唯一装配规则。</summary>

@@ -105,4 +105,4 @@ description: "FlatWorld 伤害与生命结算、死亡掉落、武器窗口、�
 
 - 撕咬的 `ActorActionConstraints.FollowLease` 自行登记 `PhysicsPreparation`，逐物理步读取双方权威刚体位置与锚点速度；技能模块只推进时长/伤害，不重复驱动跟随。`DrivenMotionLease.SetWorldVelocity` 明确提交总速度，避免再次叠加风/水流；释放、失效及丢权威时撤销调度。`combat/bite_attack` 补跨TPS跟随速度与限速边界，真实碰撞仍需现场回归。
 
-- 命中音效仅消费实际提交结果：零伤为材质挡击、正伤为受伤；环境/拒绝不响，致命删除前冻结位置。无外壳入口各自发布一次，不在 `PublishExternalDamage` 泛化重复发声。攻击动作按伤害窗口 Sequence 去重，成功远程 Launch 独立用源武器音色。详见 flatworld-audio。
+- 命中音效仅消费实际提交结果：零伤为挡击、正伤为受伤；未指定专用声时按攻击方→受击方三档硬度选18类通用声（实际弹丸为来源），环境/拒绝不响，致命删除前冻结位置。无外壳入口各自发布一次，不在 `PublishExternalDamage` 泛化重复发声。攻击动作按伤害窗口 Sequence 去重，成功远程 Launch 独立用源武器音色。详见 flatworld-audio。

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0c19eb3306146649bcc5130f92e0433, type: 3}
+  m_Name: combat.blocked.high.high
+  m_EditorClassIdentifier:
+  id: combat.blocked.high.high
+  bus: 1
+  clips:
+  - {fileID: 8300000, guid: 3aa5cd790fdd4949a86189f552a7d892, type: 3}
+  - {fileID: 8300000, guid: 06c4f2f1a8bf4a63ae83d43c86f28410, type: 3}
+  - {fileID: 8300000, guid: 16f22eaf044742f09e5db4202afd3c9d, type: 3}
+  selection: 0
+  noRepeatHistory: 2
+  loop: 0
+  volume:
+    Min: 0.9
+    Max: 1
+  pitch:
+    Min: 0.96
+    Max: 1.05
+  spatialBlend: 1
+  minDistance: 1.5
+  maxDistance: 14
+  priority: 128
+  cooldown: 0
+  maxInstances: 16
+  concurrencyPolicy: 1
+  rolloffMode: 1
+  outputOverride: {fileID: 0}

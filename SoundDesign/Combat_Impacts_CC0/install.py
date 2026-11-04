@@ -16,7 +16,7 @@ RATE = 48000
 def write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = ('\n'.join(line.rstrip() for line in text.splitlines()) + '\n').encode('utf-8')
-    if path.exists() and path.read_bytes() == payload:
+    if path.exists() and [line.rstrip() for line in path.read_text('utf-8-sig').splitlines()] == payload.decode('utf-8').splitlines():
         return
     temporary = path.with_name('.' + path.name + '.tmp')
     temporary.write_bytes(payload)
@@ -45,6 +45,8 @@ def install():
     catalog_path = PROJECT / 'Assets/Resources/Audio/AudioCatalog.asset'
     catalog = catalog_path.read_text('utf-8')
     cue_clips = {}
+    recording_by_hash = {}
+    used_recordings = set()
     for cue, segments in manifest['cues'].items():
         clips = []
         for index, segment in enumerate(segments, 1):
@@ -64,7 +66,17 @@ def install():
             destination = output / f'{cue}__{index:02}.wav'
             temporary = destination.with_suffix('.tmp.wav')
             sf.write(temporary, values * fade, RATE, subtype='PCM_16')
-            temporary.replace(destination)
+            digest = hashlib.sha256(temporary.read_bytes()).hexdigest()
+            if digest in recording_by_hash:
+                temporary.unlink()
+                destination = recording_by_hash[digest]
+            else:
+                if destination.exists() and destination.read_bytes() == temporary.read_bytes():
+                    temporary.unlink()
+                else:
+                    temporary.replace(destination)
+                recording_by_hash[digest] = destination
+            used_recordings.add(destination)
             clips.append(guid(destination, clip_template))
             meta = Path(str(destination) + '.meta')
             write(meta, re.sub(r'  userData: .*', '  userData: CC0_Combat_Recordings', meta.read_text('utf-8')))
@@ -72,10 +84,6 @@ def install():
             segment['output'] = destination.relative_to(PROJECT).as_posix()
             segment['outputSha256'] = hashlib.sha256(destination.read_bytes()).hexdigest()
         cue_clips[cue] = clips
-    # 武器/材质组合复用同类录音，仍只播放一次命中声。
-    for pair, material in {'knife.foliage': 'foliage', 'knife.stone': 'stone',
-                           'axe.wood': 'wood', 'pickaxe.stone': 'stone'}.items():
-        cue_clips['combat.impact.' + pair] = cue_clips['combat.impact.' + material]
     for cue, clips in cue_clips.items():
         path = PROJECT / 'Assets/Resources/Audio/Cues' / (cue + '.asset')
         cue_guid = guid(path)
@@ -90,6 +98,11 @@ def install():
         write(path, content)
         if cue_guid not in catalog:
             catalog = catalog.replace('  cues:\n', f'  cues:\n  - {{fileID: 11400000, guid: {cue_guid}, type: 2}}\n')
+    # 同源录音共用 GUID，不为十八类矩阵重复导入相同 PCM。
+    for candidate in output.glob('combat.*.wav'):
+        if re.fullmatch(r'combat\.(blocked|impact)\.(low|medium|high)\.(low|medium|high)__\d+\.wav', candidate.name) and candidate not in used_recordings:
+            candidate.unlink()
+            Path(str(candidate) + '.meta').unlink(missing_ok=True)
     write(catalog_path, catalog)
     write(ROOT / 'sources.json', json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     print(f'Installed {len(cue_clips)} cues / {sum(len(v) for v in manifest["cues"].values())} recording variants')

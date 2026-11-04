@@ -129,6 +129,11 @@ public sealed partial class ItemDefinitionDto
     [JsonProperty("traversalSpeedMultiplier", NullValueHandling = NullValueHandling.Ignore)]
     public float? TraversalSpeedMultiplier;
 
+    // 接触声音使用三档声学硬度，Auto 复用矿物表或材质默认值。
+    [JsonProperty("impactAudioHardness")]
+    [JsonConverter(typeof(StringEnumConverter))]
+    public CombatImpactHardness ImpactAudioHardness;
+
     /// <summary>passive 使用轻量掉落物；interactive 在地面仍保留完整 Item 与模块交互。</summary>
     [JsonProperty("worldDropBehavior", NullValueHandling = NullValueHandling.Ignore)]
     public string WorldDropBehavior;
@@ -714,7 +719,7 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
         ItemPhysicsDefinitionDto physics = null,
         WorldCombustibilityDefinitionDto combustibility = null,
         IReadOnlyList<ItemWorldLayerInfluence> worldLayerInfluences = null,
-        float traversalSpeedMultiplier = 1f)
+        float traversalSpeedMultiplier = 1f, CombatImpactHardness impactAudioHardness = CombatImpactHardness.Auto)
     {
         if (!float.IsFinite(traversalSpeedMultiplier) || traversalSpeedMultiplier <= 0f || traversalSpeedMultiplier > 1f)
             throw new InvalidDataException($"物品 {id} 的 traversalSpeedMultiplier 必须在 (0, 1] 内。");
@@ -804,6 +809,10 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
             CombatBlockedAudioCueId = audio?.Value<string>("blockedAudioCueId");
             break;
         }
+        if ((uint)impactAudioHardness > (uint)CombatImpactHardness.High)
+            throw new InvalidDataException($"物品 {id} 的 impactAudioHardness 必须为 Auto/Low/Medium/High。");
+        CombatImpactAudioHardness = CombatAudioRouter.ResolveConfiguredImpactHardness(id, CombatImpactAudioMaterial,
+            impactAudioHardness, moduleResources?.MineralProperties);
         FireFuel = combustibility?.Compile() ?? WorldFireFuelProfile.Compile(this);
         moduleIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (RuntimeItemModuleDefinition module in ModuleDefinitions)
@@ -923,6 +932,7 @@ public sealed class RuntimeItemDefinition : IItemWorldLayerInfluenceProvider
     #endregion
 
     public CombatImpactMaterial CombatImpactAudioMaterial { get; }
+    public CombatImpactHardness CombatImpactAudioHardness { get; }
     public string CombatHurtAudioCueId { get; }
     public string CombatBlockedAudioCueId { get; }
 

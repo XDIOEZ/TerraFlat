@@ -75,6 +75,9 @@ public partial class GameRes
             () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
                 itemInputs != null ? itemInputs.Wait(done) : GameplayTestResourceCache.LoadItemInputs(done, fail, plan.Report),
                 value => itemSources = value), "addressables");
+        plan.Add("mineral-properties", "加载矿物硬度参考", 1,
+            () => LoadCatalog<MineralPropertyCatalog>(MineralPropertyCatalog.LoadBuiltInAsync,
+                value => MineralProperties = value));
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
@@ -89,7 +92,7 @@ public partial class GameRes
         plan.Add("skills", "加载技能资源", 2, () => LoadAssetGroup<BaseSkill>("Skill", SkillDict, asset => asset.name, true), "addressables");
         plan.Add("items", "构建物品定义", 25,
             () => LoadCatalog<int>((done, fail) => ItemDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail, plan.Report, itemSources), _ => { }),
-            "prefabs", "loot", "tile-blocks", "skills");
+            "prefabs", "loot", "tile-blocks", "skills", "mineral-properties");
         plan.Add("actors", "构建生物定义", 15,
             PrepareCatalogWithDeferredBinding<ActorDefinitionCatalogLoader.ActorCatalogPreparation>(plan,
                 (done, fail) => ActorDefinitionCatalogLoader.LoadBuiltInCatalogInputAsync(done, fail, actorSnapshot != null),

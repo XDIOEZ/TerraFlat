@@ -694,7 +694,7 @@ namespace FlatWorld.AIECS.Gameplay
                 weapons.TryGetValue(result.Context.Attack.Source, out var weapon);
                 if (result.Context.Attack.Source.Backend != CombatBackend.Environment && result.Loss >= 0f)
                     CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(
-                        combatAudioDefinitions[result.TargetDefinitionIndex], weapon, result.Loss),
+                        combatAudioDefinitions[result.TargetDefinitionIndex], weapon, result.Loss, result.Context),
                         CombatAudioLocation.Capture(result.Context.HitPoint, worldKey));
                 if (weapon == null) continue;
                 if (result.Loss >= 0f) PlayerToEcsHits++;

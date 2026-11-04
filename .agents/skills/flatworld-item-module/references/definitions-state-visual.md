@@ -28,7 +28,7 @@
 
 ## 物质、燃烧与产出
 
-- 矿物静态力学参考集中于 `GameConfig/Items/mineral-properties.json`；加载 `MineralPropertyCatalog` 后由 `TryGetByItemId` 查询矿脉/掉落物共用的不可变条目，移动端用 `LoadBuiltInAsync`。`Hardness/Toughness` 均为1～10整数：硬度参考莫氏等级，韧性为抗断裂能力的游戏折算，不等同延展性。目前独立保留，不参与采矿/伤害/耐久；新增矿物直接扩展表。回归 `item_runtime/mineral_properties`。
+- 矿物静态力学参考集中于 `GameConfig/Items/mineral-properties.json`；加载 `MineralPropertyCatalog` 后由 `TryGetByItemId` 查询矿脉/掉落物共用的不可变条目，移动端用 `LoadBuiltInAsync`。`Hardness/Toughness` 均为1～10整数：硬度参考莫氏等级，韧性为抗断裂能力的游戏折算，不等同延展性。GameRes 在物品定义前异步加载，声音冷编译按硬度1–2/3–5/6–10映射 Low/Medium/High；根字段 `impactAudioHardness` 可覆盖。不参与采矿/伤害/耐久；新增矿物直接扩展表。回归 `item_runtime/mineral_properties`。
 
 - 巨型矿山集中于 `Items/shells/giant_mines.json`，各自继承对应小矿山，保留防御、开采工具和矿物产物；只覆盖巨型外观、20万生命与底部阻挡，石矿沿用原巨型最终掉落表。显式 `worldGridOccupancy` 可偏离根格，防种植只认这些格；无显式占地才回退根格。回归 `item_runtime/giant_mines`。
 

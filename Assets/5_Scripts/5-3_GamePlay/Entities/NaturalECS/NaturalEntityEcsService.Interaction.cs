@@ -626,7 +626,8 @@ namespace FlatWorld.NaturalEntities
                 CombatAudioRouter.PlayImpact(record.Snapshot, record.Profile.ImpactAudioMaterial,
                     record.Profile.HurtAudioCueId, actualDamage, (Vector2)context.HitPoint, sender,
                     blockedCueId: record.Profile.BlockedAudioCueId,
-                    location: CombatAudioLocation.Capture(context.HitPoint, GameplayWorldRegistry.ExecutionWorldKey));
+                    location: CombatAudioLocation.Capture(context.HitPoint, GameplayWorldRegistry.ExecutionWorldKey),
+                    sourceHardness: CombatAudioRouter.ResolveSourceImpactHardness(sender, context.SourceItemId));
             return actualDamage;
         }
 

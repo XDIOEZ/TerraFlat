@@ -84,6 +84,7 @@
     },
     {
       "id": "WillowBranch",
+      "impactAudioHardness": "Low",
       "maxDurability": 30,
       "durability": 30,
       "parent": "Stick_Wood",
@@ -122,6 +123,7 @@
     },
     {
       "id": "Clay",
+      "impactAudioHardness": "Low",
       "parent": "Ore_Stone",
       "gameName": "黏土",
       "description": "可用铲子从河岸黏土点采集的陶土材料，四份可制成一个陶罐坯。",
@@ -684,6 +686,7 @@
     },
     {
       "id": "Shovel_Copper",
+      "impactAudioHardness": "Medium",
       "parent": "Shovel_Base",
       "gameName": "铜铲",
       "description": "右键挖掘草地、沙地或泥炭地块需3次；也可挖取河岸黏土点。",
@@ -759,6 +762,7 @@
     },
     {
       "id": "Shovel_Bronze",
+      "impactAudioHardness": "Medium",
       "parent": "Shovel_Base",
       "gameName": "青铜铲",
       "description": "坚韧的青铜铲，能更快挖掘草地、沙地、泥炭与河岸黏土。",

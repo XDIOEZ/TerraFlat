@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "CopperHammer",
+      "impactAudioHardness": "Medium",
       "parent": "WoodHammer",
       "gameName": "铜锤",
       "description": "铜制锤头配木柄的金属锤，可在金属砧上锻打。耐久100，每次有效敲打消耗1点。",
@@ -42,6 +43,7 @@
     },
     {
       "id": "IronHammer",
+      "impactAudioHardness": "High",
       "parent": "CopperHammer",
       "gameName": "铁锤",
       "description": "熟铁制成的金属锤，适合在金属砧上反复锻打。耐久200，每次有效敲打消耗1点。",

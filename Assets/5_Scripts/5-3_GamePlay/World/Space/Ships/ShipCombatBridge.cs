@@ -302,7 +302,7 @@ namespace FlatWorld.Spaceflight
                 pieceAudio.ShipId = target.Ship.ShipId;
                 pieceAudio.ShipLocalPosition = new Vector2((float)audioX, (float)audioY);
                 float pieceLoss = (float)session.ApplyResolvedPieceDamage(target.Ship, target.Piece, damage, "攻击");
-                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(target.Definition, weapon, pieceLoss), pieceAudio);
+                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(target.Definition, weapon, pieceLoss, hit), pieceAudio);
                 weapon.PublishExternalDamage(hit, pieceLoss);
             }
         }

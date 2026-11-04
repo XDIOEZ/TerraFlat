@@ -7,3 +7,5 @@
 Ice uses brittle glass Foley; foliage uses cloth Foley. All files are adapted recordings, not merely references. Existing tree-chopping credits remain in Tree-Chopping-SFX-CREDITS.md. Per-clip source offsets and hashes: SoundDesign/Combat_Impacts_CC0/sources.json.
 
 License: https://creativecommons.org/publicdomain/zero/1.0/
+
+2026-11-05: the generic impact matrix uses three source-hardness levels × three receiver-hardness levels × blocked/damaged outcomes (18 cues, three separate takes each). Kenney wood/soft/punch/plate/tin/metal/glass/mining recordings provide the directed contact pairs; low/low is dull and high/high is bright or brittle. Identical processed recordings share one imported Clip. Explicit special cues, including tree chopping, remain separate. Preview_Hardness.wav demonstrates low→low, low→high, high→low and high→high, with blocked then damaged in each pair.

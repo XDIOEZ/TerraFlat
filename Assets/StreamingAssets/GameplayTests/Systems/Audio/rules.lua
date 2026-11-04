@@ -49,34 +49,63 @@ for _, row in ipairs({ { volume = -1, master = -1, expected = 0 }, { volume = 0.
     end, "音频总线范围与空间参数：" .. row.expected)
 end
 
--- 正式接受的零伤与正伤分开选音，专用受伤声不能覆盖挡击声。
+-- 三档硬度按攻击方、受击方的顺序组成九对，每对分别检查挡击和真实受伤。
+for _, source in ipairs({ "Low", "Medium", "High" }) do
+    for _, target in ipairs({ "Low", "Medium", "High" }) do
+        for _, result in ipairs({ { damage = 0, prefix = "blocked" }, { damage = 1, prefix = "impact" } }) do
+            local expected = "combat." .. result.prefix .. "." .. string.lower(source) .. "." .. string.lower(target)
+            test.system("audio", "combat_impact", {
+                sourceHardness = source, targetHardness = target, damage = result.damage
+            }, function(data)
+                assert(data.cue == expected and not data.silent, "通用命中声没有消费双方硬度和真实伤害结果")
+                assert(data.sourceHardness == source and data.targetHardness == target, "攻击方与受击方硬度顺序颠倒")
+            end, "三档硬度：" .. source .. " → " .. target .. " / " .. result.prefix)
+        end
+    end
+end
+
 for _, row in ipairs({
-    { itemId = "AppleTree", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
-    { itemId = "AppleTree", weapon = "Axe", damage = 1, targetCue = "combat.impact.tree", blocked = true, expected = "combat.impact.tree" },
-    { itemId = "Tree_Pine", weapon = "Axe", damage = 0, targetCue = "combat.impact.tree", expected = "combat.blocked.wood" },
-    { itemId = "Tree_Pine", weapon = "Axe", damage = -1, targetCue = "combat.impact.tree", blocked = true, expected = "" },
-    { itemId = "Mine_Stone", weapon = "Axe", damage = 0, expected = "combat.blocked.stone" },
-    { itemId = "Mine_Stone", weapon = "Axe", damage = 1, expected = "combat.impact.stone" },
-    { itemId = "Mine_Stone", weapon = "Pickaxe", damage = 1, expected = "combat.impact.pickaxe.stone" },
-    { itemId = "Iceberg", damage = 0, expected = "combat.blocked.ice" },
-    { itemId = "Iceberg", damage = 1, expected = "combat.impact.ice" },
+    { sourceItemId = "Stick_Wood", itemId = "Mine_Stone", damage = 0, source = "Low", target = "High", expected = "combat.blocked.low.high" },
+    { sourceItemId = "Stick_Wood", itemId = "Mine_Stone", damage = 1, source = "Low", target = "High", expected = "combat.impact.low.high" },
+    { sourceItemId = "Ore_Stone", itemId = "Mine_Stone", damage = 1, source = "High", target = "High", expected = "combat.impact.high.high" },
+    { sourceItemId = "Axe_Stone", itemId = "Stick_Wood", damage = 1, source = "High", target = "Low", expected = "combat.impact.high.low" },
+    { sourceItemId = "Stick_Wood", itemId = "Log", damage = 1, source = "Low", target = "Low", expected = "combat.impact.low.low" },
+    { sourceItemId = "Dagger_Bone", itemId = "Ore_Copper", damage = 0, source = "Medium", target = "Medium", expected = "combat.blocked.medium.medium" },
+    { sourceItemId = "Axe_Iron", itemId = "Mine_Stone", damage = 0, source = "High", target = "High", expected = "combat.blocked.high.high" },
+    { sourceItemId = "IronHammer", itemId = "Mine_Stone", damage = 0, source = "High", target = "High", configuredSource = "High", expected = "combat.blocked.high.high" },
+    { sourceItemId = "SteelHammer", itemId = "Mine_Stone", damage = 0, source = "High", target = "High", configuredSource = "High", expected = "combat.blocked.high.high" },
+    { sourceItemId = "Arrow_Iron", itemId = "Mine_Stone", damage = 0, source = "High", target = "High", expected = "combat.blocked.high.high" },
+    { sourceItemId = "Shovel_Iron", itemId = "Mine_Stone", damage = 0, source = "High", target = "High", expected = "combat.blocked.high.high" },
+    { sourceItemId = "Arrow_Stone", itemId = "Mine_Stone", damage = 1, source = "High", target = "High", expected = "combat.impact.high.high" },
+    { sourceItemId = "Arrow_Wood", itemId = "Mine_Stone", damage = 1, source = "Low", target = "High", expected = "combat.impact.low.high" },
+    { sourceItemId = "Axe_Stone", itemId = "Mine_Coal", damage = 1, source = "High", target = "Low", expected = "combat.impact.high.low" },
+    { sourceItemId = "Axe_Stone", itemId = "Mine_Obsidian", damage = 1, source = "High", target = "Medium", expected = "combat.impact.high.medium" }
+}) do
+    test.system("audio", "combat_impact", row, function(data)
+        assert(data.cue == row.expected and data.sourceHardness == row.source and data.targetHardness == row.target,
+            "真实物品定义、矿物表或弹丸接触硬度未生效：" .. row.sourceItemId .. " → " .. row.itemId)
+        if row.configuredSource then
+            assert(data.sourceConfiguredHardness == row.configuredSource, "显式接触硬度没有覆盖或继承：" .. row.sourceItemId)
+        end
+    end, "正式硬度定义：" .. row.sourceItemId .. " → " .. row.itemId)
+end
+
+for _, row in ipairs({
+    { itemId = "Tree_Pine", damage = 1, targetCue = " combat.impact.tree ", expected = "combat.impact.tree" },
+    { itemId = "Tree_Pine", damage = 0, targetCue = "combat.impact.tree", expected = "combat.blocked.medium.low" },
+    { itemId = "Tree_Pine", damage = 1, targetCue = "combat.impact.tree", weaponCue = " probe.weapon ", expected = "probe.weapon" },
     { itemId = "Tree_Pine", damage = 0, targetBlockedCue = " probe.blocked.target ", expected = "probe.blocked.target" },
     { itemId = "Tree_Pine", damage = 0, targetBlockedCue = "probe.target", weaponBlockedCue = " probe.blocked.weapon ", expected = "probe.blocked.weapon" },
-    { itemId = "Tree_Pine", damage = 1, targetBlockedCue = "probe.blocked", expected = "combat.impact.wood" },
-    { itemId = "Tree_Pine", damage = 1, targetCue = "  combat.impact.tree  ", expected = "combat.impact.tree" },
-    { itemId = "Tree_Pine", weapon = "Axe", targetCue = "combat.impact.tree", weaponCue = " probe.weapon.override ", expected = "probe.weapon.override" },
-    { itemId = "Tree_Pine", material = "None", targetCue = "combat.impact.tree", blocked = true, expected = "" },
-    { itemId = "WoodenDoor", damage = 0, expected = "combat.blocked.wood" },
-    { itemId = "WoodenDoor", damage = 1, expected = "combat.impact.wood" },
-    { itemId = "WoodenDoor", weapon = "Axe", damage = 1, expected = "combat.impact.axe.wood" },
-    { itemId = "Bush", weapon = "Knife", expected = "combat.impact.knife.foliage" },
-    { itemId = "Tree_Pine", invalidDamage = "NaN", targetCue = "combat.impact.tree", blocked = true, expected = "" },
-    { itemId = "Tree_Pine", invalidDamage = "Infinity", targetCue = "combat.impact.tree", blocked = true, expected = "" }
+    { itemId = "Tree_Pine", damage = 1, targetBlockedCue = "probe.blocked", expected = "combat.impact.medium.low" },
+    { itemId = "Tree_Pine", damage = -1, targetCue = "combat.impact.tree", expected = "" },
+    { itemId = "Tree_Pine", material = "None", targetCue = "combat.impact.tree", expected = "" },
+    { itemId = "Tree_Pine", invalidDamage = "NaN", expected = "" },
+    { itemId = "Tree_Pine", invalidDamage = "Infinity", expected = "" }
 }) do
     test.system("audio", "combat_impact", row, function(data)
         assert(data.cue == row.expected and data.silent == (row.expected == ""),
-            "命中音效未遵守真实命中、对象覆盖、武器覆盖或材质规则：" .. row.itemId)
-    end, "命中声音：" .. row.itemId .. " / " .. tostring(row.damage or row.invalidDamage or 1) .. " / " .. row.expected)
+            "显式专用声音、挡击覆盖、拒绝或静音规则错误")
+    end, "特殊命中声音与静音：" .. row.itemId .. " / " .. row.expected)
 end
 
 test.system("audio", "tree_impact_configuration", {}, function(data)
@@ -87,7 +116,7 @@ test.system("audio", "tree_impact_configuration", {}, function(data)
         seen[tree.id] = true
         assert(tree.cue == "combat.impact.tree" and tree.material == "Wood",
             "树木未继承砍木声音或木材分类：" .. tree.id)
-        assert(tree.normalCue == tree.cue and tree.axeCue == tree.cue and tree.blockedCue == "combat.blocked.wood",
+        assert(tree.normalCue == tree.cue and tree.axeCue == tree.cue and tree.blockedCue == "combat.blocked.high.low",
             "树木未区分砍入与挡击声音：" .. tree.id)
     end
     for _, id in ipairs({ "AppleTree", "PeachTree", "OrangeTree", "Tree_Coconut", "Tree_Pine", "Tree_Willow", "Tree_Oak" }) do
@@ -96,6 +125,7 @@ test.system("audio", "tree_impact_configuration", {}, function(data)
 end, "树木定义继承与普通攻击、斧砍、零伤选音")
 
 test.system("audio", "combat_configuration", {}, function(data)
+    assert(data.genericCueCount == 18, "通用命中声必须恰好3×3×2类")
     assert(data.damageDefinitions >= 60 and data.healthDefinitions >= 57, "正式战斗定义覆盖缺失")
     for _, row in ipairs(data.targets) do
         assert(row.material ~= "Auto", "目标没有解析材质：" .. row.id)
@@ -106,7 +136,7 @@ test.system("audio", "combat_configuration", {}, function(data)
         assert(row.validClips, "命中声音变体未导入、重复或不符合48kHz单声道：" .. row.id)
         assert(row.spatial and row.sfx and not row.loop, "命中声音必须为世界空间短音：" .. row.id)
     end
-end, "全部正式战斗定义与七类材质双结果声音")
+end, "全部正式硬度定义与十八类通用声音")
 
 test.system("networking", "combat_audio_wire", {}, function(data)
     assert(data.cue == "combat.blocked.stone" and data.world == "space:test" and data.ship == "test-ship",

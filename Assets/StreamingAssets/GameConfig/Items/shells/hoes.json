@@ -161,6 +161,7 @@
     },
     {
       "id": "Hoe_Copper",
+      "impactAudioHardness": "Medium",
       "maxDurability": 700,
       "durability": 700,
       "parent": "Hoe_Base",

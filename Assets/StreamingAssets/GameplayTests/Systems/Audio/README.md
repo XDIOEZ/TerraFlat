@@ -69,3 +69,5 @@ PlayMode `audio/voice_lifecycle` 检查三类游泳 Cue 的 ID、各 3 个变体
 2026-10-21：脚步统一改用开放 CC0 实录，新增木地板 Cue，合计七种地表各三变体；来源/裁切/散列在 `SoundDesign/Footsteps_CC0/`。地块可声明 `footstepCueId`，正式计步读取真实支撑地块；`footstep_surface` 补声明音色、MOD Cue、水雪覆盖木地板及深水静音断言，现场 Cue 清单加入木板。本轮未跑游戏验收，最终音量、自然感和真实行走切换由用户验收。
 
 2026-11-04 战斗声音补齐：`combat_impact` 区分正式零伤挡击与正伤受伤；`combat_configuration` 读取 Item/Actor 正式继承目录并检查全部28 Cue、三独立Clip、48kHz单声道及空间SFX；`networking/combat_audio_wire` 调用真实Mirror序列化与Sequence/RealmRevision接收门禁。`combat.lua` / `audio/combat_settlement` 走正式GO和原生石矿生命结算，采样零伤、正伤、无敌拒绝、环境静音、致命命中及实际AudioSource。本轮起初Unity在PlayMode，后由并行任务触发自动编译成功；按并行开发约定未运行新Lua，真实声源池忙时现场playing断言仍可能受其他声音干扰；机器/格子/船体/AIECS真实场景及双进程联机仍待验收。全量sync_catalog受现有space系统超过10份Lua阻断，本轮仅精确同步音频案例和总入口。
+
+2026-11-05 通用命中改为攻击方→受击方 Low/Medium/High 的有向3×3×挡击/受伤，共18类。`combat_impact` 穷举矩阵，检查正式木棍/箭头/铜骨黑曜石/铁工具及矿物分档、专用声优先级和拒绝静音；`combat_configuration` 检查18类通用和10类动作 Cue、三独立Clip、48kHz单声道。`combat_settlement` 新增真实木棍→原生石矿零伤采样，保留石斧→石矿、GO受伤/拒绝/致命路径。离线 JSON/资源引用和 C# 语法校验与 Lua/实际听感分开记录；本轮 Unity PlayMode 且有其他 Agent 修改，未启动编译或测试，双进程联机和实际听感仍待验收。

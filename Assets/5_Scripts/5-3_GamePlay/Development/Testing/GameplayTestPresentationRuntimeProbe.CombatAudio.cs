@@ -26,7 +26,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         string world = GameplayWorldRegistry.GetItemWorldKey(player);
         using var scope = GameplayWorldRegistry.UseWorld(world);
         using var audio = new AudioFixture(player);
-        Item axe = null, chicken = null;
+        Item axe = null, chicken = null, stick = null;
         NaturalEntityHandle mine = default;
         bool ownsMine = false;
         var events = new List<string>();
@@ -38,7 +38,8 @@ public static partial class GameplayTestPresentationRuntimeProbe
             Vector3 position = player.transform.position + Vector3.right * 2f;
             axe = ItemMgr.Instance.InstantiateItem("Axe_Stone", position);
             chicken = ItemMgr.Instance.InstantiateItem("Chicken", position);
-            foreach (Item item in new[] { axe, chicken })
+            stick = ItemMgr.Instance.InstantiateItem("Stick_Wood", position);
+            foreach (Item item in new[] { axe, chicken, stick })
             {
                 item.transform.SetParent(null, true);
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(item.gameObject, player.gameObject.scene);
@@ -46,6 +47,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 item.Load();
             }
             axe.Owner = player;
+            stick.Owner = player;
             foreach (Module module in chicken.itemMods.Mods.Values)
                 if (module is not Mod_DamageReceiver) module.SetEnabled(false);
             Mod_Damage weapon = axe.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
@@ -92,6 +94,14 @@ public static partial class GameplayTestPresentationRuntimeProbe
             context.ResourceToolKind = (int)ResourceToolKind.Pickaxe;
             context.ResourceToolTier = 100;
             context.ResourceToolEfficiency = 1f;
+            CombatDamageContext softContext = GameplayCombatBridge.Context(stick.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage"), context.Clock);
+            softContext.HitPoint = context.HitPoint;
+            softContext.ResourceToolKind = context.ResourceToolKind;
+            softContext.ResourceToolTier = context.ResourceToolTier;
+            softContext.ResourceToolEfficiency = 1f;
+            softContext.Damage = float4.zero;
+            Sample("native_soft_blocked", () => NaturalEntityEcsService.ApplyDamage(mine, softContext, stick.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage")));
+            context.Clock.Time += 100d;
             context.Damage = float4.zero;
             Sample("native_blocked", () => NaturalEntityEcsService.ApplyDamage(mine, context, weapon));
             context.Clock.Time += 100d;
@@ -105,6 +115,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
             CombatAudioFeedback.Published -= Capture;
             if (ownsMine) NaturalEntityEcsService.Remove(mine);
             if (chicken != null && !chicken.DestructionHandled) ItemMgr.Instance.DespawnItem(chicken, saveData: false);
+            if (stick != null && !stick.DestructionHandled) ItemMgr.Instance.DespawnItem(stick, saveData: false);
             if (axe != null && !axe.DestructionHandled) ItemMgr.Instance.DespawnItem(axe, saveData: false);
         }
     }

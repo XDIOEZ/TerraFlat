@@ -84,6 +84,7 @@
     },
     {
       "id": "Dagger_Obsidian",
+      "impactAudioHardness": "Medium",
       "maxDurability": 50,
       "durability": 50,
       "parent": "Knife_Base",
@@ -119,6 +120,7 @@
     },
     {
       "id": "Spear_Obsidian",
+      "impactAudioHardness": "Medium",
       "maxDurability": 50,
       "durability": 50,
       "parent": "Spear_Stone",

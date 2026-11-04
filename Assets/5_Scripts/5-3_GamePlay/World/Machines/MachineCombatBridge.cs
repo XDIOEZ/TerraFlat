@@ -131,7 +131,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
         if (damage <= 0f)
         {
             if (context.Attack.Source.Backend != CombatBackend.Environment)
-                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, 0f), audioLocation);
+                CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, 0f, context), audioLocation);
             weapon?.PublishExternalDamage(context, 0f);
             return;
         }
@@ -159,7 +159,7 @@ public sealed class MachineCombatBridge : IGameplayCombatBridge
 
         // 先提交耐久和摧毁事务，再回传真实损失，避免表现异常留下零血挡路节点。
         if (context.Attack.Source.Backend != CombatBackend.Environment)
-            CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, actualLoss), audioLocation);
+            CombatAudioFeedback.Publish(CombatAudioRouter.ResolveDefinitionImpactCue(definition, weapon, actualLoss, context), audioLocation);
         weapon?.PublishExternalDamage(context, actualLoss);
     }
     #endregion

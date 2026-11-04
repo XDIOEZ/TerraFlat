@@ -27,6 +27,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
     /// <summary>物品目录成员变化时递增，环境质量等缓存只在目录变化后重建。</summary>
     public ulong ItemDefinitionRevision { get; private set; }
+    public MineralPropertyCatalog MineralProperties { get; internal set; }
     private Dictionary<string, string> itemDefinitionAliases = new(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("JSON Actor 定义字典")]

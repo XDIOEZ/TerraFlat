@@ -11,9 +11,27 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 98d965164a0854d4d8d69f829c87664c, type: 3}
   m_Name: AudioCatalog
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   propagationRanges: {fileID: 4900000, guid: 7fc972907c3747fc949386b2fe3d9b6a, type: 3}
   cues:
+  - {fileID: 11400000, guid: df388c32b3c94904974cbcd076cbc927, type: 2}
+  - {fileID: 11400000, guid: 237361f704f94cc9a831dc7ceeba989b, type: 2}
+  - {fileID: 11400000, guid: e42fc0bc14f346468569e12fa9f93133, type: 2}
+  - {fileID: 11400000, guid: c0fbb4c473384dfea2995c4a278f127f, type: 2}
+  - {fileID: 11400000, guid: ac237cc71b4c4cb6b954a7277a1251f2, type: 2}
+  - {fileID: 11400000, guid: 9e418b7f074342cabdafeee4a649313c, type: 2}
+  - {fileID: 11400000, guid: 33a6fdafd6844aa8954e444e7856a925, type: 2}
+  - {fileID: 11400000, guid: d9a8a6d11c6246bf9ecb4fbe25b18163, type: 2}
+  - {fileID: 11400000, guid: 358b6785987a4dcdb146054803eb08e9, type: 2}
+  - {fileID: 11400000, guid: 3904bccbc2ad44f881e4c97cb8846d84, type: 2}
+  - {fileID: 11400000, guid: f1e45836e1574f7a9c9d158cacf53bb8, type: 2}
+  - {fileID: 11400000, guid: ddec59d2638146228bf3384e0084df87, type: 2}
+  - {fileID: 11400000, guid: 6b6f1a1f0f4047d4aebc47ef8cb44c86, type: 2}
+  - {fileID: 11400000, guid: 9ab7624cdebc48748d4d6624b63c2c72, type: 2}
+  - {fileID: 11400000, guid: 43a7c025e85b4b109b2d44a21c268a3b, type: 2}
+  - {fileID: 11400000, guid: 2e3416de93694d389381d43ec22cc944, type: 2}
+  - {fileID: 11400000, guid: 243db9276b3340a19aa0404c34b726af, type: 2}
+  - {fileID: 11400000, guid: b087173c657e40e0b9c8e030be86a871, type: 2}
   - {fileID: 11400000, guid: 231d5b3d371340bca427fe8c5d6dfee9, type: 2}
   - {fileID: 11400000, guid: aae1f6a966c544869ad1b8364a60cd60, type: 2}
   - {fileID: 11400000, guid: f171c0298c0d4bf78dfd4f7a7809a650, type: 2}

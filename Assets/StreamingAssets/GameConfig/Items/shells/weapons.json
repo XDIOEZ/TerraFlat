@@ -128,6 +128,7 @@
     },
     {
       "id": "Dagger_Copper",
+      "impactAudioHardness": "Medium",
       "maxDurability": 700,
       "durability": 700,
       "parent": "Knife_Base",
@@ -176,6 +177,7 @@
     },
     {
       "id": "Dagger_Bone",
+      "impactAudioHardness": "Medium",
       "maxDurability": 150,
       "durability": 150,
       "parent": "Knife_Base",
@@ -439,6 +441,7 @@
     },
     {
       "id": "Spear_Copper",
+      "impactAudioHardness": "Medium",
       "parent": "Spear_Base",
       "gameName": "铜矛",
       "description": "装有铜制矛头的长矛，兼顾攻击距离与耐用度。",
@@ -976,6 +979,7 @@
     },
     {
       "id": "ChippedTool",
+      "impactAudioHardness": "High",
       "maxDurability": 300,
       "durability": 300,
       "tags": ["Knife", "Stone", "StoneCraftingMaterial", "Modern", "InventoryCategory.Tool"],
@@ -1656,6 +1660,7 @@
     },
     {
       "id": "Arrow_Copper",
+      "impactAudioHardness": "Medium",
       "parent": "Arrow_Base",
       "gameName": "铜箭",
       "description": "装有铜制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取；损坏时有 30% 概率掉落一份合成原材料。",

@@ -3,6 +3,7 @@
   "items": [
     {
       "id": "Snowball",
+      "impactAudioHardness": "Low",
       "parent": "BasicItem_Base",
       "shellPrefab": "Snowball",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Snowball.prefab",
