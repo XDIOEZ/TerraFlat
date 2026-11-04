@@ -89,6 +89,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static IEnumerator CaptureTeleport(Player local, JObject args, Action<JObject> completed)
         {
+            JObject localTransfer = CaptureLocalSameWorldRespawnPosition(local);
             using var world = new BotWorld(local);
             yield return world.Join(92, world.Prefix + "传送甲");
             yield return world.Join(93, world.Prefix + "传送乙");
@@ -98,6 +99,7 @@ namespace FlatWorld.Networking.Gameplay
             Vector3 destination = WorldTopologyRuntime.NormalizePosition(start + Vector3.right * 48f);
             var result = new JObject
             {
+                ["localTransfer"] = localTransfer,
                 ["scope"] = "live-isolated-world", ["transport"] = "mirror-in-memory",
                 ["start"] = TeleportSample(actor), ["witnessBefore"] = TeleportSample(witness),
                 ["targetX"] = destination.x, ["targetY"] = destination.y
@@ -169,6 +171,43 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 重生就绪与动画归属采样
+
+        // 离线隔离现场复用权威迁移入口，覆盖 Host 本机从 Transform 查询观察者的分支。
+        private static JObject CaptureLocalSameWorldRespawnPosition(Player player)
+        {
+            GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+            if (GameNetwork.IsOnline || NetworkServer.active || NetworkClient.active)
+                throw new InvalidOperationException("本机重生坐标夹具需要离线隔离世界。");
+            SpaceSession session = SpaceSession.EnsureLoaded();
+            SpacePassengerState previous = session.State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            Vector3 original = WorldLocalPresentation.ToLogical(player.transform.position);
+            Vector3 saved = player.Data.transform.position;
+            Vector3 target = WorldTopologyRuntime.NormalizePosition(original + Vector3.right * 64f);
+            session.State.Passengers.Remove(previous);
+            try
+            {
+                bool committed = session.CompleteNetworkWorldTransfer(player, player.Data.CurrentSceneName, target);
+                bool observed = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
+                Vector3 body = WorldLocalPresentation.ToLogical(player.transform.position);
+                Vector3 physics = WorldLocalPresentation.ToLogical(WorldPhysicsService2D.GetItemRigidbody(player).position);
+                return new JObject
+                {
+                    ["committed"] = committed, ["observed"] = observed,
+                    ["targetX"] = target.x, ["targetY"] = target.y,
+                    ["bodyX"] = body.x, ["bodyY"] = body.y,
+                    ["physicsX"] = physics.x, ["physicsY"] = physics.y,
+                    ["savedX"] = player.Data.transform.position.x, ["savedY"] = player.Data.transform.position.y,
+                    ["observerX"] = observer.Position.LocalMeters.X, ["observerY"] = observer.Position.LocalMeters.Y
+                };
+            }
+            finally
+            {
+                session.State.Passengers.RemoveAll(value => value.ProfileId == player.ProfileName);
+                if (previous != null) session.State.Passengers.Add(previous);
+                PlayerTeleportService.ApplySurfacePose(player, original);
+                player.Data.transform.position = saved;
+            }
+        }
 
         private static JObject CaptureTeleportVisualOwnership(NetworkWorldPlayer actor)
         {

@@ -42,9 +42,12 @@ namespace FlatWorld.Spaceflight
                 player.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(player.gameObject, runtime.Scene);
                 ItemWorldPlacement.AttachToSceneItemCategory(player, player.gameObject);
-                using (GameplayWorldRegistry.UseWorld(world)) PlayerTeleportService.ApplySurfacePose(player, position);
-                foreach (Item child in player.GetComponentsInChildren<Item>(true)) ItemMgr.Instance.NotifyRuntimeItemMoved(child);
             }
+            // 同世界本机先提交实体落点，避免观察者从旧 Transform 读回死亡位置。
+            if (player.gameObject.scene == runtime.Scene)
+                using (GameplayWorldRegistry.UseWorld(world)) PlayerTeleportService.ApplySurfacePose(player, position);
+            if (player != ItemMgr.Instance?.User_Player)
+                foreach (Item child in player.GetComponentsInChildren<Item>(true)) ItemMgr.Instance.NotifyRuntimeItemMoved(child);
             if (owner?.PlayerData_Dict != null) owner.PlayerData_Dict[player.ProfileName] = player.Data;
             if (player == ItemMgr.Instance?.User_Player && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);

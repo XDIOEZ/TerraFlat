@@ -69,6 +69,13 @@ test.runtime("networking", "bots_teleport", {}, function(data)
         assert(near(sample.observerX, x) and near(sample.observerY, y), label .. "区块观察者仍是旧位置")
     end
     assert(data.scope == "live-isolated-world" and data.transport == "mirror-in-memory", "传送未经过正式联机夹具")
+    local local_transfer = data.localTransfer
+    assert(local_transfer.committed and local_transfer.observed, "本机同世界重生未提交正式观察者")
+    for _, source in ipairs({"body", "physics", "saved", "observer"}) do
+        assert(near(local_transfer[source .. "X"], local_transfer.targetX)
+            and near(local_transfer[source .. "Y"], local_transfer.targetY),
+            "本机同世界重生后 " .. source .. " 仍读取旧落点")
+    end
     assert(data.ordinaryStep < 2, "普通移动错误绕过了服务器单步位移限制")
     assert_position(data.teleported, data.targetX, data.targetY, "GM 传送")
     assert(data.teleported.revision > data.start.revision and data.teleported.velocity == 0,
