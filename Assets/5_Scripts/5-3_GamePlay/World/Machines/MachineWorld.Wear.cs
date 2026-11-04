@@ -6,7 +6,8 @@ using UnityEngine;
 public static partial class MachineWorld
 {
     #region 加工耗尽后的材料与库存交付
-    public static bool TryDestroyWornMachine(MachineEntity node, float recoveryFraction, out string reason)
+    public static bool TryDestroyWornMachine(MachineEntity node, float recoveryFraction, out string reason,
+        IReadOnlyList<ItemData> additionalDrops = null)
     {
         reason = null;
         using var nodeScope = UseNodeScope(node);
@@ -16,6 +17,7 @@ public static partial class MachineWorld
         var drops = new List<ItemData>();
         if (recoveryFraction > 0f && !BuildingMaterialSalvage.TryCreateProportionalMaterialSalvage(carrier, recoveryFraction,
                 out drops, out reason, node.Snapshot)) return false;
+        if (additionalDrops != null) drops.AddRange(additionalDrops);
         var seen = new HashSet<Inventory_Data>();
         foreach (Inventory inventory in node.Logic.Inventories)
         {

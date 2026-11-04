@@ -16,6 +16,15 @@ for _, kind in ipairs({ "drill", "flint" }) do
         assert(data.closedTargetsCleared and data.eventDetached and data.panelReleased, "取火面板卸载没有清理转移目标、事件或面板")
         if expectedKind == "drill" then
             assert(data.inputAmount == 1 and math.abs(data.temperature - 30) < .001 and data.outputId == "", "钻木按钮没有只加热一次材料")
+            assert(#data.drillDefinitionDurability == 2, "钻木器缺少手持或落地定义")
+            assert(data.toolDurability == 299, "钻木器有效摩擦未恰好扣除一点耐久")
+            for _, definition in ipairs(data.drillDefinitionDurability) do
+                assert(definition.durability == 300 and definition.maximum == 300, "钻木器初始或最大耐久不是300")
+            end
+            local kinds = 0
+            for _ in pairs(data.drillBreakMaterials) do kinds = kinds + 1 end
+            assert(kinds == 2 and data.drillBreakMaterials.Stick_Wood == 1 and data.drillBreakMaterials.Rope == 1,
+                "钻木器损毁残料必须恰好为一根木棍和一根绳子")
         else
             assert(data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1, "打火石按钮没有只消费一次材料并产出火种")
             assert(data.blockedInputAmount == 1 and data.blockedOutputId == "Log", "满输出时打火石错误扣料或替换产物")

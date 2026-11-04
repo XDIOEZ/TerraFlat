@@ -123,6 +123,21 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         float outputAmount = output?.Stack?.Amount ?? 0f;
         float blockedInput = 0f;
         string blockedOutput = string.Empty;
+        var drillDefinitionDurability = new JArray();
+        var drillBreakMaterials = new JObject();
+        if (drill)
+        {
+            foreach (string id in new[] { "SparkMaker_Summoner", "SparkMaker" })
+            {
+                ItemData definition = GameRes.ExistingInstance.CreateItemData(id);
+                drillDefinitionDurability.Add(new JObject
+                {
+                    ["durability"] = definition.Durability, ["maximum"] = definition.MaxDurability
+                });
+            }
+            foreach (ItemData drop in Mod_FireDrill.CreateBrokenFireDrillMaterialDrops())
+                drillBreakMaterials[drop.IDName] = ((float?)drillBreakMaterials[drop.IDName] ?? 0f) + drop.Stack.Amount;
+        }
         if (!drill)
         {
             scope.Output.Data.RemoveItemAll(scope.Output.Data.GetItemSlot(0), 0);
@@ -143,6 +158,8 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             ["panelReleased"] = scope.Panel == null,
             ["inputAmount"] = inputAmount, ["temperature"] = temperature,
             ["outputId"] = outputId, ["outputAmount"] = outputAmount,
+            ["drillDefinitionDurability"] = drillDefinitionDurability, ["drillBreakMaterials"] = drillBreakMaterials,
+            ["toolDurability"] = scope.Host.itemData.Durability,
             ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput
         };
     }
@@ -177,7 +194,8 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             try
             {
                 Host = Root.AddComponent<GameItem>();
-                Host.BindData(new Data_GeneralItem { IDName = "probe:fire_tool", Stack = new ItemStack { Amount = 1f } });
+                Host.BindData(new Data_GeneralItem { IDName = "probe:fire_tool", Stack = new ItemStack { Amount = 1f },
+                    Durability = 300f, MaxDurability = 300f });
                 Receiver = Root.AddComponent<Mod_InteractReciver>();
                 Receiver.modData = new Ex_ModData { ID = ModText.Interact, Name = "probe-interaction" };
                 Receiver.ModuleInit(Host, Receiver.modData);

@@ -44,6 +44,11 @@ public static class ItemDurabilityService
 
     /// <summary>含内部库存的工具损坏前先交付内容，失败时保留工具和内容。</summary>
     public static bool TryConsumePreservingContainedItems(Item source, float wear, params Inventory[] inventories)
+        => TryConsumePreservingContainedItemsWithBreakMaterialDrops(source, wear, null, inventories);
+
+    // 固定残料与内部库存共用损毁交付和失败回滚。
+    public static bool TryConsumePreservingContainedItemsWithBreakMaterialDrops(Item source, float wear,
+        IReadOnlyList<ItemData> additionalDrops, params Inventory[] inventories)
     {
         ItemData data = source?.itemData;
         if (!ItemDurabilityRules.CanConsume(data, wear)) return false;
@@ -54,6 +59,14 @@ public static class ItemDurabilityService
         using var scope = source.UseOwnedWorldForItemCallbacks();
         try
         {
+            if (additionalDrops != null)
+                foreach (ItemData drop in additionalDrops)
+                {
+                    DroppedItemHandle handle = DroppedItemService.Spawn(drop,
+                        source.Owner != null ? source.Owner.transform.position : source.transform.position, sourceItem: source);
+                    if (!handle.IsValid) throw new System.InvalidOperationException("工具损毁时无法交付残料。");
+                    drops.Add(handle);
+                }
             foreach (Inventory inventory in inventories)
             {
                 if (inventory?.Data?.itemSlots == null) continue;

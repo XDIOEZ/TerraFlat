@@ -18,6 +18,7 @@
 - 实例产物也支持copyInputItemId精确复制消耗一件的物品；durabilityMultiplier累乘已有品质并同步缩放当前/最大耐久，addTag标记配合excludeTag限制一次。木盾五Plank+五Rope合成，三Nail加固一次×1.5，NailReinforced不覆盖胶黏标记；百科与工坊同步保留字段。
 - 绳料配方使用 `Rope` 标签接收绳子/皮带；`BindingMaterialCraftingRule` 按真实扣料中最弱 `BindingDurability:<倍率>` 决定品质，普通绳子视为1，因此全皮带才×1.3。皮革 `processing.cut` 产皮带，后手加固走实例配方；两种方式共享 `CraftedQuality.BindingReinforced`，该前缀状态随品质跨建筑放置/拆回迁移，与胶黏/钉子独立。
 - Mod_FlintStrike复用UI_FireDrill，按能力隐藏建筑按钮/绑定概率文案；每击独立10%，不累积/衰减。成功由CraftingTransaction扣一份火绒、产一份火种；每次有效击打扣1耐久，满输出不扣，损坏先交付内部物品。
+- 钻木器手持/落地基础耐久均为300；耗尽固定交付 `Stick_Wood×1、Rope×1`，与内部库存共用原损毁事务，不按制作成本返料。回归 `processing/fire_tool_panel` 覆盖两态定义及残料构造，末次耗损交付仍需现场验证。
 - 库存冷Tick由ModuleDataRuleRegistry/InventoryModuleDataScheduler按规则与宿主代际推进；结构变才重建，数值不重建。Entry值类型、只读引用遍历，槽/代际/规则实时复核；共享跨库存状态扣除重叠时间、不补暂停。
 - 便携罐按不可变模块声明缓存配置，对外仍独立副本；真实Contents/二进制载荷/目录换代才重建流体包装，稳定Tick不重复序列化/刷新。保存比较StateRevision/超压时钟/破裂，UI比较内容/生命。
 

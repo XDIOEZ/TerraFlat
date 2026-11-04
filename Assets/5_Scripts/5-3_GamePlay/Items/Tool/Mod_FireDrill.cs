@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.UI;
@@ -127,7 +128,23 @@ public class Mod_FireDrill : FireMakingInventoryPanelModule
         RefreshOutputPreview();
         Save();
         if (transformed) _outputPreview?.PlaySuccess();
-        if (worked) ItemDurabilityService.TryConsumePreservingContainedItems(item, 1f, InputInventory, OutputInventory);
+        if (worked) ItemDurabilityService.TryConsumePreservingContainedItemsWithBreakMaterialDrops(item, 1f,
+            item.itemData.Durability <= 1f ? CreateBrokenFireDrillMaterialDrops() : null, InputInventory, OutputInventory);
+    }
+
+    // 手持与落地钻木器耗尽时固定交付一根木棍和一根绳子，不按制作成本返料。
+    public static List<ItemData> CreateBrokenFireDrillMaterialDrops()
+    {
+        var drops = new List<ItemData>(2);
+        foreach (string id in new[] { "Stick_Wood", "Rope" })
+        {
+            ItemData material = GameRes.Instance.CreateItemData(id);
+            material.Stack.Amount = 1f;
+            material.Stack.CanBePickedUp = true;
+            material.inHand = false;
+            drops.Add(material);
+        }
+        return drops;
     }
 
     private void SyncHeatingSettings()

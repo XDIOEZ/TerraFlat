@@ -57,7 +57,8 @@ public class FireDrillLogic : MachineLogic
         bool completed = Heater.Rub(GetAmbientTemperature(), actor, out bool worked);
         if (worked) Entity.Snapshot.Durability = Mathf.Max(0f, Entity.Snapshot.Durability - 1f);
         NotifyChanged();
-        if (worked && Entity.Snapshot.Durability <= 0f && !MachineWorld.TryDestroyWornMachine(Entity, 0f, out string reason))
+        if (worked && Entity.Snapshot.Durability <= 0f && !MachineWorld.TryDestroyWornMachine(Entity, 0f, out string reason,
+                Mod_FireDrill.CreateBrokenFireDrillMaterialDrops()))
             Debug.LogError("[取火工具损毁] " + reason);
         return completed;
     }
