@@ -88,6 +88,11 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         end
     end
     local fire = data.fireCue
+    local burning = data.sharedCombustion
+    assert(burning.initiallySilent and burning.started and burning.spatialLoop and burning.reused,
+        "共享燃烧循环没有按真实状态起声或重复占用音源")
+    assert(burning.ownerReleased and burning.extinguished and burning.reignited and burning.stopped,
+        "共享燃烧循环没有在熄灭后淡出释放或无法再次点燃")
     assert(fire.configured == "fire.burning.loop" and fire.loaded and fire.loop and #fire.clips == 1,
         "篝火没有绑定正式燃烧循环或音频未导入")
     assert(fire.bus == "Sfx" and fire.spatialBlend == 1 and fire.rolloff == "Linear" and fire.cooldown == 0,

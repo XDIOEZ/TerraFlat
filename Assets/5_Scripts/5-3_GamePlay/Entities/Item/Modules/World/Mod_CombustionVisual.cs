@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 通用燃烧视觉模块：把燃烧状态转发给同 Prefab 的 CombustionVisualEffect。
-/// 只负责 Shader 火焰、可选烟雾与入水烟汽，不负责燃料、光照、伤害或温度。
+/// 负责燃烧声、Shader 火焰、可选烟雾与入水烟汽，不负责燃料、光照、伤害或温度。
 /// </summary>
 public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
 {
@@ -24,6 +24,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
     [Min(0f)] public float smokeDensity = 1f;
     private CombustionVisualEffect effect;
     private bool combustionActive;
+    private CombustionAudioLoop burningAudio;
 
     public override string CanonicalModuleId => ModuleId;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
@@ -47,6 +48,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
         ApplyPresentationConfiguration();
         effect.BindHost(item);
         effect.SetCombustionActive(combustionActive);
+        burningAudio.RefreshBurningAudio(transform, combustionActive && isActiveAndEnabled);
     }
 
     protected override void OnSave()
@@ -55,8 +57,15 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
 
     protected override void OnUnload()
     {
+        burningAudio.StopBurningAudio();
         effect?.SetCombustionActive(false);
     }
+
+    private void OnEnable() => RefreshBurningAudio();
+    private void OnDisable() => burningAudio.StopBurningAudio();
+
+    private void RefreshBurningAudio()
+        => burningAudio.RefreshBurningAudio(transform, combustionActive && Enabled && IsRuntimeLoaded && isActiveAndEnabled);
 
     public override void OnResourcesReloaded()
     {
@@ -76,6 +85,7 @@ public sealed class Mod_CombustionVisual : Module, ICombustionStateReceiver
     public void SetCombustionActive(bool active)
     {
         combustionActive = active;
+        RefreshBurningAudio();
         effect ??= GetComponent<CombustionVisualEffect>();
         effect?.BindHost(item);
         effect?.SetCombustionActive(active);

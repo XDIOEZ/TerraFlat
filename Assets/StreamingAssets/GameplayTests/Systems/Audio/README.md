@@ -1,5 +1,7 @@
 # 音频
 
+2026-11-04：所有燃烧物品通过 `CombustionAudioLoop` 共用 `fire.burning.loop`，删除篝火专属 Cue 配置；火把、物质物品、轻量掉落和设施各按真实状态管理句柄。`voice_lifecycle` 追加正式共享入口的初始静音、点燃、空间循环、重复刷新复用、熄灭淡出释放、重新点燃和立即停止断言。Unity 处于用户 PlayMode，本轮不编译、不执行 Lua；四种宿主的真实切换、镜头远近听感、大量火源并发仍待现场验收。地块火场不属于该物品音频接线。
+
 2026-11-03：冰地从石头脚步拆出 `player.footstep.ice`，采用 qubodup 开放 CC0 硬壳冰雪实录八变体；`Mod_Mover.Audio` 改按真实露出的地层识别支撑面，非 WaterContact 液体不能播放水脚步。新增冰面、水雪优先 Lua 规则和第九类正式 Cue 检查，`verify_tiles.py` 核验九类八变体和正式 24 种可走地块。仅静态验证，尚待实际 PlayMode 听感验收。
 
 2026-11-02：正式 31 种地块中 24 种可走地块均显式配置 `footstepCueId`；洞穴石地、自然石地、石地板不再错误继承草原脚步。草被覆盖泥土仍保持草脚步，水/雪优先不变。新增 Thimras CC0 金属落脚 8 实录变体，铜/铁/青铜地板及平台使用专用 `player.footstep.metal`，来源与随包鸣谢见 `SoundDesign/Footsteps_CC0/`；静态资源覆盖用 `verify_tiles.py`，Lua 补草被/金属、水雪与正式 Cue 校验。实际音色和场景切换仍需 PlayMode 试听。
@@ -20,7 +22,7 @@
 
 2026-10-18 新增动物待机叫声回归（仅静态编写，未编译或运行）：`audio/animal_idle_sequence` 直接驱动正式 `AnimalAmbientAudioSchedule`，检查首次延迟、独立错峰、随机间隔、禁声资格/声源占用抑制、一次播放机会后的完整等待、Clear 重建、负时间/卡帧不补叫，并检查不消耗玩法全局随机。`audio/voice_lifecycle` 同一现场读取 Chicken、WildBoar、Wolf、Bird、Seagull、Bee、Sheep、Rabbit、SnowLeopard、SmallFish 的实际 Actor 模块参数及正式 Cue/Clip，Lua 检查种类绑定、非循环 SFX、完整空间混音、线性衰减、有效距离及 48kHz 单声道资源。禁声规则不等于睡眠/死亡/未激活的实际组件接线已运行；实际声像、远近响度、群体听感、真实并发拒播和对象池内正在播放声音的回收仍由用户自行验收。本轮不打断现有 PlayMode，也不启动测试。
 
-2026-10-17 新增篝火燃烧循环资源回归（本轮未运行）：`audio/voice_lifecycle` 读取正式 Bonfire 炉体的 `burningLoopCueId`、目录 Cue 和实际导入的 Clip，Lua 检查 `fire.burning.loop`、20 秒/48kHz/单声道、SFX 总线、循环/零冷却及 1.5～14 格线性衰减。此断言不覆盖真实篝火的点燃/熄灭、添柴、卸载或声音听感；这些由用户在退出当前 PlayMode、编译后验收。
+2026-10-17 新增燃烧循环资源回归（后续统一为共享入口）：`audio/voice_lifecycle` 读取 `CombustionAudioLoop.CueId`、目录 Cue 和实际导入的 Clip，Lua 检查 `fire.burning.loop`、20 秒/48kHz/单声道、SFX 总线、循环/零冷却及 1.5～14 格线性衰减。资源断言不代表宿主真实点燃/熄灭、添柴、卸载或声音听感已验收。
 
 2026-10-17 新增启动预热回归（本轮未运行）：正式音频现场在已有服务上重复调用 PreloadAsync，检查实例、目录和用户设置不被替换，并检查 ui.click 的音频数据已预加载。此断言覆盖幂等及就绪状态，不证明冷启动耗时、首次主菜单点击听感或磁盘冷缓存峰值。
 

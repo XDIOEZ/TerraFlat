@@ -73,13 +73,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
         }
     }
 
-    // 只返回正式 Cue 和篝火配置原值，资源契约由 Lua 断言。
+    // 读取共享燃烧入口使用的正式 Cue，资源契约由 Lua 断言。
     private static JObject CaptureFireCue(AudioService service)
     {
-        bool loaded = service.TryGetCue("fire.burning.loop", out AudioCue cue);
-        MachineModuleConfiguration config = MachineCatalog.Get("Bonfire")?.Content?.Find<Mod_Furnace>();
-        string configured = config?.Authoring is Mod_Furnace source
-            ? config.Value("burningLoopCueId", source.burningLoopCueId) : null;
+        bool loaded = service.TryGetCue(CombustionAudioLoop.CueId, out AudioCue cue);
         var clips = new JArray();
         if (loaded)
             foreach (AudioClip clip in cue.Clips)
@@ -91,7 +88,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 });
         return new JObject
         {
-            ["configured"] = configured, ["loaded"] = loaded, ["clips"] = clips,
+            ["configured"] = CombustionAudioLoop.CueId, ["loaded"] = loaded, ["clips"] = clips,
             ["loop"] = loaded && cue.Loop,
             ["bus"] = loaded ? cue.Bus.ToString() : string.Empty,
             ["spatialBlend"] = loaded ? cue.SpatialBlend : 0f,
@@ -100,6 +97,46 @@ public static partial class GameplayTestPresentationRuntimeProbe
             ["minDistance"] = loaded ? cue.MinDistance : 0f,
             ["maxDistance"] = loaded ? cue.MaxDistance : 0f
         };
+    }
+
+    // 使用真实共享入口检查幂等、熄灭淡出与重新点燃，不复算燃烧或音频规则。
+    private static IEnumerator CaptureSharedCombustionAudio(Player player, AudioService service, JObject result)
+    {
+        var root = new GameObject("Lua共享燃烧音效");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
+        root.transform.position = player.transform.position;
+        var loop = new CombustionAudioLoop();
+        var sample = new JObject();
+        result["sharedCombustion"] = sample;
+        try
+        {
+            loop.RefreshBurningAudio(root.transform, false);
+            sample["initiallySilent"] = !loop.IsPlaying;
+            var occupied = new HashSet<AudioSource>(service.GetComponentsInChildren<AudioSource>(true)
+                .Where(value => value.clip != null));
+            loop.RefreshBurningAudio(root.transform, true);
+            sample["started"] = loop.IsPlaying;
+            AudioSource source = service.GetComponentsInChildren<AudioSource>(true)
+                .SingleOrDefault(value => value.clip != null && !occupied.Contains(value));
+            sample["spatialLoop"] = source != null && source.loop && source.spatialBlend == 1f &&
+                source.rolloffMode == AudioRolloffMode.Linear;
+            int voices = service.ActiveVoiceCount;
+            loop.RefreshBurningAudio(root.transform, true);
+            sample["reused"] = loop.IsPlaying && service.ActiveVoiceCount == voices;
+            loop.RefreshBurningAudio(root.transform, false);
+            sample["ownerReleased"] = !loop.IsPlaying;
+            yield return new WaitForSecondsRealtime(.4f);
+            sample["extinguished"] = source != null && !source.isPlaying && source.clip == null;
+            loop.RefreshBurningAudio(root.transform, true);
+            sample["reignited"] = loop.IsPlaying;
+            loop.StopBurningAudio(0f);
+            sample["stopped"] = !loop.IsPlaying;
+        }
+        finally
+        {
+            loop.StopBurningAudio(0f);
+            UnityEngine.Object.Destroy(root);
+        }
     }
 
     #region 正式雨声循环采样
@@ -434,6 +471,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["released"] = released, ["sourceReused"] = sourceReused,
                 ["newHandleDistinct"] = replacement != handle, ["replacementSurvivedOldStop"] = replacementSurvivedOldStop
             };
+            yield return CaptureSharedCombustionAudio(player, service, result);
             yield return CaptureAudioGamePause(fixture, result);
         }
         finally { fixture.Dispose(); }

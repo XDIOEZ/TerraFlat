@@ -30,6 +30,7 @@ public partial class ItemMgr
         public double LastTime;
         public WorldMatterStructure Structure;
         public ShaderFlameEffect Flame;
+        public CombustionAudioLoop BurningAudio;
         public bool FireSuppressedByWorldFire;
     }
 
@@ -256,6 +257,7 @@ public partial class ItemMgr
         }
 
         worldMatterFlames.Add(entry);
+        entry.BurningAudio.RefreshBurningAudio(entry.Item.transform, entry.Item.isActiveAndEnabled);
         SpriteRenderer sprite = entry.Item.Sprite;
         Vector3 position = sprite != null ? sprite.transform.position : entry.Item.transform.position;
         bool wasSuppressed = entry.FireSuppressedByWorldFire;
@@ -317,6 +319,7 @@ public partial class ItemMgr
 
     private void DestroyWorldItemCombustionVisual(WorldMatterEntry entry)
     {
+        entry.BurningAudio.StopBurningAudio();
         worldMatterFlames.Remove(entry);
         entry.FireSuppressedByWorldFire = false;
         if (entry.Flame == null) { entry.Flame = null; return; }

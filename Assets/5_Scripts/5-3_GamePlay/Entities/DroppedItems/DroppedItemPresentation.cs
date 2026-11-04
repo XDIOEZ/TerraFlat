@@ -92,6 +92,7 @@ internal sealed class DroppedItemPresentation : IDisposable
         public Matrix4x4 LastProjection;
         public readonly WorldVisualPoseHistory VisualMotion = new();
         public ShaderFlameEffect CombustionFlame;
+        public CombustionAudioLoop BurningAudio;
         public int FlameRenderQueue;
         public bool LastBurning;
         public bool HasState;
@@ -414,7 +415,10 @@ internal sealed class DroppedItemPresentation : IDisposable
         bool presentedBurning = burning && !fireSuppressed;
         if (view.HasState && SamePresentationState(view.LastBody, body) &&
             view.LastNearestPosition == nearest && view.LastBurning == presentedBurning && view.LastProjection == worldToDisplay)
+        {
+            view.BurningAudio.RefreshBurningAudio(view.Root.transform, burning);
             return;
+        }
 
         float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
         Vector3 bodyScale = new(body.Scale.x * submergedScale, body.Scale.y * submergedScale, 1f);
@@ -424,6 +428,7 @@ internal sealed class DroppedItemPresentation : IDisposable
             worldToDisplay.MultiplyPoint3x4(basePosition + bodyRotation * Vector3.Scale(visual.LocalPosition, bodyScale)),
             worldToDisplay.rotation * bodyRotation * visual.LocalRotation);
         view.Root.transform.localScale = Vector3.Scale(worldToDisplay.lossyScale, Vector3.Scale(bodyScale, visual.LocalScale));
+        view.BurningAudio.RefreshBurningAudio(view.Root.transform, burning);
 
         Bounds bounds = view.Renderer.bounds;
         float height = Mathf.Max(0.0001f, bounds.size.y);
@@ -518,6 +523,7 @@ internal sealed class DroppedItemPresentation : IDisposable
 
     private void Release(PooledView view)
     {
+        view?.BurningAudio.StopBurningAudio();
         if (view?.Root == null) return;
         if (sortingDomain != null) RemoveViewSortingKeys(view, sortingDomain);
         view.Visual = null;
