@@ -1857,7 +1857,7 @@
             "animationMoveSpeedThreshold": 0.03,
             "Data": {
               "Speed": {
-                "BaseValue": 6.3,
+                "BaseValue": 4.725,
                 "BaseAdditive": 0.0,
                 "AdditiveModifier": 0.0,
                 "MultiplicativeModifier": 1.0,
