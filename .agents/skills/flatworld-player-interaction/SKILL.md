@@ -31,6 +31,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 键位源为 `.inputactions`，包装器由生成器同步；Action 名是内部身份，物理键来自 binding `effectivePath`。覆盖按 binding GUID 保存，加载只过滤不存在的 GUID；不同行为可共用同一按键，互不覆盖。
 - 控制偏好手动保存为键鼠/手柄/手机，只影响 HUD 与指针；玩法/UI ActionMap 接受并行设备输入。设备变化仅更新 UI/指针，手机触摸由自身生命周期清理；鼠标/Touchscreen 点击退出手柄 UI 模式，Shift 等修饰键不切设备。
 - 文本焦点由 `EventSystemGuard.IsTextInputFocused` 与 `IsGameplayInputAllowed` 拦截键盘玩法，移动返回零；鼠标仍经 UI 射线仲裁。鼠标位置缓存响应 performed/canceled，按键读取当前坐标；切回键鼠清理非文本选择焦点。
+- 面板开关统一走 `CanToggleGameplayWindow`，不查询其他面板或租约锁；仅显式锁/世界加载禁止新开，已有窗口始终可关闭。背包、制作、装备和设置遵循相同规则，输入设备与文本焦点仲裁保持独立。
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
 - 外部控制持有唯一 External Gameplay Control 租约，期间真实设备退出玩法仲裁，移动/瞄准/攻击注入现有生产链；打包运行时 `Mod_GameMCP_LLM` 复用该租约与移动输入。
 - 丢弃组合态让 Ctrl+滚轮缩放让位，普通滚轮仍可换槽。返回顺序为顶层可取消面板 → 手机抽屉 → 设置；返回处理先于玩法锁拦截。聊天 Enter 打开当帧抑制提交。

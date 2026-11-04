@@ -34,7 +34,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - 左上角 `PlayerWorldCoordinateHUD` 的 FPS 开关同时显示实际 FPS/TPS；共用0.5秒真实时间窗口，TPS 取统一固定步序号差，暂停后归零。
 - UI_Food 将碳水/脂肪/蛋白质及其容量加算为食物条，显示顺序为蛋白质/脂肪/碳水，隐藏营养图例且不改营养消耗顺序；血量红、水量蓝。ThreeSegmentStatusBarGraphic 按总容量绘制并复用 HUD 过渡时钟，食物条专用子树用 UIVisualOwner 保语义色，Prefab/构建器同步；回归 food_segmented_bar/status_hud_readability。
 - 同根靠兄弟顺序置顶，sortingOrder 只管独立 Canvas；模态持玩法锁/顶层手柄焦点，关闭/失败释放，HUD仅按钮接射线。
-- 普通窗口用 `BasePanel.PrepareForGameplayWindow`，并行、可导航/取消、可窗外丢弃、不持玩法锁；开关经 `Mod_GameController.CanToggleGameplayWindow`。背景透明，拖动仅标题/窄边框；快捷栏随根排序，手机模态拖放临时升 Canvas。
+- 普通窗口（含钻木/燧石取火）用 `BasePanel.PrepareForGameplayWindow`，并行、可导航/取消、可窗外丢弃、不持玩法锁。所有窗口快捷开关共用 `Mod_GameController.CanToggleGameplayWindow`：面板阻断和租约锁只锁玩法，不能禁止其他面板开关；显式锁/世界加载禁止新开但允许关闭，设备与文本焦点仍由输入仲裁处理。背景透明，拖动仅标题/窄边框；快捷栏随根排序，手机模态拖放临时升 Canvas。
 - `SetHeldItemWorldDropAllowed` 声明丢弃，专用锁才传自身 Owner。UIManager 聚合阻断窗口/锁和真实矩形（优先 WindowRect）；未知锁/未授权窗口拦截，窗内透明区也不可落物。
 - 返回只走 `FlatWorldUI/Cancel → EventSystemGuard.CancelRequested`，`BasePanel.OnCancel` 防同帧重复；手机：顶层面板→抽屉→设置。主菜单/设置用 CancelShortcutOverride 保确认，危险确认先消费。完整点击才业务选中，手柄焦点限顶层，TMP确认再开虚拟键盘。
 - 手柄停用只解绑，保最新输入资产；Configure 替换/撤销延后到 OnEnable 恢复，不复用已销毁资产。

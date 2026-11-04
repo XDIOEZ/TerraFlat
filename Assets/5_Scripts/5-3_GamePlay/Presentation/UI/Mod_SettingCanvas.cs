@@ -101,8 +101,7 @@ public class Mod_SettingCanvas : Module, IInstanceUI
             return true;
         }
 
-        bool panelOpen = basePanel != null && basePanel.IsOpen();
-        if (gameController != null && gameController.IsGameplayInputLocked && !panelOpen)
+        if (gameController != null && !gameController.CanToggleGameplayWindow(basePanel))
         {
             return true;
         }

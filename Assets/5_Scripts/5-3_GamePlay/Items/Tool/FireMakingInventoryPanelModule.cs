@@ -102,8 +102,8 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
 
     public void OnInteractStart(Item playerItem)
     {
-        OnFireMakingInteractionBeginning(playerItem);
         if (basePanel == null) OpenUI();
+        OnFireMakingInteractionBeginning(playerItem);
         EnsureFireMakingPanelBindings();
         BindFireMakingBuildingActionsOnInteraction();
         Inventory handInventory = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
@@ -115,13 +115,7 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
         InputInventory.RefreshUI();
         OutputInventory.RefreshUI();
         basePanel.Toggle();
-        InputInventory.SyncQuickTransferTarget(basePanel);
-        if (!basePanel.IsOpen())
-        {
-            InputInventory.DefaultTarget_Inventory = null;
-            OutputInventory.DefaultTarget_Inventory = null;
-            OnFireMakingInteractionEnded();
-        }
+        if (basePanel.IsOpen()) InputInventory.SyncQuickTransferTarget(basePanel);
     }
 
     public void OnInteractCancel(Item playerItem)
@@ -135,6 +129,8 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
         if (UI_Prefab == null)
             throw new InvalidOperationException($"[{GetType().Name}] 无法获取共用取火面板 UI_FireDrill。");
         basePanel = UIManager.Instance.CreatePanelFromGameObject(UI_Prefab);
+        basePanel.PrepareForGameplayWindow();
+        basePanel.Closed += OnFireMakingPanelClosed;
         RectTransform panelRect = basePanel.Dragger != null ? basePanel.Dragger.rectTransform : basePanel.rectTransform;
         InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
         EnsureFireMakingPanelBindings();
@@ -184,12 +180,14 @@ public abstract class FireMakingInventoryPanelModule : Module, IInteractable
         return null;
     }
 
-    private void CloseFireMakingPanel()
+    private void CloseFireMakingPanel() => basePanel?.Close();
+
+    // 按钮、快捷键和交互取消共用面板关闭事件，统一释放转移目标。
+    private void OnFireMakingPanelClosed()
     {
         OnFireMakingInteractionEnded();
         InputInventory.DefaultTarget_Inventory = null;
         OutputInventory.DefaultTarget_Inventory = null;
-        if (basePanel != null) basePanel.Close();
         InputInventory.SyncQuickTransferTarget(basePanel);
     }
 

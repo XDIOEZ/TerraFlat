@@ -12,7 +12,13 @@ for _, kind in ipairs({ "drill", "flint" }) do
     test.runtime("processing", "fire_tool_panel", { kind = expectedKind }, function(data)
         assert(data.prefabFields and data.opened and data.slotBindings and data.transferTargets and data.preview and data.previewEvents,
             "原 Prefab 字段、取火槽位、手部目标或预览监听错误")
-        assert(data.closedByCancel and data.reopened and data.closedByToggle, "取火面板关闭或重复交互错误")
+        assert(data.closedByCancel and data.reopened and data.closedByToggle and data.closedByPanel, "取火面板关闭或重复交互错误")
+        assert(data.gameplayWindow, "取火面板未接入非模态窗口、导航、返回和窗外丢弃规则")
+        local shortcuts = data.shortcuts
+        assert(shortcuts.gameplayLocked and shortcuts.openOtherAllowed and shortcuts.closeAllowed and shortcuts.reopenAllowed,
+            "模态面板或租约锁错误阻止其他面板开关，或玩法锁被错误解除")
+        assert(shortcuts.explicitLockBlocksOpen and shortcuts.explicitLockAllowsClose,
+            "显式锁未阻止新开窗口，或阻止关闭已有窗口")
         assert(data.closedTargetsCleared and data.eventDetached and data.panelReleased, "取火面板卸载没有清理转移目标、事件或面板")
         if expectedKind == "drill" then
             assert(data.inputAmount == 1 and math.abs(data.temperature - 30) < .001 and data.outputId == "", "钻木按钮没有只加热一次材料")

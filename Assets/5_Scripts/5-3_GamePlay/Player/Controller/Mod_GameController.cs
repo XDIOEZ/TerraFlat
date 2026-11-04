@@ -203,12 +203,11 @@ public partial class Mod_GameController : Module
         }
     }
 
-    /// <summary>普通窗口共用开关准入；允许关掉自身，打开时服从硬锁和模态面板。</summary>
+    /// <summary>窗口开关只服从显式锁与世界加载；面板和租约锁仅阻断玩法，不阻断其他窗口。</summary>
     public bool CanToggleGameplayWindow(BasePanel panel)
     {
         return (panel != null && panel.IsOpen()) ||
-               (!IsGameplayInputLocked &&
-                UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() != true);
+               (!_isGameplayInputLocked && !IsWorldLoadingGameplayLocked());
     }
 
     public bool IsGameplayInputExplicitlyLocked => _isGameplayInputLocked; // 只读过场显式锁，不包含面板锁或外部控制租约。

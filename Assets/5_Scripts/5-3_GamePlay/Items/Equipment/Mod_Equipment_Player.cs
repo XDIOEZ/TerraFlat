@@ -67,8 +67,7 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     private void ToggleEquipmentPanelFromInput()
     {
-        if (inputController != null && inputController.IsGameplayInputLocked &&
-            (EquipmentInventory?.basePanel == null || !EquipmentInventory.basePanel.IsOpen()))
+        if (inputController != null && !inputController.CanToggleGameplayWindow(EquipmentInventory?.basePanel))
         {
             return;
         }

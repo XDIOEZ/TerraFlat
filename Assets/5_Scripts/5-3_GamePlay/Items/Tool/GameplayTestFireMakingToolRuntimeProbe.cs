@@ -101,6 +101,8 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         scope.Receiver.OnAction_Start.Invoke(player);
         BasePanel panel = scope.Panel;
         bool opened = panel != null && panel.IsOpen();
+        bool gameplayWindow = opened && !panel.IsGameplayInputBlocking && panel.AllowsHeldItemWorldDrop &&
+                              panel.IsGamepadNavigationPrepared && panel.IsCancelShortcutTarget;
         bool slotBindings = scope.InputSlot?.BoundInventory == scope.Input && scope.OutputSlot?.BoundInventory == scope.Output;
         bool targets = ReferenceEquals(scope.Input.DefaultTarget_Inventory, hand) && ReferenceEquals(scope.Output.DefaultTarget_Inventory, hand);
         bool preview = scope.OutputSlot != null && scope.OutputSlot.GetComponent<CraftingOutputPreview>() != null;
@@ -113,6 +115,9 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         bool reopened = panel.IsOpen();
         scope.Receiver.OnAction_Start.Invoke(player);
         bool closedByToggle = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
+        scope.Receiver.OnAction_Start.Invoke(player);
+        panel.Close();
+        bool closedByPanel = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Receiver.OnAction_Start.Invoke(player);
         scope.ActionButton.onClick.Invoke();
         ItemData after = scope.Input.Data.GetItemSlot(0)?.itemData;
@@ -146,12 +151,16 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             blockedInput = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
             blockedOutput = scope.Output.Data.GetItemSlot(0)?.itemData?.IDName ?? string.Empty;
         }
+        JObject shortcuts = CapturePanelShortcutAdmission(player, panel);
         scope.Tool.Unload();
         return new JObject
         {
             ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
+            ["gameplayWindow"] = gameplayWindow,
+            ["shortcuts"] = shortcuts,
             ["preview"] = preview, ["previewEvents"] = previewEvents, ["prefabFields"] = prefabFields,
             ["closedByCancel"] = closedByCancel, ["reopened"] = reopened,
+            ["closedByPanel"] = closedByPanel,
             ["closedByToggle"] = closedByToggle, ["closedTargetsCleared"] = targetsCleared,
             ["eventDetached"] = scope.EventsUnbound && !scope.Input.Data.Event_OnDataChanged.HasCalls &&
                                 !scope.Output.Data.Event_OnDataChanged.HasCalls,
@@ -162,6 +171,37 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             ["toolDurability"] = scope.Host.itemData.Durability,
             ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput
         };
+    }
+
+    // 用真实面板叠加模态和租约锁，采样窗口开关与玩法锁的独立边界。
+    private static JObject CapturePanelShortcutAdmission(Player player, BasePanel panel)
+    {
+        Mod_GameController controller = player.GetComponent<Mod_GameController>();
+        bool previousExplicitLock = controller.IsGameplayInputExplicitlyLocked;
+        panel.SetGameplayInputBlocking(true);
+        controller.AcquireGameplayInputLock(panel);
+        try
+        {
+            var result = new JObject
+            {
+                ["gameplayLocked"] = controller.IsGameplayInputLocked,
+                ["openOtherAllowed"] = controller.CanToggleGameplayWindow(null),
+                ["closeAllowed"] = controller.CanToggleGameplayWindow(panel)
+            };
+            panel.Close();
+            result["reopenAllowed"] = controller.CanToggleGameplayWindow(panel);
+            panel.Open();
+            controller.SetGameplayInputLocked(true);
+            result["explicitLockBlocksOpen"] = !controller.CanToggleGameplayWindow(null);
+            result["explicitLockAllowsClose"] = controller.CanToggleGameplayWindow(panel);
+            return result;
+        }
+        finally
+        {
+            controller.SetGameplayInputLocked(previousExplicitLock);
+            controller.ReleaseGameplayInputLock(panel);
+            panel.PrepareForGameplayWindow();
+        }
     }
 
     #endregion
