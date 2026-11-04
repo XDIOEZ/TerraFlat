@@ -25,6 +25,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 核心：`Assets/5_Scripts/5-6_Audio/Runtime/` 的 `AudioService`、`AudioCatalog`、`AudioCue`、`AudioRuntimeConfig`、`AudioTypes`。
 - 玩法桥接：`Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/Mod_AudioEmitter.cs`、`Entities/Combat/CombatAudioRouter.cs`；UI 桥接：`Assets/5_Scripts/5-5_UI/Audio/`。
 - 配置：`Assets/Resources/Audio/`；工具：`Assets/5_Scripts/5-6_Audio/Editor/`。
+- 天气调音：`Assets/Resources/Config/Weather/weather-audio.json` 集中雨声音量、风声阈值/音量/曲线/响应/交叉淡化和雷声近远分界/传播速度；`WeatherAudioConfiguration` 复用二进制目录加载与 Bake，地表和洞口共用，独立于生成冻结配置。默认雨声 `0.9`、风声 `0.2`，修改后重新启动游戏；参数须有限，音量幂次/交叉淡化时长/传播速度须为正，响应速率非负。
 - 已接入天气音：`Assets/Audio/Generated/weather.*.wav`；LMMS MCP 工程与母带整理脚本在 `SoundDesign/Weather_LMMS/`。雨声使用 `rain_sources.json` 登记的 CC0 连续实录，`prepare_rain_sources.py` 整理采样，`Weather_Rain.mmp` 采样轨经 MCP 重渲染后用 `process_weather.py finalize --only-rain` 单独替换；24 秒立体声循环做 1 秒等功率首尾交叠，预加载 PCM/DecompressOnLoad，避免恢复为零散雨点或实时压缩解码。保留风雷资源，鸣谢随 `StreamingAssets/ThirdPartyNotices/Weather-SFX-CREDITS.md` 发布。
 - 玩法音效：`SoundDesign/Gameplay_SFX_LMMS/` 保存攻击、材质命中和交互三组工程；31 个 Cue 绑定 91 个单声道变体，`build_sfx.py build/finalize` 负责编排与母带整理。`combat.weapon.crossbow.loaded` 仅在弩完成上膛时播放。旧 C# 默认音效生成器已删除，避免覆盖 LMMS 成品。
 - 湿衣服移动循环 `player.wet_clothes.move.loop` 只保留短衣料摩擦，禁止恢复持续白噪声底层；经 LMMS MCP 重渲染 `Gameplay_Interactions.mmp` 后用 `build_sfx.py finalize --only-cue player.wet_clothes.move.loop` 单独替换，保留其他成品。

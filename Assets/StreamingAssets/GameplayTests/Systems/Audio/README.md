@@ -1,5 +1,7 @@
 # 音频
 
+2026-11-05：天气声音调音值迁入 `Resources/Config/Weather/weather-audio.json`，`WeatherAudioConfiguration` 复用正式配置加载与构建 Bake；雨风状态由调用者注入配置，地表与洞口共用风声曲线和雷声近远/传播速度，不进入生成或存档冻结。风声音量保留 `0.2`、雨声保留 `0.9`。`weather_audio_configuration` 核对正式 JSON 与必要数学域，`rain_sequence/wind_sequence` 新增自定义音量、静音、阈值、曲线、响应速率、交叉淡化和 Reset 断言。当前用户 PlayMode，未编译或运行 Lua；真实资源导入、构建 Bake 与听感尚未验收。
+
 2026-11-04：所有燃烧物品通过 `CombustionAudioLoop` 共用 `fire.burning.loop`，删除篝火专属 Cue 配置；火把、物质物品、轻量掉落和设施各按真实状态管理句柄。`voice_lifecycle` 追加正式共享入口的初始静音、点燃、空间循环、重复刷新复用、熄灭淡出释放、重新点燃和立即停止断言。Unity 处于用户 PlayMode，本轮不编译、不执行 Lua；四种宿主的真实切换、镜头远近听感、大量火源并发仍待现场验收。地块火场不属于该物品音频接线。
 
 2026-11-03：冰地从石头脚步拆出 `player.footstep.ice`，采用 qubodup 开放 CC0 硬壳冰雪实录八变体；`Mod_Mover.Audio` 改按真实露出的地层识别支撑面，非 WaterContact 液体不能播放水脚步。新增冰面、水雪优先 Lua 规则和第九类正式 Cue 检查，`verify_tiles.py` 核验九类八变体和正式 24 种可走地块。仅静态验证，尚待实际 PlayMode 听感验收。
@@ -28,7 +30,7 @@
 
 2026-10-15：此前登记的快速规则和 PlayMode 入口已执行通过，见 [缓存与全系统 DEBUG](../../缓存与38系统DEBUG循环_2026-10-15.md)。2026-10-17 新增游泳断言尚未编译或运行；以下功能缺口继续有效，玩法验收由用户进行。
 
-快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、nature_ambience_sequence、foliage_ambience_volume、nature_foliage_config、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
+快速入口：`rules.lua`；操作：`audio/bus_volume、catalog_lifecycle、propagation_ranges、weather_audio_configuration、nature_ambience_sequence、foliage_ambience_volume、nature_foliage_config、combat_impact、tree_impact_configuration、rain_sequence、wind_sequence、animal_idle_sequence、footstep_surface、water_depth_volume、swimming_sequence、inventory_cue`。
 
 传播配置：`Assets/Resources/Audio/PropagationRanges.json` 的 `levels` 定义 1～10 档距离（默认 1/2/4/8/16/32/64/128/256/512 格），`cues` 按声音 ID 选择 `level`，重新启动游戏后生效。狼、鸟、海鸥为七档 64 格，蜂、野猪、鸡、兔为五档 16 格，羊、雪豹及树叶/河流为六档 32 格，小鱼为四档 8 格。`propagation_ranges` 直接驱动正式目录覆盖全部十档（含 1/512 格端点）、正式 JSON 档位与现有声音距离、修改距离、未绑定声音及移除配置后的重建；`voice_lifecycle` 读取十种动物的实际 Cue，并采样狼/鸟/蜂/野猪在距离内、边界及距离外的真实声源分配和线性衰减。听感仍需实际试听。
 

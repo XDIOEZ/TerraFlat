@@ -1392,6 +1392,9 @@
       "name": "音频",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherMgr.Audio.cs",
+        "Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherAudioConfiguration.cs",
+        "Assets/Resources/Config/Weather/weather-audio.json",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Audio/*",
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/Mod_Mover.Audio.cs",
         "Assets/5_Scripts/5-6_Audio/*",

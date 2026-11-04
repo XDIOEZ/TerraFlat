@@ -15,6 +15,22 @@ public static partial class GameplayTestSystemProbe
     {
         Register("audio", "wind_sequence", ServiceWindSequence);
         Register("audio", "rain_sequence", ServiceRainSequence);
+        Register("audio", "weather_audio_configuration", ServiceWeatherAudioConfiguration);
+    }
+
+    private static JObject ServiceWeatherAudioConfiguration(JObject args)
+    {
+        try { return JObject.FromObject(ReadWeatherAudioConfigurationForProbe(args)); }
+        catch (ArgumentException error) { return new JObject { ["error"] = error.Message }; }
+    }
+
+    private static WeatherAudioConfiguration ReadWeatherAudioConfigurationForProbe(JObject args)
+    {
+        WeatherAudioConfiguration configuration = WeatherAudioConfiguration.Load();
+        if (args["configuration"] is not JObject overrides) return configuration;
+        JObject source = JObject.FromObject(configuration);
+        source.Merge(overrides);
+        return WeatherAudioConfiguration.Parse(source.ToString());
     }
 
     private static JObject ServiceRainSequence(JObject args)
@@ -22,6 +38,7 @@ public static partial class GameplayTestSystemProbe
         if (args["steps"] is not JArray steps || steps.Count == 0 || steps.Count > 128)
             throw new ArgumentException("雨声音效采样需要 1 至 128 个连续步骤。");
 
+        WeatherAudioConfiguration configuration = ReadWeatherAudioConfigurationForProbe(args);
         var state = new WeatherMgr.RainAudioState();
         var samples = new JArray();
         foreach (JToken value in steps)
@@ -34,7 +51,7 @@ public static partial class GameplayTestSystemProbe
             else
                 state.Advance(Flag(step, "available", true),
                     Flag(step, "invalidRain", false) ? float.NaN : (float)Number(step, "rain", 0),
-                    (float)Number(step, "deltaTime", 0), (float)Number(step, "transitionSeconds", 12));
+                    (float)Number(step, "deltaTime", 0), (float)Number(step, "transitionSeconds", 12), configuration);
             samples.Add(new JObject
             {
                 ["intensity"] = state.PresentedIntensity,
@@ -49,6 +66,7 @@ public static partial class GameplayTestSystemProbe
         if (args["steps"] is not JArray steps || steps.Count == 0 || steps.Count > 128)
             throw new ArgumentException("风声音效采样需要 1 至 128 个连续步骤。");
 
+        WeatherAudioConfiguration configuration = ReadWeatherAudioConfigurationForProbe(args);
         var state = new WeatherMgr.WindAudioState();
         var samples = new JArray();
         foreach (JToken value in steps)
@@ -62,7 +80,7 @@ public static partial class GameplayTestSystemProbe
             else
                 state.Advance((float)Number(step, "strength", 0),
                     (float)Number(step, "deltaTime", 10),
-                    (float)Number(step, "transitionSeconds", 3));
+                    (float)Number(step, "transitionSeconds", 3), configuration);
             samples.Add(new JObject
             {
                 ["cue"] = state.IsGale ? AudioEventIds.WeatherWindGaleLoop : AudioEventIds.WeatherWindLoop,

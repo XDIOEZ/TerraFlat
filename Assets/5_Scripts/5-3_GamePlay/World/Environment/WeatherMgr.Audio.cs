@@ -8,11 +8,6 @@ public partial class WeatherMgr
     #region 天气声音状态
 
     private const float WeatherAudioThreshold = 0.001f;
-    private const float WindAudioStartStrength = 0.5f;
-    private const float WindAudioMaximumVolume = 0.2f;
-    private const float WindAudioCrossFadeSeconds = 0.8f;
-    private const float ThunderNearRadius = 64f;
-    private const float ThunderPropagationSpeed = 64f;
     private const int MaximumPendingThunder = 8;
     private AudioHandle rainAudioHandle;
     private AudioHandle windAudioHandle;
@@ -28,12 +23,13 @@ public partial class WeatherMgr
     {
         public float PresentedIntensity { get; private set; }
         public float TargetIntensity { get; private set; }
-        public float Volume => 0.9f * PresentedIntensity;
+        public float Volume { get; private set; }
         private float startIntensity;
         private float elapsed;
         private float duration;
 
-        public void Advance(bool sampleAvailable, float rainIntensity, float deltaTime, float transitionSeconds)
+        public void Advance(bool sampleAvailable, float rainIntensity, float deltaTime, float transitionSeconds,
+            WeatherAudioConfiguration configuration)
         {
             // 缺少玩家所在地的降水样本时沿用上一目标，不把加载空档当成停雨。
             if (sampleAvailable && float.IsFinite(rainIntensity))
@@ -51,6 +47,7 @@ public partial class WeatherMgr
             elapsed = Mathf.Min(duration, elapsed + step);
             float progress = duration <= 0f ? 1f : Mathf.SmoothStep(0f, 1f, elapsed / duration);
             PresentedIntensity = Mathf.Lerp(startIntensity, TargetIntensity, progress);
+            Volume = configuration.RainMaximumVolume * PresentedIntensity;
         }
 
         public void Reset() => this = default;
@@ -65,7 +62,8 @@ public partial class WeatherMgr
         private float totalVolume;
         private float galeBlend;
 
-        public void Advance(float windStrength, float deltaTime, float transitionSeconds)
+        public void Advance(float windStrength, float deltaTime, float transitionSeconds,
+            WeatherAudioConfiguration configuration)
         {
             float strength = float.IsFinite(windStrength) ? Mathf.Clamp01(windStrength) : 0f;
             float elapsed = float.IsFinite(deltaTime) ? Mathf.Max(0f, deltaTime) : 0f;
@@ -73,12 +71,12 @@ public partial class WeatherMgr
             IsGale = WindEnvironmentRules.ResolveWindLevel(strength) >= WindEnvironmentRules.MinimumPushWindLevel;
             // 选音和响度共用玩家脚下风场，风级立即裁定，响度保留原有平滑曲线。
             PresentedStrength = Mathf.MoveTowards(PresentedStrength, strength, elapsed / transition);
-            float audibleWind = Mathf.InverseLerp(WindAudioStartStrength, 1f, PresentedStrength);
-            float targetVolume = WindAudioMaximumVolume * Mathf.Pow(audibleWind, 1.5f);
+            float audibleWind = Mathf.InverseLerp(configuration.WindStartStrength, 1f, PresentedStrength);
+            float targetVolume = configuration.WindMaximumVolume * Mathf.Pow(audibleWind, configuration.WindVolumeExponent);
             if (totalVolume <= WeatherAudioThreshold)
                 galeBlend = IsGale ? 1f : 0f;
-            totalVolume = Mathf.MoveTowards(totalVolume, targetVolume, elapsed * 0.75f);
-            galeBlend = Mathf.MoveTowards(galeBlend, IsGale ? 1f : 0f, elapsed / WindAudioCrossFadeSeconds);
+            totalVolume = Mathf.MoveTowards(totalVolume, targetVolume, elapsed * configuration.WindVolumeResponsePerSecond);
+            galeBlend = Mathf.MoveTowards(galeBlend, IsGale ? 1f : 0f, elapsed / configuration.WindCrossFadeSeconds);
             NormalVolume = totalVolume * (1f - galeBlend);
             GaleVolume = totalVolume * galeBlend;
         }
@@ -183,9 +181,10 @@ public partial class WeatherMgr
             if (TryGetWindBlendAt(position, out var windBlend))
                 wind = Mathf.Clamp01(Unity.Mathematics.math.length(windBlend.Wind));
         }
-        rainAudioState.Advance(hasPrecipitation, rain, Time.deltaTime, _precipitationTransitionSeconds);
+        WeatherAudioConfiguration configuration = WeatherAudioConfiguration.Load();
+        rainAudioState.Advance(hasPrecipitation, rain, Time.deltaTime, _precipitationTransitionSeconds, configuration);
         UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, rainAudioState.Volume, ref rainAudioHandle);
-        windAudioState.Advance(wind, Time.unscaledDeltaTime, _weatherTransitionSeconds);
+        windAudioState.Advance(wind, Time.unscaledDeltaTime, _weatherTransitionSeconds, configuration);
         UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, windAudioState.NormalVolume, ref windAudioHandle);
         UpdateWeatherLoop(AudioEventIds.WeatherWindGaleLoop, windAudioState.GaleVolume, ref galeAudioHandle);
         PlayPendingWeatherThunder();
@@ -217,7 +216,7 @@ public partial class WeatherMgr
 
     private static bool TryGetWeatherThunderCue(float distance, out AudioCue cue)
     {
-        string cueId = distance <= ThunderNearRadius
+        string cueId = distance <= WeatherAudioConfiguration.Load().ThunderNearRadius
             ? AudioEventIds.WeatherThunder : AudioEventIds.WeatherThunderFar;
         return AudioService.Instance.TryGetCue(cueId, out cue) && distance < cue.MaxDistance;
     }
@@ -249,7 +248,7 @@ public partial class WeatherMgr
             return;
 
         pendingWeatherThunder.Add(new PendingWeatherThunder(lightning,
-            Time.unscaledTime + distance / ThunderPropagationSpeed));
+            Time.unscaledTime + distance / WeatherAudioConfiguration.Load().ThunderPropagationSpeed));
     }
 
     private void PlayPendingWeatherThunder()

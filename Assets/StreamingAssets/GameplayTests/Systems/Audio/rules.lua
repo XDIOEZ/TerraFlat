@@ -213,9 +213,31 @@ for _, row in ipairs({ { firstEnabled = false, errors = 0 }, { firstEnabled = tr
     end, "事件启停与缺失录音校验：" .. tostring(row.firstEnabled))
 end
 
+test.system("audio", "weather_audio_configuration", {}, function(data)
+    assert(math.abs(data.RainMaximumVolume - 0.9) < 0.00001 and
+        math.abs(data.WindMaximumVolume - 0.2) < 0.00001, "正式 JSON 没有保留雨声音量和减半后的风声音量")
+    assert(data.WindStartStrength == 0.5 and data.WindVolumeExponent == 1.5 and
+        data.WindVolumeResponsePerSecond == 0.75 and math.abs(data.WindCrossFadeSeconds - 0.8) < 0.00001,
+        "正式 JSON 的风声起声、曲线或淡化参数没有保留")
+    assert(data.ThunderNearRadius == 64 and data.ThunderPropagationSpeed == 64,
+        "地表与洞口共用的雷声配置错误")
+end, "天气声音 JSON：正式音量、风声曲线与雷声参数")
+
+for _, row in ipairs({
+    { field = "WindVolumeExponent", value = 0 },
+    { field = "WindCrossFadeSeconds", value = 0 },
+    { field = "ThunderPropagationSpeed", value = 0 },
+    { field = "WindVolumeResponsePerSecond", value = -0.1 },
+    { field = "RainMaximumVolume", value = 1e39 }
+}) do
+    test.system("audio", "weather_audio_configuration", { configuration = { [row.field] = row.value } }, function(data)
+        assert(data.error ~= nil, "天气声音 JSON 未拒绝会产生无效数学结果的参数：" .. row.field)
+    end, "天气声音 JSON 数学域：" .. row.field)
+end
+
 -- 玩家雨声只跟随有效降水；缺失区块样本继续上一目标，不重建循环。
-local function rain_sequence(label, steps)
-    test.system("audio", "rain_sequence", { steps = steps }, function(data)
+local function rain_sequence(label, steps, configuration)
+    test.system("audio", "rain_sequence", { steps = steps, configuration = configuration }, function(data)
         assert(#data.samples == #steps, "雨声没有返回完整连续采样")
         for i, sample in ipairs(data.samples) do
             local step = steps[i]
@@ -223,7 +245,8 @@ local function rain_sequence(label, steps)
                 label .. "，第 " .. i .. " 步雨声没有从当前音量连续过渡")
             assert(math.abs(sample.target - step.target) < 0.00001,
                 label .. "，第 " .. i .. " 步缺样或停雨目标错误")
-            assert(math.abs(sample.volume - step.intensity * 0.9) < 0.00001,
+            local maximumVolume = configuration and configuration.RainMaximumVolume or 0.9
+            assert(math.abs(sample.volume - step.intensity * maximumVolume) < 0.00001,
                 label .. "，第 " .. i .. " 步雨声音量倍率错误")
         end
     end, "雨声连续性：" .. label)
@@ -267,9 +290,19 @@ rain_sequence("负时间、卡帧、越界雨量和零时长边界", {
     { rain = 1, transitionSeconds = -1, intensity = 1, target = 1 }
 })
 
+rain_sequence("JSON 自定义雨声音量与重置后重用配置", {
+    { rain = 1, deltaTime = 12, intensity = 1, target = 1 },
+    { reset = true, intensity = 0, target = 0 },
+    { rain = 0.5, deltaTime = 12, intensity = 0.5, target = 0.5 }
+}, { RainMaximumVolume = 0.3 })
+
+rain_sequence("JSON 零音量不回退硬编码默认值", {
+    { rain = 1, deltaTime = 12, intensity = 1, target = 1 }
+}, { RainMaximumVolume = 0 })
+
 -- 使用玩家当地风强直接驱动正式风声状态，不建世界或播放声音。
-local function wind_sequence(label, steps)
-    test.system("audio", "wind_sequence", { steps = steps }, function(data)
+local function wind_sequence(label, steps, configuration)
+    test.system("audio", "wind_sequence", { steps = steps, configuration = configuration }, function(data)
         assert(#data.samples == #steps, "风声没有返回完整连续采样")
         for i, sample in ipairs(data.samples) do
             local step = steps[i]
@@ -277,7 +310,8 @@ local function wind_sequence(label, steps)
             assert(sample.gale == (step.gale == true) and sample.cue == expectedCue,
                 label .. "，第 " .. i .. " 步八级风选音边界错误")
             local volume = sample.normalVolume + sample.galeVolume
-            assert(sample.normalVolume >= 0 and sample.galeVolume >= 0 and volume <= 0.20001,
+            local maximumVolume = configuration and configuration.WindMaximumVolume or 0.2
+            assert(sample.normalVolume >= 0 and sample.galeVolume >= 0 and volume <= maximumVolume + 0.00001,
                 label .. "，第 " .. i .. " 步交叉淡化超出风音量上限")
             if step.volume ~= nil then
                 assert(math.abs(volume - step.volume) < 0.00001,
@@ -334,6 +368,32 @@ wind_sequence("退出重置清除双路包络，新世界按当前风级重新�
     { strength = 1, deltaTime = 100, gale = true, volume = 0.2, galeRatio = 1 },
     { strength = 0, volume = 0, presented = 0 }
 })
+
+wind_sequence("JSON 自定义起声、音量曲线和交叉淡化", {
+    { strength = 0.5, volume = 0 },
+    { strength = 0.7, volume = 0.15, galeRatio = 0 },
+    { strength = 0.8, deltaTime = 0.5, gale = true, volume = 0.3, galeRatio = 0.25 },
+    { strength = 0.8, deltaTime = 1.5, gale = true, volume = 0.3, galeRatio = 1 },
+    { reset = true, volume = 0, presented = 0 },
+    { strength = 1, gale = true, volume = 0.6, galeRatio = 1 }
+}, {
+    WindStartStrength = 0.6, WindMaximumVolume = 0.6, WindVolumeExponent = 1,
+    WindVolumeResponsePerSecond = 2, WindCrossFadeSeconds = 2
+})
+
+wind_sequence("JSON 音量响应速率控制上升和下降", {
+    { strength = 1, deltaTime = 1, transitionSeconds = 0.01, gale = true, volume = 0.05, galeRatio = 1 },
+    { strength = 1, deltaTime = 1, transitionSeconds = 0.01, gale = true, volume = 0.1, galeRatio = 1 },
+    { strength = 0, deltaTime = 1, transitionSeconds = 0.01, volume = 0.05, galeRatio = 0 },
+    { strength = 0, deltaTime = 1, transitionSeconds = 0.01, volume = 0 }
+}, {
+    WindStartStrength = 0.5, WindMaximumVolume = 0.4, WindVolumeExponent = 1.5,
+    WindVolumeResponsePerSecond = 0.05, WindCrossFadeSeconds = 0.8
+})
+
+wind_sequence("JSON 零风声音量不回退硬编码默认值", {
+    { strength = 1, gale = true, volume = 0 }
+}, { WindMaximumVolume = 0 })
 
 -- 河流索引读取权威水量、水文和融冰层；Lua 只检查生产索引返回值与增量版本。
 test.system("audio", "nature_ambience_sequence", {}, function(data)

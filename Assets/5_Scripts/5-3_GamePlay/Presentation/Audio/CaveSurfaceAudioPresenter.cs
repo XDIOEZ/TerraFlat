@@ -12,7 +12,6 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
     private const float WeatherSoundRange = 48f;
     private const float WeatherSampleInterval = 0.25f;
     private const float WeatherSilenceThreshold = 0.001f;
-    private const float ThunderSpeed = 64f;
     private const float PortalRefreshDistance = 4f;
     private const float PortalSearchRange = 512f;
     private const int MaximumNearbyPortals = 16;
@@ -142,8 +141,9 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
             sampleElapsed = 0f;
             SampleSurfaceWeather(entrance);
         }
-        rain.Advance(hasRainSample, sampledRain, deltaTime, 12f);
-        wind.Advance(sampledWind, deltaTime, 3f);
+        WeatherAudioConfiguration configuration = WeatherAudioConfiguration.Load();
+        rain.Advance(hasRainSample, sampledRain, deltaTime, 12f, configuration);
+        wind.Advance(sampledWind, deltaTime, 3f, configuration);
         UpdateWeatherLoop(AudioEventIds.WeatherRainLoop, rain.Volume, entrance, ref rainHandle);
         UpdateWeatherLoop(AudioEventIds.WeatherWindLoop, wind.NormalVolume, entrance, ref windHandle);
         UpdateWeatherLoop(AudioEventIds.WeatherWindGaleLoop, wind.GaleVolume, entrance, ref galeHandle);
@@ -247,7 +247,7 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
                 WorldTopologyRuntime.ShortestDelta(listener, audioPortals[i].CavePosition).magnitude);
         if (distance >= 192f || lightning.Strength <= 0f) return;
         pendingThunder.Add(new PendingThunder(lightning.Position, lightning.Strength, distance,
-            Time.unscaledTime + distance / ThunderSpeed));
+            Time.unscaledTime + distance / WeatherAudioConfiguration.Load().ThunderPropagationSpeed));
     }
 
     private void PlayPendingThunder()
@@ -263,7 +263,7 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
                 Mathf.Clamp01(thunder.Strength));
             options.SourceWorldKey = surfaceWorldKey;
             AudioService.Instance.Play(
-                thunder.Distance <= 64f
+                thunder.Distance <= WeatherAudioConfiguration.Load().ThunderNearRadius
                     ? AudioEventIds.WeatherThunder : AudioEventIds.WeatherThunderFar, options);
         }
     }

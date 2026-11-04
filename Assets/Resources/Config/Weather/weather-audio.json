@@ -1,0 +1,10 @@
+{
+  "RainMaximumVolume": 0.9,
+  "WindStartStrength": 0.5,
+  "WindMaximumVolume": 0.2,
+  "WindVolumeExponent": 1.5,
+  "WindVolumeResponsePerSecond": 0.75,
+  "WindCrossFadeSeconds": 0.8,
+  "ThunderNearRadius": 64.0,
+  "ThunderPropagationSpeed": 64.0
+}
