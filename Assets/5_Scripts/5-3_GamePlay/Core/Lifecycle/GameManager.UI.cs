@@ -121,7 +121,6 @@ public partial class GameManager
     public const string GameSaveSelectedTextKey = "选中的存档名称";
     public const string GameSaveRenameButtonKey = "RenameSavePencilButton";
     public const string GameSaveTimeTextKey = "存档保存时间";
-    public const string GameSaveGenerationFreezeToggleKey = "冻结世界生成规则开关";
     public const string GameSaveNoSelectionText = "尚未选择存档";
     public const string GameSaveNoTimeText = "保存时间：--";
     public const string SaveRenameDialogPanelKey = RuntimeUIPrefabKeys.SaveRenameDialog;
@@ -1228,7 +1227,6 @@ public partial class GameManager
         });
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(
             value => saveList?.OnPlayerNameInputChanged(value));
-        panel.GetToggle(GameSaveGenerationFreezeToggleKey)?.gameObject.SetActive(false);
         // 动态存档条目在 RefreshForGamepadOpen 后创建；这里仅提供无存档时的安全回退。
         panel.PrepareForGamepadNavigation(GameSaveBackButtonKey);
         panel.Open();
