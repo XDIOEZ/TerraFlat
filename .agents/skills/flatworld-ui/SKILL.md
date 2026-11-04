@@ -22,7 +22,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - Prefab 持视觉/引用，领域控制器持业务，UIManager 管生命周期。节点名/RuntimeUIPrefabKeys 是身份，不翻译；文案走 FlatWorldUI 表 GetUiText/GetUiFormat。资产标 Addressables Prefab，移动保 meta/GUID，UI 子目录继承 UI.asmdef。
 - 主菜单灰阶为基准，根→内容/按钮逐级提亮；近白字、低对比边框约2像素、字描边约1，图标/语义色独立。主题走 `FlatWorldUIThemeConfigCatalog → FlatWorldUITheme → BasePanel/构建器`；文案只留字段、操作、状态和必要规则。
 - 构建器先停有 Awake 的根，引用齐再激活；迁移仅显式菜单，补建保人工编辑。`FlatWorldUIFeedback` 保基础缩放，布局用 `SetBaseScale`，预览停反馈。
-- 普通底板用 `UI_PanelBackground`，根 Image 透明；HUD角落锚点/透明容器，确认/改名遮罩透明。CanvasGroup.alpha=1、独立 Canvas.localScale=1，注册前 `InitClosed()`；启动加载页由 WorldManager.prefab 直引。
+- 普通底板用 `UI_PanelBackground`，根 Image 透明；底板 `LayoutElement.ignoreLayout=true`，铺满父节点且不参与正文排版，直接生成的语言页也复用同一底板。HUD角落锚点/透明容器，确认/改名遮罩透明。CanvasGroup.alpha=1、独立 Canvas.localScale=1，注册前 `InitClosed()`；启动加载页由 WorldManager.prefab 直引。
 - 固定 TMP 用 `FlatWorldUITextLayout.Configure(text, 设计字号)` 并同步 Prefab：最大字号不放大，下限通常12～18（可保更低有效值），超长 Ellipsis。输入、自适应长文、手动分页保自身规则，不在 Update 遍历修字。
 
 ## 生命周期与输入

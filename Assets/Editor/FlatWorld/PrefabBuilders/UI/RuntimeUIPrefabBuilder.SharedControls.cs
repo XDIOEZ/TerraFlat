@@ -201,6 +201,8 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(Image),
             typeof(Outline),
             typeof(ReusableUIControl));
+        // 底板始终铺满父节点，不参与正文布局。
+        root.AddComponent<LayoutElement>().ignoreLayout = true;
         Image image = root.GetComponent<Image>();
         image.color = FlatWorldUITheme.Canvas;
         image.raycastTarget = false;

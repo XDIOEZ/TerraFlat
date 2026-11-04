@@ -128,6 +128,9 @@ public static partial class RuntimeUIPrefabBuilder
             content,
             SettingsActionListPagination.LanguagePageName);
         ClearDirectChildren(languagePage);
+        Image background = InstantiateSharedControl<Image>(
+            RuntimeUIPrefabKeys.PanelBackground, RuntimeUIPrefabKeys.PanelBackground, languagePage);
+        Stretch(background.rectTransform);
         CreateSettingsHeader(languagePage, "语言");
         CreateSettingsHint(languagePage, "界面语言会立即切换，点击保存后保留修改。", 48f);
         CreateSettingsDropdownRow(
