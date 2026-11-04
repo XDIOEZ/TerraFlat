@@ -71,6 +71,9 @@ public sealed class ModAuthoringWindow : EditorWindow
             EditorGUILayout.EndHorizontal();
         }
 
+        if (GUILayout.Button("检查 C# MOD 包（只读）", GUILayout.Height(28f)))
+            InspectManagedPackage();
+
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("报告", EditorStyles.boldLabel);
         reportScroll = EditorGUILayout.BeginScrollView(reportScroll, GUI.skin.box);
@@ -81,6 +84,31 @@ public sealed class ModAuthoringWindow : EditorWindow
     #endregion
 
     #region 校验
+
+    // 原独立菜单的 C# 包校验并入 MOD 创作工具，不重复维护编辑器窗口。
+    private void InspectManagedPackage()
+    {
+        string root = EditorUtility.OpenFolderPanel("选择需要检查的 MOD 包",
+            Path.Combine(Application.persistentDataPath, "Mods"), string.Empty);
+        if (string.IsNullOrWhiteSpace(root)) return;
+
+        try
+        {
+            ModManifest manifest = JsonConvert.DeserializeObject<ModManifest>(
+                File.ReadAllText(Path.Combine(root, "manifest.json")));
+            if (manifest?.Managed == null || string.IsNullOrWhiteSpace(manifest.Id))
+                throw new InvalidDataException("清单没有有效 C# MOD 声明。");
+
+            ModManagedAssemblyStore.ValidateDefinition(root, manifest.Managed);
+            report = $"C# MOD 包检查通过：{manifest.Id}（仅检查清单与 DLL 元数据）";
+            Debug.Log(report);
+        }
+        catch (Exception error)
+        {
+            report = "C# MOD 包检查失败：\n" + error;
+            Debug.LogException(error);
+        }
+    }
 
     private void ValidateSelectedSource()
     {

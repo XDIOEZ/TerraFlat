@@ -99,7 +99,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         }
 
         Instance = this;
-        ModManagerOverlay.Ensure(gameObject, this);
     }
 
     private void Update()
