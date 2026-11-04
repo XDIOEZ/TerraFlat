@@ -95,7 +95,8 @@ public sealed partial class WorldPhysicsService2D
         if (item == null) return null;
         if (TryGetRegisteredItemProxy(item, out WorldPhysicsEntityProxy2D proxy) && proxy.Shell.OwnsRoot)
             return proxy.Shell.SharedFixedBody ? null : proxy.Body;
-        return item.GetComponent<Rigidbody2D>();
+        item.TryGetComponent(out Rigidbody2D body);
+        return body;
     }
 
     public static T GetItemRootCollider<T>(Item item) where T : Collider2D

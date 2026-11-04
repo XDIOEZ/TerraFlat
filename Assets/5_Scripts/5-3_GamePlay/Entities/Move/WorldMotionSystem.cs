@@ -212,7 +212,7 @@ public static class WorldMotionSystem
                 looseWindItems.Remove(item);
                 continue;
             }
-            if (!item.isActiveAndEnabled || item.gameObject.scene.name != worldKey ||
+            if (!item.isActiveAndEnabled || GameplayWorldRegistry.GetItemWorldKey(item) != worldKey ||
                 Mod_Droping.IsDropInProgress(item) || registration.WaterRuntime?.IsActive == true ||
                 registration.LastMotionFrame == motionFrame || LooseItemMotion.IsDrivenByConveyor(item.transform.position))
                 continue;
@@ -221,7 +221,9 @@ public static class WorldMotionSystem
             if (velocity.sqrMagnitude <= 0f && !LooseItemMotion.HasVelocitySources) continue;
             Vector2 destination = LooseItemMotion.AdvanceExternal(worldKey, item.itemData,
                 position, seconds, velocity);
-            if (LooseItemMotion.CommitItemPosition(item, destination)) WorldItemWaterSystem.ScheduleSpawnCheck(item);
+            if (!LooseItemMotion.CommitItemPosition(item, destination)) continue;
+            WorldItemWaterSystem.TryEnterWater(item, requirePickable: true, out bool terrainResolved);
+            if (!terrainResolved) WorldItemWaterSystem.ScheduleSpawnCheck(item);
         }
         looseWindScratch.Clear();
     }

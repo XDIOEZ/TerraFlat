@@ -5,6 +5,7 @@ using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Unity.Profiling;
 using UnityEngine;
 
 /// <summary>
@@ -13,6 +14,9 @@ using UnityEngine;
 /// </summary>
 public static class WorldItemWaterSystem
 {
+    #region 世界物品入水检查
+    private static readonly ProfilerMarker WindTickMarker = new("WorldItemWater.LooseWind");
+    private static readonly ProfilerMarker SpawnChecksMarker = new("WorldItemWater.PendingSpawnChecks");
     private static readonly HashSet<Item> PendingSpawnChecks = new();
     private static readonly List<Item> PendingSnapshot = new();
 
@@ -44,14 +48,16 @@ public static class WorldItemWaterSystem
     /// <summary>由 ItemMgr 每帧统一结算新实例的最终地块环境。</summary>
     public static void ProcessPendingSpawnChecks()
     {
-        WorldMotionSystem.TickLooseItemWind(Time.deltaTime);
-        if (PendingSpawnChecks.Count == 0)
-            return;
-
         PendingSnapshot.Clear();
         PendingSnapshot.AddRange(PendingSpawnChecks);
         PendingSpawnChecks.Clear();
 
+        using (WindTickMarker.Auto())
+            WorldMotionSystem.TickLooseItemWind(Time.deltaTime);
+        if (PendingSnapshot.Count == 0)
+            return;
+
+        using var spawnChecksScope = SpawnChecksMarker.Auto();
         for (int i = 0; i < PendingSnapshot.Count; i++)
         {
             Item item = PendingSnapshot[i];
@@ -83,15 +89,26 @@ public static class WorldItemWaterSystem
     /// requirePickable=false 允许落地收尾帧尚未恢复拾取标记的物品进入水体。
     /// </summary>
     public static EntryResult TryEnterWater(Item item, bool requirePickable)
+        => TryEnterWater(item, requirePickable, out _);
+
+    // 已登记散物移动后直接复查入水，只有地形未就绪才重新排队生成检查。
+    internal static EntryResult TryEnterWater(Item item, bool requirePickable, out bool terrainResolved)
     {
-        if (!CanUseWorldWaterRuntime(item, requirePickable))
+        terrainResolved = true;
+        if (item == null || item.DestructionHandled || item.itemData?.Stack == null)
             return EntryResult.None;
 
-        if (!TryResolveWaterAt(item.transform.position, out bool isWater))
+        terrainResolved = TryResolveWaterAt(item.transform.position, out bool isWater);
+        if (!terrainResolved)
+            return EntryResult.None;
+        // 普通陆地散物没有入水工作，避免每次风移动都扫描整棵模块组件树。
+        if (!isWater && !GetSavedBottomState(item.itemData))
+            return EntryResult.None;
+        if (!CanUseWorldWaterRuntime(item, requirePickable))
             return EntryResult.None;
         if (!isWater)
         {
-            if (GameNetwork.HasStateAuthority && GetSavedBottomState(item.itemData))
+            if (GameNetwork.HasStateAuthority)
             {
                 SetSavedBottomState(item.itemData, false);
                 ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
@@ -126,6 +143,7 @@ public static class WorldItemWaterSystem
         isWater = sample.LiquidDepth > 0f;
         return true;
     }
+    #endregion
 
     #region 沉底物品拾取
 
