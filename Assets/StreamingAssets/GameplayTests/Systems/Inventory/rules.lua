@@ -1,3 +1,28 @@
+for _, mode in ipairs({"organize", "priority", "sort"}) do
+    test.system("inventory", "repack_notifications", {mode = mode}, function(data)
+        assert(data.changed and data.structure == 1 and data.mass == 1 and data.fullRefreshes == 1
+            and data.slotRefreshes == 0, "整理仍逐格重建整包结构、质量或界面")
+        assert(data.before == 8 and data.after == 8 and data.beforeSawOriginal and data.finalStateOnly,
+            "整理丢失槽位业务回调，变更前已改数量，或对外暴露了半成品布局")
+        assert(data.noop and data.removedUnbound and data.retainedBound,
+            "重复整理仍发布变更，或合并后的质量订阅未正确转移")
+        assert(data.weight == 25 and data.volume == 13 and #data.packed == 5,
+            "整理丢失物品、特殊载荷或品质不同的材料被错误合并")
+        local expected = mode == "priority" and {6, 1, 3, 4, 5}
+            or mode == "sort" and {1, 3, 5, 4, 6} or {1, 3, 6, 4, 5}
+        for index, guid in ipairs(expected) do
+            assert(data.packed[index].guid == guid, "稳定整理、搜索优先或ID排序的实例顺序错误")
+            if guid == 1 then
+                assert(data.packed[index].amount == 5 and data.packed[index].durability == 6,
+                    "合堆没有保留原实例和受损件磨损")
+            elseif guid == 3 then
+                assert(data.packed[index].amount == 4 and data.packed[index].durability == 9,
+                    "两份受损材料被合并或磨损丢失")
+            end
+        end
+    end, "整理批量提交、最终通知与订阅守恒：" .. mode)
+end
+
 test.system("inventory", "pickup_lifecycle", {}, function(data)
     assert(data.missingBeforeLease and data.readyAfterLease and data.registeredContactResolvesItem,
         "拾取器先加载、物理后租借时未补齐范围或接触来源")

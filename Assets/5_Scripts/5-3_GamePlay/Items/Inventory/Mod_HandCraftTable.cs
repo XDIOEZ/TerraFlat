@@ -474,23 +474,23 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         _carryInputData = inputInventory.Data;
         _carryOutputData = outputInventory.Data;
-        _carryInputData.Event_OnDataChanged += HandleCarryWeightChanged;
+        _carryInputData.MassChanged += HandleCarryWeightChanged;
         if (!ReferenceEquals(_carryOutputData, _carryInputData))
-            _carryOutputData.Event_OnDataChanged += HandleCarryWeightChanged;
+            _carryOutputData.MassChanged += HandleCarryWeightChanged;
         PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 
     private void UnbindCarryWeightEvents()
     {
         if (_carryInputData != null)
-            _carryInputData.Event_OnDataChanged -= HandleCarryWeightChanged;
+            _carryInputData.MassChanged -= HandleCarryWeightChanged;
         if (_carryOutputData != null && !ReferenceEquals(_carryOutputData, _carryInputData))
-            _carryOutputData.Event_OnDataChanged -= HandleCarryWeightChanged;
+            _carryOutputData.MassChanged -= HandleCarryWeightChanged;
         _carryInputData = null;
         _carryOutputData = null;
     }
 
-    private void HandleCarryWeightChanged(ItemSlot _)
+    private void HandleCarryWeightChanged(Inventory_Data _)
     {
         if (item is Player player)
             PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);

@@ -148,7 +148,7 @@ public sealed class InventorySortButton : MonoBehaviour
             ? inventory.Data.Sort(mode, bagSearch.MatchesCurrentQuery)
             : inventory.Data.Sort(mode);
         if (changed)
-            RefreshInventory();
+            NotifyInventoryRuntimeStateChanged();
 
         RefreshSortButtonLabel(mode);
     }
@@ -188,13 +188,12 @@ public sealed class InventorySortButton : MonoBehaviour
         if (inventory?.Data == null || !inventory.Data.Organize(priority))
             return;
 
-        RefreshInventory();
+        NotifyInventoryRuntimeStateChanged();
     }
 
-    /// <summary>刷新库存界面并同步容器运行态。</summary>
-    private void RefreshInventory()
+    /// <summary>整理数据已统一刷新界面，此处只同步容器运行态。</summary>
+    private void NotifyInventoryRuntimeStateChanged()
     {
-        inventory.RefreshUI();
         if (inventory.item != null)
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(inventory.item);
     }

@@ -15,7 +15,58 @@ public static partial class GameplayTestSystemProbe
     {
         Register("inventory", "slot_binding_reuse", CaptureInventorySlotBindingReuse);
         Register("inventory", "pointer_query_reuse", CaptureInventoryPointerQueryReuse);
+        Register("inventory", "repack_notifications", CaptureInventoryRepackNotifications);
         Register("building", "snapshot_repacking", CaptureBuildingSnapshotRepacking);
+    }
+
+    private static JObject CaptureInventoryRepackNotifications(JObject args)
+    {
+        ItemData Material(int guid, float amount, float durability) => new Data_GeneralItem
+        {
+            IDName = "material", Guid = guid, MaxDurability = 20f, Durability = durability,
+            Stack = new ItemStack { Amount = amount, Stackable = true, Weight = 2f, Volume = 1f }
+        };
+        ItemData full = Material(1, 2f, 20f), worn = Material(2, 3f, 6f), secondWorn = Material(3, 4f, 9f);
+        ItemData special = Material(4, 1f, 20f), quality = Material(5, 2f, 20f);
+        special.ItemSpecialData = "special";
+        quality.CraftedDurabilityMultiplier = 2f;
+        ItemData tool = new Data_GeneralItem { IDName = "tool", Guid = 6,
+            Stack = new ItemStack { Amount = 1f, Stackable = false, Weight = 1f, Volume = 1f } };
+        var data = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = full }, new(1),
+            new(2) { itemData = worn }, new(3) { itemData = secondWorn }, new(4) { itemData = tool },
+            new(5) { itemData = Material(7, 0f, 20f) }, new(6) { itemData = special }, new(7) { itemData = quality } }, "repack-probe");
+        _ = data.ContentStructureRevision;
+        int structureEvents = 0, massEvents = 0, fullRefreshes = 0, slotRefreshes = 0, beforeEvents = 0, changedEvents = 0;
+        bool finalStateOnly = true, beforeSawOriginal = true;
+        bool FinalState() => !data.IsRepackingItems && full.Stack.Amount == 5f && worn.Stack.Amount == 0f &&
+            data.itemSlots.FindAll(slot => slot.itemData != null).Count == 5 && data.itemSlots[7].itemData == null;
+        data.RuntimeStructureChanged += _ => { structureEvents++; finalStateOnly &= FinalState(); };
+        data.MassChanged += _ => { massEvents++; finalStateOnly &= FinalState(); };
+        data.Event_RefreshUI += index => { if (index < 0) fullRefreshes++; else slotRefreshes++; finalStateOnly &= FinalState(); };
+        data.Event_OnBeforeDataChanged += _ => { beforeEvents++; beforeSawOriginal &= full.Stack.Amount == 2f && worn.Stack.Amount == 3f; };
+        data.Event_OnDataChanged += _ => changedEvents++;
+        string mode = Text(args, "mode", "organize");
+        bool ApplyCurrentRepackMode() => mode == "sort" ? data.Sort(InventorySortMode.Id) :
+            mode == "priority" ? data.Organize(item => ReferenceEquals(item, tool)) : data.Organize();
+        bool changed = ApplyCurrentRepackMode();
+        var packed = new JArray();
+        foreach (ItemSlot slot in data.itemSlots)
+            if (slot.itemData != null) packed.Add(new JObject { ["guid"] = slot.itemData.Guid,
+                ["amount"] = slot.itemData.Stack.Amount, ["durability"] = slot.itemData.Durability });
+        var firstPass = new JObject { ["changed"] = changed, ["structure"] = structureEvents, ["mass"] = massEvents,
+            ["fullRefreshes"] = fullRefreshes, ["slotRefreshes"] = slotRefreshes, ["before"] = beforeEvents,
+            ["after"] = changedEvents, ["finalStateOnly"] = finalStateOnly, ["beforeSawOriginal"] = beforeSawOriginal,
+            ["packed"] = packed, ["weight"] = data.CurrentCarryWeight, ["volume"] = data.CurrentCarryVolume };
+        // 同一整理再次执行无结构、质量或界面通知；已合并实例解除订阅，保留实例继续通知。
+        int beforeRepeated = beforeEvents, afterRepeated = changedEvents;
+        bool repeated = ApplyCurrentRepackMode();
+        firstPass["noop"] = !repeated && structureEvents == 1 && massEvents == 1 && fullRefreshes == 1 && slotRefreshes == 0
+            && beforeEvents == beforeRepeated && changedEvents == afterRepeated;
+        worn.Stack.Amount = 1f;
+        firstPass["removedUnbound"] = massEvents == 1;
+        full.Stack.Amount += 1f;
+        firstPass["retainedBound"] = massEvents == 2;
+        return firstPass;
     }
 
     private sealed class InventorySlotBindingProbe : Inventory

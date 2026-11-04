@@ -34,3 +34,4 @@
 - InstantiateHeldItem 注册前绑定真实 ItemData、Owner/inHand；事件标脏、安全边界同步，同GUID跨槽保留实例。先 ModuleSave 手持再存库存；卸载释放输入/事件/PlayerHand/所属Item。ItemMgr先毁时用 GetInstance 取存活管理器，缺失则销毁自有手持，不调用 Instance。RuntimeInventory 在Player Prefab以[SerializeReference]保存。
 - BindController/UnbindController 只管输入，UnbindRuntimeDataEvents 清数据/UI监听。Inventory.basePanel 仅拥有通用UI_Content，自管面板用 SyncQuickTransferTarget；皮肤由 InventorySlotVisualProfile，Tooltip 经 IItemTooltipInfoProvider 扩展。模态库存锁输入，快捷栏/手部/机器面板不锁。
 - 排序循环ID/分类/数量/重量/体积，分类读InventoryGroup；整理稳定合堆压空。搜索仅改槽Alpha，按定义/Tag别名匹配，排序/整理稳定置顶命中项；虚拟映射可null，拖拽期间不重绑。
+- 整理在临时列表合堆压空，按ID限定候选且复用完整堆叠资格；只提交最终槽引用。批次保留逐槽业务回调，结构和质量通知各合并一次，结束后 `Event_RefreshUI(-1)` 全刷新；`Inventory.RefreshUI` 在批次内跳过重复刷新。超重及关联携带UI监听实际 `MassChanged`，不依赖逐槽业务/UI事件；回归 `inventory/repack_notifications`。

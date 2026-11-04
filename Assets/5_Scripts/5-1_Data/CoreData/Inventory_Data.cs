@@ -151,6 +151,11 @@ public partial class Inventory_Data
 
     private void HandleSlotReferenceChanged(ItemSlot slot)
     {
+        if (IsRepackingItems)
+        {
+            repackStructureChanged = true;
+            return;
+        }
         if (!IsObservedSlotLayoutCurrent())
         {
             SynchronizeRuntimeSlotBindings();
@@ -165,6 +170,11 @@ public partial class Inventory_Data
 
     private void PublishRuntimeStructureChanged()
     {
+        if (IsRepackingItems)
+        {
+            repackStructureChanged = true;
+            return;
+        }
         contentStructureRevision++;
         RebindMassSlots();
         RuntimeStructureChanged?.Invoke(this);
@@ -981,6 +991,13 @@ public partial class Inventory_Data
 
     #region 背包整理与排序
 
+    [NonSerialized, MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private bool isRepackingItems, repackStructureChanged, repackMassChanged;
+
+    [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    // 整理批次只发布最终结构、质量和界面状态。
+    public bool IsRepackingItems => isRepackingItems;
+
     /// <summary>判断当前物品是否已经连续排列在前方，且不存在还能继续合并的堆叠。</summary>
     public bool IsOrganized()
     {
@@ -988,6 +1005,7 @@ public partial class Inventory_Data
             return true;
 
         bool foundEmptySlot = false;
+        var stackCandidates = new Dictionary<string, List<int>>(StringComparer.Ordinal);
         for (int i = 0; i < itemSlots.Count; i++)
         {
             ItemSlot sourceSlot = itemSlots[i];
@@ -1004,13 +1022,17 @@ public partial class Inventory_Data
             if (!CanUseDefaultStacking(source))
                 continue;
 
-            for (int targetIndex = 0; targetIndex < i; targetIndex++)
+            string stackKey = source.IDName ?? string.Empty;
+            if (!stackCandidates.TryGetValue(stackKey, out List<int> candidates))
+                stackCandidates.Add(stackKey, candidates = new List<int>());
+            foreach (int targetIndex in candidates)
             {
                 ItemSlot targetSlot = itemSlots[targetIndex];
                 ItemData target = targetSlot?.itemData;
                 if (CanMergeForDefaultSort(source, target) && GetAvailableStackAmount(targetSlot, target) > 0f)
                     return false;
             }
+            candidates.Add(i);
         }
 
         return true;
@@ -1091,71 +1113,101 @@ public partial class Inventory_Data
             items.AddRange(regularItems);
         }
 
-        for (int i = 0; i < itemSlots.Count; i++)
+        int matchingSlotCount = 0;
+        while (matchingSlotCount < itemSlots.Count && itemSlots[matchingSlotCount] != null && ReferenceEquals(itemSlots[matchingSlotCount].itemData,
+                   matchingSlotCount < items.Count ? items[matchingSlotCount] : null))
+            matchingSlotCount++;
+        if (matchingSlotCount == itemSlots.Count && IsOrganized())
+            return false;
+
+        bool changed = false;
+        isRepackingItems = true;
+        try
         {
-            ItemSlot slot = GetOrCreateItemSlot(i);
-            if (slot == null)
-                continue;
-
-            Event_OnBeforeDataChanged.Invoke(slot);
-            slot.itemData = null;
-        }
-
-        int occupiedSlotCount = 0;
-        for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
-        {
-            ItemData source = items[itemIndex];
-            if (source == null)
-                continue;
-
-            float remainingAmount = source.Stack != null ? source.Stack.Amount : 1f;
-            if (CanUseDefaultStacking(source))
+            for (int i = 0; i < itemSlots.Count; i++)
             {
-                for (int slotIndex = 0; slotIndex < occupiedSlotCount && remainingAmount > 0f; slotIndex++)
+                changed |= itemSlots[i] == null;
+                Event_OnBeforeDataChanged.Invoke(GetOrCreateItemSlot(i));
+            }
+
+            // 在临时列表内压紧物品，只提交最终引用，避免清空再填造成整包反复重建。
+            int occupiedSlotCount = 0;
+            var stackCandidates = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            for (int itemIndex = 0; itemIndex < items.Count; itemIndex++)
+            {
+                ItemData source = items[itemIndex];
+                float remainingAmount = source.Stack != null ? source.Stack.Amount : 1f;
+                string stackKey = source.IDName ?? string.Empty;
+                stackCandidates.TryGetValue(stackKey, out List<int> candidates);
+                if (CanUseDefaultStacking(source) && candidates != null)
                 {
-                    ItemSlot targetSlot = itemSlots[slotIndex];
-                    ItemData target = targetSlot?.itemData;
-                    if (!CanMergeForDefaultSort(source, target))
-                        continue;
+                    for (int candidateIndex = 0; candidateIndex < candidates.Count && remainingAmount > 0f; candidateIndex++)
+                    {
+                        int slotIndex = candidates[candidateIndex];
+                        ItemData target = items[slotIndex];
+                        if (!CanMergeForDefaultSort(source, target))
+                            continue;
 
-                    float availableAmount = GetAvailableStackAmount(targetSlot, target);
-                    if (availableAmount <= 0f)
-                        continue;
+                        float availableAmount = GetAvailableStackAmount(itemSlots[slotIndex], target);
+                        if (availableAmount <= 0f)
+                            continue;
 
-                    float movedAmount = Mathf.Min(remainingAmount, availableAmount);
-                    ItemDurabilityRules.CopyTopWear(source, target);
-                    target.Stack.Amount += movedAmount;
-                    remainingAmount -= movedAmount;
-                    source.Stack.Amount = remainingAmount;
-                    ItemDurabilityRules.AdvanceAfterRemoval(source);
+                        float movedAmount = Mathf.Min(remainingAmount, availableAmount);
+                        ItemDurabilityRules.CopyTopWear(source, target);
+                        target.Stack.Amount += movedAmount;
+                        remainingAmount -= movedAmount;
+                        source.Stack.Amount = remainingAmount;
+                        ItemDurabilityRules.AdvanceAfterRemoval(source);
+                        changed = true;
+                    }
+                }
+
+                if (remainingAmount > 0f)
+                {
+                    if (CanUseDefaultStacking(source))
+                    {
+                        if (candidates == null)
+                            stackCandidates.Add(stackKey, candidates = new List<int>());
+                        candidates.Add(occupiedSlotCount);
+                    }
+                    items[occupiedSlotCount++] = source;
                 }
             }
 
-            if (remainingAmount <= 0f)
-                continue;
-
-            if (occupiedSlotCount >= itemSlots.Count)
+            for (int i = 0; i < itemSlots.Count; i++)
             {
-                Debug.LogError("[Inventory_Data.RepackItems] 整理后槽位不足，已中止以避免丢失物品。");
-                return false;
+                ItemSlot slot = itemSlots[i];
+                ItemData target = i < occupiedSlotCount ? items[i] : null;
+                changed |= !ReferenceEquals(slot.itemData, target);
+                slot.itemData = target;
+                slot.Index = i;
             }
+            if (!changed)
+                return false;
 
-            if (source.Stack != null)
-                source.Stack.Amount = remainingAmount;
-            itemSlots[occupiedSlotCount].itemData = source;
-            occupiedSlotCount++;
+            EnsureSpareSlot();
+            SynchronizeRuntimeSlotBindings();
+            for (int i = 0; i < itemSlots.Count; i++)
+            {
+                ItemSlot slot = itemSlots[i];
+                slot.RefreshUI();
+                NotifyItemDataChanged(slot);
+            }
+            return true;
         }
-
-        for (int i = 0; i < itemSlots.Count; i++)
+        finally
         {
-            ItemSlot slot = itemSlots[i];
-            slot.Index = i;
-            slot.RefreshUI();
-            Event_RefreshUI.Invoke(i);
-            NotifyItemDataChanged(slot);
+            isRepackingItems = false;
+            bool structureChanged = repackStructureChanged;
+            bool massChanged = repackMassChanged;
+            repackStructureChanged = repackMassChanged = false;
+            if (structureChanged)
+                PublishRuntimeStructureChanged();
+            else if (massChanged)
+                NotifyMassChanged();
+            if (changed)
+                Event_RefreshUI.Invoke(-1);
         }
-
-        return true;
     }
 
     private static int CompareItemsForSort(ItemData left, ItemData right, InventorySortMode mode)

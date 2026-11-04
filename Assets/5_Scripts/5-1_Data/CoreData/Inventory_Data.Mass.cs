@@ -14,6 +14,11 @@ public partial class Inventory_Data
 
     public void NotifyMassChanged()
     {
+        if (IsRepackingItems)
+        {
+            repackMassChanged = true;
+            return;
+        }
         unchecked { massRevision++; }
         MassChanged?.Invoke(this);
     }

@@ -324,11 +324,7 @@ public static class MachineInventoryCommands
         bool changed = request.Organize
             ? inventory.Data.Organize(priorityFilter)
             : inventory.Data.Sort(request.Mode, priorityFilter);
-        if (changed)
-        {
-            inventory.RefreshUI();
-            if (publicEntity != null) MachineWorld.StateChanged(publicEntity);
-        }
+        if (changed && publicEntity != null) MachineWorld.StateChanged(publicEntity);
         return true;
     }
     #endregion

@@ -394,9 +394,12 @@ public partial class Inventory_Data
     /// <summary>数据事务提交后先维护容量，再通知订阅者；拾取、拖放、整理共用同一边界。</summary>
     private void NotifyItemDataChanged(ItemSlot slot)
     {
-        EnsureSpareSlot();
-        // 物品变更提交时统一重绑新补齐或追加的槽位。
-        SynchronizeRuntimeSlotBindings();
+        if (!IsRepackingItems)
+        {
+            EnsureSpareSlot();
+            // 物品变更提交时统一重绑新补齐或追加的槽位。
+            SynchronizeRuntimeSlotBindings();
+        }
         Event_OnDataChanged.Invoke(slot);
     }
 

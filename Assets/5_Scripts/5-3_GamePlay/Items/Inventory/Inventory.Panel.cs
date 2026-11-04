@@ -584,6 +584,12 @@ public partial class Inventory
 
     public void RefreshUI(int index)
     {
+        if (Data?.IsRepackingItems == true) return;
+        if (index < 0)
+        {
+            RefreshUI();
+            return;
+        }
         if (_virtualizedSlotGrid != null)
         {
             _virtualizedSlotGrid.RefreshSlot(index);
@@ -605,6 +611,7 @@ public partial class Inventory
 
     public void RefreshUI()
     {
+        if (Data?.IsRepackingItems == true) return;
         if (SyncDynamicSlotUI())
         {
             RefreshCarryCapacityUI();
@@ -666,8 +673,7 @@ public partial class Inventory
         _linkedCarryUsageData.Remove(Data);
         foreach (Inventory_Data data in _linkedCarryUsageData)
         {
-            data.Event_OnDataChanged += HandleLinkedCarryDataChanged;
-            data.Event_RefreshUI += HandleLinkedCarryUIRefresh;
+            data.MassChanged += HandleLinkedCarryDataChanged;
         }
     }
 
@@ -678,18 +684,12 @@ public partial class Inventory
 
         foreach (Inventory_Data data in _linkedCarryUsageData)
         {
-            data.Event_OnDataChanged -= HandleLinkedCarryDataChanged;
-            data.Event_RefreshUI -= HandleLinkedCarryUIRefresh;
+            data.MassChanged -= HandleLinkedCarryDataChanged;
         }
         _linkedCarryUsageData.Clear();
     }
 
-    private void HandleLinkedCarryDataChanged(ItemSlot _)
-    {
-        RefreshCarryCapacityUI();
-    }
-
-    private void HandleLinkedCarryUIRefresh(int _)
+    private void HandleLinkedCarryDataChanged(Inventory_Data _)
     {
         RefreshCarryCapacityUI();
     }

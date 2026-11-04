@@ -444,7 +444,7 @@ public partial class Inventory : IItemSlotHost
             return;
 
         _overweightObservedData = Data;
-        _overweightObservedData.Event_OnDataChanged += HandlePlayerCarryWeightDataChanged;
+        _overweightObservedData.MassChanged += HandlePlayerCarryWeightDataChanged;
 
         // 重载或网络恢复可能直接替换整份库存数据，没有逐槽位变更事件；绑定时做一次状态校准。
         PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
@@ -456,12 +456,12 @@ public partial class Inventory : IItemSlotHost
         if (_overweightObservedData == null)
             return;
 
-        _overweightObservedData.Event_OnDataChanged -= HandlePlayerCarryWeightDataChanged;
+        _overweightObservedData.MassChanged -= HandlePlayerCarryWeightDataChanged;
         _overweightObservedData = null;
     }
 
     /// <summary>背包物品输入、输出或数量变化后，按玩家当前随身总重量更新超重状态。</summary>
-    private void HandlePlayerCarryWeightDataChanged(ItemSlot _)
+    private void HandlePlayerCarryWeightDataChanged(Inventory_Data _)
     {
         if (item is Player player)
             PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
