@@ -20,7 +20,7 @@ namespace FlatWorld.Automation
         private static readonly Func<bool> IsEditorConnection = BindEditorConnectionCheck();
         private static bool enabled;
         private static float thresholdFps, warmupSeconds, durationSeconds;
-        private static bool monitoring, recordingBefore, expectedRecording;
+        private static bool monitoring, recordingBefore, expectedRecording, monitoringProfileEditor;
         private static int lastObservedFrame = -1, targetId;
         private static double readyAt;
         private static Trigger pending;
@@ -254,20 +254,23 @@ namespace FlatWorld.Automation
                     Status = EditorApplication.isPaused ? "编辑器已暂停；继续后重新开始监测" : "等待运行中的游戏";
                     return;
                 }
-                if (!IsEditorConnection() || ProfilerDriver.profileEditor)
+                if (!IsEditorConnection())
                 {
                     StopMonitoring();
-                    Status = "请将 Profiler 目标设为本机 Editor 的 PlayMode（关闭 Profile Editor）";
+                    Status = "请将 Profiler 目标设为本机 Editor";
                     return;
                 }
                 if (ProfilerSnapshotToolbar.IsExporting) return;
-                if (monitoring && targetId != ProfilerDriver.connectedProfiler) StopMonitoring();
+                // 切换目标或 Editor 采样模式后重新缓冲，避免混用旧帧与观察窗口。
+                if (monitoring && (targetId != ProfilerDriver.connectedProfiler || monitoringProfileEditor != ProfilerDriver.profileEditor))
+                    StopMonitoring();
                 if (!monitoring)
                 {
                     recordingBefore = ProfilerDriver.enabled;
                     expectedRecording = true;
                     monitoring = true;
                     targetId = ProfilerDriver.connectedProfiler;
+                    monitoringProfileEditor = ProfilerDriver.profileEditor;
                     ProfilerDriver.enabled = true;
                     lastObservedFrame = ProfilerDriver.lastFrameIndex;
                     readyAt = EditorApplication.timeSinceStartup + warmupSeconds;
@@ -341,7 +344,8 @@ namespace FlatWorld.Automation
                         requiredLowFpsRatio = RequiredLowFpsRatio,
                         windowEndProfilerTimeMs = startMilliseconds + milliseconds,
                         windowStartProfilerTimeMs = startMilliseconds + milliseconds - durationSeconds * 1000d,
-                        targetId = targetId
+                        targetId = targetId,
+                        profileEditor = monitoringProfileEditor
                     };
                     ShowExportProgress("检测到持续低帧率，正在暂停游戏并准备导出性能报告…", 0.1f);
                     EditorApplication.isPaused = true;
@@ -366,8 +370,9 @@ namespace FlatWorld.Automation
                 // 必须在下一次编辑器回调确认暂停，不能把导出本身的卡顿误认为触发帧。
                 if (!EditorApplication.isPlaying || !EditorApplication.isPaused || EditorBusy)
                     throw new InvalidOperationException("编辑器未保持 PlayMode 暂停状态，已取消自动导出。");
-                if (ProfilerDriver.connectedProfiler != trigger.targetId || !IsEditorConnection() || ProfilerDriver.profileEditor)
-                    throw new InvalidOperationException("Profiler 目标已改变，已取消自动导出。");
+                if (ProfilerDriver.connectedProfiler != trigger.targetId || !IsEditorConnection() ||
+                    ProfilerDriver.profileEditor != trigger.profileEditor)
+                    throw new InvalidOperationException("Profiler 目标或采样模式已改变，已取消自动导出。");
                 int frame = trigger.selectedDisplayFrame - 1;
                 if (frame < ProfilerDriver.firstFrameIndex || frame > ProfilerDriver.lastFrameIndex)
                     throw new InvalidOperationException("选中的最慢帧已不在 Profiler 缓冲中，未使用其他帧代替。");
@@ -437,7 +442,7 @@ namespace FlatWorld.Automation
             public double thresholdFps, measuredFps, frameTimeMs, warmupSeconds;
             public double durationSeconds, observedSeconds, lowFpsSeconds, lowFpsRatio, requiredLowFpsRatio;
             public double windowStartProfilerTimeMs, windowEndProfilerTimeMs;
-            public bool editorPausedBeforeExport;
+            public bool editorPausedBeforeExport, profileEditor;
             public string measurement = "FPS = 1000 / Profiler main-thread CPU frameTimeMs; low-FPS time is the CPU frame interval overlap with the trailing durationSeconds window, not a frame count ratio. Not GPU/presentation FPS.";
             public string sceneScope = "World/Console/screenshot describe the paused export-time scene, not a reconstruction of the selected historical frame. Playback resumes after successful export.";
         }

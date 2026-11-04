@@ -355,13 +355,67 @@ internal static class Program
             EditorApplication.isCompiling = false; EditorApplication.isUpdating = true; EditorApplication.Tick(2);
             Check(!EditorApplication.isPaused && !ProfilerDriver.enabled);
         });
-        Test("远程 Player 和 Profile Editor 数据不当成本机游戏 FPS", () =>
+        Test("远程 Player 数据不当成本机 Editor 帧时间", () =>
         {
             ProfilerDriver.localEditor = false; Start(); Frame(0, 100, 1);
             Check(!ProfilerDriver.enabled && !EditorApplication.isPaused);
-            ProfilerDriver.localEditor = true; ProfilerDriver.profileEditor = true; EditorApplication.Tick(2);
-            Check(!ProfilerDriver.enabled && !EditorApplication.isPaused);
         });
+        #region Profile Editor 采样与模式切换回归
+
+        foreach (bool profileEditor in new[] { false, true })
+        {
+            foreach (bool recordingBefore in new[] { false, true })
+            {
+                Test($"Profile Editor={profileEditor}、原录制={recordingBefore} 导出后恢复录制", () =>
+                {
+                    ProfilerDriver.profileEditor = profileEditor;
+                    ProfilerDriver.enabled = recordingBefore;
+                    Start(); Frame(0, 100, 1); EditorApplication.FlushDelay();
+                    Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerDriver.enabled == recordingBefore);
+                    Check(ProfilerDriver.profileEditor == profileEditor);
+                });
+            }
+            Test($"Profile Editor={profileEditor} 可自动导出且保留采样模式", () =>
+            {
+                ProfilerDriver.profileEditor = profileEditor;
+                Start(); Frame(0, 1293, 1.293); EditorApplication.FlushDelay();
+                Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 0);
+                Check(!EditorApplication.isPaused && ProfilerDriver.profileEditor == profileEditor);
+                using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
+                Check(metadata.RootElement.GetProperty("profileEditor").GetBoolean() == profileEditor);
+                Check(metadata.RootElement.GetProperty("frameTimeMs").GetDouble() == 1293);
+                ProfilerAutoExporter.Enabled = false;
+                Check(ProfilerDriver.profileEditor == profileEditor);
+            });
+            Test($"从 Profile Editor={profileEditor} 切换模式后重新缓冲并丢弃旧窗口", () =>
+            {
+                ProfilerDriver.profileEditor = profileEditor;
+                ProfilerAutoExporter.DurationSeconds = 1;
+                Start(1); EditorApplication.Tick(1); Frame(0, 700, 1.7);
+                Check(Near(ProfilerAutoExporter.LowFpsSeconds, 0.7));
+                ProfilerDriver.profileEditor = !profileEditor;
+                Frame(1, 200, 1.9);
+                Check(!EditorApplication.isPaused && ProfilerAutoExporter.ObservedSeconds == 0);
+                Frame(2, 1000, 2.8);
+                Check(!EditorApplication.isPaused && ProfilerAutoExporter.ObservedSeconds == 0);
+                Frame(3, 500, 3.3); Frame(4, 500, 3.8); EditorApplication.FlushDelay();
+                Check(ProfilerSnapshotToolbar.Exports == 1 && ProfilerSnapshotToolbar.SelectedFrame == 3);
+                using var metadata = JsonDocument.Parse(ProfilerSnapshotToolbar.Metadata);
+                Check(metadata.RootElement.GetProperty("profileEditor").GetBoolean() == !profileEditor);
+                Check(Near(metadata.RootElement.GetProperty("lowFpsSeconds").GetDouble(), 1));
+            });
+            Test($"Profile Editor={profileEditor} 触发后切换模式取消待导出报告", () =>
+            {
+                ProfilerDriver.profileEditor = profileEditor;
+                Start(); Frame(0, 100, 1);
+                ProfilerDriver.profileEditor = !profileEditor;
+                EditorApplication.FlushDelay();
+                Check(ProfilerSnapshotToolbar.Exports == 0 && !ProfilerAutoExporter.Enabled && EditorApplication.isPaused);
+                Check(ProfilerDriver.profileEditor == !profileEditor && !EditorUtility.ProgressVisible);
+            });
+        }
+
+        #endregion
         Test("无效时长被忽略，未就绪帧会重试", () =>
         {
             Start(); ProfilerDriver.Frames[0] = double.NaN; ProfilerDriver.Frames[1] = double.PositiveInfinity;
