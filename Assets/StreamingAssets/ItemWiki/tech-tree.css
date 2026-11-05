@@ -70,9 +70,12 @@
 .tt-node-menu[hidden] { display: none; }
 .tt-node-menu button { padding: 10px 14px; color: inherit; background: transparent; border: 0; text-align: left; font-size: 13px; cursor: pointer; }
 .tt-node-menu button:hover, .tt-node-menu button:focus-visible { color: #362c25; background: #f0cd94; outline: none; }
-/* 远景文字已无法辨认，保留时代色边和选择状态供全图导航。 */
-.tt-surface.is-overview .tt-node { box-shadow: none; }
-.tt-surface.is-overview .tt-node > * { display: none; }
+/* 远景只显示大号名称，完整名字提示保留屏幕字号。 */
+.tt-surface.is-overview .tt-node { grid-template-columns: minmax(0, 1fr); padding: 4px; box-shadow: none; text-align: center; }
+.tt-surface.is-overview .tt-node-icon, .tt-surface.is-overview .tt-node-copy > small, .tt-surface.is-overview .tt-node-copy > span { display: none; }
+.tt-surface.is-overview .tt-node-copy > strong { font-size: 40px; line-height: 1.2; }
+.tt-overview-name { position: absolute; left: 12px; bottom: 12px; z-index: 5; max-width: calc(100% - 24px); padding: 8px 12px; color: #ffe0a2; background: #101d2c; border: 1px solid #a9ad89; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; pointer-events: none; }
+.tt-overview-name[hidden], .tt-surface:not(.is-overview) ~ .tt-overview-name { display: none; }
 .tt-node-icon, .tt-detail-icon { display: grid; place-items: center; width: 42px; height: 44px; color: #7590a3; font-size: 24px; background: #101d2c; border: 1px solid #35475b; }
 .tt-node-icon img, .tt-detail-icon img { display: block; max-width: 90%; max-height: 90%; object-fit: contain; image-rendering: pixelated; }
 .tt-node-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }

@@ -139,6 +139,7 @@
                     <div id="ttViewport" class="tt-viewport" tabindex="0" role="region" aria-label="可拖拽与缩放的科技树；方向键平移，加减键缩放，Home 回到起点">
                         <div id="ttSurface" class="tt-surface"><div id="ttRegions" class="tt-regions" aria-hidden="true"></div><svg id="ttEdges" class="tt-edges" aria-hidden="true"></svg><div id="ttNodes" class="tt-nodes"></div></div>
                         <div id="ttEmpty" class="tt-empty" hidden></div>
+                        <div id="ttOverviewName" class="tt-overview-name" hidden></div>
                     </div>
                     <div class="tt-panbar"><span>横向浏览</span><input id="ttPan" type="range" min="0" max="1000" value="0" aria-label="横向移动科技树"><span id="ttPanEra"></span></div>
                     <div class="tt-map-status"><span id="ttVisible" role="status"></span><span>拖拽平移 · 滚轮缩放 · Shift＋滚轮横移</span></div>
@@ -149,10 +150,10 @@
             </div>
             <details class="tt-notes"><summary>分期规则与数据说明 <span id="ttWarningCount"></span></summary><div id="ttNotesBody"></div></details>`;
         const get = id => root.querySelector(`#${id}`);
-        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
+        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "OverviewName", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
         const state = {
             model: null, nodes: new Map(), routes: new Map(), incoming: new Map(), outgoing: new Map(),
-            selected: "", route: "", query: "", globalQuery: "", visible: [], shown: false, layout: null,
+            selected: "", hovered: "", focused: "", route: "", query: "", globalQuery: "", visible: [], shown: false, layout: null,
             zoom: .85, x: 20, y: 12, initialized: false, generation: 0, observer: null, frame: 0,
             drag: null, suppressClickUntil: 0, pointers: new Map(), pinch: null, searchTimer: 0
         };
@@ -273,6 +274,7 @@
             els.Counts.textContent = "数据暂不可用";
             els.Detail.replaceChildren(); els.EraNav.replaceChildren(); els.NotesBody.replaceChildren(); els.Results.hidden = true;
             els.WarningCount.textContent = ""; els.EdgeNote.textContent = ""; els.Visible.textContent = "";
+            els.OverviewName.hidden = true;
         }
         // #endregion
 
@@ -280,6 +282,7 @@
         function render() {
             if (!state.model) return;
             closeNodeContextMenu();
+            state.hovered = state.focused = "";
             state.generation++;
             state.observer?.disconnect();
             state.visible = filterNodes();
@@ -370,6 +373,22 @@
             }
             els.Locate.disabled = !state.selected;
             els.Chain.disabled = !state.selected;
+            updateOverviewItemName();
+        }
+
+        function updateOverviewItemName() {
+            const id = state.hovered || state.focused || state.selected;
+            const name = state.model && state.nodes.get(keyOf(id))?.name || "";
+            els.OverviewName.textContent = name;
+            els.OverviewName.hidden = !name;
+        }
+
+        for (const [enter, leave, key] of [["pointerover", "pointerout", "hovered"], ["focusin", "focusout", "focused"]]) {
+            els.Nodes.addEventListener(enter, event => {
+                state[key] = event.target.closest(".tt-node")?.dataset.id || "";
+                updateOverviewItemName();
+            });
+            els.Nodes.addEventListener(leave, () => { state[key] = ""; updateOverviewItemName(); });
         }
 
         function renderEdges() {
@@ -634,7 +653,7 @@
             state.frame = requestAnimationFrame(() => {
                 state.frame = 0;
                 if (!state.layout || !state.shown) return;
-                // 尺寸先读后写，远景仅保留可点选的物品轮廓，避免全图文字与原图反复栅格化。
+                // 尺寸先读后写，远景仅保留物品名，避免全图详情与原图反复栅格化。
                 const viewportWidth = els.Viewport.clientWidth;
                 const overview = state.zoom < OVERVIEW_ZOOM;
                 const overviewChanged = els.Surface.classList.contains("is-overview") !== overview;
