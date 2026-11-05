@@ -81,7 +81,7 @@ test("周期生产和交互采集保留条件，生物只作为外部来源", ()
 //#endregion
 
 //#region 当前目录的关键材料链
-test("真实目录覆盖九时代和全部具体物品，并保留真实材料链与太空节点", () => {
+test("真实目录覆盖十时代和全部具体物品，并保留真实材料链与太空节点", () => {
     const gameConfig = path.resolve(__dirname, "../../GameConfig");
     const read = filename => JSON.parse(fs.readFileSync(filename, "utf8"));
     const load = (directory, manifestName, collection) => {
@@ -107,9 +107,9 @@ test("真实目录覆盖九时代和全部具体物品，并保留真实材料�
     });
     assert.equal(graph.nodes.length, entries.filter(entry => entry.kind === "item" && !entry.final.abstract).length);
     assert.equal(graph.stats.unclassifiedCount, 0);
-    assert.equal(graph.stats.eraCount, 9);
+    assert.equal(graph.stats.eraCount, 10);
     assert.deepEqual(graph.eras.map(era => [era.id, era.name]), [
-        ["primitive", "原始采集"], ["stone", "石器"], ["bronze", "铜与青铜"], ["iron", "铁器"],
+        ["primitive", "原始采集"], ["stone", "石器"], ["copper", "铜器时代"], ["bronze", "青铜时代"], ["iron", "铁器"],
         ["mechanical", "机械动力时代"], ["electricity", "电力时代"], ["chemical", "化工时代"],
         ["electronics", "电子信息时代"], ["space", "太空时代"]
     ]);
@@ -121,6 +121,8 @@ test("真实目录覆盖九时代和全部具体物品，并保留真实材料�
     }
     for (const era of graph.eras) assert.ok(graph.nodes.some(node => node.eraId === era.id), `${era.name} 不能是空时代`);
     for (const [eraId, ids] of [
+        ["copper", ["Mine_Copper", "Ore_Copper", "Ingot_Copper", "CopperPlate", "CopperAnvil", "CopperHammer", "Axe_Copper"]],
+        ["bronze", ["Ingot_Bronze", "BronzePlate", "Axe_Bronze", "Pickaxe_Bronze", "Shovel_Bronze"]],
         ["mechanical", ["HandCrank", "WaterWheel", "Windmill", "Shaft_Wood", "MechanicalLoom", "MechanicalHammer", "Conveyor_Cloth"]],
         ["electricity", ["Rubber", "Generator_Basic", "Battery_Basic", "Wire_Copper", "Wire_Hidden", "ElectricLightBulb", "InductionStove", "ElectricHeater"]],
         ["chemical", ["FluidPipe", "GasTankBlock_Iron", "GasPump_Mechanical", "LiquidPump_Electric", "GasCompressor_Electric", "PressureProbe_Mechanical", "WaterElectrolyzer", "GasEngine", "Plastic"]],
