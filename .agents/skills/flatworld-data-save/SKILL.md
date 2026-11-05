@@ -35,6 +35,7 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - ItemInstanceDataFactory 冷编译共享配置/默认状态，CloneRuntime 创建独立运行态，不经 MemoryPack 往返；同 GUID 跨槽保留 ItemData 引用，分堆分配新 GUID。活跃库存只 rebase 新冷物品，专用二进制库存由持有模块显式逐槽处理。
 - InventoryInstanceSnapshot 只保存内容/用户状态，恢复保留当前槽标签、UI、输入。不透明 BitData 的配置/进度由模块区分；IItemInstanceStateRestorer 在模块状态恢复后恢复派生属性。
 - 外层 MemoryPack 写入期间的嵌套负载使用 ItemSnapshotSerialization.SerializePayload 独占缓冲；IModuleInstanceStateCodec 同样隔离收发缓冲。FastClonerIgnore 的可写属性会被 setter 写默认值，InstanceSnapshot 计算属性不使用该标记。
+- 模块兜底与含引用的机器状态也须独占嵌套写缓冲；纯非托管机器状态保留既有原始字节格式，兼容性以旧字节及真实嵌套库存回归核验。
 - CraftedDurabilityMultiplier 保存实例品质；恢复按当前基础耐久重算，再保持损伤比例。IRuntimeDataLifecycle.Save 只捕获，Unload 才清事件/资源。
 - 自动保存共用 AutoSaveWorkBudget（0.5ms/16 单元/让两帧）；地形先分帧冻结并记 `chunkDifferenceRevisions`，最终点补冻变化块。玩家时钟、库存、机器、船体、掉落及生态最终成员同帧捕获；之后只封装冻结字节，不再读 live Item。新写入口必须标记差量版本，捕获器不得在后台调用 Item codec/Lua/Unity。新保存意图和最终快照均登记修订，旧任务不能覆盖新提交。
 - `PlayerData_Dict` 用不可变角色 ID，`Name_User` 和存档名称仅显示；名称不参与磁盘路径。改名、复制、删除和时间读取统一用存档服务；UI 一次取得目录元数据，逐行不重扫整个目录。

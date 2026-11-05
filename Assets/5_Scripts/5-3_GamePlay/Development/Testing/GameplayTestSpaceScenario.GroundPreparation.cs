@@ -277,6 +277,12 @@ public sealed partial class GameplayTestSpaceScenario
                     moved.Value<int>("invalidations"), 15d, "正式加装地板没有使旧准备布局失效。");
             yield return WaitForPreparedGroundShip(ship);
             expanded = GroundPreparationLiveSnapshot(ship, ids, baselines, world);
+            using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+            {
+                MachineEntity addedMachine = MachineWorld.GetById(int.Parse(addedId, CultureInfo.InvariantCulture));
+                expanded["addedMachinePresent"] = addedMachine != null &&
+                    addedMachine.ScopeKey == MachineWorld.GetShipScopeKey(ship.ShipId);
+            }
         }
         finally
         {
@@ -287,6 +293,12 @@ public sealed partial class GameplayTestSpaceScenario
                 expanded.Value<int>("invalidations"), 15d, "正式撤销测试地板没有使扩展准备布局失效。");
         yield return WaitForPreparedGroundShip(ship);
         JObject finalReady = GroundPreparationLiveSnapshot(ship, ids, baselines, world);
+        using (MachineWorld.UseScope(MachineWorld.GetShipScopeKey(ship.ShipId)))
+        {
+            MachineEntity addedMachine = MachineWorld.GetById(int.Parse(addedId, CultureInfo.InvariantCulture));
+            finalReady["addedMachineRemoved"] = addedMachine == null ||
+                addedMachine.ScopeKey != MachineWorld.GetShipScopeKey(ship.ShipId);
+        }
         ShipPieceState wounded = FindGroundPreparationFloor(ship);
         double healthBefore = wounded.Health;
         int woundedId = int.Parse(wounded.PieceId, CultureInfo.InvariantCulture);

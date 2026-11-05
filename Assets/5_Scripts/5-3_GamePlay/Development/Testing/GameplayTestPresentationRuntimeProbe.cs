@@ -71,7 +71,15 @@ public static partial class GameplayTestPresentationRuntimeProbe
             ["text"] = new JArray(foodTextColor.r, foodTextColor.g, foodTextColor.b, foodTextColor.a) });
         Nutrition nutrition = food.Data.nutrition;
         Vector3 targets = segments.TargetFractions;
+        var temperatureColors = new JArray();
+        foreach (float warning in new[] { -1f, -.5f, 0f, .5f, 1f })
+        {
+            Color color = TemperatureWarningPresentationRules.ResolveBarColor(warning, FlatWorldUITheme.StatusBarFoodHud);
+            temperatureColors.Add(new JObject { ["warning"] = warning,
+                ["fill"] = new JArray(color.r, color.g, color.b, color.a) });
+        }
         return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars,
+            ["temperatureColors"] = temperatureColors,
             ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text,
             ["legendVisible"] = foodLegend != null && foodLegend.gameObject.activeInHierarchy,
             ["nutrition"] = new JArray(nutrition.Carbohydrates, nutrition.Fat, nutrition.Protein),

@@ -63,6 +63,8 @@ test.runtime("space", "ship_interior_world", {}, function(data)
         "不同船的原生区块与普通 Item 没有归属各自排序域")
     assert(domains.ordinaryItemKeepsLocalLayerAndPose and domains.passengerKeepsLocalLayerAndPose,
         "普通物品或乘员进入外层域时改变了图层或船姿位置")
+    assert(domains.itemSourceReplacementPreservedRenderer and domains.itemSourceReplacementReboundProjection,
+        "普通物品重新借出真实视觉后，船内投影没有释放旧来源并保持图层和船姿")
     for _, entry in ipairs({{name = "管道", sample = domains.pipeVisual},
         {name = "种植机", sample = domains.cultivatorVisual}, {name = "传动轴", sample = domains.shaftVisual}}) do
         local sample = entry.sample

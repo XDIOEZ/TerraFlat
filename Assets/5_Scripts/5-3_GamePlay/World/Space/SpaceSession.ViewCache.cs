@@ -132,12 +132,21 @@ namespace FlatWorld.Spaceflight
             foreach (var pair in pooledShipPresenters)
                 presenters.Add(PresenterViewIdentity(pair.Key, pair.Value.Presenter, true));
             var items = new JArray();
+            using var spriteScope = UnityEngine.Pool.ListPool<SpriteRenderer>.Get(out var projectedSprites);
             foreach (var pair in interiorItemProjections)
             {
-                if (pair.Key == null || pair.Value == null) continue;
-                JObject entry = ViewIdentity(pair.Key.itemData.Guid.ToString(), pair.Value.gameObject, false);
+                if (pair.Key == null || pair.Value.Projection == null) continue;
+                JObject entry = ViewIdentity(pair.Key.itemData.Guid.ToString(), pair.Value.Projection.gameObject, false);
                 entry["worldKey"] = GameplayWorldRegistry.GetItemWorldKey(pair.Key);
                 entry["sourceId"] = pair.Key.gameObject.GetInstanceID();
+                entry["renderSourceAlive"] = pair.Value.Source != null;
+                projectedSprites.Clear();
+                pair.Value.Projection.CollectProjectedSprites(projectedSprites);
+                int visibleSprites = 0;
+                foreach (SpriteRenderer sprite in projectedSprites)
+                    if (sprite != null && sprite.enabled && sprite.gameObject.activeInHierarchy &&
+                        sprite.sprite != null && !sprite.forceRenderingOff) visibleSprites++;
+                entry["visibleSpriteCount"] = visibleSprites;
                 items.Add(entry);
             }
             var chunks = new JArray();

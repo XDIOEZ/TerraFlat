@@ -79,14 +79,23 @@ public partial class MonsterSpawnerManager
     public IEnumerator<int> SpawnCreatureInSteps(string speciesId, Vector3 position, Action<Item> completed,
         SpawnerConfig.SpawnEntry initialization = null, Func<bool> canCommit = null)
     {
-        IEnumerator<int> creation = SpawnCreatureInOwnedWorldSteps(speciesId, position, completed, initialization, canCommit);
+        string ownerKey = _ownedWorld;
+        if (!GameplayWorldRegistry.TryGet(ownerKey, out GameplayWorldRuntime owner)) yield break;
+        var ownerScene = owner.Scene;
+        bool OwnerStillCurrent() => _ownedWorld == ownerKey &&
+            GameplayWorldRegistry.TryGet(ownerKey, out GameplayWorldRuntime current) &&
+            ReferenceEquals(current, owner) && current.Scene == ownerScene;
+        bool CommitStillAllowed() => OwnerStillCurrent() && canCommit?.Invoke() != false && OwnerStillCurrent();
+        IEnumerator<int> creation = SpawnCreatureInOwnedWorldSteps(speciesId, position, completed,
+            initialization, CommitStillAllowed);
         try
         {
             while (true)
             {
+                if (!OwnerStillCurrent()) yield break;
                 int step;
                 // 同步世界作用域不能跨让帧，每一次推进和取消分别进入所属世界。
-                using (EnterOwnedWorld())
+                using (GameplayWorldRegistry.UseWorld(ownerKey))
                 {
                     if (!creation.MoveNext()) yield break;
                     step = creation.Current;
@@ -94,7 +103,12 @@ public partial class MonsterSpawnerManager
                 yield return step;
             }
         }
-        finally { using (EnterOwnedWorld()) creation.Dispose(); }
+        finally
+        {
+            if (OwnerStillCurrent())
+                using (GameplayWorldRegistry.UseWorld(ownerKey)) creation.Dispose();
+            else creation.Dispose();
+        }
     }
 
     private IEnumerator<int> SpawnCreatureInOwnedWorldSteps(string speciesId, Vector3 position, Action<Item> completed,

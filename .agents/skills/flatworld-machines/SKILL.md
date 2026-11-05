@@ -26,6 +26,7 @@ description: "FlatWorld 数据机器的调度、库存加工、机械/电力/流
 - 数据机器当前相对所属世界固定；生成、恢复、放置和迁移经世界物理服务校验 `WorldFixed`，显式 `IndependentDynamic` 会报固定格/网络约束错误，不静默回退。碰撞由 `WorldMachinePhysicsSource2D` 提交通用矩形来源，实际形状、空间合批、镜像与回收共用世界服务的普通实体代理；只有纯阻挡合批，不改逐实体受击/交互，完整 Item 建筑可选择独立可动代理。回归 `world_streaming/world_physics_proxy_modes` 与 `configured_entity_proxies`。
 - 世界时间由调用方传入；网络恢复完才 Tick、快照后才休眠。船与后台地表按自身世界继续模拟，不借当前场景的玩家、环境或掉落物。
 - 主世界机器按 20 Hz 收累计游戏秒，船及后台世界按独立作用域累计；`MachineWorld.Tick` 单次结算，不再内层最多 8 次追赶，机械配置 `TickSeconds=0.05`。
+- 气液设备每次真实机器结算消费本步流量和引擎预约；不另设较慢 `TickInterval` 丢弃中间预算。回归同时核验变步长、半步累计及燃料/气体/液体守恒。
 - `MachineWorld.SaveSnapshots` 按节点复用冻结载荷，`StateChanged` 同时使保存缓存失效；领域逻辑默认最终捕获，确认持久状态完全受跟踪后才声明 `SupportsUnchangedSaveSnapshotReuse`。专用库存布局也参与指纹，详细契约见 [数据与存档](../flatworld-data-save/SKILL.md)。
 - 迁移以 TransferScopeNodes/TransferShipNodes 整批交接真实节点、加工器和各设备本地库存；不借拆装模拟迁移。
 - 加工资格归设备，转化与温度归材料；RecipeProcessor 复用 CraftingService 原子事务。燃料炉只供热，不持有配方或加工进度。

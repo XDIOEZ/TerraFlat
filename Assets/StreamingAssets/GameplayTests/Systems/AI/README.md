@@ -1,5 +1,7 @@
 # AI 生物测试
 
+2026-11-05：`creature-creation.lua` 增加三实体 ECS 模拟快照核对，独立比较 EntityManager 与表现快照的完整身份、定义、外部标记和位置；不要求查询顺序。本次新增断言尚待 Unity 回归。
+
 2026-10-30 动物行为树：`behavior-tree.lua` 调用正式树执行器，检查优先级抢占、动作进入退出、中断、顺序节点续跑与条件失效、后台服务、参数化嵌套子树、实例隔离、非法引用及模块继承替换；`ai/animal_tree_catalog` 从正式继承目录装配全部 13 种生物的模块并加载树，检查唯一 AI 身份、失效脚本、共享子树与特定能力；`ai/aiecs_tree_parameters` 检查狼、雪豹、熊、鸡和野猪的 ECS 参数映射与显式覆盖。`python Tools/Tests/AnimalBehaviorTree/verify.py` 使用项目 XLua 执行 9 组规则，包含正式继承、ECS 参数、雪豹伤害和出血，并编译 13 份最终动物树与正式共享子树；节点工厂使用替身，不加载动物外壳。鱼觅食、目标记忆和熊领地能力分别有离线入口 `AiApproachRanges`、`AiTargetMemory`、`BearProvocation`；树目录装配及狼熊实际节点仍需 Unity 编辑态运行，飞行捕食、蜂巢抢占、水域导航、实际战斗和联机现场仍需验收。
 
 2026-10-29 出生回归先执行分帧创建，再执行同步创建，避免同一用例预热对象池；新增准备期间未注册、交付 Scene/PhysicsScene 有效且匹配世界的断言。跨星球卸载后的再次创建纳入维度 `generation-presets.lua`。首次创建断言已单独通过；后续因系统内存不足中断，最终静态修复未复测。

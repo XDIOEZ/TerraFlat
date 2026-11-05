@@ -223,6 +223,9 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             finally { ItemMgr.RuntimeItemInstantiated -= observe; }
             result["invalidCommitRejected"] = !invalidDelivered;
             result["invalidCommitNotPublished"] = published == 0;
+            var replacedWorld = new JObject();
+            yield return ExerciseIncrementalCreatureWorldReplacement(manager, player, position, replacedWorld);
+            result["replacedWorld"] = replacedWorld;
             GameObject fishPrefab = GameRes.ExistingInstance?.GetPrefab("SmallFish", logError: false);
             result["fishColdShellWithoutBody"] = fishPrefab != null && fishPrefab.GetComponent<Rigidbody2D>() == null;
             int fishGuid = 0;
@@ -259,6 +262,121 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         }
         result["cleanupComplete"] = guid != 0 && ItemMgr.Instance.GetItemByGuid(guid) == null;
         completed(result);
+    }
+
+    // 短暂替换隔离世界登记，验证跨帧旧候选不会交给同键的新场景。
+    private static IEnumerator ExerciseIncrementalCreatureWorldReplacement(MonsterSpawnerManager manager,
+        Player player, Vector3 position, JObject result)
+    {
+        string key = GameplayWorldRegistry.GetItemWorldKey(player);
+        if (!GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime original))
+            throw new InvalidOperationException("换代回归缺少当前世界。");
+        if (!GameplayWorldRegistry.TryGetPhysics(key, out WorldPhysicsService2D originalPhysics))
+            throw new InvalidOperationException("换代回归缺少当前世界物理服务。");
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic;
+        var worlds = (Dictionary<string, GameplayWorldRuntime>)typeof(GameplayWorldRegistry)
+            .GetField("worlds", flags).GetValue(null);
+        var bindings = (FlatWorld.WorldModel.WorldSceneBindingIndex)typeof(GameplayWorldRegistry)
+            .GetField("worldSceneBindings", flags).GetValue(null);
+        int initialCount = CountRegisteredChickensAt(position);
+        int rollbackBefore = manager.RolledBackCreatureCreations;
+        int published = 0;
+        bool delivered = false;
+        Item deliveredCreature = null;
+        ItemData deliveredData = null;
+        uint deliveredGeneration = 0;
+        Action<Item> observe = item =>
+        {
+            if (item.itemData?.IDName == "Chicken" && (item.transform.position - position).sqrMagnitude < .0001f)
+                published++;
+        };
+        ItemMgr.RuntimeItemInstantiated += observe;
+        Scene replacementScene = default;
+        Item candidate = null;
+        IEnumerator<int> creation = null;
+        try
+        {
+            creation = manager.SpawnCreatureInSteps("Chicken", position, item =>
+            {
+                delivered = true;
+                deliveredCreature = item;
+                deliveredData = item.itemData;
+                deliveredGeneration = item.RuntimeGeneration;
+            });
+            double deadline = Time.realtimeSinceStartupAsDouble + 30d;
+            while (creation.MoveNext())
+            {
+                if (creation.Current == 1)
+                {
+                    if (candidate == null) candidate = FindUnregisteredCreatureCandidate(original.Scene, position);
+                    if (candidate != null && HasLoadedCreatureModule(candidate)) break;
+                }
+                if (Time.realtimeSinceStartupAsDouble >= deadline)
+                    throw new TimeoutException("世界换代前未取得分帧出生候选。");
+                yield return null;
+            }
+            if (candidate == null || !HasLoadedCreatureModule(candidate))
+                throw new InvalidOperationException("世界换代前没有部分加载的候选。");
+            int candidateGuid = candidate.itemData.Guid;
+            replacementScene = WorldPhysicsScene2D.CreateIsolatedScene("GameplayTest_CreatureReplacement_" + Guid.NewGuid().ToString("N"));
+            var replacement = new GameplayWorldRuntime { WorldKey = key, Scene = replacementScene };
+            bindings.BindWorldToScene(replacementScene.handle, key, replacement);
+            worlds[key] = replacement;
+            try
+            {
+                result["sameKeyDifferentScene"] = replacement.WorldKey == original.WorldKey && replacement.Scene != original.Scene &&
+                    GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime current) && ReferenceEquals(current, replacement);
+                result["stoppedAfterReplacement"] = !creation.MoveNext();
+                result["candidateReleased"] = candidate.DestructionHandled &&
+                    !ItemMgr.Instance.IsRuntimeItemRegistered(candidate) &&
+                    !WorldPhysicsService2D.TryGetRegisteredItemOwner(candidate, out _);
+            }
+            finally
+            {
+                worlds[key] = original;
+                bindings.UnbindWorldFromScene(replacementScene.handle, key, replacement);
+            }
+            creation.Dispose();
+            creation = null;
+            result["noDeliveryOrPublish"] = !delivered && published == 0 &&
+                ItemMgr.Instance.GetItemByGuid(candidateGuid) == null && CountRegisteredChickensAt(position) == initialCount;
+            result["rolledBackOnce"] = manager.RolledBackCreatureCreations - rollbackBefore == 1;
+            result["originalWorldRestored"] = GameplayWorldRegistry.TryGet(key, out GameplayWorldRuntime restored) &&
+                ReferenceEquals(restored, original);
+            result["originalPhysicsRetained"] = GameplayWorldRegistry.TryGetPhysics(key, out WorldPhysicsService2D retainedPhysics) &&
+                ReferenceEquals(retainedPhysics, originalPhysics);
+            yield return null;
+            result["candidateDestroyed"] = candidate == null;
+        }
+        finally
+        {
+            creation?.Dispose();
+            ItemMgr.RuntimeItemInstantiated -= observe;
+            if (deliveredCreature != null && deliveredCreature.RuntimeGeneration == deliveredGeneration &&
+                ReferenceEquals(deliveredCreature.itemData, deliveredData) &&
+                ItemMgr.Instance.IsRuntimeItemRegistered(deliveredCreature))
+                ItemMgr.Instance.DespawnItem(deliveredCreature, saveData: false);
+            if (replacementScene.IsValid() && replacementScene.isLoaded)
+                SceneManager.UnloadSceneAsync(replacementScene);
+        }
+    }
+
+    private static Item FindUnregisteredCreatureCandidate(Scene scene, Vector3 position)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
+            foreach (Item item in root.GetComponentsInChildren<Item>(true))
+                if (item != null && item.itemData?.IDName == "Chicken" && !item.IsInPool &&
+                    !item.DestructionHandled && !ItemMgr.Instance.IsRuntimeItemRegistered(item) &&
+                    (item.transform.position - position).sqrMagnitude < .0001f) return item;
+        return null;
+    }
+
+    private static bool HasLoadedCreatureModule(Item candidate)
+    {
+        if (candidate?.itemMods?.Mods == null) return false;
+        foreach (Module module in candidate.itemMods.Mods.Values)
+            if (module != null && module.IsRuntimeLoaded) return true;
+        return false;
     }
 
     // 只统计测试落点的已注册鸡，验证分帧让帧期间候选尚未进入正式索引。

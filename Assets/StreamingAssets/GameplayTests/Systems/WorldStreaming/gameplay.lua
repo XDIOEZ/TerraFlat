@@ -1,4 +1,11 @@
 -- 只读正式 ChunkMgr 的窗口和脚下区块，不刷新窗口或额外申请租约。
+test.system("world_streaming", "incremental_window_updates", {}, function(data)
+    assert(not data.copiedFullRebuild and data.copiedMoveVisits == 40 and data.copiedStationaryVisits == 0,
+        "等值新快照破坏窗口增量或重复请求产生额外访问")
+    assert(data.numericConfigurationRebuilt and data.configurationRebuilt and data.seedRebuilt and data.dimensionRebuilt,
+        "真实生成配置、种子或维度改变后没有重建窗口")
+end, "等值快照保持增量，真实配置变化失效")
+
 test.runtime("world_streaming", "live_window", {}, function(data)
     assert(data.scope == "live-isolated-world" and data.runtimeActive and data.world ~= nil and data.epoch > 0, "正式纯世界运行时未建立")
     assert(data.windowReady and data.retainedChunks > 0, "可见窗口没有完成表现绑定")

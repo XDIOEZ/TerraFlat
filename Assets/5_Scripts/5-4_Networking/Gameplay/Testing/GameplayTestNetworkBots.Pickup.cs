@@ -46,6 +46,16 @@ namespace FlatWorld.Networking.Gameplay
                     ["initial"] = PickupItemSample(itemGuid)
                 };
 
+                ownedItem.Owner = a.CorePlayer;
+                ownedItem.SetInHand(true);
+                NetworkItemPickupResponse heldDenied = default;
+                yield return RequestPickup(world.Transport, 21, itemGuid, value => heldDenied = value);
+                result["heldDenied"] = PickupGrantSample(heldDenied, itemGuid);
+                ownedItem.SetInHand(false);
+                NetworkItemPickupResponse attachedDenied = default;
+                yield return RequestPickup(world.Transport, 21, itemGuid, value => attachedDenied = value);
+                result["attachedDenied"] = PickupGrantSample(attachedDenied, itemGuid);
+                ownedItem.Owner = null;
                 NetworkItemPickupResponse grant = default;
                 yield return RequestPickup(world.Transport, 21, itemGuid, value => grant = value);
                 result["aGrant"] = PickupGrantSample(grant, itemGuid);

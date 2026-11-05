@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using FlatWorld.Spaceflight;
 using FlatWorld.Networking;
 using Sirenix.OdinInspector;
@@ -17,6 +18,9 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         public Scene Scene;
         public Transform Root;
         public bool Wanted, Unloading, PresentationReady;
+        public bool CreatedScene;
+        public GameplayWorldRuntime PreviousContext;
+        public WorldPhysicsService2D PreviousPhysics;
         public Coroutine Loading;
         public readonly List<Planet> Planets = new();
         public SpaceSessionState SessionState;
@@ -112,23 +116,51 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         }
         UniverseSimulation data = session.GetUniverse(sector);
         string key = SpaceSectorCoordinates.SceneKey(sector);
+        GameplayWorldRuntime previousContext = GameplayWorldRegistry.GetExistingSpaceContext(key);
+        GameplayWorldRegistry.TryGetPhysics(key, out var previousPhysics);
         Scene scene = SceneManager.GetSceneByName(key);
-        if (!scene.IsValid() || !scene.isLoaded) scene = WorldPhysicsScene2D.CreateIsolatedScene(key);
-        if (TryRestoreRetainedSector(session, sector, scene, out SectorView restored))
+        bool createdScene = !scene.IsValid() || !scene.isLoaded;
+        if (createdScene) scene = WorldPhysicsScene2D.CreateIsolatedScene(key);
+        GameObject root = null;
+        SectorView view = null;
+        bool registered = false;
+        try
         {
-            sectors.Add(sector, restored);
-            return restored;
+            if (TryRestoreRetainedSector(session, sector, scene, out view))
+            {
+                root = view.Root.gameObject;
+                view.CreatedScene = createdScene;
+                view.PreviousContext = previousContext;
+                view.PreviousPhysics = previousPhysics;
+                sectors.Add(sector, view);
+                registered = true;
+                return view;
+            }
+            root = new GameObject("星区资源_" + key);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = presentation,
+                CreatedScene = createdScene, PreviousContext = previousContext, PreviousPhysics = previousPhysics,
+                SessionState = session.State, Data = data.State, ResourceOwner = GameRes.ExistingInstance,
+                ResourceRevision = GameRes.ExistingInstance?.ItemDefinitionRevision ?? 0 };
+            sectors.Add(sector, view);
+            registered = true;
+            SectorPresentationCreatedCount++;
+            if (presentation) view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
+            if (view.PresentationReady) view.Loading = null;
+            return view;
         }
-        GameObject root = new("星区资源_" + key);
-        SceneManager.MoveGameObjectToScene(root, scene);
-        var view = new SectorView { Sector = sector, Scene = scene, Root = root.transform, Wanted = presentation,
-            SessionState = session.State, Data = data.State, ResourceOwner = GameRes.ExistingInstance,
-            ResourceRevision = GameRes.ExistingInstance?.ItemDefinitionRevision ?? 0 };
-        sectors.Add(sector, view);
-        SectorPresentationCreatedCount++;
-        if (presentation) view.Loading = StartCoroutine(LoadSectorPresentation(session, view, data.State));
-        if (view.PresentationReady) view.Loading = null;
-        return view;
+        catch
+        {
+            if (!registered)
+            {
+                if (view != null)
+                    foreach (Planet planet in view.Planets)
+                        if (planet != null) { RuntimePlanets.Remove(planet); runtimePlanetDict.Remove(planet.planetData.BodyId); }
+                if (root != null) Destroy(root);
+                if (createdScene && scene.IsValid() && scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+            }
+            throw;
+        }
     }
 
     #region 远端权威角色的星区资源租约
@@ -212,9 +244,12 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         // 激活通知前同步自由玩家及子物品，船内玩家仍保留自己的局部世界。
         if (player != null && !session.IsPlayerInShipInteriorWorld(player))
         {
-            MovePresentationToSector(player.gameObject, view.Sector);
-            if (GameplayWorldRegistry.GetItemWorldKey(player) != view.Scene.name)
+            bool transferred = GameplayWorldRegistry.GetItemWorldKey(player) != view.Scene.name;
+            if (transferred)
                 GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, view.Scene.name);
+            MovePresentationToSector(player.gameObject, view.Sector);
+            if (transferred && player.gameObject.scene == view.Scene && player.transform.parent != view.Root)
+                player.transform.SetParent(view.Root, true);
         }
         if (SceneManager.GetActiveScene() != view.Scene) SceneManager.SetActiveScene(view.Scene);
     }
@@ -261,8 +296,13 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
             if (view.Root != null) Destroy(view.Root.gameObject);
         }
         // 原生世界卸载前先释放本星区持有的物理代理。
-        GameplayWorldRegistry.ReleaseSpaceContext(SpaceSectorCoordinates.SceneKey(view.Sector));
-        if (view.Scene.IsValid() && view.Scene.isLoaded)
+        string key = SpaceSectorCoordinates.SceneKey(view.Sector);
+        GameplayWorldRuntime context = GameplayWorldRegistry.GetExistingSpaceContext(key);
+        if (ReferenceEquals(view.PreviousContext, context) || context?.Scene != view.Scene) context = null;
+        GameplayWorldRegistry.TryGetPhysics(key, out var physics);
+        if (ReferenceEquals(view.PreviousPhysics, physics) || physics?.PrimarySpace.Scene != view.Scene) physics = null;
+        GameplayWorldRegistry.ReleaseNewSpaceOwnership(key, view.Scene, context, physics);
+        if (view.CreatedScene && view.Scene.IsValid() && view.Scene.isLoaded)
         {
             AsyncOperation unload = SceneManager.UnloadSceneAsync(view.Scene);
             if (unload != null) yield return unload;
@@ -291,11 +331,46 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     public IEnumerator ActivateLocalSector(SpaceSectorId sector)
     {
         SpaceSession session = SpaceSession.EnsureLoaded();
-        SectorView view = EnsureSectorScene(session, sector);
-        while (view.Unloading) { yield return null; view = EnsureSectorScene(session, sector); }
-        SynchronizeLocalPlayerOwnershipAndActivateSectorScene(session, view);
-        EnsureBackground(); UpdateVisibility();
-        presentationLoaded = true;
+        Scene previousScene = SceneManager.GetActiveScene();
+        SectorView view = null, newView = null;
+        Exception failure = null;
+        while (true)
+        {
+            sectors.TryGetValue(sector, out SectorView existing);
+            try
+            {
+                view = EnsureSectorScene(session, sector);
+                newView = ReferenceEquals(existing, view) ? null : view;
+            }
+            catch (Exception error)
+            {
+                failure = error;
+                if (sectors.TryGetValue(sector, out SectorView added) && !ReferenceEquals(existing, added)) newView = added;
+            }
+            if (failure != null || !view.Unloading) break;
+            yield return null;
+        }
+        if (failure == null)
+        {
+            try
+            {
+                SynchronizeLocalPlayerOwnershipAndActivateSectorScene(session, view);
+                EnsureBackground(); UpdateVisibility();
+                presentationLoaded = true;
+            }
+            catch (Exception error) { failure = error; }
+        }
+        if (failure == null) yield break;
+        if (newView != null && sectors.TryGetValue(sector, out SectorView current) && ReferenceEquals(current, newView))
+        {
+            if (SceneManager.GetActiveScene() == newView.Scene && previousScene.IsValid() && previousScene.isLoaded)
+                SceneManager.SetActiveScene(previousScene);
+            Exception cleanupFailure = null;
+            yield return GameManager.RunWorldTransitionSteps(
+                ReleaseSector(newView, false), error => cleanupFailure = error);
+            if (cleanupFailure != null) throw new AggregateException("星区激活及新租约清理均失败。", failure, cleanupFailure);
+        }
+        ExceptionDispatchInfo.Capture(failure).Throw();
     }
     public IEnumerator LoadPresentation()
     {

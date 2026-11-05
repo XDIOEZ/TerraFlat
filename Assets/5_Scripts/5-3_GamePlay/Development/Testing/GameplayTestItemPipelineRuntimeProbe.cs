@@ -467,6 +467,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         public readonly JArray Windows = new();
         public readonly JArray Contacts = new();
         public bool HostileTarget;
+        public int ConfiguredTicksPerSecond { get; private set; }
         public JObject OriginalSettings => new()
         {
             ["timeScale"] = originalTimeScale, ["targetFrameRate"] = originalTargetFrameRate,
@@ -482,6 +483,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         public void Prepare(Player player, Mod_Damage source, bool stressFixedStep, float timeScale)
         {
             damage = source;
+            ConfiguredTicksPerSecond = GameplayTickRateUserSettings.EffectiveTicksPerSecond;
             if (!stressFixedStep)
             {
                 GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
@@ -489,7 +491,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 return;
             }
             QualitySettings.vSyncCount = 0;
-            Application.targetFrameRate = 30;
+            Application.targetFrameRate = Mathf.Max(1, ConfiguredTicksPerSecond / 2);
             Time.timeScale = timeScale;
             target = ItemMgr.Instance.InstantiateItem("Chicken", player.transform.position);
             target.Load();
@@ -648,11 +650,43 @@ public static class GameplayTestItemPipelineRuntimeProbe
             fixedStep.Prepare(player, damage, args.Value<bool?>("verifyFixedStep") == true,
                 args.Value<float?>("timeScale") ?? 1f);
 
-            result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
             ulong firstActionTick = GameplayFixedStepSimulation.TickIndex;
             stage = "first_attack";
-            bool requested = hotbarScope.IsCurrent(weapon) && animation is IWeaponActionAnimation action && action.TryRequestAction();
-            result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
+            var admin = player.GetComponentInChildren<Mod_PlayerAdminController>(true);
+            Data_Player playerData = player.Data;
+            JObject ObserveOrdinaryAction()
+            {
+                string originalName = playerData?.Name_User;
+                bool isolateAdministrator = admin != null && admin.IsAdministrator;
+                var payments = new JArray();
+                var sample = new JObject { ["administratorBefore"] = isolateAdministrator };
+                void ObservePayment(StaminaConsumptionRecord record) => payments.Add(new JObject
+                {
+                    ["source"] = record.SourceId, ["requested"] = record.RequestedBaseAmount,
+                    ["consumed"] = record.ConsumedAmount, ["remaining"] = record.RemainingStamina
+                });
+                if (stamina != null) stamina.StaminaConsumed += ObservePayment;
+                try
+                {
+                    // 管理员无限体力只在同步攻击请求期间隔离，随后立即恢复玩家身份。
+                    if (isolateAdministrator) playerData.Name_User = originalName + "_combat_probe";
+                    sample["administratorDuring"] = admin != null && admin.IsAdministrator;
+                    sample["staminaBefore"] = stamina != null ? stamina.CurrentValue : 0f;
+                    sample["requested"] = animation is IWeaponActionAnimation action && action.TryRequestAction();
+                    sample["staminaAfter"] = stamina != null ? stamina.CurrentValue : 0f;
+                }
+                finally
+                {
+                    if (isolateAdministrator) playerData.Name_User = originalName;
+                    if (stamina != null) stamina.StaminaConsumed -= ObservePayment;
+                }
+                sample["administratorAfter"] = admin != null && admin.IsAdministrator;
+                sample["payments"] = payments;
+                return sample;
+            }
+            JObject firstAction = hotbarScope.IsCurrent(weapon) ? ObserveOrdinaryAction() : new JObject();
+            bool requested = firstAction.Value<bool?>("requested") == true;
+            result["firstAction"] = firstAction;
             bool sawAttackState = false, returnedToIdle = false;
             int sampledFrames = 0;
             double simulationStarted = GameplayFixedStepSimulation.CurrentTime;
@@ -692,6 +726,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 {
                     ["timeScale"] = Time.timeScale, ["targetFrameRate"] = Application.targetFrameRate,
                     ["vSyncCount"] = QualitySettings.vSyncCount, ["hostileTarget"] = fixedStep.HostileTarget,
+                    ["configuredTicksPerSecond"] = fixedStep.ConfiguredTicksPerSecond,
                     ["windows"] = fixedStep.Windows, ["contacts"] = fixedStep.Contacts,
                     ["originalSettings"] = fixedStep.OriginalSettings
                 };
@@ -700,9 +735,13 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["beforeDisableActionRequested"] = false;
             result["inactiveActionRejected"] = false;
             result["disabledWindowClosed"] = false;
-            result["disabledHitStopCleared"] = false;
+            result["disabledHitStopped"] = JValue.CreateNull();
+            result["disabledAnimatorSpeed"] = JValue.CreateNull();
+            result["disabledSimulationOwned"] = JValue.CreateNull();
             result["reactivatedIdle"] = false;
             result["reactivatedWindowClosed"] = false;
+            result["missingControllerAction"] = JValue.CreateNull();
+            result["missingControllerWindowClosed"] = JValue.CreateNull();
             result["reactivatedActionRequested"] = false;
             result["reactivatedAttackState"] = false;
             result["inactiveAnimatorWarning"] = false;
@@ -727,8 +766,9 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     {
                         result["inactiveActionRejected"] = !animation.TryRequestAction();
                         result["disabledWindowClosed"] = damage != null && !damage.IsDamageEnabled();
-                        result["disabledHitStopCleared"] = !animation.IsHitStopped &&
-                                                           Mathf.Approximately(weaponAnimator.speed, animation.AttackSpeedMultiplier);
+                        result["disabledHitStopped"] = animation.IsHitStopped;
+                        result["disabledAnimatorSpeed"] = weaponAnimator.speed;
+                        result["disabledSimulationOwned"] = animation.UsesSimulationAnimationClock;
                     }
                     if (hotbarScope.IsCurrent(weapon))
                     {
@@ -745,6 +785,18 @@ public static class GameplayTestItemPipelineRuntimeProbe
                         result["reactivatedIdle"] = weaponAnimator.isActiveAndEnabled &&
                                                     weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName("Idle_0");
                         result["reactivatedWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                        RuntimeAnimatorController originalController = weaponAnimator.runtimeAnimatorController;
+                        try
+                        {
+                            // 通过公开动画资源入口验证失效请求不会扣体力或残留伤害窗。
+                            weaponAnimator.runtimeAnimatorController = null;
+                            result["missingControllerAction"] = ObserveOrdinaryAction();
+                            result["missingControllerWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                        }
+                        finally
+                        {
+                            if (weaponAnimator != null) weaponAnimator.runtimeAnimatorController = originalController;
+                        }
                         result["reactivatedActionRequested"] = animation.TryRequestAction();
                         result["reactivatedAttackState"] = weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName(attackStateName);
                     }

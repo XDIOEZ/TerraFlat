@@ -27,7 +27,8 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     private long portRegistryGeneration = -1;
     private readonly List<(string Chamber, FluidInventoryState State, long Revision)> tickContents = new();
     public ILiquidTransferPort LiquidResiduePort { get { EnsureContainerPorts(); return liquidResiduePort; } }
-    public override float TickInterval => .1f;
+    // 流量预算和引擎预约每个世界计算步重建，设备须在同一步结算。
+    public override float TickInterval => 0f;
     public override float Progress01 => (float)Math.Clamp(State.PumpProgress, 0, 1);
     public override string Status => Describe();
     public override string ActionLabel => SolidFuelBurner != null ? SolidFuelBurner.IsIgnited ? "熄火" : "点火" :

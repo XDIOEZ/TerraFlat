@@ -21,6 +21,7 @@ description: "FlatWorld 库存、槽位交互、制作事务、装备、食物�
 
 - 本体初始库存由玩家 JSON 模板配置；旧测试库存资产已清理，`InventoryInit` Addressables 组允许为空，仍保留内容包模板入口。
 - 所有扣量、转移、制作经正式事务；预检与提交共用容量/接收策略，多产物全部可交付才扣料。UI 槽只绑定真实库存，不拥有数据。
+- 自动拾取与服务端预约拒绝手持或附属物；飞行丢弃沿原延迟队列落地后重试。资格拒绝要撤销旧尝试缓存，不能改 Stack 配置或让测试装备绕过正式拾取链。
 - `FoodConsumptionService.ConsumptionCompleted` 只在完整食用的扣量或替换成功后发布，`FoodConsumeResult` 携带操作前冻结的物品 ID 与腐败计时；容器通用饮水走独立路径。
 - `Inventory` 按 Panel/Interaction/ContentInjection 分文件，固定与虚拟槽共用输入绑定；`InventoryDragTransaction` 持有来源事务，`InventorySlotPointerQuery` 每次指针回调只扫描一次并复用命中缓冲。回归 `inventory/slot_binding_reuse、pointer_query_reuse`，拖拽现场仍走 Inventory gameplay。
 - 运行时 `Inventory` 实现 `IItemSlotHost` 并提供锚点与槽内容；环境层按物品定义发布影响，库存只负责刷新槽位宿主，不判断物品来源类型。

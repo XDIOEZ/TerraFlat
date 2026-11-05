@@ -6,6 +6,7 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
         ["ambient.foliage.rustle.loop"] = true,
         ["ambient.river.flow.loop"] = true
     }
+    local recordingSeconds = { ["ambient.foliage.rustle.loop"] = 20, ["ambient.river.flow.loop"] = 30 }
     for _, cue in ipairs(nature.cues) do
         assert(natureCueIds[cue.id] and cue.accepted and cue.sourceFound and cue.sourcePlaying and cue.stopped,
             "自然环境循环没有真实播放、采样或立即释放：" .. tostring(cue.id))
@@ -17,8 +18,9 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
             cue.sourceMinDistance == 2 and cue.sourceMaxDistance == 32,
             cue.id .. " 实际 AudioSource 没有使用空间线性衰减与正式距离")
         assert(cue.clipCount == 1 and cue.clipChannels == 1 and cue.clipFrequency == 48000 and
-            cue.clipSamples > 0 and math.abs(cue.clipDuration - 20) < 0.05,
-            cue.id .. " 没有单条 20 秒 48kHz 单声道正式录音")
+            cue.clipSamples == recordingSeconds[cue.id] * 48000 and
+            math.abs(cue.clipDuration - recordingSeconds[cue.id]) < 0.05,
+            cue.id .. " 没有符合正式时长契约的单条48kHz单声道录音")
         assert(cue.readable and cue.rms > 0 and cue.minimumWindowRms >= cue.rms * 0.03,
             cue.id .. " 循环录音出现人为静音空档")
     end

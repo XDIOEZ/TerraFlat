@@ -16,6 +16,12 @@ test.runtime("networking", "bots_pickup", {}, function(data)
     assert(data.itemGuid ~= 0 and initial.exists and initial.loaded and initial.pickable and initial.amount > 0,
         "拾取前提没有建立真实可拾取的自有掉落物")
     local first = data.aGrant
+    for _, name in ipairs({"heldDenied", "attachedDenied"}) do
+        local rejected = data[name]
+        assert(rejected.responseReceived and not rejected.granted and rejected.exists
+            and rejected.pickable and rejected.amount == initial.amount,
+            "手持或附属物被授予世界拾取租约，或拒绝后改变了来源：" .. name)
+    end
     assert(first.responseReceived and first.granted and first.token > 0,
         "A 没有收到正式服务端授予的拾取租约")
     assert(first.exists and not first.pickable and first.amount == initial.amount,

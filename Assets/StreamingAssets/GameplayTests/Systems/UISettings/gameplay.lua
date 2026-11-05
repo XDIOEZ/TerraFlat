@@ -36,6 +36,15 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
     end
     assert(data.panelVisible and #data.bars == 5 and data.sliderCount == 4, "生存状态条未合并为五项，或仍有旧营养滑条")
     assert(data.legendVisible == false, "食物营养图例行仍然显示")
+    assert(#data.temperatureColors == 5, "冷热渐变采样不完整")
+    local temperatureText
+    for _, bar in ipairs(data.bars) do if bar.name == "体温" then temperatureText = luminance(bar.text) end end
+    assert(temperatureText, "没有采集体温数值文字")
+    for _, sample in ipairs(data.temperatureColors) do
+        local fill = luminance(sample.fill)
+        assert((math.max(fill, temperatureText) + .05) / (math.min(fill, temperatureText) + .05) >= 4,
+            "冷热预警渐变颜色与数值文字的对比度不足")
+    end
     for _, bar in ipairs(data.bars) do
         local fill, text = luminance(bar.fill), luminance(bar.text)
         local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)

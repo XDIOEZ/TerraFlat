@@ -35,6 +35,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         public readonly int OriginalPlayerInstance;
         public readonly int OriginalNetworkIdentity;
         public DimensionPortalAnchor Anchor;
+        public JObject EntranceBeforeLoad;
         private readonly JToken originalNamespace;
         private readonly string originalWorldDimensionState;
         private readonly bool originalInvincibility;
@@ -104,7 +105,19 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (entrance == null) throw new InvalidOperationException("正式入口资源无法创建。");
             entranceGuid = entrance.itemData.Guid;
             Mod_Building.SetInstalledDataState(entrance.itemData);
-            entrance.Load();
+            JObject beforeLoad = DimensionPortalOwnershipSample(entrance);
+            beforeLoad["playerScene"] = player.gameObject.scene.name;
+            beforeLoad["playerSceneHandle"] = player.gameObject.scene.handle;
+            beforeLoad["executionScene"] = GameplayWorldRegistry.CurrentScene.name;
+            beforeLoad["executionSceneHandle"] = GameplayWorldRegistry.CurrentScene.handle;
+            beforeLoad["activeScene"] = SceneManager.GetActiveScene().name;
+            beforeLoad["activeSceneHandle"] = SceneManager.GetActiveScene().handle;
+            EntranceBeforeLoad = beforeLoad;
+            try { entrance.Load(); }
+            catch (Exception error)
+            {
+                throw new InvalidOperationException("正式入口加载前的世界物理归属：" + beforeLoad.ToString(Formatting.None), error);
+            }
             if (entrance.GetComponentInChildren<Mod_DimensionPortal>(true) == null)
                 throw new InvalidOperationException("正式矿洞入口没有维度入口模块。");
             Anchor = DimensionTravelProgressStore.GetOrCreateCaveAnchor(SaveDataMgr.Instance.SaveData, Surface, entrance, Cave, definition);
@@ -230,6 +243,9 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         var observer = default(FlatWorld.Spaceflight.SpaceNetworkObserver);
         bool observerPresent = FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out observer) == true;
         Vector3 logicalPosition = WorldLocalPresentation.ToLogical(player.transform.position);
+        bool registered = GameplayWorldRegistry.TryGet(expected.WorldKey, out var runtime);
+        Scene activeScene = SceneManager.GetActiveScene();
+        WorldPhysicsService2D.TryGetRegisteredItemOwner(player, out var playerPhysics);
         double observerDistance = observerPresent && !observer.InSpace && observer.WorldKey == expected.WorldKey
             ? WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), logicalPosition) : -1d;
         return new JObject
@@ -246,6 +262,19 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ["sourceDataRetained"] = controls != null && ReferenceEquals(controls.SurfaceData,
                 SaveDataMgr.Instance.SaveData.PlanetData_Dict[controls.Surface.WorldKey]),
             ["scene"] = SceneManager.GetActiveScene().name, ["savedScene"] = player.Data.CurrentSceneName,
+            ["activeSceneHandle"] = activeScene.handle, ["playerSceneHandle"] = player.gameObject.scene.handle,
+            ["runtimeSceneHandle"] = registered ? runtime.Scene.handle : 0,
+            ["playerSceneMatchesRuntime"] = registered && activeScene == runtime.Scene &&
+                player.gameObject.scene == runtime.Scene && playerPhysics != null && playerPhysics.PrimarySpace.Scene == runtime.Scene,
+            ["localChunkManagerMatchesRuntime"] = registered && runtime.Chunks != null &&
+                ReferenceEquals(ChunkMgr.LocalInstance, runtime.Chunks) && !runtime.Chunks.IsWorldRuntimeShuttingDown,
+            ["localNavigationMatchesRuntime"] = registered && runtime.Navigation != null &&
+                ReferenceEquals(WorldNavigationManager.ExistingInstance, runtime.Navigation),
+            ["navigationAlive"] = registered && runtime.Navigation != null,
+            ["navigationWorld"] = registered && runtime.Navigation != null ? runtime.Navigation.ActiveWorldKey : null,
+            ["navigationInstance"] = registered && runtime.Navigation != null ? runtime.Navigation.GetInstanceID() : 0,
+            ["navigationScene"] = registered && runtime.Navigation != null ? runtime.Navigation.gameObject.scene.name : null,
+            ["navigationSceneHandle"] = registered && runtime.Navigation != null ? runtime.Navigation.gameObject.scene.handle : 0,
             ["profile"] = player.ProfileName, ["initialized"] = player.IsInitialized,
             ["windowReady"] = ChunkMgr.ExistingInstance?.AreRuntimeWindowPresentationsReady == true,
             ["transitioning"] = manager.IsTransitioning,
@@ -264,8 +293,8 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ["guid"] = player.itemData.Guid, ["instance"] = player.GetInstanceID(),
             ["networkIdentity"] = player.GetComponent("NetworkIdentity")?.GetInstanceID() ?? 0,
             ["sourceWorldRetained"] = controls == null || GameplayWorldRegistry.TryGet(controls.Surface.WorldKey, out _),
-            ["targetRuntimePresent"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out _),
-            ["runtimeActive"] = GameplayWorldRegistry.TryGet(expected.WorldKey, out var runtime) &&
+            ["targetRuntimePresent"] = registered,
+            ["runtimeActive"] = registered &&
                 runtime.Chunks != null && !runtime.Chunks.IsWorldRuntimeShuttingDown
         };
     }
@@ -356,6 +385,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         IEnumerator Journey()
         {
             Item entrance = scope.PrepareEntrance(player);
+            result["entranceBeforeLoad"] = scope.EntranceBeforeLoad.DeepClone();
             result["entrance"] = DimensionPortalOwnershipSample(entrance);
             result["entranceHold"] = SampleDimensionPortalHoldInteraction(player, entrance);
             result["ecsResidentsBefore"] = GameplayTestRuntimeProbe.Capture(player, "dimension", "ecs_residents_begin", new JObject());
@@ -637,12 +667,29 @@ public static partial class GameplayTestNarrativeRuntimeProbe
 
     private static JObject DimensionPortalOwnershipSample(Item portal)
     {
+        string world = portal != null ? GameplayWorldRegistry.GetItemWorldKey(portal) : null;
+        GameplayWorldRegistry.TryGetPhysics(world, out WorldPhysicsService2D physics);
+        WorldPhysicsService2D.TryGetRegisteredItemOwner(portal, out WorldPhysicsService2D itemOwner);
+        Mod_DamageReceiver receiver = portal != null ? portal.GetComponentInChildren<Mod_DamageReceiver>(true) : null;
+        Collider2D collider = receiver != null ? receiver.GetComponent<Collider2D>() : null;
         return new JObject
         {
             ["registered"] = portal != null && portal.itemData != null &&
                 ReferenceEquals(ItemMgr.Instance.GetItemByGuid(portal.itemData.Guid), portal),
-            ["world"] = portal != null ? GameplayWorldRegistry.GetItemWorldKey(portal) : null,
-            ["scene"] = portal != null ? portal.gameObject.scene.name : null
+            ["world"] = world,
+            ["scene"] = portal != null ? portal.gameObject.scene.name : null,
+            ["sceneHandle"] = portal != null ? portal.gameObject.scene.handle : 0,
+            ["physicsScene"] = physics != null ? physics.PrimarySpace.Scene.name : null,
+            ["physicsSceneHandle"] = physics != null ? physics.PrimarySpace.Scene.handle : 0,
+            ["itemPhysicsOwnerMatchesWorld"] = physics != null && ReferenceEquals(itemOwner, physics),
+            ["sceneMatchesPhysicsOwner"] = portal != null && itemOwner != null &&
+                portal.gameObject.scene == itemOwner.PrimarySpace.Scene,
+            ["sceneUsesOwnedPhysics"] = portal != null && physics != null &&
+                portal.gameObject.scene.GetPhysicsScene2D() == physics.PrimarySpace.PhysicsScene,
+            ["damageColliderMatchesOwner"] = collider != null &&
+                WorldPhysicsService2D.TryResolveCollider(collider, out var binding) &&
+                binding.Item == portal && binding.Receiver == receiver && binding.World == physics &&
+                (binding.Purpose & WorldPhysicsPurpose2D.Damage) != 0
         };
     }
     #endregion

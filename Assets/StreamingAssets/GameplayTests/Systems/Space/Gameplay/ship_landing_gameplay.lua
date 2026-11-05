@@ -117,11 +117,14 @@ test.space("ship_landing", function(data)
         assert(snapshot.projectionDomainReady and snapshot.projectionOwnerId ~= 0 and
             snapshot.projectionOwnerWorldKey == snapshot.worldKey,
             "船内排序域未绑定正确世界、会话场景和船姿：" .. label)
+        local visibleSprites = 0
         for _, projection in ipairs(snapshot.itemProjections) do
-            assert(projection.active and projection.worldKey == snapshot.worldKey and
+            visibleSprites = visibleSprites + projection.visibleSpriteCount
+            assert(projection.active and projection.renderSourceAlive and projection.worldKey == snapshot.worldKey and
                 projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
                 "飞行或下降的物品投影脱离所属船内世界或排序域：" .. label)
         end
+        assert(visibleSprites > 0, "飞行或下降的物品投影没有实际启用的贴图：" .. label)
         for _, projection in ipairs(snapshot.chunkProjections) do
             assert(projection.active and projection.id:sub(1, #snapshot.worldKey + 1) == snapshot.worldKey .. ":" and
                 projection.scene == snapshot.projectionScene and projection.parentId == snapshot.projectionOwnerId,
@@ -146,6 +149,7 @@ test.space("ship_landing", function(data)
             return result
         end
         for _, snapshot in ipairs({preparation.ready, preparation.moved, preparation.expanded, preparation.finalReady}) do
+            local expectedPreparedMachines = machineCount + (snapshot == preparation.expanded and 1 or 0)
             assert(snapshot.worldRegistered and snapshot.presentationWorld == snapshot.world and
                 snapshot.targetSceneCurrent and snapshot.targetSceneHandle ~= 0,
                 "地表迁移完成后没有重新绑定降落准备所需的世界运行时：" .. label)
@@ -153,7 +157,7 @@ test.space("ship_landing", function(data)
                 snapshot.phase == "SurfaceDescending" and snapshot.height > 0 and
                 snapshot.groundMatches == 0,
                 "准备完成前提前移交地面，或丢失真实下降船体：" .. label)
-            assert(snapshot.machineCount == machineCount and snapshot.preparedMachines == machineCount and
+            assert(snapshot.machineCount == expectedPreparedMachines and snapshot.preparedMachines == expectedPreparedMachines and
                 snapshot.hiddenMachines == snapshot.preparedMachines and snapshot.consumedMachines == 0,
                 "机器显示准备状态错误，或在真实交接前就被消费：" .. label)
             ordinary_items(snapshot)
@@ -176,6 +180,7 @@ test.space("ship_landing", function(data)
         end
         assert(preparation.expanded.invalidations > preparation.moved.invalidations and
             preparation.finalReady.invalidations > preparation.expanded.invalidations and
+            preparation.expanded.addedMachinePresent and preparation.finalReady.addedMachineRemoved and
             not preparation.addedPieceStillPresent,
             "真实加装或撤销地板没有使结构准备重新对齐：" .. label)
         for _, snapshot in ipairs({preparation.expanded, preparation.finalReady}) do

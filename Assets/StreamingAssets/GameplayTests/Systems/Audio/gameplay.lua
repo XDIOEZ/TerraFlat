@@ -64,6 +64,9 @@ test.runtime("audio", "voice_lifecycle", {}, function(data)
     assert(data.mutedVolume == 0 and data.retainedWhenMuted and math.abs(data.unmutedVolume - data.busVolume) < 0.0001, "静音销毁句柄或取消静音没有恢复真实音量")
     assert(not data.farShortAccepted and data.beforeFarShort == data.afterFarShort, "范围外短音仍占用了声源池")
     assert(data.farLoopAccepted and math.abs(data.farOffsetX - (data.loopMaxDistance + 2)) < 0.001 and math.abs(data.farOffsetY) < 0.001 and math.abs(data.farOffsetZ) < 0.001, "远处循环没有保留句柄或空间位置错误")
+    assert(data.farLoopMuted and not data.returnedLoopMuted and data.returnedLoopPlaying
+        and math.abs(data.returnedLoopOffsetX - 1) < .001 and math.abs(data.returnedLoopOffsetY) < .001
+        and math.abs(data.returnedLoopOffsetZ) < .001, "范围外循环未静音，或回到范围内后没有恢复原声源与位置")
     assert(data.released and data.sourceReused and data.newHandleDistinct and data.replacementSurvivedOldStop, "停止、声源复用或旧句柄隔离错误")
     -- 采样来自真实 AudioSource，Lua 检查暂停续播、界面豁免与原始音高保留。
     local pause = data.gamePause

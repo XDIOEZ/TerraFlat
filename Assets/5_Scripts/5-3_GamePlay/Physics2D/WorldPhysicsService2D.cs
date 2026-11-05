@@ -77,8 +77,16 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         object entity = null, string receiverModule = null)
     {
         if (collider == null || disposed) return false;
-        if (collider.gameObject.scene.GetPhysicsScene2D() != PrimarySpace.PhysicsScene)
-            throw new InvalidOperationException($"碰撞体 {collider.name} 尚未进入世界 {WorldKey} 的物理空间。");
+        Scene colliderScene = collider.gameObject.scene;
+        if (colliderScene.GetPhysicsScene2D() != PrimarySpace.PhysicsScene)
+        {
+            Scene ownerScene = PrimarySpace.Scene;
+            string itemScene = item != null ? item.gameObject.scene.name : "无物品";
+            int itemSceneHandle = item != null ? item.gameObject.scene.handle : 0;
+            throw new InvalidOperationException($"碰撞体 {collider.name} 尚未进入世界 {WorldKey} 的物理空间。" +
+                $"碰撞体场景={colliderScene.name}({colliderScene.handle})，物品场景={itemScene}({itemSceneHandle})，" +
+                $"所属物理场景={ownerScene.name}({ownerScene.handle})。");
+        }
         if (colliderOwners.TryGetValue(collider, out var previous) && previous != this)
             previous.UnregisterCollider(collider);
         var binding = new WorldPhysicsColliderBinding2D(this, item, receiver, regionId, purpose, entity, receiverModule);
@@ -115,6 +123,12 @@ public sealed partial class WorldPhysicsService2D : IDisposable
     #endregion
 
     #region 普通物品登记及迁移
+    internal static bool TryGetRegisteredItemOwner(Item item, out WorldPhysicsService2D owner)
+    {
+        owner = null;
+        return item != null && itemOwners.TryGetValue(item, out owner) && owner.IsValid;
+    }
+
     internal void AssignPhysicsRootToPrimarySpace(GameObject root)
     {
         if (root.scene.GetPhysicsScene2D() == PrimarySpace.PhysicsScene) return;

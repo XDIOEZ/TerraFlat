@@ -98,16 +98,16 @@ public partial class SpaceMgr
             DestroyRetainedSector(cached);
             return false;
         }
-        // 缓存对象只在旧场景卸载完成后归还，避免 Wanted 与 Unloading 相互覆盖。
-        cached.Root.SetParent(null, true);
-        SceneManager.MoveGameObjectToScene(cached.Root.gameObject, scene);
-        cached.Scene = scene;
-        cached.Wanted = true;
-        cached.Unloading = false;
-        cached.PresentationReady = true;
-        cached.Loading = null;
         try
         {
+            // 缓存对象只在旧场景卸载完成后归还，避免 Wanted 与 Unloading 相互覆盖。
+            cached.Root.SetParent(null, true);
+            SceneManager.MoveGameObjectToScene(cached.Root.gameObject, scene);
+            cached.Scene = scene;
+            cached.Wanted = true;
+            cached.Unloading = false;
+            cached.PresentationReady = true;
+            cached.Loading = null;
             foreach (Planet planet in cached.Planets)
             {
                 BodyState body = session.GetBody(planet.planetData.BodyId);

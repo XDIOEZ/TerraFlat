@@ -34,8 +34,9 @@ public static class TemperatureWarningPresentationRules
     public const float DangerRangeCelsius = 10f;
     public const float DefaultTransitionSeconds = 1f;
 
-    public static readonly Color ColdBarColor = new Color(0.24f, 0.61f, 0.97f, 1f);
-    public static readonly Color HeatBarColor = new Color(1f, 0.30f, 0.20f, 1f);
+    // 深蓝和深红保持冷热语义，同时让状态条亮色数值在整个渐变范围内可读。
+    public static readonly Color ColdBarColor = new Color32(0x15, 0x65, 0xC0, 0xFF);
+    public static readonly Color HeatBarColor = new Color32(0xB3, 0x26, 0x1E, 0xFF);
 
     // 体温条以安全范围中点为满格，屏幕边缘仍只在越过安全线后渐强。
     public static TemperatureWarningPresentationSample Evaluate(

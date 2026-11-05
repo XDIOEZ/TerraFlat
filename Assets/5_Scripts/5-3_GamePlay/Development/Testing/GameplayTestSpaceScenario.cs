@@ -319,6 +319,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         yield return Wait(0.25d);
         JObject contextShutdown = null;
         yield return GameplayTestSpacePresentationProbe.CaptureSpaceContextShutdown(value => contextShutdown = value);
+        JObject leaseRollback = null;
+        yield return CaptureSectorActivationRollback(value => leaseRollback = value);
         SpaceSession.Capture(SaveDataMgr.Instance.SaveData);
         SpaceSessionState restored = SaveDataMgr.DeserializeSpaceState(SaveDataMgr.Instance.SaveData.SpaceStateJson);
         completed(new JObject { ["scope"] = "live-session", ["before"] = before,
@@ -327,7 +329,212 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["cameraOverride"] = GameplayTestSpacePresentationProbe.CaptureCameraOverride(CurrentPlayer()),
             ["passengerPose"] = GameplayTestSpacePresentationProbe.CapturePassengerPose(CurrentPlayer()),
             ["physicsShutdown"] = GameplayTestSpacePresentationProbe.CaptureNativePhysicsWorldShutdown(),
-            ["contextShutdown"] = contextShutdown });
+            ["contextShutdown"] = contextShutdown, ["leaseRollback"] = leaseRollback });
+    }
+
+    private IEnumerator CaptureSectorActivationRollback(Action<JObject> completed)
+    {
+        Player player = CurrentPlayer();
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        SpaceMgr manager = SpaceMgr.Instance;
+        Scene sourceScene = player.gameObject.scene;
+        Scene sourceActive = SceneManager.GetActiveScene();
+        Transform sourceParent = player.transform.parent;
+        string sourceWorld = GameplayWorldRegistry.GetItemWorldKey(player);
+        WorldPhysicsService2D.TryGetRegisteredItemOwner(player, out var sourcePhysics);
+        if (sourceScene != sourceActive || SpaceMgr.IsSpaceScene(sourceWorld) || sourcePhysics == null)
+            throw new InvalidOperationException("星区失败回滚采样需要已登记的地表玩家。");
+        bool sourceHadProxy = sourcePhysics.TryGetItemProxy(player, out _);
+
+        SpaceSectorId sector = default;
+        bool found = false;
+        foreach (UniverseState candidate in session.State.Sectors)
+        {
+            string candidateKey = SpaceSectorCoordinates.SceneKey(candidate.Sector);
+            Scene loaded = SceneManager.GetSceneByName(candidateKey);
+            if (loaded.IsValid() && loaded.isLoaded || GameplayWorldRegistry.TryGetPhysics(candidateKey, out _) ||
+                GameplayWorldRegistry.GetExistingSpaceContext(candidateKey) != null ||
+                manager.TryGetSectorPresentationDebugState(candidate.Sector, out _, out _, out _)) continue;
+            sector = candidate.Sector;
+            found = true;
+            break;
+        }
+        if (!found) throw new InvalidOperationException("没有可隔离采样的既有星区数据。");
+        string key = SpaceSectorCoordinates.SceneKey(sector);
+        var samples = new JArray();
+        for (int phase = 0; phase < 2; phase++)
+        {
+            Scene borrowed = default, failedScene = default;
+            GameObject marker = null;
+            WorldPhysicsService2D borrowedPhysics = null;
+            GameplayWorldRuntime borrowedContext = null;
+            bool injected = false, targetPhysicsPresent = false, targetContextPresent = false;
+            var injectedFailure = new InvalidOperationException("星区激活故障采样");
+            Exception observed = null;
+            void FailOnTargetMove(Item item)
+            {
+                if (injected || !ReferenceEquals(item, player) || GameplayWorldRegistry.GetItemWorldKey(item) != key) return;
+                injected = true;
+                failedScene = item.gameObject.scene;
+                targetPhysicsPresent = GameplayWorldRegistry.TryGetPhysics(key, out _);
+                targetContextPresent = GameplayWorldRegistry.GetExistingSpaceContext(key) != null;
+                throw injectedFailure;
+            }
+
+            try
+            {
+                if (phase == 1)
+                {
+                    borrowed = WorldPhysicsScene2D.CreateIsolatedScene(key);
+                    marker = new GameObject("星区借用场景采样");
+                    SceneManager.MoveGameObjectToScene(marker, borrowed);
+                    using (GameplayWorldRegistry.UseSpaceScene(key)) borrowedPhysics = GameplayWorldRegistry.CurrentPhysics;
+                    borrowedContext = GameplayWorldRegistry.GetExistingSpaceContext(key);
+                }
+                ItemMgr.RuntimeItemMoved += FailOnTargetMove;
+                try { yield return GameplayTestLuaRunner.Advance(manager.ActivateLocalSector(sector), error => observed = error); }
+                finally { ItemMgr.RuntimeItemMoved -= FailOnTargetMove; }
+
+                bool playerOwnerRestored = GameplayWorldRegistry.GetItemWorldKey(player) == sourceWorld &&
+                    WorldPhysicsService2D.TryGetRegisteredItemOwner(player, out var owner) && ReferenceEquals(owner, sourcePhysics);
+                bool viewRemoved = !manager.TryGetSectorPresentationDebugState(sector, out _, out _, out _);
+                bool physicsPresent = GameplayWorldRegistry.TryGetPhysics(key, out var afterPhysics);
+                samples.Add(new JObject
+                {
+                    ["borrowed"] = phase == 1, ["injected"] = injected,
+                    ["sourceHadProxy"] = sourceHadProxy,
+                    ["originalFailurePreserved"] = ReferenceEquals(observed, injectedFailure),
+                    ["targetPhysicsPresentAtFailure"] = targetPhysicsPresent,
+                    ["targetContextPresentAtFailure"] = targetContextPresent,
+                    ["sourceActiveRestored"] = SceneManager.GetActiveScene() == sourceActive,
+                    ["playerSceneRestored"] = player.gameObject.scene == sourceScene,
+                    ["playerParentRestored"] = player.transform.parent == sourceParent,
+                    ["playerOwnerRestored"] = playerOwnerRestored,
+                    ["viewRemoved"] = viewRemoved,
+                    ["failedSceneLoaded"] = failedScene.IsValid() && failedScene.isLoaded,
+                    ["targetPhysicsPresentAfter"] = physicsPresent,
+                    ["borrowedPhysicsPreserved"] = phase == 1 && ReferenceEquals(afterPhysics, borrowedPhysics),
+                    ["borrowedContextPreserved"] = phase == 1 && ReferenceEquals(
+                        GameplayWorldRegistry.GetExistingSpaceContext(key), borrowedContext),
+                    ["borrowedMarkerPreserved"] = phase == 1 && marker != null && marker.scene == borrowed
+                });
+            }
+            finally
+            {
+                ItemMgr.RuntimeItemMoved -= FailOnTargetMove;
+                try
+                {
+                    if (player != null && sourceScene.IsValid() && sourceScene.isLoaded)
+                    {
+                        if (player.gameObject.scene != sourceScene)
+                        {
+                            player.transform.SetParent(null, true);
+                            SceneManager.MoveGameObjectToScene(player.gameObject, sourceScene);
+                        }
+                        if (GameplayWorldRegistry.GetItemWorldKey(player) != sourceWorld)
+                            GameManager.AssignRegisteredPlayerAndChildItemsToWorld(player, sourceWorld);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        if (sourceActive.IsValid() && sourceActive.isLoaded && SceneManager.GetActiveScene() != sourceActive)
+                            SceneManager.SetActiveScene(sourceActive);
+                        if (manager.TryGetSectorPresentationDebugState(sector, out _, out _, out _))
+                            manager.UpdateSectorLeases(session, Array.Empty<SpaceSectorId>());
+                    }
+                    finally
+                    {
+                        if (marker != null) UnityEngine.Object.Destroy(marker);
+                        if (borrowed.IsValid() && borrowed.isLoaded)
+                        {
+                            try { GameplayWorldRegistry.ReleaseNewSpaceOwnership(key, borrowed, borrowedContext, borrowedPhysics); }
+                            finally { SceneManager.UnloadSceneAsync(borrowed); }
+                        }
+                    }
+                }
+            }
+            double unloadDeadline = Time.realtimeSinceStartupAsDouble + 10d;
+            while (borrowed.IsValid() && borrowed.isLoaded && Time.realtimeSinceStartupAsDouble < unloadDeadline)
+                yield return null;
+            if (borrowed.IsValid() && borrowed.isLoaded) throw new TimeoutException("借用星区采样场景未能卸载。");
+        }
+
+        string probeProfile = "sector-rollback-" + Guid.NewGuid().ToString("N");
+        Scene retry = default;
+        GameObject retryParent = null;
+        Item retryItem = null;
+        bool retryItemPhysics = false, retryContextless = false;
+        try
+        {
+            retry = manager.BindAuthoritySector(probeProfile, sector);
+            retryParent = new GameObject("星区正常释放物品采样");
+            SceneManager.MoveGameObjectToScene(retryParent, retry);
+            ItemData data = GameRes.ExistingInstance.CreateItemData("Ore_Stone");
+            retryItem = ItemMgr.Instance.InstantiateItem(data, Vector3.zero, Quaternion.identity, Vector3.one, retryParent);
+            retryItemPhysics = WorldPhysicsService2D.TryGetRegisteredItemOwner(retryItem, out var owner) &&
+                owner.PrimarySpace.Scene == retry;
+            retryContextless = GameplayWorldRegistry.GetExistingSpaceContext(key) == null;
+        }
+        finally
+        {
+            try
+            {
+                if (retryItem != null && ItemMgr.Instance.IsRuntimeItemRegistered(retryItem))
+                    ItemMgr.Instance.DespawnItem(retryItem, saveData: false);
+            }
+            finally
+            {
+                if (retryParent != null) UnityEngine.Object.Destroy(retryParent);
+                manager.ReleaseAuthoritySector(probeProfile);
+            }
+        }
+        bool retryCreated = retry.IsValid() && retry.isLoaded;
+        manager.UpdateSectorLeases(session, Array.Empty<SpaceSectorId>());
+        double deadline = Time.realtimeSinceStartupAsDouble + 10d;
+        while (retry.IsValid() && retry.isLoaded && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
+        if (retry.IsValid() && retry.isLoaded) throw new TimeoutException("重试星区场景未能卸载。");
+        bool retryPhysicsReleased = !GameplayWorldRegistry.TryGetPhysics(key, out _);
+
+        Scene normalBorrowed = WorldPhysicsScene2D.CreateIsolatedScene(key);
+        GameObject normalMarker = new GameObject("星区正常借用场景采样");
+        SceneManager.MoveGameObjectToScene(normalMarker, normalBorrowed);
+        WorldPhysicsService2D normalPhysics = null;
+        GameplayWorldRuntime normalContext = null;
+        bool normalViewRemoved = false, normalBorrowedPreserved = false;
+        try
+        {
+            using (GameplayWorldRegistry.UseSpaceScene(key)) normalPhysics = GameplayWorldRegistry.CurrentPhysics;
+            normalContext = GameplayWorldRegistry.GetExistingSpaceContext(key);
+            string borrowedProfile = "sector-borrowed-" + Guid.NewGuid().ToString("N");
+            try { manager.BindAuthoritySector(borrowedProfile, sector); }
+            finally { manager.ReleaseAuthoritySector(borrowedProfile); }
+            manager.UpdateSectorLeases(session, Array.Empty<SpaceSectorId>());
+            yield return null;
+            normalViewRemoved = !manager.TryGetSectorPresentationDebugState(sector, out _, out _, out _);
+            normalBorrowedPreserved = normalBorrowed.IsValid() && normalBorrowed.isLoaded &&
+                normalMarker != null && normalMarker.scene == normalBorrowed &&
+                GameplayWorldRegistry.TryGetPhysics(key, out var current) && ReferenceEquals(current, normalPhysics) &&
+                ReferenceEquals(GameplayWorldRegistry.GetExistingSpaceContext(key), normalContext);
+        }
+        finally
+        {
+            if (normalMarker != null) UnityEngine.Object.Destroy(normalMarker);
+            if (normalBorrowed.IsValid() && normalBorrowed.isLoaded)
+            {
+                try { GameplayWorldRegistry.ReleaseNewSpaceOwnership(key, normalBorrowed, normalContext, normalPhysics); }
+                finally { SceneManager.UnloadSceneAsync(normalBorrowed); }
+            }
+        }
+        deadline = Time.realtimeSinceStartupAsDouble + 10d;
+        while (normalBorrowed.IsValid() && normalBorrowed.isLoaded && Time.realtimeSinceStartupAsDouble < deadline)
+            yield return null;
+        completed(new JObject { ["samples"] = samples, ["retryCreated"] = retryCreated,
+            ["retryItemPhysics"] = retryItemPhysics, ["retryContextless"] = retryContextless,
+            ["retryReleased"] = !retry.IsValid() || !retry.isLoaded, ["retryPhysicsReleased"] = retryPhysicsReleased,
+            ["normalBorrowedViewRemoved"] = normalViewRemoved, ["normalBorrowedPreserved"] = normalBorrowedPreserved,
+            ["normalBorrowedCleanup"] = !normalBorrowed.IsValid() || !normalBorrowed.isLoaded });
     }
 
     private IEnumerator ReadTemplates(Action<JObject> completed)
@@ -662,14 +869,19 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
                 !presenter.Value<bool>("wholeShipBody") || presenter.Value<int>("activeBodies") != 1 ||
                 presenter.Value<string>("scene") != scene)
                 return false;
+        int visibleSprites = 0;
         foreach (JObject projection in items)
-            if (!projection.Value<bool>("active") || projection.Value<string>("worldKey") != MachineWorld.GetShipScopeKey(ship.ShipId) ||
+        {
+            visibleSprites += projection.Value<int>("visibleSpriteCount");
+            if (!projection.Value<bool>("active") || !projection.Value<bool>("renderSourceAlive") ||
+                projection.Value<string>("worldKey") != MachineWorld.GetShipScopeKey(ship.ShipId) ||
                 projection.Value<string>("scene") != view.Value<string>("projectionScene") ||
                 projection.Value<int>("parentId") != view.Value<int>("projectionOwnerId")) return false;
+        }
         foreach (JObject projection in chunks)
             if (!projection.Value<bool>("active") || projection.Value<string>("scene") != view.Value<string>("projectionScene") ||
                 projection.Value<int>("parentId") != view.Value<int>("projectionOwnerId")) return false;
-        return true;
+        return visibleSprites > 0;
     }
 
     private IEnumerator CoastOwnedShip(ShipState ship, Action<JObject> completed)
@@ -885,6 +1097,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         DayTimeSystem time = DayTimeSystem.GetInstance();
         string timeSource = null;
         bool timeReady = time != null && time.TryGetResolvedTimeData(sceneName, out timeSource, out _);
+        WorldPhysicsService2D.TryGetRegisteredItemOwner(player, out var playerPhysics);
         SpaceSectorPosition position = session.GetPassengerPosition(passenger);
         var required = new JArray();
         foreach (SpaceSectorId sector in session.RequiredSectors) required.Add(Sector(sector));
@@ -900,6 +1113,13 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             ["spaceView"] = session.IsSpaceView, ["playerProfile"] = player.ProfileName,
             ["playerInstance"] = player.GetInstanceID(), ["sector"] = Sector(position.Sector),
             ["playerScene"] = player.gameObject.scene.name, ["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player),
+            ["playerPhysicsScene"] = playerPhysics?.PrimarySpace.Scene.name,
+            ["playerPhysicsSceneHandle"] = playerPhysics != null ? playerPhysics.PrimarySpace.Scene.handle : 0,
+            ["playerSceneHandle"] = player.gameObject.scene.handle,
+            ["playerPhysicsMatchesScene"] = playerPhysics != null &&
+                playerPhysics.WorldKey == GameplayWorldRegistry.GetItemWorldKey(player) &&
+                playerPhysics.PrimarySpace.Scene == player.gameObject.scene &&
+                player.gameObject.scene.GetPhysicsScene2D() == playerPhysics.PrimarySpace.PhysicsScene,
             ["supported"] = passenger.Supported,
             ["shipId"] = passenger.ShipId, ["consoleId"] = passenger.ConsolePieceId,
             ["cameraReady"] = camera != null && camera.isActiveAndEnabled,

@@ -289,9 +289,7 @@ namespace FlatWorld.Audio
                 voice.PortalGain = portalGain;
                 ApplyVolume(voice);
             }
-            if (!audible)
-                return;
-
+            // 静音循环也同步位置，避免池中的旧坐标延续到重新进入听觉范围。
             Vector2 direction = ResolveSoundDelta(listenerTarget.position, audiblePosition);
             Vector3 offset = new Vector3(direction.x, direction.y, 0f);
             voice.GameObject.transform.position = worldListener.transform.position + offset;

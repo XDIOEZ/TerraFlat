@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -8,8 +9,15 @@ internal static class ItemWorldPlacement
 {
     public static void Attach(Item item, GameObject itemObject, Vector3 position, GameObject parent)
     {
-        // 物品在登记运行回调之前进入所属世界，后台地表不能借用本机活动场景。
-        Scene target = parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
+        // 已登记物品以实际物理所有者的场景为准，不能回迁到同名旧场景。
+        bool hasOwner = WorldPhysicsService2D.TryGetRegisteredItemOwner(item, out var owner);
+        Scene target = hasOwner ? owner.PrimarySpace.Scene :
+            parent != null ? parent.scene : GameplayWorldRegistry.CurrentScene;
+        if (hasOwner && parent != null && parent.scene != target)
+            throw new InvalidOperationException($"物品 {item.name} 的父级不属于已登记的世界场景：" +
+                $"parent={parent.scene.name}({parent.scene.handle})，owner={target.name}({target.handle})，" +
+                $"itemWorld={GameplayWorldRegistry.GetItemWorldKey(item)}，physicsWorld={owner.WorldKey}，" +
+                $"itemScene={itemObject.scene.name}({itemObject.scene.handle})。");
         if (target.IsValid() && target.isLoaded && itemObject.scene != target)
         {
             itemObject.transform.SetParent(null, true);
@@ -27,6 +35,8 @@ internal static class ItemWorldPlacement
             return;
         }
 
+        using var worldScope = hasOwner && GameplayWorldRegistry.TryGet(owner.WorldKey, out var world) &&
+            world.Scene == target ? GameplayWorldRegistry.UseWorld(owner.WorldKey) : default;
         // 新版区块窗口下，散落物的临时 ChunkView 归属由具体世界状态在最终落点确认后建立；
         // 这里绝不能为了找父级触发旧 Chunk 同步加载。
         if (ChunkMgr.ExistingInstance != null &&
@@ -44,7 +54,7 @@ internal static class ItemWorldPlacement
                 ChunkMgr.Instance.GetClosestChunk(itemObject.transform.position, out chunk);
             }
 
-            if (chunk != null)
+            if (chunk != null && chunk.gameObject.scene == itemObject.scene)
             {
                 itemObject.transform.SetParent(chunk.transform, true);
                 chunk.AddItem(item);
@@ -53,7 +63,7 @@ internal static class ItemWorldPlacement
         }
 
         if (ChunkMgr.Instance.TryGetUnActiveChunkByPos(chunkPosition, out Chunk inactiveChunk) &&
-            inactiveChunk != null)
+            inactiveChunk != null && inactiveChunk.gameObject.scene == itemObject.scene)
         {
             itemObject.transform.SetParent(inactiveChunk.transform, true);
             return;

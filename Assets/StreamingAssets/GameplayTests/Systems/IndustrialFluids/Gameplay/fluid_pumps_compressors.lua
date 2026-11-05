@@ -13,6 +13,30 @@ test.runtime("industrial_fluids", "combined_tank_pump_tick", {}, function(d)
         math.abs(d.finalDelivered + d.buffers + d.remainingSurfaceLiters - d.initialLiters) < .000001,
         "下一步未恢复抽液或泵和组合罐总量不守恒")
 end, "双泵接12格组合罐：完整Tick拓扑稳定、通知合并、连续输送与守恒")
+test.runtime("industrial_fluids", "coupled_engine_pump_world_tick", {}, function(d)
+    assert(d.sameMechanicalNetwork and d.separateFluidNetworks and #d.steps == 4,
+        "气引擎和泵未通过机械网连接不同流体网")
+    for _, step in ipairs(d.steps) do
+        local delivered = step.tankAfter - step.tankBefore
+        local hydrogen = step.hydrogenBefore - step.hydrogenAfter
+        local oxygen = step.oxygenBefore - step.oxygenAfter
+        assert(step.engineRpm > 0 and step.pumpRpm > 0 and step.pumpLoadSatisfied,
+            "完整世界步未向气泵提供真实动力")
+        assert(math.abs(delivered - d.pumpRate * step.seconds) < .000001 and
+            math.abs(step.airBefore - step.airAfter - delivered) < .000001,
+            "气泵未按本步流量连续抽取或大气与储罐不守恒")
+        assert(hydrogen > 0 and oxygen > 0 and math.abs(hydrogen - oxygen * 2) < .000000001 and
+            math.abs(step.waterAfter - step.waterBefore - hydrogen) < .000000001 and step.reservations == 0,
+            "引擎未按本步实际做功结算氢氧、产水或释放预约")
+    end
+    assert(d.halfTankFirst == d.halfTankBefore and d.halfHydrogenFirst == d.halfHydrogenBefore and
+        d.halfAirFirst == d.halfAirBefore, "未达到世界计算步时提前抽气或结算燃料")
+    assert(math.abs(d.halfTankSecond - d.halfTankBefore - d.pumpRate * d.stepSeconds) < .000001 and
+        math.abs(d.halfAirBefore - d.halfAirSecond - (d.halfTankSecond - d.halfTankBefore)) < .000001 and
+        d.halfHydrogenSecond < d.halfHydrogenBefore, "两次半步未按一个完整预算步结算")
+    assert(d.stoppedTankBefore == d.stoppedTankAfter and d.stoppedAirBefore == d.stoppedAirAfter and d.stoppedReservations == 0,
+        "断开燃料后气泵继续抽气或引擎遗留预约")
+end, "完整世界步：跨流体网引擎驱动气泵、逐步速率和预约结算")
 test.runtime("industrial_fluids", "pump", {}, function(d)
     assert(d.unpowered==0 and d.unpoweredSourceStable, "无动力气泵抽了环境")
     assert(math.abs(d.full-d.capacity)<.000001 and d.fullSourceStable, "普通气泵未充满或满后仍抽")

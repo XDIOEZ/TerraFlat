@@ -248,8 +248,11 @@ end
 
 test.system("survival", "temperature_presentation_color", {}, function(data)
     local expected = {
-        normal = {.8, .7, .6, .35}, coldHalf = {.52, .655, .785, .35}, coldFull = {.24, .61, .97, .35},
-        heatHalf = {.9, .5, .4, .35}, heatFull = {1, .3, .2, .35}
+        normal = {.8, .7, .6, .35},
+        coldHalf = {(.8 + 21/255)/2, (.7 + 101/255)/2, (.6 + 192/255)/2, .35},
+        coldFull = {21/255, 101/255, 192/255, .35},
+        heatHalf = {(.8 + 179/255)/2, (.7 + 38/255)/2, (.6 + 30/255)/2, .35},
+        heatFull = {179/255, 38/255, 30/255, .35}
     }
     for name, channels in pairs(expected) do
         for index, value in ipairs(channels) do near(data[name][index], value, "体温条颜色：" .. name .. "/" .. index) end
