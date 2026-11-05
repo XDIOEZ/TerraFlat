@@ -25,10 +25,13 @@ internal static class GameplayTestFuelOilEngine
         MachineEntity valve = fixture.Add("LiquidValve", -2);
         MachineEntity tank = fixture.Add("LiquidTankBlock_Iron", -3);
         FluidDeviceBehavior behavior = GetFluidDeviceBehavior(engine);
-        FluidInventory source = GetFluidInventory(tank);
+        fixture.Rebuild();
+        FluidInventory Source() => GetFluidInventory(tank);
         FluidDefinition fuel = FluidCatalog.Default.Find("core:fuel_oil");
         void Fill(string id)
         {
+            fixture.Rebuild();
+            FluidInventory source = Source();
             FluidDefinition definition = FluidCatalog.Default.Find(id);
             source.Restore(new FluidInventoryState());
             if (!source.TryAdd(FluidInventory.CreateBatch(definition, 0, FluidUnits.LiquidLitersToMol(definition, 1), 293.15),
@@ -59,39 +62,39 @@ internal static class GameplayTestFuelOilEngine
         double emptyPower = BeginPower();
         Fill(FluidIds.PureWater);
         double waterPower = BeginPower();
-        double waterLeft = source.GetLiquidLiters();
+        double waterLeft = Source().GetLiquidLiters();
         Fill(fuel.Id);
         GetFluidState(valve).ValveOpen = false;
         TopologyChanged(valve);
         double blockedPower = BeginPower();
-        double blockedFuel = source.GetLiquidLiters();
+        double blockedFuel = Source().GetLiquidLiters();
         GetFluidState(valve).ValveOpen = true;
         TopologyChanged(valve);
         double available = BeginPower();
-        decimal before = source.GetLiquidMoles(fuel.Id);
+        decimal before = Source().GetLiquidMoles(fuel.Id);
         engine.Rpm = 0;
         behavior.Advance(engine, fixture.Seconds);
-        decimal idle = source.GetLiquidMoles(fuel.Id);
-        int idleReservations = source.State.Ports.Count;
+        decimal idle = Source().GetLiquidMoles(fuel.Id);
+        int idleReservations = Source().State.Ports.Count;
 
         fixture.Atmosphere.Gases.Clear();
         double oxygenStarvedPower = BeginPower();
-        decimal oxygenStarved = source.GetLiquidMoles(fuel.Id);
-        int oxygenStarvedReservations = source.State.Ports.Count;
+        decimal oxygenStarved = Source().GetLiquidMoles(fuel.Id);
+        int oxygenStarvedReservations = Source().State.Ports.Count;
         RestoreOxygen();
         double beforeOxygenLossPower = BeginPower();
         SetLoaded();
         fixture.Atmosphere.Gases.Clear();
         behavior.Advance(engine, fixture.Seconds);
-        decimal afterOxygenLoss = source.GetLiquidMoles(fuel.Id);
-        int oxygenLossReservations = source.State.Ports.Count;
+        decimal afterOxygenLoss = Source().GetLiquidMoles(fuel.Id);
+        int oxygenLossReservations = Source().State.Ports.Count;
 
         RestoreOxygen();
         double loadedPower = BeginPower();
         SetLoaded();
         behavior.Advance(engine, fixture.Seconds);
-        decimal afterWork = source.GetLiquidMoles(fuel.Id);
-        int afterWorkReservations = source.State.Ports.Count;
+        decimal afterWork = Source().GetLiquidMoles(fuel.Id);
+        int afterWorkReservations = Source().State.Ports.Count;
 
         BeginPower();
         FluidMachineState saved = MachinePersistence.Read<FluidMachineState>(CaptureSnapshot(tank), "fluid");
@@ -99,7 +102,7 @@ internal static class GameplayTestFuelOilEngine
         decimal savedFuel = new FluidInventory(saved.Chambers["main"]).GetLiquidMoles(fuel.Id);
         Remove(engine.Id);
         fixture.Rebuild();
-        int removedReservations = source.State.Ports.Count;
+        int removedReservations = Source().State.Ports.Count;
         return new JObject { ["emptyPower"] = emptyPower, ["waterPower"] = waterPower, ["waterLeft"] = waterLeft,
             ["blockedPower"] = blockedPower, ["blockedFuel"] = blockedFuel,
             ["available"] = available, ["before"] = (double)before, ["idle"] = (double)idle,
@@ -109,7 +112,7 @@ internal static class GameplayTestFuelOilEngine
             ["oxygenLossReservations"] = oxygenLossReservations, ["loadedPower"] = loadedPower,
             ["afterWork"] = (double)afterWork, ["afterWorkReservations"] = afterWorkReservations,
             ["savedReservations"] = savedReservations, ["savedFuel"] = (double)savedFuel,
-            ["removedReservations"] = removedReservations, ["afterRemoval"] = (double)source.GetLiquidMoles(fuel.Id),
+            ["removedReservations"] = removedReservations, ["afterRemoval"] = (double)Source().GetLiquidMoles(fuel.Id),
             ["pipeHasNoLiquid"] = GetFluidInventory(pipe).LiquidMoles == 0m };
     }
     #endregion

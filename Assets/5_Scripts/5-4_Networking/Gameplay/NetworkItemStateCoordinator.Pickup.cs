@@ -342,7 +342,8 @@ namespace FlatWorld.Networking.Gameplay
                     !GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(reservation.Actor.CorePlayer)) &&
                     SpaceSession.Current?.TryGetNetworkLooseItem(reservation.SourceData.Guid, out _, out SpaceSectorPosition position) == true &&
                     SpaceSectorCoordinates.Difference(position, observer.Position).Magnitude <= MaxPickupDistance;
-            return reservation.Item != null && NetworkGameplayWorldScope.OwnsItem(reservation.Connection, reservation.Item) &&
+            return reservation.Item != null && !reservation.Item.InHand && reservation.Item.Owner == null &&
+                NetworkGameplayWorldScope.OwnsItem(reservation.Connection, reservation.Item) &&
                 WorldItemWaterSystem.CanPickUpAt(reservation.Item, GetConnectionLogicalPosition(reservation.Connection)) &&
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(reservation.Connection),
                     GetLogicalItemPosition(reservation.Item)) <= MaxPickupDistance;
@@ -365,7 +366,7 @@ namespace FlatWorld.Networking.Gameplay
                 return true;
             }
             item = ItemMgr.Instance.GetItemByGuid(itemGuid);
-            if (!CanSynchronizeWorldItem(item) || !NetworkGameplayWorldScope.OwnsItem(connection, item) || item.itemData.Stack?.CanBePickedUp != true ||
+            if (!CanSynchronizeWorldItem(item) || item.Owner != null || !NetworkGameplayWorldScope.OwnsItem(connection, item) || item.itemData.Stack?.CanBePickedUp != true ||
                 !WorldItemWaterSystem.CanPickUpAt(item, GetConnectionLogicalPosition(connection)) ||
                 WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), GetLogicalItemPosition(item)) > MaxPickupDistance)
             { item = null; return false; }

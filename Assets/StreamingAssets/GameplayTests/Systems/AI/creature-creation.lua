@@ -13,6 +13,11 @@ test.runtime("ai", "incremental_creature_creation", {}, function(data)
         "取消分帧创建后仍交付生物，或未执行一次回滚")
     assert(data.invalidCommitRejected and data.invalidCommitNotPublished and data.cleanupComplete,
         "失效落点仍发布了生物，或失败候选未清理")
+    local replacement = data.replacedWorld
+    assert(replacement.sameKeyDifferentScene and replacement.stoppedAfterReplacement and
+        replacement.candidateReleased and replacement.candidateDestroyed and replacement.noDeliveryOrPublish and
+        replacement.rolledBackOnce and replacement.originalWorldRestored and replacement.originalPhysicsRetained,
+        "同键世界换代后旧生物候选仍被交付，或未回滚并恢复原世界")
     assert(data.fishColdShellWithoutBody and data.fishBornWithMotionBody and data.fishCleaned,
         "小鱼无预置刚体的外壳未能分帧完成物理租借、加载或出生回收")
     assert(data.hasLightController and data.noUnusedLight and data.radianceAdded and data.lightCreatedOnDemand,
@@ -36,3 +41,31 @@ test.runtime("ai", "creature_creation", {}, function(data)
     assert(data.restoreDelta == 2 and data.finalBirthDelta == 2 and data.cleanupComplete,
         "新生/恢复统计混算，或自有测试居民没有清理")
 end, "统一出生、重复拒绝、失败回滚、池复用保护和同身份恢复")
+
+-- 对照真实实体与同一模拟步的表现快照，不依赖实体在查询中的顺序。
+test.system("ai", "ecs_resident_ownership", {wrapped = false}, function(data)
+    local sources, snapshots = data.sourceRecords, data.displayRecords
+    assert(#sources == 3 and #snapshots == 3, "ECS 多实体表现快照数量错误")
+    local function identity(record)
+        return table.concat({record.backend, record.value, record.generation, record.world, record.dimension}, ":")
+    end
+    local remaining, definitions, externalCount = {}, {}, 0
+    for _, source in ipairs(sources) do
+        local key = identity(source)
+        assert(remaining[key] == nil, "ECS 权威实体身份重复")
+        remaining[key], definitions[source.definition] = source, true
+        if source.external == 1 then externalCount = externalCount + 1 end
+    end
+    assert(definitions[0] and definitions[1] and externalCount == 1 and
+        math.abs(sources[1].x - sources[2].x) > .01 and math.abs(sources[2].x - sources[3].x) > .01,
+        "ECS 快照样本没有覆盖不同定义、位置与外部实体")
+    for _, snapshot in ipairs(snapshots) do
+        local key = identity(snapshot)
+        local source = remaining[key]
+        assert(source and snapshot.definition == source.definition and snapshot.external == source.external and
+            math.abs(snapshot.x - source.x) < .0001 and math.abs(snapshot.y - source.y) < .0001,
+            "ECS 表现快照的身份、定义或位置与实际实体不一致")
+        remaining[key] = nil
+    end
+    assert(next(remaining) == nil, "ECS 表现快照丢失实际实体")
+end, "ECS 多实体真实身份与表现快照一致")

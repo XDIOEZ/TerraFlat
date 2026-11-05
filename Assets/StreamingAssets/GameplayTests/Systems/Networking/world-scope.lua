@@ -23,8 +23,11 @@ test.runtime("networking", "world_scope", {}, function(data)
     assert(data.weatherPersistenceWarnings == 0, "子天气仍对非根节点调用DontDestroyOnLoad")
     assert(data.weatherChildRetainsOwner and data.weatherChildDestroyedWithOwner,
         "子天气脱离所属父节点、错误保留整个场景层级，或父级销毁后残留")
-    assert(data.weatherRootPersists and data.weatherRootSurvivesOwner and data.weatherFixtureReleased,
-        "独立根天气没有进入持久场景，或生命周期夹具未清理")
+    assert(data.weatherRootScene == "DontDestroyOnLoad" and data.weatherRootOutsidePlayerScene
+        and data.weatherRootCategory == "World" and data.weatherRootOwnsBusinessRoot,
+        "独立根天气没有进入持久场景的世界分类，或失去独立业务所有权")
+    assert(data.weatherRootSurvivesOwner and data.weatherFixtureReleased,
+        "独立根天气没有保持存活，或生命周期夹具未清理")
     assert(data.weatherOwnersUnchanged, "临时天气夹具替换或清理了正式世界的天气所有者")
     assert(data.sceneUnchanged and data.localPlayerUnchanged,
         "后台准备世界切换了主机活动场景或替换本地主角")

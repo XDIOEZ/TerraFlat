@@ -60,7 +60,7 @@ public sealed partial class GMReflectionConsole
         return controller != null && traits != null;
     }
 
-    /// <summary>收起 GM 后独占一次鼠标/触屏点选，输入锁同时释放已有摇杆和攻击。</summary>
+    /// <summary>收起 GM 后持续选择鼠标/触屏落点，直到主动取消才释放输入锁。</summary>
     private void BeginTeleportTargeting()
     {
         if (!TryGetTeleportPlayer(out Mod_GameController controller, out Mod_PlayerTraits traits) ||
@@ -77,18 +77,15 @@ public sealed partial class GMReflectionConsole
         teleportTargetRoot.SetActive(true);
     }
 
-    /// <summary>按本次真实触点换算落点，不能读取手机摇杆准线或点击 GM 按钮的位置。</summary>
+    /// <summary>每次触点立即传送并保持选点层，支持连续点选不同落点。</summary>
     private void CompleteTeleportTargeting(Vector2 screenPosition)
     {
-        try
-        {
-            if (teleportTargetPlayer != null)
-                teleportTargetPlayer.TryTeleportToScreenPosition(screenPosition);
-        }
-        finally
+        if (teleportTargetPlayer == null)
         {
             CancelTeleportTargeting();
+            return;
         }
+        teleportTargetPlayer.TryTeleportToScreenPosition(screenPosition);
     }
 
     /// <summary>结束点选并释放自身输入锁；重复取消不会影响其他面板的锁。</summary>
@@ -156,7 +153,7 @@ public sealed partial class GMReflectionConsole
         layout.spacing = 12f;
         layout.childControlWidth = layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
-        TextMeshProUGUI hint = CreateText(toolbar.transform, "点击场景选择传送位置", 20f, GmTextPrimary);
+        TextMeshProUGUI hint = CreateText(toolbar.transform, "连续点击场景传送，按取消退出", 20f, GmTextPrimary);
         hint.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         // 提示栏拦截点击，只有其下的场景点选层能够提交落点。
         CreateButton(toolbar.transform, "取消", () => SetWindowVisible(true), 120f, 60f);
@@ -174,6 +171,7 @@ public sealed partial class GMReflectionConsole
     private TextMeshProUGUI biomeHintText;
     private Button biomeTeleportButton;
     private CancellationTokenSource biomeSearchCancellation;
+    private uint biomeTeleportResultGeneration;
 
     // GM 调试分页沿用现有遗迹选择行的布局和主题。
     private void BuildBiomeTeleportRow(Transform content)
@@ -244,15 +242,15 @@ public sealed partial class GMReflectionConsole
         }
         var cancellation = new CancellationTokenSource();
         biomeSearchCancellation = cancellation;
+        unchecked { ++biomeTeleportResultGeneration; }
         StartCoroutine(LocateBiomeAndTeleport(player, manager,
-            teleportBiomes[selectedBiomeIndex], cancellation));
+            teleportBiomes[selectedBiomeIndex], cancellation, biomeTeleportResultGeneration));
     }
 
     // 等待后台任务时只在主线程更新 UI，并在落点应用前核对世界和玩家身份。
     private IEnumerator LocateBiomeAndTeleport(Item player, ChunkMgr manager,
-        SurfaceBiomeKind biome, CancellationTokenSource cancellation)
+        SurfaceBiomeKind biome, CancellationTokenSource cancellation, uint resultGeneration)
     {
-        bool teleported = false;
         try
         {
             biomeTeleportButton.interactable = false;
@@ -346,33 +344,29 @@ public sealed partial class GMReflectionConsole
             }
             Vector3 destination = new(result.Cell.X + 0.5f, result.Cell.Y + 0.5f,
                 player.transform.position.z);
-            bool completed = false, succeeded = false;
+            bool callbackReceived = false;
             if (!PlayerTeleportService.TryTeleportToSurface(player, destination, success =>
             {
-                succeeded = success;
-                completed = true;
+                callbackReceived = true;
+                if (this == null || resultGeneration != biomeTeleportResultGeneration || !IsSameWorld()) return;
+                if (!success)
+                {
+                    SetLocalizedText(biomeHintText, "群系传送未完成，请检查联机状态或稍后重试。");
+                    return;
+                }
+                SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
+                    "已定位{0}：({1}, {2})，检查 {3:N0} 个采样位置。",
+                    FlatWorldLocalizationService.GetUiText(name), result.Cell.X, result.Cell.Y,
+                    result.SampledCount));
+                Debug.Log($"[GM] 已按正式生成规则传送到群系 {name} ({biome})，落点={destination}，采样={result.SampledCount}");
+                SetWindowVisible(false);
             }))
             {
-                SetLocalizedText(biomeHintText, "当前无法传送，请等待世界就绪或上一笔传送结束。");
+                SetLocalizedText(biomeHintText, "当前世界尚不能执行传送。");
                 yield break;
             }
-            while (!completed)
-            {
-                if (!IsSameWorld()) yield break;
-                SetLocalizedText(biomeHintText, "已定位群系，正在等待服务器确认传送…");
-                yield return null;
-            }
-            if (!succeeded)
-            {
-                SetLocalizedText(biomeHintText, "群系传送未完成，请检查联机状态或稍后重试。");
-                yield break;
-            }
-            SetLocalizedProvider(biomeHintText, () => FlatWorldLocalizationService.GetUiFormat(
-                "已定位{0}：({1}, {2})，检查 {3:N0} 个采样位置。",
-                FlatWorldLocalizationService.GetUiText(name), result.Cell.X, result.Cell.Y,
-                result.SampledCount));
-            Debug.Log($"[GM] 已按正式生成规则传送到群系 {name} ({biome})，落点={destination}，采样={result.SampledCount}");
-            teleported = true;
+            if (!callbackReceived)
+                SetLocalizedText(biomeHintText, "已定位群系，传送已立即执行，正在同步服务器结果。");
 
             bool IsSameWorld() => player != null && manager != null &&
                 ItemMgr.GetInstance()?.LocalControlledActor == player && player.itemData != null &&
@@ -391,12 +385,11 @@ public sealed partial class GMReflectionConsole
                 SetLocalizedText(biomeTeleportButton.GetComponentInChildren<TextMeshProUGUI>(), "开始搜索");
             }
         }
-        if (teleported)
-            SetWindowVisible(false);
     }
 
     private void CancelBiomeSearch()
     {
+        unchecked { ++biomeTeleportResultGeneration; }
         if (biomeSearchCancellation == null) return;
         biomeSearchCancellation.Cancel();
         if (biomeHintText != null)

@@ -13,6 +13,8 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - 主题 `Assets/Resources/GameConfig/UI/ui-theme.json`；动画 `Assets/Resources/Config/UIAnimations.json`；设置契约 `Assets/5_Scripts/5-1_Data/Settings/SettingsContracts.cs`。
 - 主菜单背景由 `MainMenuBackgroundSlideshowController` 持十二张显式 Sprite 引用，两层 Image 按非缩放时间停留12秒、淡化1.5秒；监听 BasePanel 开关并在 Start 同步初始化状态，关闭取消淡化、重开保留底图。`MainMenuPrefabBuilder` 的接入、换肤和重建共用装配，旧六图不改导入，新增图在 `Generated/MainMenuBackgrounds/PixelCarousel/`；规则 `ui_settings/main_menu_background_slideshow`。
 
+主菜单五个图标使用 `Assets/6_Art/UI/MainMenuIcons/` 的离线 PNG + 普通 Image；SVG 仅保留为设计源，运行时不使用 SVGImage/专用材质。`Tools/Art/generate_main_menu_icons.py` 用同一份路径输出 96px 透明 PNG（Pillow 超采样）；`generate_inventory_category_icons.py` 绘制库存九个分类图标。分类按钮保留文字，图标22px，文字左留36px；正式 Prefab 与构建器同步。PNG 统一 Sprite/FullRect、Bilinear、无 mipmap/ReadWrite，图集预构建按 Prefab 依赖自动归入 Menu/GameplayUI；`verify_main_menu_icons.py` 离线检查14张图片及正式绑定。
+
 ## 公共控件与布局
 
 - **普通按钮/页签（含 GM、调试窗口）实例化 `Common/Controls/UI_Button` / `UI_TabButton`，不临时拼 Image/Button/TMP。** `ReusableUIControl` 持结构、字体、Sprite；使用处只设文案、事件、值、外部布局，页签选中走 `ReusableUITabVisual.SetSelected`。

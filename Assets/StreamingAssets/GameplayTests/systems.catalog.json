@@ -25,6 +25,7 @@
       ],
       "ruleCaseIds": [
         "ai_actor_control_rules",
+        "ai_servitor_rules",
         "ai_rules",
         "ai_behavior_tree_rules",
         "ai_spawn_countdown_rules",
@@ -38,6 +39,7 @@
       "coverageDocument": "GameplayTests/Systems/AI/README.md",
       "integrationCaseIds": [
         "ai_actor_control_gameplay",
+        "ai_servitor_gameplay",
         "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
@@ -67,6 +69,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Navigation/README.md",
       "integrationCaseIds": [
+        "ai_actor_control_gameplay",
+        "ai_servitor_gameplay",
         "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
@@ -92,6 +96,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.WorldItemQuickPick.cs",
         "Assets/PlayerInput/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestInputLifecycleRuntimeProbe.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestDeviceMovementRuntimeProbe.cs",
         "Assets/5_Scripts/5-3_GamePlay/Physics2D/*",
         "Assets/5_Scripts/5-3_GamePlay/Core/ItemActionFeedback.cs",
         "Assets/5_Scripts/Shared/Utilities/Geometry/AttackShape2D.cs",
@@ -117,6 +122,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Player/README.md",
       "integrationCaseIds": [
+        "player_device_input_behavior",
         "player_bicycle",
         "player_gameplay",
         "wheelbarrow_gameplay",
@@ -621,7 +627,11 @@
         "fluid_surface_pump_after",
         "fluid_reactions",
         "fluid_environment",
-        "player_gameplay"
+        "player_device_input_behavior",
+        "player_bicycle",
+        "player_gameplay",
+        "wheelbarrow_gameplay",
+        "wheelbarrow_cleanup_gameplay"
       ],
       "rulesCoverage": "partial"
     },
@@ -938,7 +948,6 @@
       ],
       "ruleCaseIds": [
         "space_rules",
-        "space_ship_damage_rules",
         "space_elevator_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
@@ -1266,6 +1275,7 @@
         "networking_bots_roll",
         "networking_world_scope",
         "networking_bots_ships",
+        "item_runtime_drop_motion_gameplay",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -1292,6 +1302,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Modding/README.md",
       "integrationCaseIds": [
+        "item_runtime_drop_motion_gameplay",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -1385,7 +1396,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/UISettings/README.md",
       "integrationCaseIds": [
-        "ui_localization_gameplay"
+        "ui_localization_gameplay",
+        "ui_new_world_window_behavior"
       ],
       "rulesCoverage": "partial"
     },
@@ -1422,7 +1434,8 @@
       "coverageDocument": "GameplayTests/Systems/Audio/README.md",
       "integrationCaseIds": [
         "audio_gameplay",
-        "audio_combat_settlement"
+        "audio_combat_settlement",
+        "audio_default_configuration"
       ],
       "rulesCoverage": "partial"
     },
@@ -1447,7 +1460,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Localization/README.md",
       "integrationCaseIds": [
-        "ui_localization_gameplay"
+        "ui_localization_gameplay",
+        "ui_new_world_window_behavior"
       ],
       "rulesCoverage": "partial"
     },

@@ -30,8 +30,9 @@ public static class GameplayTestBicycleRuntimeProbe
         if (action == "wall_mark") scope.MarkBlockedWheelPose();
         if (action == "push_sample") scope.MarkCoastingStart();
         JObject result = scope.Sample();
+        if (action == "land" || action == "water_sample") result["rideSamples"] = scope.EndRideSampling();
         if (action == "wall") scope.AddBlockingWall();
-        if (action == "water") scope.FillWater();
+        if (action == "water") { scope.FillWater(); scope.BeginRideSampling(); }
         if (action == "push") scope.BeginPush();
         if (action == "finish") scope.MountForScreenshot();
         result["mountedAfterAction"] = scope.Carrier.Rider == scope.Mover;
@@ -40,7 +41,7 @@ public static class GameplayTestBicycleRuntimeProbe
     #endregion
 
     #region 临时车体、液体与玩家位置租约
-    private sealed class BicycleScope : IDisposable
+    private sealed class BicycleScope : IDisposable, IGameplayFixedStepSimulationSystem
     {
         private readonly Item player;
         private readonly Vector3 originalPosition;
@@ -52,6 +53,7 @@ public static class GameplayTestBicycleRuntimeProbe
         private Vector2 blockedPosition;
         private float blockedWheelAngle;
         private float blockedPedalAngle;
+        private JArray rideSamples;
         private bool disposed;
         public Mod_Mover Mover { get; }
         public Mod_Carrier Carrier { get; private set; }
@@ -79,6 +81,33 @@ public static class GameplayTestBicycleRuntimeProbe
             if (Carrier == null || !Carrier.IsAvailable) throw new InvalidOperationException("自行车正式载具未就绪。");
             startPosition = Carrier.Body.position;
             Carrier.ToggleRider(player, Mover);
+            BeginRideSampling();
+        }
+
+        // 在移动输入持续期间逐固定步记录速度，避免松手制动后才取样。
+        public void BeginRideSampling()
+        {
+            rideSamples = new JArray();
+            GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+        }
+
+        public void SimulateFixedStep(float deltaTime)
+        {
+            if (rideSamples == null || Carrier == null) return;
+            rideSamples.Add(new JObject
+            {
+                ["tick"] = (long)GameplayFixedStepSimulation.TickIndex,
+                ["drivenSpeed"] = Carrier.DrivenVelocity.magnitude,
+                ["speed"] = Carrier.CurrentVelocity.magnitude
+            });
+        }
+
+        public JArray EndRideSampling()
+        {
+            GameplayFixedStepSimulation.Unregister(this);
+            JArray samples = rideSamples ?? new JArray();
+            rideSamples = null;
+            return samples;
         }
 
         private Vector2 FindClearRidingSite()
@@ -236,6 +265,7 @@ public static class GameplayTestBicycleRuntimeProbe
         {
             if (disposed) return;
             disposed = true;
+            GameplayFixedStepSimulation.Unregister(this);
             if (ReferenceEquals(Mover.CarrierSource, Carrier)) Mover.DetachCarrier(null);
             if (wall != null) UnityEngine.Object.DestroyImmediate(wall);
             if (bicycle != null) ItemMgr.Instance.DespawnItem(bicycle, saveData: false);

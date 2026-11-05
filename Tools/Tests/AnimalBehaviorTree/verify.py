@@ -208,7 +208,7 @@ def verify_actual_lua(samples):
 
 def verify_actor_tree_json():
     ai = ROOT / "Assets/5_Scripts/5-3_GamePlay/Entities/AI"
-    sources = [ai / "AnimalBehaviorTreeNodeCatalog.cs", ai / "AnimalLandBehaviorNodes.cs",
+    sources = [ai / "AnimalBehaviorTreeNodeCatalog.cs", ai / "ServitorBehaviorNodes.cs", ai / "AnimalLandBehaviorNodes.cs",
                ai / "AnimalTemperatureSafetyBehaviorNodes.cs", *ai.glob("AnimalSpecialMovementBehaviorNodes*.cs")]
     registered = {"actions": set(), "conditions": set()}
     for source in sources:

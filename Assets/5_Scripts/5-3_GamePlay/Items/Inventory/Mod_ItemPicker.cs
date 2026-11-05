@@ -237,14 +237,13 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
     private void OnTriggerEnter2D(Collider2D other)
     {
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
-        if (pickAble == null) return;
+        if (IgnoreAttachedOrInvalidPickupCandidate(pickAble)) return;
 
         RefreshPickupAttempts();
         deferredPickupItems.Remove(pickAble);
         pickupAttemptedItems.Remove(pickAble);
 
-        if (pickAble.itemData?.Stack != null)
-            TryPickUp(pickAble, logMissingInventories: true);
+        TryPickUp(pickAble, logMissingInventories: true);
     }
 
     /// <summary>
@@ -253,8 +252,7 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
     private void OnTriggerStay2D(Collider2D other)
     {
         Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
-        if (pickAble?.itemData?.Stack == null)
-            return;
+        if (IgnoreAttachedOrInvalidPickupCandidate(pickAble)) return;
 
         if (Mod_Droping.IsDropInProgress(pickAble) ||
             !pickAble.itemData.Stack.CanBePickedUp || !CanReachWaterItem(pickAble))
@@ -284,11 +282,21 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
         }
     }
 
-    /// <summary>
-    /// 统一处理进入和持续停留触发器的拾取请求。
-    /// </summary>
+    // 所有接触入口共用附属物资格与缓存撤销规则。
+    private bool IgnoreAttachedOrInvalidPickupCandidate(Item candidate)
+    {
+        if (candidate != null && candidate.itemData?.Stack != null && !candidate.InHand &&
+            (candidate.Owner == null || Mod_Droping.IsDropInProgress(candidate))) return false;
+        // 附属物清掉尝试记录；飞行物仍由原延迟队列在落地后重试。
+        deferredPickupItems.Remove(candidate);
+        pickupAttemptedItems.Remove(candidate);
+        return true;
+    }
+
+    /// <summary>统一处理进入和持续停留触发器的拾取请求。</summary>
     private void TryPickUp(Item pickAble, bool logMissingInventories)
     {
+        if (IgnoreAttachedOrInvalidPickupCandidate(pickAble)) return;
         // 检查物品栏列表是否为空
         if (AddTargetInventories.Count == 0)
         {
@@ -302,10 +310,6 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
         {
             return;
         }
-
-        // 已由进入/停留事件解析正式碰撞来源，避免每次接触再次遍历组件层级。
-        if (pickAble?.itemData?.Stack == null)
-            return;
 
         if (Mod_Droping.IsDropInProgress(pickAble) ||
             !pickAble.itemData.Stack.CanBePickedUp || !CanReachWaterItem(pickAble))

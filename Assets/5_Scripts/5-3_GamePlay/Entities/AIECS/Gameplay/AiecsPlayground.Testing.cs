@@ -102,10 +102,22 @@ namespace FlatWorld.AIECS.Gameplay
             if (owner.bridge == null) throw new InvalidOperationException("维度居民测试没有创建正式模拟。");
             owner.bridge.PlayerParticipates = false;
             scope.Bridge = owner.bridge; scope.Spawned = owner.spawned;
-            foreach (var record in owner.bridge.Simulation.Display)
-                if (record.External == 0) scope.Identities.Add(record.Key);
+            CollectDimensionResidentIdentities(owner, scope.Identities, out _);
             if (scope.Identities.Count == 0) throw new InvalidOperationException("维度居民测试没有成功生成单位。");
             return SampleDimensionResidents(player, args);
+        }
+
+        // 基准与迁移后都从完成同步的实体查询采样，不把显示帧当作实体全集。
+        private static void CollectDimensionResidentIdentities(AiecsPlayground owner,
+            HashSet<CombatIdentity> residents, out int externalPlayers)
+        {
+            owner.bridge.Simulation.Complete();
+            using EntityQuery query = owner.bridge.Simulation.Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>());
+            using NativeArray<AiecsIdentity> identities = query.ToComponentDataArray<AiecsIdentity>(Allocator.Temp);
+            externalPlayers = 0;
+            foreach (AiecsIdentity identity in identities)
+                if (identity.External == 0) residents.Add(identity.Key);
+                else externalPlayers++;
         }
 
         private static JObject SampleDimensionResidents(Item player, JObject args)
@@ -114,14 +126,8 @@ namespace FlatWorld.AIECS.Gameplay
                 throw new InvalidOperationException("维度居民测试缺少本轮现场。");
             AiecsPlayground owner = scope.Owner;
             if (owner == null || owner.bridge == null) return new JObject { ["active"] = false };
-            owner.bridge.Simulation.Complete();
-            using EntityQuery query = owner.bridge.Simulation.Entities.CreateEntityQuery(ComponentType.ReadOnly<AiecsIdentity>());
-            using NativeArray<AiecsIdentity> identities = query.ToComponentDataArray<AiecsIdentity>(Allocator.Temp);
             var current = new HashSet<CombatIdentity>();
-            int externalPlayers = 0;
-            foreach (AiecsIdentity identity in identities)
-                if (identity.External == 0) current.Add(identity.Key);
-                else externalPlayers++;
+            CollectDimensionResidentIdentities(owner, current, out int externalPlayers);
             bool localSuspended = WorldEntityRuntime.DevelopmentSuspended;
             return new JObject
             {

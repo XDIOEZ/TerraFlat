@@ -1,4 +1,5 @@
 -- 在隔离测试世界用正式控制与快捷栏入口完成关键玩家流程。
+-- 本文件包含内部架构/生命周期约束；普通设备行为覆盖独立放在 device-input-behavior.lua。
 test.check("world_ready", "世界已进入")
 test.check("terrain_ready", "玩家脚下地形就绪")
 test.runtime("player", "independent_presentation_frames", {}, function(data)

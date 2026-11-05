@@ -10,7 +10,7 @@ namespace FlatWorld.Spaceflight
     {
         #region 船内普通世界的显示投影
         private readonly Dictionary<ChunkView, WorldPresentationProjection> interiorChunkProjections = new();
-        private readonly Dictionary<Item, WorldPresentationProjection> interiorItemProjections = new();
+        private readonly Dictionary<Item, ShipInteriorItemPresentationBinding> interiorItemProjections = new();
         private readonly Dictionary<string, WorldPresentationSortingDomain> interiorSortingDomains = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ShipInteriorPresentationMembers> interiorPresentationMembers = new(StringComparer.Ordinal);
         private readonly Dictionary<ChunkView, ShipInteriorChunkPresentationBinding> interiorChunkBindings = new();
@@ -29,7 +29,7 @@ namespace FlatWorld.Spaceflight
             internal readonly WorldPresentationSortingDomain Domain;
             internal readonly Dictionary<RuntimeWorldAddress, ShipInteriorChunkPresentationBinding> Chunks = new();
             internal readonly HashSet<Item> Items = new();
-            internal readonly List<WorldPresentationProjection> ItemProjections = new();
+            internal readonly List<ShipInteriorItemPresentationBinding> ItemProjections = new();
             internal readonly List<ShipPieceState> Engines = new();
             internal List<ShipPieceState> PieceSource;
             internal ulong StructureRevision;
@@ -62,6 +62,13 @@ namespace FlatWorld.Spaceflight
             internal RuntimeWorldAddress Address;
             internal ChunkView View;
             internal ChunkTilemapRenderer Renderer;
+            internal WorldPresentationProjection Projection;
+        }
+
+        private sealed class ShipInteriorItemPresentationBinding
+        {
+            internal Item Item;
+            internal Transform Source;
             internal WorldPresentationProjection Projection;
         }
 
@@ -118,8 +125,25 @@ namespace FlatWorld.Spaceflight
                 if (binding.Renderer != null)
                     ChunkBatchRendererGroupService.SetOwnerExternalProjection(binding.Renderer, projection, visible, domain);
             }
-            foreach (WorldPresentationProjection display in members.ItemProjections)
-                display.ScheduleSynchronizationBeforeRendering(projection, visible);
+            WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+            foreach (ShipInteriorItemPresentationBinding binding in members.ItemProjections)
+            {
+                if (binding.Item == null) continue;
+                Transform source = rendering?.GetActorProjectionSource(binding.Item)
+                    ?? binding.Item.transform;
+                if (source == null)
+                {
+                    if (binding.Projection != null) binding.Projection.SetVisible(false);
+                    continue;
+                }
+                if (!ReferenceEquals(binding.Source, source) || binding.Projection == null || binding.Projection.IsReleased)
+                {
+                    if (binding.Projection != null) binding.Projection.Release();
+                    binding.Source = source;
+                    binding.Projection = CreateShipInteriorItemProjection(binding.Item, source, members.Domain);
+                }
+                binding.Projection.ScheduleSynchronizationBeforeRendering(projection, visible);
+            }
             if (!ship.IsWreck)
                 foreach (ShipPieceState piece in members.Engines)
                     SynchronizeInteriorEngineExhaust(ship, piece, projection, visible, domain);
@@ -240,18 +264,17 @@ namespace FlatWorld.Spaceflight
                 if (lifecycleChanged || inHand)
                     ReleaseShipInteriorItemProjection(members, item);
                 if (inHand) continue;
-                if (interiorItemProjections.TryGetValue(item, out WorldPresentationProjection display))
+                if (interiorItemProjections.TryGetValue(item, out ShipInteriorItemPresentationBinding binding))
                 {
-                    if (display != null && !display.IsReleased) continue;
+                    if (binding.Projection != null && !binding.Projection.IsReleased) continue;
                     ReleaseShipInteriorItemProjection(members, item);
                 }
                 Transform renderSource = WorldRenderingManager.ExistingInstance?.GetActorProjectionSource(item)
                     ?? item.transform;
-                display = WorldPresentationProjection.Create(renderSource, transform,
-                    allowInactiveSourceRoot: renderSource != item.transform);
-                display.SetSortingDomain(members.Domain);
-                interiorItemProjections[item] = display;
-                members.ItemProjections.Add(display);
+                binding = new ShipInteriorItemPresentationBinding { Item = item, Source = renderSource,
+                    Projection = CreateShipInteriorItemProjection(item, renderSource, members.Domain) };
+                interiorItemProjections[item] = binding;
+                members.ItemProjections.Add(binding);
             }
             members.RemovedItems.Clear();
             foreach (Item item in members.Items)
@@ -260,11 +283,25 @@ namespace FlatWorld.Spaceflight
                 ReleaseShipInteriorItemPresentationBinding(members, item);
         }
 
+        // 借出的视觉根可能随渲染注册换代，投影必须绑定当前真实来源。
+        private WorldPresentationProjection CreateShipInteriorItemProjection(Item item, Transform source,
+            WorldPresentationSortingDomain domain)
+        {
+            WorldPresentationProjection projection = WorldPresentationProjection.Create(source, transform,
+                allowInactiveSourceRoot: source != item.transform);
+            try
+            {
+                projection.SetSortingDomain(domain);
+                return projection;
+            }
+            catch { projection.Release(); throw; }
+        }
+
         private void ReleaseShipInteriorItemProjection(ShipInteriorPresentationMembers members, Item item)
         {
-            if (!interiorItemProjections.Remove(item, out WorldPresentationProjection display)) return;
-            members.ItemProjections.Remove(display);
-            if (display != null) display.Release();
+            if (!interiorItemProjections.Remove(item, out ShipInteriorItemPresentationBinding binding)) return;
+            members.ItemProjections.Remove(binding);
+            if (binding.Projection != null) binding.Projection.Release();
         }
 
         private void ReleaseShipInteriorItemPresentationBinding(ShipInteriorPresentationMembers members, Item item)
@@ -353,8 +390,8 @@ namespace FlatWorld.Spaceflight
                 WorldPresentationTransformRegistry.TryGet(domain?.WorldKey, out Matrix4x4 projection, out _);
                 ChunkBatchRendererGroupService.SetOwnerExternalProjection(renderer, projection, false, domain);
             }
-            foreach (WorldPresentationProjection display in interiorItemProjections.Values)
-                if (display != null) display.SetVisible(false);
+            foreach (ShipInteriorItemPresentationBinding binding in interiorItemProjections.Values)
+                if (binding.Projection != null) binding.Projection.SetVisible(false);
             foreach (ShipEngineExhaustPresenter exhaust in interiorEngineExhausts.Values)
                 if (exhaust != null) exhaust.gameObject.SetActive(false);
         }
@@ -528,11 +565,11 @@ namespace FlatWorld.Spaceflight
         {
             foreach (var pair in interiorItemProjections)
             {
-                if (pair.Key == null || pair.Value == null) continue;
+                if (pair.Key == null || pair.Value.Projection == null) continue;
                 string world = GameplayWorldRegistry.GetItemWorldKey(pair.Key);
                 if (world?.StartsWith("ship:", StringComparison.Ordinal) == true &&
                     SameAssembly(world.Substring(5), shipId))
-                    pair.Value.CollectProjectedSprites(renderers);
+                    pair.Value.Projection.CollectProjectedSprites(renderers);
             }
             foreach (var pair in passengerProjections)
             {

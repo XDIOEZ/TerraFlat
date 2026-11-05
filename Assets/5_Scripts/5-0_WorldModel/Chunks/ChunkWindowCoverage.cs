@@ -127,8 +127,9 @@ namespace FlatWorld.WorldModel
 
         private static bool HasSameWindowConfiguration(ChunkWindowRequest a, ChunkWindowRequest b)
         {
+            // Hook 可返回等值的新快照，窗口按冻结内容身份而非对象分配身份匹配。
             return a.Center.DimensionId == b.Center.DimensionId && a.WorldSeed == b.WorldSeed &&
-                ReferenceEquals(a.Profile, b.Profile) && a.RequestPresentation == b.RequestPresentation &&
+                a.Profile.GenerationFingerprint == b.Profile.GenerationFingerprint && a.RequestPresentation == b.RequestPresentation &&
                 a.ActiveDistanceX == b.ActiveDistanceX && a.ActiveDistanceY == b.ActiveDistanceY &&
                 a.DataDistanceX == b.DataDistanceX && a.DataDistanceY == b.DataDistanceY &&
                 a.PresentationDistanceX == b.PresentationDistanceX && a.PresentationDistanceY == b.PresentationDistanceY &&

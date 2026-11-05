@@ -101,6 +101,11 @@ internal static class Program
 
         var module = new Ex_ModData_MemoryPackable { StableName = "example", ModuleId = "test:example" };
         ExpectFailure(() => module.WriteData(new RuntimeStruct { Value = 3 }), "raw unmanaged layout rejected");
+        ExpectFailure(() => module.WriteData(3), "raw primitive module payload rejected");
+        var textState = new TaggedTextValue { Value = "state" };
+        module.WriteData(textState);
+        Check(module.BitData.AsSpan().SequenceEqual(MemoryPackSerializer.Serialize(textState)) &&
+            module.GetData<TaggedTextValue>().Value == "state", "reference-containing module struct bytes preserved");
         using (ModuleBinaryPayloadCodecs.Register(new RuntimeStructCodec()))
         {
             module.WriteData(new RuntimeStruct { Value = 77 });
@@ -115,6 +120,17 @@ internal static class Program
         ExpectFailure(() => module.GetData<RuntimeStruct>(), "removed codec rejects raw access");
         Check(Convert.ToBase64String(module.BitData) == Convert.ToBase64String(unknown) &&
             ModuleInstanceSnapshot.Capture(module).Matches(module), "unknown codec keeps original module bytes");
+        var machineSnapshot = new Data_GeneralItem { IDName = "test:machine" };
+        var unmanagedMachineState = new RuntimeStruct { Value = 1234 };
+        MachinePersistence.Write(machineSnapshot, "struct", unmanagedMachineState);
+        MachinePersistence.Write(machineSnapshot, "primitive", 5678);
+        var machineDocument = Newtonsoft.Json.Linq.JObject.Parse(machineSnapshot.ItemSpecialData)[MachinePersistence.Namespace];
+        Check(Convert.FromBase64String((string)machineDocument["struct"]).AsSpan().SequenceEqual(
+                MemoryPackSerializer.Serialize(unmanagedMachineState)) &&
+            Convert.FromBase64String((string)machineDocument["primitive"]).AsSpan().SequenceEqual(
+                MemoryPackSerializer.Serialize(5678)) &&
+            MachinePersistence.Read<RuntimeStruct>(machineSnapshot, "struct").Value == 1234 &&
+            MachinePersistence.Clone(5678) == 5678, "machine unmanaged payload bytes and roundtrip preserved");
         var ingredient = new Data_GeneralItem { IDName = "test:ingredient", Guid = 19, code = "grain",
             Stack = new ItemStack { Amount = 4 }, MaxDurability = 1, Durability = 1 };
         var mortar = new MortarState
@@ -125,12 +141,35 @@ internal static class Program
             ProcessingRecipeId = "grind", ProcessingStep = 2
         };
         module.WriteData(mortar);
+        Check(module.BitData.AsSpan().SequenceEqual(ItemSnapshotSerialization.SerializePayload(mortar)),
+            "independent writer preserves the existing mortar bytes");
         ingredient.Stack.Amount = 0;
         var restoredMortar = module.GetData<MortarState>();
         Check(restoredMortar.Bowl.itemSlots[0].itemData.Stack.Amount == 4 && restoredMortar.ProcessingStep == 2 &&
             restoredMortar.Bowl.itemSlots[0].SlotMaxVolume == 12 && restoredMortar.Bowl.itemSlots[0].CanAcceptTags[0] == "grain" &&
             restoredMortar.Bowl.Name == "石臼" && restoredMortar.Bowl.ToggleActionName == "open" && restoredMortar.Bowl.UIPrefabName == "bowl-ui",
             "nested mortar inventory snapshot roundtrip");
+        ingredient.Stack.Amount = 4;
+        var nestedFuel = new Ex_ModData_MemoryPackable { StableName = "fuel", ModuleId = "test:fuel" };
+        ingredient.ModuleDataDic.Add("fuel", nestedFuel);
+        nestedFuel.WriteRuntimeState(new TaggedValue { Value = 71 });
+        module.WriteData(mortar);
+        var nestedMortar = module.GetData<MortarState>();
+        var restoredFuel = (Ex_ModData_MemoryPackable)nestedMortar.Bowl.itemSlots[0].itemData.ModuleDataDic["fuel"];
+        Check(restoredFuel.GetData<TaggedValue>().Value == 71 && nestedMortar.Bowl.itemSlots[0].itemData.Stack.Amount == 4,
+            "nested dirty module state survives mortar inventory snapshot");
+        Check(module.BitData.AsSpan().SequenceEqual(MemoryPackSerializer.Serialize(mortar)),
+            "nested module keeps the existing mortar byte format");
+        using (ModuleBinaryPayloadCodecs.Register(new RuntimeStructCodec()))
+        {
+            var codecFuel = new Ex_ModData_MemoryPackable { StableName = "fuel", ModuleId = "test:fuel" };
+            ingredient.ModuleDataDic["fuel"] = codecFuel;
+            codecFuel.WriteRuntimeState(new RuntimeStruct { Value = 91 });
+            module.WriteData(mortar);
+            var withCodec = module.GetData<MortarState>().Bowl.itemSlots[0].itemData;
+            Check(((Ex_ModData_MemoryPackable)withCodec.ModuleDataDic["fuel"]).GetData<RuntimeStruct>().Value == 91,
+                "nested registered codec preserves its payload and version");
+        }
         var container = new Inventory_ModuleData { Data = new Dictionary<string, Inventory_Data> { ["bag"] = restoredMortar.Bowl },
             PanleRectPosition = new Vector3(1, 2, 3), InventoryInitName = "layout", BasePanelIsOpen = true };
         var containerBytes = MemoryPackSerializer.Serialize(InventoryModulePayloadSnapshot.Capture(container));
@@ -506,6 +545,12 @@ internal partial class MatterWithFutureField
 internal partial class TaggedValue
 {
     [MemoryPackOrder(0)] public int Value;
+}
+
+[MemoryPackable(GenerateType.VersionTolerant)]
+internal partial struct TaggedTextValue
+{
+    [MemoryPackOrder(0)] public string Value;
 }
 
 [MemoryPackable(GenerateType.VersionTolerant)]

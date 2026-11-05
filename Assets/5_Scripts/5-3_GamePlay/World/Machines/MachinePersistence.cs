@@ -37,7 +37,7 @@ public static class MachinePersistence
         if (string.IsNullOrWhiteSpace(key) || key == "version") throw new ArgumentException("机器载荷键无效。", nameof(key));
         JObject root = ItemSpecialDataJsonStore.ReadRoot(snapshot.ItemSpecialData);
         JObject document = ReadDocument(snapshot) ?? new JObject { ["version"] = Version };
-        byte[] bytes = MemoryPackSerializer.Serialize(value);
+        byte[] bytes = SerializeState(value);
         if (bytes.Length > MaximumPayloadBytes) throw new InvalidOperationException("机器状态载荷过大：" + key);
         document[key] = Convert.ToBase64String(bytes);
         root[Namespace] = document;
@@ -45,7 +45,12 @@ public static class MachinePersistence
     }
 
     public static T Clone<T>(T value)
-        => MemoryPackSerializer.Deserialize<T>(MemoryPackSerializer.Serialize(value));
+        => MemoryPackSerializer.Deserialize<T>(SerializeState(value));
+
+    // 嵌套库存可能在捕获模块时再次编码，外层状态须使用独立写入器。
+    private static byte[] SerializeState<T>(T value)
+        => System.Runtime.CompilerServices.RuntimeHelpers.IsReferenceOrContainsReferences<T>()
+            ? ItemSnapshotSerialization.SerializePayload(value) : MemoryPackSerializer.Serialize(value);
 
     public static bool HasCustomState(ItemData snapshot)
     {

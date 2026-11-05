@@ -9,6 +9,7 @@ public static class MainMenuPrefabBuilder
 {
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
     private const string BackgroundRoot = "Assets/6_Art/Generated/MainMenuBackgrounds/";
+    private const string MenuIconRoot = "Assets/6_Art/UI/MainMenuIcons/";
     private static readonly string[] BackgroundFiles =
     {
         "01_morning_grassland.png", "02_orbital_world.png", "03_space_launch.png",
@@ -129,6 +130,7 @@ public static class MainMenuPrefabBuilder
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
             BuildSettingsButton(root.transform, font);
+            ConfigureMainMenuIcons(root);
             BuildBackgroundPreloadIndicator(root.transform);
             ConfigureResponsiveLayout(root);
 
@@ -413,6 +415,81 @@ public static class MainMenuPrefabBuilder
             RequireComponent<RectTransform>(root, "旅程菜单卡"),
             RequireComponent<RectTransform>(root, GameManager.MainMenuSettingsButtonKey));
     }
+
+    #region 主菜单图标
+
+    /// <summary>在不重建菜单的前提下安装图标，保留现有按钮事件与背景布局。</summary>
+    [MenuItem("FlatWorld/其他工具/UI/安装主菜单五个图标（保持布局）")]
+    public static void ApplyMainMenuIconsKeepingLayout()
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            ConfigureMainMenuIcons(root);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssetIfDirty(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath));
+        Debug.Log("[MainMenu] 五个菜单图标已更新，原有布局与交互保留。");
+    }
+
+    private static void ConfigureMainMenuIcons(GameObject root)
+    {
+        ConfigureMenuButtonIcon(root, "旅程菜单卡/" + GameManager.MainMenuContinueButtonKey, "continue", false);
+        ConfigureMenuButtonIcon(root, "旅程菜单卡/" + GameManager.MainMenuNewGameButtonKey, "new-world", false);
+        ConfigureMenuButtonIcon(root, "旅程菜单卡/" + GameManager.MainMenuMultiplayerButtonKey, "multiplayer", false);
+        ConfigureMenuButtonIcon(root, "旅程菜单卡/" + GameManager.MainMenuModsButtonKey, "mods", false);
+        ConfigureMenuButtonIcon(root, GameManager.MainMenuSettingsButtonKey, "settings", true);
+    }
+
+    /// <summary>用离线 PNG Sprite 替换矢量组件，保留菜单图标节点和交互布局。</summary>
+    private static void ConfigureMenuButtonIcon(GameObject root, string buttonPath, string iconName, bool isSettings)
+    {
+        Button button = RequireComponent<Button>(root, buttonPath);
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(MenuIconRoot + iconName + ".png");
+        if (sprite == null) throw new MissingReferenceException("缺少菜单 PNG 图标：" + iconName);
+
+        Transform existing = button.transform.Find("菜单图标");
+        Image icon = existing != null ? existing.GetComponent<Image>() : null;
+        if (icon == null)
+        {
+            if (existing == null)
+                existing = CreateRect("菜单图标", button.transform);
+
+            UnityEngine.UI.Graphic obsoleteImage = existing.GetComponent<UnityEngine.UI.Graphic>();
+            if (obsoleteImage != null)
+                Object.DestroyImmediate(obsoleteImage, true);
+            icon = existing.gameObject.AddComponent<Image>();
+        }
+        icon.sprite = sprite;
+        icon.material = null;
+        icon.color = Label;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        SetRect(icon.rectTransform, new Vector2(isSettings ? 16f : 27f, 0f),
+            new Vector2(isSettings ? 28f : 32f, isSettings ? 28f : 32f),
+            new Vector2(0f, 0.5f));
+
+        if (!isSettings)
+        {
+            Transform index = button.transform.Find(button.name + "_序号");
+            if (index != null)
+                index.gameObject.SetActive(false);
+            return;
+        }
+
+        // 设置按钮原有文字区域较窄，图标和箭头分别固定在两端。
+        TMP_Text title = RequireComponent<TMP_Text>(root, buttonPath + "/设置标题");
+        SetRect(title.rectTransform, new Vector2(53f, 0f), new Vector2(82f, 28f), new Vector2(0f, 0.5f));
+        TMP_Text arrow = RequireComponent<TMP_Text>(root, buttonPath + "/设置箭头");
+        SetRect(arrow.rectTransform, new Vector2(-15f, 0f), new Vector2(20f, 30f), new Vector2(1f, 0.5f));
+    }
+
+    #endregion
 
     private static void CreateMenuButton(
         Transform parent,

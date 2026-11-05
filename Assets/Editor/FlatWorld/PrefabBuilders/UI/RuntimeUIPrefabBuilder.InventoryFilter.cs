@@ -95,7 +95,23 @@ public static partial class RuntimeUIPrefabBuilder
             label.fontSize = 17f;
             label.enableWordWrapping = false;
             label.overflowMode = TextOverflowModes.Ellipsis;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.margin = new Vector4(36f, 0f, 6f, 0f);
         }
+
+        // 图标只持静态 Sprite，保留整行按钮的点击和选中反馈。
+        Transform iconNode = tab.transform.Find("CategoryIcon");
+        Image icon = iconNode != null ? iconNode.GetComponent<Image>() :
+            CreateUIObject("CategoryIcon", tab.transform).AddComponent<Image>();
+        icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/UI/InventoryCategoryIcons/" + key + ".png");
+        if (icon.sprite == null) throw new MissingReferenceException("缺少分类 PNG 图标：" + key);
+        icon.color = Cream;
+        icon.raycastTarget = false;
+        icon.preserveAspect = true;
+        RectTransform iconRect = icon.rectTransform;
+        iconRect.anchorMin = iconRect.anchorMax = iconRect.pivot = new Vector2(0f, 0.5f);
+        iconRect.anchoredPosition = new Vector2(8f, 0f);
+        iconRect.sizeDelta = new Vector2(22f, 22f);
     }
 
     #endregion

@@ -66,6 +66,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - 正式生成与邻区预热共用 `ChunkGenerationScheduler` 并发额度，正式需求优先；来源离开数据窗口或世界结束会撤销其预热需求，不能另起 `Task.Run` 绕过调度。宏观高度按真实高度输入共享有界采样，仅完整区域成功后发布，纪元结束清理；诊断看 `river.macro.height_computes/height_shared_hits`。
 - 出生搜索、正式流送和联机生态冻结共用 `ChunkMgr.PrepareActiveGenerationSnapshot`，统一尺寸、空间倍率、运行时覆盖和保存配置；出生只检查可走地形/液深，不生成完整生态。`WorldAirHumidityField` 只读差量恢复后的 Ready 区块，依 Terrain/LiquidRevision/Epoch 失效，缺影响邻区返回 false，不触发生成。
 - 最终生成配置由 `WorldGenerationProfileCache` 复用，世界/种子/资源代际、实例覆盖与冻结规则变化失效；有 Profile Hook 时绕过。洞穴配对与冷地表共用失效条件，性能分看 `FreezeProfile/RefreshWindows`；离线回归 `Tools/Tests/WorldGenerationProfileCaching/`。
+- 窗口配置按不可变 `GenerationFingerprint` 比较内容，不按 Profile 对象引用比较；等价重建保留增量，参数变化仍须完整重建。
 - `WorldGenerationRuntimeHooks` 的 Profile Hook 在主线程冻结参数；`WorldModelTerrainDecorator` 在生成器创建时捕获委托，正式流送与出生查询共用。地形回调只能读请求中的冻结值并修改纯地形缓冲，不访问 Unity 对象或当前单例；测试平地等临时规则由订阅者退出时撤销。
 - Tile 外观查询优先 JSON 的 `runtimeTileId/tileAsset`，再回退 Palette；地形身份按冻结 Profile → 当前 Profile → JSON 目录解析，玩家新建筑用当前目录，稳定数字 ID 与冻结映射不冲突。
 - 流送计时是单调墙钟，父子阶段重叠不能相加；暂停跨越请求单独记录。宏观 Lazy 执行时间归实际执行者，get 包含等待，local_refine 只计本块。

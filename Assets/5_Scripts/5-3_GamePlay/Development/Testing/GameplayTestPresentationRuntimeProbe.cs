@@ -71,7 +71,15 @@ public static partial class GameplayTestPresentationRuntimeProbe
             ["text"] = new JArray(foodTextColor.r, foodTextColor.g, foodTextColor.b, foodTextColor.a) });
         Nutrition nutrition = food.Data.nutrition;
         Vector3 targets = segments.TargetFractions;
+        var temperatureColors = new JArray();
+        foreach (float warning in new[] { -1f, -.5f, 0f, .5f, 1f })
+        {
+            Color color = TemperatureWarningPresentationRules.ResolveBarColor(warning, FlatWorldUITheme.StatusBarFoodHud);
+            temperatureColors.Add(new JObject { ["warning"] = warning,
+                ["fill"] = new JArray(color.r, color.g, color.b, color.a) });
+        }
         return new JObject { ["panelVisible"] = panel.gameObject.activeInHierarchy, ["bars"] = bars,
+            ["temperatureColors"] = temperatureColors,
             ["sliderCount"] = sliders.Length, ["foodText"] = foodText.text,
             ["legendVisible"] = foodLegend != null && foodLegend.gameObject.activeInHierarchy,
             ["nutrition"] = new JArray(nutrition.Carbohydrates, nutrition.Fat, nutrition.Protein),
@@ -573,7 +581,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
     #region 新世界窗口关闭流程回归
 
-    /// <summary>通过正式新世界窗口验证世界页右上关闭只回到名称页，名称页右上仍关闭窗口。</summary>
+    /// <summary>通过正式新世界窗口验证世界覆盖层及返回按钮的关闭流程。</summary>
     private static JObject CaptureNewGameWindowClose(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
@@ -623,19 +631,33 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
             worldSettingsButton.onClick.Invoke();
             TMP_InputField worldSeedInput = panel.GetInputField(GameManager.NewGameSeedInputKey);
-            if (worldSeedInput == null)
-                throw new InvalidOperationException("正式世界设置页缺少种子输入框。");
+            Button worldCloseButton = panel.GetButton(GameManager.NewGameWorldSettingsCloseButtonKey);
+            TMP_Text worldCloseLabel = panel.GetText(GameManager.NewGameWorldSettingsCloseButtonKey + "_文字");
+            if (worldSeedInput == null || worldCloseButton == null || worldCloseLabel == null)
+                throw new InvalidOperationException("正式世界设置页缺少种子输入框或关闭按钮。");
             worldSeedInput.SetTextWithoutNotify(worldSeedValue);
 
-            bool worldPageOpened = worldPage.gameObject.activeSelf && !identityPage.gameObject.activeSelf;
+            bool worldPageVisible = worldPage.gameObject.activeSelf;
+            bool identityVisibleWithWorld = identityPage.gameObject.activeSelf;
+            bool worldCloseVisible = worldCloseButton.gameObject.activeInHierarchy;
             bool bottomBackHiddenInWorld = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
-            string worldCloseText = closeLabel.text;
-            closeButton.onClick.Invoke();
+            string worldCloseText = worldCloseLabel.text;
+            worldCloseButton.onClick.Invoke();
+            bool panelOpenAfterWorldClose = panel.IsOpen();
+            bool worldVisibleAfterWorldClose = worldPage.gameObject.activeSelf;
+            bool identityVisibleAfterWorldClose = identityPage.gameObject.activeSelf;
+            string playerNameAfterWorldClose = playerNameInput.text;
+            string worldSeedAfterWorldClose = worldSeedInput.text;
 
-            bool worldCloseReturnedToIdentity = panel.IsOpen() &&
-                identityPage.gameObject.activeSelf && !worldPage.gameObject.activeSelf;
-            bool playerNameRetained = playerNameInput.text == playerNameValue;
-            bool worldSeedRetained = worldSeedInput.text == worldSeedValue;
+            worldSettingsButton.onClick.Invoke();
+            bool worldVisibleAfterReopen = worldPage.gameObject.activeSelf;
+            string worldSeedAfterReopen = panel.GetInputField(GameManager.NewGameSeedInputKey).text;
+            closeButton.onClick.Invoke();
+            bool panelOpenAfterBack = panel.IsOpen();
+            bool worldVisibleAfterBack = worldPage.gameObject.activeSelf;
+            bool identityVisibleAfterBack = identityPage.gameObject.activeSelf;
+            string playerNameAfterBack = playerNameInput.text;
+            string worldSeedAfterBack = panel.GetInputField(GameManager.NewGameSeedInputKey).text;
             bool bottomBackHiddenInIdentity = bottomIdentityButton == null || !bottomIdentityButton.gameObject.activeSelf;
             string identityBackText = closeLabel.text;
             closeButton.onClick.Invoke();
@@ -644,12 +666,23 @@ public static partial class GameplayTestPresentationRuntimeProbe
             {
                 ["scope"] = "live-isolated-world",
                 ["difficultyCloseStayedInNewGame"] = difficultyCloseStayedInNewGame,
-                ["worldPageOpened"] = worldPageOpened,
+                ["worldPageVisible"] = worldPageVisible,
+                ["identityVisibleWithWorld"] = identityVisibleWithWorld,
+                ["worldCloseVisible"] = worldCloseVisible,
                 ["worldCloseText"] = worldCloseText,
                 ["expectedWorldCloseText"] = FlatWorldLocalizationService.GetUiText("关闭"),
-                ["worldCloseReturnedToIdentity"] = worldCloseReturnedToIdentity,
-                ["playerNameRetained"] = playerNameRetained,
-                ["worldSeedRetained"] = worldSeedRetained,
+                ["panelOpenAfterWorldClose"] = panelOpenAfterWorldClose,
+                ["worldVisibleAfterWorldClose"] = worldVisibleAfterWorldClose,
+                ["identityVisibleAfterWorldClose"] = identityVisibleAfterWorldClose,
+                ["playerNameAfterWorldClose"] = playerNameAfterWorldClose,
+                ["worldSeedAfterWorldClose"] = worldSeedAfterWorldClose,
+                ["worldVisibleAfterReopen"] = worldVisibleAfterReopen,
+                ["worldSeedAfterReopen"] = worldSeedAfterReopen,
+                ["panelOpenAfterBack"] = panelOpenAfterBack,
+                ["worldVisibleAfterBack"] = worldVisibleAfterBack,
+                ["identityVisibleAfterBack"] = identityVisibleAfterBack,
+                ["playerNameAfterBack"] = playerNameAfterBack,
+                ["worldSeedAfterBack"] = worldSeedAfterBack,
                 ["bottomBackHiddenInWorld"] = bottomBackHiddenInWorld,
                 ["bottomBackHiddenInIdentity"] = bottomBackHiddenInIdentity,
                 ["identityBackText"] = identityBackText,

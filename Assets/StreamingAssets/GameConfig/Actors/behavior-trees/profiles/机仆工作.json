@@ -1,0 +1,22 @@
+{
+  "root": {
+    "type": "selector",
+    "children": [
+      {
+        "type": "sequence",
+        "children": [
+          { "type": "condition", "name": "servitor.needsRecharge" },
+          { "type": "action", "name": "servitor.recharge" }
+        ]
+      },
+      {
+        "type": "sequence",
+        "children": [
+          { "type": "condition", "name": "servitor.canWork" },
+          { "type": "action", "name": "servitor.executeJob" }
+        ]
+      },
+      { "type": "action", "name": "servitor.standby" }
+    ]
+  }
+}

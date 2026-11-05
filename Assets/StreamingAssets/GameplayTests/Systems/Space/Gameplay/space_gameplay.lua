@@ -63,6 +63,27 @@ do
             context.ownedBodiesDeactivated and context.emptyBeforeSceneUnload and context.noPoolCreatedDuringRelease and
             context.sceneUnloaded and #context.worldDestroyErrors == 0,
             "星区关闭必须在场景卸载前释放真实固定与动态刚体，且不能重建物理池")
+        local rollback = data.leaseRollback
+        assert(#rollback.samples == 2, "缺少星区激活失败的独立与借用场景采样")
+        local created, borrowed = rollback.samples[1], rollback.samples[2]
+        for _, sample in ipairs(rollback.samples) do
+            assert(sample.injected and sample.originalFailurePreserved and sample.targetPhysicsPresentAtFailure and
+                sample.sourceActiveRestored and sample.playerSceneRestored and sample.playerParentRestored and
+                sample.playerOwnerRestored and sample.viewRemoved,
+                "星区激活失败后没有保留原异常并恢复玩家及新租约")
+        end
+        assert(not created.borrowed and not created.targetContextPresentAtFailure and
+            not created.failedSceneLoaded and not created.targetPhysicsPresentAfter,
+            "新星区失败后没有释放无上下文的物理服务及场景")
+        assert(borrowed.borrowed and borrowed.targetContextPresentAtFailure and borrowed.failedSceneLoaded and
+            borrowed.targetPhysicsPresentAfter and borrowed.borrowedPhysicsPreserved and
+            borrowed.borrowedContextPreserved and borrowed.borrowedMarkerPreserved,
+            "星区失败清理错误释放了借用场景或其既有物理所有者")
+        assert(rollback.retryCreated and rollback.retryItemPhysics and rollback.retryContextless and
+            rollback.retryReleased and rollback.retryPhysicsReleased,
+            "星区重试的真实物品或无上下文物理服务未能随正常租约释放")
+        assert(rollback.normalBorrowedViewRemoved and rollback.normalBorrowedPreserved and rollback.normalBorrowedCleanup,
+            "正常释放借用星区时误删了原场景、上下文或物理服务")
         assert(#shutdown.restingPose == 3 and shutdown.restingPoseStaticBodyWarnings == 0,
             "静止姿态与重复物品登记不能向静态刚体赋速或产生静态刚体警告")
         local restingSources = {"Dynamic", "Kinematic", "Static"}
@@ -214,6 +235,7 @@ do
             assert(visit.state.sector.x == visit.sector.x and visit.state.sector.y == visit.sector.y, "玩家归属星区错误：" .. key)
             assert(visit.interaction.senderReady and visit.interaction.missingTargetRejected and
                 visit.state.playerWorld == visit.state.playerScene and
+                visit.state.playerPhysicsMatchesScene and
                 visit.interaction.worldBefore == visit.interaction.worldAfter,
                 "太空交互没有使用玩家所属星区或调用后没有恢复世界上下文：" .. key)
             assert(visit.state.uiRootReady and visit.state.uiRootPersistent, "UI 根没有归属持久管理器：" .. key)
@@ -396,6 +418,12 @@ do
                 assert(snapshot.projectionDomainReady and snapshot.projectionOwnerId ~= 0 and
                     snapshot.projectionOwnerWorldKey == "ship:" .. ship.cruising.id,
                     "船内排序域未绑定正确世界、会话场景和船姿：" .. label)
+                local visibleSprites = 0
+                for _, projection in ipairs(snapshot.itemProjections) do
+                    assert(projection.renderSourceAlive, "船内物品投影来源已失效：" .. label)
+                    visibleSprites = visibleSprites + projection.visibleSpriteCount
+                end
+                assert(visibleSprites > 0, "船内物品投影没有实际启用的贴图：" .. label)
             end
             for _, snapshot in ipairs({cache.surface, cache.space, cache.returned}) do
                 assert(snapshot.presenterPoolCount <= snapshot.presenterLimit,
@@ -480,6 +508,8 @@ for _, value in ipairs({"right"}) do
                 state.observerRealmRevision == state.realmRevision, "跨区网络观察者没有同步当前星区和版本")
             assert(state.playerWorld == state.scene and state.playerScene == state.playerWorld,
                 "自由玩家跨区后物品或物理归属没有跟随星区")
+            assert(state.playerPhysicsMatchesScene and state.playerPhysicsSceneHandle == state.playerSceneHandle,
+                "自由玩家与其星区物理所有者没有绑定同一场景实例")
         end
         local nextRevision = function(value) return (value + 1) % 4294967296 end
         assert(data.crossed.realmRevision == nextRevision(data.before.realmRevision) and

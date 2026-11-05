@@ -164,7 +164,7 @@ public static class ModuleBinaryPayloadCodecs
             return ItemSnapshotSerialization.SerializePayload(new ModuleBinaryPayloadEnvelope
             { SchemaId = codec.SchemaId, SchemaVersion = codec.CurrentVersion, Payload = codec.Serialize(value) });
         RequireSafeRuntimePayloadType<T>();
-        return MemoryPackSerializer.Serialize(value);
+        return ItemSnapshotSerialization.SerializePayload(value);
     }
 
     public static T Deserialize<T>(byte[] payload)

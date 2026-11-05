@@ -390,6 +390,8 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
         if (!IsRuntimeLoaded || !isActiveAndEnabled || !CanPlayWeaponAnimation()) return false;
         if (EquipmentDurabilityRules.RejectBrokenAttack(item)) { ResetToIdle(); return false; }
         if (ActorActionConstraints.IsAttackBlocked(item?.Owner ?? item)) return false;
+        Mod_Stamina payer = ownerStamina;
+        float staminaBefore = payer != null ? payer.CurrentValue : 0f;
         if (!TryConsumeAttackStamina())
         {
             if (isAttacking)
@@ -399,45 +401,72 @@ public partial class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyB
 
             return false;
         }
-
-        ResetHitStop();
-        currentIndex = index;
-        isAttacking = true;
-        cachedDamageModule?.SetAnimationDamageSamplingActive(true);
-        InvalidateTickSchedule();
-        queuedNext = false;
-
-        ApplyAttackSpeedToAnimator();
-
-        string animationName = attackAnimationNames[index];
-        currentStateHash = Animator.StringToHash(animationName);
-        restoreIdleWhenActive = false;
-        animator.Play(animationName, 0, 0f);
-        animator.Update(0f);
-
-        float currentLength = animator.GetCurrentAnimatorStateInfo(0).length;
-        float scaledLength = currentLength / AttackSpeedMultiplier;
-        float window = comboWindowOverride > 0f
-            ? Mathf.Max(comboWindowOverride, currentLength)
-            : currentLength;
-        float scaledWindow = window / AttackSpeedMultiplier;
-
-        if (scaledWindow <= 0f)
+        float staminaConsumed = payer != null ? Mathf.Max(0f, staminaBefore - payer.CurrentValue) : 0f;
+        bool started = false;
+        try
         {
-            Debug.LogWarning($"{name} 连击时间窗口无效，已使用 0.1s 兜底。", this);
-            scaledWindow = 0.1f;
-        }
+            ResetHitStop();
+            currentIndex = index;
+            isAttacking = true;
+            cachedDamageModule?.SetAnimationDamageSamplingActive(true);
+            InvalidateTickSchedule();
+            queuedNext = false;
 
-        if (scaledLength <= 0f)
+            float speed = AttackSpeedMultiplier;
+            string animationName = attackAnimationNames[index];
+            if (!float.IsFinite(speed) || speed <= 0f)
+            {
+                Debug.LogWarning($"{name} 的攻击速度无效，已取消动作 {animationName}。", this);
+                return false;
+            }
+            ApplyAttackSpeedToAnimator();
+            currentStateHash = Animator.StringToHash(animationName);
+            restoreIdleWhenActive = false;
+
+            // 零时间采样时临时使用原速，避免模拟时钟持有的零速产生无限状态时长。
+            Animator actionAnimator = animator;
+            float previousSpeed = actionAnimator.speed;
+            AnimatorStateInfo state;
+            try
+            {
+                actionAnimator.speed = 1f;
+                actionAnimator.Play(animationName, 0, 0f);
+                actionAnimator.Update(0f);
+                state = actionAnimator.GetCurrentAnimatorStateInfo(0);
+            }
+            finally
+            {
+                if (actionAnimator != null) actionAnimator.speed = previousSpeed;
+            }
+
+            float currentLength = state.length;
+            float scaledLength = currentLength / speed;
+            float window = comboWindowOverride > 0f ? Mathf.Max(comboWindowOverride, currentLength) : currentLength;
+            float scaledWindow = window / speed;
+            float readyAt = AttackTime + scaledLength;
+            float deadline = AttackTime + scaledWindow;
+            if (state.shortNameHash != currentStateHash || !float.IsFinite(currentLength) || currentLength <= 0f ||
+                !float.IsFinite(scaledLength) || scaledLength <= 0f || !float.IsFinite(scaledWindow) || scaledWindow <= 0f ||
+                !float.IsFinite(readyAt) || !float.IsFinite(deadline))
+            {
+                Debug.LogWarning($"{name} 的动作 {animationName} 无法取得有效时长，已取消。", this);
+                return false;
+            }
+
+            comboDeadline = deadline;
+            nextReadyTime = readyAt;
+            PlayOwnerAttackPresentation();
+            started = true;
+            return true;
+        }
+        finally
         {
-            Debug.LogWarning($"{name} 当前攻击动画时长无效，已使用 0.1s 兜底。", this);
-            scaledLength = 0.1f;
+            if (!started)
+            {
+                try { ResetToIdle(); }
+                finally { if (staminaConsumed > 0f && payer != null && payer.Data != null) payer.CurrentValue += staminaConsumed; }
+            }
         }
-
-        comboDeadline = AttackTime + scaledWindow;
-        nextReadyTime = AttackTime + scaledLength;
-        PlayOwnerAttackPresentation();
-        return true;
     }
 
     /// <summary>每段真实挥动只通知一次持有者，武器自己的动画与伤害盒继续使用原姿态。</summary>

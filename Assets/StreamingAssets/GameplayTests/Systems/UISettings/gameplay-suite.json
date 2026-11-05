@@ -6,8 +6,16 @@
   "cases": [
     {
       "id": "ui_localization_gameplay",
+      "contractKind": "mixed",
       "name": "正式设置窗口、保存放弃与中英文切换",
       "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "ui_new_world_window_behavior",
+      "contractKind": "behavior",
+      "name": "新世界覆盖层关闭重开与输入保留",
+      "luaPath": "GameplayTests/Systems/UISettings/new-world-window.lua",
       "enabled": true
     }
   ]

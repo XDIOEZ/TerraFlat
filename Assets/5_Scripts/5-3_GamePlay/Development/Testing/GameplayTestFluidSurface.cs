@@ -125,8 +125,7 @@ internal static class GameplayTestFluidSurface
         foreach (MachineEntity battery in batteries) battery.ElectricalStoredJoules = battery.Definition.Electrical.CapacityJoules;
         fixture.Rebuild();
         int stepsPerBatch = (int)Math.Ceiling(10d / (6d * fixture.Seconds) - .000001d);
-        for (int i = 0; i < stepsPerBatch - 1; i++) fixture.Tick();
-        FluidNetworkGraph before = fixture.Graph;
+        FluidNetworkGraph before = null;
         MachineEntity firstTank = null;
         foreach (MachineEntity tank in tanks) { firstTank = tank; break; }
         int notifications = 0;
@@ -140,23 +139,44 @@ internal static class GameplayTestFluidSurface
             stableGraph &= GetFluidTankMembers(node).Count == tanks.Count;
         }
         NodeStateChanged += ObserveTankState;
-        double firstDelivered;
+        double firstDelivered = 0d;
+        int startupTicks = 0, firstBatchTicks = 0;
+        bool accumulating = false;
         try
         {
-            fixture.Tick();
-            firstDelivered = GetFluidInventory(firstTank).GetLiquidLiters();
+            // 首批可能先等待寻源和供电，用实际入罐状态定位要观察的 Tick。
+            for (int i = 0; i < stepsPerBatch * 2 && firstDelivered == 0d && notifications == 0; i++)
+            {
+                before = fixture.Graph;
+                fixture.Tick();
+                firstDelivered = GetFluidInventory(firstTank).GetLiquidLiters();
+                accumulating |= firstDelivered > 0d || GetFluidState(pumps[0]).WorldLiquidPumpLiters > 0d ||
+                    GetFluidState(pumps[1]).WorldLiquidPumpLiters > 0d;
+                if (accumulating) firstBatchTicks++;
+                else startupTicks++;
+                if (startupTicks > stepsPerBatch || firstBatchTicks > stepsPerBatch) break;
+            }
         }
         finally { NodeStateChanged -= ObserveTankState; }
         bool rebuiltBetweenSteps = !ReferenceEquals(before, fixture.Graph);
-        for (int i = 0; i < stepsPerBatch; i++) fixture.Tick();
-        double finalDelivered = GetFluidInventory(firstTank).GetLiquidLiters(), buffers = 0d;
+        double finalDelivered = firstDelivered;
+        int secondBatchTicks = 0;
+        while (secondBatchTicks < stepsPerBatch && finalDelivered <= firstDelivered)
+        {
+            fixture.Tick();
+            secondBatchTicks++;
+            finalDelivered = GetFluidInventory(firstTank).GetLiquidLiters();
+        }
+        double buffers = 0d;
         foreach (MachineEntity pump in pumps) buffers += GetFluidInventory(pump).GetLiquidLiters();
         return new JObject
         {
             ["tankCount"] = tanks.Count, ["notifications"] = notifications,
             ["stableGraph"] = stableGraph, ["stableBudget"] = stableBudget,
             ["rebuiltBetweenSteps"] = rebuiltBetweenSteps, ["firstDelivered"] = firstDelivered,
-            ["expectedFirstDelivered"] = 20d,
+            ["expectedFirstDelivered"] = 20d, ["stepsPerBatch"] = stepsPerBatch,
+            ["startupTicks"] = startupTicks, ["firstBatchTicks"] = firstBatchTicks,
+            ["secondBatchTicks"] = secondBatchTicks,
             ["finalDelivered"] = finalDelivered, ["buffers"] = buffers, ["initialLiters"] = initialLiters,
             ["remainingSurfaceLiters"] = (firstSource.Level + secondSource.Level) * LiquidCellValue.LitersPerUnit,
             ["powered"] = pumps[0].ElectricalSuppliedWatts > 0f && pumps[1].ElectricalSuppliedWatts > 0f

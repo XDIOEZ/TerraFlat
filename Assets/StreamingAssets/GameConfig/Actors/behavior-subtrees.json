@@ -17,6 +17,7 @@
     "flyAndForage": "behavior-trees/profiles/飞行觅食.json",
     "swimAndForage": "behavior-trees/profiles/水中觅食.json",
     "colonyWorker": "behavior-trees/profiles/群落工作.json",
+    "servitorWork": "behavior-trees/profiles/机仆工作.json",
     "seekInDarkness": "behavior-trees/profiles/趋暗追踪.json",
     "huntAndWander": "behavior-trees/composites/捕猎与游荡.json",
     "damageRetreat": "behavior-trees/composites/受伤撤退.json",

@@ -293,9 +293,9 @@ public static partial class GameplayTestSystemProbe
                 ""physics"":{""regions"":[
                     {""id"":""body:left"",""purposes"":""Blocking"",""collider"":{""type"":""BoxCollider2D"",""offset"":{""x"":-0.75,""y"":0},""size"":{""x"":0.4,""y"":1}}},
                     {""id"":""body:right"",""purposes"":""Blocking"",""collider"":{""type"":""BoxCollider2D"",""offset"":{""x"":0.75,""y"":0},""size"":{""x"":0.4,""y"":1}}},
-                    {""id"":""interact"",""purposes"":""Interaction, Trigger"",""module"":""interact:module"",""collider"":{""type"":""CircleCollider2D"",""radius"":1.5}},
-                    {""id"":""damage:first"",""purposes"":""Damage, Trigger"",""module"":""health:first"",""collider"":{""type"":""BoxCollider2D"",""size"":{""x"":0.5,""y"":0.75}}},
-                    {""id"":""damage:second"",""purposes"":""Damage, Trigger"",""module"":""health:second"",""collider"":{""type"":""BoxCollider2D"",""size"":{""x"":0.25,""y"":0.5}}}
+                    {""id"":""interact"",""purposes"":""Interaction"",""module"":""interact:module"",""collider"":{""type"":""CircleCollider2D"",""radius"":1.5}},
+                    {""id"":""damage:first"",""purposes"":""Damage"",""module"":""health:first"",""collider"":{""type"":""BoxCollider2D"",""size"":{""x"":0.5,""y"":0.75}}},
+                    {""id"":""damage:second"",""purposes"":""Damage"",""module"":""health:second"",""collider"":{""type"":""BoxCollider2D"",""size"":{""x"":0.25,""y"":0.5}}}
                 ]}}
             ";
             ItemPhysicsDefinitionDto physics = JsonConvert.DeserializeObject<ItemDefinitionDto>(json).Physics;

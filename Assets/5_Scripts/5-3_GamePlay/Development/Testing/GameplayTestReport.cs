@@ -78,6 +78,7 @@ public sealed class GameplayTestCaseReport
     public string Id;
     public string Name;
     public string LuaPath;
+    public string ContractKind;
     public string ReportPath;
     public string ReportWriteError;
     public string Status = "pending";

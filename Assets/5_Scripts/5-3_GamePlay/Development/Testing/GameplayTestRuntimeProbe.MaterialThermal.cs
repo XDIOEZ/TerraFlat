@@ -148,6 +148,8 @@ public static partial class GameplayTestRuntimeProbe
                 return source;
             }
             original = manager.InstantiateItem(FuelMaterial(), position, parent: root);
+            // 完整后端替换要求先走正式加载生命周期。
+            original.Load();
             int guid = original.itemData.Guid;
             WorldItemMatterRules.Advance(original.itemData, 20f, 1f, null, out _);
             bool planned = WorldItemMatterRules.TryCreateTransitionOutputs(original.itemData, out var outputs);

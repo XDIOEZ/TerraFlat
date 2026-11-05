@@ -7,40 +7,50 @@ local function total(slots, id)
     return amount
 end
 
-for _, kind in ipairs({ "drill", "flint" }) do
-    local expectedKind = kind
-    test.runtime("processing", "fire_tool_panel", { kind = expectedKind }, function(data)
-        assert(data.prefabFields and data.opened and data.slotBindings and data.transferTargets and data.preview and data.previewEvents,
-            "原 Prefab 字段、取火槽位、手部目标或预览监听错误")
-        assert(data.closedByCancel and data.reopened and data.closedByToggle and data.closedByPanel, "取火面板关闭或重复交互错误")
-        assert(data.gameplayWindow, "取火面板未接入非模态窗口、导航、返回和窗外丢弃规则")
-        local shortcuts = data.shortcuts
-        assert(shortcuts.gameplayLocked and shortcuts.openOtherAllowed and shortcuts.closeAllowed and shortcuts.reopenAllowed,
-            "模态面板或租约锁错误阻止其他面板开关，或玩法锁被错误解除")
-        assert(shortcuts.explicitLockBlocksOpen and shortcuts.explicitLockAllowsClose,
-            "显式锁未阻止新开窗口，或阻止关闭已有窗口")
-        assert(data.closedTargetsCleared and data.eventDetached and data.panelReleased, "取火面板卸载没有清理转移目标、事件或面板")
-        if expectedKind == "drill" then
-            assert(data.drillStrokeAnimated, "真实钻木按钮未触发器具动画或重复触发")
-            assert(data.inputAmount == 1 and math.abs(data.temperature - 30) < .001 and data.outputId == "", "钻木按钮没有只加热一次材料")
-            assert(#data.drillDefinitionDurability == 2, "钻木器缺少手持或落地定义")
-            assert(data.toolDurability == 299, "钻木器有效摩擦未恰好扣除一点耐久")
-            for _, definition in ipairs(data.drillDefinitionDurability) do
-                assert(definition.durability == 300 and definition.maximum == 300, "钻木器初始或最大耐久不是300")
-            end
-            local kinds = 0
-            for _ in pairs(data.drillBreakMaterials) do kinds = kinds + 1 end
-            assert(kinds == 2 and data.drillBreakMaterials.Stick_Wood == 1 and data.drillBreakMaterials.Rope == 1,
-                "钻木器损毁残料必须恰好为一根木棍和一根绳子")
-        else
-            assert(data.formalFlintModules and data.ownPanelPrefab and data.localUseToggled,
-                "正式打火石装配缺少能力、引用了钻木面板或本机使用无法开关UI")
-            assert(data.artworkBound and data.successAnimated and data.failedStrikeAnimated and data.blockedAnimationUnchanged,
-                "燧石贴图缺失、敲击成败表现错误或满输出仍播放敲击")
-            assert(data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1, "打火石按钮没有只消费一次材料并产出火种")
-            assert(data.blockedInputAmount == 1 and data.blockedOutputId == "Log", "满输出时打火石错误扣料或替换产物")
+local function checkFireTool(data, kind, fault)
+    assert(data.fault == fault, "取火故障注入与请求不一致")
+    local checks = {
+        panel = (data.prefabFields and data.opened and data.slotBindings and data.transferTargets and data.preview and data.previewEvents) == true,
+        toggling = (data.closedByCancel and data.reopened and data.closedByToggle and data.closedByPanel) == true,
+        cleanup = (data.closedTargetsCleared and data.eventDetached and data.panelReleased) == true,
+        window = data.gameplayWindow == true,
+        setup = data.initialInputAmount == (kind == "drill" and 1 or 2) and data.initialDurability == 300,
+        durability = data.durability == 299
+    }
+    local shortcuts = data.shortcuts
+    checks.shortcuts = (shortcuts.gameplayLocked and shortcuts.openOtherAllowed and shortcuts.closeAllowed and shortcuts.reopenAllowed
+        and shortcuts.explicitLockBlocksOpen and shortcuts.explicitLockAllowsClose) == true
+    if kind == "drill" then
+        checks.contents = data.initialTemperature == 20 and data.inputAmount == 1 and data.outputId == ""
+        checks.heating = math.abs(data.temperature - 30) < .001
+        checks.animation = data.drillStrokeAnimated == true
+        checks.durability = checks.durability and data.toolDurability == 299
+        assert(#data.drillDefinitionDurability == 2, "钻木器缺少手持或落地定义")
+        for _, definition in ipairs(data.drillDefinitionDurability) do
+            assert(definition.durability == 300 and definition.maximum == 300, "钻木器初始或最大耐久不是300")
         end
-    end, "取火工具真实面板与库存事务：" .. expectedKind)
+        local kinds = 0
+        for _ in pairs(data.drillBreakMaterials) do kinds = kinds + 1 end
+        assert(kinds == 2 and data.drillBreakMaterials.Stick_Wood == 1 and data.drillBreakMaterials.Rope == 1,
+            "钻木器损毁残料必须恰好为一根木棍和一根绳子")
+    else
+        checks.assembly = (data.formalFlintModules and data.ownPanelPrefab and data.localUseToggled) == true
+        checks.animation = (data.artworkBound and data.successAnimated and data.failedStrikeAnimated and data.blockedAnimationUnchanged) == true
+        checks.output = data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1
+        checks.full = data.blockedInputAmount == 1 and data.blockedOutputId == "Log" and data.blockedDurability == 299
+    end
+    local rejected = fault == "drop_action" and { durability = true, heating = true, animation = true } or {}
+    for name, passed in pairs(checks) do
+        assert(passed == (not rejected[name]), "取火断言结果错误：" .. fault .. "/" .. name)
+    end
+end
+
+for _, sample in ipairs({ {kind = "drill"}, {kind = "flint"}, {kind = "drill", fault = "drop_action"},
+    {kind = "drill"} }) do
+    local kind, fault = sample.kind, sample.fault or "none"
+    test.runtime("processing", "fire_tool_panel", { kind = kind, fault = fault }, function(data)
+        checkFireTool(data, kind, fault)
+    end, "取火工具面板与库存事务：" .. kind .. "/" .. fault)
 end
 
 for _, input in ipairs({

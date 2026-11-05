@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed partial class WorldNavigationManager
 {
@@ -65,7 +66,21 @@ public sealed partial class WorldNavigationManager
         if (!worldManagers.Remove(worldKey, out WorldNavigationManager manager) || manager == null) return;
         manager.OnGameWorldExit();
         manager.ownedWorldKey = null;
-        if (manager.ownsWorldObject) Destroy(manager.gameObject);
+        if (manager.ownsWorldObject)
+        {
+            // 延迟销毁前解除索引和事件，避免同帧把旧导航重新登记到新世界。
+            if (localManager == manager) localManager = null;
+            if (instance == manager) instance = null;
+            SceneManager.activeSceneChanged -= manager.OnActiveSceneChanged;
+            GameManager gameManager = FindObjectOfType<GameManager>();
+            if (gameManager != null)
+            {
+                gameManager.Event_GameWorldEnter -= manager.OnGameWorldEnter;
+                gameManager.Event_GameWorldExit -= manager.OnGameWorldExit;
+            }
+            manager.gameObject.SetActive(false);
+            Destroy(manager.gameObject);
+        }
     }
     #endregion
 }

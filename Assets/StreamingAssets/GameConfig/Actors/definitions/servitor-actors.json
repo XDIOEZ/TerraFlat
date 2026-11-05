@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Servitor",
+      "parent": "Wolf",
+      "shellPrefab": "CoreActor.Servitor.Shell",
+      "shellAddress": "Assets/2_Prefabs/Gameplay/AI/Actor_Servitor.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Actor_Servitor.prefab",
+      "gameName": "机仆",
+      "description": "通过机体控制终端设置搬运工作。电量低于20%时优先靠近通电电线；供电充足时每秒补充1%电量，充满后恢复工作。",
+      "weight": 60.0,
+      "volume": 80.0,
+      "lootTableId": "",
+      "canBePickedUp": false,
+      "tags": ["Servitor", "Robot"],
+      "itemData": { "factionId": "players" },
+      "removeModules": ["radiation", "pressure", "food", "temperature", "biteAttackSkill", "animalAudio", "damage"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Servitor/Servitor_Idle_Right.png[Servitor_Idle_Right]",
+        "animationState": "Idle",
+        "rendererLocalPosition": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "rendererLocalScale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+        "flipX": false,
+        "collider": { "type": "CircleCollider2D", "enabled": true, "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.0 }, "radius": 0.25 }
+      },
+      "modules": {
+        "servitor": { "prefab": "Module_ServitorController", "id": "ServitorController", "enabled": true,
+          "parameters": { "BatteryCapacityJoules": 10000.0, "LowBatteryFraction": 0.2, "WorkingWatts": 10.0,
+            "StandbyWatts": 2.0, "ChargingSearchRadius": 30.0, "ChargingReach": 1.25 } },
+        "ai": { "prefab": "Module_AnimalBehaviorTree", "id": "AI", "enabled": true, "inherit": false,
+          "parameters": { "behaviorTree": { "schemaVersion": 1, "root": {
+            "type": "subtree", "name": "servitorWork"
+          } } } },
+        "mover": { "parameters": { "Data": { "Speed": { "BaseValue": 3.0 } }, "stopDistance": 0.3 } },
+        "animator": { "parameters": { "visualMode": 1, "walkSwingAngle": 3.0, "walkSwingSpeed": 6.0, "walkBobAmount": 0.025 } },
+        "health": { "parameters": { "Data": { "Hp": 150.0, "MaxHp": 150.0 },
+          "$collider2D": { "type": "BoxCollider2D", "enabled": true, "isTrigger": true,
+            "offset": { "x": 0.0, "y": 0.55 }, "size": { "x": 0.75, "y": 1.1 } } } }
+      }
+    }
+  ]
+}

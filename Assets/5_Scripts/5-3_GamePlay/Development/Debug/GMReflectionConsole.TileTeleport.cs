@@ -18,6 +18,7 @@ public sealed partial class GMReflectionConsole
     private TextMeshProUGUI tileTeleportHint;
     private Button tileTeleportButton;
     private CancellationTokenSource tileSearchCancellation;
+    private uint tileTeleportResultGeneration;
 
     private void BuildTileTeleportRow(Transform content)
     {
@@ -98,7 +99,9 @@ public sealed partial class GMReflectionConsole
         }
         var cancellation = new CancellationTokenSource();
         tileSearchCancellation = cancellation;
-        StartCoroutine(LocateTileAndTeleport(player, traits, manager, candidates[0], cancellation));
+        unchecked { ++tileTeleportResultGeneration; }
+        StartCoroutine(LocateTileAndTeleport(player, traits, manager, candidates[0], cancellation,
+            tileTeleportResultGeneration));
     }
 
     #endregion
@@ -106,9 +109,8 @@ public sealed partial class GMReflectionConsole
     #region 可取消地块搜索
 
     private IEnumerator LocateTileAndTeleport(Item player, Mod_PlayerTraits traits, ChunkMgr manager,
-        RuntimeTileDefinition definition, CancellationTokenSource cancellation)
+        RuntimeTileDefinition definition, CancellationTokenSource cancellation, uint resultGeneration)
     {
-        bool teleported = false;
         try
         {
             tileTeleportButton.interactable = false;
@@ -181,36 +183,28 @@ public sealed partial class GMReflectionConsole
                 SetLocalizedText(tileTeleportHint, "目标地块在搜索期间发生了变化，请重新搜索。");
                 yield break;
             }
-            // 提交传送不等于落点已应用，只有权威回执成功才显示完成。
-            bool completed = false;
+            bool callbackReceived = false;
             if (!PlayerTeleportService.TryTeleportToSurface(player, destination, succeeded =>
             {
-                teleported = succeeded;
-                completed = true;
+                callbackReceived = true;
+                if (this == null || resultGeneration != tileTeleportResultGeneration || !IsSameWorld()) return;
+                if (succeeded)
+                {
+                    SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
+                        "已传送到{0}：({1}, {2})。", FlatWorldLocalizationService.GetUiText(name),
+                        result.Cell.X, result.Cell.Y));
+                    Debug.Log($"[GM] 已传送到地块 {definition.Id}，逻辑落点={destination}");
+                    SetWindowVisible(false);
+                }
+                else
+                    SetLocalizedText(tileTeleportHint, "地块传送未完成，落点尚未应用。");
             }))
             {
-                SetLocalizedText(tileTeleportHint, "当前无法传送，请等待世界就绪或上一笔传送结束。");
+                SetLocalizedText(tileTeleportHint, "当前世界尚不能执行传送。");
                 yield break;
             }
-            double teleportDeadline = Time.realtimeSinceStartupAsDouble + 30d;
-            while (!completed)
-            {
-                if (cancellation.IsCancellationRequested || !IsSameWorld()) yield break;
-                if (Time.realtimeSinceStartupAsDouble >= teleportDeadline)
-                {
-                    SetLocalizedText(tileTeleportHint, "等待传送结果超时，尚未确认落点。");
-                    yield break;
-                }
-                SetLocalizedText(tileTeleportHint, "已定位地块，正在等待传送结果…");
-                yield return null;
-            }
-            if (teleported)
-                SetLocalizedProvider(tileTeleportHint, () => FlatWorldLocalizationService.GetUiFormat(
-                    "已传送到{0}：({1}, {2})。", FlatWorldLocalizationService.GetUiText(name),
-                    result.Cell.X, result.Cell.Y));
-            else
-                SetLocalizedText(tileTeleportHint, "地块传送未完成，落点尚未应用。");
-            if (teleported) Debug.Log($"[GM] 已传送到地块 {definition.Id}，逻辑落点={destination}");
+            if (!callbackReceived)
+                SetLocalizedText(tileTeleportHint, "已定位地块，传送已立即执行，正在同步服务器结果。");
 
             bool IsSameWorld() => this != null && player != null && traits != null && manager != null &&
                 ItemMgr.GetInstance()?.LocalControlledActor == player && player.itemData != null &&
@@ -226,11 +220,11 @@ public sealed partial class GMReflectionConsole
             if (tileTeleportButton != null) tileTeleportButton.interactable = true;
             if (tileTeleportInput != null) tileTeleportInput.interactable = true;
         }
-        if (teleported) SetWindowVisible(false);
     }
 
     private void CancelTileSearch()
     {
+        unchecked { ++tileTeleportResultGeneration; }
         if (tileSearchCancellation == null) return;
         tileSearchCancellation.Cancel();
         if (tileTeleportHint != null) SetLocalizedText(tileTeleportHint, "正在取消地块搜索…");

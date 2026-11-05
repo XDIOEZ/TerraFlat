@@ -22,6 +22,7 @@ void Solve(MechanicalNetwork network) => MechanicalNetworkGraph.Solve(network,
 
 ConveyorTests.Run(Check);
 ConveyorLoadTests.Run(Check);
+ServitorElectricalTests.Run(Check);
 
 #region 计算步内回调不能重建正在遍历的拓扑
 var callbackFacilities = new[] { Node(950, 0), Node(951, 1), Node(952, 2) };

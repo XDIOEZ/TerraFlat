@@ -33,10 +33,25 @@ test.runtime("dimension", "generation_preset_roundtrip", {}, function(data)
             not destination.observerInSpace and destination.observerWorld == destination.address and
             destination.observerDistance >= 0 and destination.observerDistance < .01,
             "跨星球或矿洞往返后玩家实体和权威观察者的世界、位置不一致")
+        assert(destination.playerSceneMatchesRuntime and destination.localChunkManagerMatchesRuntime and
+            destination.localNavigationMatchesRuntime and
+            destination.navigationAlive and destination.navigationWorld == destination.address and
+            destination.navigationInstance ~= 0 and
+            destination.activeSceneHandle == destination.runtimeSceneHandle and
+            destination.playerSceneHandle == destination.runtimeSceneHandle,
+            "玩家、物理世界和本地区块管理器没有绑定同一个场景实例")
     end
+    assert(journey.entranceBeforeLoad.registered and journey.entranceBeforeLoad.world == data.marsWorld and
+        journey.entranceBeforeLoad.itemPhysicsOwnerMatchesWorld and journey.entranceBeforeLoad.sceneMatchesPhysicsOwner and
+        journey.entranceBeforeLoad.sceneHandle == journey.entranceBeforeLoad.playerSceneHandle,
+        "入口模块加载前没有位于玩家和物理所有者的同一个场景实例")
     assert(journey.entrance.registered and journey.entrance.world == data.marsWorld and
-        journey.entrance.scene == data.marsWorld and journey.exit.registered and
-        journey.exit.world == journey.cave.address and journey.exit.scene == journey.cave.address,
+        journey.entrance.scene == data.marsWorld and journey.entrance.sceneUsesOwnedPhysics and
+        journey.entrance.itemPhysicsOwnerMatchesWorld and journey.entrance.sceneMatchesPhysicsOwner and
+        journey.entrance.damageColliderMatchesOwner and journey.exit.registered and
+        journey.exit.world == journey.cave.address and journey.exit.scene == journey.cave.address and
+        journey.exit.sceneUsesOwnedPhysics and journey.exit.itemPhysicsOwnerMatchesWorld and
+        journey.exit.sceneMatchesPhysicsOwner,
         "火星入口或地下出口没有登记到各自的真实世界")
     for _, pair in ipairs({{journey.exitApproach, journey.cave.address},
         {journey.terrainReenterApproach, data.marsWorld}, {journey.terrainReturnApproach, journey.cave.address}}) do

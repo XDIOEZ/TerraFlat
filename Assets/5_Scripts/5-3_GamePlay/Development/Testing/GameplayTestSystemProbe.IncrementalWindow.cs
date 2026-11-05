@@ -32,6 +32,16 @@ public static partial class GameplayTestSystemProbe
             ["visits"] = coverage.LastVisitedCells };
         coverage.Update(new[] { At(4, 0) });
         var same = new JObject { ["visits"] = coverage.LastVisitedCells };
+        var copiedCoverage = new ChunkWindowCoverage();
+        var copiedProfile = new ChunkGenerationProfileSnapshot("incremental-window", 1, 4, 2);
+        copiedCoverage.Update(new[] { start });
+        copiedCoverage.Update(new[] { At(4, 0, chosen: copiedProfile) });
+        int copiedMoveVisits = copiedCoverage.LastVisitedCells;
+        bool copiedFullRebuild = copiedCoverage.LastFullRebuild;
+        copiedCoverage.Update(new[] { At(4, 0) });
+        int copiedStationaryVisits = copiedCoverage.LastVisitedCells;
+        copiedCoverage.Update(new[] { At(4, 0, chosen: copiedProfile.WithNumericParameter("probe.changed", 1d)) });
+        bool numericConfigurationRebuilt = copiedCoverage.LastFullRebuild;
         coverage.Update(new[] { start });
         bool reverseMatches = WindowCoverageMatchesFreshBuild(coverage, new[] { start });
         coverage.Update(new[] { At(4, 2) });
@@ -78,6 +88,8 @@ public static partial class GameplayTestSystemProbe
         ordered.Sort(ChunkMgr.RuntimePresentationBatchEntry.CompareForStack);
         bool priorityMovement = ordered[1].Order == 1;
         return new JObject { ["first"] = first, ["move"] = move, ["same"] = same,
+            ["copiedMoveVisits"] = copiedMoveVisits, ["copiedFullRebuild"] = copiedFullRebuild,
+            ["copiedStationaryVisits"] = copiedStationaryVisits, ["numericConfigurationRebuilt"] = numericConfigurationRebuilt,
             ["reverseMatches"] = reverseMatches, ["diagonalMatches"] = diagonalMatches,
             ["diagonalVisits"] = diagonalVisits, ["overlapMatches"] = overlapMatches,
             ["wrappedMatches"] = wrappedMatches, ["wrapBoundaryVisits"] = wrapBoundaryVisits,

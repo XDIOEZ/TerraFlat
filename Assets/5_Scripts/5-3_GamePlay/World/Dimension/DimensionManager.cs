@@ -294,6 +294,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             PreserveRunState = sourceMover != null && sourceMover.RunPreference,
             SourcePresentationScene = SceneManager.GetActiveScene()
         };
+        state.SourceSceneOwnedByRegistry = GameplayWorldRegistry.TryGet(sourceAddress.WorldKey, out var sourceWorld) &&
+            sourceWorld.Scene == state.SourcePresentationScene && sourceWorld.OwnsPhysics;
         sourceController?.SetGameplayInputLocked(true);
 
         // 必须等专属 Canvas 实际提交一帧后再保存、卸载场景，避免首帧穿帮。
@@ -323,6 +325,10 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         if (failure != null)
         {
+            Scene activeScene = SceneManager.GetActiveScene();
+            if (!state.TargetPresentationScene.IsValid() && activeScene.IsValid() &&
+                activeScene != state.SourcePresentationScene && activeScene.name == state.TargetPresentationSceneName)
+                state.TargetPresentationScene = activeScene;
             GameManager.Instance.SetDimensionTransitionLoading("维度切换失败，正在恢复原世界…", 0.1f);
             IEnumerator recoveryRoutine = RecoverAfterTransitionFailureCoroutine(
                 playerData,
@@ -375,22 +381,26 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         GameManager.Instance.SetDimensionTransitionLoading("正在创建目标维度…", 0.48f);
         if (!toSpace) EnsureWorldData(targetAddress);
-        Scene targetScene = SceneManager.GetSceneByName(targetAddress.WorldKey);
+        Scene targetScene;
         if (toSpace)
         {
             yield return GameManager.Instance.LoadPresentationSceneAndInvokeWhenReady("SpaceScene", oldScene);
+            state.TargetPresentationScene = SceneManager.GetActiveScene();
             yield return SpaceMgr.Instance.LoadPresentation();
             targetScene = SceneManager.GetActiveScene();
             state.TargetPresentationSceneName = targetScene.name;
         }
-        else if (!targetScene.IsValid() || !targetScene.isLoaded)
-            targetScene = WorldPhysicsScene2D.CreateIsolatedScene(targetAddress.WorldKey);
+        else
+            targetScene = GameplayWorldRegistry.TryGet(targetAddress.WorldKey, out var targetWorld)
+                ? targetWorld.Scene : WorldPhysicsScene2D.CreateIsolatedScene(targetAddress.WorldKey);
 
+        state.TargetPresentationScene = targetScene;
         SceneManager.SetActiveScene(targetScene);
         if (!toSpace) ActivateWorld(targetAddress);
 
         if (oldScene.IsValid() && oldScene.isLoaded && oldScene != targetScene)
         {
+            state.SourceSceneUnloading = true;
             AsyncOperation unloadOperation = SceneManager.UnloadSceneAsync(oldScene);
             while (unloadOperation != null && !unloadOperation.isDone)
                 yield return null;
@@ -405,9 +415,9 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
 
         GameManager.Instance.SetDimensionTransitionLoading("正在加载目标维度…", 0.68f);
         state.EnterNotified = true;
-        GameManager.Instance.NotifyDimensionWorldEntered();
         // 离线切换也要重新注册已加载地表，让落地准备继续使用目标世界的运行时。
         if (!toSpace) GameplayWorldRegistry.SelectLocalWorld(targetAddress.WorldKey);
+        GameManager.Instance.NotifyDimensionWorldEntered();
 
         Item targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
         targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
@@ -449,6 +459,9 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         public bool PreserveRunState;
         public bool SurfaceRealmCommitted;
         public Scene SourcePresentationScene;
+        public Scene TargetPresentationScene;
+        public bool SourceSceneOwnedByRegistry;
+        public bool SourceSceneUnloading;
         public string TargetPresentationSceneName;
     }
 
@@ -478,7 +491,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
 
         // 失败恢复只卸载本次指定的目标，不能借用 Unity 自动激活的船内场景。
-        Scene previousScene = SceneManager.GetSceneByName(state.TargetPresentationSceneName);
+        Scene previousScene = state.TargetPresentationScene;
         if (state.EnterNotified)
         {
             using (GameplayWorldRegistry.PreserveLocalChunkManagerForSpaceTransition(
@@ -489,7 +502,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         if (currentPlayer != null)
             ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
 
-        Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
+        Scene sourceScene = default;
         bool fromSpace = SpaceMgr.IsSpaceScene(sourceAddress.WorldKey);
         if (fromSpace)
         {
@@ -497,8 +510,12 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
             yield return SpaceMgr.Instance.LoadPresentation();
             sourceScene = SceneManager.GetActiveScene();
         }
-        else if (!sourceScene.IsValid() || !sourceScene.isLoaded)
-            sourceScene = WorldPhysicsScene2D.CreateIsolatedScene(sourceAddress.WorldKey);
+        else if (GameplayWorldRegistry.TryGet(sourceAddress.WorldKey, out var sourceWorld))
+            sourceScene = sourceWorld.Scene;
+        else if (!state.SourceSceneOwnedByRegistry && !state.SourceSceneUnloading &&
+                 state.SourcePresentationScene.IsValid() && state.SourcePresentationScene.isLoaded)
+            sourceScene = state.SourcePresentationScene;
+        else sourceScene = WorldPhysicsScene2D.CreateIsolatedScene(sourceAddress.WorldKey);
         SceneManager.SetActiveScene(sourceScene);
         if (!fromSpace) ActivateWorld(sourceAddress);
 
@@ -512,8 +529,8 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         playerData.GetActorProfileMetadata().WorldKey = sourceAddress.WorldKey;
         playerData.transform.position = sourcePosition;
         SaveDataMgr.Instance.SaveData.ProfileActorData[playerProfileName] = playerData;
-        GameManager.Instance.NotifyDimensionWorldEntered();
         if (!fromSpace) GameplayWorldRegistry.SelectLocalWorld(sourceAddress.WorldKey);
+        GameManager.Instance.NotifyDimensionWorldEntered();
 
         Item recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
         recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);

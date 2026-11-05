@@ -36,6 +36,15 @@ test.runtime("ui_settings", "status_hud_readability", {}, function(data)
     end
     assert(data.panelVisible and #data.bars == 5 and data.sliderCount == 4, "生存状态条未合并为五项，或仍有旧营养滑条")
     assert(data.legendVisible == false, "食物营养图例行仍然显示")
+    assert(#data.temperatureColors == 5, "冷热渐变采样不完整")
+    local temperatureText
+    for _, bar in ipairs(data.bars) do if bar.name == "体温" then temperatureText = luminance(bar.text) end end
+    assert(temperatureText, "没有采集体温数值文字")
+    for _, sample in ipairs(data.temperatureColors) do
+        local fill = luminance(sample.fill)
+        assert((math.max(fill, temperatureText) + .05) / (math.min(fill, temperatureText) + .05) >= 4,
+            "冷热预警渐变颜色与数值文字的对比度不足")
+    end
     for _, bar in ipairs(data.bars) do
         local fill, text = luminance(bar.fill), luminance(bar.text)
         local contrast = (math.max(fill, text) + .05) / (math.min(fill, text) + .05)
@@ -151,20 +160,6 @@ test.runtime("ui_settings", "settings_locale_close", {}, function(data)
     assert(data.inputBlockingRestored, "窗口关闭后残留玩法输入阻断")
     assert(data.localeRestored and data.volumeRestored and data.preferencesRestored, "测试改变的语言、音量或 PlayerPrefs 原值未恢复")
 end, "真实窗口清理和原语言、音量、偏好恢复")
-
-test.runtime("ui_settings", "new_game_window_close", {}, function(data)
-    assert(data.difficultyCloseStayedInNewGame, "关闭难度窗口误关新世界窗口，或没有回到名称页")
-    assert(data.scope == "live-isolated-world" and data.worldPageOpened, "正式新世界面板没有进入世界设置页")
-    assert(data.worldCloseText == data.expectedWorldCloseText and data.expectedWorldCloseText ~= "",
-        "世界设置页右上按钮没有显示本地化的关闭")
-    assert(data.worldCloseReturnedToIdentity and data.playerNameRetained and data.worldSeedRetained,
-        "世界设置页右上关闭没有回到名称页、保留窗口或保留输入值")
-    assert(data.bottomBackHiddenInWorld and data.bottomBackHiddenInIdentity,
-        "底部返回名称设置按钮仍然显示")
-    assert(data.identityBackText == data.expectedIdentityBackText and data.identityTopCloseClosesPanel,
-        "名称页右上按钮文案错误，或点击后没有关闭新世界窗口")
-    assert(data.panelUnregistered, "新世界关闭流程测试没有清理自有窗口")
-end, "关闭难度浮层仍留在名称页；世界页右上关闭回名称页并保留参数，名称页右上关闭窗口")
 
 test.runtime("ui_settings", "flick_settings_controls", {}, function(data)
     assert(data.wholePageScroll, "按键绑定没有使用整页滚动，或仍有内嵌绑定滚动框")

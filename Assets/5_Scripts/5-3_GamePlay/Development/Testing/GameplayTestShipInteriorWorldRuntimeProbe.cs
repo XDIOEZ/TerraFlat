@@ -330,6 +330,47 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 throw new TimeoutException("船内区块和机器表现未完成真实绑定：" + sortingDomains.ToString(Formatting.None));
             yield return null;
         }
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance ??
+            throw new InvalidOperationException("船内投影来源回归需要正式渲染管理器。");
+        Transform previousSource = rendering.GetActorProjectionSource(firstDoor);
+        bool previousSourceWasAlive = previousSource != null;
+        SpriteRenderer originalSprite = firstDoor.Sprite;
+        JArray beforeRows = (JArray)session.ShipViewCacheSnapshot()["itemProjections"];
+        bool previousProjectionFound = TryGetItemProjection(beforeRows, firstDoor, firstWorld.WorldKey,
+            firstSortingDomain.Root.gameObject.GetInstanceID(), out WorldPresentationProjection previousProjection);
+        bool previousProjectionActive = previousProjectionFound && previousProjection != null &&
+            !previousProjection.IsReleased && previousProjection.gameObject.activeInHierarchy;
+        try { rendering.UnregisterItemRendering(firstDoor); }
+        finally
+        {
+            rendering.RegisterItemRendering(firstDoor);
+            rendering.RequestItemPresentation(firstDoor);
+        }
+        Transform replacementSource = rendering.GetActorProjectionSource(firstDoor);
+        yield return new WaitForEndOfFrame();
+        JArray afterRows = (JArray)session.ShipViewCacheSnapshot()["itemProjections"];
+        bool replacementProjectionFound = TryGetItemProjection(afterRows, firstDoor, firstWorld.WorldKey,
+            firstSortingDomain.Root.gameObject.GetInstanceID(), out WorldPresentationProjection replacementProjection);
+        sortingDomains["itemSourceReplacementPreservedRenderer"] = previousSourceWasAlive && replacementSource != null &&
+            !ReferenceEquals(previousSource, replacementSource) && originalSprite != null && originalSprite.sprite != null &&
+            ReferenceEquals(originalSprite, firstDoor.Sprite) && originalSprite.transform.IsChildOf(replacementSource);
+        sortingDomains["itemSourceReplacementDetails"] = new JObject
+        {
+            ["previousSourceAliveBeforeRelease"] = previousSourceWasAlive,
+            ["previousSourceAliveAfterFrame"] = previousSource != null,
+            ["replacementSourceAlive"] = replacementSource != null,
+            ["sourceChanged"] = !ReferenceEquals(previousSource, replacementSource),
+            ["spriteAlive"] = originalSprite != null,
+            ["spriteAssetPresent"] = originalSprite != null && originalSprite.sprite != null,
+            ["sameSprite"] = ReferenceEquals(originalSprite, firstDoor.Sprite),
+            ["spriteUnderReplacement"] = originalSprite != null && replacementSource != null &&
+                originalSprite.transform.IsChildOf(replacementSource)
+        };
+        sortingDomains["itemSourceReplacementReboundProjection"] = previousProjectionActive &&
+            (previousProjection == null || previousProjection.IsReleased) && replacementProjectionFound && replacementProjection != previousProjection &&
+            replacementProjection.gameObject.activeInHierarchy && ProjectionPreservesSourceLayerAndPose(
+                replacementProjection, replacementSource, firstWorld.WorldKey, firstSortingDomain, out int reboundRendererCount) &&
+            reboundRendererCount > 0;
         sortingDomains["passengerEnteredFirstDomain"] = passengerEnteredFirstDomain;
         sortingDomains["passengerMatchesShipPose"] = passengerMatchesShipPose;
         sortingDomains["passengerSwitchedToSecondDomain"] = passengerSwitchedToSecondDomain;
@@ -356,6 +397,17 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         sortingDomains["sourceRendererRestored"] = sortingRestoreSource != null &&
             sortingRestoreSource.forceRenderingOff == GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(
                 sortingRestoreSource, sortingRestoreOriginalForceOff);
+        sortingDomains["sourceRendererRestoreDetails"] = new JObject
+        {
+            ["sourceAlive"] = sortingRestoreSource != null,
+            ["originalForceOff"] = sortingRestoreOriginalForceOff,
+            ["actualForceOff"] = sortingRestoreSource != null && sortingRestoreSource.forceRenderingOff,
+            ["requiredForceOff"] = sortingRestoreSource != null &&
+                GameplayWorldRegistry.GetPresentationRequiredForceRenderingOff(sortingRestoreSource, sortingRestoreOriginalForceOff),
+            ["stillProjected"] = WorldPresentationProjection.IsSourceProjected(sortingRestoreSource),
+            ["buildingProjected"] = sortingRestoreSource is SpriteRenderer restoredSprite &&
+                BuildingDepthMeshBridge.IsProjected(restoredSprite)
+        };
         JObject animalSmoke = SpawnAndSaveOrdinaryShipWorldChicken(session, firstWorld);
         foreach (JProperty property in animalSmoke.Properties()) result[property.Name] = property.Value.DeepClone();
         result["authoritySurvivedViewUnload"] = noItemProjection && noChunkProjection &&
@@ -478,8 +530,10 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
         bool ordinaryProjection = TryGetItemProjection(itemRows, ordinaryItem, firstWorld.WorldKey,
             firstRootId, out WorldPresentationProjection ordinaryView);
+        Transform ordinarySource = ordinaryItem != null
+            ? WorldRenderingManager.ExistingInstance?.GetActorProjectionSource(ordinaryItem) ?? ordinaryItem.transform : null;
         bool ordinaryLayerAndPose = ordinaryProjection && ProjectionPreservesSourceLayerAndPose(
-            ordinaryView, ordinaryItem.transform, firstWorld.WorldKey, firstDomain,
+            ordinaryView, ordinarySource, firstWorld.WorldKey, firstDomain,
             out int ordinaryRendererCount) && ordinaryRendererCount > 0;
         JObject pipeVisual = CaptureDataMachineProjection(firstWorld, machines.Pipe, firstDomain, chunkRows);
         JObject cultivatorVisual = CaptureDataMachineProjection(firstWorld, machines.Cultivator, firstDomain, chunkRows);
@@ -525,9 +579,10 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 secondProjectedFloorRendererCount++;
                 secondFloorPosition |= BoundsContainProjectedPoint(candidate.bounds, secondDomain.Root.TransformPoint(3.5f, 1.5f, 0f));
             }
-        sourceRendererForRelease = ordinaryItem != null ? ordinaryItem.GetComponentInChildren<SpriteRenderer>(true) : null;
+        sourceRendererForRelease = ordinarySource != null ? ordinarySource.GetComponentInChildren<SpriteRenderer>(true) : null;
         sourceOriginalForceOff = sourceRendererForRelease != null &&
-            GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRendererForRelease);
+            (WorldPresentationProjection.TryGetProjectedRendererOriginalForceRenderingOff(sourceRendererForRelease, out bool original)
+                ? original : GameplayWorldRegistry.GetPresentationOriginalForceRenderingOff(sourceRendererForRelease));
 
         result["category"] = WorldSortingManager.ProjectedWorldCategory;
         result["firstDomainKeyMatchesCategory"] = firstDomainKeyMatches;

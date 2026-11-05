@@ -428,6 +428,11 @@ public static partial class GameplayTestPresentationRuntimeProbe
             if (loopSources.Length != 1) throw new InvalidOperationException("远处循环没有对应唯一的正式空间音源。");
             AudioSource farSource = loopSources[0];
             Vector3 farOffset = farSource.transform.position - listener.transform.position;
+            bool farLoopMuted = farSource.mute;
+            service.SetWorldPosition(farLoop, player.transform.position + Vector3.right);
+            Vector3 returnedLoopOffset = farSource.transform.position - listener.transform.position;
+            bool returnedLoopMuted = farSource.mute;
+            bool returnedLoopPlaying = farSource.isPlaying;
             int farSampleFrame = Time.frameCount;
             bool nearPlaying = source.isPlaying && handle.IsPlaying;
             bool nearSpatial = source.spatialBlend == 1f && source.rolloffMode == AudioRolloffMode.Linear;
@@ -466,7 +471,11 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["mutedVolume"] = mutedVolume, ["retainedWhenMuted"] = retainedWhenMuted, ["unmutedVolume"] = unmutedVolume,
                 ["farShortAccepted"] = farShort.IsValid, ["beforeFarShort"] = beforeFarShort, ["afterFarShort"] = afterFarShort,
                 ["farLoopAccepted"] = farLoop.IsValid,
-                ["farOffsetX"] = farOffset.x, ["expectedFarOffsetX"] = loop.MaxDistance + 2f,
+                ["farOffsetX"] = farOffset.x, ["loopMaxDistance"] = loop.MaxDistance,
+                ["farLoopMuted"] = farLoopMuted, ["returnedLoopMuted"] = returnedLoopMuted,
+                ["returnedLoopPlaying"] = returnedLoopPlaying,
+                ["returnedLoopOffsetX"] = returnedLoopOffset.x, ["returnedLoopOffsetY"] = returnedLoopOffset.y,
+                ["returnedLoopOffsetZ"] = returnedLoopOffset.z,
                 ["farOffsetY"] = farOffset.y, ["farOffsetZ"] = farOffset.z,
                 ["released"] = released, ["sourceReused"] = sourceReused,
                 ["newHandleDistinct"] = replacement != handle, ["replacementSurvivedOldStop"] = replacementSurvivedOldStop

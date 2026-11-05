@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "combat_gameplay",
+      "contractKind": "mixed",
       "name": "战斗与技能真实关键流程",
       "luaPath": "GameplayTests/Systems/Combat/gameplay.lua",
       "enabled": true

@@ -35,9 +35,16 @@ public static partial class GameplayTestSystemProbe
         int2 second = wrapped ? new int2(0, 1) : new int2(1, 0);
         grid.Loaded.Add(first); grid.Loaded.Add(second);
         using var navigation = new FlowNavigationCache(grid);
+        // 两个空地区块提供有效的透明视线容器，未知格继续按正式规则阻挡。
+        using var losChunks = new NativeParallelHashMap<int2, int>(2, Allocator.Persistent);
+        losChunks.Add(first, 0); losChunks.Add(second, 1);
+        using var losCells = new NativeArray<byte>(2 * 256, Allocator.Persistent);
+        var los = new AiecsLosView { Domain = grid.Domain, Chunks = losChunks, Cells = losCells };
         var definition = new AiecsDefinition { Id = "ownership-probe", IdleSeconds = 1000f,
             PerceptionPeriod = 1000f, DecisionPeriod = 1000f };
-        using var simulation = new AiecsSimulation(new[] { definition },
+        var secondDefinition = new AiecsDefinition { Id = "ownership-probe-second", IdleSeconds = 1000f,
+            PerceptionPeriod = 1000f, DecisionPeriod = 1000f };
+        using var simulation = new AiecsSimulation(new[] { definition, secondDefinition },
             new[] { new AiecsBuffDefinition { Id = "probe-buff", Interval = 1f, Duration = 1000f } },
             new[] { new FixedString128Bytes("probe") }, new byte[1], 1, .25f, 10d);
         var template = new AiecsActorTemplate
@@ -53,32 +60,59 @@ public static partial class GameplayTestSystemProbe
         };
         var key = new CombatIdentity { Backend = CombatBackend.Entity, Value = 7, Generation = 1, World = 13, Dimension = 2 };
         Entity entity = simulation.Spawn(template, key, new float2(1f, 1f), 0);
+        var secondKey = new CombatIdentity { Backend = CombatBackend.Entity, Value = 19, Generation = 2, World = 13, Dimension = 2 };
+        var externalKey = new CombatIdentity { Backend = CombatBackend.External, Value = 31, Generation = 3, World = 13, Dimension = 2 };
+        var secondTemplate = template; secondTemplate.Definition = 1;
+        Entity secondEntity = simulation.Spawn(secondTemplate, secondKey, new float2(3f, 1f), 0);
+        Entity externalEntity = simulation.Spawn(template, externalKey, new float2(5f, 1f), 0, external: true);
         EntityManager entities = simulation.Entities;
-        void ProtectTimers()
+        void ProtectTimers(Entity protectedEntity)
         {
-            var brain = entities.GetComponentData<AiecsBrain>(entity);
+            var brain = entities.GetComponentData<AiecsBrain>(protectedEntity);
             brain.NextDecision = brain.NextPerception = brain.BehaviorUntil = 10000d;
-            entities.SetComponentData(entity, brain);
-            var attack = entities.GetComponentData<AiecsAttackState>(entity); attack.NextAttack = 10000d;
-            entities.SetComponentData(entity, attack);
-            var nutrition = entities.GetComponentData<AiecsNutrition>(entity); nutrition.NextSearchTime = 10000d;
-            entities.SetComponentData(entity, nutrition);
-            var darkness = entities.GetComponentData<AiecsDarkness>(entity);
+            entities.SetComponentData(protectedEntity, brain);
+            var attack = entities.GetComponentData<AiecsAttackState>(protectedEntity); attack.NextAttack = 10000d;
+            entities.SetComponentData(protectedEntity, attack);
+            var nutrition = entities.GetComponentData<AiecsNutrition>(protectedEntity); nutrition.NextSearchTime = 10000d;
+            entities.SetComponentData(protectedEntity, nutrition);
+            var darkness = entities.GetComponentData<AiecsDarkness>(protectedEntity);
             darkness.NextDamageTime = darkness.NextSampleTime = 10000d;
-            entities.SetComponentData(entity, darkness);
-            var tactics = entities.GetComponentData<AiecsTactics>(entity); tactics.NextChargeTime = 10000d;
-            entities.SetComponentData(entity, tactics);
-            entities.GetBuffer<AiecsBuff>(entity).Clear();
-            entities.GetBuffer<AiecsBuff>(entity).Add(new AiecsBuff { Definition = 0, Expires = 10000d, NextTick = 10000d });
+            entities.SetComponentData(protectedEntity, darkness);
+            var tactics = entities.GetComponentData<AiecsTactics>(protectedEntity); tactics.NextChargeTime = 10000d;
+            entities.SetComponentData(protectedEntity, tactics);
+            entities.GetBuffer<AiecsBuff>(protectedEntity).Clear();
+            entities.GetBuffer<AiecsBuff>(protectedEntity).Add(new AiecsBuff { Definition = 0, Expires = 10000d, NextTick = 10000d });
         }
         void Step(double time, double days)
         {
             simulation.GameDays = days;
-            simulation.Step(navigation, default, 1f / 60f, time);
+            simulation.Step(navigation, los, 1f / 60f, time);
             simulation.Complete();
         }
-        ProtectTimers();
+        ProtectTimers(entity);
+        ProtectTimers(secondEntity);
+        ProtectTimers(externalEntity);
         Step(10.02d, 1d);
+        // 分别采集实体权威状态和实际表现快照，由 Lua 比较完整身份与内容。
+        JObject CaptureRecord(CombatIdentity identity, int actorDefinition, byte external, float2 position) => new()
+        {
+            ["backend"] = (int)identity.Backend, ["value"] = (long)identity.Value,
+            ["generation"] = identity.Generation, ["world"] = identity.World, ["dimension"] = identity.Dimension,
+            ["definition"] = actorDefinition, ["external"] = (int)external,
+            ["x"] = position.x, ["y"] = position.y
+        };
+        var sourceRecords = new JArray();
+        foreach (Entity current in new[] { entity, secondEntity, externalEntity })
+        {
+            AiecsIdentity identity = entities.GetComponentData<AiecsIdentity>(current);
+            AiecsFlowAgent actor = entities.GetComponentData<AiecsFlowAgent>(current);
+            sourceRecords.Add(CaptureRecord(identity.Key, identity.Definition, identity.External, actor.Position));
+        }
+        var displayRecords = new JArray();
+        foreach (AiecsDisplayRecord record in simulation.Display)
+            displayRecords.Add(CaptureRecord(record.Key, record.Definition, record.External, record.Position));
+        simulation.Despawn(secondEntity);
+        simulation.Despawn(externalEntity);
         bool initiallyActive = entities.IsComponentEnabled<AiecsSimulationPulse>(entity);
         var agent = entities.GetComponentData<AiecsFlowAgent>(entity); agent.Position = new float2(17f, 1f);
         entities.SetComponentData(entity, agent);
@@ -100,6 +134,7 @@ public static partial class GameplayTestSystemProbe
         Step(82d, 4d);
         var result = new JObject
         {
+            ["sourceRecords"] = sourceRecords, ["displayRecords"] = displayRecords,
             ["initiallyActive"] = initiallyActive, ["movedChunkActive"] = movedChunkActive,
             ["unloadedSleeping"] = unloadedSleeping, ["residentRetained"] = residentRetained,
             ["reloadedActive"] = reloadedActive, ["sameIdentity"] = entities.GetComponentData<AiecsIdentity>(entity).Key == key,

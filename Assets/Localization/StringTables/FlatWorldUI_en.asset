@@ -18,12 +18,28 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 202611051800001
+    m_Localized: Keep clicking the world to teleport. Press Cancel to exit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800002
+    m_Localized: Teleporting is not available in the current world.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800003
+    m_Localized: Biome found. Teleported locally; synchronizing with the server.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800004
+    m_Localized: Tile found. Teleported locally; synchronizing with the server.
+    m_Metadata:
+      m_Items: []
   - m_Id: 202611040900003
-    m_Localized: "Save & Exit"
+    m_Localized: Save & Exit
     m_Metadata:
       m_Items: []
   - m_Id: 202611040900001
-    m_Localized: "Saved successfully"
+    m_Localized: Saved successfully
     m_Metadata:
       m_Items: []
   - m_Id: 202611020000001
@@ -9101,6 +9117,135 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 28103100000100006
     m_Localized: "Place tinder or an item at 500\u00b0C or hotter in the slot, then click Ignite. Drag fuel to replenish it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026167652352
+    m_Localized: Servitor Terminal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940352
+    m_Localized: Hauling
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940353
+    m_Localized: Start Hauling
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940354
+    m_Localized: Choose Nearby Storage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940355
+    m_Localized: Decrease Collection Radius
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940356
+    m_Localized: Increase Collection Radius
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940357
+    m_Localized: Recharge Now
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940358
+    m_Localized: 'Battery {0:0.0}% - {1}
+
+      Cargo: {2} items'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940359
+    m_Localized: 'Work mode: {0}
+
+      Destination: {1}
+
+      Collection radius
+      around storage: {2:0} m'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940360
+    m_Localized: Below 20%, seek a powered wire and recharge fully before resuming
+      work. Charges 1% per second with sufficient power; no power means no charging.
+      Closing this terminal does not cancel work.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940361
+    m_Localized: Only the host can change servitor orders in this version.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940362
+    m_Localized: Destination assigned
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940363
+    m_Localized: No available storage within 30 m
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940364
+    m_Localized: Awaiting work
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940365
+    m_Localized: Assign storage in the current world
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940366
+    m_Localized: Storage full or rejecting items; keeping cargo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940367
+    m_Localized: Delivering to storage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940368
+    m_Localized: Delivery complete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940369
+    m_Localized: Delivery blocked; keeping cargo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940370
+    m_Localized: Storage unreachable; keeping cargo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940371
+    m_Localized: Not assigned
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940372
+    m_Localized: Looking for loose items
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940373
+    m_Localized: No eligible items in range
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940374
+    m_Localized: Moving to collect items
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940375
+    m_Localized: Waiting for a powered wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940376
+    m_Localized: No usable powered wire nearby
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940377
+    m_Localized: Battery empty; connect a powered wire beside the servitor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940378
+    m_Localized: Moving to a powered wire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940379
+    m_Localized: Charging
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15011026691940380
+    m_Localized: Connected; waiting for power
     m_Metadata:
       m_Items: []
   references:

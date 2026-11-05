@@ -20,6 +20,9 @@
     <Compile Include="ConveyorDoubles.cs" />
     <Compile Include="ConveyorTests.cs" />
     <Compile Include="ConveyorLoadTests.cs" />
+    <Compile Include="ServitorElectricalTests.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/Entities/AI/ServitorBatteryState.cs" />
+    <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ElectricalExternalConsumer.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetwork.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/MechanicalNetworkGraph.Conveyors.cs" />
     <Compile Include="$(RepoRoot)Assets/5_Scripts/5-3_GamePlay/World/Machines/ConveyorPath.cs" />

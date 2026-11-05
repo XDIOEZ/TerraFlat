@@ -9,6 +9,80 @@ using static MachineWorld;
 internal static class GameplayTestFluidDevices
 {
     #region 真实泵与三槽
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoadMethod]
+#endif
+    private static void RegisterFullWorldTickProbe()
+        => GameplayTestRuntimeProbe.Register("industrial_fluids", "coupled_engine_pump_world_tick", CaptureCoupledEnginePumpWorldTick);
+
+    // 两套气源通过正式机械网驱动另一流体网，只采样完整世界步的实际物质和预约。
+    private static JObject CaptureCoupledEnginePumpWorldTick(Item player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var fixture = new GameplayFluidScope();
+        MachineEntity hydrogenTank = fixture.Add("GasTankBlock_Iron", -1, 0);
+        MachineEntity oxygenTank = fixture.Add("GasTankBlock_Iron", 0, -1);
+        MachineEntity engine = fixture.Add("GasEngine", 0, 0);
+        MachineEntity pump = fixture.Add("GasPump_Mechanical", 1, 0);
+        MachineEntity destination = fixture.Add("GasTankBlock_Iron", 2, 0);
+        GameplayTestFluidNetworks.AddGas(hydrogenTank, FluidIds.Hydrogen, 10);
+        GameplayTestFluidNetworks.AddGas(oxygenTank, FluidIds.Oxygen, 10);
+        fixture.Rebuild();
+        bool sameMechanicalNetwork = ReferenceEquals(engine.Network, pump.Network);
+        bool separateFluidNetworks = fixture.Graph.NodeComponents.TryGetValue(engine.Id, out var engineFluid) &&
+            fixture.Graph.NodeComponents.TryGetValue(pump.Id, out var pumpFluid) && !ReferenceEquals(engineFluid, pumpFluid);
+        FluidInventory hydrogen = GetFluidInventory(hydrogenTank), oxygen = GetFluidInventory(oxygenTank);
+        FluidInventory water = GetFluidInventory(engine, "water");
+        var steps = new JArray();
+        foreach (float seconds in new[] { fixture.Seconds, fixture.Seconds, fixture.Seconds * 1.5f, fixture.Seconds })
+        {
+            double hydrogenBefore = (double)hydrogen.GetGasMoles(FluidIds.Hydrogen);
+            double oxygenBefore = (double)oxygen.GetGasMoles(FluidIds.Oxygen);
+            double waterBefore = (double)water.LiquidMoles;
+            double tankBefore = GameplayTestFluidNetworks.Gas(destination);
+            double airBefore = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles);
+            MachineWorld.Tick(seconds);
+            steps.Add(new JObject
+            {
+                ["seconds"] = seconds, ["tankBefore"] = tankBefore, ["tankAfter"] = GameplayTestFluidNetworks.Gas(destination),
+                ["airBefore"] = airBefore, ["airAfter"] = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles),
+                ["hydrogenBefore"] = hydrogenBefore, ["hydrogenAfter"] = (double)hydrogen.GetGasMoles(FluidIds.Hydrogen),
+                ["oxygenBefore"] = oxygenBefore, ["oxygenAfter"] = (double)oxygen.GetGasMoles(FluidIds.Oxygen),
+                ["waterBefore"] = waterBefore, ["waterAfter"] = (double)water.LiquidMoles,
+                ["engineRpm"] = engine.SpeedRpm, ["pumpRpm"] = pump.SpeedRpm, ["pumpLoadSatisfied"] = pump.LoadSatisfied,
+                ["reservations"] = hydrogen.State.Ports.Count + oxygen.State.Ports.Count
+            });
+        }
+        double halfTankBefore = GameplayTestFluidNetworks.Gas(destination);
+        double halfHydrogenBefore = (double)hydrogen.GetGasMoles(FluidIds.Hydrogen);
+        double halfAirBefore = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles);
+        MachineWorld.Tick(fixture.Seconds * .5f);
+        double halfTankFirst = GameplayTestFluidNetworks.Gas(destination);
+        double halfHydrogenFirst = (double)hydrogen.GetGasMoles(FluidIds.Hydrogen);
+        double halfAirFirst = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles);
+        MachineWorld.Tick(fixture.Seconds * .5f);
+        double halfTankSecond = GameplayTestFluidNetworks.Gas(destination);
+        double halfHydrogenSecond = (double)hydrogen.GetGasMoles(FluidIds.Hydrogen);
+        double halfAirSecond = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles);
+        hydrogen.Restore(new FluidInventoryState());
+        double stoppedTankBefore = GameplayTestFluidNetworks.Gas(destination);
+        double stoppedAirBefore = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles);
+        MachineWorld.Tick(fixture.Seconds);
+        return new JObject
+        {
+            ["sameMechanicalNetwork"] = sameMechanicalNetwork, ["separateFluidNetworks"] = separateFluidNetworks,
+            ["pumpRate"] = pump.Definition.Fluid.ThroughputLitersPerSecond, ["steps"] = steps,
+            ["stepSeconds"] = fixture.Seconds, ["halfTankBefore"] = halfTankBefore, ["halfTankFirst"] = halfTankFirst,
+            ["halfTankSecond"] = halfTankSecond, ["halfHydrogenBefore"] = halfHydrogenBefore,
+            ["halfHydrogenFirst"] = halfHydrogenFirst, ["halfHydrogenSecond"] = halfHydrogenSecond,
+            ["halfAirBefore"] = halfAirBefore, ["halfAirFirst"] = halfAirFirst, ["halfAirSecond"] = halfAirSecond,
+            ["stoppedTankBefore"] = stoppedTankBefore, ["stoppedTankAfter"] = GameplayTestFluidNetworks.Gas(destination),
+            ["stoppedAirBefore"] = stoppedAirBefore, ["stoppedAirAfter"] = (double)FluidUnits.MolToStandardLiters(fixture.Atmosphere.CurrentMoles),
+            ["stoppedReservations"] = hydrogen.State.Ports.Count + oxygen.State.Ports.Count
+        };
+    }
+
     internal static readonly Dictionary<string, Action<Action<string, bool, string>>> Cases = new();
     private static void Power(MachineEntity node, bool enabled)
     { node.Rpm = enabled ? 2000 : 0; node.LoadSatisfied = enabled; node.ElectricalSuppliedWatts = enabled ? node.Definition.Electrical?.PowerWatts ?? 0 : 0; }

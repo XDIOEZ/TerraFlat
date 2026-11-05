@@ -211,8 +211,14 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
             result["weatherPersistenceWarnings"] = persistenceWarnings;
             result["weatherChildRetainsOwner"] = weatherChild.transform.parent == weatherParent.transform &&
                 weatherChild.scene == player.gameObject.scene && weatherParent.scene == player.gameObject.scene;
-            result["weatherRootPersists"] = weatherRoot.transform.parent == null &&
-                weatherRoot.scene != player.gameObject.scene && weatherRoot.scene == a.gameObject.scene;
+            var persistentHierarchy = PersistentRuntimeObjectHierarchy.ExistingInstance;
+            result["weatherRootScene"] = weatherRoot.scene.name;
+            result["weatherRootOutsidePlayerScene"] = weatherRoot.scene != player.gameObject.scene;
+            result["weatherRootCategory"] = persistentHierarchy != null &&
+                persistentHierarchy.TryGetObjectCategory(weatherRoot, out var weatherCategory)
+                ? weatherCategory.ToString() : "";
+            result["weatherRootOwnsBusinessRoot"] =
+                PersistentRuntimeObjectHierarchy.GetBusinessOwnerRoot(weatherRoot) == weatherRoot;
             UnityEngine.Object.Destroy(weatherParent);
             yield return null;
             result["weatherChildDestroyedWithOwner"] = weatherParent == null && weatherChild == null;

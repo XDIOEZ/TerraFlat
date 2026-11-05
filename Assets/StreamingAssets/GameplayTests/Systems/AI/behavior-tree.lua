@@ -114,10 +114,10 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
     local expected = {
         Bear = true, Bird = true, Seagull = true, Bee = true, Chicken = true,
         WildBoar = true, Wolf = true, Ghost = true, Zombie = true, SmallFish = true,
-        Sheep = true, Rabbit = true, SnowLeopard = true
+        Sheep = true, Rabbit = true, SnowLeopard = true, Servitor = true
     }
-    local seen, references, sharedUsed = {}, {}, false
-    assert(#data.actors == 13, "正式生物目录数量不符")
+    local seen, references, loadedSubtrees, sharedUsed = {}, {}, {}, false
+    assert(#data.actors == 14, "正式生物目录数量不符")
     for _, actor in ipairs(data.actors) do
         assert(expected[actor.id] and not seen[actor.id], "生物目录缺失或重复：" .. actor.id)
         seen[actor.id] = true
@@ -127,11 +127,9 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
         assert(actor.shellActors == 1 and actor.missingScripts == 0 and actor.hasSharedSubtrees,
             "正式外壳残留重复 AI、失效脚本或缺少共享子树：" .. actor.id)
         local definitions = {}
-        for _, name in ipairs(actor.subtreeDefinitions) do definitions[name] = true end
-        for _, name in ipairs({"huntAndWander", "damageRetreat", "aquaticPredation", "packLowHealthFlee"}) do
-            assert(definitions[name], "独立文件中的组合子树没有加载：" .. actor.id .. "/" .. name)
-        end
+        for _, name in ipairs(actor.subtreeDefinitions) do definitions[name] = true; loadedSubtrees[name] = true end
         for _, name in ipairs(actor.subtreeReferences) do
+            assert(definitions[name], "正式树引用的子树没有加载：" .. actor.id .. "/" .. name)
             if references[name] then sharedUsed = true end
             references[name] = true
         end
@@ -146,6 +144,10 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
         if actor.id == "Bee" then assert(actor.hasColony, "蜜蜂缺少群落能力") end
         if actor.id == "SmallFish" then assert(actor.hasAquatic, "小鱼缺少水生能力") end
         if actor.id == "Ghost" then assert(actor.hasLight, "幽灵缺少光照导航能力") end
+        if actor.id == "Servitor" then
+            assert(actor.hasServitor and not actor.hasPack and not actor.hasBiologicalNeeds,
+                "机仆缺少控制模块，或继承了动物群猎与生理需求")
+        end
         if actor.id == "SnowLeopard" then
             assert(not actor.hasPack, "雪豹继承了狼群能力配置")
             local damage = actor.damage
@@ -154,6 +156,9 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
             assert(damage.bleedingAt87 == 3 and damage.bleedingAt89 == 0,
                 "雪豹刃伤没有按正式出血概率与等级计算")
         end
+    end
+    for _, name in ipairs({"huntAndWander", "damageRetreat", "aquaticPredation", "packLowHealthFlee", "servitorWork"}) do
+        assert(loadedSubtrees[name], "独立文件中的组合子树没有被正式生物加载：" .. name)
     end
     assert(sharedUsed, "没有两个正式物种引用同一共享子树")
 end, "全部正式生物的树加载、能力身份与共享子树")

@@ -56,6 +56,8 @@ public sealed class GameplayTestScene : MonoBehaviour
     private int pendingOmittedWarnings;
     private bool periodicScreenshotsEnabled;
     private bool screenshotCapturing;
+    private bool expectedWorldMigrationInProgress;
+    private int expectedWorldMigrationEpoch;
     private double nextScreenshotAt;
 
     private sealed class CapturedLog
@@ -109,12 +111,13 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (GameManager.Instance?.IsGameplayReady == true && ItemMgr.Instance?.LocalControlledActor != null)
             player = ItemMgr.Instance.LocalControlledActor;
         lock (reportLock) DrainCapturedLogs();
-        if (periodicScreenshotsEnabled && !screenshotCapturing && !worldExited &&
+        if (periodicScreenshotsEnabled && !screenshotCapturing && !worldExited && !expectedWorldMigrationInProgress &&
+            manager?.IsWorldEntryInProgress != true &&
             activeCase?.Status == "running" && Time.realtimeSinceStartupAsDouble >= nextScreenshotAt &&
             TryGetScreenshotPresentation(out _))
         {
             nextScreenshotAt = Time.realtimeSinceStartupAsDouble + Mathf.Max(1f, screenshotIntervalSeconds);
-            StartCoroutine(CaptureAutomaticScreenshot(activeCase, "定时截图"));
+            StartCoroutine(CaptureAutomaticScreenshot(activeCase, "定时截图", periodic: true));
         }
         if (worldExited || clock.Elapsed.TotalSeconds > totalTimeoutSeconds)
         {
@@ -209,7 +212,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         foreach (GameplayTestCase testCase in suite.Cases)
             report.Cases.Add(new GameplayTestCaseReport
             {
-                Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath,
+                Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath, ContractKind = testCase.ContractKind,
                 Status = testCase.Enabled ? "pending" : "disabled",
                 Reason = testCase.Enabled ? null : "用例未启用。",
                 ReportPath = GameplayTestArtifacts.CaseReportPath(report, testCase.Id)
@@ -360,12 +363,18 @@ public sealed class GameplayTestScene : MonoBehaviour
 
     private void OnWorldEntryProgress(WorldEntryProgressInfo progress)
     {
+        if (progress.State == WorldEntryProgressState.Completed) expectedWorldMigrationInProgress = false;
         if (progress.State == WorldEntryProgressState.Failed) worldEntryFailure = progress.Status;
     }
 
     private void OnWorldExit()
     {
-        if (GameplayTestSpaceScenario.IsMigrationExpected) return;
+        if (GameplayTestSpaceScenario.IsMigrationExpected)
+        {
+            expectedWorldMigrationInProgress = true;
+            expectedWorldMigrationEpoch++;
+            return;
+        }
         worldExited = true;
         if (finished) return;
         // 退出事件当帧就标记中断，避免协程先结束而把退出误记为普通失败。
@@ -485,13 +494,13 @@ public sealed class GameplayTestScene : MonoBehaviour
                 "结束截图失败，请查看本用例 screenshots 中的采集错误。");
     }
 
-    private IEnumerator CaptureAutomaticScreenshot(GameplayTestCaseReport testCase, string label)
+    private IEnumerator CaptureAutomaticScreenshot(GameplayTestCaseReport testCase, string label, bool periodic = false)
     {
         screenshotCapturing = true;
         int firstNewScreenshot = testCase.Screenshots.Count;
         try
         {
-            yield return GameplayTestLuaRunner.Advance(CaptureScreenshotForCase(testCase, label), error =>
+            yield return GameplayTestLuaRunner.Advance(CaptureScreenshotForCase(testCase, label, periodic), error =>
             {
                 if (testCase.Screenshots.Count > firstNewScreenshot)
                     testCase.Screenshots[testCase.Screenshots.Count - 1].Error ??= error.ToString();
@@ -499,12 +508,25 @@ public sealed class GameplayTestScene : MonoBehaviour
                     Record("auto_screenshot", label, false, error.ToString());
             });
         }
-        finally { screenshotCapturing = false; }
+        finally
+        {
+            try
+            {
+                // 定时图失败也属于验收失败，不能被随后成功的结束图覆盖。
+                if (testCase.Screenshots.Count > firstNewScreenshot)
+                {
+                    string error = testCase.Screenshots[testCase.Screenshots.Count - 1].Error;
+                    if (!string.IsNullOrEmpty(error)) Record("auto_screenshot", label, false, error);
+                }
+            }
+            finally { screenshotCapturing = false; }
+        }
     }
 
-    private IEnumerator CaptureScreenshotForCase(GameplayTestCaseReport testCase, string label)
+    private IEnumerator CaptureScreenshotForCase(GameplayTestCaseReport testCase, string label, bool periodic)
     {
         GameplayTestScreenshotRecord screenshot;
+        int migrationEpoch = expectedWorldMigrationEpoch;
         lock (reportLock)
         {
             if (activeCase != testCase) yield break;
@@ -528,6 +550,8 @@ public sealed class GameplayTestScene : MonoBehaviour
         while (readyFrames < 2)
         {
             yield return null;
+            // 定时取图不跨越已声明的世界迁移；结束图仍必须在原八秒预算内就绪。
+            if (DeferPeriodicScreenshotForMigration(testCase, screenshot, label, periodic, migrationEpoch)) yield break;
             readyFrames = TryGetScreenshotPresentation(out presentation) ? readyFrames + 1 : 0;
             if (Time.realtimeSinceStartupAsDouble < deadline || readyFrames >= 2) continue;
             screenshot.Error = "截图现场未就绪：" + presentation;
@@ -542,8 +566,21 @@ public sealed class GameplayTestScene : MonoBehaviour
         }
         yield return GameplayTestArtifacts.CaptureScreenshot(this, screenshot.Path,
             error => screenshot.Error = error);
+        if (string.IsNullOrEmpty(screenshot.Error) &&
+            DeferPeriodicScreenshotForMigration(testCase, screenshot, label, periodic, migrationEpoch)) yield break;
         if (string.IsNullOrEmpty(screenshot.Error))
             Record("auto_screenshot", label, true, screenshot.Path);
+    }
+
+    private bool DeferPeriodicScreenshotForMigration(GameplayTestCaseReport testCase,
+        GameplayTestScreenshotRecord screenshot, string label, bool periodic, int migrationEpoch)
+    {
+        if (!periodic || !expectedWorldMigrationInProgress && manager?.IsWorldEntryInProgress != true &&
+            migrationEpoch == expectedWorldMigrationEpoch) return false;
+        if (File.Exists(screenshot.Path)) File.Delete(screenshot.Path);
+        lock (reportLock) testCase.Screenshots.Remove(screenshot);
+        Record("auto_screenshot_deferred", label, true, "取图期间进入正式世界迁移，稳定后重新采集。");
+        return true;
     }
     #endregion
 
@@ -557,14 +594,31 @@ public sealed class GameplayTestScene : MonoBehaviour
         }
         Camera camera = current.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
         SpriteRenderer sprite = current.Sprite;
-        if (camera == null || !camera.isActiveAndEnabled || sprite == null ||
-            !sprite.enabled || !sprite.gameObject.activeInHierarchy || sprite.sprite == null || sprite.color.a <= 0.01f)
+        int sourceSpriteId = sprite != null ? sprite.GetInstanceID() : 0;
+        bool projectedSprite = false;
+        WorldRenderingManager rendering = WorldRenderingManager.ExistingInstance;
+        WorldPresentationProjection presentation = null;
+        FlatWorld.Spaceflight.SpaceSession session = FlatWorld.Spaceflight.SpaceSession.Current;
+        if (session == null || !session.TryGetShipPassengerProjection(current, out presentation))
+            rendering?.TryGetItemPresentation(current, out presentation);
+        if (sprite != null && presentation != null)
         {
-            reason = "玩家相机或主角贴图尚未显示。";
+            projectedSprite = true;
+            sprite = presentation.TryGetProjectedTransform(sprite.transform, out Transform target)
+                ? target.GetComponent<SpriteRenderer>() : null;
+        }
+        if (camera == null || !camera.isActiveAndEnabled || sprite == null ||
+            !sprite.enabled || !sprite.gameObject.activeInHierarchy || sprite.forceRenderingOff ||
+            sprite.sprite == null || sprite.color.a <= 0.01f)
+        {
+            reason = $"玩家实际贴图未显示：投影={projectedSprite}，来源={sourceSpriteId}，" +
+                $"实际={ (sprite != null ? sprite.GetInstanceID() : 0) }，" +
+                $"active={sprite != null && sprite.gameObject.activeInHierarchy}，" +
+                $"enabled={sprite != null && sprite.enabled}，forceOff={sprite != null && sprite.forceRenderingOff}。";
             return false;
         }
         Vector3 displayCenter = sprite.bounds.center;
-        if (WorldPresentationTransformRegistry.TryGet(GameplayWorldRegistry.GetItemWorldKey(current),
+        if (!projectedSprite && WorldPresentationTransformRegistry.TryGet(GameplayWorldRegistry.GetItemWorldKey(current),
                 out Matrix4x4 projection, out bool worldVisible))
         {
             if (!worldVisible) { reason = "主角所属世界的显示投影尚未就绪。"; return false; }
@@ -574,7 +628,9 @@ public sealed class GameplayTestScene : MonoBehaviour
         bool visible = (camera.cullingMask & (1 << sprite.gameObject.layer)) != 0 &&
                        viewport.z >= camera.nearClipPlane && viewport.z <= camera.farClipPlane &&
                        viewport.x >= 0f && viewport.x <= 1f && viewport.y >= 0f && viewport.y <= 1f;
-        reason = $"主角视口 ({viewport.x:0.###}, {viewport.y:0.###}, {viewport.z:0.###})，相机 {camera.GetInstanceID()}。";
+        reason = $"主角视口 ({viewport.x:0.###}, {viewport.y:0.###}, {viewport.z:0.###})，" +
+            $"相机={camera.GetInstanceID()}，实际贴图={sprite.GetInstanceID()}，投影={projectedSprite}，" +
+            $"场景={sprite.gameObject.scene.name}({sprite.gameObject.scene.handle})，图层={sprite.gameObject.layer}。";
         return visible;
     }
 

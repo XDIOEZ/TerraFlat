@@ -128,7 +128,13 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         scope.Receiver.OnAction_Start.Invoke(player);
         PhysicalDeviceArtworkView drillArtwork = drill ? panel.GetComponentInChildren<PhysicalDeviceArtworkView>(true) : null;
         int strokeBefore = drillArtwork != null ? drillArtwork.StrokeRevision : 0;
-        scope.ActionButton.onClick.Invoke();
+        float initialInputAmount = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
+        float initialTemperature = scope.Input.Data.GetItemSlot(0)?.itemData?.MatterState?.TemperatureCelsius ?? 0f;
+        float initialDurability = scope.Host.itemData.Durability;
+        string fault = args.Value<string>("fault") ?? "none";
+        if (fault != "none" && (fault != "drop_action" || !drill))
+            throw new InvalidOperationException("不支持的取火故障注入：" + fault);
+        if (fault != "drop_action") scope.ActionButton.onClick.Invoke();
         bool drillStrokeAnimated = drillArtwork != null && drillArtwork.StrokeRevision == strokeBefore + 1;
         FlintStrikeToolGraphic artwork = panel.GetComponentInChildren<FlintStrikeToolGraphic>(true);
         bool artworkBound = artwork != null && artwork.ArtworkAtlas != null;
@@ -139,7 +145,9 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         float temperature = after?.MatterState?.TemperatureCelsius ?? 0f;
         string outputId = output?.IDName ?? string.Empty;
         float outputAmount = output?.Stack?.Amount ?? 0f;
+        float durability = scope.Host.itemData.Durability;
         float blockedInput = 0f;
+        float blockedDurability = 0f;
         string blockedOutput = string.Empty;
         bool blockedAnimationUnchanged = false;
         bool failedStrikeAnimated = false;
@@ -165,6 +173,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             scope.ActionButton.onClick.Invoke();
             blockedInput = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
             blockedOutput = scope.Output.Data.GetItemSlot(0)?.itemData?.IDName ?? string.Empty;
+            blockedDurability = scope.Host.itemData.Durability;
             blockedAnimationUnchanged = artworkBound && artwork.StrikeRevision == 1;
             scope.Output.Data.RemoveItemAll(scope.Output.Data.GetItemSlot(0), 0);
             scope.Flint.SuccessChancePerClick = 0f;
@@ -177,7 +186,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         scope.Tool.Unload();
         return new JObject
         {
-            ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
+            ["fault"] = fault, ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
             ["drillStrokeAnimated"] = drillStrokeAnimated,
             ["gameplayWindow"] = gameplayWindow,
             ["ownPanelPrefab"] = prefab.name == (drill ? "UI_FireDrill" : Mod_FlintStrike.PanelPrefabKey),
@@ -194,11 +203,14 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             ["eventDetached"] = scope.EventsUnbound && !scope.Input.Data.Event_OnDataChanged.HasCalls &&
                                 !scope.Output.Data.Event_OnDataChanged.HasCalls,
             ["panelReleased"] = scope.Panel == null,
+            ["initialInputAmount"] = initialInputAmount, ["initialTemperature"] = initialTemperature,
+            ["initialDurability"] = initialDurability, ["durability"] = durability,
             ["inputAmount"] = inputAmount, ["temperature"] = temperature,
             ["outputId"] = outputId, ["outputAmount"] = outputAmount,
             ["drillDefinitionDurability"] = drillDefinitionDurability, ["drillBreakMaterials"] = drillBreakMaterials,
             ["toolDurability"] = scope.Host.itemData.Durability,
-            ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput
+            ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput,
+            ["blockedDurability"] = blockedDurability
         };
     }
 

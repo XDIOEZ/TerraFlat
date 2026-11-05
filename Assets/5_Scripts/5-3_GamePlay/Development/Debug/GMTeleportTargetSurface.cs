@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// GM 单次传送的鼠标/触屏点选面；独立持有一个 pointerId，拖拽超过 UI 阈值即取消本次点击。
+/// GM 连续传送的鼠标/触屏点选面；每次独立持有一个 pointerId，拖拽超过 UI 阈值即取消本次点击。
 /// 只在主动选择落点时启用，避免常驻遮挡手机摇杆和玩法按钮。
 /// </summary>
 public sealed class GMTeleportTargetSurface : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler

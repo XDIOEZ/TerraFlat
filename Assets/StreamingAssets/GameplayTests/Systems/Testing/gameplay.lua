@@ -39,3 +39,11 @@ test.profiler_stop("FlatWorld.GameplayTest.ProfilerEvidence", function(d)
         "性能 JSON 或采集过程文件没有发布")
     assert(d.settingsRestored, "性能采集后没有恢复原录制设置")
 end, "导出含实际 Marker 的性能 JSON")
+test.runtime("testing", "contract_classification", {}, function(data)
+    local expected = {"behavior", "architecture", "configuration", "mixed"}
+    assert(data.legacyKind == "unspecified", "旧清单没有保留未分类状态")
+    assert(#data.kinds == #expected and data.unknownRejected, "契约类别丢失或接受了未知类别")
+    assert(data.noOracleRejected == 5 and data.resultCommandAccepted and data.profilerOracleAccepted,
+        "纯准备脚本被误判为结果验证，或有效移动/性能断言被拒绝")
+    for i, kind in ipairs(expected) do assert(data.kinds[i] == kind, "契约类别解析不一致") end
+end, "案例契约分类保持旧格式兼容且不接受未知类别")

@@ -48,6 +48,7 @@ description: "FlatWorld 声音素材检索、许可署名、LMMS 制作，以及
 - 业务通过稳定 Cue ID 发声；`AudioService` 持有跨场景生命周期、声源池、并发优先级、淡入淡出及音量。循环 Cue 的句柄由调用方停止/回收；生成音效 ID 的 `.loop` 后缀表示循环，历史 `player.swim.stroke` 由 Cue 显式标记循环，`player.*` 属于世界 SFX。
 - 临时禁声用 `AudioCue.playbackEnabled=false`（默认开启），播放入口在选片、冷却与声源分配前拒播，循环覆盖也不能绕过；停用 Cue 可以保留空录音，正常启用却缺片仍警告并由 Catalog 校验报错。`ui.click` 目前明确停用，Lua `catalog_lifecycle/voice_lifecycle` 分别检查声明校验和真实点击静音。
 - 世界音效使用 `At/Attached`、完整空间混音与线性衰减：`MinDistance` 内正常，`MaxDistance` 处静音。`Mod_Cam` 绑定本机玩家和已有监听器，服务将声源投影到监听器 XY 平面，排除相机高度、前探与跟随偏移；解绑按目标身份。范围外短音不占池/冷却，循环音保留句柄待靠近恢复；角色循环音绑定角色 Transform。
+- 保留的静音循环仍更新真实空间位置；距离外与重入分别核验位置、静音及同一声源恢复。录音时长属于独立配置契约，换素材须按真实文件更新，不能放宽行为容差。
 - 矿洞传声由 `Mod_Cam` 的 `CaveSurfaceAudioPresenter` 注入开放洞口配对到 `AudioService.CavePropagation`，地表空间声按“声源→地表入口→洞内出口→玩家”总距离传播，洞口方向定位并低通闷化；其他维度彼此隔音。至多缓存附近16个洞口，移动4格或出口进度变化才重选。地表雨、风使用 `AudioPlayOptions.ForceSpatial` 单次空间化（48格），不改正常天气 Cue；雷声延迟按洞口路径计算，树叶/河流使用地表入口附近的原始声景。地表温度块卸载时雨声退回天气区快照的雨雪分类，不加载地形；缺少区域天气快照则保留上一雨声目标。
 - 空间声音传播档位在 `Assets/Resources/Audio/PropagationRanges.json`：`levels` 从 1～10 默认对应 1/2/4/8/16/32/64/128/256/512 格，`cues` 按稳定 ID 选 `level`；狼/鸟/海鸥为七档，蜂/野猪为五档。目录预热时解析并缓存到 Cue，未声明的声音沿用自身距离；修改后重新启动游戏。Lua `audio/propagation_ranges` 检查十档、正式配置、改距与移除绑定，`voice_lifecycle` 检查真实 16/64 格内外声源分配与线性衰减。
 - Catalog/Config 的 Resources 路径与加载常量对应。候选 UI 音效按风格分目录，位于自动扫描目录 `Assets/Audio/Generated/` 之外，选定后再绑定 Cue；`build_preview.py --unity .` 重导保留 WAV GUID。

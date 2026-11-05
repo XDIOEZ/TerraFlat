@@ -38,6 +38,10 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 
 ## 修改后选择与补覆盖
 
+- 生产代码不得按测试状态、对象名或案例 ID 改玩法。先分类生产 Bug、夹具、时序和契约变化；外部控制/直接回调仅证明该入口，不能证明设备完整链路。正式设备现场用 `RegisterAsync(..., requiresDeviceInput: true)` 交还 Agent 租约，队列设备事件经过原 binding/Action/焦点/门禁；不得加临时 binding、专用 Usage 或跳过门禁以冒充普通玩家覆盖。
+- 行为断言优先位移、停止、拒绝、恢复、消耗和保存不变量；私有装配/节点约束单独标架构回归。探针只返回原始采样，Lua 管编排与独立期望；配置契约和适应配置的行为测试分开，容差集中命名，不调用被测计算生成答案。异步用状态或模拟时钟并保留失败预算。
+- 少量故障注入只改隔离夹具并恢复；同一组正常断言必须检出指定故障，且核对失败原因，不能将任意异常当检出成功。失败/中断也须清设备、输入、焦点、偏好、租约及数值，不能污染正式档案。
+
 - 陈列厅平地/无生态覆盖只作用于陈列厅世界；已有活动星球时不回退使用出生世界的 ReadyPlanetData 判断。其它星球的冷采样/生成专项用 `SuppressProfileOverrides` 租约，在返回前释放，并核对正式 Profile 和真实生态实体。
 - 先把改动的正常、边界、拒绝、回滚和关键流程对应到具体Lua断言；缺少则先增强同系统Lua，必要时扩展正式白名单采样，不复制业务算法或开放反射/任意C#。
 - `test.system(system,operation,args,validator,label)` 调用独立规则；`test.runtime(...)` 只用于正式隔离世界。每个回调必须实际调用assert，无断言即失败。参数排队时冻结，回调不能追加命令。
@@ -48,7 +52,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 要验证 Unity 启停/销毁回调的编辑态夹具，调用 `EnableGameplayTestProbeLifecycleCallbacks` 启用临时组件的 `runInEditMode`，或用已有 `ExecuteAlways` 子类；不手工重算复位状态。
 - 预期失败的 Addressables 请求在同步负例范围捕获并恢复 `ResourceManager.ExceptionHandler`，同时断言真实 Failed 状态和异常，避免负例日志误算为引擎故障。
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。
-- 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
+- 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；同次操作的并发状态用相同的可选第四参 budget 共用首个截止时间，不为后序条件重新计时。不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
 - 需要观察真实动作的调用时，在动作前后排 `test.profiler_start` / `test.profiler_stop`，详见 [Lua 接口与性能采集](../../../Assets/StreamingAssets/GameplayTests/README.md#lua-编写接口)；默认导出最慢保留帧，也可指定 Marker 找最近命中帧。调用树仅是选中帧，不等于整个采集区间或全部 C# 方法。
 - 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同 ProfileId、同 ItemData 的隔离角色。
@@ -64,6 +68,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - **PlayMode 场景宿主每 10 秒自动截图（场景参数可调），不再提供 `test.screenshot()` 命令。** 每份已执行 Lua 即使已有定时图、失败或提前结束，也必须在执行器 `beforeCleanup` 回调中停止定时、等待在途截图并强制拍结束图，之后才清理临时设备和租约；回调异常仍继续清理，结束图失败则用例失败。EditMode 规则不截图。
 - 图片与 Lua 断言独立，定时采集不能替代关键阶段断言；太空跨场景时按正式测试流程恢复，截图不得阻止恢复和清理。采集失败保留实际错误，不把缺图记为通过。
 - 截图宿主检查主角贴图启用、透明度、相机裁剪层和视口，连续两帧就绪后再取图；8 秒仍未就绪就失败并记录原因。实际图片仍需检查主角、HUD 与光照，组件状态或图像哈希不同不能证明画面有用，不用固定延时掩盖缺失现场。
+- 截图读取实际船乘员/普通物品投影并检查 `forceRenderingOff`；定时取图若跨正式预期迁移则记延后并重采，结束图仍强制执行原预算，真实采集错误不豁免。
 - **测试整轮结束后统一视觉复核**：CLI `run_suite.py` 调用 `visual_review.py` 检查黑屏、纯色、缺图和损坏，生成 `visual-contact-sheet-*.png`。AI 必须实际逐页看完整套图，必要时打开原图，检查 HUD、UI、角色、遮挡及光照；证实异常就修复并重跑相关用例。**程序预检不是语义识图**，仅有 `needs_semantic_review` 不能报告“视觉通过”。MCP/测试中心结束后也可执行 `python Tools/GameplayTesting/visual_review.py <本轮Runs/report.json>` 并看图。
 - 运行 PlayMode Lua 后，最终回复直接嵌入本轮关键实际截图，简短说明阶段和结果，不能只给报告路径或让用户去工具输出找图。
 
@@ -93,6 +98,12 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 - 固定步采样等待正式 `SpaceSession.State.SimulationSeconds` 达到目标，同时保留真实时间超时；慢帧或编辑器操作耗时不能计作物理推进。无外力惯性使用空星区自有夹具，同时检查位移、停推和燃料；星体引力或大气阻力范围内不能断言总速度不变。太空跨区另核验 UI 根身份、统一时间源与实际采光，防止逻辑通过但画面失效。
 
 ## 报告契约
+
+- 清单用 `contractKind` 标明 `behavior / architecture / configuration / mixed`；它只描述覆盖边界，不参与启用、选择或通过判定。内部架构更新不应改行为断言，默认配置变化只更新明确的配置契约。
+- 只有日志、等待、准备状态的 Lua 不能通过；`system/runtime/space` 回调必须实际执行断言。故障注入只作用于隔离夹具，验证指定断言失败及恢复后的正常行为，不能以预期故障为由跳过正常断言。
+- 失败先区分生产缺陷、夹具错误、时序采样和玩法契约变化。探针只准备及采样，Lua独立推导期望；保留模拟 Tick/时间预算，不能用延长固定等待或放宽阈值消除失败。`mixed` 旧案例仍含内部/业务耦合，分类完成不代表已解耦。
+- 临时装备可能被正式拾取链回收时，恢复全部拾取目标库存，不能只恢复选中槽；回传恢复前后摘要与数量供Lua比较。清理逐项尝试、聚合异常，仅成功后标记已释放。
+- 默认素材、HUD和独立窗口流程分开案例，避免首错遮蔽无关验收；拆分保留全部原断言，不把下层节点active状态当覆盖层业务契约。
 
 ```text
 Library/FlatWorldGameplayTests/

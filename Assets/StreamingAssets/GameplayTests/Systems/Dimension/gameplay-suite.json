@@ -6,12 +6,14 @@
   "cases": [
     {
       "id": "dimension_cave_roundtrip",
+      "contractKind": "mixed",
       "name": "真实矿洞入口配对、完整迁移与返回地表",
       "luaPath": "GameplayTests/Systems/Dimension/gameplay.lua",
       "enabled": true
     },
     {
       "id": "dimension_generation_presets",
+      "contractKind": "mixed",
       "name": "火星地下引用地球地表预设、独立保存与正式出口返回火星",
       "luaPath": "GameplayTests/Systems/Dimension/generation-presets.lua",
       "enabled": true

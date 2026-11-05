@@ -36,6 +36,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 面板开关统一走 `CanToggleGameplayWindow`，不查询其他面板或租约锁；仅显式锁/世界加载禁止新开，已有窗口始终可关闭。背包、制作、装备和设置遵循相同规则，输入设备与文本焦点仲裁保持独立。
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
 - 外部控制持有唯一 External Gameplay Control 租约，期间真实设备退出玩法仲裁，移动/瞄准/攻击注入现有生产链；打包运行时 `Mod_GameMCP_LLM` 复用该租约与移动输入。
+- 租约是 Agent 语义入口，不是测试放行标志。专用 Usage 设备或外部移动接口的测试不能宣称普通设备覆盖；`player_device_input_behavior` 交还租约后测试原始键盘/手柄移动事件、原 Action、焦点/锁拒绝和键盘异步翻滚，触屏及未绑定的手柄翻滚另列覆盖缺口。
 - 丢弃组合态让 Ctrl+滚轮缩放让位，普通滚轮仍可换槽。返回顺序为顶层可取消面板 → 手机抽屉 → 设置；返回处理先于玩法锁拦截。聊天 Enter 打开当帧抑制提交。
 - 返回由 `FlatWorldUI/Cancel` 唯一分发，经 `EventSystemGuard.CancelRequested` 交给设置模块；不可再额外订阅 `Win10/ESC.performed` 开关设置。UI 同步重绑时保留空字符串禁用态，不把清空绑定恢复为默认键。
 
@@ -98,5 +99,5 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 已插值目标可传 `FollowMode.PresentationLocked`：XY 阻尼、前探与预判平滑归零，Brain 固定 LateUpdate 跟随；缩放/设置变更不解除锁定，释放或目标销毁后恢复最新玩家设置和进入前的 Brain 更新方式。太空驾驶使用此模式，地表驾驶沿用普通设置。
 - 相机模块临时停用会退订设置事件；重新启用已加载相机时补应用当前设置，仍通过原 `PresentationLocked` 规则保留驾驶租约。回归 `player/camera_settings_reenable`。
 - 开发快捷键：Ctrl+F1 管理员，F1 录制 UI 隐藏，F2 创造背包（主背包打开不拦截，其它模态/加载锁拦截），T 与 GM 点选共用 `Mod_PlayerTraits.TryTeleportToScreenPosition`；太空先经 `SpaceSession.UnprojectPosition` 还原宇宙坐标，再调用 `TryTeleportPlayerToSpace`，地表传送先复用中立乘员重置解除乘船/下降，再写拓扑规范坐标并刷新区块。
-- 地表传送统一经 `PlayerTeleportService` 应用落点；联机先由 `NetworkRequest` 桥请求服务器确认，不能只修改本机 Transform 或放宽普通移动限幅。
-- 已提交权威归属的重生/迁移用 `ApplySurfacePose`，只同步逻辑坐标、刚体、运动基线、相机与流送，不能再重置乘员。普通传送用 `ApplySurfacePosition` 先解除承载；到达等待共用 `WaitForSurfaceArrival`，严格核对目标中心、配置视距和真实显示窗口，缺窗限频补发，空队列不代表就绪。回归 `player/surface_arrival`。
+- 地表传送统一经 `PlayerTeleportService` 应用落点；联机先本地预测瞬移，再经 `NetworkRequest` 桥接受服务器权威确认，不能只修改 Transform 或放宽普通移动限幅。GM 点选层支持连续点击不同落点，取消/Esc 才释放。
+- 已提交权威归属的重生/迁移用 `ApplySurfacePose`，只同步逻辑坐标、刚体、运动基线、相机与流送，不能再重置乘员。普通传送用 `ApplySurfacePosition` 先解除承载；`WaitForSurfaceArrival` 只用于正式重生/维度迁移，严格核对目标中心、配置视距和真实显示窗口；同世界 GM 直传不等待。回归 `player/surface_arrival`。

@@ -125,20 +125,19 @@ public static partial class GameplayTestPresentationRuntimeProbe
             WorldSortingManager.ReadExternalRendererKey(player.Sprite, out int playerLayer, out _);
             fixture.WorldItem = fixture.Items.InstantiateItem("Axe_Stone", player.transform.position + Vector3.right * 6f);
             fixture.WorldItem.Load();
-            SpriteRenderer worldSprite = fixture.WorldItem.GetComponentsInChildren<SpriteRenderer>(true)
+            Transform renderRoot = fixture.Rendering.GetActorProjectionSource(fixture.WorldItem);
+            SpriteRenderer worldSprite = renderRoot.GetComponentsInChildren<SpriteRenderer>(true)
                 .FirstOrDefault(value => value.enabled && value.sprite != null);
             if (worldSprite == null) throw new InvalidOperationException("正式世界石斧没有真实 SpriteRenderer。");
             WorldSortingMember member = fixture.WorldItem.GetComponent<WorldSortingMember>() ??
                 throw new InvalidOperationException("正式物品激活后没有接入世界排序。");
             WorldSortingManager sorting = UnityEngine.Object.FindObjectOfType<WorldSortingManager>() ??
                 throw new InvalidOperationException("真实世界没有排序管理器。");
-            fixture.Rendering.GetSortingKey(member.Category, out int expectedLayer, out int expectedOrder);
-            WorldSortingManager.ResolveItemVisualSortingKey(fixture.WorldItem.VisualDefinition, expectedLayer, expectedOrder,
-                out expectedLayer, out expectedOrder);
-            SortingGroup group = worldSprite.GetComponentsInParent<SortingGroup>(true).LastOrDefault(value => value.enabled &&
-                (value.transform == fixture.WorldItem.transform || value.transform.IsChildOf(fixture.WorldItem.transform)));
-            bool sortingMatches = (group != null ? group.sortingLayerID : worldSprite.sortingLayerID) == expectedLayer &&
-                (group != null ? group.sortingOrder : worldSprite.sortingOrder) == expectedOrder;
+            fixture.Rendering.GetSortingKey(member.Category, out int categoryLayer, out int categoryOrder);
+            var visual = fixture.WorldItem.VisualDefinition;
+            WorldSortingManager.ReadExternalRendererKey(worldSprite, out int actualLayer, out int actualOrder);
+            // 只采样正式配置和实际排序，覆盖关系由 Lua 独立推导。
+            string categoryLayerName = SortingLayer.IDToName(categoryLayer);
             string category = member.Category;
             int worldGuid = fixture.WorldItem.itemData.Guid;
             bool realWorldItemLoaded = fixture.WorldItem.IsInitialized;
@@ -222,7 +221,10 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["realItemLoaded"] = fixture.Item.IsInitialized, ["itemId"] = fixture.Item.itemData.IDName,
                 ["realPlayerController"] = fixture.Controller.isActiveAndEnabled,
                 ["bodyVisible"] = body.gameObject.activeInHierarchy && body.enabled && body.color.a > 0f,
-                ["worldSortingMatches"] = sortingMatches, ["category"] = category,
+                ["worldSortingLayer"] = SortingLayer.IDToName(actualLayer), ["worldSortingOrder"] = actualOrder,
+                ["categoryLayer"] = categoryLayerName, ["categoryOrder"] = categoryOrder,
+                ["visualSortingLayer"] = visual?.SortingLayerName,
+                ["visualSortingOrder"] = visual?.SortingOrder, ["category"] = category,
                 ["floors"] = floorSorting, ["worldKey"] = floorWorldKey,
                 ["groundFacilityQueue"] = ChunkBatchRendererGroupService.GetLayerRenderQueue(
                     ChunkBatchRendererGroupService.VisualLayer.GroundFacility),

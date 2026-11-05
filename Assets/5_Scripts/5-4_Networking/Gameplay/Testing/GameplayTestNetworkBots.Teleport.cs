@@ -136,7 +136,16 @@ namespace FlatWorld.Networking.Gameplay
                 "旧世界请求拒绝后新世界同序号可以传送");
             result["afterFresh"] = TeleportSample(actor);
 
-            Vector3 next = WorldTopologyRuntime.NormalizePosition(other + Vector3.right * .25f);
+            // 不等旧目标窗口渲染，下一次 GM 命令使用最新 RealmRevision 直接改落点。
+            Vector3 continuous = WorldTopologyRuntime.NormalizePosition(other + Vector3.up * 7f);
+            SendBotTeleport(world, 92, actor, 3, continuous);
+            yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, continuous).sqrMagnitude < .00001f,
+                "连续 GM 传送立即更新第二个落点");
+            result["continuousTeleport"] = TeleportSample(actor);
+            result["continuousX"] = continuous.x;
+            result["continuousY"] = continuous.y;
+
+            Vector3 next = WorldTopologyRuntime.NormalizePosition(continuous + Vector3.right * .25f);
             bool movementSent = SendBotMotion(world, 92, actor, next, Vector2.zero);
             string movementImmediately = TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None);
             // 真正的物理同步完成后再比较角色位置，避免把同帧 Transform 延迟误判为移动失败。
@@ -156,7 +165,7 @@ namespace FlatWorld.Networking.Gameplay
             result["visualOwnership"] = CaptureTeleportVisualOwnership(actor);
             result["respawnReady"] = CaptureRespawnReady(world, actor, next);
             Vector3 afterRespawn = WorldTopologyRuntime.NormalizePosition(next + Vector3.up * .5f);
-            SendBotTeleport(world, 92, actor, 3, afterRespawn);
+            SendBotTeleport(world, 92, actor, 4, afterRespawn);
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, afterRespawn).sqrMagnitude < .00001f,
                 "重生就绪确认后的 GM 传送");
             result["respawnTeleportX"] = afterRespawn.x;

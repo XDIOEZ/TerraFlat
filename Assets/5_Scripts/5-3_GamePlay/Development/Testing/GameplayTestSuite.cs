@@ -38,7 +38,8 @@ public sealed class GameplayTestSuite
         foreach (JToken token in (JArray)root["cases"])
         {
             if (token is not JObject entry) throw new InvalidDataException("测试 cases 的每项必须是对象。");
-            ValidateMembers(entry, "测试用例", "id", "name", "luaPath", "enabled", "dependsOn");
+            ValidateMembers(entry, "测试用例", "id", "name", "luaPath", "enabled", "dependsOn", "contractKind");
+            RequireType(entry, "contractKind", JTokenType.String, false);
             RequireType(entry, "id", JTokenType.String);
             RequireType(entry, "name", JTokenType.String);
             RequireType(entry, "luaPath", JTokenType.String);
@@ -77,6 +78,8 @@ public sealed class GameplayTestSuite
             if (string.IsNullOrWhiteSpace(testCase.Name))
                 throw new InvalidDataException($"测试用例 {testCase.Id} 缺少 name。");
             testCase.LuaPath = ValidateLuaPath(testCase.LuaPath, testCase.Id);
+            if (testCase.ContractKind is not ("unspecified" or "behavior" or "architecture" or "configuration" or "mixed"))
+                throw new InvalidDataException($"测试用例 {testCase.Id} 的 contractKind 无效。");
             var dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string dependency in testCase.DependsOn ?? throw new InvalidDataException($"测试用例 {testCase.Id} 的 dependsOn 不能为空值。"))
             {
@@ -140,6 +143,7 @@ public sealed class GameplayTestCase
     [JsonProperty("name", Required = Required.Always)] public string Name;
     [JsonProperty("luaPath", Required = Required.Always)] public string LuaPath;
     [JsonProperty("enabled")] public bool Enabled = true;
+    [JsonProperty("contractKind")] public string ContractKind = "unspecified";
     [JsonProperty("dependsOn")] public List<string> DependsOn = new();
     #endregion
 }

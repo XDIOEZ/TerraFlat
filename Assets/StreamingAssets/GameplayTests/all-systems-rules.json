@@ -11,6 +11,12 @@
       "enabled": true
     },
     {
+      "id": "ai_servitor_rules",
+      "name": "机仆电池与对象终端资源",
+      "luaPath": "GameplayTests/Systems/AI/servitor-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_rules",
       "name": "AI生物规则与边界",
       "luaPath": "GameplayTests/Systems/AI/rules.lua",
@@ -264,14 +270,8 @@
     },
     {
       "id": "space_rules",
-      "name": "宇宙与太空飞船规则与边界",
+      "name": "宇宙、飞船规则与局部伤害边界",
       "luaPath": "GameplayTests/Systems/Space/rules.lua",
-      "enabled": true
-    },
-    {
-      "id": "space_ship_damage_rules",
-      "name": "飞船局部伤害、设备瘫痪与成块残骸",
-      "luaPath": "GameplayTests/Systems/Space/ship_damage_rules.lua",
       "enabled": true
     },
     {
@@ -425,6 +425,12 @@
       "enabled": true
     },
     {
+      "id": "ui_structure_refactor_rules",
+      "name": "GM职责拆分与目录共享布局",
+      "luaPath": "GameplayTests/Systems/UISettings/structure-refactor.lua",
+      "enabled": true
+    },
+    {
       "id": "audio_rules",
       "name": "音频规则与边界",
       "luaPath": "GameplayTests/Systems/Audio/rules.lua",
@@ -488,12 +494,6 @@
       "id": "testing_rules",
       "name": "Lua回归框架规则与边界",
       "luaPath": "GameplayTests/Systems/Testing/rules.lua",
-      "enabled": true
-    },
-    {
-      "id": "ui_structure_refactor_rules",
-      "name": "GM职责拆分与目录共享布局",
-      "luaPath": "GameplayTests/Systems/UISettings/structure-refactor.lua",
       "enabled": true
     }
   ]

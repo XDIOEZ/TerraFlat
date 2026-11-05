@@ -392,8 +392,9 @@ public static partial class GameplayWorldRegistry
             PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(root, PersistentRuntimeObjectCategory.World);
             host = root.AddComponent<GameplayWorldRegistryHost>();
         }
-        Scene scene = SceneManager.GetSceneByName(worldKey);
-        bool created = !scene.IsValid() || !scene.isLoaded;
+        // 未登记世界只接受当前活动场景的实际句柄，其他同名场景可能正在卸载。
+        Scene scene = SceneManager.GetActiveScene();
+        bool created = !scene.IsValid() || !scene.isLoaded || scene.name != worldKey;
         if (created) scene = WorldPhysicsScene2D.CreateIsolatedScene(worldKey);
         var world = new GameplayWorldRuntime { WorldKey = worldKey, Scene = scene, OwnsPhysics = created };
         if (existing != null)
@@ -488,6 +489,26 @@ public static partial class GameplayWorldRegistry
         ReleaseWorldPhysics(worldKey);
         worldSceneBindings.UnbindWorldFromScene(context.Scene.handle, context.WorldKey, context);
         RefreshLocalWorldAfterSceneBindingChange(context.Scene);
+    }
+
+    internal static GameplayWorldRuntime GetExistingSpaceContext(string worldKey)
+        => spaceContexts.TryGetValue(worldKey ?? string.Empty, out var context) ? context : null;
+
+    // 失败事务只撤销由本次场景建立的上下文和物理服务，不碰随后接管的实例。
+    internal static void ReleaseNewSpaceOwnership(string worldKey, Scene scene,
+        GameplayWorldRuntime expectedContext, WorldPhysicsService2D expectedPhysics)
+    {
+        bool removeContext = expectedContext != null && ReferenceEquals(GetExistingSpaceContext(worldKey), expectedContext) &&
+            expectedContext.Scene == scene;
+        if (removeContext) spaceContexts.Remove(worldKey);
+        if (expectedPhysics != null && TryGetPhysics(worldKey, out var physics) &&
+            ReferenceEquals(physics, expectedPhysics) && physics.PrimarySpace.Scene == scene)
+            ReleaseWorldPhysics(worldKey);
+        if (removeContext)
+        {
+            worldSceneBindings.UnbindWorldFromScene(scene.handle, worldKey, expectedContext);
+            RefreshLocalWorldAfterSceneBindingChange(scene);
+        }
     }
 
     // 单机太空迁移只保留本机管理器与已解绑的表现壳，世界注册仍按原规则释放。
