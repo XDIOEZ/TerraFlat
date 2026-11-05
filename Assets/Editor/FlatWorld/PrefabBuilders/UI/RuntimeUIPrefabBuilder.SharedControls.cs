@@ -88,6 +88,9 @@ public static partial class RuntimeUIPrefabBuilder
         return control;
     }
 
+    internal static Slider CreateSharedProgressBar(string name, Transform parent)
+        => InstantiateSharedControl<Slider>("UI_ProgressBar", name, parent);
+
     /// <summary>组合行复用同一复选框，只由行决定方框的位置和尺寸。</summary>
     public static Toggle CreateSharedCheckboxRow(string name, Transform parent, Vector2 boxPosition, Vector2 boxSize)
     {
@@ -301,6 +304,7 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static void ConfigureProgressBar(GameObject root)
     {
+        root.AddComponent<SmoothProgressBarVisual>();
         Slider slider = root.GetComponent<Slider>();
         slider.interactable = false;
         slider.navigation = new Navigation { mode = Navigation.Mode.None };

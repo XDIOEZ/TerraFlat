@@ -197,8 +197,20 @@ public static partial class GameUIPrefabRebuilder
                     track.raycastTarget = false;
                 }
 
-                // 纯色 Image 以左侧为轴缩放，血量减少时只收缩右边缘。
-                Image fill = healthText.GetComponent<Image>() ?? healthText.gameObject.AddComponent<Image>();
+                Slider healthSlider = healthText.GetComponent<Slider>();
+                if (healthSlider == null)
+                {
+                    healthSlider = RuntimeUIPrefabBuilder.CreateSharedProgressBar("血量", healthText.parent);
+                    UnityEngine.Object.DestroyImmediate(healthText.gameObject);
+                    healthText = (RectTransform)healthSlider.transform;
+                }
+                healthText.GetComponent<Image>().color = Color.clear;
+                healthText.Find("Background").gameObject.SetActive(false);
+                RectTransform fillArea = (RectTransform)healthSlider.fillRect.parent;
+                fillArea.anchorMin = Vector2.zero;
+                fillArea.anchorMax = Vector2.one;
+                fillArea.offsetMin = fillArea.offsetMax = Vector2.zero;
+                Image fill = healthSlider.fillRect.GetComponent<Image>();
                 fill.sprite = null;
                 fill.type = Image.Type.Simple;
                 fill.color = new Color(0.92f, 0.25f, 0.21f, 1f);

@@ -1,12 +1,12 @@
 # UI 资源索引
 
-> 用途：为人和 AI 提供可搜索的 UI ID、用途别名与**实际资源路径**；不把 104 条资产清单塞进 `SKILL.md`。扫描快照：**2026-11-04**。
+> 用途：为人和 AI 提供可搜索的 UI ID、用途别名与**实际资源路径**；不把资产清单塞进 `SKILL.md`。扫描快照：**2026-11-06**。
 
 ## 查找规则
 
 - 本表路径均相对于项目根目录 `C:/Users/CatStudio/Desktop/TerraFlat-master/`，使用 `/` 分隔符。表中 `UI_...` 是 **Prefab 文件名**，并非所有运行时节点的 Hierarchy 路径。
 - **先查这份索引**：按中文名称或 `UI_` 标识搜索。改视觉/布局查 Prefab 与编辑器构建器，改行为查脚本；节点名和 `RuntimeUIPrefabKeys` 不要当作翻译文案。
-- 范围：项目自有 UI 目录内的全部 **104 个 `.prefab`**，加上独立的 `UIRoot.prefab` 与常见嵌入式页面。第三方包（如 Fungus/Mirror）的演示/插件界面不纳入。
+- 范围：项目自有 UI 目录内的 `.prefab`，加上独立的 `UIRoot.prefab` 与常见嵌入式页面。第三方包（如 Fungus/Mirror）的演示/插件界面不纳入。
 - 该索引是文件资产清单，不意味着 Prefab 全部会在当前平台/场景实例化，也不穷举每个 Prefab 内的子按钮和动态生成的临时节点。
 
 ## 最常用 UI 快速入口
@@ -49,7 +49,7 @@
 | `UI_BasePanel` | 基础面板模板 | `Assets/2_Prefabs/2-1_UI/Common/Templates/UI_BasePanel.prefab` |
 | `UI_BaseText` | 通用文本模板 | `Assets/2_Prefabs/2-1_UI/Common/Templates/UI_BaseText.prefab` |
 
-### 游戏内 UI（59）
+### 游戏内 UI
 
 | UI ID | 用途 / 搜索词 | Prefab 路径 |
 | --- | --- | --- |
@@ -112,6 +112,7 @@
 | `UI_ModuleOpenButton` | 模块展开按钮 | `Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_ModuleOpenButton.prefab` |
 | `UI_ModuleSettings` | 模块设置 | `Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_ModuleSettings.prefab` |
 | `UI_Sleep` | 睡眠界面 | `Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Sleep.prefab` |
+| `UI_Stamina` | 体力状态条 | `Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Stamina.prefab` |
 
 ### 主菜单、新世界和存档（12）
 

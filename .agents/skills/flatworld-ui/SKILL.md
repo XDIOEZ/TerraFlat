@@ -17,6 +17,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 
 - **普通按钮/页签（含 GM、调试窗口）实例化 `Common/Controls/UI_Button` / `UI_TabButton`，不临时拼 Image/Button/TMP。** `ReusableUIControl` 持结构、字体、Sprite；使用处只设文案、事件、值、外部布局，页签选中走 `ReusableUITabVisual.SetSelected`。
 - **复选框（含复选下拉行）统一继承 `UI_Toggle`**：根 Image 管命中，`Box` 管框体，`Box/Checkmark` 白色拉伸填充、内边距4；组合行通过 `CreateSharedCheckboxRow` 只设 Box 布局，行背景/文字另加节点。单选下拉和互斥选项保留各自选择标记布局；回归 `ui_settings/shared_checkbox_prefabs`。
+- **只读进度条继承 `UI_ProgressBar`**；`SmoothProgressBarVisual` 以0.24秒非缩放时间平滑显示增减，Slider保留真实目标值，首次显示直接同步。设备外壳和三段食物条保留专用视觉；回归 `ui_settings/shared_progress_bars`。
 - 主操作、危险操作及实体仪器透明命中按钮分别用 `UI_PrimaryButton`、`UI_DestructiveButton`、`UI_TransparentButton`，均继承 `UI_Button`；不得通过嵌套实例颜色覆盖阻断共享外观传播。设置页操作高度按紧凑 42 / 触屏 60 逻辑像素分档。
 - **普通按钮悬浮与按压走 `FlatWorldUIFeedback`**，ColorTint 的悬浮色读取主题 `tintHighlight`；鼠标点击后移出恢复原色，手柄焦点保持独立描边。物品槽和独立视觉控件保留自身状态，存档条目悬浮只预选不提交。
 - **所有可滚动 UI 列表使用 `ItemStepScrollRect`**，统一读取 `UIUserSettings.ScrollRowsPerWheelTick`；按布局行高滚动，大型分组不能当作一行。仅统一滚轮行为，不统一各面板的滚动条外观或排版；非滚动分页和物品格子滚轮业务保持独立。

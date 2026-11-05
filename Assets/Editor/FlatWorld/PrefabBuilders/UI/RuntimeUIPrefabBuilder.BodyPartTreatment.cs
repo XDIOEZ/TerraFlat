@@ -59,7 +59,7 @@ public static partial class RuntimeUIPrefabBuilder
         template.gameObject.SetActive(false);
         TextMeshProUGUI status = CreateText("治疗状态", content, "选择治疗部位", 22f, Cream);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 72f;
-        Slider progress = CreateSlider("引导进度", content);
+        Slider progress = CreateSharedProgressBar("引导进度", content);
         progress.GetComponent<LayoutElement>().preferredHeight = 28f;
         progress.minValue = 0f;
         progress.maxValue = 1f;

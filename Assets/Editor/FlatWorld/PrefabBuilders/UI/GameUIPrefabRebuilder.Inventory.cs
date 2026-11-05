@@ -312,15 +312,7 @@ public static partial class GameUIPrefabRebuilder
 
     private static void CreateFooterCapacityProgress(string objectName, Transform footer, float x)
     {
-        Image background = CreateImage(objectName, footer, Color.white);
-        RectTransform fillArea = CreateRect(objectName + "FillArea", background.transform);
-        Image fill = CreateImage(objectName + "Fill", fillArea, FlatWorldUITheme.StatusBarDefault);
-        Stretch(fill.rectTransform);
-
-        Slider progress = background.gameObject.AddComponent<Slider>();
-        progress.targetGraphic = background;
-        progress.fillRect = fill.rectTransform;
-        progress.handleRect = null;
+        Slider progress = RuntimeUIPrefabBuilder.CreateSharedProgressBar(objectName, footer);
         progress.direction = Slider.Direction.LeftToRight;
         progress.minValue = 0f;
         progress.maxValue = 1f;
@@ -329,7 +321,7 @@ public static partial class GameUIPrefabRebuilder
         progress.transition = Selectable.Transition.None;
         progress.navigation = new Navigation { mode = Navigation.Mode.None };
         progress.SetValueWithoutNotify(0f);
-        ConfigureFooterCapacityProgress(background.rectTransform, x);
+        ConfigureFooterCapacityProgress((RectTransform)progress.transform, x);
     }
 
     private static void ConfigureFooterCapacityProgress(RectTransform rect, float x)

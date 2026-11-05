@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 玩家头顶的世界空间氧气进度条。
@@ -12,8 +13,9 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
 
     [SerializeField] private Mod_Oxygen oxygen; // 玩家氧气权威模块。
     [SerializeField] private Canvas barCanvas; // 关闭时停止整条世界空间 UI 渲染。
-    [SerializeField] private RectTransform fillRect; // 蓝色氧气填充的实际宽度节点。
+    [SerializeField] private RectTransform fillRect; // 氧气公共进度条的根节点。
     [SerializeField, Min(0f)] private float fullFillWidth = 88f; // 满氧时填充宽度。
+    private Slider progress;
     private Item followItem;
     private Vector3 canvasLocalPosition;
     private bool hasCanvasAnchor;
@@ -25,6 +27,9 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
     private void OnEnable()
     {
         followItem = GetComponentInParent<Item>();
+        progress = fillRect != null ? fillRect.GetComponent<Slider>() : null;
+        if (fillRect != null)
+            fillRect.sizeDelta = new Vector2(fullFillWidth, fillRect.sizeDelta.y);
         if (barCanvas != null && !hasCanvasAnchor)
         { canvasLocalPosition = barCanvas.transform.localPosition; hasCanvasAnchor = true; }
         Subscribe();
@@ -80,19 +85,15 @@ public sealed class PlayerOxygenWorldBar : MonoBehaviour
         RefreshVisual();
     }
 
-    /// <summary>扣氧时显示，恢复呼吸后立即隐藏；填充长度直接映射当前氧气比例。</summary>
+    /// <summary>扣氧时显示，恢复呼吸后立即隐藏；公共进度条平滑显示当前氧气比例。</summary>
     private void RefreshVisual()
     {
         bool visible = oxygen != null && oxygen.IsOxygenDepleting;
         if (barCanvas != null)
             barCanvas.enabled = visible;
 
-        if (fillRect != null)
-        {
-            Vector2 sizeDelta = fillRect.sizeDelta;
-            sizeDelta.x = fullFillWidth * (oxygen != null ? oxygen.OxygenRatio : 0f);
-            fillRect.sizeDelta = sizeDelta;
-        }
+        if (progress != null)
+            progress.SetValueWithoutNotify(oxygen != null ? oxygen.OxygenRatio : 0f);
     }
 
     #endregion

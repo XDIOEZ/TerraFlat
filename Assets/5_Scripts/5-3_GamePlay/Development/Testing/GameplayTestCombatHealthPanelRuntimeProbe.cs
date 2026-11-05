@@ -40,12 +40,12 @@ public static class GameplayTestCombatHealthPanelRuntimeProbe
 
             receiver.ShowPanel();
             GameObject first = receiver.PanleInstance;
-            var healthFill = receiver.UIValues.GetImage("血量");
+            var healthFill = receiver.UIValues.GetSlider("血量");
             float initialHealthRatio = receiver.MaxHp > 0f ? Mathf.Clamp01(receiver.Hp / receiver.MaxHp) : 0f;
             Transform actorRoot = actor.transform;
             result["initiallyVisible"] = receiver.IsPanelVisible();
             result["initialFillMatchesHealth"] = healthFill != null &&
-                Mathf.Abs(healthFill.rectTransform.localScale.x - initialHealthRatio) < 0.001f;
+                Mathf.Abs(healthFill.normalizedValue - initialHealthRatio) < 0.001f;
             bool reused = first != null;
             bool hiddenInactive = true;
             for (int i = 0; i < 20; i++)
@@ -64,7 +64,7 @@ public static class GameplayTestCombatHealthPanelRuntimeProbe
             receiver.ForceHurt(fillProbeDamage, "dehydration");
             float damagedHealthRatio = receiver.MaxHp > 0f ? Mathf.Clamp01(receiver.Hp / receiver.MaxHp) : 0f;
             result["fillTracksDamageRatio"] = healthFill != null &&
-                Mathf.Abs(healthFill.rectTransform.localScale.x - damagedHealthRatio) < 0.001f;
+                Mathf.Abs(healthFill.normalizedValue - damagedHealthRatio) < 0.001f;
             actor.gameObject.SetActive(false);
             result["ownerDisableHidPanel"] = !receiver.IsPanelVisible();
             actor.gameObject.SetActive(true);

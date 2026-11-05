@@ -168,10 +168,14 @@ public static partial class RuntimeUIPrefabBuilder
     private static void EnsureGasCapacityGauge(MechanicalPanelView view)
     {
         if (view.GasCapacity != null && view.GasPercentage != null) return;
-        var gaugeObject = new GameObject("FWUI_GasCapacity", typeof(RectTransform), typeof(Slider));
+        Slider slider = CreateSharedProgressBar("FWUI_GasCapacity", view.InnerField);
+        var gaugeObject = slider.gameObject;
         gaugeObject.layer = view.InnerField.gameObject.layer;
         var gauge = (RectTransform)gaugeObject.transform;
-        gauge.SetParent(view.InnerField, false);
+        gaugeObject.GetComponent<Image>().color = Color.clear;
+        gauge.Find("Background").gameObject.SetActive(false);
+        gauge.Find("Fill Area").gameObject.SetActive(false);
+        gaugeObject.AddComponent<UIVisualOwner>();
         gauge.anchorMin = new Vector2(1, 0); gauge.anchorMax = Vector2.one;
         gauge.anchoredPosition = new Vector2(-148, 0);
         gauge.sizeDelta = new Vector2(200, -64);
@@ -208,7 +212,6 @@ public static partial class RuntimeUIPrefabBuilder
         label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
         label.text = "50%";
 
-        var slider = gaugeObject.GetComponent<Slider>();
         slider.fillRect = fill.rectTransform; slider.targetGraphic = fill;
         slider.direction = Slider.Direction.BottomToTop;
         slider.minValue = 0; slider.maxValue = 1;
@@ -245,10 +248,14 @@ public static partial class RuntimeUIPrefabBuilder
 
     internal static Slider CreateCapacityGauge(Transform parent, TMP_Text template, string name, bool vertical, Color color, out TMP_Text label)
     {
-        var root = new GameObject(name, typeof(RectTransform), typeof(Slider), typeof(UIVisualOwner));
+        Slider slider = CreateSharedProgressBar(name, parent);
+        var root = slider.gameObject;
         root.layer = parent.gameObject.layer;
         var rect = (RectTransform)root.transform;
-        rect.SetParent(parent, false);
+        root.GetComponent<Image>().color = Color.clear;
+        rect.Find("Background").gameObject.SetActive(false);
+        rect.Find("Fill Area").gameObject.SetActive(false);
+        root.AddComponent<UIVisualOwner>();
         rect.anchorMin = vertical ? Vector2.zero : new Vector2(0, 0);
         rect.anchorMax = vertical ? new Vector2(0, 1) : new Vector2(1, 0);
         rect.pivot = new Vector2(0, .5f);
@@ -272,7 +279,6 @@ public static partial class RuntimeUIPrefabBuilder
         label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
         label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
         label.text = "0/100";
-        Slider slider = root.GetComponent<Slider>();
         slider.fillRect = fill.rectTransform; slider.targetGraphic = fill;
         slider.direction = vertical ? Slider.Direction.BottomToTop : Slider.Direction.LeftToRight;
         slider.minValue = 0; slider.maxValue = 1; slider.interactable = false;
