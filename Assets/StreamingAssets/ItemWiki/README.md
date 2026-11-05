@@ -89,6 +89,8 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 
 `tech-tree-model.js` 负责数据关系，`tech-tree.js` 负责浏览和交互；修改显示时应保持两个职责分开。现有游戏机制文档导航仍在 [docs/README.md](docs/README.md)。
 
+右键物品节点可选择在当前页面、新标签页或新窗口打开档案；后两项保留科技树的选中、位置和铺满状态，无须经过侧栏。菜单按 Esc 关闭，再按 Esc 才退出铺满；独立窗口由浏览器按窗口偏好处理。
+
 ## 维护时的最低检查
 
 以下检查仅验证工具的语法和数据契约，不代替浏览体验及游戏玩法验收：

@@ -239,7 +239,13 @@
         state.techTree = window.ItemTechTree?.create({
             root: els.techTreeRoot,
             loadSprite,
-            openItem: id => {
+            openItem: (id, target) => {
+                if (target !== "self") {
+                    const url = new URL(location.href);
+                    url.hash = `item/${encodeURIComponent(id)}`;
+                    window.open(url.href, "_blank", target === "window" ? "popup,width=1200,height=900,noopener" : "noopener");
+                    return;
+                }
                 setView("catalog");
                 selectItem(id);
                 locateSelectedItemInIndex();

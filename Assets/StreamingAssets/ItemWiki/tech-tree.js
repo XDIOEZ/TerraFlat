@@ -279,6 +279,7 @@
         // #region 节点、阶段与真实连线
         function render() {
             if (!state.model) return;
+            closeNodeContextMenu();
             state.generation++;
             state.observer?.disconnect();
             state.visible = filterNodes();
@@ -301,6 +302,11 @@
                 button.addEventListener("click", () => {
                     if (performance.now() < state.suppressClickUntil) return;
                     select(node.id, { center: false });
+                });
+                button.setAttribute("aria-haspopup", "menu");
+                button.addEventListener("contextmenu", event => {
+                    event.preventDefault();
+                    openNodeContextMenu(event, node.id);
                 });
                 button.addEventListener("focus", () => ensureInView(node.id));
                 fragment.append(button);
@@ -482,9 +488,8 @@
             hero.innerHTML = `<span class="tt-detail-icon">◇</span><div><small>${escapeHtml(era?.name || "未分类")} / ${escapeHtml(stage?.name || "待分期")}</small><h3>${escapeHtml(node.name)}</h3><code>${escapeHtml(node.id)}</code></div>`;
             els.Detail.append(hero); fillIcon(hero.querySelector(".tt-detail-icon"), node, state.generation);
             const actions = element("div", "tt-detail-actions");
-            const archive = element("button", "tt-primary", "打开物品档案 ↗"); archive.type = "button"; archive.addEventListener("click", () => openItem(node.id));
             const clear = element("button", "", "取消选择"); clear.type = "button"; clear.addEventListener("click", () => select(""));
-            actions.append(archive, clear); els.Detail.append(actions);
+            actions.append(clear); els.Detail.append(actions);
             if (!state.layout.positions.has(node.id)) {
                 const warning = element("div", "tt-detail-warning", "所选物品被当前筛选隐藏。 ");
                 const reveal = element("button", "tt-item-link", "清除筛选并定位"); reveal.type = "button"; reveal.addEventListener("click", () => select(node.id, { center: true }));
@@ -621,6 +626,7 @@
         // #region 画布定位、缩放与输入
         function updateTransform() {
             if (!state.layout || !state.shown) return;
+            closeNodeContextMenu();
             const width = els.Viewport.clientWidth, height = els.Viewport.clientHeight;
             state.x = Math.min(36, Math.max(Math.min(36, width - state.layout.width * state.zoom - 24), state.x));
             state.y = Math.min(20, Math.max(Math.min(20, height - state.layout.height * state.zoom - 24), state.y));
@@ -683,7 +689,53 @@
                 observeIcons();
             });
         }
-        function hide() { setExpanded(false); state.shown = false; state.observer?.disconnect(); }
+        function hide() { closeNodeContextMenu(); setExpanded(false); state.shown = false; state.observer?.disconnect(); }
+
+        // #region 节点右键档案菜单
+        // 菜单跟随未缩放的画布容器，铺满时仍可操作且不会改变所选物品。
+        const nodeContextMenu = element("div", "tt-node-menu");
+        nodeContextMenu.hidden = true;
+        nodeContextMenu.setAttribute("role", "menu");
+        nodeContextMenu.setAttribute("aria-label", "打开物品档案");
+        let contextMenuItemId = "";
+        for (const [target, label] of [["self", "在当前页面打开"], ["tab", "在新标签页打开"], ["window", "在新窗口打开"]]) {
+            const action = element("button", "", label);
+            action.type = "button";
+            action.setAttribute("role", "menuitem");
+            action.addEventListener("click", () => {
+                const id = contextMenuItemId;
+                closeNodeContextMenu(true);
+                openItem(id, target);
+            });
+            nodeContextMenu.append(action);
+        }
+        els.Viewport.append(nodeContextMenu);
+        function closeNodeContextMenu(restoreFocus = false) {
+            if (nodeContextMenu.hidden) return;
+            nodeContextMenu.hidden = true;
+            if (restoreFocus) els.Viewport.focus({ preventScroll: true });
+        }
+        function openNodeContextMenu(event, id) {
+            contextMenuItemId = id;
+            nodeContextMenu.hidden = false;
+            const viewport = els.Viewport.getBoundingClientRect(), node = event.currentTarget.getBoundingClientRect();
+            const x = (event.clientX || event.clientY ? event.clientX : node.left) - viewport.left - els.Viewport.clientLeft;
+            const y = (event.clientX || event.clientY ? event.clientY : node.bottom) - viewport.top - els.Viewport.clientTop;
+            nodeContextMenu.style.left = `${Math.max(8, Math.min(x, els.Viewport.clientWidth - nodeContextMenu.offsetWidth - 8))}px`;
+            nodeContextMenu.style.top = `${Math.max(8, Math.min(y, els.Viewport.clientHeight - nodeContextMenu.offsetHeight - 8))}px`;
+            nodeContextMenu.firstElementChild.focus({ preventScroll: true });
+        }
+        nodeContextMenu.addEventListener("pointerdown", event => event.stopPropagation());
+        nodeContextMenu.addEventListener("keydown", event => {
+            const actions = [...nodeContextMenu.children], index = actions.indexOf(document.activeElement);
+            const next = event.key === "ArrowDown" ? (index + 1) % actions.length : event.key === "ArrowUp" ? (index + actions.length - 1) % actions.length
+                : event.key === "Home" ? 0 : event.key === "End" ? actions.length - 1 : -1;
+            if (next < 0) return;
+            event.preventDefault();
+            actions[next].focus();
+        });
+        document.addEventListener("pointerdown", event => { if (!nodeContextMenu.contains(event.target)) closeNodeContextMenu(); }, true);
+        // #endregion
 
         // 铺满网页时复用原画布，退出后保留浏览位置并恢复页面焦点。
         const overlay = element("section", "tt-canvas-overlay");
@@ -700,6 +752,7 @@
         let expanded = false;
         function setExpanded(value) {
             if (value === expanded) return;
+            closeNodeContextMenu();
             const width = els.Viewport.clientWidth, height = els.Viewport.clientHeight;
             expanded = value;
             if (value) {
@@ -725,6 +778,12 @@
         els.Expand.addEventListener("click", () => setExpanded(true));
         exitExpanded.addEventListener("click", () => setExpanded(false));
         document.addEventListener("keydown", event => {
+            if (!nodeContextMenu.hidden && (event.key === "Escape" || event.key === "Tab")) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeNodeContextMenu(true);
+                return;
+            }
             if (!expanded || event.key !== "Escape") return;
             event.preventDefault();
             event.stopPropagation();

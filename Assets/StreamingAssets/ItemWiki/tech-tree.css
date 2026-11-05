@@ -66,6 +66,10 @@
 .tt-node.is-selected .tt-node-copy > small, .tt-node.is-selected .tt-node-copy > span { color: #7e6042; }
 .tt-node.is-muted { opacity: .3; }
 .tt-node.is-muted:hover, .tt-node.is-muted:focus-visible { opacity: 1; }
+.tt-node-menu { position: absolute; z-index: 10; display: grid; min-width: 180px; padding: 5px; color: #dfd3bb; background: #1c2d3e; border: 1px solid #a9ad89; box-shadow: 4px 4px 0 #091523; }
+.tt-node-menu[hidden] { display: none; }
+.tt-node-menu button { padding: 10px 14px; color: inherit; background: transparent; border: 0; text-align: left; font-size: 13px; cursor: pointer; }
+.tt-node-menu button:hover, .tt-node-menu button:focus-visible { color: #362c25; background: #f0cd94; outline: none; }
 /* 远景文字已无法辨认，保留时代色边和选择状态供全图导航。 */
 .tt-surface.is-overview .tt-node { box-shadow: none; }
 .tt-surface.is-overview .tt-node > * { display: none; }
@@ -103,8 +107,6 @@
 .tt-detail-hero h3 { margin: 5px 0; font-size: 20px; line-height: 1.5; }
 .tt-detail-hero code { display: block; overflow-wrap: anywhere; color: #956c4e; font: 10px Consolas, monospace; }
 .tt-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
-.tt-detail-actions .tt-primary { background: #263d50; color: #efd9b1; border-color: #21374a; }
-.tt-detail-actions .tt-primary:hover { background: #3b5368; }
 .tt-detail .tt-classification { padding-bottom: 12px; margin-block: 14px 0; color: #946d4d; font-size: 10px; border-bottom: 1px solid rgba(151, 103, 66, .3); }
 .tt-section-title { margin: 19px 0 9px; font-size: 13px; color: #553922; }
 .tt-detail .tt-small-note, .tt-small-note { color: #92704f; font-size: 10px; line-height: 1.8; margin: 6px 0; }
