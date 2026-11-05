@@ -360,15 +360,13 @@
     // 采集来源独立于展示时代，明确自然来源及其直接采集产物进入资源区。
     function assignNaturalResources(nodes, routes, stages, nodeByKey) {
         const naturalStages = new Set(stages.filter(stage => stage.layoutBand === "natural").map(stage => stage.id));
-        const routeById = new Map(routes.map(route => [route.id, route]));
         const gatheringRoute = route => ["loot", "harvest"].includes(route.type);
         for (const node of nodes) {
             const item = node.entry.final;
             const modules = activeModules(item);
             const source = modules.some(body => body.prefab === "Module_ResourceHarvest") || (item.tags || []).some(tag => keyOf(tag) === "tree");
-            const raw = naturalStages.has(node.stageId) && !modules.some(body => /DimensionPortal/.test(body.prefab))
-                && node.recipes.every(id => gatheringRoute(routeById.get(id)));
-            node.naturalResource = !node.special && (source || raw);
+            // 显式展示分区优先于来源推断，避免天然原料被再次拆回时代主线。
+            node.naturalResource = !node.special && (naturalStages.has(node.stageId) || source);
         }
         let changed = true;
         while (changed) {
