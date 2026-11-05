@@ -6,42 +6,49 @@
   "cases": [
     {
       "id": "networking_bots_session",
+      "contractKind": "mixed",
       "name": "联机假人：加入快照、协议拒绝与重连",
       "luaPath": "GameplayTests/Systems/Networking/bots-session.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_input",
+      "contractKind": "mixed",
       "name": "联机假人：输入与意图序号、超时和断线",
       "luaPath": "GameplayTests/Systems/Networking/bots-input.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_pickup",
+      "contractKind": "behavior",
       "name": "联机假人：权威拾取租约与提交",
       "luaPath": "GameplayTests/Systems/Networking/bots-pickup.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_actions",
+      "contractKind": "mixed",
       "name": "联机假人：实际移动、攻击、拾取与丢弃",
       "luaPath": "GameplayTests/Systems/Networking/bots-actions.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_roll",
+      "contractKind": "behavior",
       "name": "联机假人：翻滚许可、体力扣费与无敌收尾",
       "luaPath": "GameplayTests/Systems/Networking/bots-roll.lua",
       "enabled": true
     },
     {
       "id": "networking_world_scope",
+      "contractKind": "mixed",
       "name": "真实双世界：同格占地、自然实体与物理隔离",
       "luaPath": "GameplayTests/Systems/Networking/world-scope.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_ships",
+      "contractKind": "mixed",
       "name": "联机假人：飞船生成补给点火与拒绝身份",
       "luaPath": "GameplayTests/Systems/Networking/bots-ships.lua",
       "enabled": true

@@ -8,6 +8,7 @@ public static partial class GameplayTestRuntimeProbe
     #region 跨帧采样登记
     private static readonly Dictionary<string, Func<Player, JObject, Action<JObject>, IEnumerator>> asyncOperations = new(StringComparer.Ordinal);
     private static CaseScope currentCase;
+    public static bool HasPendingAsyncCleanup => currentCase?.AsyncCleanups.Count > 0;
     private static readonly HashSet<string> deviceInputOperations = new(StringComparer.Ordinal);
     public static bool RequiresDeviceInput(string systemId, string operationId) => deviceInputOperations.Contains(Key(systemId, operationId));
 

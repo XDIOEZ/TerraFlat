@@ -63,27 +63,49 @@ public static partial class GameplayTestRuntimeProbe
             source.BindSlotUI(scope.Slot, 0);
             panel.Open();
             yield return null;
-            var mouse = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .4f, Screen.height * .6f) };
-            scope.Slot.OnPointerEnter(mouse);
-            InventoryItemTooltip tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
+            var mouse = new ExtendedPointerEventData(EventSystem.current)
+            {
+                pointerId = -1, pointerType = UIPointerType.MouseOrPen,
+                position = new Vector2(Screen.width * .4f, Screen.height * .6f)
+            };
+            InventoryItemTooltip tooltip = null;
+            CanvasGroup tooltipGroup = null;
+            bool hoverVisibleOnEntry = false;
+            double hoverShownElapsed = -1d;
+            if (mode == "inspect" || mode == "closed_after_show")
+            {
+                double hoverStarted = Time.unscaledTimeAsDouble;
+                scope.Slot.OnPointerEnter(mouse);
+                tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
+                tooltipGroup = tooltip != null ? tooltip.GetComponent<CanvasGroup>() : null;
+                hoverVisibleOnEntry = tooltipGroup != null && tooltipGroup.alpha > .99f;
+                // 等待可见状态并保留失败预算，避免把悬停延迟写成固定跨帧次数。
+                while (Time.unscaledTimeAsDouble - hoverStarted <= 1d)
+                {
+                    tooltip = UIManager.ExistingInstance.SafeAreaRoot.GetComponentInChildren<InventoryItemTooltip>(true);
+                    tooltipGroup = tooltip != null ? tooltip.GetComponent<CanvasGroup>() : null;
+                    if (tooltipGroup != null && tooltipGroup.alpha > .99f)
+                    {
+                        hoverShownElapsed = Time.unscaledTimeAsDouble - hoverStarted;
+                        break;
+                    }
+                    yield return null;
+                }
+            }
             Canvas tooltipCanvas = tooltip != null ? tooltip.GetComponent<Canvas>() : null;
-            CanvasGroup tooltipGroup = tooltip != null ? tooltip.GetComponent<CanvasGroup>() : null;
             Canvas sourceCanvas = scope.Slot.GetComponentInParent<Canvas>();
-            // 鼠标进入事件结束就必须显示，不再跨帧等待。
-            bool hoverImmediate = tooltipGroup != null && tooltipGroup.alpha > .99f;
-            TMP_Text labels = tooltip?.transform.Find("ParameterLabels")?.GetComponent<TMP_Text>();
-            TMP_Text values = tooltip?.transform.Find("ParameterValues")?.GetComponent<TMP_Text>();
-            bool columnsAligned = labels != null && values != null &&
-                labels.alignment == TextAlignmentOptions.TopLeft &&
-                values.alignment == TextAlignmentOptions.TopRight &&
-                !string.IsNullOrEmpty(labels.text) && !string.IsNullOrEmpty(values.text) &&
-                Mathf.Abs(labels.rectTransform.anchoredPosition.y - values.rectTransform.anchoredPosition.y) < .1f &&
-                labels.rectTransform.anchoredPosition.x + labels.rectTransform.rect.width <=
-                values.rectTransform.anchoredPosition.x + .1f;
-            bool tooltipAbovePanel = tooltipCanvas != null && tooltipCanvas.overrideSorting &&
-                tooltipCanvas.sortingLayerID == sourceCanvas.sortingLayerID && tooltipCanvas.sortingOrder > sourceCanvas.sortingOrder;
-            bool tooltipInputTransparent = tooltip != null && !tooltip.GetComponent<CanvasGroup>().blocksRaycasts &&
-                tooltip.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null;
+            float hoverOpacity = tooltipGroup != null ? tooltipGroup.alpha : 0f;
+            var hoverTexts = new JArray();
+            if (tooltip != null)
+                foreach (TMP_Text text in tooltip.GetComponentsInChildren<TMP_Text>(true))
+                    if (text.isActiveAndEnabled && !string.IsNullOrEmpty(text.text))
+                        hoverTexts.Add(new JObject
+                        {
+                            ["alignment"] = text.alignment.ToString(), ["text"] = text.text,
+                            ["parent"] = text.transform.parent.GetInstanceID(),
+                            ["x"] = text.rectTransform.anchoredPosition.x, ["y"] = text.rectTransform.anchoredPosition.y,
+                            ["width"] = text.rectTransform.rect.width
+                        });
             panel.Close();
             yield return null;
             bool hoverClosedWithPanel = tooltip == null || tooltip.GetComponent<CanvasGroup>().alpha <= .001f;
@@ -130,10 +152,18 @@ public static partial class GameplayTestRuntimeProbe
             bool closedWithPanel = !InventoryItemTooltip.IsTouchPinned(scope.Slot);
             InventoryItemTooltip.DismissTouchAt(new Vector2(-1000f, -1000f));
             result = new JObject { ["visibleEarly"] = visibleEarly, ["opened"] = opened,
-                ["hoverImmediate"] = hoverImmediate, ["columnsAligned"] = columnsAligned,
+                ["hoverVisibleOnEntry"] = hoverVisibleOnEntry, ["hoverShownElapsed"] = hoverShownElapsed,
+                ["hoverOpacity"] = hoverOpacity, ["hoverTexts"] = hoverTexts,
+                ["tooltipSortOverride"] = tooltipCanvas != null && tooltipCanvas.overrideSorting,
+                ["tooltipSortingLayer"] = tooltipCanvas != null ? tooltipCanvas.sortingLayerID : 0,
+                ["tooltipSortOrder"] = tooltipCanvas != null ? tooltipCanvas.sortingOrder : 0,
+                ["sourceCanvasPresent"] = sourceCanvas != null,
+                ["sourceSortingLayer"] = sourceCanvas != null ? sourceCanvas.sortingLayerID : 0,
+                ["sourceSortOrder"] = sourceCanvas != null ? sourceCanvas.sortingOrder : 0,
+                ["tooltipBlocksRaycasts"] = tooltipGroup == null || tooltipGroup.blocksRaycasts,
+                ["tooltipHasRaycaster"] = tooltip != null && tooltip.GetComponent<UnityEngine.UI.GraphicRaycaster>() != null,
                 ["hoverClosedWithPanel"] = hoverClosedWithPanel,
                 ["touchShownElapsed"] = touchShownElapsed,
-                ["tooltipAbovePanel"] = tooltipAbovePanel, ["tooltipInputTransparent"] = tooltipInputTransparent,
                 ["persistedAfterRelease"] = persisted, ["dismissedByOutsidePress"] = !InventoryItemTooltip.IsTouchPinned(scope.Slot),
                 ["closedWithPanel"] = closedWithPanel,
                 ["taps"] = taps, ["longPresses"] = longPresses, ["drags"] = drags,

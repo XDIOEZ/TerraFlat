@@ -52,7 +52,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 要验证 Unity 启停/销毁回调的编辑态夹具，调用 `EnableGameplayTestProbeLifecycleCallbacks` 启用临时组件的 `runInEditMode`，或用已有 `ExecuteAlways` 子类；不手工重算复位状态。
 - 预期失败的 Addressables 请求在同步负例范围捕获并恢复 `ResourceManager.ExceptionHandler`，同时断言真实 Failed 状态和异常，避免负例日志误算为引擎故障。
 - `gameplay` 清单若跨 Lua 依赖前置现场，在案例上声明 `dependsOn`（只引用更早且启用的用例）；多选/单选自动补齐前置，不能依赖列表相邻的隐含状态。
-- 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
+- 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；同次操作的并发状态用相同的可选第四参 budget 共用首个截止时间，不为后序条件重新计时。不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
 - 需要观察真实动作的调用时，在动作前后排 `test.profiler_start` / `test.profiler_stop`，详见 [Lua 接口与性能采集](../../../Assets/StreamingAssets/GameplayTests/README.md#lua-编写接口)；默认导出最慢保留帧，也可指定 Marker 找最近命中帧。调用树仅是选中帧，不等于整个采集区间或全部 C# 方法。
 - 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
@@ -97,6 +97,12 @@ python Tools/GameplayTesting/run_suite.py --list-systems
 - 固定步采样等待正式 `SpaceSession.State.SimulationSeconds` 达到目标，同时保留真实时间超时；慢帧或编辑器操作耗时不能计作物理推进。无外力惯性使用空星区自有夹具，同时检查位移、停推和燃料；星体引力或大气阻力范围内不能断言总速度不变。太空跨区另核验 UI 根身份、统一时间源与实际采光，防止逻辑通过但画面失效。
 
 ## 报告契约
+
+- 清单用 `contractKind` 标明 `behavior / architecture / configuration / mixed`；它只描述覆盖边界，不参与启用、选择或通过判定。内部架构更新不应改行为断言，默认配置变化只更新明确的配置契约。
+- 只有日志、等待、准备状态的 Lua 不能通过；`system/runtime/space` 回调必须实际执行断言。故障注入只作用于隔离夹具，验证指定断言失败及恢复后的正常行为，不能以预期故障为由跳过正常断言。
+- 失败先区分生产缺陷、夹具错误、时序采样和玩法契约变化。探针只准备及采样，Lua独立推导期望；保留模拟 Tick/时间预算，不能用延长固定等待或放宽阈值消除失败。`mixed` 旧案例仍含内部/业务耦合，分类完成不代表已解耦。
+- 临时装备可能被正式拾取链回收时，恢复全部拾取目标库存，不能只恢复选中槽；回传恢复前后摘要与数量供Lua比较。清理逐项尝试、聚合异常，仅成功后标记已释放。
+- 默认素材、HUD和独立窗口流程分开案例，避免首错遮蔽无关验收；拆分保留全部原断言，不把下层节点active状态当覆盖层业务契约。
 
 ```text
 Library/FlatWorldGameplayTests/

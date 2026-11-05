@@ -6,30 +6,35 @@
   "cases": [
     {
       "id": "player_device_input_behavior",
+      "contractKind": "behavior",
       "name": "正式设备移动、异步翻滚与可恢复故障检出",
       "luaPath": "GameplayTests/Systems/Player/device-input-behavior.lua",
       "enabled": true
     },
     {
       "id": "player_bicycle",
+      "contractKind": "mixed",
       "name": "自行车骑行、涉水与实际推动",
       "luaPath": "GameplayTests/Systems/Player/bicycle.lua",
       "enabled": true
     },
     {
       "id": "player_gameplay",
+      "contractKind": "mixed",
       "name": "玩家控制与交互真实关键流程",
       "luaPath": "GameplayTests/Systems/Player/gameplay.lua",
       "enabled": true
     },
     {
       "id": "wheelbarrow_gameplay",
+      "contractKind": "mixed",
       "name": "木制独轮车真实推动、交互与库存恢复",
       "luaPath": "GameplayTests/Systems/Player/wheelbarrow-gameplay.lua",
       "enabled": true
     },
     {
       "id": "wheelbarrow_cleanup_gameplay",
+      "contractKind": "architecture",
       "name": "木制独轮车现场自动清理",
       "luaPath": "GameplayTests/Systems/Player/wheelbarrow-cleanup.lua",
       "enabled": true,

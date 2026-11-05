@@ -32,7 +32,14 @@ test.runtime("rendering", "player_external_effects", {}, function(data)
             "正式船板在跨帧后被动态排序或合批覆盖：" .. floor.id)
     end
     assert(data.scope == "live-isolated-world" and data.realItemLoaded and data.itemId == "Axe_Stone", "真实物品没有通过正式加载流程")
-    assert(data.realPlayerController and data.bodyVisible and data.worldSortingMatches, "真实玩家主体或正式世界排序未建立")
+    assert(data.realPlayerController and data.bodyVisible, "真实玩家主体未建立")
+    local expectedLayer = data.categoryLayer
+    if type(data.visualSortingLayer) == "string" and string.find(data.visualSortingLayer, "%S") then
+        expectedLayer = data.visualSortingLayer
+    end
+    local expectedOrder = data.visualSortingOrder or data.categoryOrder
+    assert(data.worldSortingLayer == expectedLayer and data.worldSortingOrder == expectedOrder,
+        "正式世界排序没有采用视觉覆盖配置或类别默认值")
     assert(data.realWorldItemLoaded and data.worldVisible and data.worldItemReleased, "正式世界石斧排序样本无效或自有世界物没有完整回收")
     assert(data.heldInHand and data.ownedByPlayer and data.selfOwnedAttachment, "跨帧石斧没有使用正式手持身份和独立自有挂点")
     assert(data.itemInstanceId == data.currentItemInstanceId and data.rendererInstanceId == data.currentRendererInstanceId and data.itemGeneration == data.currentItemGeneration, "跨帧等待替换或回收了所测石斧/Renderer")

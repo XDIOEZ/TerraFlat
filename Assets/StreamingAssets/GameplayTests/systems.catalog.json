@@ -616,7 +616,11 @@
         "fluid_surface_pump_after",
         "fluid_reactions",
         "fluid_environment",
-        "player_gameplay"
+        "player_device_input_behavior",
+        "player_bicycle",
+        "player_gameplay",
+        "wheelbarrow_gameplay",
+        "wheelbarrow_cleanup_gameplay"
       ],
       "rulesCoverage": "partial"
     },
@@ -933,7 +937,6 @@
       ],
       "ruleCaseIds": [
         "space_rules",
-        "space_ship_damage_rules",
         "space_elevator_rules"
       ],
       "rulesSuite": "GameplayTests/Systems/Space/rules-suite.json",
@@ -1261,6 +1264,7 @@
         "networking_bots_roll",
         "networking_world_scope",
         "networking_bots_ships",
+        "item_runtime_drop_motion_gameplay",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -1287,6 +1291,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Modding/README.md",
       "integrationCaseIds": [
+        "item_runtime_drop_motion_gameplay",
         "item_mod_network_gameplay"
       ],
       "rulesCoverage": "partial"
@@ -1372,7 +1377,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/UISettings/README.md",
       "integrationCaseIds": [
-        "ui_localization_gameplay"
+        "ui_localization_gameplay",
+        "ui_new_world_window_behavior"
       ],
       "rulesCoverage": "partial"
     },
@@ -1402,7 +1408,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Audio/README.md",
       "integrationCaseIds": [
-        "audio_gameplay"
+        "audio_gameplay",
+        "audio_default_configuration"
       ],
       "rulesCoverage": "partial"
     },
@@ -1427,7 +1434,8 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Localization/README.md",
       "integrationCaseIds": [
-        "ui_localization_gameplay"
+        "ui_localization_gameplay",
+        "ui_new_world_window_behavior"
       ],
       "rulesCoverage": "partial"
     },

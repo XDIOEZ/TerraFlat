@@ -429,7 +429,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
                 ["mutedVolume"] = mutedVolume, ["retainedWhenMuted"] = retainedWhenMuted, ["unmutedVolume"] = unmutedVolume,
                 ["farShortAccepted"] = farShort.IsValid, ["beforeFarShort"] = beforeFarShort, ["afterFarShort"] = afterFarShort,
                 ["farLoopAccepted"] = farLoop.IsValid,
-                ["farOffsetX"] = farOffset.x, ["expectedFarOffsetX"] = loop.MaxDistance + 2f,
+                ["farOffsetX"] = farOffset.x, ["loopMaxDistance"] = loop.MaxDistance,
                 ["farOffsetY"] = farOffset.y, ["farOffsetZ"] = farOffset.z,
                 ["released"] = released, ["sourceReused"] = sourceReused,
                 ["newHandleDistinct"] = replacement != handle, ["replacementSurvivedOldStop"] = replacementSurvivedOldStop

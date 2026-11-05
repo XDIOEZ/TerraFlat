@@ -114,14 +114,22 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         scope.Receiver.OnAction_Start.Invoke(player);
         bool closedByToggle = !panel.IsOpen() && scope.Input.DefaultTarget_Inventory == null && scope.Output.DefaultTarget_Inventory == null;
         scope.Receiver.OnAction_Start.Invoke(player);
-        scope.ActionButton.onClick.Invoke();
+        float initialInputAmount = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
+        float initialTemperature = scope.Input.Data.GetItemSlot(0)?.itemData?.MatterState?.TemperatureCelsius ?? 0f;
+        float initialDurability = scope.Host.itemData.Durability;
+        string fault = args.Value<string>("fault") ?? "none";
+        if (fault != "none" && (fault != "drop_action" || !drill))
+            throw new InvalidOperationException("不支持的取火故障注入：" + fault);
+        if (fault != "drop_action") scope.ActionButton.onClick.Invoke();
         ItemData after = scope.Input.Data.GetItemSlot(0)?.itemData;
         ItemData output = scope.Output.Data.GetItemSlot(0)?.itemData;
         float inputAmount = after?.Stack?.Amount ?? 0f;
         float temperature = after?.MatterState?.TemperatureCelsius ?? 0f;
         string outputId = output?.IDName ?? string.Empty;
         float outputAmount = output?.Stack?.Amount ?? 0f;
+        float durability = scope.Host.itemData.Durability;
         float blockedInput = 0f;
+        float blockedDurability = 0f;
         string blockedOutput = string.Empty;
         if (!drill)
         {
@@ -130,20 +138,24 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             scope.ActionButton.onClick.Invoke();
             blockedInput = scope.Input.Data.GetItemSlot(0)?.itemData?.Stack?.Amount ?? 0f;
             blockedOutput = scope.Output.Data.GetItemSlot(0)?.itemData?.IDName ?? string.Empty;
+            blockedDurability = scope.Host.itemData.Durability;
         }
         scope.Tool.Unload();
         return new JObject
         {
-            ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
+            ["fault"] = fault, ["opened"] = opened, ["slotBindings"] = slotBindings, ["transferTargets"] = targets,
             ["preview"] = preview, ["previewEvents"] = previewEvents, ["prefabFields"] = prefabFields,
             ["closedByCancel"] = closedByCancel, ["reopened"] = reopened,
             ["closedByToggle"] = closedByToggle, ["closedTargetsCleared"] = targetsCleared,
             ["eventDetached"] = scope.EventsUnbound && !scope.Input.Data.Event_OnDataChanged.HasCalls &&
                                 !scope.Output.Data.Event_OnDataChanged.HasCalls,
             ["panelReleased"] = scope.Panel == null,
+            ["initialInputAmount"] = initialInputAmount, ["initialTemperature"] = initialTemperature,
+            ["initialDurability"] = initialDurability, ["durability"] = durability,
             ["inputAmount"] = inputAmount, ["temperature"] = temperature,
             ["outputId"] = outputId, ["outputAmount"] = outputAmount,
-            ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput
+            ["blockedInputAmount"] = blockedInput, ["blockedOutputId"] = blockedOutput,
+            ["blockedDurability"] = blockedDurability
         };
     }
 
@@ -177,7 +189,9 @@ public static class GameplayTestFireMakingToolRuntimeProbe
             try
             {
                 Host = Root.AddComponent<GameItem>();
-                Host.BindData(new Data_GeneralItem { IDName = "probe:fire_tool", Stack = new ItemStack { Amount = 1f } });
+                // 保留足够耐久，使单次按钮测试不会意外进入损毁清库存流程。
+                Host.BindData(new Data_GeneralItem { IDName = "probe:fire_tool", Durability = 200f,
+                    MaxDurability = 200f, Stack = new ItemStack { Amount = 1f } });
                 Receiver = Root.AddComponent<Mod_InteractReciver>();
                 Receiver.modData = new Ex_ModData { ID = ModText.Interact, Name = "probe-interaction" };
                 Receiver.ModuleInit(Host, Receiver.modData);

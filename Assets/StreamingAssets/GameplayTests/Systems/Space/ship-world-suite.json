@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "ship_interior_world_gameplay",
+      "contractKind": "mixed",
       "name": "船内独立世界、物理与普通物品归属",
       "luaPath": "GameplayTests/Systems/Space/ship_world.lua",
       "enabled": true

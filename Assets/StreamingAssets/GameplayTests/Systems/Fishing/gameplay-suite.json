@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "fishing_gameplay",
+      "contractKind": "mixed",
       "name": "钓鱼：实际流程",
       "luaPath": "GameplayTests/Systems/Fishing/gameplay.lua",
       "enabled": true

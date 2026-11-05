@@ -6,7 +6,11 @@ test.runtime("industrial_fluids", "combined_tank_pump_tick", {}, function(d)
     assert(d.rebuiltBetweenSteps, "液体身份变化没有在计算步之间更新流体拓扑")
     assert(math.abs(d.firstDelivered - d.expectedFirstDelivered) < .000001,
         "首次进液后第二台泵漏算、重复计算或丢失流量预算")
-    assert(d.finalDelivered > d.firstDelivered and math.abs(d.finalDelivered + d.buffers + d.remainingSurfaceLiters - d.initialLiters) < .000001,
+    assert(d.startupTicks <= d.stepsPerBatch and d.firstBatchTicks > 0 and d.firstBatchTicks <= d.stepsPerBatch and
+        d.secondBatchTicks > 0 and d.secondBatchTicks <= d.stepsPerBatch,
+        "双泵寻源或连续批次超过模拟 Tick 预算")
+    assert(math.abs(d.finalDelivered - d.firstDelivered - d.expectedFirstDelivered) < .000001 and
+        math.abs(d.finalDelivered + d.buffers + d.remainingSurfaceLiters - d.initialLiters) < .000001,
         "下一步未恢复抽液或泵和组合罐总量不守恒")
 end, "双泵接12格组合罐：完整Tick拓扑稳定、通知合并、连续输送与守恒")
 test.runtime("industrial_fluids", "pump", {}, function(d)

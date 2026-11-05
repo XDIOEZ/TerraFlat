@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -31,6 +32,7 @@ public static class GameplayTestFrameworkRuntimeProbe
         GameplayTestRuntimeProbe.Register("testing", "begin_lease", Begin);
         GameplayTestRuntimeProbe.Register("testing", "sample_lease", Sample);
         GameplayTestRuntimeProbe.Register("testing", "previous_cleanup", PreviousCleanup);
+        GameplayTestRuntimeProbe.Register("testing", "contract_classification", CaptureContractClassification);
     }
     private static System.Collections.IEnumerator Cleanup(Lease lease)
     {
@@ -40,6 +42,40 @@ public static class GameplayTestFrameworkRuntimeProbe
     #endregion
 
     #region 实际命令队列与跨用例清理采样
+    private static JObject CaptureContractClassification(Player player, JObject args)
+    {
+        // 契约分类只描述覆盖边界，不改变案例启用状态或任何断言。
+        var entry = new JObject { ["id"] = "classification", ["name"] = "classification", ["luaPath"] = "GameplayTests/classification.lua" };
+        var suite = new JObject { ["schemaVersion"] = 1, ["cases"] = new JArray(entry) };
+        string legacy = GameplayTestSuite.Parse(suite.ToString()).Cases[0].ContractKind;
+        var kinds = new JArray();
+        foreach (string kind in new[] { "behavior", "architecture", "configuration", "mixed" })
+        {
+            entry["contractKind"] = kind;
+            kinds.Add(GameplayTestSuite.Parse(suite.ToString()).Cases[0].ContractKind);
+        }
+        entry["contractKind"] = "unknown";
+        bool rejected = false;
+        try { GameplayTestSuite.Parse(suite.ToString()); }
+        catch (InvalidDataException) { rejected = true; }
+        int noOracleRejected = 0;
+        foreach (string source in new[] { "test.log('no oracle')", "test.wait(.01)", "test.check('world_ready')",
+            "test.check('mechanical_plant_placed')", "test.check('mechanical_engine_fueled')" })
+        {
+            try { GameplayTestLuaRunner.ValidateScript(source, "@contract-no-oracle"); }
+            catch (InvalidOperationException) { noOracleRejected++; }
+        }
+        bool resultCommandAccepted = true;
+        try { GameplayTestLuaRunner.ValidateScript("test.move_to(1,1,1,.1)", "@contract-move-result"); }
+        catch (InvalidOperationException) { resultCommandAccepted = false; }
+        bool profilerOracleAccepted = true;
+        try { GameplayTestLuaRunner.ValidateScript("test.profiler_start(1);test.profiler_stop(nil,function(data) assert(data) end)", "@contract-profiler-result"); }
+        catch (InvalidOperationException) { profilerOracleAccepted = false; }
+        return new JObject { ["legacyKind"] = legacy, ["kinds"] = kinds, ["unknownRejected"] = rejected,
+            ["noOracleRejected"] = noOracleRejected, ["resultCommandAccepted"] = resultCommandAccepted,
+            ["profilerOracleAccepted"] = profilerOracleAccepted };
+    }
+
     private static JObject Begin(Player player, JObject args)
     {
         if (pending != null && (!pending.SyncCleaned || !pending.AsyncCleaned))

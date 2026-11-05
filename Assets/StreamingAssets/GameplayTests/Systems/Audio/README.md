@@ -36,7 +36,7 @@
 
 已编写的规则覆盖：AudioUserSettings 五总线与总音量范围；AudioPlayOptions 的全局和空间位置参数；JsonUtility装配独立 AudioCue/AudioCatalog、重复ID校验、目录索引重建与规范查询，随后释放临时资源。未创建全局 AudioService。
 
-PlayMode 入口：`gameplay-suite.json` / `gameplay.lua`；操作 `audio/voice_lifecycle`。
+PlayMode 入口：`gameplay-suite.json`。`audio_gameplay` 检查播放、当前配置下的传播、音量、暂停及释放；`audio_default_configuration` 保留原来的固定默认资源、装配和相关现场断言，两者都调用 `audio/voice_lifecycle`，可独立选择。默认配置案例保留播放和索引检查，因此标为 mixed；点击 Cue 若启用，行为案例无法覆盖其停用拒播。河流录音 20 秒的原断言仍保留，拆分后尚未复测。
 
 自然声景：`nature_ambience_sequence` 以正式稀疏河流索引覆盖真实水量/流量、湖海与非水排除、冰融、单格/批次增量、无关层不重建、距离边界和退订；`foliage_ambience_volume` 检查无风/无叶静音和风强/密度单调，`nature_foliage_config` 读取正式继承定义检查有叶树木标签及枯树排除。树叶/河流正式 Cue 为 20 秒、48kHz 单声道 Ambient 空间循环，默认传播 32 格，由本机相机持有最多两条循环，不为每树/每水格创建声源。
 

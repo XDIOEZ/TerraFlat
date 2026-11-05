@@ -5,43 +5,50 @@
   "continueAfterFailure": true,
   "cases": [
     {
-      "id": "player_device_input_behavior",
-      "name": "正式设备移动、异步翻滚与可恢复故障检出",
-      "luaPath": "GameplayTests/Systems/Player/device-input-behavior.lua",
-      "enabled": true
-    },
-    {
       "id": "ai_creature_creation_gameplay",
+      "contractKind": "mixed",
       "name": "统一生物出生：身份、回滚与居民恢复",
       "luaPath": "GameplayTests/Systems/AI/creature-creation.lua",
       "enabled": true
     },
     {
       "id": "ai_navigation_gameplay",
+      "contractKind": "mixed",
       "name": "AI 与导航：真实生物推进、异步寻路和到达",
       "luaPath": "GameplayTests/Systems/AI/gameplay.lua",
       "enabled": true
     },
     {
+      "id": "player_device_input_behavior",
+      "contractKind": "behavior",
+      "name": "正式设备移动、异步翻滚与可恢复故障检出",
+      "luaPath": "GameplayTests/Systems/Player/device-input-behavior.lua",
+      "enabled": true
+    },
+    {
       "id": "player_bicycle",
+      "contractKind": "mixed",
       "name": "自行车骑行、涉水与实际推动",
       "luaPath": "GameplayTests/Systems/Player/bicycle.lua",
       "enabled": true
     },
     {
       "id": "player_gameplay",
+      "contractKind": "mixed",
       "name": "玩家控制与交互真实关键流程",
       "luaPath": "GameplayTests/Systems/Player/gameplay.lua",
       "enabled": true
     },
     {
       "id": "wheelbarrow_gameplay",
+      "contractKind": "mixed",
       "name": "木制独轮车真实推动、交互与库存恢复",
       "luaPath": "GameplayTests/Systems/Player/wheelbarrow-gameplay.lua",
       "enabled": true
     },
     {
       "id": "wheelbarrow_cleanup_gameplay",
+      "contractKind": "architecture",
       "name": "木制独轮车现场自动清理",
       "luaPath": "GameplayTests/Systems/Player/wheelbarrow-cleanup.lua",
       "enabled": true,
@@ -51,384 +58,469 @@
     },
     {
       "id": "combat_gameplay",
+      "contractKind": "mixed",
       "name": "战斗与技能真实关键流程",
       "luaPath": "GameplayTests/Systems/Combat/gameplay.lua",
       "enabled": true
     },
     {
       "id": "buff_gameplay",
+      "contractKind": "mixed",
       "name": "Buff状态真实关键流程",
       "luaPath": "GameplayTests/Systems/Buff/gameplay.lua",
       "enabled": true
     },
     {
       "id": "survival_gameplay",
+      "contractKind": "mixed",
       "name": "角色生存：真实体温缓冲、疾病和快照重载",
       "luaPath": "GameplayTests/Systems/Survival/gameplay.lua",
       "enabled": true
     },
     {
       "id": "inventory_gameplay",
+      "contractKind": "mixed",
       "name": "库存与装备真实关键流程",
       "luaPath": "GameplayTests/Systems/Inventory/gameplay.lua",
       "enabled": true
     },
     {
       "id": "crafting_gameplay",
+      "contractKind": "mixed",
       "name": "手工制作：真实面板点击、扣料产出和满槽拒绝",
       "luaPath": "GameplayTests/Systems/Crafting/gameplay.lua",
       "enabled": true
     },
     {
       "id": "fluid_inventory",
+      "contractKind": "behavior",
       "name": "库存与原子事务",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_inventory.lua",
       "enabled": true
     },
     {
       "id": "fluid_thermodynamics",
+      "contractKind": "behavior",
       "name": "热力学与相变",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_thermodynamics.lua",
       "enabled": true
     },
     {
       "id": "fluid_state_save",
+      "contractKind": "mixed",
       "name": "状态快照与存档",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_state_save.lua",
       "enabled": true
     },
     {
       "id": "fluid_topology",
+      "contractKind": "mixed",
       "name": "管网拓扑与路由",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_topology.lua",
       "enabled": true
     },
     {
       "id": "fluid_transport",
+      "contractKind": "behavior",
       "name": "混气排放与吞吐",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_transport.lua",
       "enabled": true
     },
     {
       "id": "fluid_tanks",
+      "contractKind": "behavior",
       "name": "储罐生命周期与充装",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_tanks.lua",
       "enabled": true
     },
     {
       "id": "fluid_pumps_compressors",
+      "contractKind": "mixed",
       "name": "动力气泵与地表水泵",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_pumps_compressors.lua",
       "enabled": true
     },
     {
       "id": "fluid_surface_pump_after",
+      "contractKind": "mixed",
       "name": "真实双电泵抽后水池与管罐",
       "luaPath": "GameplayTests/Systems/SurfaceFluids/fluid_surface_pump_after.lua",
       "enabled": true
     },
     {
       "id": "fluid_reactions",
+      "contractKind": "mixed",
       "name": "实际氢氧与液水发动机",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_reactions.lua",
       "enabled": true
     },
     {
       "id": "fluid_environment",
+      "contractKind": "behavior",
       "name": "环境抽排与容器",
       "luaPath": "GameplayTests/Systems/IndustrialFluids/Gameplay/fluid_environment.lua",
       "enabled": true
     },
     {
       "id": "agriculture_phosphate_fertilizer_gameplay",
+      "contractKind": "behavior",
       "name": "磷肥真实持有补给与拒绝",
       "luaPath": "GameplayTests/Systems/Agriculture/phosphate-fertilizer-gameplay.lua",
       "enabled": true
     },
     {
       "id": "agriculture_gameplay",
+      "contractKind": "mixed",
       "name": "农业种植：实际流程",
       "luaPath": "GameplayTests/Systems/Agriculture/gameplay.lua",
       "enabled": true
     },
     {
       "id": "fishing_gameplay",
+      "contractKind": "mixed",
       "name": "钓鱼：实际流程",
       "luaPath": "GameplayTests/Systems/Fishing/gameplay.lua",
       "enabled": true
     },
     {
       "id": "terrain_ecology_gameplay",
+      "contractKind": "mixed",
       "name": "地形与生态：真实覆盖差量、资源占地和实体恢复",
       "luaPath": "GameplayTests/Systems/Terrain/gameplay.lua",
       "enabled": true
     },
     {
       "id": "time_live_clock",
+      "contractKind": "mixed",
       "name": "正式时钟登记、活动场景引用、跨日通知与保存",
       "luaPath": "GameplayTests/Systems/Time/gameplay.lua",
       "enabled": true
     },
     {
       "id": "atmosphere_analyzer_gameplay",
+      "contractKind": "mixed",
       "name": "大气检测仪真实手持、仪器屏幕与离手关闭",
       "luaPath": "GameplayTests/Systems/Environment/atmosphere-analyzer-gameplay.lua",
       "enabled": true
     },
     {
       "id": "item_slot_world_influence_gameplay",
+      "contractKind": "behavior",
       "name": "嵌套槽位温度、辐射和污染来源",
       "luaPath": "GameplayTests/Systems/Environment/item-slot-world-influence-gameplay.lua",
       "enabled": true
     },
     {
       "id": "dimension_cave_roundtrip",
+      "contractKind": "mixed",
       "name": "真实矿洞入口配对、完整迁移与返回地表",
       "luaPath": "GameplayTests/Systems/Dimension/gameplay.lua",
       "enabled": true
     },
     {
-      "id": "building_gameplay",
-      "name": "建造与拆除：实际流程",
-      "luaPath": "GameplayTests/Systems/Building/gameplay.lua",
-      "enabled": true
-    },
-    {
       "id": "dimension_generation_presets",
+      "contractKind": "mixed",
       "name": "火星地下引用地球地表预设、独立保存与正式出口返回火星",
       "luaPath": "GameplayTests/Systems/Dimension/generation-presets.lua",
       "enabled": true
     },
     {
+      "id": "building_gameplay",
+      "contractKind": "mixed",
+      "name": "建造与拆除：实际流程",
+      "luaPath": "GameplayTests/Systems/Building/gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "processing_electronic_materials_gameplay",
+      "contractKind": "mixed",
       "name": "电子材料冷料供热、满输出恢复与云母切割",
       "luaPath": "GameplayTests/Systems/Processing/electronic-materials-gameplay.lua",
       "enabled": true
     },
     {
       "id": "mechanical_assemble",
+      "contractKind": "mixed",
       "name": "GM 创建全组件机械工厂",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_assemble.lua",
       "enabled": true
     },
     {
       "id": "mechanical_power",
+      "contractKind": "mixed",
       "name": "多动力源、传动与用力器",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_power.lua",
       "enabled": true
     },
     {
       "id": "mechanical_conveyor",
+      "contractKind": "behavior",
       "name": "动力输送带实际搬运物品",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_conveyor.lua",
       "enabled": true
     },
     {
       "id": "mechanical_fluid_pump",
+      "contractKind": "mixed",
       "name": "机械动力气泵与固定容量",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_fluid_pump.lua",
       "enabled": true
     },
     {
       "id": "mechanical_control",
+      "contractKind": "behavior",
       "name": "离合器断连及恢复",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_control.lua",
       "enabled": true
     },
     {
       "id": "mechanical_processing",
+      "contractKind": "mixed",
       "name": "机器正式原料加工与气体收集",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_processing.lua",
       "enabled": true
     },
     {
       "id": "mechanical_manual_millstone",
+      "contractKind": "behavior",
       "name": "石磨独立手推动力",
       "luaPath": "GameplayTests/Systems/Mechanical/mechanical_manual_millstone.lua",
       "enabled": true
     },
     {
       "id": "universe_content",
+      "contractKind": "mixed",
       "name": "宇宙内容、轨道、地表与快照",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/universe_content.lua",
       "enabled": true
     },
     {
       "id": "sector_rules",
+      "contractKind": "mixed",
       "name": "星区坐标、接触与租约",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/sector_rules.lua",
       "enabled": true
     },
     {
       "id": "ship_rules",
+      "contractKind": "mixed",
       "name": "飞船结构、环境、动力与快照",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_rules.lua",
       "enabled": true
     },
     {
       "id": "space_gameplay",
+      "contractKind": "mixed",
       "name": "真实太空入场、航行、跨区与接触",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/space_gameplay.lua",
       "enabled": true
     },
     {
       "id": "ship_landing_gameplay",
+      "contractKind": "mixed",
       "name": "飞船普通建筑起降与落地管路自动加油专项",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_landing_gameplay.lua",
       "enabled": true
     },
     {
-      "id": "ship_interior_world_gameplay",
-      "name": "船内独立世界、物理与普通物品归属",
-      "luaPath": "GameplayTests/Systems/Space/ship_world.lua",
-      "enabled": true
-    },
-    {
       "id": "ship_damage_gameplay",
+      "contractKind": "mixed",
       "name": "真实长船局部截断与冷残骸继续破碎",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/ship_damage_gameplay.lua",
       "enabled": true
     },
     {
       "id": "presentation_cache",
+      "contractKind": "mixed",
       "name": "地表与太空表现缓存两轮往返复用",
       "luaPath": "GameplayTests/Systems/Space/Gameplay/presentation_cache.lua",
       "enabled": true
     },
     {
+      "id": "ship_interior_world_gameplay",
+      "contractKind": "mixed",
+      "name": "船内独立世界、物理与普通物品归属",
+      "luaPath": "GameplayTests/Systems/Space/ship_world.lua",
+      "enabled": true
+    },
+    {
       "id": "narrative_inventory_quest_guide",
+      "contractKind": "mixed",
       "name": "正式背包开关、任务交付与新手引导",
       "luaPath": "GameplayTests/Systems/Quests/narrative_inventory.lua",
       "enabled": true
     },
     {
       "id": "narrative_pickup_quest_guide",
+      "contractKind": "behavior",
       "name": "实际拾取入包、任务自动完成与教程进度",
       "luaPath": "GameplayTests/Systems/Quests/narrative_pickup.lua",
       "enabled": true
     },
     {
       "id": "narrative_event_dialogue",
+      "contractKind": "mixed",
       "name": "正式事件行动通知、取消与主角屏幕气泡",
       "luaPath": "GameplayTests/Systems/Quests/narrative_event_dialogue.lua",
       "enabled": true
     },
     {
       "id": "core_lifecycle_gameplay",
+      "contractKind": "mixed",
       "name": "核心生命周期与资源真实关键流程",
       "luaPath": "GameplayTests/Systems/CoreLifecycle/gameplay.lua",
       "enabled": true
     },
     {
       "id": "item_runtime_drop_motion_gameplay",
+      "contractKind": "mixed",
       "name": "轻量掉落物真实拾取、余量保存与原地续捡",
       "luaPath": "GameplayTests/Systems/ItemRuntime/drop-motion-gameplay.lua",
       "enabled": true
     },
     {
       "id": "item_mod_network_gameplay",
+      "contractKind": "mixed",
       "name": "真实物品生命周期、MOD Lua与网络副本链路",
       "luaPath": "GameplayTests/Systems/ItemRuntime/gameplay.lua",
       "enabled": true
     },
     {
+      "id": "natural_item_decoupling_gameplay",
+      "contractKind": "architecture",
+      "name": "真实自然物的逻辑物理视觉分离",
+      "luaPath": "GameplayTests/Systems/WorldStreaming/natural-decoupling-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "world_streaming_gameplay",
+      "contractKind": "mixed",
       "name": "世界模型与区块流送真实关键流程",
       "luaPath": "GameplayTests/Systems/WorldStreaming/gameplay.lua",
       "enabled": true
     },
     {
       "id": "world_physics_gameplay",
+      "contractKind": "mixed",
       "name": "世界物理原生场景与物品区域契约",
       "luaPath": "GameplayTests/Systems/WorldStreaming/physics.lua",
       "enabled": true
     },
     {
       "id": "world_physics_proxy_gameplay",
+      "contractKind": "mixed",
       "name": "JSON物理代理与正式实体运动回写",
       "luaPath": "GameplayTests/Systems/WorldStreaming/proxy-gameplay.lua",
       "enabled": true
     },
     {
       "id": "save_gameplay",
+      "contractKind": "mixed",
       "name": "存档与恢复真实关键流程",
       "luaPath": "GameplayTests/Systems/Save/gameplay.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_session",
+      "contractKind": "mixed",
       "name": "联机假人：加入快照、协议拒绝与重连",
       "luaPath": "GameplayTests/Systems/Networking/bots-session.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_input",
+      "contractKind": "mixed",
       "name": "联机假人：输入与意图序号、超时和断线",
       "luaPath": "GameplayTests/Systems/Networking/bots-input.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_pickup",
+      "contractKind": "behavior",
       "name": "联机假人：权威拾取租约与提交",
       "luaPath": "GameplayTests/Systems/Networking/bots-pickup.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_actions",
+      "contractKind": "mixed",
       "name": "联机假人：实际移动、攻击、拾取与丢弃",
       "luaPath": "GameplayTests/Systems/Networking/bots-actions.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_roll",
+      "contractKind": "behavior",
       "name": "联机假人：翻滚许可、体力扣费与无敌收尾",
       "luaPath": "GameplayTests/Systems/Networking/bots-roll.lua",
       "enabled": true
     },
     {
       "id": "networking_world_scope",
+      "contractKind": "mixed",
       "name": "真实双世界：同格占地、自然实体与物理隔离",
       "luaPath": "GameplayTests/Systems/Networking/world-scope.lua",
       "enabled": true
     },
     {
       "id": "networking_bots_ships",
+      "contractKind": "mixed",
       "name": "联机假人：飞船生成补给点火与拒绝身份",
       "luaPath": "GameplayTests/Systems/Networking/bots-ships.lua",
       "enabled": true
     },
     {
       "id": "ui_localization_gameplay",
+      "contractKind": "mixed",
       "name": "正式设置窗口、保存放弃与中英文切换",
       "luaPath": "GameplayTests/Systems/UISettings/gameplay.lua",
       "enabled": true
     },
     {
+      "id": "ui_new_world_window_behavior",
+      "contractKind": "behavior",
+      "name": "新世界覆盖层关闭重开与输入保留",
+      "luaPath": "GameplayTests/Systems/UISettings/new-world-window.lua",
+      "enabled": true
+    },
+    {
       "id": "audio_gameplay",
+      "contractKind": "mixed",
       "name": "真实空间音源、音量静音、声源复用和旧句柄隔离",
       "luaPath": "GameplayTests/Systems/Audio/gameplay.lua",
       "enabled": true
     },
     {
+      "id": "audio_default_configuration",
+      "contractKind": "mixed",
+      "name": "音频默认资源、装配与对应现场契约",
+      "luaPath": "GameplayTests/Systems/Audio/default-configuration.lua",
+      "enabled": true
+    },
+    {
       "id": "rendering_gameplay",
+      "contractKind": "mixed",
       "name": "真实物品排序、玩家跨帧 MPB 绑定与正式特效池清理",
       "luaPath": "GameplayTests/Systems/Rendering/gameplay.lua",
       "enabled": true
     },
     {
       "id": "rendering_world_fire_render_benchmark",
+      "contractKind": "architecture",
       "name": "一万火格1080p隔离相机性能采样",
       "luaPath": "GameplayTests/Systems/Rendering/world-fire-render-benchmark.lua",
       "enabled": true
     },
     {
       "id": "testing_queue_gameplay",
+      "contractKind": "architecture",
       "name": "Lua真实命令队列与清理租约前置",
       "luaPath": "GameplayTests/Systems/Testing/gameplay.lua",
       "enabled": true
     },
     {
       "id": "testing_cleanup_gameplay",
+      "contractKind": "architecture",
       "name": "Lua跨用例同步与跨帧收尾核对（需前置）",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-cleanup.lua",
       "dependsOn": [
@@ -438,14 +530,9 @@
     },
     {
       "id": "testing_resource_cache_gameplay",
+      "contractKind": "architecture",
       "name": "Lua专用GameRes跨编译缓存与正式目录",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
-      "enabled": true
-    },
-    {
-      "id": "natural_item_decoupling_gameplay",
-      "name": "真实自然物的逻辑物理视觉分离",
-      "luaPath": "GameplayTests/Systems/WorldStreaming/natural-decoupling-gameplay.lua",
       "enabled": true
     }
   ]

@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "crafting_gameplay",
+      "contractKind": "mixed",
       "name": "手工制作：真实面板点击、扣料产出和满槽拒绝",
       "luaPath": "GameplayTests/Systems/Crafting/gameplay.lua",
       "enabled": true

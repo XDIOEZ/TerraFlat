@@ -119,13 +119,13 @@ public static class GameplayTestArtifacts
         text.AppendLine($"- 耗时：{report.DurationSeconds:F2} 秒；Unity 错误 {report.ErrorCount}，警告 {report.WarningCount}");
         text.AppendLine("- [完整 JSON 报告](report.json)");
         text.AppendLine();
-        text.AppendLine("| 用例 | 结果 | 用例报告 | 关键截图 | 原因 |");
-        text.AppendLine("| --- | --- | --- | --- | --- |");
+        text.AppendLine("| 用例 | 契约类型 | 结果 | 用例报告 | 关键截图 | 原因 |");
+        text.AppendLine("| --- | --- | --- | --- | --- | --- |");
         foreach (GameplayTestCaseReport testCase in report.Cases)
         {
             string casePath = "cases/" + testCase.Id + "/";
             text.AppendLine("| " + Markdown(testCase.Name) + " (`" + testCase.Id + "`) | " +
-                Markdown(testCase.Status) + " | [JSON](" + casePath + "report.json) | " + ScreenshotLinks(testCase) + " | " +
+                Markdown(testCase.ContractKind ?? "unspecified") + " | " + Markdown(testCase.Status) + " | [JSON](" + casePath + "report.json) | " + ScreenshotLinks(testCase) + " | " +
                 Markdown(testCase.Reason) + " |");
         }
         bool screenshotHeadingWritten = false;

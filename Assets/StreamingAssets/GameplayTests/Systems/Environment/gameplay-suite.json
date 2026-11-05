@@ -6,12 +6,14 @@
   "cases": [
     {
       "id": "atmosphere_analyzer_gameplay",
+      "contractKind": "mixed",
       "name": "大气检测仪真实手持、仪器屏幕与离手关闭",
       "luaPath": "GameplayTests/Systems/Environment/atmosphere-analyzer-gameplay.lua",
       "enabled": true
     },
     {
       "id": "item_slot_world_influence_gameplay",
+      "contractKind": "behavior",
       "name": "嵌套槽位温度、辐射和污染来源",
       "luaPath": "GameplayTests/Systems/Environment/item-slot-world-influence-gameplay.lua",
       "enabled": true

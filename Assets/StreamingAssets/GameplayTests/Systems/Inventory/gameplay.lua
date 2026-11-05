@@ -40,6 +40,27 @@ for _, case in ipairs({
         end
     end, "真实部分拾取：" .. case.name)
 end
+local function assertMouseTooltip(data)
+    assert(not data.hoverVisibleOnEntry and data.hoverOpacity > .99 and data.hoverShownElapsed >= .19
+        and data.hoverShownElapsed <= 1, "鼠标悬停没有在0.2秒后显示物品介绍")
+    local aligned = false
+    for _, labels in ipairs(data.hoverTexts) do
+        local weight = string.find(labels.text, "重量", 1, true) or string.find(labels.text, "Weight", 1, true)
+        local volume = string.find(labels.text, "体积", 1, true) or string.find(labels.text, "Volume", 1, true)
+        if labels.alignment == "TopLeft" and weight and volume then
+            for _, values in ipairs(data.hoverTexts) do
+                if values.alignment == "TopRight" and string.find(values.text, "kg", 1, true)
+                    and string.find(values.text, " L", 1, true) and labels.parent == values.parent
+                    and math.abs(labels.y - values.y) < .1 and labels.x + labels.width <= values.x + .1 then
+                    aligned = true
+                end
+            end
+        end
+    end
+    assert(aligned, "物品属性没有分为左名称和右数值两列")
+    assert(data.hoverClosedWithPanel, "关闭面板后鼠标悬浮介绍仍残留")
+end
+
 for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_changed", "source_changed", "moved", "early_release", "disabled"}) do
     test.runtime("inventory", "touch_tooltip", {mode = mode}, function(data)
         if mode == "inspect" or mode == "closed_after_show" then
@@ -48,9 +69,7 @@ for _, mode in ipairs({"inspect", "closed_after_show", "empty", "held", "hand_ch
             assert(data.touchShownElapsed >= .5 and data.touchShownElapsed <= 1,
                 "空手长按没有在0.5秒后显示物品介绍")
             if mode == "inspect" then
-                assert(data.hoverImmediate,
-                    "鼠标移入后没有立刻显示物品介绍")
-                assert(data.columnsAligned, "物品属性没有分为左名称和右数值两列")
+                assertMouseTooltip(data)
             end
             assert(data.dismissedByOutsidePress, "再次点击其他位置没有关闭物品介绍")
             assert(data.taps == 0 and data.longPresses == 0 and data.drags == 0,
@@ -80,12 +99,11 @@ for _, panel in ipairs({
         test.runtime("inventory", "touch_tooltip", {
             mode = "closed_after_show", panelPrefab = panel.prefab, slotName = slotName
         }, function(data)
-            assert(data.hoverImmediate and data.tooltipAbovePanel and data.tooltipInputTransparent,
-                "正式面板的悬浮介绍未显示、被窗口遮挡或拦截输入")
-            assert(data.hoverImmediate,
-                "正式面板的物品介绍鼠标移入后没有立即显示")
-            assert(data.columnsAligned, "正式面板的属性名称与右对齐数值没有分列")
-            assert(data.hoverClosedWithPanel, "关闭正式面板后鼠标悬浮介绍仍残留")
+            assertMouseTooltip(data)
+            assert(data.sourceCanvasPresent and data.tooltipSortOverride
+                and data.tooltipSortingLayer == data.sourceSortingLayer and data.tooltipSortOrder > data.sourceSortOrder
+                and not data.tooltipBlocksRaycasts and not data.tooltipHasRaycaster,
+                "正式面板的悬浮介绍被窗口遮挡或拦截输入")
             assert(not data.visibleEarly and data.opened and data.persistedAfterRelease,
                 "正式槽位未显示同一介绍窗，或松手后没有保留")
             assert(data.touchShownElapsed >= .5 and data.touchShownElapsed <= 1,

@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "survival_gameplay",
+      "contractKind": "mixed",
       "name": "角色生存：真实体温缓冲、疾病和快照重载",
       "luaPath": "GameplayTests/Systems/Survival/gameplay.lua",
       "enabled": true

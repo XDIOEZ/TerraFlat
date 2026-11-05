@@ -28,7 +28,7 @@ public static class GameplayTestRulesSuiteRunner
         foreach (GameplayTestCase definition in suite.Cases)
             report.Cases.Add(new GameplayTestCaseReport
             {
-                Id = definition.Id, Name = definition.Name, LuaPath = definition.LuaPath,
+                Id = definition.Id, Name = definition.Name, LuaPath = definition.LuaPath, ContractKind = definition.ContractKind,
                 Status = definition.Enabled ? "pending" : "disabled",
                 ReportPath = GameplayTestArtifacts.CaseReportPath(report, definition.Id)
             });

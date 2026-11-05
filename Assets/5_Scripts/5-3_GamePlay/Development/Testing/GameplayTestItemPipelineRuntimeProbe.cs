@@ -320,6 +320,141 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 手持武器正式装配与动画伤害窗口
+    private sealed class HeldWeaponHotbarScope : IDisposable
+    {
+        private readonly Mod_HotBar hotbar;
+        private readonly Inventory_Data inventory;
+        private readonly int index;
+        private readonly ItemData testData;
+        private readonly List<(Inventory View, Inventory_Data Data, InventoryInstanceSnapshot Snapshot, byte[] Baseline,
+            int Occupied, double Amount)> snapshots = new();
+        private Item held;
+        private uint generation;
+        private bool changed, disposed;
+        public bool Restored { get; private set; }
+        public bool Drawing => hotbar != null && hotbar.IsDrawingHeldItem;
+        public readonly JArray RestoredInventories = new();
+
+        private static int OccupiedSlots(Inventory_Data data) => data.itemSlots.Count(slot => slot?.itemData != null);
+        private static double ItemAmount(Inventory_Data data) => data.itemSlots.Sum(slot => (double)(slot?.itemData?.Stack?.Amount ?? 0f));
+        private static string SnapshotHash(byte[] payload)
+        {
+            using var hash = System.Security.Cryptography.SHA256.Create();
+            return Convert.ToBase64String(hash.ComputeHash(payload));
+        }
+
+        public HeldWeaponHotbarScope(Player player, ItemData data)
+        {
+            hotbar = player.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar) ??
+                throw new InvalidOperationException("武器回归缺少正式快捷栏。");
+            inventory = hotbar.Data ?? throw new InvalidOperationException("武器回归缺少快捷栏库存。");
+            index = hotbar.CurrentIndex;
+            if (inventory.GetItemSlot(index) == null) throw new InvalidOperationException("当前快捷栏槽不存在。");
+            Item current = hotbar.CurentSelectItem;
+            if (current != null)
+            {
+                if (!ReferenceEquals(current.itemData, inventory.GetItemSlot(index).itemData))
+                    throw new InvalidOperationException("武器回归前快捷栏手持实例与槽位不一致。");
+                current.ModuleSave();
+            }
+            testData = data ?? throw new ArgumentNullException(nameof(data));
+            Mod_ItemPicker picker = player.itemMods.GetMod_ByID<Mod_ItemPicker>(ModText.Picker) ??
+                throw new InvalidOperationException("武器回归缺少正式拾取器。");
+            var captured = new HashSet<Inventory_Data>();
+            void CaptureInventory(Inventory target)
+            {
+                Inventory_Data targetData = target?.Data;
+                if (targetData == null || !captured.Add(targetData)) return;
+                InventoryInstanceSnapshot snapshot = InventoryInstanceSnapshot.Capture(targetData);
+                snapshots.Add((target, targetData, snapshot, ItemSnapshotSerialization.SerializePayload(snapshot),
+                    OccupiedSlots(targetData), ItemAmount(targetData)));
+            }
+            foreach (IInventory target in picker.AddTargetInventories)
+                CaptureInventory(target?.GetDefaultTargetInventory());
+            CaptureInventory(hotbar.RuntimeInventory);
+        }
+
+        public Item Equip()
+        {
+            changed = true;
+            inventory.SetOne_ItemData(index, testData);
+            if (!ReferenceEquals(inventory.GetItemSlot(index)?.itemData, testData) || !hotbar.TrySelectSlot(index))
+                throw new InvalidOperationException("无法将隔离武器放入并选中真实快捷栏。");
+            held = hotbar.CurentSelectItem;
+            if (held == null || !ReferenceEquals(held.itemData, testData))
+                throw new InvalidOperationException("真实快捷栏没有建立本次武器实例。");
+            generation = held.RuntimeGeneration;
+            return held;
+        }
+
+        public bool IsCurrent(Item candidate) => hotbar != null && candidate != null && !candidate.DestructionHandled && !candidate.IsInPool &&
+            ReferenceEquals(candidate, held) && candidate.RuntimeGeneration == generation &&
+            ReferenceEquals(candidate.itemData, testData) && ReferenceEquals(hotbar.CurentSelectItem, candidate) &&
+            ReferenceEquals(hotbar.Data, inventory) && hotbar.CurrentIndex == index &&
+            ReferenceEquals(inventory.GetItemSlot(index)?.itemData, testData) &&
+            ItemMgr.Instance.IsRuntimeItemRegistered(candidate);
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            if (!changed) { Restored = true; disposed = true; return; }
+            var errors = new List<Exception>();
+            bool hotbarContentsRestored = false;
+            RestoredInventories.Clear();
+            // 恢复全部正式拾取目标，清除测试武器被误拾取产生的副本和数量变化。
+            foreach (var entry in snapshots)
+            {
+                try
+                {
+                    if (!ReferenceEquals(entry.View.Data, entry.Data))
+                        throw new InvalidOperationException("武器回归期间拾取目标库存引用被替换。");
+                    entry.Snapshot.RestoreTo(entry.Data, value => value.SharedConfiguration == null
+                        ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, value) : value);
+                    if (entry.Data.itemSlots.Count > entry.Snapshot.SlotCount)
+                        entry.Data.itemSlots.RemoveRange(entry.Snapshot.SlotCount, entry.Data.itemSlots.Count - entry.Snapshot.SlotCount);
+                    entry.Data.NotifySlotsChanged();
+                    entry.View.RefreshUI();
+                    if (ReferenceEquals(entry.Data, inventory)) hotbarContentsRestored = true;
+                }
+                catch (Exception error) { errors.Add(error); }
+            }
+            try
+            {
+                if (!hotbarContentsRestored || hotbar == null || !ReferenceEquals(hotbar.Data, inventory) || inventory.GetItemSlot(index) == null ||
+                    !hotbar.TrySelectSlot(index))
+                    throw new InvalidOperationException("武器夹具无法恢复原快捷栏选择。");
+                ItemData restored = inventory.GetItemSlot(index).itemData;
+                if (restored == null ? hotbar.CurentSelectItem != null :
+                    hotbar.CurentSelectItem == null || !ReferenceEquals(hotbar.CurentSelectItem.itemData, restored))
+                    throw new InvalidOperationException("武器夹具未能恢复原手持实例。");
+            }
+            catch (Exception error) { errors.Add(error); }
+            foreach (var entry in snapshots)
+            {
+                try
+                {
+                    if (!ReferenceEquals(entry.View.Data, entry.Data))
+                        throw new InvalidOperationException("武器回归期间拾取目标库存引用被替换。");
+                    byte[] after = ItemSnapshotSerialization.SerializePayload(InventoryInstanceSnapshot.Capture(entry.Data));
+                    RestoredInventories.Add(new JObject
+                    {
+                        ["name"] = entry.Data.Name, ["hotbar"] = ReferenceEquals(entry.Data, inventory),
+                        ["beforeHash"] = SnapshotHash(entry.Baseline), ["afterHash"] = SnapshotHash(after),
+                        ["beforeSlots"] = entry.Snapshot.SlotCount, ["afterSlots"] = entry.Data.itemSlots.Count,
+                        ["beforeOccupied"] = entry.Occupied, ["afterOccupied"] = OccupiedSlots(entry.Data),
+                        ["beforeAmount"] = entry.Amount, ["afterAmount"] = ItemAmount(entry.Data)
+                    });
+                    if (!entry.Baseline.SequenceEqual(after))
+                        throw new InvalidOperationException("拾取目标库存未恢复原始内容。");
+                }
+                catch (Exception error) { errors.Add(error); }
+            }
+            if (errors.Count > 0) throw new AggregateException("武器夹具恢复失败。", errors);
+            Restored = true;
+            disposed = true;
+        }
+    }
+
     private sealed class HeldWeaponFixedStepObservation : IDisposable, IGameplayFixedStepSimulationSystem
     {
         private readonly float originalTimeScale = Time.timeScale;
@@ -344,9 +479,15 @@ public static class GameplayTestItemPipelineRuntimeProbe
         };
 
         // 目标、帧率与观察器均属于当前 Lua，断言失败和中断时恢复。
-        public void Prepare(Player player, Mod_Damage source, float timeScale)
+        public void Prepare(Player player, Mod_Damage source, bool stressFixedStep, float timeScale)
         {
             damage = source;
+            if (!stressFixedStep)
+            {
+                GameplayFixedStepSimulation.Register(this, GameplayFixedStepSimulationPhase.AfterPhysics);
+                registered = true;
+                return;
+            }
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 30;
             Time.timeScale = timeScale;
@@ -423,6 +564,8 @@ public static class GameplayTestItemPipelineRuntimeProbe
     private static IEnumerator CaptureHeldWeaponAction(Player player, JObject args, Action<JObject> completed)
     {
         Item weapon = null;
+        ItemData weaponData = null;
+        HeldWeaponHotbarScope hotbarScope = null;
         HeldWeaponFixedStepObservation fixedStep = null;
         string weaponId = args.Value<string>("weaponId") ?? "ChippedTool";
         // 按用例指定的真实攻击状态采样，覆盖不同武器的挥动动作。
@@ -430,11 +573,28 @@ public static class GameplayTestItemPipelineRuntimeProbe
         Mod_Stamina stamina = player.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         float originalStamina = stamina != null ? stamina.CurrentValue : 0f;
         var result = new JObject();
+        int despawnNotifications = 0;
+        long despawnTick = -1;
+        string stage = "equip";
+        var despawnEvents = new JArray();
+        void ObserveWeaponDespawn(Item value)
+        {
+            if (!ReferenceEquals(value, weapon) && (weaponData == null || !ReferenceEquals(value.itemData, weaponData))) return;
+            despawnNotifications++;
+            despawnTick = (long)GameplayFixedStepSimulation.TickIndex;
+            if (despawnNotifications == 1)
+                despawnEvents.Add(new JObject { ["stage"] = stage, ["tick"] = despawnTick,
+                    ["stack"] = Environment.StackTrace });
+        }
+        ItemMgr.RuntimeItemDespawning += ObserveWeaponDespawn;
         try
         {
             if (stamina != null) stamina.CurrentValue = stamina.MaxValue;
-            // 使用正式手持工厂和公开动作接口，避免绕过定义装配或手动打开伤害盒。
-            weapon = SpawnHeld(player, GameRes.ExistingInstance.CreateItemData(weaponId));
+            // 通过真实快捷栏槽建立手持实例，记录原始槽位以便异常时恢复。
+            weaponData = GameRes.ExistingInstance.CreateItemData(weaponId);
+            hotbarScope = new HeldWeaponHotbarScope(player, weaponData);
+            GameplayTestRuntimeProbe.RegisterCleanup(hotbarScope);
+            weapon = hotbarScope.Equip();
             Mod_Weapon_AnimationAction animation = weapon.itemMods.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
             Mod_Damage damage = weapon.itemMods.GetMod_ByID<Mod_Damage>("Mod_Damage");
             result["weaponId"] = weapon.itemData.IDName;
@@ -466,22 +626,43 @@ public static class GameplayTestItemPipelineRuntimeProbe
             result["animatorUpdateMode"] = animation?.animator != null ? animation.animator.updateMode.ToString() : "missing";
             result["simulationOwnedAnimation"] = animation?.UsesSimulationAnimationClock == true;
 
-            if (args.Value<bool?>("verifyFixedStep") == true)
+            stage = "draw";
+            double drawStarted = Time.realtimeSinceStartupAsDouble;
+            double drawDeadline = drawStarted + 3d;
+            while (hotbarScope.IsCurrent(weapon) && hotbarScope.Drawing && Time.realtimeSinceStartupAsDouble < drawDeadline)
+                yield return null;
+            result["drawElapsed"] = Time.realtimeSinceStartupAsDouble - drawStarted;
+            result["drawCompleted"] = !hotbarScope.Drawing;
+            result["weaponHeldAfterDraw"] = hotbarScope.IsCurrent(weapon);
+            if (!hotbarScope.IsCurrent(weapon) || hotbarScope.Drawing || animation == null || damage == null)
             {
-                fixedStep = new HeldWeaponFixedStepObservation();
-                GameplayTestRuntimeProbe.RegisterCleanup(fixedStep);
-                fixedStep.Prepare(player, damage, args.Value<float?>("timeScale") ?? 1f);
+                result["despawnNotifications"] = despawnNotifications;
+                result["despawnEvents"] = despawnEvents;
+                completed(result);
+                yield break;
             }
+
+            stage = "prepare_target";
+            fixedStep = new HeldWeaponFixedStepObservation();
+            GameplayTestRuntimeProbe.RegisterCleanup(fixedStep);
+            fixedStep.Prepare(player, damage, args.Value<bool?>("verifyFixedStep") == true,
+                args.Value<float?>("timeScale") ?? 1f);
 
             result["staminaBeforeAction"] = stamina != null ? stamina.CurrentValue : 0f;
             ulong firstActionTick = GameplayFixedStepSimulation.TickIndex;
-            bool requested = animation is IWeaponActionAnimation action && action.TryRequestAction();
+            stage = "first_attack";
+            bool requested = hotbarScope.IsCurrent(weapon) && animation is IWeaponActionAnimation action && action.TryRequestAction();
             result["staminaAfterAction"] = stamina != null ? stamina.CurrentValue : 0f;
-            bool sawAttackState = false, sawOpenWindow = false, sawOpenWindowWithFixedDamageTick = false, returnedToIdle = false;
+            bool sawAttackState = false, returnedToIdle = false;
             int sampledFrames = 0;
-            float deadline = Time.realtimeSinceStartup + 10f;
-            while (requested && Time.realtimeSinceStartup < deadline)
+            double simulationStarted = GameplayFixedStepSimulation.CurrentTime;
+            double realDeadline = Time.realtimeSinceStartupAsDouble + 20d;
+            // 按模拟时钟等待动作完成，额外保留真实时间上限防止时钟停转。
+            stage = "observe_first_attack";
+            while (requested && GameplayFixedStepSimulation.CurrentTime - simulationStarted < 5d &&
+                   Time.realtimeSinceStartupAsDouble < realDeadline)
             {
+                if (!hotbarScope.IsCurrent(weapon) || animation == null) break;
                 Animator animator = animation.animator;
                 if (animator != null)
                 {
@@ -489,29 +670,22 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     sawAttackState |= state.IsName(attackStateName);
                     returnedToIdle = sawAttackState && state.IsName("Idle_0");
                 }
-                sawOpenWindow |= damage != null && damage.IsDamageEnabled();
-                sawOpenWindowWithFixedDamageTick |= damage != null && damage.IsDamageEnabled() &&
-                                                 damage.TickMode == ModuleTickMode.EveryFrame;
                 sampledFrames++;
                 if (returnedToIdle && damage != null && !damage.IsDamageEnabled()) break;
                 yield return null;
             }
             result["actionRequested"] = requested;
             result["sawAttackState"] = sawAttackState;
-            result["sawOpenWindow"] = sawOpenWindow;
-            result["sawOpenWindowWithFixedDamageTick"] = sawOpenWindowWithFixedDamageTick;
             result["returnedToIdle"] = returnedToIdle;
             result["finalWindowClosed"] = damage != null && !damage.IsDamageEnabled();
             result["sampledFrames"] = sampledFrames;
             result["simulationTicks"] = (long)(GameplayFixedStepSimulation.TickIndex - firstActionTick);
             result["simulationTime"] = GameplayFixedStepSimulation.CurrentTime;
-            result["lastItemTickTime"] = Convert.ToDouble(typeof(Item).GetField("lastScheduledTickTime",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(weapon));
-            result["itemTickTier"] = weapon.GetTickTier().ToString();
-            result["animationTickMode"] = animation.TickMode.ToString();
-            result["animationProgress"] = animation.animator != null
+            result["weaponRegisteredAtEnd"] = hotbarScope.IsCurrent(weapon);
+            result["animationTickMode"] = animation != null ? animation.TickMode.ToString() : "missing";
+            result["animationProgress"] = animation != null && animation.animator != null
                 ? animation.animator.GetCurrentAnimatorStateInfo(0).normalizedTime : -1f;
-            result["weaponWorld"] = GameplayWorldRegistry.GetItemWorldKey(weapon);
+            result["weaponWorld"] = weapon != null ? GameplayWorldRegistry.GetItemWorldKey(weapon) : null;
             result["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player);
             if (fixedStep != null)
                 result["fixedStep"] = new JObject
@@ -522,9 +696,19 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     ["originalSettings"] = fixedStep.OriginalSettings
                 };
 
-            // 攻击中停用再启用真实武器，检查场景迁移同类的 Animator 失活路径。
-            Animator weaponAnimator = animation?.animator;
-            if (weaponAnimator != null)
+            // 攻击中停用再启用真实武器，跨帧前后核对同一持有实例。
+            result["beforeDisableActionRequested"] = false;
+            result["inactiveActionRejected"] = false;
+            result["disabledWindowClosed"] = false;
+            result["disabledHitStopCleared"] = false;
+            result["reactivatedIdle"] = false;
+            result["reactivatedWindowClosed"] = false;
+            result["reactivatedActionRequested"] = false;
+            result["reactivatedAttackState"] = false;
+            result["inactiveAnimatorWarning"] = false;
+            result["weaponHeldAfterReactivation"] = false;
+            Animator weaponAnimator = animation != null ? animation.animator : null;
+            if (hotbarScope.IsCurrent(weapon) && animation != null && weaponAnimator != null)
             {
                 bool keepStateOnDisable = weaponAnimator.keepAnimatorStateOnDisable;
                 bool inactiveAnimatorWarning = false;
@@ -535,39 +719,63 @@ public static class GameplayTestItemPipelineRuntimeProbe
                 Application.logMessageReceived += onLog;
                 try
                 {
+                    stage = "disable";
                     weaponAnimator.keepAnimatorStateOnDisable = true;
                     result["beforeDisableActionRequested"] = animation.TryRequestAction();
                     weapon.gameObject.SetActive(false);
-                    result["inactiveActionRejected"] = !animation.TryRequestAction();
-                    result["disabledWindowClosed"] = damage != null && !damage.IsDamageEnabled();
-                    result["disabledHitStopCleared"] = !animation.IsHitStopped &&
-                                                       Mathf.Approximately(weaponAnimator.speed, animation.AttackSpeedMultiplier);
-                    weapon.gameObject.SetActive(true);
-                    yield return null;
-                    yield return null;
-                    result["reactivatedIdle"] = weaponAnimator.isActiveAndEnabled &&
-                                                weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName("Idle_0");
-                    result["reactivatedWindowClosed"] = damage != null && !damage.IsDamageEnabled();
-                    result["reactivatedActionRequested"] = animation.TryRequestAction();
-                    result["reactivatedAttackState"] = weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName(attackStateName);
+                    if (hotbarScope.IsCurrent(weapon) && animation != null && weaponAnimator != null)
+                    {
+                        result["inactiveActionRejected"] = !animation.TryRequestAction();
+                        result["disabledWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                        result["disabledHitStopCleared"] = !animation.IsHitStopped &&
+                                                           Mathf.Approximately(weaponAnimator.speed, animation.AttackSpeedMultiplier);
+                    }
+                    if (hotbarScope.IsCurrent(weapon))
+                    {
+                        stage = "reactivate";
+                        weapon.gameObject.SetActive(true);
+                        for (int frame = 0; frame < 2 && hotbarScope.IsCurrent(weapon) && weaponAnimator != null; frame++)
+                            yield return null;
+                    }
+                    bool stillHeld = hotbarScope.IsCurrent(weapon) && animation != null && weaponAnimator != null &&
+                        ReferenceEquals(animation.animator, weaponAnimator);
+                    result["weaponHeldAfterReactivation"] = stillHeld;
+                    if (stillHeld)
+                    {
+                        result["reactivatedIdle"] = weaponAnimator.isActiveAndEnabled &&
+                                                    weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName("Idle_0");
+                        result["reactivatedWindowClosed"] = damage != null && !damage.IsDamageEnabled();
+                        result["reactivatedActionRequested"] = animation.TryRequestAction();
+                        result["reactivatedAttackState"] = weaponAnimator.GetCurrentAnimatorStateInfo(0).IsName(attackStateName);
+                    }
                 }
                 finally
                 {
                     Application.logMessageReceived -= onLog;
-                    if (weaponAnimator != null) weaponAnimator.keepAnimatorStateOnDisable = keepStateOnDisable;
+                    if (hotbarScope.IsCurrent(weapon) && weaponAnimator != null)
+                        weaponAnimator.keepAnimatorStateOnDisable = keepStateOnDisable;
                     result["inactiveAnimatorWarning"] = inactiveAnimatorWarning;
                 }
             }
-            result["limitations"] = "正式手持装配、公开动作入口和真实动画伤害窗；未覆盖手机摇杆输入、命中结算或画面手感。";
+            result["despawnNotifications"] = despawnNotifications;
+            result["despawnTick"] = despawnTick;
+            result["despawnEvents"] = despawnEvents;
+            result["limitations"] = "正式快捷栏手持装配、公开动作入口和真实动画伤害窗；未覆盖手机摇杆输入或画面手感。";
         }
         finally
         {
+            ItemMgr.RuntimeItemDespawning -= ObserveWeaponDespawn;
             try { fixedStep?.Dispose(); }
             finally
             {
                 if (result["fixedStep"] is JObject sample)
                     sample["restoredSettings"] = HeldWeaponFixedStepObservation.CurrentSettings;
-                try { Despawn(ref weapon); }
+                try
+                {
+                    hotbarScope?.Dispose();
+                    result["hotbarRestored"] = hotbarScope?.Restored == true;
+                    result["restoredInventories"] = hotbarScope?.RestoredInventories;
+                }
                 finally { if (stamina != null) stamina.CurrentValue = originalStamina; }
             }
         }

@@ -6,6 +6,7 @@
   "cases": [
     {
       "id": "building_gameplay",
+      "contractKind": "mixed",
       "name": "建造与拆除：实际流程",
       "luaPath": "GameplayTests/Systems/Building/gameplay.lua",
       "enabled": true

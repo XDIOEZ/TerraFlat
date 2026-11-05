@@ -87,6 +87,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private LuaEnv luaEnvironment;
     private LuaFunction executeLua;
     private readonly List<LuaFunction> callbacks = new();
+    private readonly Dictionary<string, double> stateCheckBudgetDeadlines = new(StringComparer.Ordinal);
 
     private sealed class Command
     {
@@ -122,8 +123,10 @@ public sealed class GameplayTestLuaRunner : IDisposable
         string failure = null;
         using var validator = new GameplayTestLuaRunner(null, _ => true,
             (_, _, success, message) => { if (!success) failure = message; });
-        if (!validator.TryReadCommands(source, chunkName, out _))
+        if (!validator.TryReadCommands(source, chunkName, out var commands))
             throw new InvalidOperationException("测试 Lua 预检失败：" + (failure ?? chunkName));
+        if (!commands.Any(IsResultOracle))
+            throw new InvalidOperationException("测试 Lua 必须包含结果断言，日志、等待和准备状态不能单独证明玩法通过。");
     }
 
     #endregion
@@ -184,10 +187,11 @@ public sealed class GameplayTestLuaRunner : IDisposable
             enqueue({name='profiler_stop', text=marker, validator=validator,
                 label=label == nil and '导出性能采集' or text(label, 'label')})
         end
-        function test.await_check(name, timeout, label)
+        function test.await_check(name, timeout, label, budget)
             name = text(name, 'check name')
             assert(timeout ~= nil and timeout > 0, 'await_check 超时必须大于零')
-            enqueue({name='await_check', text=name, seconds=duration(timeout),
+            if budget ~= nil then budget = text(budget, 'shared check budget') end
+            enqueue({name='await_check', text=name, seconds=duration(timeout), argument=budget,
                 label=label == nil and name or text(label, 'label')})
         end
         function test.move(x, y, seconds)
@@ -581,9 +585,23 @@ public sealed class GameplayTestLuaRunner : IDisposable
         yield return beforeCleanup();
     }
 
+    // 操作成功不等于玩法验收，只有结果判据才能作为案例的通过依据。
+    private static bool IsResultOracle(Command command) =>
+        command.Name is "system" or "runtime" or "space" or "fluid" or "move_to" ||
+        (command.Name == "profiler_stop" && command.Validator != null) ||
+        (command.Name is "check" or "await_check" &&
+         command.Text is not ("world_ready" or "player_ready" or "terrain_ready" or "showroom_complete" or
+             "mechanical_plant_placed" or "mechanical_engine_fueled"));
+
     private IEnumerator RunPlayCommands(string source, string chunkName)
     {
+        stateCheckBudgetDeadlines.Clear();
         if (!TryReadCommands(source, chunkName, out List<Command> commands)) yield break;
+        if (!commands.Any(IsResultOracle))
+        {
+            record("assert", "结果断言覆盖", false, "只有操作或准备状态，没有结果断言。");
+            yield break;
+        }
         if (!TryAcquireControl(out string error))
         {
             record("control", "接管测试玩家", false, error);
@@ -624,7 +642,8 @@ public sealed class GameplayTestLuaRunner : IDisposable
                 }
                 fluidFailed = true;
             }
-            yield return null;
+            // 同一并发预算内已达标的检查连续采样，不让测试队列逐项空耗渲染帧。
+            if (command.Name != "await_check" || command.Argument == null) yield return null;
         }
         bool cleaned = false;
         yield return RestoreSpaceScene(value => cleaned = value);
@@ -642,18 +661,25 @@ public sealed class GameplayTestLuaRunner : IDisposable
             case "await_check":
                 // 生产状态一旦达标立即进入下一步，不再强制耗尽固定等待时间。
                 double checkDeadline = Time.realtimeSinceStartupAsDouble + command.Seconds;
+                // 并发状态共用首个检查的截止时间，避免逐项重置预算掩盖慢速回归。
+                if (command.Argument != null)
+                {
+                    if (stateCheckBudgetDeadlines.TryGetValue(command.Argument, out double sharedDeadline))
+                        checkDeadline = sharedDeadline;
+                    else stateCheckBudgetDeadlines.Add(command.Argument, checkDeadline);
+                }
                 while (true)
                 {
                     if (!TryEnsureContext(out command.Message)) yield break;
+                    if (Time.realtimeSinceStartupAsDouble >= checkDeadline)
+                    {
+                        command.Message = $"等待 {command.Text} 超过 {command.Seconds:0.###} 秒预算仍未达标（共享组：{command.Argument ?? "独立"}）。";
+                        break;
+                    }
                     if (check(command.Text))
                     {
                         command.Success = true;
                         command.Message = $"状态已达标：{command.Text}";
-                        break;
-                    }
-                    if (Time.realtimeSinceStartupAsDouble >= checkDeadline)
-                    {
-                        command.Message = $"等待 {command.Text} 超过 {command.Seconds:0.###} 秒仍未达标。";
                         break;
                     }
                     yield return null;
@@ -893,23 +919,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         if (sample == null) throw new InvalidOperationException("太空操作没有返回真实结果。");
         record("space_sample", command.Label + "（实际采样）", true,
             sample.ToString(Newtonsoft.Json.Formatting.None));
-        var tables = new List<LuaTable>();
-        try
-        {
-            LuaTable data = (LuaTable)ToLuaValue(sample, tables);
-            object[] result = executeLua.Call(command.Validator, data);
-            try
-            {
-                command.Success = result.Length > 0 && result[0] is bool passed && passed;
-                command.Message = result.Length > 1 && result[1] != null ? result[1].ToString() :
-                    command.Success ? "Lua 太空断言通过。" : "Lua 太空断言失败。";
-            }
-            finally { DisposeLuaResults(result); }
-        }
-        finally
-        {
-            for (int index = tables.Count - 1; index >= 0; index--) tables[index].Dispose();
-        }
+        ValidateSystemSample(command, sample);
     }
 
     private IEnumerator RestoreSpaceScene(Action<bool> completed)
@@ -1133,6 +1143,12 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private void ReleaseRuntimeScope()
     {
         IDisposable scope = runtimeScope;
+        if (scope != null && GameplayTestRuntimeProbe.HasPendingAsyncCleanup)
+        {
+            Succeeded = false;
+            record("runtime_cleanup", "跨帧现场恢复未完成", false,
+                "执行器被中断时仍有异步清理，不能把同步释放视为已恢复世界现场。");
+        }
         runtimeScope = null;
         try { scope?.Dispose(); }
         catch (Exception exception)

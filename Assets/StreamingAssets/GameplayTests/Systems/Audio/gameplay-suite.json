@@ -6,8 +6,16 @@
   "cases": [
     {
       "id": "audio_gameplay",
+      "contractKind": "mixed",
       "name": "真实空间音源、音量静音、声源复用和旧句柄隔离",
       "luaPath": "GameplayTests/Systems/Audio/gameplay.lua",
+      "enabled": true
+    },
+    {
+      "id": "audio_default_configuration",
+      "contractKind": "mixed",
+      "name": "音频默认资源、装配与对应现场契约",
+      "luaPath": "GameplayTests/Systems/Audio/default-configuration.lua",
       "enabled": true
     }
   ]

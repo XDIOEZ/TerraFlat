@@ -3,13 +3,13 @@
   "continueAfterFailure": true,
   "buildShowroom": false,
   "cases": [
-    {"id":"processing_electronic_materials_gameplay","name":"电子材料冷料供热、满输出恢复与云母切割","luaPath":"GameplayTests/Systems/Processing/electronic-materials-gameplay.lua","enabled":true},
-    {"id":"mechanical_assemble","name":"GM 创建全组件机械工厂","luaPath":"GameplayTests/Systems/Mechanical/mechanical_assemble.lua","enabled":true},
-    {"id":"mechanical_power","name":"多动力源、传动与用力器","luaPath":"GameplayTests/Systems/Mechanical/mechanical_power.lua","enabled":true},
-    {"id":"mechanical_conveyor","name":"动力输送带实际搬运物品","luaPath":"GameplayTests/Systems/Mechanical/mechanical_conveyor.lua","enabled":true},
-    {"id":"mechanical_fluid_pump","name":"机械动力气泵与固定容量","luaPath":"GameplayTests/Systems/Mechanical/mechanical_fluid_pump.lua","enabled":true},
-    {"id":"mechanical_control","name":"离合器断连及恢复","luaPath":"GameplayTests/Systems/Mechanical/mechanical_control.lua","enabled":true},
-    {"id":"mechanical_processing","name":"机器正式原料加工与气体收集","luaPath":"GameplayTests/Systems/Mechanical/mechanical_processing.lua","enabled":true},
-    {"id":"mechanical_manual_millstone","name":"石磨独立手推动力","luaPath":"GameplayTests/Systems/Mechanical/mechanical_manual_millstone.lua","enabled":true}
+    {"id":"processing_electronic_materials_gameplay", "contractKind":"mixed","name":"电子材料冷料供热、满输出恢复与云母切割","luaPath":"GameplayTests/Systems/Processing/electronic-materials-gameplay.lua","enabled":true},
+    {"id":"mechanical_assemble", "contractKind":"mixed","name":"GM 创建全组件机械工厂","luaPath":"GameplayTests/Systems/Mechanical/mechanical_assemble.lua","enabled":true},
+    {"id":"mechanical_power", "contractKind":"mixed","name":"多动力源、传动与用力器","luaPath":"GameplayTests/Systems/Mechanical/mechanical_power.lua","enabled":true},
+    {"id":"mechanical_conveyor", "contractKind":"behavior","name":"动力输送带实际搬运物品","luaPath":"GameplayTests/Systems/Mechanical/mechanical_conveyor.lua","enabled":true},
+    {"id":"mechanical_fluid_pump", "contractKind":"mixed","name":"机械动力气泵与固定容量","luaPath":"GameplayTests/Systems/Mechanical/mechanical_fluid_pump.lua","enabled":true},
+    {"id":"mechanical_control", "contractKind":"behavior","name":"离合器断连及恢复","luaPath":"GameplayTests/Systems/Mechanical/mechanical_control.lua","enabled":true},
+    {"id":"mechanical_processing", "contractKind":"mixed","name":"机器正式原料加工与气体收集","luaPath":"GameplayTests/Systems/Mechanical/mechanical_processing.lua","enabled":true},
+    {"id":"mechanical_manual_millstone", "contractKind":"behavior","name":"石磨独立手推动力","luaPath":"GameplayTests/Systems/Mechanical/mechanical_manual_millstone.lua","enabled":true}
   ]
 }

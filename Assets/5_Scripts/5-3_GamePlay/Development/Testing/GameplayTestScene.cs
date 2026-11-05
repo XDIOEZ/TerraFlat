@@ -209,7 +209,7 @@ public sealed class GameplayTestScene : MonoBehaviour
         foreach (GameplayTestCase testCase in suite.Cases)
             report.Cases.Add(new GameplayTestCaseReport
             {
-                Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath,
+                Id = testCase.Id, Name = testCase.Name, LuaPath = testCase.LuaPath, ContractKind = testCase.ContractKind,
                 Status = testCase.Enabled ? "pending" : "disabled",
                 Reason = testCase.Enabled ? null : "用例未启用。",
                 ReportPath = GameplayTestArtifacts.CaseReportPath(report, testCase.Id)
@@ -499,7 +499,19 @@ public sealed class GameplayTestScene : MonoBehaviour
                     Record("auto_screenshot", label, false, error.ToString());
             });
         }
-        finally { screenshotCapturing = false; }
+        finally
+        {
+            try
+            {
+                // 定时图失败也属于验收失败，不能被随后成功的结束图覆盖。
+                if (testCase.Screenshots.Count > firstNewScreenshot)
+                {
+                    string error = testCase.Screenshots[testCase.Screenshots.Count - 1].Error;
+                    if (!string.IsNullOrEmpty(error)) Record("auto_screenshot", label, false, error);
+                }
+            }
+            finally { screenshotCapturing = false; }
+        }
     }
 
     private IEnumerator CaptureScreenshotForCase(GameplayTestCaseReport testCase, string label)

@@ -57,6 +57,14 @@ for _, weaponCase in ipairs({
         verifyFixedStep = case.timeScale ~= nil, timeScale = case.timeScale}, function(data)
         assert(data.weaponId == case.id, "未使用真实" .. case.name .. "定义")
         assert(data.held.inHand and data.held.ownedByPlayer and data.held.registered and data.held.indexed, case.name .. "没有完成正式手持装配")
+        assert(data.hotbarRestored, case.name .. "测试后没有恢复原快捷栏槽和手持物")
+        assert(#data.restoredInventories > 0, case.name .. "没有采样拾取目标库存的恢复状态")
+        for _, inventory in ipairs(data.restoredInventories) do
+            assert(inventory.beforeHash == inventory.afterHash and inventory.beforeSlots == inventory.afterSlots
+                and inventory.beforeOccupied == inventory.afterOccupied and inventory.beforeAmount == inventory.afterAmount,
+                case.name .. "没有恢复拾取目标库存：" .. tostring(inventory.name))
+        end
+        assert(data.drawCompleted and data.weaponHeldAfterDraw, case.name .. "正式拔出未完成或武器不再属于原槽位")
         assert(data.animationRegistered and data.animationLoaded, case.name .. "攻击动作模块未注册或未加载")
         assert(data.damageRegistered and data.damageLoaded, case.name .. "伤害模块未注册或未加载")
         assert(data.shellPrefabId == case.shell, case.name .. "没有复用对应武器外壳")
@@ -73,17 +81,20 @@ for _, weaponCase in ipairs({
         assert(data.animatorUpdateMode == "Normal" and data.simulationOwnedAnimation,
             case.name .. "武器时间轴没有交给游戏 Tick 独占，或仍依赖 Unity FixedUpdate")
         assert(data.actionRequested and data.sawAttackState, case.name .. "公开动作入口没有启动攻击动画")
-        assert(data.sawOpenWindow, case.name .. "攻击动画未打开真实伤害窗")
-        assert(data.sawOpenWindowWithFixedDamageTick, case.name .. "动画伤害窗没有唤醒固定逻辑 Tick")
+        assert(data.weaponRegisteredAtEnd and data.despawnNotifications == 0 and data.weaponWorld == data.playerWorld,
+            case.name .. "攻击期间实例提前回收或失去世界归属")
+        local fixed = data.fixedStep
+        assert(#fixed.windows > 0, case.name .. "攻击动画未在固定步打开真实伤害窗")
+        for _, sample in ipairs(fixed.windows) do
+            assert(sample.inFixedStep and sample.damageTickEnabled, case.name .. "伤害窗没有在固定步中唤醒")
+        end
         if case.timeScale then
-            local fixed = data.fixedStep
             assert(fixed.timeScale == case.timeScale and fixed.targetFrameRate == 30 and fixed.vSyncCount == 0,
                 case.name .. "固定步采样没有处于指定倍率和低帧率")
             assert(fixed.hostileTarget and #fixed.windows > 0 and #fixed.contacts > 0,
                 case.name .. "真实固定步伤害窗未采样，或没有命中/尝试命中隔离目标")
             local sameFrameSteps = false
             for index, sample in ipairs(fixed.windows) do
-                assert(sample.inFixedStep and sample.damageTickEnabled, case.name .. "伤害窗没有在固定步中唤醒")
                 nearWeapon(sample.delta, 1 / 60, case.name .. "固定步时间")
                 if index > 1 and sample.frame == fixed.windows[index - 1].frame then sameFrameSteps = true end
             end
@@ -98,6 +109,7 @@ for _, weaponCase in ipairs({
         assert(data.returnedToIdle and data.finalWindowClosed, case.name .. "单次攻击后未回待机或未关闭伤害窗")
         assert(data.beforeDisableActionRequested and data.inactiveActionRejected, case.name .. "停用前未挥击或失活期间仍能攻击")
         assert(data.disabledWindowClosed and data.disabledHitStopCleared, case.name .. "停用未清理伤害窗与动画速度")
+        assert(data.weaponHeldAfterReactivation, case.name .. "武器在停用或重新启用期间失去原持有实例")
         assert(data.reactivatedIdle and data.reactivatedWindowClosed, case.name .. "再次启用未恢复待机或关闭伤害窗")
         assert(data.reactivatedActionRequested and data.reactivatedAttackState, case.name .. "再次启用后无法正常攻击")
         assert(data.inactiveAnimatorWarning == false, case.name .. "停用时仍对失活 Animator 播放动画")

@@ -1,3 +1,10 @@
+local function maximumDrivenSpeed(samples)
+    assert(#samples > 0, "骑行期间没有采集固定步速度")
+    local maximum = 0
+    for _, sample in ipairs(samples) do maximum = math.max(maximum, sample.drivenSpeed) end
+    return maximum
+end
+
 test.check("world_ready", "自行车隔离世界已进入")
 test.runtime("player", "bicycle_lifecycle", {action = "begin"}, function(data)
     assert(data.available and data.mountedAfterAction and data.bodySimulated and not data.riderBodySimulated and
@@ -7,9 +14,10 @@ test.runtime("player", "bicycle_lifecycle", {action = "begin"}, function(data)
 end, "生成自行车并通过正式交互上车")
 test.move(1, 0, .7)
 test.runtime("player", "bicycle_lifecycle", {action = "land"}, function(data)
-    assert(data.mounted and data.distance > 1 and data.drivenSpeed > 5.5 and data.drivenSpeed <= 6.01 and
+    local speed = maximumDrivenSpeed(data.rideSamples)
+    assert(data.mounted and data.distance > 1 and speed > 5.5 and speed <= 6.01 and
         not data.riderInWater,
-        "真实输入没有驱动自行车或陆地限速失效")
+        "模拟移动输入没有驱动自行车或陆地限速失效")
     assert(data.wheelAngle > .01 and data.sameWheelRotation and data.pedalAngle > .01 and
         data.pedalTransformSynced and data.seatError < .05,
         "骑行车轮或脚踏没有同步转动，或乘员没有准确跟座")
@@ -34,7 +42,8 @@ test.runtime("player", "bicycle_lifecycle", {action = "water"}, function(data)
 end, "松手制动并建立真实涉水区域")
 test.move(1, 0, 1)
 test.runtime("player", "bicycle_lifecycle", {action = "water_sample"}, function(data)
-    assert(data.mounted and data.inWater and data.drivenSpeed > .55 and data.drivenSpeed < .65 and
+    local speed = maximumDrivenSpeed(data.rideSamples)
+    assert(data.mounted and data.inWater and speed > .55 and speed < .65 and
         data.riderTerrainContact and data.riderInWater and data.riderLiquidDepth > 0,
         "真实水面骑行速度没有保持陆地的10%")
 end, "真实水面骑行限速0.6格每秒")

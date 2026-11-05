@@ -6,18 +6,21 @@
   "cases": [
     {
       "id": "narrative_inventory_quest_guide",
+      "contractKind": "mixed",
       "name": "正式背包开关、任务交付与新手引导",
       "luaPath": "GameplayTests/Systems/Quests/narrative_inventory.lua",
       "enabled": true
     },
     {
       "id": "narrative_pickup_quest_guide",
+      "contractKind": "behavior",
       "name": "实际拾取入包、任务自动完成与教程进度",
       "luaPath": "GameplayTests/Systems/Quests/narrative_pickup.lua",
       "enabled": true
     },
     {
       "id": "narrative_event_dialogue",
+      "contractKind": "mixed",
       "name": "正式事件行动通知、取消与主角屏幕气泡",
       "luaPath": "GameplayTests/Systems/Quests/narrative_event_dialogue.lua",
       "enabled": true

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import uuid
+from collections import Counter
 
 ROOT = Path(__file__).resolve().parents[2]
 STREAMING = ROOT / "Assets" / "StreamingAssets"
@@ -80,14 +81,17 @@ def sync():
     matrix = ["# 游戏系统测试索引", "",
               f"当前按源码职责统计 {len(catalog['systems'])} 个测试域，包含玩法系统、平台服务和测试框架。系统之间会共享模块，不按文件夹数量机械计数。",
               "", "每个系统均已有规则入口；以下案例数按当前清单统计，均为部分覆盖，不代表执行结果。共享现场集在总清单中只执行一次；具体断言和缺口以对应 README 为准。",
-              "", "| 分组 | 系统 ID | 系统与覆盖说明 | 规则案例数 | 现场案例数 |",
-              "| --- | --- | --- | ---: | ---: |"]
+              "", "| 分组 | 系统 ID | 系统与覆盖说明 | 规则案例数 | 现场案例数 | 现场契约分类 |",
+              "| --- | --- | --- | ---: | ---: | --- |"]
     for system in catalog["systems"]:
         document = Path(system["coverageDocument"]).relative_to("GameplayTests").as_posix()
+        kinds = Counter(live_ids[case_id.lower()].get("contractKind", "unspecified") for case_id in system["integrationCaseIds"])
+        kind_summary = ", ".join(f"{kind}:{count}" for kind, count in sorted(kinds.items())) or "—"
         matrix.append(f"| {system['group']} | `{system['id']}` | [{system['name']}]({document}) | "
-                      f"{len(system['ruleCaseIds'])} | {len(system['integrationCaseIds'])} |")
+                      f"{len(system['ruleCaseIds'])} | {len(system['integrationCaseIds'])} | {kind_summary} |")
     matrix.extend(["", "现场案例数含共享机械/气液/太空清单，同一案例在总场景清单中只登记一次。零代表目前尚无现场入口，应补对应实际流程。",
                    "", "系统归属、依赖和案例映射以 [systems.catalog.json](systems.catalog.json) 为源；新增主题后运行 `python Tools/GameplayTesting/sync_catalog.py` 更新总入口。",
+                   "", "分类只描述断言边界，不改变案例选择或通过判定；mixed 表示业务与架构仍混合，unspecified 表示尚未归类，均不代表完成解耦。",
                    "", "维护与执行方法见 [README](README.md)。", ""])
     index = TESTS / "系统索引.md"
     index.write_text("\n".join(matrix), encoding="utf-8")
