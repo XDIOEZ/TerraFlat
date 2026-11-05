@@ -90,7 +90,7 @@
     },
     {
       "id": "crafting_electronic_materials_rules",
-      "name": "电子材料目录与三条指定配方",
+      "name": "电子材料目录与电子时代完整配方",
       "luaPath": "GameplayTests/Systems/Crafting/electronic-materials.lua",
       "enabled": true
     },

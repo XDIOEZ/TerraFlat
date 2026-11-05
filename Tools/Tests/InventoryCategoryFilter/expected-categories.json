@@ -342,6 +342,12 @@
     "WildDogMilk_Gray"
   ],
   "material": [
+    "GlassBottle",
+    "VacuumTube",
+    "CircuitBoard",
+    "Transistor",
+    "VacuumTubeLogicModule",
+    "IntegratedCircuit",
     "Beeswax",
     "Bitumen",
     "Bone",

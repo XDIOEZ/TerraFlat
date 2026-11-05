@@ -1,9 +1,10 @@
--- 电子材料目录和三条指定配方独立回归，避免被无关旧断言中断。
+-- 电子材料目录和电子时代完整配方独立回归，避免被无关旧断言中断。
 test.system("crafting", "electronic_material_catalog", {ids = {
     "CarbonFiber", "CarbonFiberPlate", "Ingot_Titanium", "Ingot_Aluminum", "Ingot_Molybdenum", "Ingot_Nickel",
-    "Ore_Mica", "MicaSheet", "Phosphorus", "Fertilizer_Phosphate", "Boron", "Quartz", "Lithium", "Ingot_WroughtIron"
+    "Ore_Mica", "MicaSheet", "Phosphorus", "Fertilizer_Phosphate", "Boron", "Quartz", "Lithium", "Ingot_WroughtIron",
+    "GlassBottle", "VacuumTube", "CircuitBoard", "Transistor", "VacuumTubeLogicModule", "IntegratedCircuit"
 }}, function(data)
-    assert(#data.items == 14, "电子材料或质量比较基准缺失")
+    assert(#data.items == 20, "电子材料或质量比较基准缺失")
     local items = {}
     for _, item in ipairs(data.items) do
         assert(not items[item.id], "电子材料身份重复")
@@ -35,6 +36,18 @@ test.system("crafting", "handmade_catalog", {package = "crafting/electronic_mate
         ["core:electronic_lithium_iron_phosphate_battery"] = {output = "Battery_LithiumIronPhosphate_Summoner", amount = 1,
             materials = {Phosphorus = 1, Lithium = 1, Ingot_WroughtIron = 1, CopperPlate = 1, Rubber = 1}}
     }
+    expected["core:electronic_GlassBottle"] = {output = "GlassBottle", amount = 1, station = "workbench",
+        materials = {Glass = 1}}
+    expected["core:electronic_VacuumTube"] = {output = "VacuumTube", amount = 1, station = "workbench",
+        materials = {GlassBottle = 1, Ingot_Tungsten = 1, MicaSheet = 1, CopperPlate = 1}}
+    expected["core:electronic_CircuitBoard"] = {output = "CircuitBoard", amount = 1, station = "workbench",
+        materials = {SiliconPlate = 1, Resin = 1}}
+    expected["core:electronic_Transistor"] = {output = "Transistor", amount = 1, station = "workbench",
+        materials = {SiliconPlate = 1, Boron = 1, Phosphorus = 1}}
+    expected["core:electronic_VacuumTubeLogicModule"] = {output = "VacuumTubeLogicModule", amount = 1, station = "workbench",
+        materials = {VacuumTube = 3}}
+    expected["core:electronic_IntegratedCircuit"] = {output = "IntegratedCircuit", amount = 1, station = "workbench",
+        materials = {CircuitBoard = 1, Transistor = 1}}
     local function same(before, after)
         assert(#before == #after, "电子材料制作拒绝改变了槽数")
         for i, slot in ipairs(before) do
@@ -49,6 +62,7 @@ test.system("crafting", "handmade_catalog", {package = "crafting/electronic_mate
         assert(wanted and #recipe.warnings == 0, "电子材料配方缺失、引用无效或自主扩展了用途")
         assert(#recipe.expectedOutputs == 1 and recipe.expectedOutputs[1].id == wanted.output
             and recipe.expectedOutputs[1].amount == wanted.amount, "电子材料配方产物错误")
+        if wanted.station then assert(recipe.station == wanted.station, "电子零件未使用现有工作台能力") end
         local kinds, expectedKinds = 0, 0
         for _, _ in pairs(wanted.materials) do expectedKinds = expectedKinds + 1 end
         for _, ingredient in ipairs(recipe.ingredients) do
@@ -74,4 +88,4 @@ test.system("crafting", "handmade_catalog", {package = "crafting/electronic_mate
         expected[recipe.id] = nil
     end
     assert(next(expected) == nil, "电子材料指定配方未全部登记")
-end, "碳纤维树脂制板、磷肥和锂电池：正式配方、精确扣料、逐种缺料和满输出")
+end, "电子时代九条配方：正式目录、精确扣料、逐种缺料和满输出")

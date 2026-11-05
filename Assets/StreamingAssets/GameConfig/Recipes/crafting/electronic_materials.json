@@ -47,6 +47,179 @@
       ],
       "outputs": [{ "itemId": "Battery_LithiumIronPhosphate_Summoner", "amount": 1 }],
       "actions": []
+    },
+    {
+      "id": "core:electronic_GlassBottle",
+      "displayName": "玻璃瓶",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Glass",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "GlassBottle",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_VacuumTube",
+      "displayName": "电子管",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "GlassBottle",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Tungsten",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "MicaSheet",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "VacuumTube",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_CircuitBoard",
+      "displayName": "电路板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "SiliconPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Resin",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CircuitBoard",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_Transistor",
+      "displayName": "晶体管",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "SiliconPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Boron",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Phosphorus",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Transistor",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_VacuumTubeLogicModule",
+      "displayName": "电子管逻辑模块",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "VacuumTube",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "VacuumTubeLogicModule",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:electronic_IntegratedCircuit",
+      "displayName": "集成电路",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "IntegratedCircuit",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

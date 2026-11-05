@@ -1241,6 +1241,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7746d49bd5feab64a84ec04da04e1a9b
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 780f1ed662184beca511bdb04b595f7d
     m_Address: Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png
     m_ReadOnly: 0
@@ -1471,6 +1477,12 @@ MonoBehaviour:
     - ItemSprite
     - Sprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8fbd3a839f1b5044d82c5d02bd64695b
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 90b6f4e4caf243b8933ceabf368e6f1e
     m_Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png
     m_ReadOnly: 0
@@ -1479,6 +1491,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 91523b89bca33bf4a88f86f63a74ecf1
     m_Address: Assets/6_Art/Generated/Building/GrassBed/GrassBed.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 91793d33d6c22174a9ed711eaa0431f8
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2103,6 +2121,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d463411fa22f75247ab75919584525fe
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d5cad94b5cfb4469934746903e66a35c
     m_Address: Assets/6_Art/Generated/Equipment/Spacesuit_Feet/Spacesuit_Feet_Icon.png
     m_ReadOnly: 0
@@ -2306,6 +2330,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e8700496385d253449fb8b4c7b340087
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e89ee2f67e1641ba9926ec08a407aa27
     m_Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png
     m_ReadOnly: 0
@@ -2483,6 +2513,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fcc1fc6afdc05604d9368aa332bc00fc
     m_Address: Assets/6_Art/Generated/WaterVessel/ClayJar/ClayJar_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fd4a65036b7cc8e4cb450f0aa5b9ed4d
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

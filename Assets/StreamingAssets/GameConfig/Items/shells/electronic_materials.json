@@ -335,6 +335,132 @@
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png"
       },
       "modules": {}
+    },
+    {
+      "id": "GlassBottle",
+      "parent": "BasicItem_Base",
+      "gameName": "玻璃瓶",
+      "description": "由玻璃制成的空瓶，收窄的瓶口便于封装，是制作电子管玻璃外壳的基础零件。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.15,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "VacuumTube",
+      "parent": "BasicItem_Base",
+      "gameName": "电子管",
+      "description": "以玻璃瓶封装钨灯丝、金属电极与云母绝缘片的真空电子管，可组装早期逻辑电路。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "CircuitBoard",
+      "parent": "BasicItem_Base",
+      "gameName": "电路板",
+      "description": "硅板与树脂复合成的绿色电路基板，表面布有铜色走线与焊点，用于装配集成电路。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.2,
+      "volume": 0.15,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Transistor",
+      "parent": "BasicItem_Base",
+      "gameName": "晶体管",
+      "description": "以硼、磷掺杂硅板制成的三引脚半导体元件，可控制电流并构成逻辑电路。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.02,
+      "volume": 0.02,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "VacuumTubeLogicModule",
+      "parent": "BasicItem_Base",
+      "gameName": "电子管逻辑模块",
+      "description": "将三个电子管组合到带线路和端子的底板上，构成早期电子逻辑组件。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.8,
+      "volume": 0.7,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "IntegratedCircuit",
+      "parent": "BasicItem_Base",
+      "gameName": "集成电路",
+      "description": "将电路板与晶体管集成为黑色多引脚芯片，是现代电子控制系统的基础零件。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.08,
+      "volume": 0.06,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png"
+      },
+      "modules": {}
     }
   ]
 }
