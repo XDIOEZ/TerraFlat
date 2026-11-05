@@ -35,7 +35,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 出生集中检查当前连接引用、认证、已通过版本/MOD 的 Join 和本连接的 WorldReady；Mirror AddPlayerMessage 不能提前出生。远端名字分配同时避开现有 Player_DIC 档案，本地主机可以接管自己的离线角色。
 - 断线清理须核对连接对象身份：复用相同 connectionId 后，旧连接的延迟回调不得删除新连接握手、出生预约或太空输入/攻击状态。
 - 协议、存档和权威判定使用规范逻辑坐标。`NetworkWorldPlayer.AuthoritativeLogicalPosition` 是服务端玩家位置；Host 中远端 Transform 可能已是本机镜像。`WorldLocalPresentation` 在各客户端选择 owned 玩家附近的表现镜像，远端插值先保存逻辑目标。区块流送消费 `ObserverLogicalPosition`，按观察者并集加载。
-- GM 地表 TP 经 `PlayerTeleportService → NetworkWorldPlayer.Teleport` 的连接所属命令与回执；服务器同时重定位角色、乘员和权威坐标，本机等回执期间停发旧位置，确认后重置速度采样/插值并立即刷新观察窗口。普通移动保留单步限幅，不按显示名识别 GM；太空传送仍沿用原限制。
+- GM 地表 TP 经 `PlayerTeleportService → NetworkWorldPlayer.Teleport` 的连接所属命令与回执；本机先预测瞬移并刷新观察窗口，停发旧位置，服务器再同步角色、乘员与权威坐标。同一请求未确认时允许继续选择落点，仅保留最新待发目标，回执携带新 `RealmRevision` 后发送下一跳；过时回执不可回退新落点。同世界 GM 直传跳过地表到达绘制等待，重生/维度切换仍严格等待就绪。普通移动保留单步限幅，太空传送沿用原限制。
 - 本机动画只读自身移动状态，`ApplyRemoteVisualState` 拒绝 owned 角色；远端最终显示坐标同时写角色 Transform 和刚体，物理步后核对本体、保存和观察者。迁移就绪先刷新正式观察者再核对世界与代际，防止 Host 同帧重生确认被旧代际吞掉。回归并入 `networking/bots_teleport`。
 - GM 地表 TP 与翻滚 Command 均携带玩家 `RealmRevision` 并在服务端处理前拒绝旧代际/迁移中请求；拒绝时回执释放客户端待确认动作，不消耗该请求序号。远端 TP 的坐标归一化、模块位置及观察者更新必须处于连接所属 `NetworkGameplayWorldScope`，Mirror 假人命令签名同步更新。
 - 建造消息校验连接与真实快捷栏材料，`BuildingPlacementService` 处理放置、扣料和回滚；缺少网络发布器时事务回滚。Host 确认回调不重复发布建造进度。
@@ -51,7 +51,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 ## 快照与复制
 
-- `NetworkGameplayProtocol.CurrentVersion=36`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
+- `NetworkGameplayProtocol.CurrentVersion=37`。太空用 `SpaceNetworkSnapshotDeltaCodec` 共享实体字段编码，连接各自维护已发送基线；仅变化字段编码/压缩，首次可见和补拉带完整字段，离视野显式删除。定时广播共用显式采集轮，即时操作另开一轮；分片全部排队后才提交基线。接收冻结数据与表现 DTO 隔离，先重建完整可见集合再应用，完整补拉强制重绑船内资源。回归 `networking/space_snapshot_delta`，离线 `Tools/Tests/SpaceCruise` 的 `--space-network-snapshot-delta` 不代表真实双端通过。
 - 天气地表雪格同时携带 `IceMeltProgress`，排队合并时保留最新进度；客户端仅恢复权威进度，不执行融冰，规则 `networking/weather_surface_ice_merge`。
 
 - 玩家公开快照经 `Item.ModuleSavePublicNetworkState` 调用模块保存：实现 `IPublicNetworkStateSaver` 的模块仅刷新公开字段，未实现的模块仍执行完整保存。`Mod_Inventory` 跳过私有槽位保存和装备收纳袋拆装；正式存档仍走完整 `ModuleSave`。回归 `networking/public_network_save_route`。

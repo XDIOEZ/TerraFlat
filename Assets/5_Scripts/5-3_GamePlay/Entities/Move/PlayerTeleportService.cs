@@ -25,7 +25,8 @@ public static class PlayerTeleportService
             return NetworkRequest?.Invoke(player, logical, succeeded =>
             {
                 if (succeeded) Debug.Log($"[GM] 玩家已传送到逻辑位置: {logical}");
-                else Debug.LogWarning("[GM] 联机传送未完成，服务器拒绝了请求或连接已结束。");
+                else if (completed != null)
+                    Debug.LogWarning("[GM] 本次传送已被更新的传送目标覆盖，或未通过服务器确认。");
                 completed?.Invoke(succeeded);
             }) == true;
 

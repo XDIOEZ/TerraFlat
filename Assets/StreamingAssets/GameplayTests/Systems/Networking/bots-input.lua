@@ -79,10 +79,13 @@ test.runtime("networking", "bots_teleport", {}, function(data)
     assert(data.afterRejected.revision == data.teleported.revision, "拒绝的请求重复执行了传送")
     assert_position(data.afterFresh, data.otherX, data.otherY, "旧世界请求拒绝后的新世界合法传送")
     assert(data.afterFresh.revision > data.afterRejected.revision, "旧世界拒绝后当前世界传送没有刷新代际")
+    assert_position(data.continuousTeleport, data.continuousX, data.continuousY, "连续 GM 传送")
+    assert(data.continuousTeleport.revision > data.afterFresh.revision and data.continuousTeleport.directTeleport,
+        "连续 GM 传送未使用新世界代际，或错误进入普通加载事务")
     assert(near(data.witnessBefore.x, data.witnessAfter.x) and near(data.witnessBefore.y, data.witnessAfter.y),
         "传送影响了另一名玩家")
     assert_position(data.afterMove, data.nextX, data.nextY, "传送后的普通移动")
-    assert(data.afterMove.revision == data.afterFresh.revision and data.afterMove.velocity == 0,
+    assert(data.afterMove.revision == data.continuousTeleport.revision and data.afterMove.velocity == 0,
         "普通移动改变了世界代际，或物理步后没有保持停止位置")
     local visual = data.visualOwnership
     assert(visual.ownedMoving > .1 and visual.ownedIdle < .001,

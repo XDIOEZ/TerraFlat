@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -73,6 +73,16 @@ public partial class GameManager
                 if (SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true)
                 {
                     yield return ApplyShipInteriorNetworkObserver(player, observer, key);
+                    continue;
+                }
+                if (!observer.InSpace && observer.IsDirectSurfaceTeleport && key == networkLocalWorldKey &&
+                    !localSpacePresentationActive && player.gameObject.scene.name == key &&
+                    !DimensionManager.Instance.IsTransitioning)
+                {
+                    // GM 同世界瞬移不冻结输入或等待区块绘制；客户端落点已预测/回执校正。
+                    PlayerTeleportService.RequestSurfaceStreaming(player);
+                    NetworkDimensionBridge.NotifyPresentationReady(player, key);
+                    CompleteNetworkLocalSurface(observer, key);
                     continue;
                 }
                 bool enteringSpace = observer.InSpace && !localSpacePresentationActive;

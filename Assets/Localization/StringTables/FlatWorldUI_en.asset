@@ -18,6 +18,22 @@ MonoBehaviour:
   m_Metadata:
     m_Items: []
   m_TableData:
+  - m_Id: 202611051800001
+    m_Localized: "Keep clicking the world to teleport. Press Cancel to exit."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800002
+    m_Localized: "Teleporting is not available in the current world."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800003
+    m_Localized: "Biome found. Teleported locally; synchronizing with the server."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 202611051800004
+    m_Localized: "Tile found. Teleported locally; synchronizing with the server."
+    m_Metadata:
+      m_Items: []
   - m_Id: 202611040900003
     m_Localized: "Save & Exit"
     m_Metadata:
