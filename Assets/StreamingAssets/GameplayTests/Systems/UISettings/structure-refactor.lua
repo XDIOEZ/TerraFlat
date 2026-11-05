@@ -21,3 +21,24 @@ test.system("ui_settings", "shared_checkbox_prefabs", {}, function(data)
     assert(data.offAlpha == 0 and data.onAlpha == 1, "复选框开关状态未控制填充显隐")
     assert(data.silentEvents == 0 and data.changeEvents == 1, "复选框静默赋值或变更事件异常")
 end, "全局共享复选框填充与原生状态契约")
+
+test.system("ui_settings", "shared_progress_bars", {}, function(data)
+    assert(#data.unshared == 0, "仍有进度条未引用公共预制体：" .. table.concat(data.unshared, ", "))
+    assert(#data.brokenVisuals == 0, "进度条填充或方向错误：" .. table.concat(data.brokenVisuals, ", "))
+    assert(#data.brokenBindings == 0, "业务面板的进度条引用丢失：" .. table.concat(data.brokenBindings, ", "))
+    assert(data.interactiveSliderUnchanged, "可交互设置滑块被错误接入进度过渡")
+    assert(#data.samples == 8, "进度条方向或填充类型采样不完整")
+    for _, sample in ipairs(data.samples) do
+        assert(sample.directionCorrect, "填充图片的方向与进度条方向不一致")
+        assert(math.abs(sample.initial - .2) < .001 and math.abs(sample.target - .8) < .001,
+            "初始显示或业务目标值异常")
+        assert(sample.increasing > .2 and sample.increasing < .8,
+            "增加数值时没有显示中间过渡")
+        assert(sample.reversing > .1 and sample.reversing < sample.increasing,
+            "过渡途中减少时没有从当前显示位置平滑改向")
+        assert(math.abs(sample.completed - .1) < .001 and math.abs(sample.reopened - .7) < .001,
+            "过渡结束或重新启用后的显示值错误")
+        assert(sample.silentEvents == 0 and sample.changeEvents == 1,
+            "过渡影响了 Slider 的静默赋值或变更事件")
+    end
+end, "公共进度条引用、四方向与增减过渡")

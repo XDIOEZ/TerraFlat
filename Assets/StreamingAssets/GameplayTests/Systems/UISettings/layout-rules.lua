@@ -14,6 +14,7 @@ for _, case in ipairs({
 }) do
     test.system("ui_settings", "food_segmented_bar", case, function(data)
         assert(data.rowCount == 5 and data.ordinarySliders == 4, "正式生存 HUD 仍保留旧营养条")
+        assert(data.sharedFoodTrack, "三段食物条没有引用公共进度条基础")
         assert(data.bounded and data.inputTransparent and data.themePreserved,
             "食物图例越界、拦截操作或三色被主题覆盖")
         for index = 1, 3 do

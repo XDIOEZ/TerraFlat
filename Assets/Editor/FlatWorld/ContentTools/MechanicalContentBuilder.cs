@@ -252,10 +252,14 @@ public static class MechanicalContentBuilder
     private static void EnsureBatteryGauge(MechanicalPanelView view)
     {
         if (view.BatteryCharge != null && view.BatteryPercentage != null) return;
-        var gaugeObject = new GameObject("FWUI_BatteryCharge", typeof(RectTransform), typeof(Slider));
+        Slider slider = RuntimeUIPrefabBuilder.CreateSharedProgressBar("FWUI_BatteryCharge", view.InnerField);
+        var gaugeObject = slider.gameObject;
         gaugeObject.layer = view.InnerField.gameObject.layer;
         var gauge = (RectTransform)gaugeObject.transform;
-        gauge.SetParent(view.InnerField, false);
+        gaugeObject.GetComponent<Image>().color = Color.clear;
+        gauge.Find("Background").gameObject.SetActive(false);
+        gauge.Find("Fill Area").gameObject.SetActive(false);
+        gaugeObject.AddComponent<UIVisualOwner>();
         gauge.anchorMin = gauge.anchorMax = new Vector2(1, .5f);
         gauge.anchoredPosition = new Vector2(-120, 0);
         gauge.sizeDelta = new Vector2(72, 98);
@@ -293,7 +297,6 @@ public static class MechanicalContentBuilder
         label.rectTransform.offsetMin = new Vector2(4, 4); label.rectTransform.offsetMax = new Vector2(-4, -4);
         label.text = "50%";
 
-        var slider = gaugeObject.GetComponent<Slider>();
         slider.fillRect = fill.rectTransform;
         slider.direction = Slider.Direction.BottomToTop;
         slider.minValue = 0; slider.maxValue = 1;

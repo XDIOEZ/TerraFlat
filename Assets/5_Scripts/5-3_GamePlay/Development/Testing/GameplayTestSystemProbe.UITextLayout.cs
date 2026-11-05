@@ -75,7 +75,9 @@ public static partial class GameplayTestSystemProbe
                     graphic.ThirdColor == third && graphic.color == Color.white && UIVisualOwner.OwnsVisuals(graphic),
                 ["bounded"] = bounded, ["inputTransparent"] = transparent,
                 ["rowCount"] = source.parent.childCount,
-                ["ordinarySliders"] = prefab.GetComponentsInChildren<Slider>(true).Length };
+                ["ordinarySliders"] = prefab.GetComponentsInChildren<Slider>(true).Length -
+                    source.GetComponentsInChildren<Slider>(true).Length,
+                ["sharedFoodTrack"] = source.Find("FoodTrack").GetComponent<SmoothProgressBarVisual>() != null };
         }
         finally { Object.DestroyImmediate(holder); }
     }

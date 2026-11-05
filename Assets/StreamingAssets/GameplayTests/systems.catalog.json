@@ -1312,6 +1312,10 @@
       "name": "UI与设置",
       "group": "共享支撑",
       "sourcePaths": [
+        "Assets/2_Prefabs/2-1_UI/*",
+        "Assets/2_Prefabs/Gameplay/Player/Human.prefab",
+        "Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder*.cs",
+        "Assets/Editor/FlatWorld/ContentTools/MechanicalContentBuilder.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestPhysicalDeviceArtworkRules.cs",
         "Assets/Editor/FlatWorld/PrefabBuilders/UI/PhysicalDeviceArtwork*.cs",
         "Tools/UIArtwork/*",

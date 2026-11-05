@@ -430,7 +430,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
         }
 
         float healthRatio = MaxHp > 0f ? Mathf.Clamp01(Hp / MaxHp) : 0f;
-        UIValues.GetImage("血量").rectTransform.localScale = new Vector3(healthRatio, 1f, 1f);
+        UIValues.GetSlider("血量").SetValueWithoutNotify(healthRatio);
     }
 
 

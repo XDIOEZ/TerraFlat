@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,14 +11,6 @@ using UnityEngine.UI;
 public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposable
 {
     private const float StatusBarTransitionDuration = 0.24f;
-
-    private struct StatusBarTransition
-    {
-        public Slider Slider;
-        public float StartValue;
-        public float TargetValue;
-        public float Elapsed;
-    }
 
     private struct DisplayedRange
     {
@@ -35,8 +26,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private readonly Action<GameObject> writePanelInstance;
     private readonly Func<BasePanel> readPanel;
     private readonly Action<BasePanel> writePanel;
-    private readonly Dictionary<Slider, float> statusBarTargets = new Dictionary<Slider, float>();
-    private readonly List<StatusBarTransition> statusBarTransitions = new List<StatusBarTransition>(8);
     private Coroutine statusBarTransitionCoroutine;
     private BasePanel boundPanel;
     private ThreeSegmentStatusBarGraphic foodFillGraphic;
@@ -158,7 +147,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     {
         GameObject panelInstance = readPanelInstance?.Invoke();
         BasePanel registeredPanel = readPanel?.Invoke();
-        StopStatusBarTransitions();
         ClearPanelBindings();
         writePanel?.Invoke(null);
         writePanelInstance?.Invoke(null);
@@ -301,7 +289,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         if (statusBarTransitionCoroutine != null && boundPanel != null)
             boundPanel.StopCoroutine(statusBarTransitionCoroutine);
         statusBarTransitionCoroutine = null;
-        StopStatusBarTransitions();
         ResetTemperatureWarningColor();
         boundPanel = null;
         foodFillGraphic = null;
@@ -564,87 +551,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     #region 状态条过渡
 
-    /// <summary>首次绑定直接同步，后续变化用非缩放时间平滑推动填充条左右移动。</summary>
+    /// <summary>写入真实值，填充过渡由公共进度条负责。</summary>
     private void SetStatusBarValue(Slider slider, float minValue, float maxValue, float targetValue)
     {
         float safeMaxValue = Mathf.Max(minValue, maxValue);
-        float clampedTarget = Mathf.Clamp(targetValue, minValue, safeMaxValue);
         slider.minValue = minValue;
         slider.maxValue = safeMaxValue;
-
-        if (!statusBarTargets.TryGetValue(slider, out float previousTarget))
-        {
-            statusBarTargets.Add(slider, clampedTarget);
-            slider.SetValueWithoutNotify(clampedTarget);
-            return;
-        }
-
-        if (Mathf.Approximately(previousTarget, clampedTarget))
-            return;
-
-        statusBarTargets[slider] = clampedTarget;
-        if (Mathf.Approximately(slider.value, clampedTarget))
-        {
-            slider.SetValueWithoutNotify(clampedTarget);
-            RemoveStatusBarTransition(slider);
-            return;
-        }
-
-        for (int i = 0; i < statusBarTransitions.Count; i++)
-        {
-            if (statusBarTransitions[i].Slider != slider)
-                continue;
-
-            StatusBarTransition transition = statusBarTransitions[i];
-            transition.StartValue = slider.value;
-            transition.TargetValue = clampedTarget;
-            transition.Elapsed = 0f;
-            statusBarTransitions[i] = transition;
-            return;
-        }
-
-        statusBarTransitions.Add(new StatusBarTransition
-        {
-            Slider = slider,
-            StartValue = slider.value,
-            TargetValue = clampedTarget,
-            Elapsed = 0f
-        });
-    }
-
-    private void AdvanceStatusBarTransitions(float unscaledDeltaTime)
-    {
-        float deltaTime = Mathf.Max(0f, unscaledDeltaTime);
-        for (int i = statusBarTransitions.Count - 1; i >= 0; i--)
-        {
-            StatusBarTransition transition = statusBarTransitions[i];
-            if (transition.Slider == null)
-            {
-                statusBarTransitions.RemoveAt(i);
-                continue;
-            }
-
-            transition.Elapsed += deltaTime;
-            float t = StatusBarTransitionDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(transition.Elapsed / StatusBarTransitionDuration);
-            float inverse = 1f - t;
-            float eased = 1f - inverse * inverse * inverse;
-            transition.Slider.SetValueWithoutNotify(Mathf.LerpUnclamped(
-                transition.StartValue,
-                transition.TargetValue,
-                eased));
-
-            if (t >= 1f)
-            {
-                transition.Slider.SetValueWithoutNotify(transition.TargetValue);
-                statusBarTransitions.RemoveAt(i);
-            }
-            else
-            {
-                statusBarTransitions[i] = transition;
-            }
-        }
+        slider.SetValueWithoutNotify(Mathf.Clamp(targetValue, minValue, safeMaxValue));
     }
 
     /// <summary>常驻 HUD 用一条复用协程逐帧推进状态条，避免为每次刷新创建 Tween 和闭包。</summary>
@@ -652,28 +565,11 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     {
         while (owner != null && boundPanel == owner)
         {
-            AdvanceStatusBarTransitions(Time.unscaledDeltaTime);
             if (foodFillGraphic != null)
                 foodFillGraphic.AdvanceTransition(Time.unscaledDeltaTime);
             AdvanceTemperatureWarningColor(Time.unscaledDeltaTime);
             yield return null;
         }
-    }
-
-    private void RemoveStatusBarTransition(Slider slider)
-    {
-        for (int i = statusBarTransitions.Count - 1; i >= 0; i--)
-        {
-            if (statusBarTransitions[i].Slider == slider)
-                statusBarTransitions.RemoveAt(i);
-        }
-    }
-
-    /// <summary>释放面板前终止所有状态条动画，避免销毁后仍访问 Slider。</summary>
-    private void StopStatusBarTransitions()
-    {
-        statusBarTransitions.Clear();
-        statusBarTargets.Clear();
     }
 
     #endregion
