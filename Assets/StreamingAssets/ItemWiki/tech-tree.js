@@ -7,6 +7,7 @@
     const TRACK_WIDTH = 256;
     const ROW_HEIGHT = 88;
     const ROWS_PER_TRACK = 13;
+    const OVERVIEW_ZOOM = .35;
     const SVG_NS = "http://www.w3.org/2000/svg";
     const KIND_NAMES = { ingredient: "材料", tool: "工具条件", station: "设备条件", processing: "加工", placement: "放置", transition: "状态转化", loot: "采集与掉落", harvest: "采收", crafting: "制作", smelting: "冶炼", reaction: "反应", mechanical: "机械加工", production: "生产" };
     const CONDITION_NAMES = {
@@ -124,7 +125,6 @@
                 <label class="tt-search"><span>找物品</span><input id="ttSearch" type="search" autocomplete="off" placeholder="名称、ID、材料…"></label>
                 <label><span>时代</span><select id="ttEra"><option value="">全部时代</option></select></label>
                 <label><span>类别</span><select id="ttCategory"><option value="">全部类别</option></select></label>
-                <label><span>连线</span><select id="ttEdgeMode"><option value="trunk">主干＋所选依赖</option><option value="all">全部真实关系</option><option value="focus">仅所选关系</option></select></label>
                 <label class="tt-chain-toggle"><input id="ttChain" type="checkbox"><span>只看所选依赖链</span></label>
                 <button id="ttResetFilters" type="button">清空筛选</button>
             </div>
@@ -149,7 +149,7 @@
             </div>
             <details class="tt-notes"><summary>分期规则与数据说明 <span id="ttWarningCount"></span></summary><div id="ttNotesBody"></div></details>`;
         const get = id => root.querySelector(`#${id}`);
-        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "EdgeMode", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
+        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
         const state = {
             model: null, nodes: new Map(), routes: new Map(), incoming: new Map(), outgoing: new Map(),
             selected: "", route: "", query: "", globalQuery: "", visible: [], shown: false, layout: null,
@@ -369,24 +369,9 @@
         function renderEdges() {
             if (!state.layout) return;
             const positions = state.layout.positions;
-            const available = state.model.edges.filter(edge => edge.source !== edge.target && positions.has(edge.source) && positions.has(edge.target));
-            const focused = new Set(relatedEdges().map(edge => edge.id));
-            let edges = [];
-            if (els.EdgeMode.value === "all" || els.Chain.checked) edges = available;
-            else if (els.EdgeMode.value === "trunk") {
-                const trunks = new Map();
-                for (const edge of available) {
-                    if (edge.feedback) continue;
-                    const source = state.nodes.get(keyOf(edge.source)), target = state.nodes.get(keyOf(edge.target));
-                    if (!source || !target || source.stageIndex > target.stageIndex) continue;
-                    const score = (edge.optional ? 10000 : 0) + (["tool", "station"].includes(edge.kind) ? 5000 : 0) + Math.abs(target.stageIndex - source.stageIndex) * 100 + Math.abs((target.depth || 0) - (source.depth || 0));
-                    if (!trunks.has(edge.target) || trunks.get(edge.target).score > score) trunks.set(edge.target, { edge, score });
-                }
-                const selected = new Map([...trunks.values()].map(({ edge }) => [edge.id, edge]));
-                available.filter(edge => focused.has(edge.id)).forEach(edge => selected.set(edge.id, edge));
-                edges = [...selected.values()];
-            } else edges = available.filter(edge => focused.has(edge.id));
-            edges.sort((a, b) => Number(focused.has(a.id)) - Number(focused.has(b.id)));
+            const edges = relatedEdges().filter(edge => edge.source !== edge.target && positions.has(edge.source) && positions.has(edge.target));
+            els.EdgeNote.textContent = state.selected ? `仅高亮所选物品的直接关系，共 ${edges.length} 条。` : "连线默认隐藏，选中物品后高亮它的直接上下游。";
+            if (!edges.length) { els.Edges.replaceChildren(); return; }
             const fragment = document.createDocumentFragment();
             const defs = document.createElementNS(SVG_NS, "defs");
             for (const [name, color] of [["material", "#9fbb9a"], ["requirement", "#8caed2"], ["optional", "#ddb878"], ["feedback", "#bf93b1"]]) {
@@ -405,7 +390,7 @@
                 const bend = forward ? Math.min(260, Math.max(30, (x2 - x1) * .45)) : 70;
                 const path = document.createElementNS(SVG_NS, "path");
                 const kind = edge.optional ? "optional" : edge.feedback || edge.kind === "transition" ? "feedback" : ["tool", "station"].includes(edge.kind) ? "requirement" : "material";
-                path.setAttribute("class", `tt-edge ${kind}${focused.has(edge.id) ? " is-focused" : state.selected ? " is-muted" : ""}`);
+                path.setAttribute("class", `tt-edge ${kind} is-focused`);
                 path.setAttribute("d", forward ? `M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2},${y2}` : `M${x1},${y1} C${x1 + bend},${y1} ${x1 + bend},${Math.min(y1, y2) - 55} ${x1},${Math.min(y1, y2) - 55} L${x2 - bend},${Math.min(y1, y2) - 55} C${x2 - bend},${Math.min(y1, y2) - 55} ${x2 - bend},${y2} ${x2},${y2}`);
                 // 资源区与技术主线之间从上下边缘连接，避免绕回最左边。
                 if (Boolean(source.natural) !== Boolean(target.natural)) {
@@ -422,22 +407,22 @@
                 path.append(title); fragment.append(path);
             }
             els.Edges.replaceChildren(fragment);
-            els.EdgeNote.textContent = els.Chain.checked ? `依赖链已展开，当前绘制 ${edges.length} 条关系。替代路线和循环关系仍分别保留。`
-                : els.EdgeMode.value === "trunk" ? `主干模式：每个物品保留一条真实前置关系，点选后补全它的全部相邻关系；当前 ${edges.length} 条。`
-                : els.EdgeMode.value === "focus" ? `仅显示所选物品的直接关系，共 ${edges.length} 条。`
-                : `显示当前物品之间的全部关系，共 ${edges.length} 条。连线密集时可切回主干模式。`;
         }
 
         function observeIcons() {
+            state.observer?.disconnect();
+            if (!state.shown || state.zoom < OVERVIEW_ZOOM) return;
             const generation = state.generation;
             const fill = async button => {
                 const node = state.nodes.get(keyOf(button.dataset.id));
                 if (!node) return;
                 const host = button.querySelector(".tt-node-icon");
+                if (host.children.length) return;
                 await fillIcon(host, node, generation);
             };
             if (typeof IntersectionObserver === "function") {
                 state.observer = new IntersectionObserver(entries => {
+                    if (!state.shown || state.zoom < OVERVIEW_ZOOM) return;
                     entries.filter(entry => entry.isIntersecting).forEach(entry => { state.observer.unobserve(entry.target); fill(entry.target); });
                 }, { root: els.Viewport, rootMargin: "160px" });
                 for (const button of els.Nodes.children) state.observer.observe(button);
@@ -459,13 +444,15 @@
         // #region 物品来源、替代组与下游详情
         function select(id, options = {}) {
             if (!state.model) return;
+            const wasChain = els.Chain.checked;
             const node = state.nodes.get(keyOf(id));
             state.selected = node?.id || ""; state.route = "";
+            if (!node) els.Chain.checked = false;
             if (node && options.reveal !== false && !state.layout.positions.has(node.id)) {
                 state.query = ""; state.globalQuery = ""; els.Search.value = ""; els.Era.value = ""; els.Category.value = "";
                 clearGlobalSearch?.();
                 render();
-            } else if (els.Chain.checked) render();
+            } else if (wasChain) render();
             else { updateSelection(); renderEdges(); }
             renderDetail();
             if (options.notify !== false) onSelect?.(state.selected);
@@ -496,7 +483,7 @@
             els.Detail.append(hero); fillIcon(hero.querySelector(".tt-detail-icon"), node, state.generation);
             const actions = element("div", "tt-detail-actions");
             const archive = element("button", "tt-primary", "打开物品档案 ↗"); archive.type = "button"; archive.addEventListener("click", () => openItem(node.id));
-            const clear = element("button", "", "取消选择"); clear.type = "button"; clear.addEventListener("click", () => { els.Chain.checked = false; select(""); });
+            const clear = element("button", "", "取消选择"); clear.type = "button"; clear.addEventListener("click", () => select(""));
             actions.append(archive, clear); els.Detail.append(actions);
             if (!state.layout.positions.has(node.id)) {
                 const warning = element("div", "tt-detail-warning", "所选物品被当前筛选隐藏。 ");
@@ -641,15 +628,21 @@
             state.frame = requestAnimationFrame(() => {
                 state.frame = 0;
                 if (!state.layout || !state.shown) return;
+                // 尺寸先读后写，远景仅保留可点选的物品轮廓，避免全图文字与原图反复栅格化。
+                const viewportWidth = els.Viewport.clientWidth;
+                const overview = state.zoom < OVERVIEW_ZOOM;
+                const overviewChanged = els.Surface.classList.contains("is-overview") !== overview;
+                const distance = Math.max(0, state.layout.width * state.zoom - viewportWidth + 60);
+                const worldX = (viewportWidth * .35 - state.x) / state.zoom;
+                const box = state.layout.eras.find(value => worldX >= value.x && worldX <= value.x + value.width) || state.layout.eras.find(value => value.x > worldX) || state.layout.eras.at(-1);
+                els.Surface.classList.toggle("is-overview", overview);
                 els.Surface.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.zoom})`;
                 els.ZoomValue.textContent = `${Math.round(state.zoom * 100)}%`;
-                const distance = Math.max(0, state.layout.width * state.zoom - els.Viewport.clientWidth + 60);
                 els.Pan.disabled = distance === 0;
                 els.Pan.value = String(distance ? Math.round((36 - state.x) / distance * 1000) : 0);
-                const worldX = (els.Viewport.clientWidth * .35 - state.x) / state.zoom;
-                const box = state.layout.eras.find(value => worldX >= value.x && worldX <= value.x + value.width) || state.layout.eras.find(value => value.x > worldX) || state.layout.eras.at(-1);
                 els.PanEra.textContent = box?.era.name || "";
                 for (const button of els.EraNav.children) button.classList.toggle("is-current", button.dataset.era === box?.era.id);
+                if (overviewChanged) observeIcons();
             });
         }
 
@@ -687,11 +680,10 @@
             if (!state.initialized) { state.initialized = true; home(); }
             requestAnimationFrame(() => {
                 updateTransform();
-                state.observer?.disconnect();
                 observeIcons();
             });
         }
-        function hide() { setExpanded(false); state.shown = false; }
+        function hide() { setExpanded(false); state.shown = false; state.observer?.disconnect(); }
 
         // 铺满网页时复用原画布，退出后保留浏览位置并恢复页面焦点。
         const overlay = element("section", "tt-canvas-overlay");
@@ -754,7 +746,6 @@
             }
             render(); renderDetail(); fit();
         });
-        els.EdgeMode.addEventListener("change", renderEdges);
         els.ResetFilters.addEventListener("click", clearFilters);
         els.ZoomOut.addEventListener("click", () => zoomAt(state.zoom / 1.25));
         els.ZoomIn.addEventListener("click", () => zoomAt(state.zoom * 1.25));

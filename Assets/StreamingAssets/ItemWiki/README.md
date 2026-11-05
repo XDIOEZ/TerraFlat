@@ -17,6 +17,8 @@ Unity 内亦可由菜单「FlatWorld → 物品百科 → 打开 ItemWiki」启�
 
 科技树画布上方的「铺满网页」会隐藏导航、筛选和详情，只保留可拖拽、缩放的画布。按 Esc 或点击右上角「退出铺满」返回，浏览位置和选择会保留。
 
+科技树默认隐藏连线，选择物品后只高亮直接上下游；「只看所选依赖链」筛选全部上下游物品，连线仍聚焦所选物品。缩放低于 35% 时只画可点选的卡片轮廓，暂停加载画布图标；放大后恢复名称、图标和详情。
+
 ## 启动
 
 双击本目录的 `打开物品Wiki.cmd`。需要 Python 3，默认打开：
@@ -95,9 +97,21 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 node Assets/StreamingAssets/ItemWiki/tests/maintenance.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/balance-tuning.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-model.test.js
+node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-layout.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/behavior-tree-model.test.js
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_wiki_maintenance.py
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_balance_tuning.py
 ```
 
 增加浏览器脚本或新的数据源时，同时检查 `wiki_server.py` 的公开白名单；公开模式不能因为新页面而开放整个项目目录。
+
+连线、依赖链清选、远近景图标加载及铺满状态的浏览器回归使用独立测试页面，不依赖 Wiki 服务。首次安装测试工具到已忽略的 Library，再运行：
+
+```powershell
+npm install --prefix Library/ItemWikiBrowserValidation --no-audit --no-fund playwright-core
+$env:ITEM_WIKI_PLAYWRIGHT_MODULE = (Resolve-Path Library/ItemWikiBrowserValidation/node_modules/playwright-core).Path
+node Library/ItemWikiBrowserValidation/node_modules/playwright-core/cli.js install chromium
+node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-browser.test.js
+```
+
+已有 Chromium 时可设置 `ITEM_WIKI_CHROMIUM_PATH` 指向其可执行文件，省略浏览器安装。
