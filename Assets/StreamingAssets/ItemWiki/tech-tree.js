@@ -33,8 +33,8 @@
     };
     const valueText = value => typeof value === "object" ? JSON.stringify(value) : String(value);
 
-    // 技术按时代排列，自然资源在中下方按下游用途排序，缩短跨时代连线。
-    function layout(nodes, stages, eras, includeEmpty, edges = []) {
+    // 技术按时代排列，自然资源按已知生物群系组合分区且每种物品只放一次。
+    function layout(nodes, stages, eras, includeEmpty) {
         const positions = new Map(), stageBoxes = [], eraBoxes = [];
         const byStage = new Map(), natural = nodes.filter(node => node.naturalResource);
         for (const node of nodes) {
@@ -71,41 +71,31 @@
         const width = Math.max(720, x), mainHeight = Math.max(480, 176 + maxRows * ROW_HEIGHT);
         let resourceBox = null;
         if (natural.length) {
-            const outgoing = new Map(), naturalIds = new Set(natural.map(node => node.id));
-            for (const edge of edges) {
-                if (["tool", "station"].includes(edge.kind)) continue;
-                if (!outgoing.has(edge.source)) outgoing.set(edge.source, new Set());
-                outgoing.get(edge.source).add(edge.target);
+            const grouped = new Map();
+            for (const node of natural) {
+                const group = node.resourceGroup || { id: "unknown", name: "群系未标注", description: "尚无可解析的群系来源", order: 99 };
+                if (!grouped.has(group.id)) grouped.set(group.id, { ...group, members: [] });
+                grouped.get(group.id).members.push(node);
             }
-            const preferredX = node => {
-                const consumers = new Set(), visited = new Set([node.id]), queue = [node.id];
-                for (let index = 0; index < queue.length; index++) {
-                    for (const id of outgoing.get(queue[index]) || []) {
-                        if (visited.has(id)) continue;
-                        visited.add(id);
-                        if (naturalIds.has(id)) queue.push(id);
-                        else if (positions.has(id)) consumers.add(positions.get(id).x + NODE_WIDTH / 2);
-                    }
-                }
-                const values = [...consumers].sort((a, b) => a - b);
-                return values.length ? values[Math.floor(values.length / 2)] : width / 2;
-            };
-            const ordered = natural.map(node => ({ node, preferred: preferredX(node) }))
-                .sort((a, b) => a.preferred - b.preferred || a.node.name.localeCompare(b.node.name, "zh-CN"));
-            const columns = Math.min(natural.length, Math.max(1, Math.min(Math.floor(width * .5 / TRACK_WIDTH), Math.ceil(Math.sqrt(natural.length * 1.5)))));
-            const rows = Math.ceil(natural.length / columns), bandWidth = columns * TRACK_WIDTH + 40;
-            resourceBox = { x: (width - bandWidth) / 2, y: mainHeight + 64, width: bandWidth, height: 112 + rows * ROW_HEIGHT, count: natural.length };
-            const occupied = Array(columns).fill(0);
-            for (const { node, preferred } of ordered) {
-                const ideal = Math.max(0, Math.min(columns - 1, Math.round((preferred - resourceBox.x - 20 - NODE_WIDTH / 2) / TRACK_WIDTH)));
-                let column = -1;
-                for (let candidate = 0; candidate < columns; candidate++) {
-                    if (occupied[candidate] >= rows) continue;
-                    if (column < 0 || Math.abs(candidate - ideal) < Math.abs(column - ideal)) column = candidate;
-                }
-                positions.set(node.id, { x: resourceBox.x + 20 + column * TRACK_WIDTH,
-                    y: resourceBox.y + 84 + occupied[column]++ * ROW_HEIGHT, node, natural: true });
+            const groups = [...grouped.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+            const bandWidth = Math.min(width, Math.max(720, Math.min(width * .5, 12 * TRACK_WIDTH + 88)));
+            const maxColumns = Math.max(1, Math.floor((bandWidth - 72) / TRACK_WIDTH));
+            resourceBox = { x: (width - bandWidth) / 2, y: mainHeight + 64, width: bandWidth, count: natural.length, groups: [] };
+            let left = 20, top = 92, rowHeight = 0;
+            for (const group of groups) {
+                const columns = Math.min(3, maxColumns, Math.ceil(group.members.length / 8)), rows = Math.ceil(group.members.length / columns);
+                const groupWidth = columns * TRACK_WIDTH + 32, groupHeight = 112 + rows * ROW_HEIGHT;
+                if (left > 20 && left + groupWidth > bandWidth - 20) { left = 20; top += rowHeight + 24; rowHeight = 0; }
+                const box = { ...group, x: resourceBox.x + left, y: resourceBox.y + top, width: groupWidth, height: groupHeight, count: group.members.length };
+                resourceBox.groups.push(box);
+                group.members.sort((a, b) => a.name.localeCompare(b.name, "zh-CN")).forEach((node, index) => {
+                    positions.set(node.id, { x: box.x + 16 + Math.floor(index / rows) * TRACK_WIDTH,
+                        y: box.y + 88 + index % rows * ROW_HEIGHT, node, natural: true });
+                });
+                left += groupWidth + 24;
+                rowHeight = Math.max(rowHeight, groupHeight);
             }
+            resourceBox.height = top + rowHeight + 20;
         }
         return { positions, stages: stageBoxes, eras: eraBoxes, width, mainHeight, resourceBox,
             height: resourceBox ? resourceBox.y + resourceBox.height + 24 : mainHeight };
@@ -231,7 +221,7 @@
                 if (els.Era.value && node.eraId !== els.Era.value) return false;
                 if (els.Category.value && (node.entry?.category || "其他") !== els.Category.value) return false;
                 if (chain && !chain.has(node.id)) return false;
-                const search = `${node.name} ${node.id} ${node.entry?.searchBlob || ""}`.toLowerCase();
+                const search = `${node.name} ${node.id} ${node.entry?.searchBlob || ""} ${(node.resourceHabitats || []).join(" ")}`.toLowerCase();
                 return words.every(word => search.includes(word));
             });
         }
@@ -289,7 +279,7 @@
             state.observer?.disconnect();
             state.visible = filterNodes();
             const filtered = !!(els.Era.value || els.Category.value || state.query || state.globalQuery || els.Chain.checked);
-            state.layout = layout(state.visible, state.model.stages, state.model.eras, !filtered, state.model.edges);
+            state.layout = layout(state.visible, state.model.stages, state.model.eras, !filtered);
             els.Surface.style.width = `${state.layout.width}px`;
             els.Surface.style.height = `${state.layout.height}px`;
             els.Edges.setAttribute("width", String(state.layout.width));
@@ -303,7 +293,7 @@
                 button.style.setProperty("--era-color", colorOf(state.model.eras.find(era => era.id === node.eraId)?.color));
                 const routeCount = node.recipes?.length || 0;
                 button.innerHTML = `<span class="tt-node-icon" aria-hidden="true">◇</span><span class="tt-node-copy"><strong>${escapeHtml(node.name)}</strong><small>${escapeHtml(node.id)}</small><span>${node.naturalResource ? "自然资源" : escapeHtml(node.entry?.category || "其他")} <b>${node.special ? escapeHtml(node.specialLabel || "特殊") : routeCount ? `${routeCount} 条来源` : "查看来源"}</b></span></span>`;
-                button.title = `${node.name}\n${node.id}\n${node.naturalResource ? "自然资源 · 跨时代共用\n" : ""}${node.classification?.reason || ""}`;
+                button.title = `${node.name}\n${node.id}\n${node.naturalResource ? `自然资源 · ${(node.resourceHabitats || []).join(" / ")}\n` : ""}${node.classification?.reason || ""}`;
                 button.addEventListener("click", () => {
                     if (performance.now() < state.suppressClickUntil) return;
                     select(node.id, { center: false });
@@ -343,7 +333,14 @@
             if (resources) {
                 const band = element("div", "tt-resource-region");
                 band.style.cssText = `left:${resources.x}px;top:${resources.y}px;width:${resources.width}px;height:${resources.height}px`;
-                band.innerHTML = `<strong class="tt-era-title">自然资源 <span>${resources.count} 个物品 · 跨时代共用</span></strong><p>自然采集的资源按用途靠近相关技术排列，不代表获取时代。</p>`;
+                band.innerHTML = `<strong class="tt-era-title">自然资源 <span>${resources.count} 个物品 · ${resources.groups.length} 个来源分区</span></strong><p>按已知生物群系组合分区，同一物品仅展示一次；实际分布随地形、气候和世界变化。</p>`;
+                for (const group of resources.groups) {
+                    const region = element("div", "tt-resource-group");
+                    region.dataset.group = group.id;
+                    region.style.cssText = `left:${group.x - resources.x}px;top:${group.y - resources.y}px;width:${group.width}px;height:${group.height}px`;
+                    region.innerHTML = `<strong>${escapeHtml(group.name)}<span>${group.count}</span></strong><p>${escapeHtml(group.description)}</p>`;
+                    band.append(region);
+                }
                 fragment.append(band);
             }
             els.Regions.replaceChildren(fragment);
@@ -583,6 +580,11 @@
             }
             if (node.special) els.Detail.append(element("p", "tt-special-note", node.specialLabel || "此物品属于特殊或内部用途，不代表正常进度解锁。"));
             els.Detail.append(element("p", "tt-classification", node.classification?.reason || "按当前物品用途和材料归入这一阶段。"));
+            if (node.resourceHabitats?.length) {
+                els.Detail.append(element("h4", "tt-section-title", "已知来源环境"));
+                els.Detail.append(element("p", "tt-source-note", node.resourceHabitats.join(" · ")));
+                els.Detail.append(element("p", "tt-small-note", "按当前生成与采集来源整理，实际出现仍受地形、气候和世界预设影响。"));
+            }
             if (node.sourceNote) els.Detail.append(element("p", node.sourceStatus === "no-known-route" ? "tt-source-note" : "tt-small-note", node.sourceNote));
             const incoming = state.incoming.get(node.id) || [], outgoing = state.outgoing.get(node.id) || [];
             const routeIds = [...new Set([...(node.recipes || []), ...incoming.map(edge => edge.routeId)])].filter(id => state.routes.has(id));
@@ -699,7 +701,7 @@
             els.WarningCount.textContent = warnings.length ? `· ${warnings.length} 条待核对信息` : "";
             els.NotesBody.replaceChildren();
             els.NotesBody.append(element("p", "", "每个大时代下面继续分细阶段，每张节点都对应当前 JSON 中的一种具体物品。时代只用于整理，调整 ItemWiki/tech-tree-eras.json 后重新读取即可；不改变游戏解锁、配方和物品属性。"));
-            els.NotesBody.append(element("p", "", "自然资源独立放在中下方，按下游用途就近排列；自然采集、采矿与树木掉落可跨时代使用，加工产物仍沿时代主线排列。"));
+            els.NotesBody.append(element("p", "", "自然资源独立放在中下方，按已知生物群系组合分区；同一物品只展示一次，洞穴等额外来源保留在详情。实际分布受地形、气候与世界预设影响。"));
             els.NotesBody.append(element("p", "", "关系读取启用分包的配方、物品自带加工与反应、机械加工、放置和状态转换。不同路线可替代，同一路线的材料组一起需要，标签 / 能力组内部任选。已知的循环关系保留为回线；缺少来源不推测补齐。"));
             if (warnings.length) {
                 const list = element("ul", "tt-warnings");

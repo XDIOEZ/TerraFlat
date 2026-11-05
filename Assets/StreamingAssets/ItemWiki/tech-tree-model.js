@@ -215,6 +215,11 @@
                         inputs: sourceInputs, externalSource, outputs: [{ itemId: parameters.CollectItemId, amount: 1 }],
                         conditions: { stockRequired: true, maxStock: parameters.MaxStock },
                         evidence: `${entry.kind === "actor" ? "Actors" : "Items"}/${entry.package?.path || entry.final.id}#${entry.final.id}.Module_Collectable.CollectItemId` });
+                if (body.prefab === "Module_CanopyFruit" && parameters.FruitItemId)
+                    add({ id: `canopy:${entry.final.id}:${index}`, sourceKind: "harvest", displayName: "树冠果实掉落",
+                        inputs: sourceInputs, externalSource, outputs: [{ itemId: parameters.FruitItemId, amount: 1 }],
+                        conditions: { environment: "果实成熟后按生长周期自然掉落" },
+                        evidence: `Items/${entry.package?.path || entry.final.id}#${entry.final.id}.Module_CanopyFruit.FruitItemId` });
             }
         }
         return Array.from(result.values());
@@ -341,7 +346,7 @@
             }
         }
         assignDepth(nodes, edges, nodeByKey);
-        assignNaturalResources(nodes, routes, stages, nodeByKey);
+        assignNaturalResources(nodes, routes, stages, nodeByKey, resources);
         for (const node of nodes) {
             node.upgrades = upgrades.filter(upgrade => upgrade.itemIds.includes(node.id));
             if (node.special) node.sourceNote = `${node.specialLabel}：${node.specialReason} ${node.sourceNote}`;
@@ -358,32 +363,84 @@
 
     //#region 自然来源与循环安全的层级排序
     // 采集来源独立于展示时代，明确自然来源及其直接采集产物进入资源区。
-    function assignNaturalResources(nodes, routes, stages, nodeByKey) {
+    function assignNaturalResources(nodes, routes, stages, nodeByKey, resources) {
         const naturalStages = new Set(stages.filter(stage => stage.layoutBand === "natural").map(stage => stage.id));
         const gatheringRoute = route => ["loot", "harvest"].includes(route.type);
+        // 位序对齐 SurfaceBiomeKind，来源集合只参与百科分组，不模拟气候和世界预设。
+        const biomes = ["海洋", "河流", "海滩", "沙漠", "草原", "森林", "雪地", "石地"];
+        const extraHabitats = { floodplain: "河漫滩", cave: "洞穴", asteroid: "小行星", ground: "地表采挖", animals: "生物产物", unknown: "群系未标注" };
+        const habitatName = id => biomes[Number(id)] || extraHabitats[id];
+        const habitats = new Map(nodes.map(node => [node.id, new Set()])), generated = new Set();
+        const addHabitats = (id, values) => {
+            const node = nodeByKey.get(keyOf(id));
+            if (!node) return false;
+            const current = habitats.get(node.id), size = current.size;
+            for (const value of values) current.add(value);
+            return size !== current.size;
+        };
+        const rules = asArray(resources.naturalItems).flatMap(pkg => [
+            ...asArray(pkg.ecologyRules), ...asArray(pkg.caveResourceRules).map(rule => ({ ...rule, caveResource: true }))
+        ]).filter(rule => rule.caveResource || finite(rule.spawnChanceMultiplier, 1) > 0 &&
+            (rule.companionOnly ? finite(rule.companionSpawnChance, 0) > 0 : finite(rule.spawnChance, 0) > 0));
+        const scopeOf = rule => rule.caveResource || rule.ruleId.startsWith("cave.") ? "cave" : rule.ruleId.startsWith("surface.asteroid.") ? "asteroid" : "surface";
+        const ruleHabitats = new Map(rules.map(rule => {
+            const scope = scopeOf(rule);
+            const ids = scope !== "surface" ? [scope] : biomes.flatMap((_, index) => rule.biomeMask & (1 << index) ? [String(index)] : []);
+            if (scope === "surface" && rule.minRiverFloodplainStrength > 0) ids.push("floodplain");
+            return [rule.ruleId, ids];
+        }));
+        for (const rule of rules) {
+            let ids = ruleHabitats.get(rule.ruleId);
+            if (rule.companionOnly) {
+                ids = rules.filter(host => !host.companionOnly && scopeOf(host) === scopeOf(rule) &&
+                    asArray(host.providedTags).some(tag => keyOf(tag) === keyOf(rule.companionHostTag)))
+                    .flatMap(host => ruleHabitats.get(host.ruleId))
+                    .filter(id => !rule.biomeMask || ids.includes(id));
+            }
+            const node = nodeByKey.get(keyOf(rule.itemId));
+            if (node) { generated.add(node.id); addHabitats(node.id, ids); }
+        }
+        for (const tile of asArray(resources.tiles)) {
+            if (!tile.groundHarvest?.itemId) continue;
+            const node = nodeByKey.get(keyOf(tile.groundHarvest.itemId));
+            if (node) { generated.add(node.id); addHabitats(node.id, ["ground"]); }
+        }
         for (const node of nodes) {
             const item = node.entry.final;
             const modules = activeModules(item);
             const source = modules.some(body => body.prefab === "Module_ResourceHarvest") || (item.tags || []).some(tag => keyOf(tag) === "tree");
             // 显式展示分区优先于来源推断，避免天然原料被再次拆回时代主线。
-            node.naturalResource = !node.special && (naturalStages.has(node.stageId) || source);
+            node.naturalResource = !node.special && (naturalStages.has(node.stageId) || source || generated.has(node.id));
         }
         let changed = true;
         while (changed) {
             changed = false;
             for (const route of routes) {
-                if (!gatheringRoute(route)) continue;
+                const gathering = gatheringRoute(route);
+                if (!gathering && route.type !== "placement") continue;
                 const fromNature = route.inputs.length
                     ? route.inputs.every(group => group.candidates.length && group.candidates.every(id => nodeByKey.get(keyOf(id))?.naturalResource))
                     : Boolean(route.conditions.externalSource);
                 if (!fromNature) continue;
                 for (const output of route.outputs) {
                     const node = nodeByKey.get(keyOf(output.itemId));
-                    if (!node || node.special || node.naturalResource) continue;
-                    node.naturalResource = true;
-                    changed = true;
+                    if (!node || node.special || !gathering && !node.naturalResource) continue;
+                    if (!node.naturalResource) { node.naturalResource = true; changed = true; }
+                    const ids = route.inputs.flatMap(group => group.candidates.flatMap(id => [...(habitats.get(id) || [])]));
+                    if (route.conditions.externalSource) ids.push("animals");
+                    if (addHabitats(node.id, ids)) changed = true;
                 }
             }
+        }
+        for (const node of nodes.filter(node => node.naturalResource)) {
+            const ids = [...habitats.get(node.id)].sort((a, b) => String(a).localeCompare(String(b)));
+            if (!ids.length) ids.push("unknown");
+            const surface = ids.filter(id => /^\d$/.test(id) || id === "floodplain");
+            const groupIds = surface.length ? surface : ids.filter(id => !["ground", "animals"].includes(id));
+            if (!groupIds.length) groupIds.push(ids.includes("ground") ? "ground" : "animals");
+            node.resourceHabitats = ids.map(habitatName);
+            node.resourceGroup = { id: groupIds.join("+"), name: groupIds.length > 3 ? "多群系共享" : groupIds.map(habitatName).join(" / "),
+                description: groupIds.map(habitatName).join(" · "), order: /^\d$/.test(groupIds[0]) ? Number(groupIds[0]) : 8 + Object.keys(extraHabitats).indexOf(groupIds[0]) };
         }
     }
 

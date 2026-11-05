@@ -211,3 +211,7 @@ body.tt-canvas-expanded { overflow: hidden; }
 .tt-resource-region { position: absolute; border: 1px solid #4a6d61; border-top: 3px solid #8db999; background: linear-gradient(180deg, rgba(112, 161, 130, .1), rgba(38, 65, 55, .12)); }
 .tt-resource-region .tt-era-title { color: #a8d0b3; }
 .tt-resource-region > p { margin: 0 18px; color: #93aea0; font-size: 11px; }
+.tt-resource-group { position: absolute; border: 1px solid #3e5b50; border-top: 2px solid #81a58c; background: rgba(32, 57, 47, .35); }
+.tt-resource-group > strong { display: flex; align-items: start; gap: 12px; padding: 13px 16px 4px; color: #c0ddc6; font-size: 17px; line-height: 24px; }
+.tt-resource-group > strong > span { margin-left: auto; color: #8da997; font: 12px Consolas, monospace; }
+.tt-resource-group > p { margin: 0 16px; max-width: 720px; color: #91ac9a; font-size: 11px; line-height: 16px; }

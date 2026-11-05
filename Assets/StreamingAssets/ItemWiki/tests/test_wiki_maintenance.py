@@ -77,6 +77,15 @@ class WikiMaintenanceTests(unittest.TestCase):
                 response = connection.getresponse()
                 self.assertEqual(200, response.status, request_path)
                 response.read()
+            for directory, manifest_name in [("WorldGeneration/NaturalItems", "natural-item-manifest.json"), ("Tiles", "tile-manifest.json")]:
+                prefix = "/Assets/StreamingAssets/GameConfig/" + directory + "/"
+                manifest = wiki.read_json(wiki.PROJECT_ROOT / prefix.lstrip("/") / manifest_name)
+                for relative in [manifest_name] + [pkg["path"] for pkg in manifest["packages"] if pkg.get("enabled", True)]:
+                    connection.request("GET", prefix + relative)
+                    response = connection.getresponse()
+                    self.assertEqual(200, response.status, prefix + relative)
+                    self.assertIn("no-store", response.getheader("Cache-Control"))
+                    response.read()
             for request_path in ["/Assets/StreamingAssets/ItemWiki/balance-tuning.js", "/Assets/StreamingAssets/ItemWiki/balance-tuning.css"]:
                 connection.request("GET", request_path)
                 response = connection.getresponse()
@@ -101,7 +110,8 @@ class WikiMaintenanceTests(unittest.TestCase):
             response = connection.getresponse()
             self.assertEqual(403, response.status, "公开 Wiki 不允许保存调参设置")
             response.read()
-            for request_path in ["/.git/config", "/Assets/StreamingAssets/ItemWiki/wiki_server.py", "/Assets/StreamingAssets/GameConfig/Items/not-in-manifest.json"]:
+            for request_path in ["/.git/config", "/Assets/StreamingAssets/ItemWiki/wiki_server.py", "/Assets/StreamingAssets/GameConfig/Items/not-in-manifest.json",
+                                 "/Assets/StreamingAssets/GameConfig/WorldGeneration/NaturalItems/not-in-manifest.json", "/Assets/StreamingAssets/GameConfig/Tiles/not-in-manifest.json"]:
                 connection.request("GET", request_path)
                 response = connection.getresponse()
                 self.assertEqual(404, response.status, request_path)

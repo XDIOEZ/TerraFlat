@@ -171,4 +171,27 @@ test("远景只显名称与固定字号全名，停载图标，回近景和铺�
     assert.equal(await page.evaluate(() => tree.getSelectedId()), "B");
     assert.equal(await page.locator(".tt-edge").count(), 3);
 });
+// 群系组合只生成一个物品节点，搜索和详情仍能看到额外来源。
+test("资源群系分块、跨群系唯一卡片与来源搜索详情", async () => {
+    const ids = ["Palm", "Cactus", "Cotton", "Mushroom"];
+    const resources = model.build(ids.map(id => ({ kind: "item", displayName: id, final: { id } })), [], {
+        eras: [{ id: "early", name: "早期", order: 0 }], stages: [{ id: "tools", eraId: "early", order: 0 }],
+        assignments: [{ stageId: "tools", itemIds: ids }]
+    }, { naturalItems: [{ ecologyRules: [
+        { ruleId: "surface.palm", itemId: "Palm", spawnChance: 1, biomeMask: 4 },
+        { ruleId: "surface.cactus", itemId: "Cactus", spawnChance: 1, biomeMask: 8 },
+        { ruleId: "surface.cotton", itemId: "Cotton", spawnChance: 1, biomeMask: 48 },
+        { ruleId: "cave.mushroom", itemId: "Mushroom", spawnChance: 1, biomeMask: 0 }
+    ] }] });
+    await page.evaluate(resources => tree.setModel(resources), resources);
+    assert.equal(await page.locator(".tt-resource-group").count(), 4);
+    assert.equal(await page.locator(".tt-node").count(), 4);
+    await page.locator("#ttSearch").fill("森林");
+    await page.waitForFunction(() => document.querySelectorAll(".tt-node").length === 1);
+    assert.equal(await page.locator(".tt-node").getAttribute("data-id"), "Cotton");
+    assert.match(await page.locator(".tt-resource-group").textContent(), /草原.*森林/);
+    await page.evaluate(() => tree.select("Cotton"));
+    assert.match(await page.locator("#ttDetail").textContent(), /已知来源环境.*草原.*森林/);
+    assert.equal(await page.locator('.tt-node[data-id="Cotton"]').count(), 1);
+});
 //#endregion

@@ -24,7 +24,7 @@
 - HTML 物品字典入口 `Assets/StreamingAssets/ItemWiki/打开物品Wiki.cmd`，直接读启用的 Items/Actors/Recipes/Buffs manifests；维护说明在同目录 README。启动器按项目和读写模式复用后台服务，不按端口批量杀 Python。
 - 科技树 `tech-tree-eras.json` 配展示时代/细分阶段，`tech-tree-model.js` 从当前配方、物品加工和机器/温变数据建关系；processing 不继承。新增浏览器资源或配置入口同步 `wiki_server.py` 公开白名单。
 - ItemWiki「行为树」分页只读展示继承后的 Actor 树及 Manifest 的 `behaviorSubtrees`；`behavior-tree-model.js` 处理局部覆盖、展开、实参和引用生物，`behavior-tree.js` 管树图交互。回归 `tests/behavior-tree-model.test.js` 与 Python 公开资源路由。
-- 科技树自然资源按采矿/树木与直接采集路线识别，`stages.layoutBand: "natural"` 标记基础自然原料组；下方资源区按用途居中布局，与展示时代分开，未知来源不自动视为自然资源。
+- 科技树资源区按 NaturalItems 的群系组合分块，伴生沿宿主、产物沿采集/掉落链传递来源；洞穴/小行星独立标注，Tiles.groundHarvest 只标地表采挖，未映射生物与未知来源不猜群系。节点不复制，时代独立；`stages.layoutBand: "natural"` 仍优先指定整组进入资源区，其他自然生成/采矿/树木来源自动识别。新增数据源须同步公开服务 manifest 白名单与布局/浏览器回归。
 - 科技树连线仅绘制所选物品的直接上下游（支持配方聚焦）；依赖链只筛节点。低于35%卡片仅显示名称，完整名字提示保持屏幕字号，停止画布图标观察，回近景恢复；浏览器回归 `tests/tech-tree-browser.test.js`，安装方式见 Wiki README。
 - 连线点击复用`select`定位另一端，反向可返回；悬停/聚焦说明只消费edge/route条件。SVG加宽命中线统一置于可见线下方，避免密集线互挡，保留viewport拖拽和防误触时限。
 - 外部刷新在 Windows 用 ReadDirectoryChangesW，禁 Mono DefaultWatcher 递归扫 Assets；Play/切换中留请求，编辑静默后合并，溢出补一次全量。Unity 保存独立于全库刷新；内容工坊只写 JSON 差异。

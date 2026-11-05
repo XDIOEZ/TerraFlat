@@ -598,7 +598,8 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         if lower in {"assets/resources/config/mechanical/mechanical-catalog.json", "assets/streamingassets/gameconfig/liquids/liquids.json"}:
             return True
 
-        for directory, manifest_name in (("Items", "item-manifest.json"), ("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json"), ("Buffs", "buff-manifest.json")):
+        for directory, manifest_name in (("Items", "item-manifest.json"), ("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json"), ("Buffs", "buff-manifest.json"),
+                                         ("WorldGeneration/NaturalItems", "natural-item-manifest.json"), ("Tiles", "tile-manifest.json")):
             prefix = f"assets/streamingassets/gameconfig/{directory.lower()}/"
             if lower.startswith(prefix):
                 config_root = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / directory

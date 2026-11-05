@@ -451,7 +451,8 @@
                 Promise.all([
                     fetchJson(TECH_TREE_CONFIG_PATH),
                     fetchJson("../../../Assets/Resources/Config/Mechanical/mechanical-catalog.json"),
-                    fetchJson("../GameConfig/Liquids/liquids.json")
+                    fetchJson("../GameConfig/Liquids/liquids.json"),
+                    loadResourceHabitatSources()
                 ]).catch(error => {
                     state.techTreeError = error.message;
                     return null;
@@ -497,7 +498,7 @@
                 .catch(error => { state.behaviorTreeError = error.message; return null; });
             state.recipes = Array.from(recipes.resolved.values());
             state.techTreeConfig = techTreeData?.[0] || null;
-            state.techTreeResources = { mechanicalCatalog: techTreeData?.[1], liquids: techTreeData?.[2] };
+            state.techTreeResources = { mechanicalCatalog: techTreeData?.[1], liquids: techTreeData?.[2], ...techTreeData?.[3] };
             state.itemMetadata = itemMetadata && itemMetadata.schemaVersion === 1 && isPlainObject(itemMetadata.items)
                 ? itemMetadata
                 : { schemaVersion: 1, items: {} };
@@ -533,6 +534,20 @@
     }
 
     // 获取 JSON，并把 HTTP 错误转换成可读异常。
+    // 资源分区复用自然物与地块真源，避免额外维护物品到群系的副本。
+    async function loadResourceHabitatSources() {
+        const loadPackages = async (base, name) => {
+            const manifest = await fetchJson(base + name);
+            return Promise.all(manifest.packages.filter(pkg => pkg.enabled !== false)
+                .map(pkg => fetchJson(base + pkg.path)));
+        };
+        const [naturalItems, tiles] = await Promise.all([
+            loadPackages("../GameConfig/WorldGeneration/NaturalItems/", "natural-item-manifest.json"),
+            loadPackages("../GameConfig/Tiles/", "tile-manifest.json")
+        ]);
+        return { naturalItems, tiles: tiles.flatMap(pkg => pkg.tiles || []) };
+    }
+
     async function fetchJson(path) {
         const response = await fetch(path, { cache: "no-store" });
         if (!response.ok) throw new Error(`${response.status} ${response.statusText} · ${path}`);
