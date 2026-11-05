@@ -8,19 +8,23 @@ public static partial class GameplayTestRuntimeProbe
     #region 跨帧采样登记
     private static readonly Dictionary<string, Func<Player, JObject, Action<JObject>, IEnumerator>> asyncOperations = new(StringComparer.Ordinal);
     private static CaseScope currentCase;
+    private static readonly HashSet<string> deviceInputOperations = new(StringComparer.Ordinal);
+    public static bool RequiresDeviceInput(string systemId, string operationId) => deviceInputOperations.Contains(Key(systemId, operationId));
 
     public static void RegisterAsync(string systemId, string operationId,
-        Func<Player, JObject, Action<JObject>, IEnumerator> handler)
+        Func<Player, JObject, Action<JObject>, IEnumerator> handler, bool requiresDeviceInput = false)
     {
         if (handler == null) throw new ArgumentNullException(nameof(handler));
         string key = Key(systemId, operationId);
         if (operations.ContainsKey(key)) throw new InvalidOperationException("同步与跨帧操作重复：" + key);
         if (asyncOperations.TryGetValue(key, out var previous))
         {
-            if (previous.Method == handler.Method && Equals(previous.Target, handler.Target)) return;
+            if (previous.Method == handler.Method && Equals(previous.Target, handler.Target) &&
+                requiresDeviceInput == deviceInputOperations.Contains(key)) return;
             throw new InvalidOperationException("跨帧操作重复登记：" + key);
         }
         asyncOperations.Add(key, handler);
+        if (requiresDeviceInput) deviceInputOperations.Add(key);
     }
 
     public static IEnumerator CaptureAsync(Player player, string systemId, string operationId,

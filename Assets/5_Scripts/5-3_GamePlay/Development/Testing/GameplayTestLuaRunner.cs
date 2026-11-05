@@ -825,7 +825,18 @@ public sealed class GameplayTestLuaRunner : IDisposable
         JObject sample = null;
         string profile = player.ProfileName;
         Data_Player originalData = player.Data;
-        yield return GameplayTestRuntimeProbe.CaptureAsync(player, command.Text, command.Argument, command.Arguments, value => sample = value);
+        // 正式设备链路测试交还 Agent 租约，设备事件仍经过原 Action、焦点与玩法门禁。
+        bool deviceInput = GameplayTestRuntimeProbe.RequiresDeviceInput(command.Text, command.Argument);
+        if (deviceInput) ReleaseControl();
+        try
+        {
+            yield return GameplayTestRuntimeProbe.CaptureAsync(player, command.Text, command.Argument, command.Arguments, value => sample = value);
+        }
+        finally
+        {
+            if (deviceInput && !TryAcquireControl(out string restoreError))
+                throw new InvalidOperationException("设备输入现场结束后恢复控制失败：" + restoreError);
+        }
         Player current = ItemMgr.Instance?.User_Player;
         if (!ReferenceEquals(current, player))
         {

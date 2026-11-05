@@ -33,6 +33,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 文本焦点由 `EventSystemGuard.IsTextInputFocused` 与 `IsGameplayInputAllowed` 拦截键盘玩法，移动返回零；鼠标仍经 UI 射线仲裁。鼠标位置缓存响应 performed/canceled，按键读取当前坐标；切回键鼠清理非文本选择焦点。
 - 世界指针统一经 `GetPointerScreenPosition/GetMouseWorldPosition(screenPosition)`；准线距离来自普通交互 `maxInteractDistance` 或建筑 `maxVisibleDistance`。`Move_Player` 保留 0～1 模拟幅度。
 - 外部控制持有唯一 External Gameplay Control 租约，期间真实设备退出玩法仲裁，移动/瞄准/攻击注入现有生产链；打包运行时 `Mod_GameMCP_LLM` 复用该租约与移动输入。
+- 租约是 Agent 语义入口，不是测试放行标志。专用 Usage 设备或外部移动接口的测试不能宣称普通设备覆盖；`player_device_input_behavior` 交还租约后测试原始键盘/手柄移动事件、原 Action、焦点/锁拒绝和键盘异步翻滚，触屏及未绑定的手柄翻滚另列覆盖缺口。
 - 丢弃组合态让 Ctrl+滚轮缩放让位，普通滚轮仍可换槽。返回顺序为顶层可取消面板 → 手机抽屉 → 设置；返回处理先于玩法锁拦截。聊天 Enter 打开当帧抑制提交。
 - 返回由 `FlatWorldUI/Cancel` 唯一分发，经 `EventSystemGuard.CancelRequested` 交给设置模块；不可再额外订阅 `Win10/ESC.performed` 开关设置。UI 同步重绑时保留空字符串禁用态，不把清空绑定恢复为默认键。
 
