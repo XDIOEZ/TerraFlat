@@ -13,7 +13,7 @@ description: "FlatWorld uGUI 面板、Prefab/公共控件、主题、设置 Prov
 - 主题 `Assets/Resources/GameConfig/UI/ui-theme.json`；动画 `Assets/Resources/Config/UIAnimations.json`；设置契约 `Assets/5_Scripts/5-1_Data/Settings/SettingsContracts.cs`。
 - 主菜单背景由 `MainMenuBackgroundSlideshowController` 持十二张显式 Sprite 引用，两层 Image 按非缩放时间停留12秒、淡化1.5秒；监听 BasePanel 开关并在 Start 同步初始化状态，关闭取消淡化、重开保留底图。`MainMenuPrefabBuilder` 的接入、换肤和重建共用装配，旧六图不改导入，新增图在 `Generated/MainMenuBackgrounds/PixelCarousel/`；规则 `ui_settings/main_menu_background_slideshow`。
 
-主菜单五个按钮的图标源与透明 Sprite 位于 `Assets/6_Art/UI/MainMenuIcons/`（SVG+PNG），由 `Tools/Art/generate_main_menu_icons.py` 生成，`verify_main_menu_icons.py` 校验。`MainMenuPrefabBuilder` 原位安装及重建均装配图标，图标不接收射线；四个旅程入口隐藏旧序号。
+主菜单五个图标直接使用 `Assets/6_Art/UI/MainMenuIcons/` 的 SVG：Unity 2022 用 `com.unity.vectorgraphics@2.0.0-preview.25` 导入为 `UISVGImage`（256 目标分辨率），菜单以 `SVGImage` + 导入材质绘制，不再依赖 PNG。图标由 `Tools/Art/generate_main_menu_icons.py` 生成、`verify_main_menu_icons.py` 校验；`MainMenuPrefabBuilder` 原位安装和重建都能装配图标，装饰图标不接收射线，四个旅程入口隐藏旧序号。
 
 ## 公共控件与布局
 

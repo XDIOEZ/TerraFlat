@@ -4,6 +4,8 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
+using Unity.VectorGraphics;
+using Unity.VectorGraphics.Editor;
 
 public static class MainMenuPrefabBuilder
 {
@@ -446,19 +448,27 @@ public static class MainMenuPrefabBuilder
         ConfigureMenuButtonIcon(root, GameManager.MainMenuSettingsButtonKey, "settings", true);
     }
 
-    /// <summary>用同一套 Image 规则装配图标；主菜单序号只作旧布局占位，不参与渲染。</summary>
+    /// <summary>用矢量 SVGImage 替换旧位图 Image，保留菜单图标节点和交互布局。</summary>
     private static void ConfigureMenuButtonIcon(GameObject root, string buttonPath, string iconName, bool isSettings)
     {
         Button button = RequireComponent<Button>(root, buttonPath);
-        Sprite sprite = LoadMainMenuIconSprite(iconName);
+        SVGImage source = LoadMainMenuIconSvg(iconName);
 
         Transform existing = button.transform.Find("菜单图标");
-        Image icon = existing != null ? existing.GetComponent<Image>() : null;
+        SVGImage icon = existing != null ? existing.GetComponent<SVGImage>() : null;
         if (icon == null)
-            icon = CreateImage("菜单图标", button.transform, Label);
-        icon.sprite = sprite;
+        {
+            if (existing == null)
+                existing = CreateRect("菜单图标", button.transform);
+
+            Image obsoleteImage = existing.GetComponent<Image>();
+            if (obsoleteImage != null)
+                Object.DestroyImmediate(obsoleteImage, true);
+            icon = existing.gameObject.AddComponent<SVGImage>();
+        }
+        icon.sprite = source.sprite;
+        icon.material = source.material;
         icon.color = Label;
-        icon.type = Image.Type.Simple;
         icon.preserveAspect = true;
         icon.raycastTarget = false;
         SetRect(icon.rectTransform, new Vector2(isSettings ? 16f : 27f, 0f),
@@ -480,32 +490,31 @@ public static class MainMenuPrefabBuilder
         SetRect(arrow.rectTransform, new Vector2(-15f, 0f), new Vector2(20f, 30f), new Vector2(1f, 0.5f));
     }
 
-    private static Sprite LoadMainMenuIconSprite(string name)
+    private static SVGImage LoadMainMenuIconSvg(string name)
     {
-        string path = MenuIconRoot + name + ".png";
-        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        string path = MenuIconRoot + name + ".svg";
+        SVGImporter importer = AssetImporter.GetAtPath(path) as SVGImporter;
         if (importer == null)
-            throw new System.InvalidOperationException("[MainMenu] 缺少图标资源：" + path);
+            throw new System.InvalidOperationException("[MainMenu] 缺少 SVG 导入器或图标资源：" + path);
 
-        bool needsImport = importer.textureType != TextureImporterType.Sprite ||
-            importer.spriteImportMode != SpriteImportMode.Single ||
-            importer.mipmapEnabled || importer.filterMode != FilterMode.Bilinear ||
-            importer.wrapMode != TextureWrapMode.Clamp || !importer.alphaIsTransparency;
+        bool needsImport = importer.SvgType != SVGType.UISVGImage ||
+            importer.ViewportOptions != ViewportOptions.PreserveViewport ||
+            !importer.PreserveSVGImageAspect || importer.TargetResolution != 256;
         if (needsImport)
         {
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
-            importer.mipmapEnabled = false;
-            importer.filterMode = FilterMode.Bilinear;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.alphaIsTransparency = true;
+            importer.SvgType = SVGType.UISVGImage;
+            importer.ViewportOptions = ViewportOptions.PreserveViewport;
+            importer.PreserveSVGImageAspect = true;
+            importer.TargetResolution = 256;
+            EditorUtility.SetDirty(importer);
             importer.SaveAndReimport();
         }
 
-        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-        if (sprite == null)
-            throw new System.InvalidOperationException("[MainMenu] 图标导入失败：" + path);
-        return sprite;
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        SVGImage source = asset != null ? asset.GetComponent<SVGImage>() : null;
+        if (source == null || source.sprite == null || source.material == null)
+            throw new System.InvalidOperationException("[MainMenu] SVG 矢量资源导入失败：" + path);
+        return source;
     }
 
     #endregion

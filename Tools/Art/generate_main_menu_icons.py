@@ -1,17 +1,11 @@
-"""生成主菜单的同源 SVG 图标及供 Unity uGUI 使用的透明 PNG。"""
+"""生成主菜单的 SVG 矢量图标，由 Unity Vector Graphics 直接导入。"""
 
 from __future__ import annotations
 
 from math import cos, pi, sin
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
-
 ROOT = Path(__file__).resolve().parents[2] / "Assets/6_Art/UI/MainMenuIcons"
-SVG_SIZE = 24
-PNG_SIZE = 128
-RENDER_SCALE = 8
 STROKE_WIDTH = 1.9
 
 
@@ -76,31 +70,16 @@ def svg_content(lines):
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
         'width="24" height="24" fill="none" stroke="#ffffff" '
-        'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">\n'
+        f'stroke-width="{STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round">\n'
         f"{shapes}\n</svg>\n"
     )
-
-
-def write_png(path: Path, lines):
-    image = Image.new("RGBA", (SVG_SIZE * RENDER_SCALE,) * 2, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    width = round(STROKE_WIDTH * RENDER_SCALE)
-    radius = width / 2
-    for points in lines:
-        scaled = [(x * RENDER_SCALE, y * RENDER_SCALE) for x, y in points]
-        draw.line(scaled, fill="white", width=width, joint="curve")
-        for x, y in scaled:
-            draw.ellipse((round(x - radius), round(y - radius),
-                          round(x + radius), round(y + radius)), fill="white")
-    image.resize((PNG_SIZE, PNG_SIZE), Image.Resampling.LANCZOS).save(path, optimize=True)
 
 
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     for name, lines in ICONS.items():
         (ROOT / f"{name}.svg").write_text(svg_content(lines), encoding="utf-8")
-        write_png(ROOT / f"{name}.png", lines)
-        print(f"{name}: SVG + PNG")
+        print(f"{name}: SVG")
 
 
 if __name__ == "__main__":
