@@ -38,13 +38,77 @@ beforeEach(async () => {
 });
 afterEach(async () => page?.close());
 
+async function getClickableEdgePoint(destination, offset = 4) {
+    return page.locator(`.tt-edge-link[href="#tech-tree/${destination}"] .tt-edge-hit`).evaluate((hit, offset) => {
+        const length = hit.getTotalLength(), matrix = hit.getScreenCTM();
+        for (const distance of [offset, 0]) for (let fraction = .1; fraction < .95; fraction += .025) {
+            const point = hit.getPointAtLength(length * fraction).matrixTransform(matrix);
+            const next = hit.getPointAtLength(length * fraction + 1).matrixTransform(matrix);
+            const dx = next.x - point.x, dy = next.y - point.y, size = Math.hypot(dx, dy);
+            const x = point.x - dy / size * distance, y = point.y + dx / size * distance;
+            if (document.elementFromPoint(x, y)?.closest(".tt-edge-link")?.dataset.edgeId === hit.parentNode.dataset.edgeId) return { x, y };
+        }
+        throw new Error("未找到可点击且未被卡片遮挡的线段");
+    }, offset);
+}
+
+test("连线悬停解释，点击另一端并反向返回，在线上拖动不误跳", async () => {
+    await page.evaluate(() => tree.select("B"));
+    await page.locator("#ttFit").click();
+    await page.locator("#ttExpand").click();
+    const point = await getClickableEdgePoint("A");
+    await page.mouse.move(point.x, point.y);
+    assert.equal(await page.locator("#ttEdgeTooltip").isVisible(), true);
+    assert.match(await page.locator("#ttEdgeTooltip").textContent(), /A → B.*材料.*路线：ab.*点击定位：A/s);
+    await page.mouse.click(point.x, point.y);
+    assert.equal(await page.evaluate(() => tree.getSelectedId()), "A");
+    assert.equal(await page.locator("#ttEdgeTooltip").isVisible(), false);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    const back = await getClickableEdgePoint("B");
+    await page.mouse.click(back.x, back.y);
+    assert.equal(await page.evaluate(() => tree.getSelectedId()), "B");
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    const drag = await getClickableEdgePoint("A");
+    await page.mouse.move(drag.x, drag.y);
+    await page.mouse.down();
+    await page.mouse.move(drag.x - 40, drag.y + 25, { steps: 5 });
+    await page.mouse.up();
+    assert.equal(await page.evaluate(() => tree.getSelectedId()), "B");
+    await page.waitForTimeout(220);
+    await page.locator('.tt-edge-link[href="#tech-tree/A"]:not([aria-hidden])').focus();
+    assert.equal(await page.locator("#ttEdgeTooltip").isVisible(), true);
+    await page.keyboard.press("Enter");
+    assert.equal(await page.evaluate(() => tree.getSelectedId()), "A");
+    const selected = await page.locator('.tt-node[data-id="A"]').boundingBox();
+    const viewport = await page.locator("#ttViewport").boundingBox();
+    assert.ok(selected.x + selected.width / 2 >= viewport.x && selected.x + selected.width / 2 <= viewport.x + viewport.width);
+    assert.ok(selected.y + selected.height / 2 >= viewport.y && selected.y + selected.height / 2 <= viewport.y + viewport.height);
+});
+
+test("连线说明保留工具不消耗、候选与随身手工条件，清选后关闭", async () => {
+    const smallGraph = model.build(["A", "B", "C", "D"].map(id => ({ kind: "item", displayName: id,
+        final: { id, ...(id === "C" ? { tags: ["Needle"] } : {}) } })), [{ id: "sew", displayName: "缝制",
+        requiredStation: "D", minTemperature: 100,
+        inputs: [{ itemId: "A", match: "exact_item", amount: 2 }, { tag: "Needle", match: "tag", amount: 0, minTemperature: 200 }],
+        outputs: [{ itemId: "B", amount: 1 }] }], { eras, stages,
+        assignments: [{ stageId: "stage0", itemIds: ["A", "B", "C", "D"] }],
+        stationAliases: [{ station: "D", portable: true, label: "工作台或随身手工" }] });
+    await page.evaluate(graph => { tree.setModel(graph); tree.select("B"); }, smallGraph);
+    await page.locator('.tt-edge-link[href="#tech-tree/C"]:not([aria-hidden])').focus();
+    assert.match(await page.locator("#ttEdgeTooltip").textContent(), /工具条件.*不消耗.*候选之一.*缝制.*100.*200/s);
+    await page.locator('.tt-edge-link[href="#tech-tree/D"]:not([aria-hidden])').focus();
+    assert.match(await page.locator("#ttEdgeTooltip").textContent(), /设备条件.*随身手工.*无须专门建造/s);
+    await page.evaluate(() => tree.select(""));
+    assert.equal(await page.locator("#ttEdgeTooltip").isVisible(), false);
+});
+
 // 真实点击覆盖路线筛选与依赖链切换，防止默认线和无关线重新出现。
 test("默认无线，选择仅高亮直接关系，取消依赖链选择恢复全图", async () => {
     assert.equal(await page.locator(".tt-edge").count(), 0);
     await page.evaluate(() => tree.select("B", { center: false }));
     assert.equal(await page.locator(".tt-edge").count(), 3);
     assert.equal(await page.locator(".tt-edge.is-focused").count(), 3);
-    const titles = await page.locator(".tt-edge title").allTextContents();
+    const titles = await page.locator(".tt-edge-link > title").allTextContents();
     assert.ok(titles.every(title => /A → B|C → B|B → D/.test(title)));
     await page.locator(".tt-route-focus").first().click();
     assert.equal(await page.locator(".tt-edge").count(), 1);

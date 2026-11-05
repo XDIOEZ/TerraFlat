@@ -53,10 +53,20 @@
 .tt-stage-region > p { margin: 6px 20px; color: #8496a5; font-size: 10px; line-height: 16px; max-width: 460px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .tt-stage-empty { padding: 45px 22px; color: #73808a; font-size: 11px; }
 .tt-edges { z-index: 1; pointer-events: none; overflow: visible; }
-.tt-edge { fill: none; stroke: #9fbb9a; stroke-width: 2.7; opacity: .96; }
+.tt-edge { fill: none; stroke: #9fbb9a; stroke-width: 2.7; opacity: .96; pointer-events: stroke; cursor: pointer; }
 .tt-edge.requirement { stroke: #8caed2; stroke-dasharray: 3 4; }
 .tt-edge.optional { stroke: #ddb878; stroke-dasharray: 8 5; }
 .tt-edge.feedback { stroke: #bf93b1; stroke-dasharray: 2 4; }
+.tt-edge-hit { fill: none; stroke: transparent; stroke-width: 14px; vector-effect: non-scaling-stroke; pointer-events: stroke; cursor: pointer; }
+.tt-edge-link:hover .tt-edge, .tt-edge-link:focus .tt-edge { stroke-width: 4.2; opacity: 1; }
+.tt-edge-link:focus { outline: none; }
+.tt-edge-tooltip { position: absolute; right: 12px; bottom: 12px; z-index: 6; width: 340px; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: hidden; box-sizing: border-box; padding: 12px 14px; color: #d5dfdf; background: #101d2c; border: 1px solid #a9ad89; font-size: 12px; line-height: 1.6; pointer-events: none; }
+.tt-edge-tooltip[hidden], .tt-edge-tooltip:not([hidden]) ~ .tt-overview-name { display: none; }
+.tt-edge-tooltip > strong { display: block; color: #ffe0a2; font-size: 14px; overflow-wrap: anywhere; }
+.tt-edge-tooltip > p { margin: 6px 0; }
+.tt-edge-tooltip > small { display: block; color: #acbac5; overflow-wrap: anywhere; }
+.tt-edge-tooltip .tt-edge-destination { color: #ffe0a2; }
+.tt-edge-tooltip .tt-conditions dt, .tt-edge-tooltip .tt-conditions dd { color: #d5dfdf; }
 .tt-nodes { z-index: 2; pointer-events: none; }
 .tt-node { position: absolute; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 9px; width: 210px; height: 70px; padding: 8px 9px; color: #dfd3bb; background: #1c2d3e; border: 1px solid #506174; border-left: 3px solid var(--era-color); border-radius: 0; box-shadow: 3px 3px 0 #091523; text-align: left; cursor: pointer; pointer-events: auto; }
 .tt-node:hover { background: #304255; border-color: #cbb68c; z-index: 3; }

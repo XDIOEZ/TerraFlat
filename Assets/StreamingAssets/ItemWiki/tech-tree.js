@@ -137,8 +137,9 @@
                         <span class="tt-direction">早期 <span>────────→</span> 后期</span>
                     </div>
                     <div id="ttViewport" class="tt-viewport" tabindex="0" role="region" aria-label="可拖拽与缩放的科技树；方向键平移，加减键缩放，Home 回到起点">
-                        <div id="ttSurface" class="tt-surface"><div id="ttRegions" class="tt-regions" aria-hidden="true"></div><svg id="ttEdges" class="tt-edges" aria-hidden="true"></svg><div id="ttNodes" class="tt-nodes"></div></div>
+                        <div id="ttSurface" class="tt-surface"><div id="ttRegions" class="tt-regions" aria-hidden="true"></div><svg id="ttEdges" class="tt-edges" aria-label="物品关系，点击连线定位到另一端"></svg><div id="ttNodes" class="tt-nodes"></div></div>
                         <div id="ttEmpty" class="tt-empty" hidden></div>
+                        <div id="ttEdgeTooltip" class="tt-edge-tooltip" role="tooltip" hidden></div>
                         <div id="ttOverviewName" class="tt-overview-name" hidden></div>
                     </div>
                     <div class="tt-panbar"><span>横向浏览</span><input id="ttPan" type="range" min="0" max="1000" value="0" aria-label="横向移动科技树"><span id="ttPanEra"></span></div>
@@ -150,10 +151,10 @@
             </div>
             <details class="tt-notes"><summary>分期规则与数据说明 <span id="ttWarningCount"></span></summary><div id="ttNotesBody"></div></details>`;
         const get = id => root.querySelector(`#${id}`);
-        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "OverviewName", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
+        const els = Object.fromEntries(["Counts", "EraNav", "Search", "Era", "Category", "Chain", "ResetFilters", "Results", "ZoomOut", "ZoomValue", "ZoomIn", "Home", "Fit", "Locate", "Expand", "Viewport", "Surface", "Regions", "Edges", "Nodes", "Empty", "EdgeTooltip", "OverviewName", "Pan", "PanEra", "Visible", "EdgeNote", "Detail", "WarningCount", "NotesBody"].map(name => [name, get(`tt${name}`)]));
         const state = {
             model: null, nodes: new Map(), routes: new Map(), incoming: new Map(), outgoing: new Map(),
-            selected: "", hovered: "", focused: "", route: "", query: "", globalQuery: "", visible: [], shown: false, layout: null,
+            selected: "", hovered: "", focused: "", edgeHovered: "", edgeFocused: "", route: "", query: "", globalQuery: "", visible: [], shown: false, layout: null,
             zoom: .85, x: 20, y: 12, initialized: false, generation: 0, observer: null, frame: 0,
             drag: null, suppressClickUntil: 0, pointers: new Map(), pinch: null, searchTimer: 0
         };
@@ -275,6 +276,7 @@
             els.Detail.replaceChildren(); els.EraNav.replaceChildren(); els.NotesBody.replaceChildren(); els.Results.hidden = true;
             els.WarningCount.textContent = ""; els.EdgeNote.textContent = ""; els.Visible.textContent = "";
             els.OverviewName.hidden = true;
+            clearEdgeTooltip();
         }
         // #endregion
 
@@ -392,10 +394,11 @@
         }
 
         function renderEdges() {
+            clearEdgeTooltip();
             if (!state.layout) return;
             const positions = state.layout.positions;
             const edges = relatedEdges().filter(edge => edge.source !== edge.target && positions.has(edge.source) && positions.has(edge.target));
-            els.EdgeNote.textContent = state.selected ? `仅高亮所选物品的直接关系，共 ${edges.length} 条。` : "连线默认隐藏，选中物品后高亮它的直接上下游。";
+            els.EdgeNote.textContent = state.selected ? `仅高亮所选物品的直接关系，共 ${edges.length} 条。悬停查看含义，点击定位另一端，再点同一关系可返回。` : "连线默认隐藏，选中物品后高亮它的直接上下游。";
             if (!edges.length) { els.Edges.replaceChildren(); return; }
             const fragment = document.createDocumentFragment();
             const defs = document.createElementNS(SVG_NS, "defs");
@@ -408,6 +411,7 @@
                 marker.append(head); defs.append(marker);
             }
             fragment.append(defs);
+            const hitLinks = document.createDocumentFragment(), visibleLinks = document.createDocumentFragment();
             for (const edge of edges) {
                 const source = positions.get(edge.source), target = positions.get(edge.target);
                 const x1 = source.x + NODE_WIDTH, y1 = source.y + NODE_HEIGHT / 2, x2 = target.x, y2 = target.y + NODE_HEIGHT / 2;
@@ -427,11 +431,74 @@
                     path.setAttribute("d", `M${sx},${sy} C${sx},${sy + direction * curve} ${tx},${ty - direction * curve} ${tx},${ty}`);
                 }
                 path.setAttribute("marker-end", `url(#ttArrow-${kind})`);
+                // 独立的屏幕像素命中线扩大点击区域，复用同一条曲线几何。
+                const destination = edge.source === state.selected ? edge.target : edge.source;
+                const destinationName = state.nodes.get(keyOf(destination)).name;
+                const link = document.createElementNS(SVG_NS, "a");
+                link.setAttribute("class", "tt-edge-link");
+                link.setAttribute("href", `#tech-tree/${encodeURIComponent(destination)}`);
+                link.setAttribute("aria-label", `${edge.source} → ${edge.target}，跳转至${destinationName}`);
+                link.dataset.edgeId = edge.id;
+                const hit = document.createElementNS(SVG_NS, "path");
+                hit.setAttribute("class", "tt-edge-hit");
+                hit.setAttribute("d", path.getAttribute("d"));
                 const title = document.createElementNS(SVG_NS, "title");
-                title.textContent = `${edge.source} → ${edge.target} · ${edge.label || KIND_NAMES[edge.kind] || edge.kind}${edge.optional ? "（可替换候选）" : ""}`;
-                path.append(title); fragment.append(path);
+                title.textContent = `${edge.source} → ${edge.target} · ${edge.label || KIND_NAMES[edge.kind] || edge.kind}${edge.optional ? "（可替换候选）" : ""} · 点击跳转至${destinationName}`;
+                const hitLink = link.cloneNode(false);
+                hitLink.setAttribute("aria-hidden", "true"); hitLink.setAttribute("tabindex", "-1");
+                hitLink.append(hit); hitLinks.append(hitLink);
+                link.append(title, path); visibleLinks.append(link);
             }
+            // 可见线统一盖住加宽命中区，避免密集线互相遮挡。
+            fragment.append(hitLinks, visibleLinks);
             els.Edges.replaceChildren(fragment);
+        }
+
+        els.Edges.addEventListener("click", event => {
+            const link = event.target.closest(".tt-edge-link");
+            if (!link) return;
+            event.preventDefault();
+            if (performance.now() < state.suppressClickUntil) return;
+            select(decodeURIComponent(link.getAttribute("href").slice("#tech-tree/".length)), { center: true });
+        });
+
+        function clearEdgeTooltip() {
+            state.edgeHovered = state.edgeFocused = "";
+            els.EdgeTooltip.hidden = true;
+        }
+
+        function updateEdgeTooltip() {
+            const id = state.edgeHovered || state.edgeFocused;
+            const edge = id && state.model?.edges.find(value => value.id === id);
+            els.EdgeTooltip.hidden = !edge;
+            if (!edge) return;
+            const source = state.nodes.get(keyOf(edge.source)), target = state.nodes.get(keyOf(edge.target));
+            const destination = edge.source === state.selected ? target : source;
+            const route = state.routes.get(edge.routeId);
+            const portable = route?.requirements.find(requirement => requirement.groupId === edge.groupId)?.portable;
+            els.EdgeTooltip.replaceChildren(
+                element("strong", "", `${source.name} → ${target.name}`),
+                element("p", "", `关系：${KIND_NAMES[edge.kind] || edge.kind}${edge.feedback ? " · 反馈/循环或逆阶段关系" : ""}`),
+                element("p", "", edge.label),
+                element("p", "", portable ? "可使用此工作站，也可随身手工完成，无须专门建造该设备。" : edge.optional ? "候选之一（OR）：同组任选一种，不同材料组仍需同时满足。" : "箭头由来源物品或所需条件指向产物。"));
+            if (route) els.EdgeTooltip.append(element("small", "", `路线：${route.label}`));
+            for (const [label, conditions] of [["路线条件", route?.conditions], ["该输入的附加条件", edge.conditions]]) {
+                const visible = Object.fromEntries(Object.entries(conditions || {}).filter(([key, value]) => key !== "inputRule" && (!Array.isArray(value) || value.length)));
+                if (Object.keys(visible).length) {
+                    els.EdgeTooltip.append(element("small", "", label));
+                    appendConditions(els.EdgeTooltip, visible);
+                }
+            }
+            els.EdgeTooltip.append(element("p", "tt-edge-destination", `点击定位：${destination.name} · 可沿同一关系跳回`));
+        }
+
+        for (const [enter, leave, key] of [["pointerover", "pointerout", "edgeHovered"], ["focusin", "focusout", "edgeFocused"]]) {
+            for (const type of [enter, leave]) els.Edges.addEventListener(type, event => {
+                const link = (type === enter ? event.target : event.relatedTarget)?.closest?.(".tt-edge-link");
+                const id = link?.dataset.edgeId || "";
+                if (state[key] === id) return;
+                state[key] = id; updateEdgeTooltip();
+            });
         }
 
         function observeIcons() {
@@ -645,6 +712,7 @@
         // #region 画布定位、缩放与输入
         function updateTransform() {
             if (!state.layout || !state.shown) return;
+            clearEdgeTooltip();
             closeNodeContextMenu();
             const width = els.Viewport.clientWidth, height = els.Viewport.clientHeight;
             state.x = Math.min(36, Math.max(Math.min(36, width - state.layout.width * state.zoom - 24), state.x));
