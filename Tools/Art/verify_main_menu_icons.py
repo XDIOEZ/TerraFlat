@@ -1,110 +1,68 @@
-"""检查 Unity 对五个 SVG 矢量图标的导入及 Prefab 绑定。"""
-
-import json
-import sys
-import xml.etree.ElementTree as ET
+"""离线校验菜单/库存 PNG 的导入设置、Prefab身份与点击布局，不连接其他项目。"""
 from pathlib import Path
+import re
+import json
+from PIL import Image
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from UnityMcpFast import UnityMcp, default_url
+ROOT = Path(__file__).resolve().parents[2]
+IMAGE_GUID = 'fe87c0e1cc204ed48ad3b37840f39efc'
 
 
-ROOT = Path(__file__).resolve().parents[2] / "Assets/6_Art/UI/MainMenuIcons"
-EXPECTED = {
-    "选择存档": "continue",
-    "新游戏": "new-world",
-    "联机模式": "multiplayer",
-    "MOD管理": "mods",
-    "设置": "settings",
-}
+def prefab_blocks(path):
+    source = (ROOT / path).read_text(encoding='utf-8')
+    entries = re.split(r'(?=^--- !u!)', source, flags=re.M)[1:]
+    result = {re.search(r'&(\d+)', b)[1]: b for b in entries}
+    assert len(result) == len(entries), 'Duplicate prefab IDs'
+    assert set(re.findall(r'\{fileID: (\d+)\}', source)) <= set(result) | {'0'}
+    return result
 
-for icon in EXPECTED.values():
-    source = ET.parse(ROOT / f"{icon}.svg").getroot()
-    assert source.attrib.get("viewBox") == "0 0 24 24", icon
-    assert source.attrib.get("fill") == "none", icon
-    assert not (ROOT / f"{icon}.png").exists(), "主菜单不应再依赖 PNG: " + icon
 
-script = """
-const path='Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab';
-const asset=CS.UnityEditor.AssetDatabase.LoadAssetAtPath(path,puer.$typeof(CS.UnityEngine.GameObject));
-const buttons=asset.GetComponentsInChildren(puer.$typeof(CS.UnityEngine.UI.Button),true);
-const iconType=puer.$typeof(CS.Unity.VectorGraphics.SVGImage);
-const icons=[];
-for(const name of ['选择存档','新游戏','联机模式','MOD管理','设置']){
-  const node=asset.transform.Find(name==='设置'?name:'旅程菜单卡/'+name);
-  if(!node)throw new Error('缺少菜单按钮: '+name);
-  const button=node.GetComponent(puer.$typeof(CS.UnityEngine.UI.Button));
-  const transform=button.transform.Find('菜单图标');
-  const icon=transform?transform.GetComponent(iconType):null;
-  const importedName={'选择存档':'continue','新游戏':'new-world','联机模式':'multiplayer','MOD管理':'mods','设置':'settings'}[name];
-  const svgPath='Assets/6_Art/UI/MainMenuIcons/'+importedName+'.svg';
-  const importer=CS.UnityEditor.AssetImporter.GetAtPath(svgPath);
-  const importedAssets=CS.UnityEditor.AssetDatabase.LoadAllAssetsAtPath(svgPath);
-  const assetTypes=[];
-  for(let i=0;i<importedAssets.Length;i++)
-    assetTypes.push(importedAssets.GetValue(i).GetType().FullName);
-  const source=CS.UnityEditor.AssetDatabase.LoadAssetAtPath(svgPath,puer.$typeof(CS.UnityEngine.GameObject));
-  const importedIcon=source?source.GetComponent(iconType):null;
-  const index=button.transform.Find(button.name+'_序号');
-  const rect=icon?icon.rectTransform:null;
-  const titleTransform=button.transform.Find(name==='设置'?'设置标题':name+'_标题');
-  const title=titleTransform.GetComponent(puer.$typeof(CS.UnityEngine.RectTransform));
-  const arrowTransform=name==='设置'?button.transform.Find('设置箭头'):null;
-  const arrow=arrowTransform?arrowTransform.GetComponent(puer.$typeof(CS.UnityEngine.RectTransform)):null;
-  let iconCount=0;
-  for(let child=0;child<button.transform.childCount;child++){
-    if(button.transform.GetChild(child).name==='菜单图标')iconCount++;
-  }
-  icons.push({
-    button:button.name, sprite:icon&&icon.sprite?icon.sprite.name:null,
-    vectorComponent:icon?icon.GetType().FullName:null,
-    svgType:importer?Number(importer.SvgType):null,
-    targetResolution:importer?Number(importer.TargetResolution):null,
-    svgAssetTypes:assetTypes,
-    spriteVertices:icon&&icon.sprite?icon.sprite.vertices.Length:0,
-    sourceMatches:icon&&importedIcon?icon.sprite.GetInstanceID()===importedIcon.sprite.GetInstanceID():false,
-    materialMatches:icon&&importedIcon?icon.material.GetInstanceID()===importedIcon.material.GetInstanceID():false,
-    raycast:icon?icon.raycastTarget:null,
-    size:rect?[rect.sizeDelta.x,rect.sizeDelta.y]:null,
-    indexVisible:index?index.gameObject.activeSelf:null,
-    iconCount:iconCount,
-    iconRight:rect?rect.anchoredPosition.x+rect.sizeDelta.x:null,
-    titleLeft:title.anchoredPosition.x,
-    titleRight:title.anchoredPosition.x+title.sizeDelta.x,
-    arrowLeft:arrow?button.GetComponent(puer.$typeof(CS.UnityEngine.RectTransform)).rect.width
-      +arrow.anchoredPosition.x-arrow.sizeDelta.x:null
-  });
-}
-return JSON.stringify({buttonCount:buttons.Length,icons:icons});
-"""
+def verify_png_binding(folder, name, blocks):
+    path = ROOT / f'Assets/6_Art/UI/{folder}/{name}.png'
+    image = Image.open(path)
+    assert image.mode == 'RGBA' and image.size == (96, 96), path
+    alpha = image.getchannel('A')
+    assert alpha.getextrema() == (0, 255) and alpha.getbbox(), path
+    meta = path.with_suffix('.png.meta').read_text()
+    guid = re.search(r'guid: ([a-f0-9]{32})', meta)[1]
+    for setting in ['enableMipMap: 0', 'isReadable: 0', 'filterMode: 1', 'textureType: 8',
+                    'spriteMode: 1', 'spriteMeshType: 1', 'alphaIsTransparency: 1']:
+        assert setting in meta, (path, setting)
+    matches = [b for b in blocks.values() if f'm_Sprite: {{fileID: 21300000, guid: {guid}, type: 3}}' in b]
+    assert len(matches) == 1, path
+    component = matches[0]
+    for setting in [f'guid: {IMAGE_GUID}', 'm_Material: {fileID: 0}', 'm_RaycastTarget: 0', 'm_PreserveAspect: 1', 'm_UseSpriteMesh: 0']:
+        assert setting in component, (path, setting)
+    go = re.search(r'm_GameObject: \{fileID: (\d+)\}', component)[1]
+    rect = next(b for b in blocks.values() if b.startswith('--- !u!224 ') and f'm_GameObject: {{fileID: {go}}}' in b)
+    return go, rect
 
-client = UnityMcp(default_url(), timeout=15)
-try:
-    response, _ = client.request("tools/call", {
-        "name": "editor.js.eval",
-        "arguments": {"mode": "script", "code": script},
-    })
-finally:
-    client.close()
 
-if response.get("isError"):
-    raise RuntimeError(str(response))
-result = json.loads(response["structuredContent"]["value"])
-assert result["buttonCount"] == 5, result
-assert {icon["button"] for icon in result["icons"]} == set(EXPECTED), result
-for icon in result["icons"]:
-    assert icon["sprite"] == EXPECTED[icon["button"]] + "Sprite", icon
-    assert icon["vectorComponent"] == "Unity.VectorGraphics.SVGImage", icon
-    assert icon["svgType"] == 4 and icon["spriteVertices"] > 0, icon
-    assert icon["targetResolution"] == 256, icon
-    assert icon["sourceMatches"] and icon["materialMatches"], icon
-    assert icon["raycast"] is False, icon
-    assert icon["iconCount"] == 1, icon
-    assert icon["size"] == ([28, 28] if icon["button"] == "设置" else [32, 32]), icon
-    assert icon["iconRight"] + 4 <= icon["titleLeft"], icon
-    if icon["button"] != "设置":
-        assert icon["indexVisible"] is False, icon
-    else:
-        assert icon["titleRight"] + 4 <= icon["arrowLeft"], icon
-print("主菜单五个 SVG 矢量资源、SVGImage 与 Prefab 绑定全部通过")
-print(" | ".join(f"{icon['button']}：{icon['spriteVertices']} 顶点" for icon in result["icons"]))
+menu = prefab_blocks('Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab')
+assert 'ef8b96895a0ec4ba685178a052544251' not in ''.join(menu.values())
+for name, button_name in {'continue': '选择存档', 'new-world': '新游戏', 'multiplayer': '联机模式',
+                          'mods': 'MOD管理', 'settings': '设置'}.items():
+    go, rect = verify_png_binding('MainMenuIcons', name, menu)
+    assert 'm_Name: "\\u83DC\\u5355\\u56FE\\u6807"' in menu[go]
+    size = 28 if name == 'settings' else 32
+    assert f'm_SizeDelta: {{x: {size}, y: {size}}}' in rect
+    parent = re.search(r'm_Father: \{fileID: (\d+)\}', rect)[1]
+    parent_go = re.search(r'm_GameObject: \{fileID: (\d+)\}', menu[parent])[1]
+    caption = re.search(r'  m_Name: (.+)', menu[parent_go])[1]
+    assert (json.loads(caption) if caption.startswith('"') else caption) == button_name
+
+bag = prefab_blocks('Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Bag.prefab')
+for name in ['all', 'building', 'nature', 'functional', 'tool', 'equipment', 'food', 'material', 'transport']:
+    go, rect = verify_png_binding('InventoryCategoryIcons', name, bag)
+    assert 'm_Name: CategoryIcon' in bag[go]
+    assert 'm_SizeDelta: {x: 22, y: 22}' in rect
+    assert 'm_AnchoredPosition: {x: 8, y: 0}' in rect
+    tab = next(b for b in bag.values() if f'value: FWUI_Category_{name}\n' in b)
+    parent = re.search(r'm_Father: \{fileID: (\d+)\}', rect)[1]
+    instance = re.search(r'm_PrefabInstance: \{fileID: (\d+)\}', bag[parent])[1]
+    assert tab.startswith(f'--- !u!1001 &{instance}\n')
+    child = re.search(r'&([0-9]+)', rect)[1]
+    assert f'addedObject: {{fileID: {child}}}' in tab
+    assert 'propertyPath: m_margin.x\n      value: 36' in tab
+    assert 'propertyPath: m_margin.z\n      value: 6' in tab
+print('PASS: 5 menu + 9 inventory PNG Sprite bindings, import settings and category ownership')

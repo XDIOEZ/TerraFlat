@@ -1,9 +1,10 @@
-"""生成主菜单的 SVG 矢量图标，由 Unity Vector Graphics 直接导入。"""
+"""生成图标源及离线栅格 PNG，游戏只使用普通 Sprite。依赖 Pillow。"""
 
 from __future__ import annotations
 
 from math import cos, pi, sin
 from pathlib import Path
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2] / "Assets/6_Art/UI/MainMenuIcons"
 STROKE_WIDTH = 1.9
@@ -75,11 +76,26 @@ def svg_content(lines):
     )
 
 
+def rasterize_icon(lines, path):
+    # 同一份矢量路径离线超采样，避免运行时曲线网格和专用材质。
+    scale = 16
+    image = Image.new("RGBA", (24 * scale, 24 * scale))
+    draw = ImageDraw.Draw(image)
+    radius = STROKE_WIDTH * scale / 2
+    for line in lines:
+        points = [(x * scale, y * scale) for x, y in line]
+        draw.line(points, fill="white", width=round(radius * 2), joint="curve")
+        for x, y in points:
+            draw.ellipse((x-radius, y-radius, x+radius, y+radius), fill="white")
+    image.resize((96, 96), Image.Resampling.LANCZOS).save(path)
+
+
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
     for name, lines in ICONS.items():
         (ROOT / f"{name}.svg").write_text(svg_content(lines), encoding="utf-8")
-        print(f"{name}: SVG")
+        rasterize_icon(lines, ROOT / f"{name}.png")
+        print(f"{name}: PNG")
 
 
 if __name__ == "__main__":

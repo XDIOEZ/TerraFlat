@@ -4,8 +4,6 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
-using Unity.VectorGraphics;
-using Unity.VectorGraphics.Editor;
 
 public static class MainMenuPrefabBuilder
 {
@@ -448,26 +446,27 @@ public static class MainMenuPrefabBuilder
         ConfigureMenuButtonIcon(root, GameManager.MainMenuSettingsButtonKey, "settings", true);
     }
 
-    /// <summary>用矢量 SVGImage 替换旧位图 Image，保留菜单图标节点和交互布局。</summary>
+    /// <summary>用离线 PNG Sprite 替换矢量组件，保留菜单图标节点和交互布局。</summary>
     private static void ConfigureMenuButtonIcon(GameObject root, string buttonPath, string iconName, bool isSettings)
     {
         Button button = RequireComponent<Button>(root, buttonPath);
-        SVGImage source = LoadMainMenuIconSvg(iconName);
+        Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(MenuIconRoot + iconName + ".png");
+        if (sprite == null) throw new MissingReferenceException("缺少菜单 PNG 图标：" + iconName);
 
         Transform existing = button.transform.Find("菜单图标");
-        SVGImage icon = existing != null ? existing.GetComponent<SVGImage>() : null;
+        Image icon = existing != null ? existing.GetComponent<Image>() : null;
         if (icon == null)
         {
             if (existing == null)
                 existing = CreateRect("菜单图标", button.transform);
 
-            Image obsoleteImage = existing.GetComponent<Image>();
+            UnityEngine.UI.Graphic obsoleteImage = existing.GetComponent<UnityEngine.UI.Graphic>();
             if (obsoleteImage != null)
                 Object.DestroyImmediate(obsoleteImage, true);
-            icon = existing.gameObject.AddComponent<SVGImage>();
+            icon = existing.gameObject.AddComponent<Image>();
         }
-        icon.sprite = source.sprite;
-        icon.material = source.material;
+        icon.sprite = sprite;
+        icon.material = null;
         icon.color = Label;
         icon.preserveAspect = true;
         icon.raycastTarget = false;
@@ -488,33 +487,6 @@ public static class MainMenuPrefabBuilder
         SetRect(title.rectTransform, new Vector2(53f, 0f), new Vector2(82f, 28f), new Vector2(0f, 0.5f));
         TMP_Text arrow = RequireComponent<TMP_Text>(root, buttonPath + "/设置箭头");
         SetRect(arrow.rectTransform, new Vector2(-15f, 0f), new Vector2(20f, 30f), new Vector2(1f, 0.5f));
-    }
-
-    private static SVGImage LoadMainMenuIconSvg(string name)
-    {
-        string path = MenuIconRoot + name + ".svg";
-        SVGImporter importer = AssetImporter.GetAtPath(path) as SVGImporter;
-        if (importer == null)
-            throw new System.InvalidOperationException("[MainMenu] 缺少 SVG 导入器或图标资源：" + path);
-
-        bool needsImport = importer.SvgType != SVGType.UISVGImage ||
-            importer.ViewportOptions != ViewportOptions.PreserveViewport ||
-            !importer.PreserveSVGImageAspect || importer.TargetResolution != 256;
-        if (needsImport)
-        {
-            importer.SvgType = SVGType.UISVGImage;
-            importer.ViewportOptions = ViewportOptions.PreserveViewport;
-            importer.PreserveSVGImageAspect = true;
-            importer.TargetResolution = 256;
-            EditorUtility.SetDirty(importer);
-            importer.SaveAndReimport();
-        }
-
-        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        SVGImage source = asset != null ? asset.GetComponent<SVGImage>() : null;
-        if (source == null || source.sprite == null || source.material == null)
-            throw new System.InvalidOperationException("[MainMenu] SVG 矢量资源导入失败：" + path);
-        return source;
     }
 
     #endregion
