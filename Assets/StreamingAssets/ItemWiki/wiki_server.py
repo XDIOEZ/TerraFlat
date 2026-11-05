@@ -80,6 +80,8 @@ class ExclusiveThreadingHTTPServer(ThreadingHTTPServer):
     """独占监听端口，避免旧静态服务器与 Wiki 写入服务同时占用同一地址。"""
 
     allow_reuse_address = False
+    # 浏览器并发读取分包与图标时由系统监听队列承接突发连接。
+    request_queue_size = socket.SOMAXCONN
 
     def server_bind(self) -> None:
         """Windows 下启用独占地址，其它平台使用普通绑定。"""

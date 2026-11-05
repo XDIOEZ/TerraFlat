@@ -46,6 +46,34 @@ class WikiMaintenanceTests(unittest.TestCase):
         roots = {package["id"]: wiki.read_json(wiki.ITEM_ROOT / package["path"]) for package in packages}
         wiki.validate_all_items(roots, packages)
 
+    def test_browser_manifest_burst_can_queue_before_request_accept_loop(self):
+        class Handler(wiki.WikiRequestHandler):
+            def log_message(self, *args):
+                pass
+
+        server = wiki.ExclusiveThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        clients = []
+        thread = None
+        try:
+            for _ in range(16):
+                connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=2)
+                clients.append(connection)
+                connection.connect()
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            for connection in clients:
+                connection.request("HEAD", "/api/wiki/status")
+                response = connection.getresponse()
+                self.assertEqual(200, response.status)
+                self.assertEqual(b"", response.read())
+        finally:
+            for connection in clients:
+                connection.close()
+            if thread is not None:
+                server.shutdown()
+                thread.join()
+            server.server_close()
+
     def test_public_routes_and_fresh_data(self):
         class Handler(wiki.WikiRequestHandler):
             public_readonly = True
