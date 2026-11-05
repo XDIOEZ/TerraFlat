@@ -47,7 +47,7 @@ public static class PlayerModuleAssemblyDiagnostics
         try
         {
             Item player = root.GetComponent<Item>();
-            Check(player != null, "Player Prefab 缺少 Player 组件。");
+            Check(player != null, "Human Prefab 缺少 Item 组件。");
             var modules = new List<Module>();
             foreach (Module module in root.GetComponentsInChildren<Module>(true))
             {
@@ -57,9 +57,9 @@ public static class PlayerModuleAssemblyDiagnostics
                 modules.Add(module);
             }
 
-            ItemData first = player.Get_NewItemData() as ItemData;
-            ItemData second = player.Get_NewItemData() as ItemData;
-            Check(first != null && second != null, "玩家模板未生成 Data_Player。");
+            ItemData first = player.Get_NewItemData();
+            ItemData second = player.Get_NewItemData();
+            Check(first != null && second != null, "Human 模板未生成通用 ItemData。");
             Check(first.ModuleDataDic.Count == modules.Count, "模板模块集合与玩家层级不一致。");
             foreach (var pair in first.ModuleDataDic)
                 Check(!ReferenceEquals(pair.Value, second.ModuleDataDic[pair.Key]), $"模块 {pair.Key} 在两个玩家之间共享实例数据。");

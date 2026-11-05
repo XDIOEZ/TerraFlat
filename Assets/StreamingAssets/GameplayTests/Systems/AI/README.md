@@ -1,6 +1,6 @@
 # AI 生物测试
 
-2026-11-05 统一角色控制：actor-control.lua 检查独占租约、过期释放、档案保留及旧库存按键合并/快捷栏去重；actor-control-gameplay.lua 用正式 Human/Wolf 工厂检查输入锁期间保持接管、释放恢复同一树/身体、原生攻击冷却、能力不补装、本地模块卸载和两轮接管的体力/营养 HUD 创建清理。已外部编译；其他 Agent 正在修改，Unity 规则与现场尚未执行。离线行为树、存档合同与22组质量回归通过，不能据此宣称镜头/HUD、载具/洞穴/太空或双端联网通过。
+2026-11-05 统一角色控制：actor-control.lua 检查独占租约、过期释放、档案保留及旧库存按键合并/快捷栏去重；actor-control-gameplay.lua 用正式 Human/Wolf 工厂检查输入锁期间保持接管、释放恢复同一树/身体、原生攻击冷却、能力不补装、本地模块卸载和两轮接管的体力/营养 HUD 创建清理。Unity 自动刷新编译和 EditMode/PlayMode 测试程序集外部编译通过，控制台 0 Error / 0 Warning；Human 及四个控制模块 Prefab 无 Missing Script。其他 Agent 仍在修改，Unity 规则与现场尚未执行。离线行为树、存档合同与22组质量回归通过，不能据此宣称镜头/HUD、载具/洞穴/太空或双端联网通过。
 
 本轮另通过 BearProvocation 的实际XLua及24项命中归属断言、RainWetness 的54项断言。ShipContacts、RuntimeAiWorldOwnership、AiTargetMemory 离线夹具仍分别缺 MemoryPack/SpaceElevator、世界层级/物理状态、导航依赖，未通过；全目录 sync_catalog.py 被既有 space 超过10份 Lua 阻断，已按AI清单单独同步总入口和索引，AI共8份Lua。
 
