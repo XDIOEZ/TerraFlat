@@ -113,14 +113,22 @@ namespace FlatWorld.Tests.EditMode
         [Test]
         public void Lua_NoLongerRequiresScreenshotCommands()
         {
-            Assert.DoesNotThrow(() => GameplayTestLuaRunner.ValidateScript("test.log('截图由宿主定时采集')", "@automatic-screenshot.lua"));
+            Assert.DoesNotThrow(() => GameplayTestLuaRunner.ValidateScript(
+                "test.log('截图由宿主定时采集'); test.check('gm_invincibility_enabled')", "@automatic-screenshot.lua"));
+        }
+
+        [Test]
+        public void Lua_RejectsCasesWithoutAResultAssertion()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+                GameplayTestLuaRunner.ValidateScript("test.log('截图由宿主定时采集')", "@automatic-screenshot.lua"));
         }
 
         [Test]
         public void Lua_RejectsRemovedScreenshotCommand()
         {
             Assert.Throws<InvalidOperationException>(() =>
-                GameplayTestLuaRunner.ValidateScript("test.screenshot('旧截图命令')", "@automatic-screenshot.lua"));
+                GameplayTestLuaRunner.ValidateScript("test.check('gm_invincibility_enabled'); test.screenshot('旧截图命令')", "@automatic-screenshot.lua"));
         }
         #endregion
     }
