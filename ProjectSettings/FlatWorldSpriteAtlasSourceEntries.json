@@ -60,7 +60,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png",
             "previousManagedGroup": ""
         },
@@ -141,7 +141,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png",
             "previousManagedGroup": ""
         },
@@ -177,7 +177,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png",
             "previousManagedGroup": ""
         },
@@ -204,7 +204,7 @@
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png",
             "previousManagedGroup": ""
         },
@@ -240,7 +240,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png",
             "previousManagedGroup": ""
         },
@@ -267,7 +267,7 @@
             "sourcePath": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png",
             "previousManagedGroup": ""
         },
@@ -287,6 +287,15 @@
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_Iron/Axe_Iron_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "0def1277b59f4f769ae11f310b5e7380",
+            "sourcePath": "Assets/6_Art/Generated/Space/ShipWreck/ShipWreck_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Space/ShipWreck/ShipWreck_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Space/ShipWreck/ShipWreck_Icon.png",
             "previousManagedGroup": ""
         },
         {
@@ -312,7 +321,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_GameplayUI",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
             "previousManagedGroup": ""
         },
@@ -375,7 +384,7 @@
             "sourcePath": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
             "originalGroup": "PrimitiveTools",
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png",
             "previousManagedGroup": ""
         },
@@ -411,7 +420,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png",
             "previousManagedGroup": ""
         },
@@ -456,7 +465,7 @@
             "sourcePath": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png",
             "previousManagedGroup": ""
         },
@@ -528,7 +537,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png",
             "previousManagedGroup": ""
         },
@@ -708,7 +717,7 @@
             "sourcePath": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png",
             "previousManagedGroup": ""
         },
@@ -717,7 +726,7 @@
             "sourcePath": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png",
             "previousManagedGroup": ""
         },
@@ -728,6 +737,15 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/GoldIngot_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalIngots/GoldIngot_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "26319aeadd9945f595315c109719628b",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png",
             "previousManagedGroup": ""
         },
         {
@@ -807,7 +825,7 @@
             "sourcePath": "Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png",
             "previousManagedGroup": ""
         },
@@ -843,7 +861,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png",
             "previousManagedGroup": ""
         },
@@ -852,7 +870,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png",
             "previousManagedGroup": ""
         },
@@ -863,6 +881,15 @@
             "originalAddress": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Farming/Peach/Peach_Idle.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "2e6f095bc67d4789a1ffddda92c4982a",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -924,7 +951,7 @@
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png",
             "previousManagedGroup": ""
         },
@@ -951,7 +978,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png",
             "previousManagedGroup": ""
         },
@@ -960,7 +987,7 @@
             "sourcePath": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
             "originalGroup": "PrimitiveTools",
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png",
             "previousManagedGroup": ""
         },
@@ -996,7 +1023,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1014,7 +1041,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
             "previousManagedGroup": ""
         },
@@ -1050,8 +1077,17 @@
             "sourcePath": "Assets/6_Art/Food/堆肥桶.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Food/堆肥桶.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Food/堆肥桶.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "392fd99f75fb43f0bcc4d0cd58b52900",
+            "sourcePath": "Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png",
             "previousManagedGroup": ""
         },
         {
@@ -1077,7 +1113,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1104,7 +1140,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png",
             "previousManagedGroup": ""
         },
@@ -1167,7 +1203,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1212,7 +1248,7 @@
             "sourcePath": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png",
             "previousManagedGroup": ""
         },
@@ -1239,7 +1275,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png",
             "previousManagedGroup": ""
         },
@@ -1248,7 +1284,7 @@
             "sourcePath": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1343,6 +1379,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "48fa49d07ae34bcb926d94899c4f278c",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "4a7faf28d20c46dfb1450c6c680484e7",
             "sourcePath": "Assets/6_Art/Generated/Buff/StatusIcons/SpeedBoost.png",
             "originalGroup": "Default",
@@ -1365,7 +1410,7 @@
             "sourcePath": "Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1410,7 +1455,7 @@
             "sourcePath": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
             "originalGroup": "PlayerAppearance",
             "originalAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png",
             "previousManagedGroup": ""
         },
@@ -1421,6 +1466,15 @@
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Axe_RawIron/Axe_RawIron_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "4e5507f9fdc84dd4acf948df8d76e972",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -1464,7 +1518,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png",
             "previousManagedGroup": ""
         },
@@ -1509,7 +1563,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png",
             "previousManagedGroup": ""
         },
@@ -1518,7 +1572,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1572,7 +1626,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png",
             "previousManagedGroup": ""
         },
@@ -1590,7 +1644,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png",
             "previousManagedGroup": ""
         },
@@ -1635,7 +1689,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png",
             "previousManagedGroup": ""
         },
@@ -1811,20 +1865,11 @@
             "previousManagedGroup": ""
         },
         {
-            "guid": "647e6092ebb3cc8458d1a7cb22f7df84",
-            "sourcePath": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png",
-            "originalGroup": "Default",
-            "originalAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
-            "managedAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png",
-            "previousManagedGroup": ""
-        },
-        {
             "guid": "64a3a03e261b4bf39470b79fbec2a753",
             "sourcePath": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png",
             "previousManagedGroup": ""
         },
@@ -2000,6 +2045,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "6f44702b34704aabbd62ce47abed64e4",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "6fde0dd353728d74c818759104432689",
             "sourcePath": "Assets/6_Art/Generated/Environment/PeachTree/PeachTree_Idle.png",
             "originalGroup": "Default",
@@ -2040,7 +2094,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png",
             "previousManagedGroup": ""
         },
@@ -2058,7 +2112,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png",
             "previousManagedGroup": ""
         },
@@ -2117,12 +2171,30 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "7746d49bd5feab64a84ec04da04e1a9b",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "780f1ed662184beca511bdb04b595f7d",
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/WoodAsh/WoodAsh_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "78148680bd2d47b4a65a219c99f6267e",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -2144,6 +2216,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "793ce9fb265f42999df0e152d91709ff",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "79debcbb3770407ebb396eda5fb4f64f",
             "sourcePath": "Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryLeftHand.png",
             "originalGroup": "Default",
@@ -2157,7 +2238,7 @@
             "sourcePath": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
             "originalGroup": "PlayerAppearance",
             "originalAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png",
             "previousManagedGroup": ""
         },
@@ -2229,7 +2310,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png",
             "previousManagedGroup": ""
         },
@@ -2292,7 +2373,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png",
             "previousManagedGroup": ""
         },
@@ -2319,7 +2400,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png",
             "previousManagedGroup": ""
         },
@@ -2337,7 +2418,7 @@
             "sourcePath": "Assets/6_Art/Generated/Railway/SteamEngine.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Railway/SteamEngine.png",
             "previousManagedGroup": ""
         },
@@ -2373,8 +2454,17 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "877c6ee4251a42f590ea719d133409d5",
+            "sourcePath": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -2400,7 +2490,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png",
             "previousManagedGroup": ""
         },
@@ -2504,12 +2594,30 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "8c58910106764e04b099ec4e540f6b46",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "8c7d41c0b2d84a7da6c650f2413eb182",
             "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
             "originalGroup": "Default",
             "originalAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
             "managedGroup": "FlatWorldSpriteAtlas_Menu",
             "managedAddress": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_PanelBackground.prefab",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "8c86d9933e254df18737d5544f5b4696",
+            "sourcePath": "Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png",
             "previousManagedGroup": ""
         },
         {
@@ -2526,7 +2634,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png",
             "previousManagedGroup": ""
         },
@@ -2576,6 +2684,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "8fbd3a839f1b5044d82c5d02bd64695b",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "90b6f4e4caf243b8933ceabf368e6f1e",
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png",
             "originalGroup": "Default",
@@ -2591,6 +2708,15 @@
             "originalAddress": "Assets/6_Art/Generated/Building/GrassBed/GrassBed.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Building/GrassBed/GrassBed.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "91793d33d6c22174a9ed711eaa0431f8",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png",
             "previousManagedGroup": ""
         },
         {
@@ -2688,7 +2814,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png",
             "previousManagedGroup": ""
         },
@@ -2729,6 +2855,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "9937a354fa2c4e84883ff8391e377f4a",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "997a4f5f4fc9402cbd106af57ecb1ea3",
             "sourcePath": "Assets/6_Art/Generated/Farming/PlantSet_LowPixel_20261023/RiceCrop/RiceCrop_Seedling.png",
             "originalGroup": "PlantSprites",
@@ -2742,7 +2877,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png",
             "previousManagedGroup": ""
         },
@@ -2841,7 +2976,7 @@
             "sourcePath": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png",
             "previousManagedGroup": ""
         },
@@ -2861,6 +2996,15 @@
             "originalAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FlintStrike/FlintStrike_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "a2d6146a2a264153a474b6f8a2edeea5",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png",
             "previousManagedGroup": ""
         },
         {
@@ -2985,7 +3129,7 @@
             "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png",
             "previousManagedGroup": ""
         },
@@ -3003,7 +3147,7 @@
             "sourcePath": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3075,7 +3219,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3174,7 +3318,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3183,7 +3327,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png",
             "previousManagedGroup": ""
         },
@@ -3210,7 +3354,7 @@
             "sourcePath": "Assets/6_Art/Food/pixelate (1).png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Food/pixelate (1).png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Food/pixelate (1).png",
             "previousManagedGroup": ""
         },
@@ -3221,6 +3365,15 @@
             "originalAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Wheel.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Wheel.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "b8b3886b2f4c7434b8a2a1599659ef70",
+            "sourcePath": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png",
+            "managedGroup": "FlatWorldSpriteAtlas_GameplayUI",
+            "managedAddress": "Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png",
             "previousManagedGroup": ""
         },
         {
@@ -3269,6 +3422,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "bb0b0c5949cf4fce994a2516e5bc4bc3",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "bcaec33fbf6a82a46b27fb8909782064",
             "sourcePath": "Assets/6_Art/Generated/Actors/Zombie/Character_Zombie_Idle_LR_Sheet.png",
             "originalGroup": "Default",
@@ -3282,7 +3444,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png",
             "previousManagedGroup": ""
         },
@@ -3293,6 +3455,15 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/SteelPlate_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/SteelPlate_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "be2592b44eec48e79fc19c03e3d8b99c",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Gold.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Gold.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Gold.png",
             "previousManagedGroup": ""
         },
         {
@@ -3318,7 +3489,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png",
             "previousManagedGroup": ""
         },
@@ -3327,7 +3498,7 @@
             "sourcePath": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3354,7 +3525,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3372,7 +3543,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png",
             "previousManagedGroup": ""
         },
@@ -3381,7 +3552,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png",
             "previousManagedGroup": ""
         },
@@ -3408,7 +3579,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png",
             "previousManagedGroup": ""
         },
@@ -3480,7 +3651,7 @@
             "sourcePath": "Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3498,7 +3669,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png",
             "previousManagedGroup": ""
         },
@@ -3588,7 +3759,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png",
             "previousManagedGroup": ""
         },
@@ -3669,7 +3840,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png",
             "previousManagedGroup": ""
         },
@@ -3689,6 +3860,24 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Beeswax/Beeswax_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Beeswax/Beeswax_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "d463411fa22f75247ab75919584525fe",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "d467af166f8b431eab92579a6eb3df5a",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -3795,7 +3984,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3822,7 +4011,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png",
             "previousManagedGroup": ""
         },
@@ -3894,7 +4083,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png",
             "previousManagedGroup": ""
         },
@@ -3923,6 +4112,15 @@
             "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/MetalPlates/CopperPlate_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "e1bd6558fcd04a4fb362a9f0f0bed471",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png",
             "previousManagedGroup": ""
         },
         {
@@ -4034,11 +4232,20 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "e8700496385d253449fb8b4c7b340087",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "e89ee2f67e1641ba9926ec08a407aa27",
             "sourcePath": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png",
             "previousManagedGroup": ""
         },
@@ -4079,11 +4286,20 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "eb579949368e42b08e6555983402f085",
+            "sourcePath": "Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "eb948656856c40edafd6751aa0eb76e7",
             "sourcePath": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png",
             "previousManagedGroup": ""
         },
@@ -4121,6 +4337,15 @@
             "originalAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Environment/Iceberg/Iceberg_Idle.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "efbcc912129c431395e6e80e510c29b4",
+            "sourcePath": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png",
             "previousManagedGroup": ""
         },
         {
@@ -4166,6 +4391,15 @@
             "originalAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Sulfur/Mine_Sulfur_Idle.png",
             "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
             "managedAddress": "Assets/6_Art/Generated/Environment/MineralsUnified/Mine_Sulfur/Mine_Sulfur_Idle.png",
+            "previousManagedGroup": ""
+        },
+        {
+            "guid": "f2d2d408dec14604a4ba5934e220012c",
+            "sourcePath": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
             "previousManagedGroup": ""
         },
         {
@@ -4245,7 +4479,7 @@
             "sourcePath": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png",
             "previousManagedGroup": ""
         },
@@ -4340,6 +4574,15 @@
             "previousManagedGroup": ""
         },
         {
+            "guid": "fd4a65036b7cc8e4cb450f0aa5b9ed4d",
+            "sourcePath": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png",
+            "originalGroup": "Default",
+            "originalAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png",
+            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedAddress": "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png",
+            "previousManagedGroup": ""
+        },
+        {
             "guid": "fd5ff6df82e5dfe4db26faa6261915ab",
             "sourcePath": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_DestructiveButton.prefab",
             "originalGroup": "Default",
@@ -4380,7 +4623,7 @@
             "sourcePath": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png",
             "originalGroup": "Default",
             "originalAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png",
-            "managedGroup": "FlatWorldSpriteAtlas_CommonItems",
+            "managedGroup": "FlatWorldSpriteAtlas_Shared",
             "managedAddress": "Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png",
             "previousManagedGroup": ""
         },

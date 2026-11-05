@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: Tile_BitumenFloor
   m_EditorClassIdentifier:
-  m_Sprite: {fileID: 21300000, guid: de315b489b0d40f2abd764e9910c2d18, type: 3}
-  m_Color: {r: 0.22, g: 0.23, b: 0.25, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 8c86d9933e254df18737d5544f5b4696, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1
     e01: 0

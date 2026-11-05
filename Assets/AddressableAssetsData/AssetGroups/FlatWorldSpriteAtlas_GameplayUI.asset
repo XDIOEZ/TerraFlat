@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 79bd6428e0bb95e41a6c8a7a3002995c
   m_SerializeEntries:
+  - m_GUID: 0e96842eb55ce694c96c14875794e0e1
+    m_Address: Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0fdbfa8e4b7d4de590c52a96440afcb3
     m_Address: Assets/6_Art/Generated/Buff/StatusIcons/BodyRecoveryChest.png
     m_ReadOnly: 0
@@ -166,6 +172,17 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b2e5239f772e44f4989e54a7e7fb5b02
     m_Address: Assets/6_Art/Generated/Buff/StatusIcons/Concussion.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3fe9ebbae8cfa343ac0ff0df6a3ff20
+    m_Address: FlatWorld_GameplayUI_04
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b8b3886b2f4c7434b8a2a1599659ef70
+    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

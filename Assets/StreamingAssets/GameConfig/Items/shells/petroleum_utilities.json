@@ -19,11 +19,11 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
         "color": {
-          "r": 0.58,
-          "g": 0.48,
-          "b": 0.32,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -99,11 +99,11 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
         "color": {
-          "r": 0.58,
-          "g": 0.48,
-          "b": 0.32,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -169,11 +169,11 @@
       "volume": 29,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png",
+        "spriteAddress": "Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png",
         "color": {
-          "r": 0.22,
-          "g": 0.23,
-          "b": 0.25,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },

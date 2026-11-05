@@ -19,11 +19,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png",
         "color": {
-          "r": 0.15,
-          "g": 0.12,
-          "b": 0.1,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -73,11 +73,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png",
         "color": {
-          "r": 0.94,
-          "g": 0.83,
-          "b": 0.52,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -123,11 +123,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png",
         "color": {
-          "r": 0.72,
-          "g": 0.9,
-          "b": 0.92,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -174,11 +174,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png",
         "color": {
-          "r": 0.91,
-          "g": 0.72,
-          "b": 0.47,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -201,11 +201,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png",
         "color": {
-          "r": 0.23,
-          "g": 0.2,
-          "b": 0.18,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -229,11 +229,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png",
         "color": {
-          "r": 0.61,
-          "g": 0.41,
-          "b": 0.17,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -273,11 +273,11 @@
         "InventoryCategory.Material"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png",
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png",
         "color": {
-          "r": 0.65,
-          "g": 0.7,
-          "b": 0.72,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },

@@ -19,7 +19,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 5,
@@ -93,7 +93,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 5,

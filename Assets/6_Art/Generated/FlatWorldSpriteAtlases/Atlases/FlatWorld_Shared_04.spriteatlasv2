@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!612988286 &1
+SpriteAtlasAsset:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FlatWorld_Shared_04
+  serializedVersion: 2
+  m_MasterAtlas: {fileID: 0}
+  m_ImporterData:
+    packables:
+    - {fileID: 21300000, guid: 2cd81af677434ebca39952af527326e1, type: 3}
+    - {fileID: 21300000, guid: 332e21aa52133a44f9035a0c79ea127e, type: 3}
+    - {fileID: 21300000, guid: 4149e423b7f64db4b9095e4b486e0e6b, type: 3}
+    - {fileID: 21300001, guid: 42f724342d0e3f7469f7dbb65f10d656, type: 3}
+    - {fileID: 21300000, guid: 4474f46a23ce4c14696db676ae1b07f6, type: 3}
+    - {fileID: 21300000, guid: 44857f02da7a4f9fa97074798a277126, type: 3}
+    - {fileID: 21300000, guid: 521c7d2ba6f995d48bf33c22d655e409, type: 3}
+    - {fileID: 21300000, guid: 544c876833c829343bbd8343fb616815, type: 3}
+    - {fileID: 21300000, guid: 5d4350f02e305e14da8a848a4d32ec18, type: 3}
+    - {fileID: 21300000, guid: 7eef1c5ee25a2c842b14531f283ab19d, type: 3}
+    - {fileID: 21300000, guid: 9a7e192315d12f1429f388ed14b482f8, type: 3}
+    - {fileID: 21300000, guid: aa1eefd3fce04509b3d4ad9dc3f17619, type: 3}
+    - {fileID: 21300000, guid: af075c8f242c4394a0186cc839ebe892, type: 3}
+  m_IsVariant: 0

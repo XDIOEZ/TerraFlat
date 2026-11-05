@@ -19,15 +19,15 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
         "rendererLocalScale": {
           "x": 1,
           "y": 1,
           "z": 1
         },
         "color": {
-          "r": 0.72,
-          "g": 0.88,
+          "r": 1,
+          "g": 1,
           "b": 1,
           "a": 1
         }
@@ -128,15 +128,15 @@
         "InventoryCategory.Transport"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+        "spriteAddress": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
         "rendererLocalScale": {
           "x": 1,
           "y": 1,
           "z": 1
         },
         "color": {
-          "r": 0.72,
-          "g": 0.88,
+          "r": 1,
+          "g": 1,
           "b": 1,
           "a": 1
         }

@@ -222,6 +222,9 @@
     }
     ,{
       "id": "Seed_Cotton",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png"
+      },
       "parent": "Seed_Radish",
       "gameName": "棉花种子",
       "description": "种下后会长出棉花作物。",

@@ -1,0 +1,666 @@
+{
+  "generationMode": "built-in image_gen",
+  "date": "2026-11-05",
+  "scope": "20 independent sprites / 27 item definitions; presentation only",
+  "import": {
+    "filter": "Point",
+    "mipmaps": false,
+    "compression": "None",
+    "maxTextureSize": 2048,
+    "spriteMode": "Single",
+    "pivot": [
+      0.5,
+      0.5
+    ],
+    "originalResolutionAndAlphaPreserved": "19 originals unchanged; WaterTrough uses nearest-neighbor 128x58 runtime copy, original generation preserved outside Assets",
+    "sizeCalibrationAlphaThreshold": 128
+  },
+  "assets": [
+    {
+      "id": "Seed_Cotton",
+      "ids": [
+        "Seed_Cotton"
+      ],
+      "asset": "Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png",
+      "guid": "392fd99f75fb43f0bcc4d0cd58b52900",
+      "dimensions": [
+        1317,
+        1194
+      ],
+      "ppu": 3080.0,
+      "targetLongest": 0.25,
+      "alphaBounds128": [
+        267,
+        270,
+        1037,
+        989
+      ],
+      "prompt": "Cotton seeds with creamy fuzz; chunky muted pixel art matching current bear, transparent background.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Farming/RadishSeed/RadishSeed_Icon.png",
+      "sourceGenerationFile": "exec-d64f8125-5470-4358-9e1f-c91ef3e063cd.png",
+      "readWrite": false
+    },
+    {
+      "id": "SteelNail",
+      "ids": [
+        "SteelNail"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png",
+      "guid": "8c58910106764e04b099ec4e540f6b46",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "ppu": 1144.754716981132,
+      "targetLongest": 0.828125,
+      "alphaBounds128": [
+        209,
+        181,
+        1062,
+        1129
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, transparent background, no text, no border, no ground or shadow. Style reference image is STYLE ONLY: bear's coarse low-saturation big square pixel clusters, very sparse hard-edge shading, roughly 32x32 logical pixel detail shown on a large original canvas, no fur or bear. Center isolated subject about 70% of square canvas. 8-12 muted colors, clear functional silhouette, no noise, no smooth gradients or antialiasing. Three handmade STEEL NAILS, a close pair and one angled nail with clearly forged flat polygonal heads and pointed long square shafts, cool bluish grey steel, one small light edge, dark broad side faces, irregular hammered texture expressed by two large shapes only. Distinct arrangement from a cross of old iron nails.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png",
+      "sourceGenerationFile": "exec-4a9f86bf-2041-4195-87f3-008f14b98af3.png",
+      "readWrite": false
+    },
+    {
+      "id": "OrePowder_Gold",
+      "ids": [
+        "OrePowder_Gold"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Gold.png",
+      "guid": "be2592b44eec48e79fc19c03e3d8b99c",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 2618.88,
+      "targetLongest": 0.390625,
+      "alphaBounds128": [
+        241,
+        275,
+        1264,
+        911
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, genuine transparent background with CLEAN hard alpha edges. No checker pattern or colored fringe. No text, no border, no ground or cast shadow. Reference is STYLE ONLY: bear's coarse muted big pixel clusters and sparse hard-edge shading, no fur or bear. Roughly 32x32 logical pixels rendered as large crisp square pixels on a large original canvas. Center single isolated subject about 65-75% of canvas. 8-12 muted colors, clear silhouette, no noise, no gradients, no microscopic details. Do not add any container. GOLD ORE POWDER: low compact asymmetric mound of crushed tan rock dust with a few chunky subdued yellow gold flakes mixed through grey-brown gangue grains, three loose grains close to the base. Not solid rock, coins, glitter or pure gold. Perfectly clean alpha silhouette, no semitransparent haze, checkerboard, speckles or colored marks outside the powder.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Stone.png",
+      "sourceGenerationFile": "exec-0137b713-9e05-4b40-909d-711f48e21e2c.png",
+      "readWrite": false
+    },
+    {
+      "id": "CommandManual",
+      "ids": [
+        "CommandManual"
+      ],
+      "asset": "Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png",
+      "guid": "eb579949368e42b08e6555983402f085",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "ppu": 1084.0353982300885,
+      "targetLongest": 0.8828125,
+      "alphaBounds128": [
+        151,
+        211,
+        1108,
+        1114
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, transparent background, no text, no border, no ground or shadow. Style reference image is STYLE ONLY: bear's coarse low-saturation big square pixel clusters, very sparse hard-edge shading, roughly 32x32 logical pixel detail shown on a large original canvas, no fur or bear. Center isolated subject about 70% of square canvas. 8-12 muted colors, clear functional silhouette, no noise, no smooth gradients or antialiasing. A sturdy closed CHAT COMMAND MANUAL, a dark desaturated teal cloth-bound book with a simple ivory embossed terminal chevron and underscore pictogram on front cover, NO alphabet or words. Thick cream page block visible on right, simple spine bands, single bronze corner clasp. Three-quarter top view. Keep glyph formed in 2-3 coarse pixel blocks, sparse bold shapes. No quill, charcoal, table, or extra objects.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png",
+      "sourceGenerationFile": "exec-0c318eff-cc6c-4638-a9db-f9c2d5621c18.png",
+      "readWrite": false
+    },
+    {
+      "id": "CrudeOil",
+      "ids": [
+        "CrudeOil"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png",
+      "guid": "48fa49d07ae34bcb926d94899c4f278c",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1798.4,
+      "targetLongest": 0.625,
+      "alphaBounds128": [
+        190,
+        155,
+        1314,
+        963
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, genuine transparent background with CLEAN hard alpha edges. No checker pattern or colored fringe. No text, no border, no ground or cast shadow. Reference is STYLE ONLY: bear's coarse muted big pixel clusters and sparse hard-edge shading, no fur or bear. Roughly 32x32 logical pixels rendered as large crisp square pixels on a large original canvas. Center single isolated subject about 65-75% of canvas. 8-12 muted colors, clear silhouette, no noise, no gradients, no microscopic details. Do not add any container. PETROLEUM / CRUDE OIL raw material: a squat irregular black-brown viscous liquid puddle with a single short thick upright droplet emerging from its center, broad faceted charcoal and earthy brown surfaces and just two muted brown-grey reflections. Heavy sticky oil, distinct liquid silhouette, no rock, no bottle, no resin crystal. Avoid rainbow sheen.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+      "sourceGenerationFile": "exec-b5632186-4c17-4207-9da3-515b72fcb81a.png",
+      "readWrite": false
+    },
+    {
+      "id": "Naphtha",
+      "ids": [
+        "Naphtha"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png",
+      "guid": "e1bd6558fcd04a4fb362a9f0f0bed471",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1537.6,
+      "targetLongest": 0.625,
+      "alphaBounds128": [
+        257,
+        172,
+        1218,
+        901
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, genuine transparent background with CLEAN hard alpha edges. No checker pattern or colored fringe. No text, no border, no ground or cast shadow. Reference is STYLE ONLY: bear's coarse muted big pixel clusters and sparse hard-edge shading, no fur or bear. Roughly 32x32 logical pixels rendered as large crisp square pixels on a large original canvas. Center single isolated subject about 65-75% of canvas. 8-12 muted colors, clear silhouette, no noise, no gradients, no microscopic details. Do not add any container. NAPHTHA raw liquid material: one pale straw-yellow translucent-looking low oval liquid pool with a slender tapered teardrop of light liquid resting upright at rear. Convey a light mobile liquid in hard pixel shapes, small pale cream face and sand-tone shadow, faint green-grey edge; no bottle, no splashes, no bubbles, no rock. Subject itself opaque pixel shading, only background transparent.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+      "sourceGenerationFile": "exec-6171d5f3-3389-4640-9081-814e8318ef90.png",
+      "readWrite": false
+    },
+    {
+      "id": "FuelOil",
+      "ids": [
+        "FuelOil"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png",
+      "guid": "9937a354fa2c4e84883ff8391e377f4a",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1828.8,
+      "targetLongest": 0.625,
+      "alphaBounds128": [
+        167,
+        134,
+        1310,
+        926
+      ],
+      "prompt": "Create ONE production FlatWorld inventory sprite, genuine transparent background with CLEAN hard alpha edges. No checker pattern or colored fringe. No text, no border, no ground or cast shadow. Reference is STYLE ONLY: bear's coarse muted big pixel clusters and sparse hard-edge shading, no fur or bear. Roughly 32x32 logical pixels rendered as large crisp square pixels on a large original canvas. Center single isolated subject about 65-75% of canvas. 8-12 muted colors, clear silhouette, no noise, no gradients, no microscopic details. Do not add any container. FUEL OIL liquid material: a broad warm amber-brown low puddle with two rounded heavy liquid lobes and one compact upright amber oil droplet, darker tobacco lower edge and broad muted golden reflection, clearly viscous fluid not a crystal or rock. No container, no fire.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Resin/Resin_Icon.png",
+      "sourceGenerationFile": "exec-ee5a5186-a96c-473a-ae5e-2244198a04bf.png",
+      "readWrite": false
+    },
+    {
+      "id": "Bitumen",
+      "ids": [
+        "Bitumen"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png",
+      "guid": "bb0b0c5949cf4fce994a2516e5bc4bc3",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1410.2857142857142,
+      "targetLongest": 0.875,
+      "alphaBounds128": [
+        137,
+        134,
+        1371,
+        979
+      ],
+      "prompt": "Create ONE production FlatWorld raw-material inventory sprite, transparent background with clean hard alpha edges. No label, text, border, ground shadow, container, laboratory apparatus or scenery. Reference image is STYLE ONLY: bear's coarse muted big square pixel clusters, very sparse hard-edge shading, no bear or fur. Approx 32x32 logical pixel detail rendered large on original canvas. Center isolated subject, 70% coverage, 8-12 desaturated colors, no gradients, noise, antialiasing, checkerboard or colored fringe. BITUMEN / ASPHALT BINDER raw material: an irregular folded lump of almost black charcoal tar pitch, a squat heavy mass with a broad folded upper lip and thick sticky torn lower edge, muted dark warm grey faces with two broad restrained slate reflections. NOT liquid oil with a droplet, NOT amber resin, not a pot, no stones.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/InventoryCrafting/ResinGlue/ResinGlue_Idle.png",
+      "sourceGenerationFile": "exec-24f1b83e-bfb8-4d30-b63b-e28c1cfb7555.png",
+      "readWrite": false
+    },
+    {
+      "id": "Ethylene",
+      "ids": [
+        "Ethylene"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png",
+      "guid": "a2d6146a2a264153a474b6f8a2edeea5",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1390.2574257425742,
+      "targetLongest": 0.7890625,
+      "alphaBounds128": [
+        204,
+        122,
+        1301,
+        973
+      ],
+      "prompt": "Create ONE production FlatWorld raw-material inventory sprite, transparent background with clean hard alpha edges. No label, text, border, ground shadow, container, laboratory apparatus or scenery. Reference image is STYLE ONLY: bear's coarse muted big square pixel clusters, very sparse hard-edge shading, no bear or fur. Approx 32x32 logical pixel detail rendered large on original canvas. Center isolated subject, 70% coverage, 8-12 desaturated colors, no gradients, noise, antialiasing, checkerboard or colored fringe. ETHYLENE gas raw-material icon as a simple compact molecular ball-and-stick pictogram in retro pixel art: exactly TWO connected large charcoal carbon atom blocks with a double bond between them; FOUR small ivory hydrogen blocks, two attached to each carbon. Molecule lying diagonally on screen as one compact centered cluster. Thick muted teal-grey bonds, large block shading, no glossy 3D rendering, no text or chemical formula, no aura, no container. Clear two-carbon silhouette.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+      "sourceGenerationFile": "exec-ece85178-028d-4443-90e3-597511387025.png",
+      "readWrite": false
+    },
+    {
+      "id": "Propylene",
+      "ids": [
+        "Propylene"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png",
+      "guid": "793ce9fb265f42999df0e152d91709ff",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1552.4752475247524,
+      "targetLongest": 0.7890625,
+      "alphaBounds128": [
+        136,
+        92,
+        1361,
+        997
+      ],
+      "prompt": "Create ONE production FlatWorld raw-material inventory sprite, transparent background with clean hard alpha edges. No label, text, border, ground shadow, container, laboratory apparatus or scenery. Reference image is STYLE ONLY: bear's coarse muted big square pixel clusters, very sparse hard-edge shading, no bear or fur. Approx 32x32 logical pixel detail rendered large on original canvas. Center isolated subject, 70% coverage, 8-12 desaturated colors, no gradients, noise, antialiasing, checkerboard or colored fringe. PROPYLENE gas raw-material icon as a compact molecular ball-and-stick pictogram in retro pixel art: THREE larger charcoal carbon atom blocks in a bent zigzag chain, double bond between first two, simple single bond to third; SIX small muted ivory hydrogen blocks attached around them (2 at first,1 at middle,3 at third). Thick muted ochre-grey bonds, coarse flat block shading. No glossy 3D rendering, formula, text, aura or container. Clear three-carbon bent silhouette distinct from two-carbon ethylene.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png",
+      "sourceGenerationFile": "exec-f62266c6-cbac-43fc-940e-77be5bda8539.png",
+      "readWrite": false
+    },
+    {
+      "id": "PolymerizationCatalyst",
+      "ids": [
+        "PolymerizationCatalyst"
+      ],
+      "asset": "Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png",
+      "guid": "6f44702b34704aabbd62ce47abed64e4",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1212.8316831683169,
+      "targetLongest": 0.7890625,
+      "alphaBounds128": [
+        277,
+        195,
+        1234,
+        956
+      ],
+      "prompt": "Create ONE production FlatWorld raw-material inventory sprite, transparent background with clean hard alpha edges. No label, text, border, ground shadow, container, laboratory apparatus or scenery. Reference image is STYLE ONLY: bear's coarse muted big square pixel clusters, very sparse hard-edge shading, no bear or fur. Approx 32x32 logical pixel detail rendered large on original canvas. Center isolated subject, 70% coverage, 8-12 desaturated colors, no gradients, noise, antialiasing, checkerboard or colored fringe. POLYMERIZATION CATALYST: small cluster of short porous industrial catalyst pellets, muted warm grey and dusty mauve, mostly squat rough cylinders with visible dark central pores on only two large pellets. About seven pellets arranged as compact irregular pile. Manufactured granular chemical material, not glittering sulfur crystal, not pebbles, no bowl.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Environment/Ore_Sulfur/Ore_Sulfur_Icon.png",
+      "sourceGenerationFile": "exec-9f696d60-504c-4590-8a98-65cf4e306a9d.png",
+      "readWrite": false
+    },
+    {
+      "id": "WaterTrough",
+      "ids": [
+        "WaterTrough",
+        "WaterTrough_Building"
+      ],
+      "asset": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
+      "guid": "f2d2d408dec14604a4ba5934e220012c",
+      "dimensions": [
+        128,
+        58
+      ],
+      "ppu": 123.42857142857143,
+      "targetLongest": 0.875,
+      "alphaBounds128": [
+        10,
+        10,
+        118,
+        53
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Transparent background with clean hard alpha, no ground shadow, no scenery, text, labels, checker patterns or stray pixels. Reference image 1 is STYLE ONLY: match the bear's coarse low-saturation big square pixel blocks and sparse shading, do not draw bear. Reference image 2 provides existing industrial material/viewpoint context ONLY; do not reproduce the contact sheet. About 40x40 logical pixels of detail rendered as large crisp blocks on a large original canvas. One isolated centered object occupies 75% of canvas, front with modest top visibility as top-down 2D sandbox props, no dramatic isometric angle. No smooth gradients, tiny rivets, noise or dense detail. An EMPTY WOODEN WATER TROUGH, distinctly elongated rectangular open basin, 2.2:1 width to body-height, hand-built warm muted brown planks, thick uneven rim, short simple wooden feet, two coarse rope bindings. Clearly visible open interior as one flat dark brown rectangular recess. Interior basin is dark brown (RGB channels all below 70), no water, no debris, no bright interior highlights. Outer rim and wood lighter than recess. Functional 400 litre wooden trough, not round barrel, not bucket. Slight top visibility but nearly straight horizontal rectangular opening for later runtime liquid recolor. No pipes, no attached external fittings.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png",
+      "sourceGenerationFile": "exec-0da0169c-9e8f-4831-a193-cbd0480f1d45.png",
+      "readWrite": true,
+      "originalGenerationDimensions": [
+        1858,
+        846
+      ],
+      "runtimeCopyReason": "Liquid surface renderer caches full textures per fill-row. Bounds floor/ceil spans 11 rows: 128*58*4*11 = 326656 bytes (319 KiB) RGBA32 payload per liquid color; original 144 rows require 905395968 bytes."
+    },
+    {
+      "id": "InductionStove",
+      "ids": [
+        "InductionStove",
+        "InductionStove_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png",
+      "guid": "4e5507f9fdc84dd4acf948df8d76e972",
+      "dimensions": [
+        1312,
+        1199
+      ],
+      "ppu": 1510.010152284264,
+      "targetLongest": 0.76953125,
+      "alphaBounds128": [
+        75,
+        141,
+        1237,
+        1110
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Transparent background with clean hard alpha, no ground shadow, no scenery, text, labels, checker patterns or stray pixels. Reference image 1 is STYLE ONLY: match the bear's coarse low-saturation big square pixel blocks and sparse shading, do not draw bear. Reference image 2 provides existing industrial material/viewpoint context ONLY; do not reproduce the contact sheet. About 40x40 logical pixels of detail rendered as large crisp blocks on a large original canvas. One isolated centered object occupies 75% of canvas, front with modest top visibility as top-down 2D sandbox props, no dramatic isometric angle. No smooth gradients, tiny rivets, noise or dense detail. A single INDUSTRIAL INDUCTION STOVE / induction heating workbench, low wide square grey-blue steel case, upper face a large flat dark cook surface with ONE chunky circular copper induction-coil ring graphic, front face one broad dark vent and a simple orange switch, short squared feet. Clearly horizontal cooktop rather than tall radiator. Coarse bolted workshop construction. Cold unlit idle state. No pan, flames, glowing effects, cable, pipe or external connection fittings.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png",
+      "sourceGenerationFile": "exec-81f7c0cd-8744-4136-8516-509dcb88b482.png",
+      "readWrite": false
+    },
+    {
+      "id": "FuelEngine",
+      "ids": [
+        "FuelEngine",
+        "FuelEngine_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png",
+      "guid": "78148680bd2d47b4a65a219c99f6267e",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "ppu": 1977.0377375342464,
+      "targetLongest": 0.6059570726728468,
+      "alphaBounds128": [
+        152,
+        86,
+        1350,
+        993
+      ],
+      "prompt": "Edit this existing game sprite. Remove ALL the soft dark glow/halo/shadow surrounding the outer silhouette and between parts. Keep only the solid coarse pixel-art machine itself with crisp hard edges. Make every exterior background pixel fully transparent, not black. Do not add any pixels outside the existing solid machine. Preserve EXACTLY the current machine design, arrangement, shape, palette, coarse pixel detail and original canvas size. No fog, feathering, antialiasing, glow, shadow, noise or backdrop; only hard 0/255 alpha. No other changes.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png",
+      "sourceGenerationFile": "exec-4f176060-85f8-4da8-a83b-184f844bcf43.png",
+      "readWrite": false
+    },
+    {
+      "id": "GasFiller",
+      "ids": [
+        "GasFiller",
+        "GasFiller_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png",
+      "guid": "efbcc912129c431395e6e80e510c29b4",
+      "dimensions": [
+        1448,
+        1086
+      ],
+      "ppu": 1318.1925782608696,
+      "targetLongest": 0.6873047344837221,
+      "alphaBounds128": [
+        272,
+        121,
+        1178,
+        1000
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Transparent background with clean hard alpha, no ground shadow, no scenery, text, labels, checker patterns or stray pixels. Reference image 1 is STYLE ONLY: match the bear's coarse low-saturation big square pixel blocks and sparse shading, do not draw bear. Reference image 2 provides existing industrial material/viewpoint context ONLY; do not reproduce the contact sheet. About 40x40 logical pixels of detail rendered as large crisp blocks on a large original canvas. One isolated centered object occupies 75% of canvas, front with modest top visibility as top-down 2D sandbox props, no dramatic isometric angle. No smooth gradients, tiny rivets, noise or dense detail. A GAS CYLINDER FILLING MACHINE / gas filler, squat grey-blue steel compressor cabinet with a chunky circular pressure gauge high on front, protected integrated vertical pressure chamber on left, orange capped service panel on right. Closed one-piece workshop machine housing, low rectangular body on short feet, NOT horizontal compressor tank on wheels. No actual loose gas cylinders, hoses, external pipes, flange, shafts, socket holes or cable. Idle unlit state.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
+      "sourceGenerationFile": "exec-394267ab-de84-49e9-82c5-bc13a0f69aad.png",
+      "readWrite": false
+    },
+    {
+      "id": "LiquidFiller",
+      "ids": [
+        "LiquidFiller",
+        "LiquidFiller_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png",
+      "guid": "2e6f095bc67d4789a1ffddda92c4982a",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "ppu": 1711.0314260869566,
+      "targetLongest": 0.6873047344837221,
+      "alphaBounds128": [
+        180,
+        134,
+        1356,
+        972
+      ],
+      "prompt": "Edit this existing game sprite. Remove ALL the soft dark glow/halo/shadow surrounding the outer silhouette and between parts. Keep only the solid coarse pixel-art machine itself with crisp hard edges. Make every exterior background pixel fully transparent, not black. Do not add any pixels outside the existing solid machine. Preserve EXACTLY the current machine design, arrangement, shape, palette, coarse pixel detail and original canvas size. No fog, feathering, antialiasing, glow, shadow, noise or backdrop; only hard 0/255 alpha. No other changes.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png",
+      "sourceGenerationFile": "exec-47523f58-d7da-497f-832f-af755945a529.png",
+      "readWrite": false
+    },
+    {
+      "id": "LiquidOutlet",
+      "ids": [
+        "LiquidOutlet",
+        "LiquidOutlet_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png",
+      "guid": "d467af166f8b431eab92579a6eb3df5a",
+      "dimensions": [
+        1261,
+        1247
+      ],
+      "ppu": 2650.1818440625,
+      "targetLongest": 0.34374999664306644,
+      "alphaBounds128": [
+        234,
+        191,
+        1029,
+        1102
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Genuine transparent background with clean hard alpha edges, no shadow, smoke, halo, scenery, text, labels or stray pixels. Reference 1 is STYLE ONLY: bear's chunky low-saturation big square pixel blocks and sparse shading, not bear. Reference 2 gives grey-blue industrial palette and front/visible-top 2D sandbox viewpoint ONLY, never reproduce sheet. Approximately 40x40 logical pixel detail rendered as large crisp blocks on a large original canvas. One isolated centered object 75% canvas coverage, front with modest top visibility, no dramatic isometric view. No gradients, tiny rivets, noisy texture or dense details. A small LIQUID DISCHARGE OUTLET DEVICE, compact squat dark blue-grey metal wall box with a small centered orange shutoff lever on top, large chunky recessed downward-facing rectangular outlet lip INSIDE front body silhouette, simple muted turquoise drop pictogram embossed on face to distinguish liquid service. No water emission, no glow. Closed solid outer casing, no external connecting pipes/flanges, no loose fittings, no socket stubs, no ground plate. Plain and readable in 0.5 game unit.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png",
+      "sourceGenerationFile": "exec-074edcd8-b1cf-4b75-9472-cc291bf3b849.png",
+      "readWrite": false
+    },
+    {
+      "id": "SpaceElevatorTerminal",
+      "ids": [
+        "SpaceElevatorTerminal",
+        "SpaceElevatorTerminal_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png",
+      "guid": "877c6ee4251a42f590ea719d133409d5",
+      "dimensions": [
+        1312,
+        1199
+      ],
+      "ppu": 1122.3382045929018,
+      "targetLongest": 0.935546875,
+      "alphaBounds128": [
+        186,
+        100,
+        1126,
+        1150
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Genuine transparent background with clean hard alpha edges, no shadow, smoke, halo, scenery, text, labels or stray pixels. Reference 1 is STYLE ONLY: bear's chunky low-saturation big square pixel blocks and sparse shading, not bear. Reference 2 gives grey-blue industrial palette and front/visible-top 2D sandbox viewpoint ONLY, never reproduce sheet. Approximately 40x40 logical pixel detail rendered as large crisp blocks on a large original canvas. One isolated centered object 75% canvas coverage, front with modest top visibility, no dramatic isometric view. No gradients, tiny rivets, noisy texture or dense details. A SPACE ELEVATOR TERMINAL, a compact upright grey-blue steel loading kiosk with a sealed center cargo lift shutter, two thick vertical guide rails integrated into its own frame, a small dark teal status display above and an orange upward-arrow shaped control on right. Lower console ledge and sturdy short feet. Fits one game tile, no tall tower or actual space cable. Distinct cargo-lift machine rather than flight-navigation computer, not a plain laptop. Closed housing; no external pipes, shafts, cables or scenery.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png",
+      "sourceGenerationFile": "exec-978cf584-0797-476a-907e-0e3e89257b30.png",
+      "readWrite": false
+    },
+    {
+      "id": "ShipWreck",
+      "ids": [
+        "ShipWreck"
+      ],
+      "asset": "Assets/6_Art/Generated/Space/ShipWreck/ShipWreck_Icon.png",
+      "guid": "0def1277b59f4f769ae11f310b5e7380",
+      "dimensions": [
+        1504,
+        1046
+      ],
+      "ppu": 1265.3617021276596,
+      "targetLongest": 0.9791666666666666,
+      "alphaBounds128": [
+        130,
+        171,
+        1369,
+        937
+      ],
+      "prompt": "Create ONE new production FlatWorld world-object sprite. Genuine transparent background with clean hard alpha edges, no shadow, smoke, halo, scenery, text, labels or stray pixels. Reference 1 is STYLE ONLY: bear's chunky low-saturation big square pixel blocks and sparse shading, not bear. Reference 2 gives grey-blue industrial palette and front/visible-top 2D sandbox viewpoint ONLY, never reproduce sheet. Approximately 40x40 logical pixel detail rendered as large crisp blocks on a large original canvas. One isolated centered object 75% canvas coverage, front with modest top visibility, no dramatic isometric view. No gradients, tiny rivets, noisy texture or dense details. A SPACESHIP WRECK FRAGMENT icon, single compact broken hull section, desaturated blue-grey bent sheet-metal plates, jagged torn edge, exposed dark coarse structural ribs in the center and one small damaged muted orange panel. Asymmetrical low mound, one cohesive salvage fragment rather than full spaceship, no flames, smoke, sparks, halo or detached floating debris. It is a static inventory/catalog representation of wreckage.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]",
+      "sourceGenerationFile": "exec-99d8c82f-c419-4a49-8883-9ae7a04d7c70.png",
+      "readWrite": false
+    },
+    {
+      "id": "Floor_Bitumen_Summoner",
+      "ids": [
+        "Floor_Bitumen_Summoner"
+      ],
+      "asset": "Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png",
+      "guid": "8c86d9933e254df18737d5544f5b4696",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "ppu": 1254,
+      "targetLongest": 1,
+      "alphaBounds128": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "prompt": "Create ONE seamless FLAT ASPHALT FLOOR TILE albedo texture for FlatWorld top-down pixel-art sandbox. OPAQUE square texture, completely filled to all edges; no transparent areas or margins, no perspective, bevel, outline or tile border. Use extremely coarse 32x32 logical pixel clusters rendered as big hard square blocks on a large original square canvas. Muted charcoal-grey bitumen surface with sparse broad dark grey and warm grey aggregate patches, only 5-7 low contrast colors. Homogeneous even density and brightness, neutral diffuse albedo, no directional light, glow, shadow, center hotspot, cracks, seams, brick courses, road markings, stripe, text or scenery. All four edges tile seamlessly, no visible cell boundary, no focal stone. Large coarse pixel clusters, not granular noisy asphalt photograph. Reference bear is only coarse pixel density style reference, do NOT depict bear/fur.",
+      "previousSpriteAddress": "Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Stone_Tile.png",
+      "sourceGenerationFile": "exec-e09a49c5-04f2-43e1-afb7-8544731667d9.png",
+      "readWrite": false
+    }
+  ],
+  "validation": {
+    "unityImportedSprites": 20,
+    "configuredAddressCount": 523,
+    "catalogHitCount": 523,
+    "missingPackedSprites": 0,
+    "binaryCatalogBaked": true,
+    "contentValidationErrors": 21,
+    "contentValidationIssues": [
+      {
+        "id": "FWC-ITEMJSON-015",
+        "path": "Assets/StreamingAssets/GameConfig/Items/shells/tools.json",
+        "field": "items[FireSeed].modules[worldFireIgnition].prefab",
+        "message": "模块 Prefab ID 'Item.WorldFireIgnition' 无法解析。"
+      },
+      {
+        "id": "FWC-MODULEJSON-001",
+        "path": "Assets/StreamingAssets/GameConfig/Items/shells/tools.json",
+        "field": "definitions[FireSeed].modules[worldFireIgnition].parameters",
+        "message": "模块 Prefab ID 'Item.WorldFireIgnition' 无法解析到唯一 Module，不能校验参数。"
+      },
+      {
+        "id": "FWC-ITEMJSON-015",
+        "path": "Assets/StreamingAssets/GameConfig/Items/shells/tools.json",
+        "field": "items[FireSeed].modules[lifetime].prefab",
+        "message": "模块 Prefab ID 'Item.TimedDespawn' 无法解析。"
+      },
+      {
+        "id": "FWC-MODULEJSON-001",
+        "path": "Assets/StreamingAssets/GameConfig/Items/shells/tools.json",
+        "field": "definitions[FireSeed].modules[lifetime].parameters",
+        "message": "模块 Prefab ID 'Item.TimedDespawn' 无法解析到唯一 Module，不能校验参数。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Chicken].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[WildBoar].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Wolf].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Rabbit].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[SnowLeopard].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Bird].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Seagull].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Bee].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[Sheep].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-ACTORJSON-003",
+        "path": "Assets/StreamingAssets/GameConfig/Actors/actor-manifest.json",
+        "field": "actors[SmallFish].modules[animalAudio].prefab",
+        "message": "模块 Prefab ID 'Mod_AnimalAmbientAudio' 无法解析到唯一 Module。"
+      },
+      {
+        "id": "FWC-BUILDINGJSON-008",
+        "path": "Assets/StreamingAssets/GameConfig/Items/shells/coconut_foods.json",
+        "field": "items[Coconut_Shell].health",
+        "message": "建筑定义缺少生命值配置。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Creatures/UI_CreatureHealth.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGameDifficultyContent.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGameWorldContent.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/2-1_UI/Gameplay/Screens/UI_AtmosphereAnalyzerGasRow.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/Effects/VFX_ShaderFlame.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      },
+      {
+        "id": "FWC-PREFAB-008",
+        "path": "Assets/2_Prefabs/2-1_UI/Common/Controls/UI_MultiSelectDropdown.prefab",
+        "field": "Addressables.Entry",
+        "message": "运行时 Prefab 未加入 Addressables。"
+      }
+    ],
+    "playModeTests": "not_run_other_agent_modifying_project",
+    "readOnlyStaticReview": "Luna6Max",
+    "unityConsole": {
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "sourceOwnershipRepair": {
+    "sourceHome": "Default",
+    "entries": [
+      "Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png",
+      "Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png"
+    ]
+  }
+}

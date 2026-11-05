@@ -3,6 +3,18 @@
   "items": [
     {
       "id": "WaterTrough",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
+        "liquidSurface": {
+          "bounds": {
+            "x": 0.135,
+            "y": 0.525,
+            "width": 0.73,
+            "height": 0.17
+          },
+          "maxSourceChannel": 80
+        }
+      },
       "tags": ["InventoryCategory.Functional"],
       "parent": "WoodenBarrel",
       "gameName": "水槽",
@@ -30,6 +42,18 @@
     },
     {
       "id": "WaterTrough_Building",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png",
+        "liquidSurface": {
+          "bounds": {
+            "x": 0.135,
+            "y": 0.525,
+            "width": 0.73,
+            "height": 0.17
+          },
+          "maxSourceChannel": 80
+        }
+      },
       "tags": ["InventoryCategory.Functional"],
       "parent": "WoodenBarrel_Building",
       "gameName": "水槽-建筑",

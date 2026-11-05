@@ -13,8 +13,250 @@ MonoBehaviour:
   m_Name: Shared
   m_EditorClassIdentifier: 
   Entries:
+  - Address: Assets/6_Art/Food/pixelate (1).png
+    Sprite: {fileID: 21300000, guid: b81ac21ec38797245a976d9f921b2bd4, type: 3}
+  - Address: "Assets/6_Art/Food/\u5806\u80A5\u6876.png[\u5806\u80A5\u6876]"
+    Sprite: {fileID: 21300000, guid: 392f49685d31b894f8ba9907a27e9e5e, type: 3}
+  - Address: Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png
+    Sprite: {fileID: 21300000, guid: bcc0f9083daf21e44ba79a3d1631835b, type: 3}
+  - Address: Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png
+    Sprite: {fileID: 21300000, guid: 971aad71286b9754a9fa5f29f3cb0b32, type: 3}
+  - Address: Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png
+    Sprite: {fileID: 21300000, guid: 3d90c82fbc7c44379437e45514a9e22f, type: 3}
+  - Address: Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png[Bonfire_Spent]
+    Sprite: {fileID: 21300000, guid: 1597bb2b13c840c1be6c70c008f3e4d4, type: 3}
+  - Address: Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png
+    Sprite: {fileID: 21300000, guid: c1e78f488cf6435c8dc99ec861a5c577, type: 3}
+  - Address: Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png
+    Sprite: {fileID: 21300000, guid: c71e2c87bc474c2ead351084f31388cf, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png
+    Sprite: {fileID: 21300000, guid: 7eef1c5ee25a2c842b14531f283ab19d, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png
+    Sprite: {fileID: 21300000, guid: 34d43aef3ea9a5a4cb671efab0a09867, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]
+    Sprite: {fileID: 21300000, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]
+    Sprite: {fileID: 21300001, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]
+    Sprite: {fileID: 21300002, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]
+    Sprite: {fileID: 21300003, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]
+    Sprite: {fileID: 21300004, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]
+    Sprite: {fileID: 21300005, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]
+    Sprite: {fileID: 21300006, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]
+    Sprite: {fileID: 21300007, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]
+    Sprite: {fileID: 21300008, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]
+    Sprite: {fileID: 21300009, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]
+    Sprite: {fileID: 21300010, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]
+    Sprite: {fileID: 21300011, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]
+    Sprite: {fileID: 21300012, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]
+    Sprite: {fileID: 21300013, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]
+    Sprite: {fileID: 21300014, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]
+    Sprite: {fileID: 21300015, guid: 64a3a03e261b4bf39470b79fbec2a753, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_00]
+    Sprite: {fileID: 21300000, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_01]
+    Sprite: {fileID: 21300001, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_02]
+    Sprite: {fileID: 21300002, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_03]
+    Sprite: {fileID: 21300003, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_04]
+    Sprite: {fileID: 21300004, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_05]
+    Sprite: {fileID: 21300005, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_06]
+    Sprite: {fileID: 21300006, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_07]
+    Sprite: {fileID: 21300007, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_08]
+    Sprite: {fileID: 21300008, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_09]
+    Sprite: {fileID: 21300009, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_10]
+    Sprite: {fileID: 21300010, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_11]
+    Sprite: {fileID: 21300011, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_12]
+    Sprite: {fileID: 21300012, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_13]
+    Sprite: {fileID: 21300013, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_14]
+    Sprite: {fileID: 21300014, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_15]
+    Sprite: {fileID: 21300015, guid: 26319aeadd9945f595315c109719628b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png
+    Sprite: {fileID: 21300000, guid: ff6fd8824d619004685b00aba0d21e5e, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png
+    Sprite: {fileID: 21300000, guid: b4d6374644a1f5641a58e034bc7cb4b6, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png
+    Sprite: {fileID: 21300000, guid: bf6f4e62a9d24d6f92da6bfdc19482c0, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png
+    Sprite: {fileID: 21300000, guid: 2cd81af677434ebca39952af527326e1, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png
+    Sprite: {fileID: 21300000, guid: e89ee2f67e1641ba9926ec08a407aa27, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png
+    Sprite: {fileID: 21300000, guid: c806b4d57fdb4346a94a38b201b61c5c, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png
+    Sprite: {fileID: 21300000, guid: 598f0c85c5cc4ed6a104972e9e7851a3, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png
+    Sprite: {fileID: 21300000, guid: 0abce2c9649e41839f03413e0a1f5e06, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png
+    Sprite: {fileID: 21300000, guid: 067df91779944dbe9bbe5428c8682441, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png
+    Sprite: {fileID: 21300000, guid: 023de7b990a947b3bce68fe4e313c03d, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png
+    Sprite: {fileID: 21300000, guid: da9e65f0aeb41a441b1eba3deb5ccd7b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png
+    Sprite: {fileID: 21300000, guid: 5d4350f02e305e14da8a848a4d32ec18, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png
+    Sprite: {fileID: 21300000, guid: 544c876833c829343bbd8343fb616815, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png
+    Sprite: {fileID: 21300000, guid: 9a7e192315d12f1429f388ed14b482f8, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png
+    Sprite: {fileID: 21300000, guid: 3a84785b10bfb014884e31ff4166f0b3, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png
+    Sprite: {fileID: 21300000, guid: 4149e423b7f64db4b9095e4b486e0e6b, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png
+    Sprite: {fileID: 21300000, guid: 1bac3a0b21af407c91783b6a5594d4aa, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png
+    Sprite: {fileID: 21300000, guid: c2f74f5b0347ab64785dc25c839b90f8, type: 3}
+  - Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png
+    Sprite: {fileID: 21300000, guid: 36c89c668c76400449873f3dbe4d9962, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png
+    Sprite: {fileID: 21300000, guid: 1775ca47ee8540bab7ea3b4c3ceb8b00, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]
+    Sprite: {fileID: 21300000, guid: 42f724342d0e3f7469f7dbb65f10d656, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Lit]
+    Sprite: {fileID: 21300001, guid: 42f724342d0e3f7469f7dbb65f10d656, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png
+    Sprite: {fileID: 21300000, guid: 2407b0ab98494b48a6bdeff9b33b0530, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]
+    Sprite: {fileID: 21300016, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]
+    Sprite: {fileID: 21300000, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]
+    Sprite: {fileID: 21300001, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]
+    Sprite: {fileID: 21300002, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]
+    Sprite: {fileID: 21300003, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]
+    Sprite: {fileID: 21300004, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]
+    Sprite: {fileID: 21300005, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]
+    Sprite: {fileID: 21300006, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]
+    Sprite: {fileID: 21300007, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]
+    Sprite: {fileID: 21300008, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]
+    Sprite: {fileID: 21300009, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]
+    Sprite: {fileID: 21300010, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]
+    Sprite: {fileID: 21300011, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]
+    Sprite: {fileID: 21300012, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]
+    Sprite: {fileID: 21300013, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]
+    Sprite: {fileID: 21300014, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]
+    Sprite: {fileID: 21300015, guid: 0c370d56e19945209114ef87ed621741, type: 3}
+  - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png
+    Sprite: {fileID: 21300000, guid: 4d7a9024128d4f70811e6c1edbb10318, type: 3}
+  - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png
+    Sprite: {fileID: 21300000, guid: 79ec41bd6ee64c7f88ac6bb1d2562c71, type: 3}
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png
+    Sprite: {fileID: 21300000, guid: 312ab8b8d6244db987ad765512b0f132, type: 3}
+  - Address: Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png
+    Sprite: {fileID: 21300000, guid: 08868ceb1c31f6341a0be7a5d3d8bf50, type: 3}
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png
+    Sprite: {fileID: 21300000, guid: a90ae757e41d429d83015a2c35b475e5, type: 3}
+  - Address: Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png
+    Sprite: {fileID: 21300000, guid: a24e86abf0bf498d81b64cd55a4f5430, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png
+    Sprite: {fileID: 21300000, guid: 2dd4b0844af24ceba0d62b416a7cbee8, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png
+    Sprite: {fileID: 21300000, guid: 877939e697424de9a0251d2ae783e211, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png
+    Sprite: {fileID: 21300000, guid: af075c8f242c4394a0186cc839ebe892, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png
+    Sprite: {fileID: 21300000, guid: 332e21aa52133a44f9035a0c79ea127e, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png
+    Sprite: {fileID: 21300000, guid: dba4e1d1df8b44f8a38a4ed22e4ca653, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png
+    Sprite: {fileID: 21300000, guid: 8d9d85fd3a4e42d3a74f8017318c88ce, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png
+    Sprite: {fileID: 21300000, guid: 824f051937274630ad8044d8a80c6662, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png
+    Sprite: {fileID: 21300000, guid: c30e014c84b24b07a4af8ed3cfb8affb, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png
+    Sprite: {fileID: 21300000, guid: 727897aa3f8963844b58ea9d3650987d, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png
+    Sprite: {fileID: 21300000, guid: d2a025f51166e6e4686b88a04879fce9, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png
+    Sprite: {fileID: 21300000, guid: dee3a2aadabb4d098bb8aca6df0ae143, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png
+    Sprite: {fileID: 21300000, guid: 724b8d8de985428995697b25f2c3d6e7, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png
+    Sprite: {fileID: 21300000, guid: 83cc30f10c1a4bad8cb3ff340b741ff7, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png
+    Sprite: {fileID: 21300000, guid: 54119c7e6b9a457e9db626c776c19b0a, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png
+    Sprite: {fileID: 21300000, guid: 07a6c64acffb49fc84c15c1b79d39326, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png
+    Sprite: {fileID: 21300000, guid: 4474f46a23ce4c14696db676ae1b07f6, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png
+    Sprite: {fileID: 21300000, guid: f7eea705516d4072af9b0afc345895ce, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png
+    Sprite: {fileID: 21300000, guid: 5b5172528f03400790aa96cbe3029b88, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png
+    Sprite: {fileID: 21300000, guid: 883137757c43fa349ab6e73e45e36960, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png
+    Sprite: {fileID: 21300000, guid: c3f4c7127917401d99d824e79aacbfb6, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png
+    Sprite: {fileID: 21300000, guid: b4ed656af44843ed9caacecce351444a, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png
+    Sprite: {fileID: 21300000, guid: cf4ac39fcbea2364fa40a553f3c7ab5e, type: 3}
+  - Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png
+    Sprite: {fileID: 21300000, guid: 521c7d2ba6f995d48bf33c22d655e409, type: 3}
+  - Address: Assets/6_Art/Generated/Railway/SteamEngine.png
+    Sprite: {fileID: 21300000, guid: 86e2911939294f38be2745e6d7677616, type: 3}
+  - Address: Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png
+    Sprite: {fileID: 21300000, guid: 4b413ba8e5714357939199e0f1bd8988, type: 3}
+  - Address: Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png[ShipChemicalEngine_Idle]
+    Sprite: {fileID: 21300000, guid: 44857f02da7a4f9fa97074798a277126, type: 3}
+  - Address: Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png
+    Sprite: {fileID: 21300000, guid: aa1eefd3fce04509b3d4ad9dc3f17619, type: 3}
+  - Address: Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png
+    Sprite: {fileID: 21300000, guid: 2ad4bd3d0b13453784dc26917d54e759, type: 3}
+  - Address: Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png
+    Sprite: {fileID: 21300000, guid: eb948656856c40edafd6751aa0eb76e7, type: 3}
+  - Address: Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png[SpaceCultivator_Idle]
+    Sprite: {fileID: 21300000, guid: bf72b6191a344fb6baffc649372d8645, type: 3}
+  - Address: Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png
+    Sprite: {fileID: 21300000, guid: 24cdcd6a289743e88338e085b67ce080, type: 3}
   - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/FishingRod/FishingRod_Cast_Icon.png
     Sprite: {fileID: 21300000, guid: 6cdab99f627a4000a238769bf2a911d0, type: 3}
+  - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png
+    Sprite: {fileID: 21300000, guid: 1239a55e1ad5428093df3599f2294c73, type: 3}
+  - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png
+    Sprite: {fileID: 21300000, guid: 33ab12d649e2468890f0dcc2365436b6, type: 3}
   - Address: Assets/6_Art/Items/Tools/Item_Tool_327.png
     Sprite: {fileID: 21300000, guid: 81b4dc488d6e9914596d43f5ebd2e6a0, type: 3}
   Locations: []

@@ -2517,7 +2517,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,
@@ -2591,7 +2591,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,
@@ -2664,7 +2664,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,
@@ -2738,7 +2738,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,
@@ -2811,7 +2811,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,
@@ -2885,7 +2885,7 @@
         "InventoryCategory.Functional"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png"
+        "spriteAddress": "Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png"
       },
       "health": {
         "impactAudioMaterial": 1,

@@ -638,6 +638,9 @@
     },
     {
       "id": "SteelNail",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png"
+      },
       "parent": "Nail",
       "gameName": "钢钉",
       "description": "由钢锭锻打制成的金属钉。和钢板一起制作机械锻锤或锯木机时，成品工作效率提高20%。",

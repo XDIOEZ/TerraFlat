@@ -51,9 +51,9 @@ MonoBehaviour:
   - Address: Assets/6_Art/Food/Item_WildDogMilk_Gray.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Food/pixelate (1).png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: "Assets/6_Art/Food/\u5806\u80A5\u6876.png[\u5806\u80A5\u6876]"
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u7A7A.png"
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: "Assets/6_Art/Food/\u6930\u8089.png"
@@ -139,19 +139,21 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Buff/StatusIcons/Wet.png[Wet]
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/GameplayUI
   - Address: Assets/6_Art/Generated/Building/Anvils/CopperAnvil_World.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Building/Anvils/IronAnvil_World.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Building/BlastFurnace/BlastFurnace.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Building/Bonfire/Bonfire_Spent.png[Bonfire_Spent]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Building/Chest_Wood/Chest_Wood_Closed.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Building/Floor_Bitumen/Floor_Bitumen_Tile.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Building/GrassBed/GrassBed.png[GrassBed]
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Building/Meatrack/Meatrack_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Building/MineEntrance/MineEntrance_Artificial_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Building/Scarecrow/Scarecrow_Idle.png
@@ -177,7 +179,7 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Building/WaterPlatform/WaterPlatform_Tile.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Building/WorkBench/WorkBench_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Masks/Headgear_Hair.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Chestplate_Twine.png
@@ -227,85 +229,125 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/Traveler_Vest.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/ElectricHeater/ElectricHeater_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FilterResidue/FilterResidue_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/FluidOutlet/FluidOutlet_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_00]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_01]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_02]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_03]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_04]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_05]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_06]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_07]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_08]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_09]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_10]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_11]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_12]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_13]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_14]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/FluidPipe_Connections.png[Pipe_15]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_00]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_01]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_02]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_03]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_04]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_05]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_06]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_07]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_08]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_09]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_10]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_11]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_12]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_13]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_14]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FluidPipe/GasPipe_Connections.png[Pipe_15]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/FluidValve/FluidValve_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
-  - Address: Assets/6_Art/Generated/Chemistry/GasCompressor_Electric/GasCompressor_Electric_Idle.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/FuelEngine/FuelEngine_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/GasEngine/GasEngine_Idle.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/GasFiller/GasFiller_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedBack.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedCrank.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedFront.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedNeedle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonLeft.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedPistonRight.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodLeft.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_ArticulatedRodRight.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasPump_Mechanical/GasPump_Mechanical_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/GasSelector/GasSelector_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Iron/GasTankBlock_Iron_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/GasTankBlock_Steel/GasTankBlock_Steel_Idle.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Chemistry/InductionStove/InductionStove_Idle.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidFiller/LiquidFiller_Idle.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Chemistry/LiquidOutlet/LiquidOutlet_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Chemistry/LiquidPump_Electric/LiquidPump_Electric_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/LiquidStorageTank/LiquidStorageTank_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Iron/LiquidTankBlock_Iron_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/LiquidTankBlock_Steel/LiquidTankBlock_Steel_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Iron/PortableGasTank_Iron_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Chemistry/PortableGasTank_Steel/PortableGasTank_Steel_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Copper_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Combat/Archery/Arrow_Iron_Icon.png
@@ -333,49 +375,49 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Combat/Spear_Stone/Spear_Stone_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Electrical/Battery_Basic/Battery_Basic_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Idle]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/ElectricLightBulb/ElectricLightBulb_States.png[ElectricLightBulb_Lit]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Body.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Generator_Basic/Generator_Basic_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[CablePort_Left]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_00]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_01]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_02]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_03]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_04]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_05]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_06]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_07]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_08]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_09]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_10]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_11]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_12]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_13]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_14]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Copper/Wire_Copper_Connections.png[Wire_15]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Electrical/Wire_Hidden/Wire_Hidden_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Environment/AppleTree/AppleTree_Idle.png
@@ -461,11 +503,11 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Hands/Spacesuit_Hands_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Head/Spacesuit_Head_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Legs/Spacesuit_Legs_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Equipment/Spacesuit_Torso/Spacesuit_Torso_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Equipment/Steel_Boots/Steel_Boots_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Equipment/Steel_Gauntlets/Steel_Gauntlets_Icon.png
@@ -489,6 +531,8 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Farming/BerrySeed/BerrySeed_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Farming/Chili/Chili_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Farming/CottonSeed/CottonSeed_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Farming/FoxtailEar/FoxtailEar_SeedHead_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
@@ -579,14 +623,18 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/InventoryCrafting/CuredMeat/CuredMeat_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Battery_LithiumIronPhosphate/Battery_LithiumIronPhosphate_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Boron/Boron_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiber/CarbonFiber_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CarbonFiberPlate/CarbonFiberPlate_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/CircuitBoard/CircuitBoard_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Fertilizer_Phosphate/Fertilizer_Phosphate_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/GlassBottle/GlassBottle_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Aluminum/Ingot_Aluminum_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
@@ -595,6 +643,8 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Nickel/Ingot_Nickel_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Ingot_Titanium/Ingot_Titanium_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/IntegratedCircuit/IntegratedCircuit_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Lithium/Lithium_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
@@ -606,12 +656,18 @@ MonoBehaviour:
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Quartz/Quartz_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/Transistor/Transistor_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTube/VacuumTube_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/ElectronicMaterials/VacuumTubeLogicModule/VacuumTubeLogicModule_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Fat/Fat_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Fiber/Fiber_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/FireSeed/FireSeed_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/InventoryCrafting/Flint/Flint_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Flour/Flour_Icon.png
@@ -629,7 +685,7 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/InventoryCrafting/LeatherStrap/LeatherStrap_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Meat/Meat_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/InventoryCrafting/MeatCooked/MeatCooked_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/MeatDehydrate/MeatDehydrate_Icon.png
@@ -662,11 +718,29 @@ MonoBehaviour:
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Nails/Nail_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Nails/SteelNail_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Paper/Paper_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Coal.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Copper.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Gold.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/InventoryCrafting/Powders/OrePowder_Iron.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
@@ -709,7 +783,7 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Items/Berry/Item_Berry.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Items/Fishing/FishingHook_Bone.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Items/Fishing/FishingHook_Gold.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Items/Fishing/FishingHook_Iron.png
@@ -725,59 +799,59 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Mechanical/Items/DrilledStone_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Frame.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Leather.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/Items/MechanicalBellows/MechanicalBellows_Static.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/MechanicalLoom/MechanicalLoom_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Disengaged.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Clutch/Clutch_Engaged.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Cloth.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Conveyor/World_Conveyor_Wood.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Body.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Building.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/HandCrank/HandCrank_Rotor.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Body.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Building.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/MechanicalHammer_Ram.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Millstone_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Millstone_Rotor.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Sawmill.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Sawmill_Body.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Sawmill_Rotor.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Frame.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_CrossShaft_Horizontal.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gear_Wood_InputShaft.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Gear.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Gearbox_Wood_Housing.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_EndRings.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_Linked_RollingCore.png
@@ -785,22 +859,24 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Mechanical/World/Transmission/World_Shaft_Wood_RightPort.png[AxlePort_Right]
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Body.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Building.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/WaterWheel/WaterWheel_Rotor.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Building.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Rotor.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Mechanical/World/Windmill_Tower.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Medical/Bandage_Plant.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Medical/HerbPoultice/Item_HerbPoultice.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Medical/Splint.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Quest/MinersNote/MinersNote_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
@@ -811,15 +887,13 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Railway/Rail_Straight.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Railway/SteamEngine.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
-  - Address: "Assets/6_Art/Generated/Shared/ItemPlaceholder/\u7D20\u6750\u5360\u4F4D\u7B26.png[\u7D20\u6750\u5360\u4F4D\u7B26]"
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipAirSupply/ShipAirSupply_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipChemicalEngine/ShipChemicalEngine_Idle.png[ShipChemicalEngine_Idle]
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipConsole/ShipConsole_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipDockingPort/ShipDockingPort_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Space/ShipDoor/ShipDoor_Closed.png[ShipDoor_Closed]
@@ -831,19 +905,23 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Space/ShipFloor_Refractory/ShipFloor_Refractory_Tile.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Space/ShipGravityGenerator/ShipGravityGenerator_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipNavigation/ShipNavigation_Idle.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Space/ShipWall_Iron/ShipWall_Iron_Tile.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Space/ShipWall_Refractory/ShipWall_Refractory_Tile.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/Space/ShipWreck/ShipWreck_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Space/SpaceCultivator/SpaceCultivator_Idle.png[SpaceCultivator_Idle]
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
+  - Address: Assets/6_Art/Generated/Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Tools/MetalHammers/CopperHammer_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Tools/MetalHammers/IronHammer_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Tools/MetalHammers/SteelHammer_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Tools/Needle_Copper/Needle_Copper_Icon.png
@@ -917,9 +995,9 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/StoneHammer/StoneHammer_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/Torch_Summoner/Torch_Summoner_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Tools/PrimitiveSet_20261023/WoodHammer/WoodHammer_Icon.png
-    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/Shared
   - Address: Assets/6_Art/Generated/Transport/Wheelbarrow/Wheelbarrow.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/Vehicles/Bicycle/Bicycle_Icon.png
@@ -933,6 +1011,8 @@ MonoBehaviour:
   - Address: Assets/6_Art/Generated/WaterVessel/Crucible/Crucible_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/WaterVessel/IronBucket/IronBucket_Icon.png
+    CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
+  - Address: Assets/6_Art/Generated/WaterVessel/WaterTrough/WaterTrough_Empty.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems
   - Address: Assets/6_Art/Generated/WaterVessel/WoodenBarrel/WoodenBarrel_Icon.png
     CatalogAddress: FlatWorld/StartupSpriteAtlasCatalog/CommonItems

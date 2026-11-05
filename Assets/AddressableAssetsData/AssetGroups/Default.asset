@@ -17,12 +17,6 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
-  - m_GUID: fbeea6764bc547cda0e9a1d4940613a4
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Administrator.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab
     m_ReadOnly: 0
@@ -986,6 +980,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 647e6092ebb3cc8458d1a7cb22f7df84
+    m_Address: "Assets/6_Art/Generated/Shared/ItemPlaceholder/\u7D20\u6750\u5360\u4F4D\u7B26.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 64842fb553039f44a99a4fe673c1babf
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DifficultySettings.prefab
     m_ReadOnly: 0
@@ -1804,12 +1804,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b8b3886b2f4c7434b8a2a1599659ef70
-    m_Address: Assets/6_Art/Generated/Farming/Rice/RiceCrop_Mature.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bbabd61494cb49a4cb666e18688d12d8
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Copper.asset
     m_ReadOnly: 0
@@ -2398,6 +2392,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fbeea6764bc547cda0e9a1d4940613a4
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Administrator.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fbffc25086cf10846861a513617f0dd8
     m_Address: Assets/7_Tiles/Base

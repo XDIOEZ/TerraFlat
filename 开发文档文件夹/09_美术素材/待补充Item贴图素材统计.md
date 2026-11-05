@@ -1,83 +1,63 @@
-# 待补充 Item 贴图素材统计
+# Item 临时贴图替换记录
 
-## 文档用途
+## 当前状态
 
-用于统计当前本体 Item 中仍在使用通用占位图，或暂时直接继承其他物品贴图的内容，供后续 AI 美术任务逐项补齐正式 Sprite。
+2026-11-05 复查启用 Manifest 的 500 个物品定义，本轮为 20 类物品制作独立 Sprite，替换 27 个物品/建筑定义以及沥青地板 Tile 的借图引用。上一轮 14 项已完成，继续保留。
 
-## 实现状态
+## 本轮独立素材
 
-本清单已完成：**14 / 14**。其中 `Seed_Mushroom` 使用项目中已存在并已接入的正式孢子贴图，其余 13 项已补充独立正式 Sprite；全部候选 Item 已有自己的 `visual.spriteAddress`，不再依赖本清单记录的占位图或父物品视觉。
+| 物品 | 原借图 | 正式素材（Assets/6_Art/Generated/ 下） |
+| --- | --- | --- |
+| 棉籽 `Seed_Cotton` | `RadishSeed_Icon.png` | `Farming/CottonSeed/CottonSeed_Icon.png` |
+| 钢钉 `SteelNail` | `Nail_Icon.png` | `InventoryCrafting/Nails/SteelNail_Icon.png` |
+| 金矿粉 `OrePowder_Gold` | `OrePowder_Stone.png` | `InventoryCrafting/Powders/OrePowder_Gold.png` |
+| 命令手册 `CommandManual` | `MinersNote_Icon.png` | `Quest/CommandManual/CommandManual_Icon.png` |
+| 石油 `CrudeOil` | `Resin_Icon.png` | `InventoryCrafting/Petrochemicals/CrudeOil/CrudeOil_Icon.png` |
+| 石脑油 `Naphtha` | `Resin_Icon.png` | `InventoryCrafting/Petrochemicals/Naphtha/Naphtha_Icon.png` |
+| 燃油 `FuelOil` | `Resin_Icon.png` | `InventoryCrafting/Petrochemicals/FuelOil/FuelOil_Icon.png` |
+| 沥青 `Bitumen` | `ResinGlue_Idle.png` | `InventoryCrafting/Petrochemicals/Bitumen/Bitumen_Icon.png` |
+| 乙烯 `Ethylene` | `PortableGasTank_Steel_Icon.png` | `InventoryCrafting/Petrochemicals/Ethylene/Ethylene_Icon.png` |
+| 丙烯 `Propylene` | `PortableGasTank_Steel_Icon.png` | `InventoryCrafting/Petrochemicals/Propylene/Propylene_Icon.png` |
+| 聚合催化剂 `PolymerizationCatalyst` | `Ore_Sulfur_Icon.png` | `InventoryCrafting/Petrochemicals/PolymerizationCatalyst/PolymerizationCatalyst_Icon.png` |
+| 木制水槽 `WaterTrough` | `WoodenBarrel_Icon.png` | `WaterVessel/WaterTrough/WaterTrough_Empty.png` |
+| 电磁炉 `InductionStove` | `ElectricHeater_Idle.png` | `Chemistry/InductionStove/InductionStove_Idle.png` |
+| 燃油发动机 `FuelEngine` | `GasEngine_Idle.png` | `Chemistry/FuelEngine/FuelEngine_Idle.png` |
+| 气体灌装机 `GasFiller` | `GasCompressor_Electric_Idle.png` | `Chemistry/GasFiller/GasFiller_Idle.png` |
+| 液体灌装机 `LiquidFiller` | `GasCompressor_Electric_Idle.png` | `Chemistry/LiquidFiller/LiquidFiller_Idle.png` |
+| 液体排出口 `LiquidOutlet` | `FluidOutlet_Idle.png` | `Chemistry/LiquidOutlet/LiquidOutlet_Idle.png` |
+| 太空电梯终端 `SpaceElevatorTerminal` | `ShipConsole_Idle.png` | `Space/SpaceElevatorTerminal/SpaceElevatorTerminal_Idle.png` |
+| 飞船残骸 `ShipWreck` | `素材占位符.png[素材占位符]` | `Space/ShipWreck/ShipWreck_Icon.png` |
+| 沥青地板 `Floor_Bitumen_Summoner` | `WaterPlatform_Stone_Tile.png` | `Building/Floor_Bitumen/Floor_Bitumen_Tile.png` |
 
-状态说明：
+## 接入边界
 
-- **已确认**：当前配置明确使用项目统一 `素材占位符`，需要制作正式贴图。
-- **建议稿**：当前没有独立 `spriteAddress`，运行时继承父物品贴图；功能不缺图，但建议后续补成独立美术。
-- **待实现**：正式 PNG、Unity Sprite 导入、Addressables 注册以及 Item JSON 引用替换尚未执行。
-- **待讨论**：建议稿中的继承贴图 Item 是否全部需要独立美术，可按美术优先级决定。
+- 相同物品的召唤器和落地建筑同步换图；JSON 为正式视觉入口，不修改旧迁移 sourcePrefab。
+- 水槽继续使用液体模块的程序重绘，独立图启用 Read/Write，并覆盖 liquidSurface.bounds，避免继承木桶口区域。
+- 沥青地板同步修改 Floor_Bitumen_Summoner 和 Tile_BitumenFloor.asset，乘色统一白色。
+- ShipWreck 的独立图用于定义/图鉴；世界残骸继续由真实船体部件 Sprite 拼合。
+- 原素材仍供原物品使用，只解除本轮借用方引用，不删除原文件。
 
-## 一、已确认需要正式贴图：4 个
+## 保留的有效复用
 
-| 优先级 | Item ID | 显示名 | 当前状态 | 建议素材目录 / 文件名 | 美术要点 |
-| --- | --- | --- | --- | --- | --- |
-| P0 | `Scissors` | 剪刀 | 明确使用统一素材占位符 | `Generated/InventoryCrafting/Scissors/Scissors_Icon.png` | 工具类；主体应明确表现剪刀轮廓，透明背景，与现有手持工具像素风统一。若作为手持物显示，接入前核对握持 Pivot。 |
-| P0 | `Seed_Foxtail` | 狗尾草籽 | 明确使用统一素材占位符 | `Generated/Farming/FoxtailSeed/FoxtailSeed_Icon.png` | 种子类；需要和狗尾草穗明显区分，表现为少量细小草籽，不要画成完整草穗。 |
-| P0 | `Flour` | 面粉 | 明确使用统一素材占位符 | `Generated/InventoryCrafting/Flour/Flour_Icon.png` | 食材类；表现面粉本体，避免做成已经烹饪完成的面包等产物。 |
-| P0 | `Honey` | 蜂蜜 | 明确使用统一素材占位符，当前额外乘金黄色 | `Generated/InventoryCrafting/Honey/Honey_Icon.png` | 食材/液体原料；表现蜂蜜本体而非水容器。正式成图后应重新检查现有 `visual.color`，通常独立成图应改回白色乘色。 |
+- 同一物品的图标/建筑、巨型矿脉、隐藏铜线、天然洞穴进出口。
+- 相同材质的木/石/金属地板与水上平台、通用气液手轮阀、创造模式和 GM 派生设备。
+- 共享机械连接零件及合法状态图；未发现额外的跨物品重复 PNG 内容。
 
-当前统一占位引用：
+## 生成与导入
 
-`Assets/6_Art/Generated/Shared/ItemPlaceholder/素材占位符.png[素材占位符]`
+内置 ImageGen；大色块、低饱和、硬像素簇，按物品用途分别绘制。乙烯/丙烯以分子结构区分，其余保留功能与材质轮廓。完整提示词、尺寸、GUID、原引用和 PPU 见 [生成清单](../../Tools/Art/IndependentItemSprites_20261105.json)。
 
-## 二、建议补独立贴图：10 个
+19 张素材保留生成原图分辨率与 Alpha；水槽因液面按水量缓存整张纹理，使用独立 128×58 最近邻运行图，原稿保留在项目外的生成目录。Point、无 Mipmap、无压缩、maxTextureSize 2048。用 Alpha≥128 的主体最长边对齐原有世界尺寸；地板为 1×1 世界单位。
 
-以下 Item 当前并非“加载不到贴图”，而是没有自己的 `visual.spriteAddress`，因此直接继承父物品的视觉。它们属于**美术复用/临时替代候选**，与上面的明确占位图分开处理。
+## 上一轮已完成的 14 项
 
-**本轮实现决定：以下 10 项全部升级为独立美术。**
+Scissors、Seed_Foxtail、Flour、Honey、Shovel_Stone、MinersNote、StoneHammer、Seed_Radish、Seed_Mushroom、Seed_Berry、Seed_Herb、Seed_Willow、WillowBranch、Tree_Willow。
 
-| 建议优先级 | Item ID | 显示名 | 当前继承视觉 | 建议处理 |
-| --- | --- | --- | --- | --- |
-| P0 | `Shovel_Stone` | 石铲 | 继承 `Pickaxe_Stone`，当前实际使用石镐贴图 | 制作独立石铲 Sprite；工具轮廓应能直接区分“铲”和“镐”，并核对手持旋转/Pivot。 |
-| P0 | `MinersNote` | 矿工笔记 | 继承 `Rope`，当前实际使用绳子贴图 | 制作独立笔记/纸张 Sprite；这是语义差异最大的继承项之一。 |
-| P1 | `StoneHammer` | 石锤 | 继承 `WoodHammer`，并使用灰色乘色 | 制作真正的石质锤头版本；完成后移除或重新评估灰色乘色。 |
-| P1 | `Seed_Radish` | 萝卜种子 | 继承 `Seed_Apple` | 建议制作萝卜种子独立 Sprite。 |
-| P1 | `Seed_Mushroom` | 蘑菇孢子 | 经 `Seed_Radish` 继续继承 `Seed_Apple` | 建议制作孢子独立 Sprite，外形不要继续与普通种子完全相同。 |
-| P1 | `Seed_Berry` | 浆果种子 | 经 `Seed_Radish` 继续继承 `Seed_Apple` | 建议制作浆果种子独立 Sprite。 |
-| P1 | `Seed_Herb` | 药草种子 | 继承 `Seed_Radish`，最终沿用苹果种子视觉 | 建议制作药草种子独立 Sprite。 |
-| P1 | `Seed_Willow` | 柳树种子 | 继承 `Seed_Radish`，最终沿用苹果种子视觉 | 建议制作柳树种子独立 Sprite。 |
-| P1 | `WillowBranch` | 柳枝 | 继承 `Stick_Wood`，当前沿用普通木棍贴图 | 建议制作更细、更柔韧、带柳枝特征的独立 Sprite。 |
-| P1 | `Tree_Willow` | 柳树 | 继承 `AppleTree`，当前以绿色乘色区分 | 建议制作独立柳树 Sprite；保持现有树木世界尺度、底部 Pivot 和俯视表现，不再依赖苹果树染色。 |
+## 本轮验证
 
-## 三、后续 AI 美术任务建议顺序
-
-1. 先完成 4 个**已确认占位图**：`Scissors`、`Seed_Foxtail`、`Flour`、`Honey`。
-2. 再完成视觉语义明显不匹配的继承项：`Shovel_Stone`、`MinersNote`。
-3. 再处理工具/植物的大型差异项：`StoneHammer`、`WillowBranch`、`Tree_Willow`。
-4. 最后批量制作种子系列：`Seed_Radish`、`Seed_Mushroom`、`Seed_Berry`、`Seed_Herb`、`Seed_Willow`，统一种子类画风与世界尺度，同时保证轮廓可区分。
-
-## 四、正式素材接入要求
-
-- 运行时物品素材优先参考项目内同类别 Item 的视角、轮廓、像素簇、描边、配色和世界尺度，不强制固定 16×16。
-- 普通物品使用透明 PNG、硬边缘像素风、Point Filter、无 Mipmap、无纹理压缩；图标通常中心 Pivot，手持工具必须按实际握柄核对 Pivot。
-- 正式素材建议保存到 `Assets/6_Art/Generated/<System>/<ItemName>/`，不要覆盖统一占位图。
-- 完成 PNG 后，为具体 Item 更新 `visual.spriteAddress`；如果正式 Sprite 不再依赖染色，同时检查并清理继承或现有的 `visual.color`。
-- Sprite 注册到现有 Item Sprite Addressables 链路后，再运行 `FlatWorld/内容配置/校验全部本体内容`。
-- 替换贴图时不要修改 Item ID、配方、玩法模块或数值；本任务只处理美术表现及其资源引用。
-
-## 五、统计结果
-
-- **已确认占位图：4 个**
-- **建议独立美术的继承贴图 Item：10 个**
-- **本清单合计候选：14 个**
-- **当前已实现正式素材：14 / 14**
-
-## 六、实现结果
-
-### 已完成
-
-- 已为 4 个占位 Item 制作正式运行时 Sprite，并替换 Item JSON 引用。
-- 已将 10 个继承贴图 Item 全部升级为独立 Sprite；`Seed_Mushroom` 复核并保留已有正式孢子贴图。
-- 已完成像素素材静态检查、Addressables `ItemSprite` 注册和 Item JSON 引用检查。
-
-### 已确定
-
-- `StoneHammer`、种子系列、`WillowBranch`、`Tree_Willow` 全部采用独立美术；原有灰色/绿色/金黄色乘色已在对应独立成图 Item 上恢复为白色乘色。
+- Unity 成功导入 20/20 Sprite；启动二进制目录与用途图集重新烘焙完成。
+- 523/523 配置地址命中用途目录，漏绑 0、地址冲突 0；20 个新地址和 ItemSprite 标签全部就绪。
+- 修复 7 个既有源条目缺迁移来源的登记：GasPipe、CircuitBoard、GlassBottle、VacuumTube、VacuumTubeLogicModule、IntegratedCircuit、Transistor。先明确设置 Default 为源组，再由生成器迁至用途组；地址与用途不变。
+- 全内容校验返回 21 条本轮范围外问题：FireSeed/动物音效模块别名、Coconut_Shell 生命配置和部分 UI/VFX Prefab 注册；本轮 Sprite 引用未报错，详情见生成清单。
+- 其他 Agent 正在修改项目，按 AGENTS.md 未运行 PlayMode/Lua 回归。最终接入只做资源/配置校验，未声称实际游玩验收。
+- flatworld-art 及 runtime-sprites 技能现有规则已覆盖本轮换图流程，无需扩展。

@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "CommandManual",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Quest/CommandManual/CommandManual_Icon.png"
+      },
       "parent": "MinersNote",
       "gameName": "命令手册",
       "description": "输入 /help 获得的聊天命令手册，书内自带 1 个木炭。手持后使用即可阅读和编辑。",
