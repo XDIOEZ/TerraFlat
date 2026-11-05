@@ -79,6 +79,7 @@ public static partial class MachineWorld
     private static void SolveElectricalNetworks(float seconds)
     {
         if (electricalGraph == null) return;
+        electricalGraph.PrepareExternalConsumers(seconds);
         using var couplingSample = ElectricalCouplingMarker.Auto();
         bool hasConverters = graph.ConverterNetworks.Count > 0;
         if (!hasConverters)
@@ -182,6 +183,8 @@ public static partial class MachineWorld
             ElectricalNetworkGraph.Solve(network, seconds,
                 ElectricalGeneratorFactorDelegate, ElectricalDemandFactorDelegate, ElectricalBatteryChangedDelegate, commitStorage);
             if (!commitStorage) continue;
+            foreach (ElectricalExternalConsumer consumer in network.ExternalConsumers)
+                consumer.CommitSuppliedEnergy(seconds);
             foreach (MachineEntity node in network.PowerIndicatorNodes)
             {
                 bool powered = node.ElectricalSuppliedWatts > 0f;
@@ -241,6 +244,8 @@ public static partial class MachineWorld
                 continue;
             }
             if (member.ElectricalNetwork == null || member.Definition.TorqueLoad <= 0f) continue;
+            foreach (ElectricalExternalConsumer consumer in member.ElectricalNetwork.ExternalConsumers)
+                if (consumer.RequestedWatts > 0f) return true;
             float voltage = member.Definition.Electrical.NominalVoltage;
             foreach (MachineEntity target in member.ElectricalNetwork.Nodes)
             {

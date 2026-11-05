@@ -38,6 +38,10 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 后端与生命周期
 
+- 机仆 Actor `Servitor` 的模块能力 ID 为 `ServitorController`，不能与 Actor 同名（模块能力会注册资源别名）。定义在 `definitions/servitor-actors.json`，引用 `servitorWork` / `profiles/机仆工作.json`；正式树按回充→搬运→待机排序，`ServitorBehaviorNodes` 只接生命周期，`Mod_ServitorController*` 持有电量/终端命令，`ActorHaulingJobDriver` 持有工作步骤，不动态改树。
+- 机仆默认 10kJ、低于/等于20%锁定回充至满电；供电充足每模拟秒补1%，不足按实取焦耳充电，死亡/卸载/换世界释放电网租约。电量归零停主动移动，允许在身边接线唤醒。根碰撞体只声明脚底圆形占地，整身受击框归 health；不能将整身尺寸用于移动。充电与仓储接近共用 `ActorInteractionApproach`：不可走目标只选真实作用范围内的可走站位，停止余量不得越过交互范围。
+- 搬运只经正式掉落→私有货仓→仓储端口事务；预约按世界、掉落句柄和 Actor 代际隔离，充电/取消释放预约但保留货物。订单、货仓和电量随模块保存；跨世界和异世界存档恢复均保留货物与电量、撤旧仓库订单。首版终端只允许近距离本地主机下令，不提供全局 HUD；资源构建菜单 `FlatWorld/其他工具/AI/构建机仆与对象终端`，回归 `ai/servitor_rules`、`ai/servitor_work`、`ai/servitor_cooperation`。
+
 - Actor目录的外壳与动画控制器共用 `ResourceLoadQueue` 四槽队列，完成即补槽；发出/异步失败仍归原Actor错误字典，热更新保留逐定义回滚。单轮定义编译共用 `ItemModulePrototypeCache`，不跨资源会话；回归 `core_lifecycle/resource_queue`、`item_runtime/module_assembly_identity`。
 
 - 显式 `AiRuntimeBackendService.TrySpawnDirect` 按当前世界懒建普通生成管理器；玩家位置优先读 Item 世界账本，局部世界使用本地物理坐标。`SimulateWithoutObservers` 不因无人观察休眠居民，世界退役通过 `MonsterSpawnerManager.ReleaseWorld` 统一保存、撤服务和后端；新增普通物种不增加船用生成分支。船内现场入口为 `Space/ship-world-suite.json`，未执行不能视作验收。

@@ -89,6 +89,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0634d484938c34d4f85d1de30dbf954c
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_ServitorController.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 066b00c3870f447380f3581c8483e16d
     m_Address: Assets/6_Art/Generated/InventoryCrafting/CopperShovel/CopperShovel_Icon.png
     m_ReadOnly: 0
@@ -497,6 +503,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f65b53578f43ba4eb5fba4f968bf60f
+    m_Address: Assets/2_Prefabs/Gameplay/AI/Actor_Servitor.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2fd9bc2abdea04445baa7a139e45a80d
     m_Address: UI_ReadableBook
     m_ReadOnly: 0
@@ -568,6 +580,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 350ca304d7350bf4a866d247e3ce5c99
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Player/UI_ServitorTerminal.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 35837daa9fb944ebbdfd082901273275
     m_Address: UI_AtmosphereAnalyzer
@@ -2229,6 +2247,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ed19c7316f183cd41a30870ffc7e32c7
+    m_Address: Assets/6_Art/Generated/Actors/Servitor/Servitor_Idle_Right.png
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ee80b135ec9294e4aa971fc293fddb02
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_372.png

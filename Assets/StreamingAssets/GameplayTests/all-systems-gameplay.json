@@ -5,6 +5,13 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "ai_servitor_gameplay",
+      "contractKind": "mixed",
+      "name": "机仆：对象终端、搬运、电网充电与任务中断",
+      "luaPath": "GameplayTests/Systems/AI/servitor-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_creature_creation_gameplay",
       "contractKind": "mixed",
       "name": "统一生物出生：身份、回滚与居民恢复",

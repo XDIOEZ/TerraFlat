@@ -166,6 +166,7 @@ public static class AnimalBehaviorTreeNodeCatalog
         AnimalLandBehaviorNodes.Register();
         AnimalSpecialMovementBehaviorNodes.Register();
         AnimalTemperatureSafetyBehaviorNodes.Register();
+        ServitorBehaviorNodes.Register();
     }
     #endregion
 }

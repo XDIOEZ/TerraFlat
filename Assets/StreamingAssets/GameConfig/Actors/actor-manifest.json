@@ -3,6 +3,11 @@
   "behaviorSubtrees": "behavior-subtrees.json",
   "packages": [
     {
+      "id": "servitor-actors",
+      "path": "definitions/servitor-actors.json",
+      "enabled": true
+    },
+    {
       "id": "bear-actors",
       "path": "definitions/bear-actors.json",
       "enabled": true

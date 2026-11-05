@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "ai_servitor_rules",
+      "name": "机仆电池与对象终端资源",
+      "luaPath": "GameplayTests/Systems/AI/servitor-rules.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_rules",
       "name": "AI生物规则与边界",
       "luaPath": "GameplayTests/Systems/AI/rules.lua",

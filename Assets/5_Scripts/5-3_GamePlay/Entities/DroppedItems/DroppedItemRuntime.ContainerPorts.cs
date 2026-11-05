@@ -7,6 +7,7 @@ internal sealed partial class DroppedItemRuntime
 {
     #region 轻量实物输出端口
     private IItemTransferPort GetConveyorOutput(int id) => new LightweightOutput(this, id);
+    internal IItemTransferPort GetItemTransferOutput(int id) => new LightweightOutput(this, id);
     private sealed class LightweightOutput : ContainerPortBase, IItemTransferPort
     {
         private readonly DroppedItemRuntime runtime; private readonly int id;

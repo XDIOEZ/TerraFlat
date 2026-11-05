@@ -24,6 +24,7 @@
         "combat"
       ],
       "ruleCaseIds": [
+        "ai_servitor_rules",
         "ai_rules",
         "ai_behavior_tree_rules",
         "ai_spawn_countdown_rules",
@@ -36,6 +37,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/AI/README.md",
       "integrationCaseIds": [
+        "ai_servitor_gameplay",
         "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
@@ -65,6 +67,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Navigation/README.md",
       "integrationCaseIds": [
+        "ai_servitor_gameplay",
         "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],

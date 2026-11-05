@@ -9,6 +9,7 @@ public sealed class ElectricalNetwork
     #region 运行状态
     public readonly List<MachineEntity> Nodes = new();
     internal readonly List<MachineEntity> PowerIndicatorNodes = new();
+    internal readonly List<ElectricalExternalConsumer> ExternalConsumers = new();
     public float Voltage;
     public float GeneratedWatts;
     public float DemandWatts;
@@ -27,7 +28,7 @@ public sealed class ElectricalNetwork
 }
 
 /// <summary>电线覆盖层与设备电气端口组成轻量电网，方向端口随设备旋转。</summary>
-public sealed class ElectricalNetworkGraph
+public sealed partial class ElectricalNetworkGraph
 {
     #region 拓扑
     private static readonly Vector2Int[] Directions =
@@ -220,6 +221,9 @@ public sealed class ElectricalNetworkGraph
                 network.VoltageIncompatible = true;
         }
 
+        foreach (ElectricalExternalConsumer consumer in network.ExternalConsumers)
+            network.DemandWatts += consumer.RequestedWatts;
+
         if (voltage <= 0f)
         {
             network.PowerRatio = network.DemandWatts > 0f ? 0f : 1f;
@@ -237,6 +241,8 @@ public sealed class ElectricalNetworkGraph
         foreach (MachineEntity node in network.Nodes)
             if (node.IsElectricalConsumer && node.Definition.Electrical.AcceptsVoltage(voltage))
                 compatibleDemand += node.ElectricalRequestedWatts;
+        foreach (ElectricalExternalConsumer consumer in network.ExternalConsumers)
+            compatibleDemand += consumer.RequestedWatts;
 
         if (unlimitedSources > 0)
             SupplyUnlimitedGeneration(network, voltage, compatibleDemand, seconds, unlimitedSources);
@@ -258,6 +264,9 @@ public sealed class ElectricalNetworkGraph
             node.ElectricalSuppliedWatts = node.ElectricalRequestedWatts * network.PowerRatio;
             node.ElectricalCurrentAmps = node.ElectricalSuppliedWatts / voltage;
         }
+
+        foreach (ElectricalExternalConsumer consumer in network.ExternalConsumers)
+            consumer.SuppliedWatts = consumer.RequestedWatts * network.PowerRatio;
 
         float surplusGeneration = Mathf.Max(0f, network.GeneratedWatts - network.DeliveredWatts);
         if (surplusGeneration > 0f)
@@ -288,6 +297,7 @@ public sealed class ElectricalNetworkGraph
         network.WastedWatts = 0f; network.CurrentAmps = 0f; network.SafeCurrentAmps = 0f;
         network.PowerRatio = 1f; network.VoltageConflict = false; network.VoltageIncompatible = false;
         network.Overloaded = false; network.Status = "待机";
+        foreach (ElectricalExternalConsumer consumer in network.ExternalConsumers) consumer.SuppliedWatts = 0f;
         foreach (MachineEntity node in network.Nodes)
         {
             node.ElectricalVoltage = 0f;

@@ -24,6 +24,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     private static void Register()
     {
         RegisterCreatureCreation();
+        RegisterServitor();
         GameplayTestRuntimeProbe.RegisterAsync("ai", "advance_navigation", CaptureAdvance);
         GameplayTestRuntimeProbe.Register("ai", "cleanup", (_, _) => Release("ai"));
         GameplayTestRuntimeProbe.Register("survival", "temperature_conditions", CaptureTemperatureConditions);

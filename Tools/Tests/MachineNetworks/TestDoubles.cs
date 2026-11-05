@@ -85,6 +85,7 @@ public sealed class MachineDefinition
     public float TorqueLoadStep = 10f;
     public int SourceRotationDirection = 1;
     public ElectricalDefinition Electrical;
+    public object PowerIndicator;
     public object Fluid;
     public TransportDefinition Transport;
     public float[] Ratios = { 1f, 2f };
@@ -153,7 +154,9 @@ public static partial class MachineWorld
     public static float GetSourceRpm(MachineEntity node) => node.Definition.Rpm * node.Definition.SourceRotationDirection;
     public static float GetWorkEfficiency(MachineEntity node) => node.SpeedRpm / node.Definition.Rpm;
     public static bool Contains(MachineEntity node) => nodes.ContainsKey(node.Id);
+    public static MachineEntity GetById(int id) => nodes.GetValueOrDefault(id);
     public static void StateChanged(MachineEntity node) { }
+    private static void NotifyVisualChanged(MachineEntity node) { }
     private static MachineState ReadMachineState(ItemData snapshot) => new();
     private static void EnsureScope() { }
     public static int FluidTopologyRebuildsForTest;

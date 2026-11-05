@@ -82,8 +82,42 @@ public static partial class GameplayTestSystemProbe
         var candidate = new ResourceReloadContext();
         ActorDefinitionCatalogLoader.ConfigureResourceReload(candidate);
         candidate.InCandidate(() => definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions());
-        var rows = new JArray();
+#if UNITY_EDITOR
         var prefabs = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
+        foreach (ItemDefinitionDto definition in definitions)
+            if (definition != null && !definition.Abstract)
+                foreach (ItemModuleDefinitionDto module in definition.Modules.Values)
+                    FindAnimalCatalogModulePrefab(module.Prefab, prefabs);
+        return GameRes.WithBuiltInModulePrototypeCatalog(prefabs.Values,
+            resources =>
+            {
+                GameObject clockOwner = null;
+                try
+                {
+                    if (DayTimeSystem.GetInstance() == null)
+                    {
+                        clockOwner = new GameObject("[AnimalTreeCatalogClock]") { hideFlags = HideFlags.HideAndDontSave };
+                        clockOwner.SetActive(false);
+                        clockOwner.AddComponent<AnimalTreeCatalogClock>().BindForCatalog();
+                    }
+                    return CaptureAnimalBehaviorTreeModuleCatalog(definitions, resources);
+                }
+                finally { if (clockOwner != null) UnityEngine.Object.DestroyImmediate(clockOwner); }
+            });
+#else
+        return CaptureAnimalBehaviorTreeModuleCatalog(definitions, GameRes.ExistingInstance);
+#endif
+    }
+
+    private sealed class AnimalTreeCatalogClock : DayTimeSystem
+    {
+        // 只登记真实时钟实例，不启用世界调度或修改场景时间。
+        public void BindForCatalog() => base.Awake();
+    }
+
+    private static JObject CaptureAnimalBehaviorTreeModuleCatalog(List<ItemDefinitionDto> definitions, GameRes resources)
+    {
+        var rows = new JArray();
         foreach (ItemDefinitionDto definition in definitions)
         {
             if (definition == null || definition.Abstract) continue;
@@ -121,7 +155,7 @@ public static partial class GameplayTestSystemProbe
                             ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Id);
                         if (module == null)
                         {
-                            GameObject prefab = FindAnimalCatalogModulePrefab(configured.Prefab, prefabs);
+                            GameObject prefab = resources.GetPrefab(configured.Prefab, false);
                             Module prototype = ItemDefinitionCatalogLoader.FindModulePrototype(null, prefab, configured.Id);
                             if (prototype == null) throw new InvalidOperationException($"动物 {definition.Id} 缺少模块 {pair.Key} 的实现。");
                             module = UnityEngine.Object.Instantiate(prototype, instance.transform, false);
@@ -167,7 +201,10 @@ public static partial class GameplayTestSystemProbe
                     ["hasPack"] = hasPack, ["hasTerritory"] = hasTerritory,
                     ["hasProduction"] = hasProduction, ["hasProductionModule"] = definition.Modules.ContainsKey("生产模块"),
                     ["hasFlight"] = hasFlight, ["hasAquatic"] = hasAquatic,
-                    ["hasColony"] = hasColony, ["hasLight"] = hasLight
+                    ["hasColony"] = hasColony, ["hasLight"] = hasLight,
+                    ["hasServitor"] = item.itemMods.GetMod_ByID<Mod_ServitorController>(Mod_ServitorController.ModuleId) != null,
+                    ["hasBiologicalNeeds"] = definition.Modules.ContainsKey("food") || definition.Modules.ContainsKey("temperature") ||
+                        definition.Modules.ContainsKey("pressure") || definition.Modules.ContainsKey("radiation")
                 };
                 if (definition.Id == "SnowLeopard")
                 {
