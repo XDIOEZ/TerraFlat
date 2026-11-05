@@ -64,7 +64,7 @@ internal static class ItemWorldPlacement
     // 未指定宿主的物品只归入当前场景分类，区块与手持物仍保留显式父级。
     internal static void AttachToSceneItemCategory(Item item, GameObject itemObject)
         => itemObject.transform.SetParent(RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
-            itemObject.scene, item is Player ? RuntimeSceneObjectCategory.Players : RuntimeSceneObjectCategory.Items), true);
+            itemObject.scene, ActorIdentity.IsPlayer(item as Item) ? RuntimeSceneObjectCategory.Players : RuntimeSceneObjectCategory.Items), true);
 
     /// <summary>
     /// 将一个运行时散落物绑定到世界逻辑区块的临时物品账本。

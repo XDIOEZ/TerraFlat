@@ -12,7 +12,7 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
 
     private Material material;
     private FogPass pass;
-    private Player localPlayer;
+    private Item localPlayer;
     private Mod_Cam cameraModule;
     private WorldRuntime presentationWorld;
     private long presentationEpoch;
@@ -57,7 +57,7 @@ public sealed class DenseFogRendererFeature : ScriptableRendererFeature
         if (cameraData.cameraType != CameraType.Game)
             return;
 
-        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Player player))
+        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Item player))
         {
             ResetPresentation();
             return;

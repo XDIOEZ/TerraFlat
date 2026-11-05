@@ -96,7 +96,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
         panel.Toggle(actor);
     }
     public void OnInteractCancel(Item actor) => panel?.Close();
-    public bool TryDrill(Player actor = null)
+    public bool TryDrill(Item actor = null)
     {
         if (!GameNetwork.HasStateAuthority || Processor == null || item?.itemData == null || item.itemData.Durability <= 0f)
             return false;
@@ -107,7 +107,7 @@ public sealed class Mod_HandDrill : Module, IInteractable
         if (worked) ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         return result;
     }
-    private void Drill(Player actor) { TryDrill(actor); panel?.Refresh(); }
+    private void Drill(Item actor) { TryDrill(actor); panel?.Refresh(); }
     private string GetActionLabel() => "钻孔";
     /// <summary>旧占位手钻没有建筑角色，统一转入便携载体；正式落地本体保留 HandDrill 身份。</summary>
     public static string ResolveCarrierDefinition(ItemData data)

@@ -5,12 +5,8 @@
     {
       "id": "default",
       "core": {
-        "dataSpeed": 8.0,
         "playerPov": 10.0,
         "perceptionRadiusMultiplier": 1.0,
-        "initialStamina": 100.0,
-        "maxStamina": 100.0,
-        "staminaRecoverySpeed": 10.0,
         "maxCarryWeight": 100.0,
         "maxCarryVolume": 100.0
       },

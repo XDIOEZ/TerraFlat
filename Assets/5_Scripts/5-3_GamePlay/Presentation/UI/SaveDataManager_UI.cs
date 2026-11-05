@@ -219,9 +219,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         ClearSelectedRow(ref selectedPlayerRow);
         pendingPlayerRows = false;
         playerNameBuffer.Clear();
-        if (saveAndLoad?.SaveData?.PlayerData_Dict != null)
+        if (saveAndLoad?.SaveData?.ProfileActorData != null)
         {
-            foreach (string profileId in saveAndLoad.SaveData.PlayerData_Dict.Keys)
+            foreach (string profileId in saveAndLoad.SaveData.ProfileActorData.Keys)
                 playerNameBuffer.Add(profileId);
         }
 
@@ -299,11 +299,11 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         // 使用当前存档面板更新输入框，并将手柄流程推进到进入世界。
         if (TryGetSavePanel(out BasePanel panel))
         {
-            Data_Player playerData = saveAndLoad?.SaveData?.PlayerData_Dict != null &&
-                                     saveAndLoad.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player found)
+            ItemData playerData = saveAndLoad?.SaveData?.ProfileActorData != null &&
+                                     saveAndLoad.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData found)
                 ? found : null;
             TMP_InputField input = panel.GetInputField(GameManager.GameSavePlayerInputKey);
-            input?.SetTextWithoutNotify(playerData?.Name_User ?? playerName);
+            input?.SetTextWithoutNotify(playerData?.GetActorProfileMetadata().DisplayName ?? playerName);
             FocusStartGameForGamepad();
         }
     }
@@ -322,11 +322,11 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         profileId = string.Empty;
         newDisplayName = null;
-        if (saveAndLoad?.SaveData?.PlayerData_Dict == null)
+        if (saveAndLoad?.SaveData?.ProfileActorData == null)
             return false;
 
         if (selectedPlayerRow != null &&
-            saveAndLoad.SaveData.PlayerData_Dict.ContainsKey(selectedPlayerRow.Value))
+            saveAndLoad.SaveData.ProfileActorData.ContainsKey(selectedPlayerRow.Value))
         {
             profileId = selectedPlayerRow.Value;
             return true;
@@ -335,9 +335,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         string requestedName = inputName?.Trim();
         if (string.IsNullOrWhiteSpace(requestedName) || requestedName.Length > 48)
             return false;
-        foreach (Data_Player existing in saveAndLoad.SaveData.PlayerData_Dict.Values)
+        foreach (ItemData existing in saveAndLoad.SaveData.ProfileActorData.Values)
         {
-            if (existing != null && string.Equals(existing.Name_User, requestedName,
+            if (existing != null && string.Equals(existing.GetActorProfileMetadata().DisplayName, requestedName,
                     System.StringComparison.OrdinalIgnoreCase))
             {
                 Debug.LogWarning("已有同名角色，请从列表中选择该角色。");
@@ -349,7 +349,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         {
             profileId = SaveDataMgr.CreatePlayerProfileId();
         }
-        while (saveAndLoad.SaveData.PlayerData_Dict.ContainsKey(profileId));
+        while (saveAndLoad.SaveData.ProfileActorData.ContainsKey(profileId));
         newDisplayName = requestedName;
         return true;
     }
@@ -1157,10 +1157,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     private string GetPlayerDisplayName(string profileId)
     {
-        if (saveAndLoad?.SaveData?.PlayerData_Dict != null &&
-            saveAndLoad.SaveData.PlayerData_Dict.TryGetValue(profileId, out Data_Player playerData) &&
-            !string.IsNullOrWhiteSpace(playerData?.Name_User))
-            return playerData.Name_User;
+        if (saveAndLoad?.SaveData?.ProfileActorData != null &&
+            saveAndLoad.SaveData.ProfileActorData.TryGetValue(profileId, out ItemData playerData) &&
+            !string.IsNullOrWhiteSpace(playerData?.GetActorProfileMetadata().DisplayName))
+            return playerData.GetActorProfileMetadata().DisplayName;
         return profileId;
     }
 

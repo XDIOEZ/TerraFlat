@@ -180,7 +180,7 @@ internal sealed class ItemObjectPool
 
     private bool CanPool(Item item)
     {
-        if (item == null || item.IsRuntimeTransitioning || item is Player || item is Map)
+        if (item == null || item.IsRuntimeTransitioning || ActorIdentity.IsPlayer(item as Item) || item is Map)
         {
             RuntimeReturnDebug.AddWork(1);
             return false;

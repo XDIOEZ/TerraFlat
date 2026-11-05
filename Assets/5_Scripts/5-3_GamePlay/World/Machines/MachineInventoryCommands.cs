@@ -19,14 +19,14 @@ public static class MachineInventoryCommands
     #region 归属与意图
     public static event Func<Inventory, int, Inventory, int, string, int, bool> RemoteTransferRequested;
 
-    private static readonly Dictionary<string, Func<Player, MachineEntity, Inventory>> privateInventories =
+    private static readonly Dictionary<string, Func<Item, MachineEntity, Inventory>> privateInventories =
         new(StringComparer.Ordinal);
 
     private sealed class PrivateInventoryLease : IDisposable
     {
         private readonly string key;
-        private readonly Func<Player, MachineEntity, Inventory> resolver;
-        public PrivateInventoryLease(string key, Func<Player, MachineEntity, Inventory> resolver)
+        private readonly Func<Item, MachineEntity, Inventory> resolver;
+        public PrivateInventoryLease(string key, Func<Item, MachineEntity, Inventory> resolver)
         { this.key = key; this.resolver = resolver; }
         public void Dispose()
         {
@@ -36,7 +36,7 @@ public static class MachineInventoryCommands
     }
 
     /// <summary>私有库存由角色和机器共同定位，MOD 卸载时释放注册租约。</summary>
-    public static IDisposable RegisterPrivateInventory(string key, Func<Player, MachineEntity, Inventory> resolver)
+    public static IDisposable RegisterPrivateInventory(string key, Func<Item, MachineEntity, Inventory> resolver)
     {
         if (string.IsNullOrWhiteSpace(key) || key.Length > 128 || key[0] == '@' || resolver == null)
             throw new ArgumentException("私有库存注册参数无效。");
@@ -49,7 +49,7 @@ public static class MachineInventoryCommands
            !string.IsNullOrEmpty(address.PlayerInventory) &&
            privateInventories.ContainsKey(address.PlayerInventory);
 
-    public static Inventory ResolvePrivate(Player actor, MachineEntity entity, string key)
+    public static Inventory ResolvePrivate(Item actor, MachineEntity entity, string key)
     {
         if (actor == null || entity == null || string.IsNullOrEmpty(key) ||
             !privateInventories.TryGetValue(key, out var resolver)) return null;
@@ -79,7 +79,7 @@ public static class MachineInventoryCommands
         return entity?.Processor == null ? Array.Empty<Inventory>() : new[] { entity.Processor.Input, entity.Processor.Output };
     }
 
-    public static bool TryAddress(Player actor, Inventory inventory, out MachineInventoryAddress address)
+    public static bool TryAddress(Item actor, Inventory inventory, out MachineInventoryAddress address)
     {
         address = default;
         if (actor == null || inventory == null) return false;
@@ -111,7 +111,7 @@ public static class MachineInventoryCommands
         return false;
     }
 
-    public static Inventory Resolve(Player actor, MachineInventoryAddress address)
+    public static Inventory Resolve(Item actor, MachineInventoryAddress address)
     {
         if (actor == null || address.Index < 0) return null;
         if (address.MachineId == 0 && address.Index >= 0 && address.Index <= 1 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true)
@@ -140,7 +140,7 @@ public static class MachineInventoryCommands
         return null;
     }
 
-    private static IEnumerable<(MachineInventoryAddress Address, Inventory Inventory)> PlayerInventories(Player actor)
+    private static IEnumerable<(MachineInventoryAddress Address, Inventory Inventory)> PlayerInventories(Item actor)
     {
         var equipment = actor.itemMods?.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module)?.EquipmentInventory;
         if (equipment != null) yield return (new MachineInventoryAddress { PlayerInventory = "@equipment" }, equipment);
@@ -164,7 +164,7 @@ public static class MachineInventoryCommands
         }
     }
 
-    public static IEnumerable<ItemData> OwnedSpacesuits(Player actor)
+    public static IEnumerable<ItemData> OwnedSpacesuits(Item actor)
     {
         if (actor == null) yield break;
         var seen = new HashSet<int>();
@@ -237,14 +237,14 @@ public static class MachineInventoryCommands
         MachineEntity entity = inventory?.MachineOwner;
         if (entity == null) return false;
         var inventories = GetMachineInventories(entity);
-        Player actor = null;
+        Item actor = null;
         int index = -1;
         for (int i = 0; i < inventories.Count; i++)
             if (ReferenceEquals(inventories[i], inventory)) { index = i; break; }
         string privateKey = null;
         if (index < 0)
         {
-            actor = ItemMgr.Instance?.User_Player;
+            actor = ItemMgr.Instance?.LocalControlledActor;
             if (!TryAddress(actor, inventory, out var address) || !IsPrivateInventoryAddress(address))
                 return true;
             index = 0;
@@ -281,7 +281,7 @@ public static class MachineInventoryCommands
     }
 
     /// <summary>私有库存的整理仍由服务端验证角色与箱体，并只回传该角色的结果。</summary>
-    public static bool ExecutePrivateLayout(MachineEntity entity, string argument, Player actor)
+    public static bool ExecutePrivateLayout(MachineEntity entity, string argument, Item actor)
     {
         if (!GameNetwork.HasStateAuthority || !MachineWorld.Contains(entity) || actor == null ||
             string.IsNullOrWhiteSpace(argument) || argument.Length > 2048) return false;

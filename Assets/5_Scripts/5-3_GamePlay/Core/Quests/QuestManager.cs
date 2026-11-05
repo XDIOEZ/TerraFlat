@@ -13,24 +13,24 @@ namespace FlatWorld.Gameplay.Quests
     {
         #region 状态
 
-        private readonly Dictionary<Player, PlayerQuestRuntime> runtimes = new();
-        private readonly HashSet<Player> pendingPlayers = new();
+        private readonly Dictionary<Item, PlayerQuestRuntime> runtimes = new();
+        private readonly HashSet<Item> pendingPlayers = new();
         private GameManager boundGameManager;
         private bool eventsBound;
 
         /// <summary>本地玩家任务运行时完成初始化后发送，供只读 UI 和日志绑定。</summary>
-        public event Action<Player, PlayerQuestRuntime> RuntimeReady;
+        public event Action<Item, PlayerQuestRuntime> RuntimeReady;
 
         /// <summary>世界退出或管理器销毁前发送，订阅者必须立即释放旧运行时引用。</summary>
-        public event Action<Player> RuntimeRemoving;
+        public event Action<Item> RuntimeRemoving;
 
         public PlayerQuestRuntime LocalRuntime
         {
             get
             {
-                foreach (KeyValuePair<Player, PlayerQuestRuntime> pair in runtimes)
+                foreach (KeyValuePair<Item, PlayerQuestRuntime> pair in runtimes)
                 {
-                    if (pair.Key != null && pair.Key.IsLocalProfile)
+                    if (pair.Key != null && ActorProfileRegistry.IsLocallyControlled(pair.Key))
                         return pair.Value;
                 }
 
@@ -91,7 +91,7 @@ namespace FlatWorld.Gameplay.Quests
 
         #region 查询
 
-        public bool TryGetRuntime(Player player, out PlayerQuestRuntime runtime)
+        public bool TryGetRuntime(Item player, out PlayerQuestRuntime runtime)
         {
             if (player == null)
             {
@@ -118,15 +118,15 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         /// <summary>F5 替换 Player 外壳后丢弃旧对象键，继续使用同一份玩家任务存档重建运行时。</summary>
-        private void HandlePlayerRuntimeReloaded(Player player)
+        private void HandlePlayerRuntimeReloaded(Item player)
         {
             ClearRuntimes();
             HandlePlayerEntered(player);
         }
 
-        private void HandlePlayerEntered(Player player)
+        private void HandlePlayerEntered(Item player)
         {
-            if (player == null || !player.IsLocalProfile || player.Data == null)
+            if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null)
                 return;
 
             if (runtimes.TryGetValue(player, out PlayerQuestRuntime existing))
@@ -151,11 +151,11 @@ namespace FlatWorld.Gameplay.Quests
             if (pendingPlayers.Count == 0 || !IsQuestContentReady())
                 return;
 
-            var readyPlayers = new List<Player>(pendingPlayers);
+            var readyPlayers = new List<Item>(pendingPlayers);
             pendingPlayers.Clear();
-            foreach (Player player in readyPlayers)
+            foreach (Item player in readyPlayers)
             {
-                if (player != null && player.IsLocalProfile && player.Data != null)
+                if (player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.itemData != null)
                     StartRuntime(player);
             }
         }
@@ -175,7 +175,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         /// <summary>为已确认内容就绪的本地玩家创建任务运行时。</summary>
-        private void StartRuntime(Player player)
+        private void StartRuntime(Item player)
         {
             if (runtimes.ContainsKey(player))
                 return;
@@ -207,7 +207,7 @@ namespace FlatWorld.Gameplay.Quests
         {
             pendingPlayers.Clear();
 
-            foreach (KeyValuePair<Player, PlayerQuestRuntime> pair in runtimes)
+            foreach (KeyValuePair<Item, PlayerQuestRuntime> pair in runtimes)
             {
                 NotifyRuntimeRemoving(pair.Key);
                 pair.Value?.Dispose();
@@ -217,7 +217,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         /// <summary>逐订阅者隔离 UI 绑定异常，避免破坏任务运行时创建。</summary>
-        private void NotifyRuntimeReady(Player player, PlayerQuestRuntime runtime)
+        private void NotifyRuntimeReady(Item player, PlayerQuestRuntime runtime)
         {
             if (RuntimeReady == null)
                 return;
@@ -226,7 +226,7 @@ namespace FlatWorld.Gameplay.Quests
             {
                 try
                 {
-                    ((Action<Player, PlayerQuestRuntime>)callback)(player, runtime);
+                    ((Action<Item, PlayerQuestRuntime>)callback)(player, runtime);
                 }
                 catch (Exception exception)
                 {
@@ -236,7 +236,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         /// <summary>逐订阅者通知运行时即将失效。</summary>
-        private void NotifyRuntimeRemoving(Player player)
+        private void NotifyRuntimeRemoving(Item player)
         {
             if (RuntimeRemoving == null)
                 return;
@@ -245,7 +245,7 @@ namespace FlatWorld.Gameplay.Quests
             {
                 try
                 {
-                    ((Action<Player>)callback)(player);
+                    ((Action<Item>)callback)(player);
                 }
                 catch (Exception exception)
                 {

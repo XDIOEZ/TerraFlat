@@ -143,7 +143,7 @@ public static partial class MachineWorld
         public Vector2 SurfacePoint(int x = 0, int y = 0) => new(origin.x + x + .5f, origin.y + y + .5f);
         private static Vector2Int FindSurfaceCells(int width, int height, int left, int bottom)
         {
-            Player player = ItemMgr.Instance.User_Player ?? throw new InvalidOperationException("测试玩家不存在。");
+            Item player = ItemMgr.Instance.LocalControlledActor ?? throw new InvalidOperationException("测试玩家不存在。");
             Vector2Int center = CellOf(player.transform.position);
             for (int y = -3; y <= 3; y++)
             for (int x = -3; x <= 3; x++)

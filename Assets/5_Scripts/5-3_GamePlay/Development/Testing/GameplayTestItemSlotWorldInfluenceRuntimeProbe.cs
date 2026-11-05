@@ -21,7 +21,7 @@ public static class GameplayTestItemSlotWorldInfluenceRuntimeProbe
     private static void Register()
         => GameplayTestRuntimeProbe.Register("environment", "item_slot_world_influence", CaptureWorldInfluenceLifecycle);
 
-    private static JObject CaptureWorldInfluenceLifecycle(Player player, JObject _)
+    private static JObject CaptureWorldInfluenceLifecycle(Item player, JObject _)
     {
         GameRes resources = GameRes.ExistingInstance
             ?? throw new InvalidOperationException("环境影响回归需要已加载的游戏资源。");

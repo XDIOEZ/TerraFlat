@@ -15,7 +15,7 @@ public static class GameplayTestChunkStreamingOptimizationRuntimeProbe
         "world_streaming", "incremental_window_roundtrip", CaptureIncrementalWindowRoundtrip);
 
     // 临时接管隔离玩家的正式窗口，核对边界增量、折返复用和稳定后的待办清空。
-    private static IEnumerator CaptureIncrementalWindowRoundtrip(Player player, JObject args,
+    private static IEnumerator CaptureIncrementalWindowRoundtrip(Item player, JObject args,
         Action<JObject> completed)
     {
         var fixture = new StreamingWindowFixture(player);
@@ -76,7 +76,7 @@ public static class GameplayTestChunkStreamingOptimizationRuntimeProbe
                 ["pendingPresentations"] = manager.PendingRuntimeChunkPresentationCount,
                 ["idleReconciliationAttempts"] = manager.RuntimeBindingReconciliationAttempts - beforeIdle,
                 ["worldPreserved"] = GameplayWorldRegistry.ExecutionWorldKey == fixture.WorldKey,
-                ["playerPreserved"] = ReferenceEquals(player, ItemMgr.Instance.User_Player)
+                ["playerPreserved"] = ReferenceEquals(player, ItemMgr.Instance.LocalControlledActor)
             };
             yield return fixture.RestoreAndWait();
             result["restoredWindowReady"] = manager.AreRuntimeWindowPresentationsReady;
@@ -92,7 +92,7 @@ public static class GameplayTestChunkStreamingOptimizationRuntimeProbe
         {
             if (Time.realtimeSinceStartupAsDouble >= deadline)
                 throw new TimeoutException("正式区块窗口没有完成数据恢复与分帧表现：" +
-                    manager.DescribeRuntimeEntityPresentationWait(ItemMgr.Instance.User_Player.transform.position));
+                    manager.DescribeRuntimeEntityPresentationWait(ItemMgr.Instance.LocalControlledActor.transform.position));
             yield return null;
         }
     }
@@ -116,7 +116,7 @@ public static class GameplayTestChunkStreamingOptimizationRuntimeProbe
         private readonly Mod_ChunkLoader loader;
         private bool restored;
 
-        internal StreamingWindowFixture(Player player)
+        internal StreamingWindowFixture(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             Manager = ChunkMgr.ExistingInstance;

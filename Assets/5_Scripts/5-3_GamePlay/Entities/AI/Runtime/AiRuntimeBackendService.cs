@@ -52,7 +52,7 @@ public interface IAiEcologyBackend
     bool PrepareWorld(IReadOnlyList<SpawnerConfig> configs);
     void ResetWorld();
     /// <summary>玩家实例卸载前解除后端引用，但保留当前世界的生态运行态。</summary>
-    void ReleasePlayer(Player player);
+    void ReleasePlayer(Item player);
     bool SupportsSpecies(string speciesId);
     bool TryCreateActor(string speciesId, Vector3 position, int requestedGuid,
         SpawnerConfig.SpawnEntry initialization, out int actorGuid);

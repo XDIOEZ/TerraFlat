@@ -81,12 +81,13 @@ public static class JsonConfigurationCache
 public sealed class ItemData { public string IDName = "Animal"; }
 public class Item : UnityEngine.MonoBehaviour
 {
+    public bool ProfileBound;
     public bool DestructionHandled;
     public ItemData itemData = new();
     public ItemMods itemMods = new();
 }
-public sealed class Player : Item { }
 public interface IPlayerStateAuthorityModule { }
+public static class ActorIdentity { public static bool IsPlayer(Item actor) => actor?.ProfileBound == true; }
 public sealed class ItemMods
 {
     public readonly Dictionary<string, Module> Modules = new();

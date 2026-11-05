@@ -51,12 +51,8 @@ public sealed partial class PlayerCreationTemplateConfig
     [Serializable]
     public sealed partial class CoreSettings
     {
-        [JsonProperty("dataSpeed")] public float DataSpeed = 8f;
         [JsonProperty("playerPov")] public float PlayerPov = 10f;
         [JsonProperty("perceptionRadiusMultiplier")] public float PerceptionRadiusMultiplier = 1f;
-        [JsonProperty("initialStamina")] public float InitialStamina = 100f;
-        [JsonProperty("maxStamina")] public float MaxStamina = 100f;
-        [JsonProperty("staminaRecoverySpeed")] public float StaminaRecoverySpeed = 10f;
         [JsonProperty("maxCarryWeight")] public float MaxCarryWeight = 100f;
         [JsonProperty("maxCarryVolume")] public float MaxCarryVolume = 100f;
     }
@@ -127,35 +123,30 @@ public sealed partial class PlayerCreationTemplateConfig
     #region 应用配置
 
     /// <summary>将模板应用到尚未执行 Load 的玩家实例。</summary>
-    public void ApplyTo(Player player)
+    public void ApplyTo(Item player)
     {
         if (player == null)
             throw new ArgumentNullException(nameof(player));
-        if (player.Data == null)
+        if (player.itemData == null)
             throw new InvalidOperationException("玩家创建 JSON 配置无法应用：Player.Data 为空。");
         if (Core == null || Movement == null || Food == null || Food.Nutrition == null || Stamina == null)
             throw new InvalidOperationException($"玩家创建 JSON 配置不完整：{Id}");
 
-        ApplyCore(player.Data);
         ApplyMovement(player.GetComponentInChildren<Mod_Mover>(true));
         ApplyFood(player.GetComponentInChildren<Mod_Food>(true));
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
 
         ItemData templateData = player.Get_NewItemData();
-        player.Data.ModuleDataDic = templateData.DetachModuleData();
+        player.itemData.ModuleDataDic = templateData.DetachModuleData();
+        ApplyCore(player.itemData);
     }
 
-    private void ApplyCore(Data_Player data)
+    private void ApplyCore(ItemData data)
     {
-        float maxStamina = Mathf.Max(0f, Core.MaxStamina);
-        data.Speed = new GameValue_float(Mathf.Max(0f, Core.DataSpeed));
-        data.PlayerPov = Mathf.Max(0f, Core.PlayerPov);
-        data.PerceptionRadiusMultiplier = Mathf.Max(0f, Core.PerceptionRadiusMultiplier);
-        data.stamina = Mathf.Clamp(Core.InitialStamina, 0f, maxStamina);
-        data.staminaMax = maxStamina;
-        data.staminaRecoverySpeed = Mathf.Max(0f, Core.StaminaRecoverySpeed);
-        data.MaxCarryWeight = Mathf.Max(0f, Core.MaxCarryWeight);
-        data.MaxCarryVolume = Mathf.Max(0f, Core.MaxCarryVolume);
+        ActorModuleState.SetCameraPov(data, Mathf.Max(0f, Core.PlayerPov));
+        ActorModuleState.SetTargetPerceptionMultiplier(data, Mathf.Max(0f, Core.PerceptionRadiusMultiplier));
+        ActorModuleState.SetMaxCarryWeight(data, Mathf.Max(0f, Core.MaxCarryWeight));
+        ActorModuleState.SetMaxCarryVolume(data, Mathf.Max(0f, Core.MaxCarryVolume));
     }
 
     private void ApplyMovement(Mod_Mover mover)
@@ -359,12 +350,8 @@ public static class PlayerCreationTemplateJsonLoader
             profile.Food.Nutrition == null || profile.Stamina == null)
             throw new InvalidDataException($"玩家创建 profile 配置不完整：{profile.Id}");
 
-        ValidateFiniteNonNegative(profile.Core.DataSpeed, $"{profile.Id}.core.dataSpeed");
         ValidateFiniteNonNegative(profile.Core.PlayerPov, $"{profile.Id}.core.playerPov");
         ValidateFiniteNonNegative(profile.Core.PerceptionRadiusMultiplier, $"{profile.Id}.core.perceptionRadiusMultiplier");
-        ValidateFiniteNonNegative(profile.Core.InitialStamina, $"{profile.Id}.core.initialStamina");
-        ValidateFiniteNonNegative(profile.Core.MaxStamina, $"{profile.Id}.core.maxStamina");
-        ValidateFiniteNonNegative(profile.Core.StaminaRecoverySpeed, $"{profile.Id}.core.staminaRecoverySpeed");
         ValidatePositive(profile.Core.MaxCarryWeight, $"{profile.Id}.core.maxCarryWeight");
         ValidatePositive(profile.Core.MaxCarryVolume, $"{profile.Id}.core.maxCarryVolume");
 

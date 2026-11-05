@@ -64,7 +64,8 @@ public abstract class Item : MonoBehaviour
     /// 被其他实体感知时的范围倍率。1 为标准感知体型，数值越大越容易在更远处被发现。
     /// 观察者的检测半径与该目标倍率共同决定最终感知范围。
     /// </summary>
-    public virtual float PerceptionRadiusMultiplier => 1f;
+    internal float TargetPerceptionRadiusMultiplier { get; set; } = 1f;
+    public virtual float PerceptionRadiusMultiplier => TargetPerceptionRadiusMultiplier;
 
     /// <summary>读取经过安全归一化的目标感知倍率，避免异常存档破坏空间查询。</summary>
     public float GetPerceptionRadiusMultiplier()
@@ -663,6 +664,7 @@ public abstract class Item : MonoBehaviour
             }
         }
         catch (Exception error) { errors.Add(error); }
+        ActorProfileRegistry.UnbindProfile(this);
         try { ModuleUnload(); }
         catch (Exception error) { errors.Add(error); }
         ClearPerceptionRadiusLimits();
@@ -1175,6 +1177,9 @@ public abstract class Item : MonoBehaviour
             : WorldLocalPresentation.ToLogical(transform.position);
         itemData.transform.rotation = transform.rotation;
         itemData.transform.scale = transform.localScale;
+        if (ActorProfileRegistry.IsProfileBound(this) && !SpaceMgr.IsSpaceScene(gameObject.scene.name))
+            itemData.transform.position = WorldLocalPresentation.ToLogical(
+                FlatWorld.Spaceflight.ShipSurfacePresentation.GroundPosition(gameObject, transform.position));
         ModuleSave();
     }
 
@@ -1334,7 +1339,7 @@ public abstract class Item : MonoBehaviour
     /// <summary>玩家、全局管理实体或 MOD 可覆写此入口以保持完整更新。</summary>
     public virtual bool ShouldUseSimulationRange()
     {
-        return itemData != null && !InHand &&
+        return !ActorProfileRegistry.IsProfileBound(this) && !ActorProfileRegistry.IsManuallyControlled(this) && itemData != null && !InHand &&
             !GameplayWorldRegistry.SimulatesWithoutObservers(GameplayWorldRegistry.GetItemWorldKey(this));
     }
 

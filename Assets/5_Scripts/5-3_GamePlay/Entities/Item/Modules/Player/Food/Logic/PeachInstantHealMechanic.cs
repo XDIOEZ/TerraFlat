@@ -15,7 +15,7 @@ public sealed class PeachInstantHealMechanic : IFoodMechanic, IFoodConsumptionOb
     /// <summary>完整吃完桃子后立即结算一次 5 点生命恢复。</summary>
     public void OnFoodConsumed(FoodConsumeResult result)
     {
-        if (!(result.Consumer is Player) ||
+        if (!(ActorIdentity.IsPlayer(result.Consumer as Item)) ||
             !string.Equals(
                 result.ConsumedItem?.itemData?.IDName,
                 ItemId,

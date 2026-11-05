@@ -494,8 +494,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
             {
                 NetworkSurfaceWorldKey = surfaceWorld;
                 NetworkSurfacePresentationOrigin = shooter.transform.position;
-                Player sourcePlayer = FlatWorld.Spaceflight.SpaceSession.CombatPlayer(shooter);
-                NetworkSurfaceCanonicalOrigin = sourcePlayer != null && FlatWorld.Spaceflight.SpaceSession.Current != null && FlatWorld.Spaceflight.SpaceSession.Current.TryGetNetworkObserver(sourcePlayer.ProfileName, out var observer)
+                Item sourcePlayer = FlatWorld.Spaceflight.SpaceSession.CombatPlayer(shooter);
+                NetworkSurfaceCanonicalOrigin = sourcePlayer != null && FlatWorld.Spaceflight.SpaceSession.Current != null && FlatWorld.Spaceflight.SpaceSession.Current.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(sourcePlayer), out var observer)
                     ? observer.Position.LocalMeters.ToVector2() : WorldLocalPresentation.ToLogical(shooter.transform.position);
                 IsNetworkSurfaceQueryOnly = surfaceWorld != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
                 if (IsNetworkSurfaceQueryOnly)
@@ -592,8 +592,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder, IComba
     private void RefreshSpaceProjectilePresentation()
     {
         var session = FlatWorld.Spaceflight.SpaceSession.Current;
-        Player local = ItemMgr.Instance?.User_Player;
-        bool visible = session != null && local != null && session.TryGetNetworkObserver(local.ProfileName, out var observer) && observer.InSpace &&
+        Item local = ItemMgr.Instance?.LocalControlledActor;
+        bool visible = session != null && local != null && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(local), out var observer) && observer.InSpace &&
             FlatWorld.Spaceflight.SpaceSession.TryGetCombatPosition(item, item.transform.position, out var point) &&
             FlatWorld.Spaceflight.SpaceSectorCoordinates.Difference(point, observer.Position).Magnitude <= 8192d;
         foreach (Renderer renderer in item.GetComponentsInChildren<Renderer>(true)) renderer.enabled = visible;

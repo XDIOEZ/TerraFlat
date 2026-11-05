@@ -7,7 +7,7 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 本地格建造预览
-        public bool TryGetPlacementWorldShip(Player actor, out ShipState ship)
+        public bool TryGetPlacementWorldShip(Item actor, out ShipState ship)
         {
             string key = actor != null ? GameplayWorldRegistry.GetItemWorldKey(actor) : GameplayWorldRegistry.ExecutionWorldKey;
             if (key?.StartsWith("ship:", StringComparison.Ordinal) == true)
@@ -19,7 +19,7 @@ namespace FlatWorld.Spaceflight
             return false;
         }
         public bool TrySnapPlacement(ItemData source, Vector2 point, int quarterTurns, out Vector2 snapped, out float angle,
-            Player actor = null)
+            Item actor = null)
         {
             snapped = point; angle = 0f;
             ShipPartConfiguration config = ResolvePartConfiguration(source);
@@ -50,7 +50,7 @@ namespace FlatWorld.Spaceflight
             return true;
         }
         public bool TryValidatePlacement(ItemData source, Vector2 point, int quarterTurns, out bool valid, out string reason,
-            Player actor = null)
+            Item actor = null)
         {
             reason = null; valid = false;
             ShipPartConfiguration config = ResolvePartConfiguration(source);

@@ -381,8 +381,8 @@ namespace FlatWorld.Networking.Gameplay
             bool found = false;
             RuntimeWorldAddress selected = default;
             float farthest = -1f;
-            Vector2 observer = ItemMgr.Instance?.User_Player != null
-                ? (Vector2)ItemMgr.Instance.User_Player.transform.position : Vector2.zero;
+            Vector2 observer = ItemMgr.Instance?.LocalControlledActor != null
+                ? (Vector2)ItemMgr.Instance.LocalControlledActor.transform.position : Vector2.zero;
             void Consider(RuntimeWorldAddress address)
             {
                 float distance = WorldTopologyRuntime.ShortestDelta(observer,

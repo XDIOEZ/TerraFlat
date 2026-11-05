@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 /// 相机跟随管理器
 /// </summary>
 [DefaultExecutionOrder(-1000)]
-public class Mod_Cam : Module
+public class Mod_Cam : Module, IActorLocalControlModule
 {
     private const float DefaultPovValue = 10f;
 
@@ -39,7 +39,7 @@ public class Mod_Cam : Module
 
     [Header("跟随目标")]
     public Item CameraFollowItem;
-    public Player Player;
+    public Item Player;
     public Mod_GameController GameController;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
     private CinemachineFramingTransposer _framingTransposer;
@@ -135,6 +135,7 @@ public class Mod_Cam : Module
     #region 生命周期方法
     private void OnEnable()
     {
+        if (!IsRuntimeLoaded) return;
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
         BindWorldAudioListener();
@@ -150,6 +151,7 @@ public class Mod_Cam : Module
 
     private void LateUpdate()
     {
+        if (!IsRuntimeLoaded) return;
         UpdateDefaultPresentationFollowTarget();
         naturalAmbience.Advance(Player, Time.deltaTime);
         caveSurfaceAudio.Advance(Player, Time.deltaTime);
@@ -165,7 +167,7 @@ public class Mod_Cam : Module
         CameraUserSettings.Changed -= HandleCameraSettingsChanged;
         CameraUserSettings.Changed += HandleCameraSettingsChanged;
         // 获取GameController并绑定输入事件
-        GameController = GetComponentInParent<Mod_GameController>();
+        GameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (GameController != null && GameController._inputActions != null)
         {
             // 注意：Win10Actions是结构体，不能与null比较，直接绑定事件
@@ -174,7 +176,7 @@ public class Mod_Cam : Module
     
         // 获取跟随对象
         CameraFollowItem = GetComponentInParent<Item>();
-        Player = CameraFollowItem as Player;
+        Player = CameraFollowItem;
     
         // 直接在当前位置实例化相机预制体
         if (CamPrefab != null)
@@ -203,7 +205,7 @@ public class Mod_Cam : Module
         }
     
         // 镜头跟随独立表现锚点，避免低 TPS 的物理阶梯运动拖动整幅画面。
-        if (Vcam != null && Player != null && Player.IsLocalProfile)
+        if (Vcam != null && Player != null && ActorProfileRegistry.IsLocallyControlled(Player))
         {
             _defaultPresentationFollowTarget = new GameObject("玩家镜头表现锚点").transform;
             UpdateDefaultPresentationFollowTarget();
@@ -229,6 +231,12 @@ public class Mod_Cam : Module
         }
         GameController._mainCamera = ControllerCamera;
         BindWorldAudioListener();
+        var health = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
+        if (health != null)
+        {
+            var effect = item.GetComponent<PlayerLowHealthPostProcessEffect>() ?? item.gameObject.AddComponent<PlayerLowHealthPostProcessEffect>();
+            effect.Bind(item, health);
+        }
     
         // 重置旋转
         transform.rotation = Quaternion.identity;
@@ -296,7 +304,7 @@ public class Mod_Cam : Module
     // 世界音量跟随地表宇宙画面的同一淡变进度，切换驾驶或离开地表时恢复。
     private void UpdateWorldAudioForSurfaceZoom()
     {
-        if (Player == null || !Player.IsLocalProfile || !AudioService.HasInstance)
+        if (Player == null || !ActorProfileRegistry.IsLocallyControlled(Player) || !AudioService.HasInstance)
             return;
 
         float gain = Player.isActiveAndEnabled && !HasFollowOverride &&
@@ -310,7 +318,7 @@ public class Mod_Cam : Module
     // 本机玩家拥有世界听音中心，相机只提供屏幕左右方向和音频输出监听器。
     private void BindWorldAudioListener()
     {
-        if (Player == null || !Player.IsLocalProfile || ControllerCamera == null)
+        if (Player == null || !ActorProfileRegistry.IsLocallyControlled(Player) || ControllerCamera == null)
             return;
 
         AudioListener listener = ControllerCamera.GetComponent<AudioListener>();
@@ -634,9 +642,9 @@ public class Mod_Cam : Module
             }
         }
 
-        if (Player != null && Player.Data != null)
+        if (Player != null && Player.itemData != null)
         {
-            povValue = Player.Data.PlayerPov;
+            povValue = ActorModuleState.GetCameraPov(Player.itemData);
         }
     }
 

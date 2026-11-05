@@ -6,7 +6,7 @@ namespace FlatWorld.Gameplay.Progress
     /// <summary>
     /// 保存玩家首次冶炼粗铁与首次制作金属工具的幂等里程碑。
     /// 数据写入独立的 flatworld.progression.metallurgy 命名空间，版本 1 只包含两个布尔值，
-    /// 因此不会覆盖任务、教程或自言自语完成标记，也能随现有 Data_Player 存档链自然落盘。
+    /// 因此不会覆盖任务、教程或自言自语完成标记，并随档案角色的通用快照落盘。
     /// </summary>
     public sealed class PlayerMetallurgyProgressStore
     {
@@ -35,7 +35,7 @@ namespace FlatWorld.Gameplay.Progress
 
         #region 状态
 
-        private readonly Data_Player playerData;
+        private readonly ItemData playerData;
         private JObject namespaceData;
 
         public bool FirstRawIronSmelted { get; private set; }
@@ -43,7 +43,7 @@ namespace FlatWorld.Gameplay.Progress
 
         #endregion
 
-        public PlayerMetallurgyProgressStore(Data_Player playerData)
+        public PlayerMetallurgyProgressStore(ItemData playerData)
         {
             this.playerData = playerData ?? throw new ArgumentNullException(nameof(playerData));
             Load();

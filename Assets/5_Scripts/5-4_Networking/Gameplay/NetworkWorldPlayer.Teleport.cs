@@ -21,7 +21,7 @@ namespace FlatWorld.Networking.Gameplay
             CompleteSurfaceTeleport(false);
         }
 
-        private bool RequestSurfaceTeleport(Player player, Vector3 destination, Action<bool> completed)
+        private bool RequestSurfaceTeleport(Item player, Vector3 destination, Action<bool> completed)
         {
             if (!isOwned || !NetworkClient.ready || player != corePlayer || IsInSpace || authoritativeWorldTransferPending ||
                 pendingTeleportRequest != 0 || !IsValidPosition(destination))
@@ -50,22 +50,22 @@ namespace FlatWorld.Networking.Gameplay
         private bool ApplySurfaceTeleportOnServer(uint request, Vector3 destination)
         {
             if (request == 0 || unchecked((int)(request - lastServerTeleportRequest)) <= 0 ||
-                IsInSpace || authoritativeWorldTransferPending || corePlayer?.Data == null || !IsValidPosition(destination) ||
+                IsInSpace || authoritativeWorldTransferPending || corePlayer?.itemData== null || !IsValidPosition(destination) ||
                 GameManager.ExistingInstance?.IsGameplayReady != true)
                 return false;
 
             using var worldScope = NetworkGameplayWorldScope.Use(this);
             SpaceSession session = SpaceSessionForNetwork;
-            string world = corePlayer.Data.CurrentSceneName;
-            if (session == null || !session.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) ||
+            string world = corePlayer.itemData.GetActorProfileMetadata().WorldKey;
+            if (session == null || !session.TryGetNetworkObserver(profileId, out SpaceNetworkObserver observer) ||
                 observer.InSpace || !string.Equals(observer.WorldKey, world, StringComparison.Ordinal) ||
                 !session.CanTransferToNetworkSurface(world, out _))
                 return false;
 
             lastServerTeleportRequest = request;
             Vector3 logical = WorldTopologyRuntime.NormalizePosition(destination);
-            session.RemoveNetworkPassengerInput(displayName);
-            session.EndNetworkAttack(displayName);
+            session.RemoveNetworkPassengerInput(profileId);
+            session.EndNetworkAttack(profileId);
             PlayerTeleportService.ApplySurfacePosition(corePlayer, logical);
             authoritativePosition = logical;
             authoritativeVelocity = Vector2.zero;

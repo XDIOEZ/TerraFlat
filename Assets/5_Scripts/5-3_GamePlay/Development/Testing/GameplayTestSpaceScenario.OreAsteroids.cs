@@ -160,7 +160,7 @@ public sealed partial class GameplayTestSpaceScenario
         double? distanceBeforeApproach, double? distanceAfterApproach, float inventoryBeforeApproach,
         JArray beforeSlots, JArray completedPickups)
     {
-        Player player = CurrentPlayer();
+        Item player = CurrentPlayer();
         SpacePassengerState passenger = session.GetPassenger(player);
         Mod_ItemPicker picker = player.itemMods.GetMod_ByID<Mod_ItemPicker>(ModText.Picker);
         Vector2 point = session.ProjectPosition(new SpaceSectorPosition(drop.Motion.Sector, drop.Motion.PositionMeters));
@@ -351,7 +351,7 @@ public sealed partial class GameplayTestSpaceScenario
     // 在真实下降过程中同时采样乘员投影、跟随目标和星球环绕坐标。
     private JObject CaptureAsteroidDescentCameraPresentation(ShipState ship)
     {
-        Player player = CurrentPlayer();
+        Item player = CurrentPlayer();
         Mod_Cam module = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
         Camera camera = module?.ControllerCamera;
         SpriteRenderer sprite = player.Sprite;

@@ -7,7 +7,7 @@ public static partial class GameplayTestRuntimeProbe
 {
     #region 容器整份落地现场
     // 真实冷库存容器调用正式倒液与装液入口，测试结束归还原地表液体。
-    private static JObject CaptureVesselWholePour(Player player, JObject args)
+    private static JObject CaptureVesselWholePour(Item player, JObject args)
     {
         RuntimeTerrainTileSample sample = default;
         int offset = 0;

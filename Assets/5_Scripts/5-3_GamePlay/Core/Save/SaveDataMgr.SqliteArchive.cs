@@ -91,15 +91,15 @@ public partial class SaveDataMgr
     {
         var records = new List<SaveArchiveRecord>();
         var planets = source.PlanetData_Dict;
-        var players = source.PlayerData_Dict;
+        var players = source.ProfileActorData;
         string space = source.SpaceStateJson;
         // 核心记录剔除空间增长的数据，玩家和世界分别成为独立记录。
         try
         {
-            source.PlanetData_Dict = new(); source.PlayerData_Dict = new(); source.SpaceStateJson = null;
+            source.PlanetData_Dict = new(); source.ProfileActorData = new(); source.SpaceStateJson = null;
             records.Add(ArchiveRecord("global", "", "core", SerializeCoreDataWithoutChunks(source)));
         }
-        finally { source.PlanetData_Dict = planets; source.PlayerData_Dict = players; source.SpaceStateJson = space; }
+        finally { source.PlanetData_Dict = planets; source.ProfileActorData = players; source.SpaceStateJson = space; }
         foreach (var pair in planets)
         {
             PlanetData planet = pair.Value;
@@ -117,7 +117,7 @@ public partial class SaveDataMgr
         }
         foreach (var player in players)
             records.Add(ArchiveRecord("global", "", "player:" + player.Key,
-                ItemSnapshotSerialization.SerializePayload(ItemInstanceSnapshot.Capture(player.Value))));
+                ItemSnapshotSerialization.SerializePayload(ActorProfileSnapshot.Capture(player.Value))));
         ModRuntimeManager mods = ModRuntimeManager.Instance;
         if (mods == null || !mods.IsReady) throw new InvalidOperationException("MOD 框架尚未就绪。");
         records.Add(ArchiveRecord("global", "", "mods", MemoryPackSerializer.Serialize(mods.CaptureSaveMetadata())));
@@ -316,7 +316,7 @@ public partial class SaveDataMgr
             if (record.SchemaId.StartsWith("optional.", StringComparison.Ordinal)) continue;
             if (record.Key == "mods") modMetadata = MemoryPackSerializer.Deserialize<ModSaveMetadata>(record.Payload);
             if (record.Key.StartsWith("player:", StringComparison.Ordinal))
-                candidate.PlayerData_Dict[record.Key.Substring(7)] = (Data_Player)MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(record.Payload).CreateColdData();
+                candidate.ProfileActorData[record.Key.Substring(7)] = MemoryPackSerializer.Deserialize<ActorProfileSnapshot>(record.Payload).RestoreActorData();
         }
         var machines = new FrozenMachineArchivePayload { Worlds = new() };
         var drops = new DroppedItemArchive();
@@ -357,7 +357,9 @@ public partial class SaveDataMgr
     {
         var registry = new SaveArchiveSchemaRegistry();
         foreach (string id in new[] { "core", "planet", "player", "mods", "space", "chunk", "weather", "machine-metadata", "machine", "drop" })
-            registry.RegisterSchema("flatworld." + id, id == "chunk" ? 3 : 1);
+            registry.RegisterSchema("flatworld." + id, id == "chunk" ? 3 : id is "core" or "player" ? 2 : 1);
+        registry.RegisterMigration(new ActorProfileSaveMigration("core"));
+        registry.RegisterMigration(new ActorProfileSaveMigration("player"));
         registry.RegisterMigration(new WorldCombustibilitySaveMigration());
         registry.RegisterMigration(new WorldGroundStrataSaveMigration());
         return registry;
@@ -408,3 +410,22 @@ public partial class GameSaveData
     [MemoryPackIgnore] public string ArchiveId;
     #endregion
 }
+
+#region 档案角色统一模型迁移
+internal sealed class ActorProfileSaveMigration : ISaveArchivePayloadMigration
+{
+    private readonly string kind;
+    public ActorProfileSaveMigration(string kind) => this.kind = kind;
+    public string SchemaId => "flatworld." + kind;
+    public int FromVersion => 1;
+    public int ToVersion => 2;
+    public byte[] Migrate(byte[] payload)
+    {
+        if (payload == null) return null;
+        if (kind == "core")
+            return ItemSnapshotSerialization.SerializePayload(MemoryPackSerializer.Deserialize<GameSaveData>(payload));
+        var actor = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(payload).CreateColdData();
+        return ItemSnapshotSerialization.SerializePayload(ActorProfileSnapshot.Capture(actor));
+    }
+}
+#endregion

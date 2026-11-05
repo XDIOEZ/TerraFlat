@@ -20,7 +20,7 @@ public static class FurnaceFuelRules
         return MachineDefinition.Positive(value) && MachineDefinition.Positive(temperature);
     }
 
-    public static bool HasHeldIgnition(Player actor)
+    public static bool HasHeldIgnition(Item actor)
     {
         if (actor == null) return false;
         Item held = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;

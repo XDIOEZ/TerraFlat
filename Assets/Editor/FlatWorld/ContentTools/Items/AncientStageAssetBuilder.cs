@@ -64,7 +64,7 @@ public static partial class AncientStageAssetBuilder
     /// <summary>玩家正式资源组合出汗能力；重复装配不叠加模块。</summary>
     private static void BuildSurvivalModules()
     {
-        const string path = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
+        const string path = "Assets/2_Prefabs/Gameplay/Player/Human.prefab";
         GameObject root = PrefabUtility.LoadPrefabContents(path);
         try
         {

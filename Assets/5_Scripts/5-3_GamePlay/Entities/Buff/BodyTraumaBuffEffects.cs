@@ -63,7 +63,7 @@ public static class BodyTraumaBuffEffects
             entry.Speed = runtime.Receiver.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.Speed;
             if (entry.Speed != null) entry.Speed.MultiplicativeModifier *= entry.Value;
         }
-        if (effect.TypeId == Blur && runtime.Receiver is Player player && player.IsLocalProfile)
+        if (effect.TypeId == Blur && (runtime.Receiver is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player))
         {
             entry.Screen = new TraumaScreenEffect(runtime, effect.Value);
             ScreenPostProcessManager.Instance.RegisterEffect(entry.Screen);
@@ -121,7 +121,7 @@ public static class BodyTraumaBuffEffects
         public TraumaScreenEffect(BuffInstance runtime, float strength) { this.runtime = runtime; this.strength = strength; }
         public string EffectId => "trauma:" + runtime.SourceKey;
         public int Priority => 30;
-        public bool IsValid => runtime.Receiver is Player player && player.IsLocalProfile;
+        public bool IsValid => (runtime.Receiver is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player);
         public void Apply(ScreenPostProcessFrame frame, float deltaTime) => frame.AddBlur(strength);
     }
     #endregion

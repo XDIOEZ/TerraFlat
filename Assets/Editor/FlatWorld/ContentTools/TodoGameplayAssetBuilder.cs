@@ -22,7 +22,7 @@ public static class TodoGameplayAssetBuilder
     public const string FruitlessPath = "Assets/6_Art/Generated/Farming/CoconutTree/FruitlessCoconutTree.png";
     private const string PalmSourcePath = "Assets/6_Art/Env/椰子树.png";
     private const string ModulesDirectory = "Assets/2_Prefabs/Gameplay/Modules/World";
-    private const string PlayerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
+    private const string PlayerPath = "Assets/2_Prefabs/Gameplay/Player/Human.prefab";
 
     [MenuItem(Menu)]
     public static void Build()

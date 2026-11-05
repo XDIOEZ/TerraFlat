@@ -188,7 +188,7 @@ public partial class SaveDataMgr
             if (record?.PlanetName == worldKey && record.HasChanges) records.Add(record);
         records.Sort((a, b) => a.ChunkPosition.x != b.ChunkPosition.x
             ? a.ChunkPosition.x.CompareTo(b.ChunkPosition.x) : a.ChunkPosition.y.CompareTo(b.ChunkPosition.y));
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData))
+        using (ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData, ActorProfileRegistry.IsProfileActorData))
         {
             foreach (ChunkSaveRecord record in records) snapshot.Chunks.Add(MemoryPackSerializer.Serialize(record));
             snapshot.Drops = DroppedItemService.CaptureWorldItems(worldKey);

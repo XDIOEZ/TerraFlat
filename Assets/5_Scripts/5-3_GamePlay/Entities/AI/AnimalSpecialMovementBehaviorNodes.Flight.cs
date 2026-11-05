@@ -19,6 +19,11 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             Movement.BeginAnimationMotionFrame(deltaTime);
             Movement.TickFlightEnvironmentAndTimers(deltaTime);
         }
+        public override void TickWhileManuallyControlled(float deltaTime)
+        {
+            Movement.BeginAnimationMotionFrame(deltaTime);
+            Movement.TickFlightEnvironmentAndTimers(deltaTime, false);
+        }
     }
 
     private static void RegisterFlightNodes()

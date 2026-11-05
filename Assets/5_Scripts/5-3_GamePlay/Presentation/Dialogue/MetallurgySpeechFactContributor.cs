@@ -14,8 +14,8 @@ namespace FlatWorld.Dialogue
     {
         #region 状态
 
-        private Player actor;
-        private Data_Player loadedPlayerData;
+        private Item actor;
+        private ItemData loadedPlayerData;
         private PlayerMetallurgyProgressStore progress;
         private CharacterSoliloquyController observingController;
 
@@ -37,7 +37,7 @@ namespace FlatWorld.Dialogue
         {
             ResolveActor();
             if (actor != null)
-                actor.ProfileContextChanged += HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actor).Changed += HandleProfileContextChanged;
 
             GameplayProgressEvents.SmeltSucceeded += HandleSmeltSucceeded;
             GameplayProgressEvents.CraftSucceeded += HandleCraftSucceeded;
@@ -48,7 +48,7 @@ namespace FlatWorld.Dialogue
         {
             EndObserving();
             if (actor != null)
-                actor.ProfileContextChanged -= HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actor).Changed -= HandleProfileContextChanged;
 
             GameplayProgressEvents.SmeltSucceeded -= HandleSmeltSucceeded;
             GameplayProgressEvents.CraftSucceeded -= HandleCraftSucceeded;
@@ -73,13 +73,13 @@ namespace FlatWorld.Dialogue
 
         #region 玩法事件
 
-        private void HandleSmeltSucceeded(Player eventActor, string outputItemId)
+        private void HandleSmeltSucceeded(Item eventActor, string outputItemId)
         {
             if (CanHandle(eventActor) && progress.RecordSmeltedOutput(outputItemId))
                 observingController?.NotifySpeechStateChanged();
         }
 
-        private void HandleCraftSucceeded(Player eventActor, string outputItemId)
+        private void HandleCraftSucceeded(Item eventActor, string outputItemId)
         {
             if (CanHandle(eventActor) && progress.RecordCraftedOutput(outputItemId))
                 observingController?.NotifySpeechStateChanged();
@@ -98,13 +98,13 @@ namespace FlatWorld.Dialogue
 
         private void ResolveActor()
         {
-            actor ??= GetComponentInParent<Player>();
+            actor ??= GetComponentInParent<Item>();
         }
 
         private void RefreshStore()
         {
             ResolveActor();
-            Data_Player playerData = actor != null && actor.IsLocalProfile ? actor.Data : null;
+            ItemData playerData = actor != null && ActorProfileRegistry.IsLocallyControlled(actor) ? actor.itemData : null;
             if (ReferenceEquals(playerData, loadedPlayerData))
                 return;
 
@@ -114,7 +114,7 @@ namespace FlatWorld.Dialogue
                 : null;
         }
 
-        private bool CanHandle(Player eventActor)
+        private bool CanHandle(Item eventActor)
         {
             RefreshStore();
             return progress != null && ReferenceEquals(actor, eventActor);

@@ -16,7 +16,7 @@ public enum BirdFlightPhase { Ground, RunUp, TakingOff, Flying, Landing }
 public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDependencyBinder, IRuntimeAiPersistencePolicy,
     IIncomingDamageRule, IIncomingDamageContextRule, ICombatAirborneTarget, IVisualGroundOffset,
     IWaterCurrentExposure, IWindMotionOwner, IAnimalTemperatureSafetyExecutor, IDamageSender,
-    IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D
+    IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D, IActorManualMotionOverride
 {
     #region 配置与独立存档
     public const string ModuleId = "Mod_AnimalFlightMovement"; // 飞行能力 ID 与具体 Prefab 名分别维护。
@@ -138,6 +138,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
     public bool IsAlive => health != null && health.Hp > 0f;
     public BirdFlightPhase Phase => state.Phase;
     public bool IsAirborne => state.Phase != BirdFlightPhase.Ground && state.Phase != BirdFlightPhase.RunUp;
+    public bool ConsumesManualMovement => IsAirborne;
     public bool ReceivesWaterCurrent => !IsAirborne;
     public bool OwnsWindMotion => IsAirborne;
     public float FlightStamina => state.Stamina;
@@ -290,6 +291,18 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
             }
             else ApplyAirborneWind(deltaTime);
         }
+        if (ActorProfileRegistry.IsLocallyControlled(item) && fishingRod == null)
+        {
+            // 接管保留离地/降落进度，只让输入决定水平位移。
+            if (state.Phase == BirdFlightPhase.RunUp) TickRunUp(deltaTime);
+            else if (state.Phase == BirdFlightPhase.TakingOff && state.Elapsed >= transitionDuration) EnterPhase(BirdFlightPhase.Flying);
+            else if (state.Phase == BirdFlightPhase.Landing && state.Elapsed >= transitionDuration) CompleteLanding();
+            if (IsAirborne)
+            {
+                Vector2 input = item.itemMods.GetMod_ByID<Mod_ActorControl>(Mod_ActorControl.ModuleId).ReadManualMovementInput();
+                if (input.sqrMagnitude > 0f) MoveCruiseStep(input * flightSpeed * deltaTime, deltaTime);
+            }
+        }
         ApplyFlightPresentation();
     }
 
@@ -300,7 +313,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         animationFlightSeconds = Mathf.Max(0f, deltaTime);
     }
 
-    public void TickFlightEnvironmentAndTimers(float deltaTime)
+    public void TickFlightEnvironmentAndTimers(float deltaTime, bool autonomous = true)
     {
         if (!loaded || !IsAlive || fishingRod != null || !GameNetwork.HasStateAuthority) return;
         float step = Mathf.Max(0f, deltaTime);
@@ -308,7 +321,12 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         if (!permanentFlight)
         {
             AdvanceFlightStamina(state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
-            TickVigilance(step);
+            if (autonomous) TickVigilance(step);
+            else
+            {
+                escapeRemaining = Mathf.Max(0f, escapeRemaining - step);
+                vigilanceRemaining -= step;
+            }
             forageScanRemaining -= step;
             fishHuntScanRemaining -= step;
         }

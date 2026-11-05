@@ -13,7 +13,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     private readonly Item owner;
     private readonly MachineEntity mechanicalOwner; // 已安装机械的纯数据目标。
     private readonly RecipeProcessor processor;
-    private readonly Action<Player> action;
+    private readonly Action<Item> action;
     private readonly Func<string> status;
     private readonly Func<string> actionLabel;
     private readonly Func<bool> actionAvailable; // 操作资格由机械域判断，面板只呈现按钮禁用态。
@@ -21,12 +21,12 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     private readonly Func<float> batteryCharge01;
     private readonly Func<float> gasCapacity01;
     private readonly CraftingOutputPreview preview;
-    private Player actor;
+    private Item actor;
     private bool disposed;
     public bool IsAlive => !disposed && panel != null;
     public bool IsOpen => IsAlive && panel.IsOpen();
 
-    public MechanicalPanelSession(string prefabId, Item owner, RecipeProcessor processor, Action<Player> action,
+    public MechanicalPanelSession(string prefabId, Item owner, RecipeProcessor processor, Action<Item> action,
         Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
         bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null, Func<float> gasCapacity01 = null)
     {
@@ -68,7 +68,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
 
     /// <summary>纯数据机械节点使用相同面板，不需要对应世界 Item。</summary>
     public MechanicalPanelSession(string prefabId, MachineEntity owner, RecipeProcessor processor,
-        Action<Player> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
+        Action<Item> action, Func<string> status, Func<string> actionLabel, Func<bool> actionAvailable = null,
         bool refreshStatusPeriodically = false, Func<float> batteryCharge01 = null, Func<float> gasCapacity01 = null)
         : this(prefabId, (Item)null, processor, action, status, actionLabel, actionAvailable, refreshStatusPeriodically, batteryCharge01, gasCapacity01)
     {
@@ -82,7 +82,7 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (panel.IsOpen()) { Close(); return; }
-        actor = playerItem as Player ?? playerItem?.GetComponentInParent<Player>();
+        actor = ActorProfileRegistry.GetProfileActorOrNull(playerItem as Item) ?? playerItem?.GetComponentInParent<Item>();
         var hand = playerItem?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (hand == null) throw new InvalidOperationException("加工面板缺少玩家手部库存。");
         BuildingPanelActions buildingActions = panel.GetComponent<BuildingPanelActions>();

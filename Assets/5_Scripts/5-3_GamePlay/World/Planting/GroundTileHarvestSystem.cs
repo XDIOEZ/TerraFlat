@@ -27,8 +27,8 @@ public static class GroundTileHarvestSystem
         reason = null;
         if (!GameNetwork.HasStateAuthority || tool?.item == null ||
             tool.HarvestKind == ResourceToolKind.None || !tool.item.InHand ||
-            tool.item.DestructionHandled || tool.item.Owner is not Player actor ||
-            !actor.IsLocalProfile || actor.DestructionHandled ||
+            tool.item.DestructionHandled || !(tool.item.Owner is Item actor && ActorIdentity.IsPlayer(actor)) ||
+            !ActorProfileRegistry.IsLocallyControlled(actor) || actor.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
         {
             reason = "当前无法使用采挖工具。";

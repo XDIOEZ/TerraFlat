@@ -27,7 +27,7 @@ public static class GameplayTestBuffRuntimeProbe
         private bool regularAttempted;
         private bool disposed;
 
-        public SourceBuffScope(Player player)
+        public SourceBuffScope(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             Manager = player.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager) ??
@@ -66,7 +66,7 @@ public static class GameplayTestBuffRuntimeProbe
         }
     }
 
-    private static JObject CaptureSourcePresence(Player player, JObject args)
+    private static JObject CaptureSourcePresence(Item player, JObject args)
     {
         var scope = new SourceBuffScope(player);
         GameplayTestRuntimeProbe.RegisterCleanup(scope);
@@ -116,7 +116,7 @@ public static class GameplayTestBuffRuntimeProbe
     #endregion
 
     #region 常规出血与来源实例独立续期
-    private static JObject CaptureBleedingSources(Player player, JObject args)
+    private static JObject CaptureBleedingSources(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         // 使用已就绪的正式目录和独立未注册宿主，不修改主角原有创伤。
@@ -170,7 +170,7 @@ public static class GameplayTestBuffRuntimeProbe
     #endregion
 
     #region 正式感染续期与自然到期
-    private static JObject CaptureInfection(Player player, JObject args)
+    private static JObject CaptureInfection(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var scope = new GameplayTestInfectionFixture();

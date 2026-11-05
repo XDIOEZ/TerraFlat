@@ -106,7 +106,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (player == null || player.IsInSpace || !NetworkServer.active && !player.SharesLocalRealm() ||
                     !player.TryGetSpaceObserver(out FlatWorld.Spaceflight.SpaceNetworkObserver realm) || string.IsNullOrWhiteSpace(realm.WorldKey)) continue;
                 // 本机雾窗和区块需求都跟随同一个预测位置，不能等旧服务器位置跨块才补地形。
-                bool ownsLocalSurface = player.isOwned && player.CorePlayer?.Data?.CurrentSceneName == realm.WorldKey;
+                bool ownsLocalSurface = player.isOwned && player.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey == realm.WorldKey;
                 Vector3 point = ResolveObserverWindowPosition(ownsLocalSurface,
                     ownsLocalSurface ? player.ObserverLogicalPosition : default, realm.Position.LocalMeters.ToVector2());
                 if (!IsValidObserverPosition(point)) continue;
@@ -132,7 +132,7 @@ namespace FlatWorld.Networking.Gameplay
                 GameplayWorldRuntime world = GameplayWorldRegistry.GetOrCreate(pair.Key);
                 using (GameplayWorldRegistry.UseWorld(pair.Key))
                 {
-                    Vector3 anchor = localAnchor != null && localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.Data?.CurrentSceneName == pair.Key
+                    Vector3 anchor = localAnchor != null && localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey == pair.Key
                         ? ResolveLogicalObserverPosition(localAnchor) : pair.Value[0];
                     int signature = active * 31 + prefetch * 17 + retained;
                     foreach (Vector3 point in pair.Value) unchecked { signature = signature * 31 + world.Chunks.ResolveRuntimeChunkOrigin(point).GetHashCode(); }
@@ -152,7 +152,7 @@ namespace FlatWorld.Networking.Gameplay
                 worldObservers.Remove(inactiveWorldKeys[i]);
             if (localAnchor != null)
             {
-                string key = localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.Data?.CurrentSceneName;
+                string key = localAnchor.GetComponent<NetworkWorldPlayer>()?.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey;
                 if (GameplayWorldRegistry.TryGet(key, out _))
                 {
                     using (GameplayWorldRegistry.UseWorld(key)) RefreshLocalNavigationAnchor(ResolveLogicalObserverPosition(localAnchor), active);

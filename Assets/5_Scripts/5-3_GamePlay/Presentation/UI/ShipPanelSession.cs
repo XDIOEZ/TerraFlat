@@ -21,7 +21,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private string shipId;
     private int groundConsoleGuid;
     private BasePanel panel;
-    private Player actor;
+    private Item actor;
     private TextMeshProUGUI status, output;
     private TMP_InputField xField, yField, pressureField, commandField;
     private ScrollRect outputScroll;
@@ -100,7 +100,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     private void Bind(string name, Action action)
         => panel.GetComponentsInChildren<Button>(true).First(value => value.name == name).onClick.AddListener(() => action());
 
-    public static void Open(SpaceSession session, Player player, string ship, string piece)
+    public static void Open(SpaceSession session, Item player, string ship, string piece)
     {
         if (session == null || !session.CanOpenShipPanel(player, ship, piece)) return;
         ShipPanelSession existing = sessions.Find(value => value.IsAlive && value.session == session && value.shipId == ship && value.pieceId == piece);
@@ -112,7 +112,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        Player nearbyPlayer = player as Player;
+        Item nearbyPlayer = ActorProfileRegistry.GetProfileActorOrNull(player as Item);
         bool valid = groundConsoleGuid != 0
             ? ShipGroundAssembly.TryGetGroundConsole(nearbyPlayer, groundConsoleGuid, out _)
             : session != null && session.CanOpenShipPanel(nearbyPlayer, shipId, pieceId);
@@ -134,7 +134,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         panel.Close();
     }
 
-    public static void CloseForPlayer(SpaceSession session, Player player)
+    public static void CloseForPlayer(SpaceSession session, Item player)
     {
         foreach (ShipPanelSession value in sessions.ToArray())
             if (value.session == session && value.actor == player) value.Close();
@@ -346,7 +346,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (!driveAfterLaunch) return true;
         driveAfterLaunch = false;
         // 驾驶预约在服务端随点火原子接管，客户端只等待同一次权威乘员快照。
-        if (session.State.Passengers.Any(value => value.ProfileId == actor.ProfileName && value.ConsolePieceId == pieceId))
+        if (session.State.Passengers.Any(value => value.ProfileId == ActorProfileRegistry.GetProfileId(actor) && value.ConsolePieceId == pieceId))
         {
             Append("完成", "已进入驾驶位，Esc 离开驾驶。");
             RenderOutput();
@@ -408,7 +408,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
     }
 
     // 选点后的导航同样等待正式结果，拒绝时重新显示控制台里的真实原因。
-    public static void ReportNavigationSelection(SpaceSession owner, Player player, string console, bool success, string reason)
+    public static void ReportNavigationSelection(SpaceSession owner, Item player, string console, bool success, string reason)
     {
         ShipPanelSession existing = sessions.Find(value => value.IsAlive && value.session == owner && value.actor == player);
         if (existing == null) return;
@@ -476,7 +476,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         string navigation = task == null ? string.Empty : $"{task.Sequence}:{task.Status}";
         var docks = session.State.Docking.Where(value => value.Connected && (value.ShipAId == shipId || value.ShipBId == shipId)).ToArray();
         string docking = string.Join("|", docks.Select(value => value.PairId).OrderBy(value => value, StringComparer.Ordinal));
-        bool driving = actor != null && session.State.Passengers.Any(value => value.ProfileId == actor.ProfileName && value.ShipId == shipId && !string.IsNullOrWhiteSpace(value.ConsolePieceId));
+        bool driving = actor != null && session.State.Passengers.Any(value => value.ProfileId == ActorProfileRegistry.GetProfileId(actor) && value.ShipId == shipId && !string.IsNullOrWhiteSpace(value.ConsolePieceId));
         bool powered = session.ResolveConsole(shipId, pieceId) != null;
         if (observed)
         {
@@ -515,7 +515,7 @@ public sealed class ShipPanelSession : IMachinePanelSession
         if (!IsOpen) return;
         if (!immediate && Time.unscaledTime < nextRefreshTime) return;
         nextRefreshTime = Time.unscaledTime + .2f;
-        actor = ItemMgr.Instance?.User_Player ?? actor;
+        actor = ItemMgr.Instance?.LocalControlledActor ?? actor;
         if (groundConsoleGuid != 0)
         {
             RefreshGroundConsole();

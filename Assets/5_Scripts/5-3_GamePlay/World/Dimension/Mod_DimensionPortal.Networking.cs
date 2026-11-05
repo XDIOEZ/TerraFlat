@@ -5,7 +5,7 @@ using UnityEngine;
 public sealed partial class Mod_DimensionPortal
 {
     #region 联机入口校验与失败释放
-    public bool ValidateNetworkTransition(Player actor, WorldAddress source, string target, bool generated)
+    public bool ValidateNetworkTransition(Item actor, WorldAddress source, string target, bool generated)
     {
         CachePortalContext();
         if (!runtimeLoaded || !isActiveAndEnabled || portalItem == null || portalItem.InHand ||

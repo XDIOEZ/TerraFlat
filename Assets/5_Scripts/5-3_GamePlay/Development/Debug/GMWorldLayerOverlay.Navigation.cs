@@ -14,13 +14,13 @@ internal sealed partial class GMWorldLayerOverlay
     private bool navigationJobScheduled; // 完成后才上传纹理或释放输出。
     private FlowNavigationCache navigationCache; // 当前真实后端，不归观察层释放。
     private FlowGoalHandle navigationGoal; // 玩家共享目标，包含世界纪元和代际。
-    private Player navigationPlayer; // 本地玩家；复活和换世界使旧显示失效。
+    private Item navigationPlayer; // 本地玩家；复活和换世界使旧显示失效。
     private uint navigationPlayerGeneration; // 对象池复用时也清除旧帧。
 
     /// <summary>每 0.25 秒借用实际已发布流场，按视口逐格批量采样，不新增目标或触发路径搜索。</summary>
     private void UpdateNavigationOverlay(Camera camera, long version)
     {
-        Player player = ItemMgr.Instance?.User_Player;
+        Item player = ItemMgr.Instance?.LocalControlledActor;
         if (material == null ||
             !WorldNavigationFlowRegistry.TryGetPlayerFlow(player, out FlowNavigationCache cache, out FlowGoalHandle goal) ||
             !cache.TryReadPublished(goal, out FlowNavigationSnapshot snapshot))

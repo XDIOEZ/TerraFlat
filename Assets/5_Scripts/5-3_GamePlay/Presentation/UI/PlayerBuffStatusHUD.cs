@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// 列表超过安全区可容纳高度时仅在列表区域允许滚动，普通状态下完全输入透明。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public sealed class PlayerBuffStatusHUD : MonoBehaviour
 {
     #region 常量与运行时状态
@@ -28,7 +28,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private static readonly ProfilerMarker CreateRowMarker = new("FlatWorld.Buff.HUD.CreateRow");
     private static readonly ProfilerMarker CreateViewMarker = new("FlatWorld.Buff.HUD.CreateView");
 
-    private Player player;
+    private Item player;
     private Mod_BuffManager buffManager;
     private GameObject viewObject;
     private GameObject itemPrefab;
@@ -56,7 +56,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     {
         ResolvePlayer();
         if (player != null)
-            player.ProfileContextChanged += HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
 
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
@@ -66,7 +66,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private void OnDisable()
     {
         if (player != null)
-            player.ProfileContextChanged -= HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
 
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         UnbindUiManager();
@@ -85,7 +85,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     /// <summary>模块修复或运行时补装改变玩家子层级时，按事件重新解析一次 Mod_BuffManager。</summary>
     private void OnTransformChildrenChanged()
     {
-        if (isActiveAndEnabled && player != null && player.IsLocalProfile)
+        if (isActiveAndEnabled && player != null && ActorProfileRegistry.IsLocallyControlled(player))
             RefreshBinding();
     }
 
@@ -97,7 +97,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private void RefreshBinding()
     {
         ResolvePlayer();
-        if (player == null || !player.IsLocalProfile)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
         {
             UnbindBuffManager();
             SetViewActive(false);
@@ -423,7 +423,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private void ResolvePlayer()
     {
-        player ??= GetComponent<Player>();
+        player ??= GetComponent<Item>();
     }
 
     private void HandleProfileContextChanged()

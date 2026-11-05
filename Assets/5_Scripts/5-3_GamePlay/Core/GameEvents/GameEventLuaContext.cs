@@ -76,19 +76,19 @@ namespace FlatWorld.Gameplay.Events
             ItemMgr manager = ItemMgr.Instance;
             if (manager != null)
             {
-                List<Player> sorted = new();
-                foreach (Player player in manager.Player_DIC.Values)
+                List<Item> sorted = new();
+                foreach (Item player in manager.ProfileActors.Values)
                 {
                     if (player == null || !player.gameObject.activeInHierarchy ||
-                        (player.Data != null && !string.IsNullOrEmpty(player.Data.CurrentSceneName) &&
-                         !string.Equals(player.Data.CurrentSceneName, WorldKey, StringComparison.Ordinal))) continue;
+                        (player.itemData != null && !string.IsNullOrEmpty(player.itemData.GetActorProfileMetadata().WorldKey) &&
+                         !string.Equals(player.itemData.GetActorProfileMetadata().WorldKey, WorldKey, StringComparison.Ordinal))) continue;
                     sorted.Add(player);
                 }
-                sorted.Sort((left, right) => string.CompareOrdinal(left.ProfileName, right.ProfileName));
-                foreach (Player player in sorted)
+                sorted.Sort((left, right) => string.CompareOrdinal(ActorProfileRegistry.GetProfileId(left), ActorProfileRegistry.GetProfileId(right)));
+                foreach (Item player in sorted)
                 {
                     Vector3 position = player.transform.position;
-                    players.Add(new JObject { ["id"] = player.ProfileName, ["x"] = position.x, ["y"] = position.y });
+                    players.Add(new JObject { ["id"] = ActorProfileRegistry.GetProfileId(player), ["x"] = position.x, ["y"] = position.y });
                 }
             }
             return KeepTable(players);

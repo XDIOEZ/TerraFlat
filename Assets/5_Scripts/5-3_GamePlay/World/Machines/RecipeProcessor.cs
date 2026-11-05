@@ -22,7 +22,7 @@ public class RecipeProcessor : IDisposable
     public Func<bool> BeginWork; // 通过材料、容量和拖拽检查后确认本次工作条件。
     public Action CompleteWork; // 当前工作有效推进后消耗工作站及其工具。
     public Func<CraftingResult> PreviewOverride;
-    public Func<Player, CraftingResult> CommitOverride;
+    public Func<Item, CraftingResult> CommitOverride;
     private readonly bool registeredProcess;
     private readonly bool catalogRecipes;
     private readonly bool ownsInventories;
@@ -103,9 +103,9 @@ public class RecipeProcessor : IDisposable
 
     /// <summary>按有效工作时间推进加工；提交成功之后才清空当前加工进度。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual bool Advance(float workSeconds, Player actor = null) => AdvanceWork(workSeconds, actor, false, out _);
+    public virtual bool Advance(float workSeconds, Item actor = null) => AdvanceWork(workSeconds, actor, false, out _);
 
-    private bool AdvanceWork(float workSeconds, Player actor, bool manual, out bool worked)
+    private bool AdvanceWork(float workSeconds, Item actor, bool manual, out bool worked)
     {
         worked = false;
         if (disposed || committing || IsAdvancing || !MachineDefinition.Positive(workSeconds)) return false;
@@ -180,13 +180,13 @@ public class RecipeProcessor : IDisposable
 
     /// <summary>独立具名事务入口供 Harmony 修改；默认仍使用统一库存锁和原子提交。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual CraftingResult Commit(Player actor)
+    public virtual CraftingResult Commit(Item actor)
         => CommitOverride != null ? CommitOverride(actor)
             : CraftingService.CraftRecipe(Input, Output, Capabilities, Recipe, actor, committingWorkingToolMatch);
 
     /// <summary>直接手动推进加工时沿用自动加工的预检、进度和原子提交。</summary>
-    public bool AdvanceManually(float workSeconds, Player actor = null) => AdvanceWork(workSeconds, actor, true, out _);
-    public bool AdvanceManually(float workSeconds, Player actor, out bool worked) => AdvanceWork(workSeconds, actor, true, out worked);
+    public bool AdvanceManually(float workSeconds, Item actor = null) => AdvanceWork(workSeconds, actor, true, out _);
+    public bool AdvanceManually(float workSeconds, Item actor, out bool worked) => AdvanceWork(workSeconds, actor, true, out worked);
     public void ResumeAfterWorkingToolReplacement() => PausedForWorkingTool = false;
 
     public float Progress01 => Recipe != null ? Mathf.Clamp01(State.Progress / RequiredWork) : 0f;

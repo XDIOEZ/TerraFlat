@@ -74,7 +74,7 @@ public static class ActorActionConstraints
         if (mover == null || anchor == null || IsForcedFollowing(follower) || mover.CarrierSource != null) return false;
         Mod_Mover.DrivenMotionLease motion = null;
         // 远端玩家在服务器没有输入驱动，由网络桥消费同一跟随位置，不能解除其既有输入锁。
-        bool remoteAuthority = GameNetwork.HasStateAuthority && follower is Player player && !player.IsLocalProfile;
+        bool remoteAuthority = GameNetwork.HasStateAuthority && (follower is Item player && ActorIdentity.IsPlayer(player)) && !ActorProfileRegistry.IsLocallyControlled(player);
         if (!remoteAuthority && !mover.TryAcquireDrivenMotion(Vector2.zero, out motion)) return false;
         lease = new FollowLease(follower, anchor, mover, motion, remoteAuthority);
         Followers[follower] = lease;

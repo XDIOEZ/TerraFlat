@@ -3,6 +3,11 @@
   "behaviorSubtrees": "behavior-subtrees.json",
   "packages": [
     {
+      "id": "human-actors",
+      "path": "definitions/human-actors.json",
+      "enabled": true
+    },
+    {
       "id": "bear-actors",
       "path": "definitions/bear-actors.json",
       "enabled": true

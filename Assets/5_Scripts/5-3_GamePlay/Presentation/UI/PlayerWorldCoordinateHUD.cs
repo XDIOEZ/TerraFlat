@@ -11,7 +11,7 @@ using UnityEngine;
 /// 坐标与环境温度以 10Hz 采样，FPS 与 TPS 共用 0.5 秒真实时间窗口。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 {
     #region 性能分段
@@ -43,7 +43,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private const float RefreshIntervalSeconds = 0.1f;
     private const float FpsSampleIntervalSeconds = 0.5f;
 
-    private Player player;
+    private Item player;
     private GameObject viewObject;
     private RectTransform viewRect;
     private TextMeshProUGUI coordinateText;
@@ -100,7 +100,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     {
         ResolvePlayer();
         if (player != null)
-            player.ProfileContextChanged += HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
         PlayerWorldCoordinateDisplayPreferences.Changed += HandleDisplayPreferenceChanged;
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
         RefreshHudLocalization();
@@ -112,7 +112,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private void OnDisable()
     {
         if (player != null)
-            player.ProfileContextChanged -= HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
         PlayerWorldCoordinateDisplayPreferences.Changed -= HandleDisplayPreferenceChanged;
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
@@ -432,7 +432,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         SpacePassengerState passenger = null;
         foreach (SpacePassengerState candidate in session.State.Passengers)
         {
-            if (candidate.ProfileId != player.ProfileName)
+            if (candidate.ProfileId != ActorProfileRegistry.GetProfileId(player))
                 continue;
             passenger = candidate;
             break;
@@ -593,13 +593,13 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     /// <summary>缓存当前组件所属的玩家。</summary>
     private void ResolvePlayer()
     {
-        player ??= GetComponent<Player>();
+        player ??= GetComponent<Item>();
     }
 
     /// <summary>仅允许已启用的本地玩家维护屏幕 HUD。</summary>
     private bool CanDisplay()
     {
-        return isActiveAndEnabled && player != null && player.IsLocalProfile;
+        return isActiveAndEnabled && player != null && ActorProfileRegistry.IsLocallyControlled(player);
     }
 
     /// <summary>玩家本地资格变化后重建 HUD 刷新状态。</summary>

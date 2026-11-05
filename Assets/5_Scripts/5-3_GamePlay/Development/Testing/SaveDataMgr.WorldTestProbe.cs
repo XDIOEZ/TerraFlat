@@ -6,7 +6,7 @@ public partial class SaveDataMgr
 {
     #region 隔离现场草差量恢复
     /// <summary>只在隔离测试存档中捕获单格原草差量，供测试完成后原样恢复。</summary>
-    public GrassCellState? CaptureTestRuntimeGrassDelta(Player player, RuntimeTerrainTileSample sample)
+    public GrassCellState? CaptureTestRuntimeGrassDelta(Item player, RuntimeTerrainTileSample sample)
     {
         RequireTestGrassCell(player, sample);
         return GetRuntimeChunkRecord(sample.Address, false)?.GrassDeltas
@@ -14,7 +14,7 @@ public partial class SaveDataMgr
     }
 
     /// <summary>仅撤销测试格新增的 Removed 差量，已有记录按捕获值恢复，其他格保持不变。</summary>
-    public bool RestoreTestRuntimeGrassDelta(Player player, RuntimeTerrainTileSample sample, GrassCellState? previous)
+    public bool RestoreTestRuntimeGrassDelta(Item player, RuntimeTerrainTileSample sample, GrassCellState? previous)
     {
         RequireTestGrassCell(player, sample);
         ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, false);
@@ -26,7 +26,7 @@ public partial class SaveDataMgr
         return true;
     }
 
-    private void RequireTestGrassCell(Player player, RuntimeTerrainTileSample sample)
+    private void RequireTestGrassCell(Item player, RuntimeTerrainTileSample sample)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         if (!ReferenceEquals(this, TestExistingInstance) || !GameNetwork.HasStateAuthority || sample.Terrain == null || sample.Terrain.IsDisposed ||

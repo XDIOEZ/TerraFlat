@@ -19,7 +19,7 @@ public partial class Mod_Mover
     {
         if (resettingMotion || CarrierSource != null || source == null || !source.IsAvailable || rb == null ||
             !GameNetwork.HasStateAuthority || !physicsAllowsIndependentMotion ||
-            item is not Player player || !player.IsLocalProfile)
+            !(item is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
             return false;
         carrierTileEffects = item.itemMods.GetMod_ByID<Mod_TileEffectReceiver>(ModText.Mod_TileEffectReceiver);
         carrierHealth = item.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -190,7 +190,7 @@ public partial class Mod_Mover
         ApplyCarrierPosition(CarrierSource.SeatPosition);
     }
     private void OnDisable() { GameplayFixedStepSimulation.Unregister(this); ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); }
-    protected override void OnUnload() { GameplayFixedStepSimulation.Unregister(this); ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); DisposeSwimmingAudio(); UnbindMoveAnimationCallbacks(); }
+    protected override void OnUnload() { ActorProfileRegistry.GetBinding(item).Changed -= RefreshManualControlInputBindings; GameplayFixedStepSimulation.Unregister(this); ReleaseSpaceInput(); ReleaseCarrierLease(); ResetMotion(); DisposeSwimmingAudio(); UnbindMoveAnimationCallbacks(); }
     #endregion
 
     #region 载具推动阻力反馈

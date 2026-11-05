@@ -51,7 +51,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 - 等待加工等异步生产结果优先用 `test.await_check(name,timeout,label)`，达标立即继续；不要用固定 `test.wait` 代替实际结果断言。
 - 高耦合系统共用一份现场清单（AI/导航、地形/生态、任务/事件/对话/引导、UI/本地化、物品/MOD Lua/网络副本），在各系统 `integrationSuites` 指向同一路径；总入口按案例 ID 去重，不复制清单。
 - 需要观察真实动作的调用时，在动作前后排 `test.profiler_start` / `test.profiler_stop`，详见 [Lua 接口与性能采集](../../../Assets/StreamingAssets/GameplayTests/README.md#lua-编写接口)；默认导出最慢保留帧，也可指定 Marker 找最近命中帧。调用树仅是选中帧，不等于整个采集区间或全部 C# 方法。
-- 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同档案、同 Data_Player 的隔离角色。
+- 跨帧现场用 `RegisterAsync`，Lua仍调用 `test.runtime`；保留截图现场时先登记 `RegisterCleanup`，需要正式异步回程时登记 `RegisterAsyncCleanup`。每用例结束或失败先等跨帧恢复，再逆序同步清理；强制中断的异步迁移交宿主退出世界兜底，不报告已恢复。迁移后只重绑同 ProfileId、同 ItemData 的隔离角色。
 - 新主题更新本系统清单和README后运行 `python Tools/GameplayTesting/sync_catalog.py` 同步总清单与映射；新系统登记sourcePaths/dependsOn。Lua组合无需编译，新增C#操作仍需编译。
 - `--systems` 精确选择；`--changed` 根据源码归属包含使用它的系统，未登记路径报错，测试框架改动选全部规则。影响实际链路再加 `--integration`，现场子集一次建世界。没有现场入口返回4；已有入口也须检查README中的缺口。
 - 交互注册表与掉落回滚句柄会核对世界场景；临时现场夹具须将 GameObject 根移入隔离玩家的 `player.gameObject.scene`，临时 Item 还须登记世界归属并在收尾解除，不能只搬 Scene 或默认使用 Editor 活动场景。

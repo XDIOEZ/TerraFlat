@@ -410,7 +410,7 @@ public class Mod_DiscardItem : Mod_BaseDroper
     private bool DropItemByCountCore(ItemSlot slot, int count, Vector2? screenPosition, Vector2? worldPosition)
     {
         // 等待本机库存事务确认时不能先生成掉落，再被权威快照补回已丢弃数量。
-        if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+        if (ActorProfileRegistry.IsLocallyControlled(item) && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return false;
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {

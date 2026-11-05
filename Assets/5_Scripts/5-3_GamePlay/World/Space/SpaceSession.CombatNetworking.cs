@@ -30,12 +30,12 @@ namespace FlatWorld.Spaceflight
         {
             worldKey = source?.GetComponentInChildren<Mod_Projectile>(true)?.NetworkSurfaceWorldKey;
             if (!string.IsNullOrEmpty(worldKey)) return true;
-            Player player = CombatPlayer(source);
+            Item player = CombatPlayer(source);
             // 本地地表战斗以当前场景为准，避免保存在乘员快照中的旧世界误筛飞船。
             string activeWorld = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (player != null && player == ItemMgr.Instance?.User_Player && !SpaceMgr.IsSpaceScene(activeWorld))
+            if (player != null && player == ItemMgr.Instance?.LocalControlledActor && !SpaceMgr.IsSpaceScene(activeWorld))
             { worldKey = activeWorld; return !string.IsNullOrEmpty(worldKey); }
-            if (player != null && Current != null && Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace)
+            if (player != null && Current != null && Current.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer) && !observer.InSpace)
             { worldKey = observer.WorldKey; return !string.IsNullOrEmpty(worldKey); }
             worldKey = source != null ? source.gameObject.scene.name : null;
             return !string.IsNullOrEmpty(worldKey) && !SpaceMgr.IsSpaceScene(worldKey);
@@ -59,9 +59,9 @@ namespace FlatWorld.Spaceflight
             Mod_Projectile projectile = source?.GetComponentInChildren<Mod_Projectile>(true);
             if (projectile?.NetworkSurfaceWorldKey == worldKey)
                 return new SurfaceCombatProjection(worldKey, projectile.NetworkSurfacePresentationOrigin, projectile.NetworkSurfaceCanonicalOrigin);
-            Player player = CombatPlayer(source);
-            if (player != null && player != ItemMgr.Instance?.User_Player && Current != null &&
-                Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !observer.InSpace &&
+            Item player = CombatPlayer(source);
+            if (player != null && player != ItemMgr.Instance?.LocalControlledActor && Current != null &&
+                Current.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer) && !observer.InSpace &&
                 string.Equals(observer.WorldKey, worldKey, StringComparison.Ordinal))
             {
                 // 远端玩家可能不在主机当前地表，必须保留其独立世界的权威位置作为投影原点。
@@ -78,7 +78,7 @@ namespace FlatWorld.Spaceflight
         public bool ExecuteNetworkAttack(string profile, int action, SpaceSectorPosition aim, out string reason)
         {
             reason = "玩家或手持武器尚未准备好";
-            Player player = FindNetworkPlayer(profile);
+            Item player = FindNetworkPlayer(profile);
             if (!GameNetwork.HasStateAuthority || player == null || !TryGetNetworkObserver(profile, out SpaceNetworkObserver observer)) return false;
             using var worldScope = player.UseOwnedWorldForItemCallbacks();
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -137,18 +137,18 @@ namespace FlatWorld.Spaceflight
 
         private static bool SubmitNetworkItemAction(Item weapon, int action, Vector2 worldAim, bool useItem)
         {
-            Player player = CombatPlayer(weapon);
+            Item player = CombatPlayer(weapon);
             SpaceSession session = Current;
             if (!GameNetwork.IsOnline || GameNetwork.HasStateAuthority) return false;
             if (player == null || session == null ||
-                !session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer)) return true;
+                !session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer)) return true;
             if (action == 4)
             {
                 ClientAttackHeld = false;
                 if (!observer.InSpace && !ClientGroundCombatPending) return true;
             }
             bool startsGroundCombat = !observer.InSpace && !ClientGroundCombatPending;
-            if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(player.ProfileName) != true) return true;
+            if (startsGroundCombat && SpaceNetworkBridge.CombatPreparationSender?.Invoke(ActorProfileRegistry.GetProfileId(player)) != true) return true;
             if (action == 0 || action == 1) ClientAttackHeld = action == 0;
             if (!observer.InSpace) ClientGroundCombatPending = true;
             string actionWorld = null;
@@ -161,7 +161,7 @@ namespace FlatWorld.Spaceflight
                 aim = observer.InSpace ? SpaceSectorCoordinates.Normalize(ship.Sector, new SpaceVector2(x, y))
                     : new SpaceSectorPosition(default, new SpaceVector2(x, y));
             }
-            bool sent = SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
+            bool sent = SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(player), new SpaceNetworkIntent
             {
                 Kind = action == 3 ? SpaceNetworkIntentKind.OffhandParry : useItem ? SpaceNetworkIntentKind.UsePlayerItem : action == 0 ? SpaceNetworkIntentKind.Attack : action == 1 || action == 4 ? SpaceNetworkIntentKind.AttackEnd : SpaceNetworkIntentKind.UseSkill,
                 Action = action == 4 ? 4 : 0,
@@ -183,10 +183,10 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        internal static Player CombatPlayer(Item item)
+        internal static Item CombatPlayer(Item item)
         {
             for (int depth = 0; item != null && depth < 8; depth++, item = item.Owner)
-                if (item is Player player) return player;
+                if ((item is Item player && ActorIdentity.IsPlayer(player))) return player;
             return null;
         }
 
@@ -254,8 +254,8 @@ namespace FlatWorld.Spaceflight
             // 普通武器没有投射坐标组件，失败查询不应在编辑器中逐帧产生分配。
             if (source.TryGetComponent(out SpaceCombatFrame projectile) && projectile.Active)
             { canonical = projectile.CanonicalOrigin; presentation = projectile.PresentationOrigin; return true; }
-            Player player = CombatPlayer(source);
-            if (player == null || !Current.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) || !observer.InSpace) return false;
+            Item player = CombatPlayer(source);
+            if (player == null || !Current.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer) || !observer.InSpace) return false;
             canonical = observer.Position; presentation = player.transform.position;
             return true;
         }
@@ -263,7 +263,7 @@ namespace FlatWorld.Spaceflight
         public static bool TryGetCombatPosition(Item item, Vector2 worldPosition, out SpaceSectorPosition canonical)
         {
             canonical = default;
-            Player player = CombatPlayer(item);
+            Item player = CombatPlayer(item);
             if (Current != null && player != null && Current.IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
             {
                 ShipGeometry.LocalToWorld(ship, worldPosition.x, worldPosition.y, out double x, out double y);
@@ -348,10 +348,10 @@ namespace FlatWorld.Spaceflight
         {
             if (!SectorLocal || display == null || Projectile == null) return;
             SpaceSession session = SpaceSession.Current;
-            Player local = ItemMgr.Instance?.User_Player;
+            Item local = ItemMgr.Instance?.LocalControlledActor;
             bool hasPosition = SpaceSession.TryGetCombatPosition(Projectile, Projectile.transform.position, out SpaceSectorPosition point);
             bool visible = session != null && session.IsSpaceView && local != null && hasPosition &&
-                session.TryGetNetworkObserver(local.ProfileName, out var observer) && observer.InSpace &&
+                session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(local), out var observer) && observer.InSpace &&
                 SpaceSectorCoordinates.Difference(point, observer.Position).Magnitude <= 8192d;
             Vector2 offset = hasPosition && session != null ? session.ProjectPosition(point) - (Vector2)Projectile.transform.position : Vector2.zero;
             display.Synchronize(Matrix4x4.Translate(offset), visible);

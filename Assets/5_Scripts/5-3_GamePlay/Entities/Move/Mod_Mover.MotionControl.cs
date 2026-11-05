@@ -160,7 +160,7 @@ public partial class Mod_Mover
     #endregion
 
     #region 网络移动与生存消耗分离
-    private bool networkAuthorityMovement, networkMoving, networkRunning;
+    protected bool networkAuthorityMovement, networkMoving, networkRunning;
     public void EnableNetworkAuthorityMovement() => networkAuthorityMovement = true;
     public void ApplyNetworkMovementActivity(bool moving, bool running)
     { networkMoving = moving; networkRunning = running; }

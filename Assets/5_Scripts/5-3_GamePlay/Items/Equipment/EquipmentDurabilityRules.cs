@@ -97,7 +97,7 @@ public static partial class EquipmentDurabilityRules
     public static bool RejectBrokenAttack(Item source)
     {
         if (!IsBroken(source?.itemData)) return false;
-        if (source.Owner is Player { IsLocalProfile: true })
+        if (ActorProfileRegistry.IsLocallyControlled(source.Owner))
             CombatFeedbackEvents.PublishEquipmentBroken(source.Owner.transform.position);
         return true;
     }

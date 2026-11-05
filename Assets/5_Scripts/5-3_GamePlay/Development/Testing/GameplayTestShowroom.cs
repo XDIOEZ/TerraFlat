@@ -205,7 +205,7 @@ public sealed class GameplayTestShowroom : IDisposable
         building = true;
         GameRes catalog = GameRes.ExistingInstance ?? throw new InvalidOperationException("物品目录尚未就绪。");
         ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("区块管理器尚未就绪。");
-        Player player = FindLocalPlayer();
+        Item player = FindLocalPlayer();
         Vector3 spawn = player.itemData.transform.position;
         List<RuntimeItemDefinition> definitions = CollectDefinitions(catalog);
         ExpectedCount = definitions.Count;
@@ -320,10 +320,10 @@ public sealed class GameplayTestShowroom : IDisposable
         return size;
     }
 
-    private static Player FindLocalPlayer()
+    private static Item FindLocalPlayer()
     {
-        Player player = ItemMgr.GetInstance()?.User_Player;
-        if (player != null && player.IsLocalProfile) return player;
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
+        if (player != null && ActorProfileRegistry.IsLocallyControlled(player)) return player;
         throw new InvalidOperationException("真实本地玩家尚未进入测试世界。");
     }
 

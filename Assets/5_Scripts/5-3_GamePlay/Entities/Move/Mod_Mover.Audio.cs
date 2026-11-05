@@ -54,7 +54,7 @@ public partial class Mod_Mover
     private void InitializeFootstepAudio()
     {
         // 生物使用自身位移发声，玩家仍只由本地实例播放。
-        footstepAudioEnabled = rb != null && (item is not Player player || player.IsLocalProfile);
+        footstepAudioEnabled = rb != null && (!(item is Item player && ActorIdentity.IsPlayer(player)) || ActorProfileRegistry.IsLocallyControlled(player));
         footstepPreviousPosition = rb != null ? WorldTopologyRuntime.NormalizePosition(rb.position) : Vector2.zero;
         footstepDistance = 0f;
     }
@@ -264,7 +264,7 @@ public partial class Mod_Mover
     private void InitializeSwimmingAudio()
     {
         DisposeSwimmingAudio();
-        swimmingAudioEnabled = item is Player player && player.IsLocalProfile && rb != null;
+        swimmingAudioEnabled = (item is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player) && rb != null;
         if (!swimmingAudioEnabled)
             return;
 
@@ -381,7 +381,7 @@ public partial class Mod_Mover
     {
         DisposeWetClothesAudio();
 
-        if (item is not Player player || !player.IsLocalProfile)
+        if (!(item is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
             return;
 
         wetClothesBuffManager = item.itemMods?.GetMod_ByID<Mod_BuffManager>(ModText.Mod_BuffManager);

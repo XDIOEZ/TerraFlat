@@ -79,12 +79,12 @@ namespace FlatWorld.Networking.Gameplay
                 ReferenceEquals(state.Connection, connection)) fixedShipConnections.Remove(connection.connectionId);
         }
 
-        private bool SendFixedShipRequest(Player actor, string templateId, bool refill, Action<bool, string> reply)
+        private bool SendFixedShipRequest(Item actor, string templateId, bool refill, Action<bool, string> reply)
         {
-            if (NetworkServer.active || !NetworkClient.ready || actor == null || !OwnsProfile(actor.ProfileName)) return false;
+            if (NetworkServer.active || !NetworkClient.ready || actor == null || !OwnsProfile(ActorProfileRegistry.GetProfileId(actor))) return false;
             if (pendingFixedShipToken != 0)
             { reply?.Invoke(false, "正在等待上一次飞船请求完成。"); return true; }
-            if (SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) != true) return false;
+            if (SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver observer) != true) return false;
             pendingFixedShipToken = NextToken(ref fixedShipToken);
             fixedShipReply = reply;
             fixedShipDeadline = Time.unscaledTime + 30f;
@@ -167,7 +167,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             catch (Exception failure) { reason = "飞船操作失败：" + failure.Message; }
             SendFixedShipResponse(connection, request.Token, accepted, reason);
-            if (accepted) SendSnapshot(connection, player.DisplayName);
+            if (accepted) SendSnapshot(connection, player.ProfileId);
         }
 
         private static void SendFixedShipResponse(NetworkConnectionToClient connection, uint token, bool accepted, string reason)

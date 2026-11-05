@@ -17,7 +17,7 @@ using UnityEngine.Serialization;
 
 
 [MemoryPackUnion(4, typeof(Data_GeneralItem))]//通用物品数据
-[MemoryPackUnion(6, typeof(Data_Player))]//玩家数据
+[MemoryPackUnion(6, typeof(LegacyPlayerDataEnvelope))]// 只读旧协议编号，运行时角色统一使用通用物品数据。
 [MemoryPackUnion(8, typeof(Data_TileMap))]//瓦片地图数据
 [MemoryPackUnion(9, typeof(BlockData))]//瓦片地图数据
 

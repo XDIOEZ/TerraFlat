@@ -13,7 +13,7 @@ namespace FlatWorld.Dialogue
     /// 绑定动作打开、Enter 提交、Esc 取消；提交后复用角色现有屏幕空间气泡。
     /// </summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(Player))]
+    [RequireComponent(typeof(Item))]
     [RequireComponent(typeof(Mod_GameController))]
     [RequireComponent(typeof(CharacterSoliloquyController))]
     public sealed class PlayerChatInputController : MonoBehaviour
@@ -39,7 +39,7 @@ namespace FlatWorld.Dialogue
         private readonly List<IPlayerChatCommandHandler> commandHandlers =
             new List<IPlayerChatCommandHandler>();
 
-        private Player player;
+        private Item player;
         private Mod_GameController gameController;
         private CharacterSoliloquyController speechController;
         private GameObject viewObject;
@@ -71,7 +71,7 @@ namespace FlatWorld.Dialogue
             ResolveReferences();
             BindOpenChatInput();
             if (player != null)
-                player.ProfileContextChanged += HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
         }
 
         private void Start()
@@ -83,7 +83,7 @@ namespace FlatWorld.Dialogue
         {
             UnbindOpenChatInput();
             if (player != null)
-                player.ProfileContextChanged -= HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
             CloseChat(clearText: true);
         }
 
@@ -448,7 +448,7 @@ private bool EnsureView()
         private void ResolveReferences()
         {
             if (player == null)
-                player = GetComponent<Player>();
+                player = GetComponent<Item>();
             if (gameController == null)
                 gameController = GetComponent<Mod_GameController>();
             if (speechController == null)
@@ -459,7 +459,7 @@ private bool EnsureView()
         {
             return isActiveAndEnabled &&
                    player != null &&
-                   player.IsLocalProfile &&
+                   ActorProfileRegistry.IsLocallyControlled(player) &&
                    gameController != null &&
                    speechController != null;
         }

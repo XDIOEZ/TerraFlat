@@ -843,7 +843,7 @@ public static class MaterialThermalProcessor
 {
     #region 材料热反应
 
-    public static bool Process(Inventory input, Inventory output, Player actor = null,
+    public static bool Process(Inventory input, Inventory output, Item actor = null,
         ISet<int> blockedMaterialSlots = null, ISet<int> rejectedMaterialSlots = null)
     {
         if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null ||
@@ -898,7 +898,7 @@ public static class MaterialThermalProcessor
         return changed;
     }
 
-    private static void Publish(Player actor, CraftingResult result)
+    private static void Publish(Item actor, CraftingResult result)
     {
         foreach (ItemData output in result.Outputs)
             FlatWorld.Gameplay.Progress.GameplayProgressEvents.PublishSmeltSucceeded(actor, output.IDName, output.Stack.Amount);

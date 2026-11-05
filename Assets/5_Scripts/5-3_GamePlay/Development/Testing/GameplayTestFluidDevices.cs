@@ -12,7 +12,7 @@ internal static class GameplayTestFluidDevices
     internal static readonly Dictionary<string, Action<Action<string, bool, string>>> Cases = new();
     private static void Power(MachineEntity node, bool enabled)
     { node.Rpm = enabled ? 2000 : 0; node.LoadSatisfied = enabled; node.ElectricalSuppliedWatts = enabled ? node.Definition.Electrical?.PowerWatts ?? 0 : 0; }
-    internal static JObject CapturePump(Player player, JObject args)
+    internal static JObject CapturePump(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope();var pump=f.Add("GasPump_Mechanical");var tank=f.Add("GasTankBlock_Iron",1);
@@ -34,7 +34,7 @@ internal static class GameplayTestFluidDevices
             ["oxygen"]=(double)FluidUnits.MolToStandardLiters(GetFluidInventory(tank).GetGasMoles(FluidIds.Oxygen)),
             ["nitrogen"]=(double)FluidUnits.MolToStandardLiters(GetFluidInventory(tank).GetGasMoles(FluidIds.Nitrogen)) };
     }
-    internal static JObject CaptureAtmosphereQuantizedSource(Player player, JObject args)
+    internal static JObject CaptureAtmosphereQuantizedSource(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope();
@@ -73,7 +73,7 @@ internal static class GameplayTestFluidDevices
             ["conserved"] = before == after + drawn
         };
     }
-    internal static JObject CaptureFiller(Player player,JObject args)
+    internal static JObject CaptureFiller(Item player,JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f=new GameplayFluidScope();var source=f.Add("GasTankBlock_Iron");var filler=f.Add("GasFiller",1);
@@ -104,7 +104,7 @@ internal static class GameplayTestFluidDevices
     #endregion
 
     #region 引擎物料与空载
-    internal static JObject CaptureEngine(Player player,JObject args)
+    internal static JObject CaptureEngine(Item player,JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         bool water=args.Value<bool?>("water")??false;

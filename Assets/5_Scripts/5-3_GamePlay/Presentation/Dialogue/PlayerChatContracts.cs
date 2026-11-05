@@ -8,14 +8,14 @@ namespace FlatWorld.Dialogue
     /// </summary>
     public readonly struct PlayerChatCommandContext
     {
-        public Player Sender { get; }
+        public Item Sender { get; }
         public CharacterSoliloquyController SpeechController { get; }
         public string RawText { get; }
         public string CommandName { get; }
         public string[] Arguments { get; }
 
         public PlayerChatCommandContext(
-            Player sender,
+            Item sender,
             CharacterSoliloquyController speechController,
             string rawText,
             string commandName,

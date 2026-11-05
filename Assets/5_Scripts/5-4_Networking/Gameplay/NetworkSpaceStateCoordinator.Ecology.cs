@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Spaceflight;
 using System.Collections.Generic;
 using FlatWorld.NaturalEntities;
@@ -62,7 +62,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (NetworkServer.active || player == null || message.RealmRevision != player.RealmRevision ||
-                player.CorePlayer?.Data?.CurrentSceneName != message.WorldKey || message.Guid == 0 ||
+                player.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey != message.WorldKey || message.Guid == 0 ||
                 !float.IsFinite(message.Position.x) || !float.IsFinite(message.Position.y)) return;
             ItemData snapshot = null;
             if (message.Snapshot != null && message.Snapshot.Length > 0 &&
@@ -150,7 +150,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (NetworkServer.active || player == null || message.RealmRevision != player.RealmRevision ||
-                player.CorePlayer?.Data?.CurrentSceneName != message.WorldKey) return;
+                player.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey != message.WorldKey) return;
             NaturalEntityEcsService.ApplyIndependentPhysicsNetworkPoses(message.WorldKey, message.Poses);
         }
 
@@ -163,7 +163,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (!clientStarted || NetworkServer.active) return;
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
-            string world = player?.CorePlayer?.Data?.CurrentSceneName;
+            string world = player?.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey;
             uint realm = player?.RealmRevision ?? 0;
             if (displayedEcologyWorld == world && displayedEcologyRealm == realm) return;
             ClearEcologySnapshots(); displayedEcologyWorld = world; displayedEcologyRealm = realm;
@@ -193,7 +193,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (NetworkServer.active || player == null || message.RealmRevision != player.RealmRevision ||
-                player.CorePlayer?.Data?.CurrentSceneName != message.WorldKey) return;
+                player.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey != message.WorldKey) return;
             UpdateEcologyRealm();
             if (ecologyBuffer.Accept(message.WorldKey, message.RealmRevision, message.Sequence,
                 message.Index, message.Count, message.Actors, out AiEcologyNetworkActor[] completed))

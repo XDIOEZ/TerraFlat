@@ -203,7 +203,7 @@ public static class WaterCurrentPushConfigService
         if (item == null) throw new ArgumentNullException(nameof(item));
         if (item.itemData?.Stack == null)
             throw new InvalidOperationException("水流推动实体缺少重量数据：" + item.name);
-        string actorId = item is Player ? "Player" : item.itemData?.IDName;
+        string actorId = ActorIdentity.IsPlayer(item as Item) ? "Player" : item.itemData?.IDName;
         return ResolvePushSpeed(actorId, item.itemData.Stack.Weight);
     }
 

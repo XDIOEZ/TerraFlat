@@ -27,7 +27,7 @@ public static class GameplayTestInputLifecycleRuntimeProbe
 
     #region 正式交互卸载与重载
     // 独立键盘经过真实 Action 回调，卸载时仍保持对象激活以暴露残留订阅。
-    private static JObject CaptureInputUnload(Player player, JObject args)
+    private static JObject CaptureInputUnload(Item player, JObject args)
     {
         Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
@@ -100,7 +100,7 @@ public static class GameplayTestInputLifecycleRuntimeProbe
 
     #region 镜头设置停用恢复
     // 真实相机读取正式设置结果，精确恢复用户原值及原本不存在的偏好键。
-    private static JObject CaptureCameraSettings(Player player, JObject args)
+    private static JObject CaptureCameraSettings(Item player, JObject args)
     {
         Mod_Cam module = player.GetComponentInChildren<Mod_Cam>(true);
         if (module == null || !module.IsRuntimeLoaded || !module.isActiveAndEnabled ||
@@ -171,7 +171,7 @@ public static class GameplayTestInputLifecycleRuntimeProbe
 
     #region 冰面与积雪接触启停
     // 暂改隔离世界的真实脚下格，检查停用清理、恢复重读和正式迁移屏障，结束后原样归还。
-    private static JObject CaptureTileEffects(Player player, JObject args)
+    private static JObject CaptureTileEffects(Item player, JObject args)
     {
         Mod_TileEffectReceiver receiver = player.GetComponentInChildren<Mod_TileEffectReceiver>(true);
         Mod_Mover mover = player.GetComponentInChildren<Mod_Mover>(true);

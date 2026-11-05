@@ -94,7 +94,7 @@ public class WorkbenchLogic : MachineLogic
         => recipe?.GetRequiredCraftingClickCount(RequiredClicks) ?? RequiredClicks;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool PerformWork(float amount, Player actor, bool manual = false)
+    public bool PerformWork(float amount, Item actor, bool manual = false)
     {
         if (!GameNetwork.HasStateAuthority) return false;
         RefreshRecipes();
@@ -103,7 +103,7 @@ public class WorkbenchLogic : MachineLogic
         return result;
     }
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation == "select") return SelectRecipe(argument);
         if (operation != "work") return false;

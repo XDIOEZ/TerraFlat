@@ -66,7 +66,7 @@ public static class GameplayTestMechanicalPlant
 
     private static readonly Dictionary<string, MachineEntity> parts = new(StringComparer.Ordinal);
     private static readonly List<int> owned = new();
-    private static Player owner;
+    private static Item owner;
     private static Vector3 ownerStart;
     private static IDisposable ownerWindShield;
     private static Vector2Int anchor;
@@ -85,10 +85,10 @@ public static class GameplayTestMechanicalPlant
     private static decimal initialFuelEngineOilMoles;
     private static decimal initialSteamEngineWaterMoles;
 
-    public static bool TryBuild(Player player, out string message)
+    public static bool TryBuild(Item player, out string message)
     {
         message = string.Empty;
-        if (player == null || !player.IsLocalProfile || GameManager.Instance?.IsGameplayReady != true)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || GameManager.Instance?.IsGameplayReady != true)
         { message = "机械工厂要求已进入独立的真实测试世界。"; return false; }
         if (built) { message = "机械工厂已经创建。"; return true; }
         Reset();

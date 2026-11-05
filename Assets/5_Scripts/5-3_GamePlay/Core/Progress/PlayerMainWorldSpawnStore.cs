@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 玩家主世界初始出生点存档：只在第一次确定安全陆地后写入，之后死亡复活始终读取同一坐标。
-/// 使用 ItemSpecialData JSON 命名空间，避免改变 Data_Player 的 MemoryPack 布局并兼容旧存档。
+/// 使用 ItemSpecialData JSON 命名空间，随通用角色快照保持档案出生点。
 /// </summary>
 public static class PlayerMainWorldSpawnStore
 {
@@ -20,7 +20,7 @@ public static class PlayerMainWorldSpawnStore
 
     /// <summary>读取玩家存档中的主世界出生点。</summary>
     public static bool TryGetMainWorldSpawn(
-        Data_Player playerData,
+        ItemData playerData,
         out Vector3 position,
         out string worldKey)
     {
@@ -44,7 +44,7 @@ public static class PlayerMainWorldSpawnStore
 
     /// <summary>写入主世界出生点；只接受有限坐标，世界键统一保存为地表键。</summary>
     public static bool SetMainWorldSpawn(
-        Data_Player playerData,
+        ItemData playerData,
         string worldKey,
         Vector3 position)
     {
@@ -72,7 +72,7 @@ public static class PlayerMainWorldSpawnStore
 
     /// <summary>仅在旧存档没有出生点时写入，避免每次加载覆盖原始出生位置。</summary>
     public static bool EnsureMainWorldSpawn(
-        Data_Player playerData,
+        ItemData playerData,
         string worldKey,
         Vector3 position)
     {

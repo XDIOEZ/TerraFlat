@@ -19,7 +19,7 @@ public static partial class GameplayTestRuntimeProbe
     private static void RegisterQuickEquipInput()
         => RegisterAsync("inventory", "held_equipment_shortcut", CaptureHeldEquipmentShortcut);
 
-    private static IEnumerator CaptureHeldEquipmentShortcut(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureHeldEquipmentShortcut(Item player, JObject args, Action<JObject> completed)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "left_shift");
         Mod_HotBar hotbar = player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);

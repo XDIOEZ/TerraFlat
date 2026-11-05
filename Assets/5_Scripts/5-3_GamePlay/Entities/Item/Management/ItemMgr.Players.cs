@@ -10,11 +10,11 @@ using UnityEngine.SceneManagement;
 public partial class ItemMgr
 {
     [ShowInInspector]
-    public Dictionary<string, Player> Player_DIC = new();
+    public Dictionary<string, Item> ProfileActors => ActorProfileRegistry.ProfileActors;
 
-    private readonly HashSet<Player> _networkPlayers = new();
-    private readonly HashSet<Player> _networkRemoteReplicas = new();
-    private readonly HashSet<Player> _networkInitializedPlayers = new();
+    private readonly HashSet<Item> _networkPlayers = new();
+    private readonly HashSet<Item> _networkRemoteReplicas = new();
+    private readonly HashSet<Item> _networkInitializedPlayers = new();
 
     #region 加载玩家
 
@@ -26,15 +26,15 @@ public partial class ItemMgr
     public int SavePlayer()
     {
         int playerCount = 0;
-        Player[] players = ItemMgr.Instance.Player_DIC.Values.ToArray();
+        Item[] players = ItemMgr.Instance.ProfileActors.Values.ToArray();
 
-        foreach (Player player in players)
+        foreach (Item player in players)
         {
             if (player == null) continue;
             if (_networkRemoteReplicas.Contains(player)) continue;
             SavePlayerAtAuthoritativePosition(player);
 
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[RequireProfileName(player)] = player.Data;
+            SaveDataMgr.Instance.SaveData.ProfileActorData[RequireProfileName(player)] = player.itemData;
 
             playerCount++;
         }
@@ -42,50 +42,47 @@ public partial class ItemMgr
         return playerCount;
     }
 
-    private static void SavePlayerAtAuthoritativePosition(Player player)
+    private static void SavePlayerAtAuthoritativePosition(Item player)
     {
         player.Save();
         // 联机存真实世界坐标，远端显示对象的位置不能覆盖服务器记录。
         if (FlatWorld.Networking.GameNetwork.IsOnline && FlatWorld.Networking.GameNetwork.HasStateAuthority &&
-            FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName, out var observer) == true)
+            FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out var observer) == true)
         {
-            player.Data.CurrentSceneName = observer.WorldKey;
-            player.Data.transform.position = new Vector3((float)observer.Position.LocalMeters.X,
+            player.itemData.GetActorProfileMetadata().WorldKey = observer.WorldKey;
+            player.itemData.transform.position = new Vector3((float)observer.Position.LocalMeters.X,
                 (float)observer.Position.LocalMeters.Y);
         }
     }
 
     [Button("加载玩家")]
     [Tooltip("按稳定角色 ID 加载玩家数据；不存在时创建新角色。")]
-    public Player LoadPlayer(string playerName)
+    public Item LoadPlayer(string playerName)
     {
         return LoadPlayer(playerName, null);
     }
 
     /// <summary>首次创建角色时单独指定显示名，身份键始终使用 playerName 参数。</summary>
-    public Player LoadPlayer(string playerName, string newPlayerDisplayName)
+    public Item LoadPlayer(string playerName, string newPlayerDisplayName)
     {
         // 加载或者创建玩家数据
-        Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
+        ItemData playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         if (wasCreated && !string.IsNullOrWhiteSpace(newPlayerDisplayName))
-            playerData.Name_User = newPlayerDisplayName.Trim();
+            playerData.GetActorProfileMetadata().DisplayName = newPlayerDisplayName.Trim();
         //传入数据创建玩家
-        Player player = CreatePlayer(playerData);
+        Item player = CreatePlayer(playerData);
         if (wasCreated)
             ApplyPlayerCreationTemplate(player, ResolveDefaultPlayerCreationTemplate());
-        player.SetProfileContext(
-            localProfile: true,
-            profileDataWasCreated: wasCreated,
-            runtimeProfileName: playerName);
+        ActorProfileRegistry.BindProfile(player, localProfile: true, profileDataWasCreated: wasCreated, runtimeProfileName: playerName);
         //设置玩家数据到玩家引用字典
-        ItemMgr.Instance.Player_DIC[player.ProfileName] = player;
+        ItemMgr.Instance.ProfileActors[ActorProfileRegistry.GetProfileId(player)] = player;
 
         player.Load();
 
         return player;
     }
 
-    public void ReleasePlayerForWorldTransition(Player player)
+    public void ReleasePlayerForWorldTransition(Item player)
     {
         if (player == null)
             return;
@@ -93,17 +90,18 @@ public partial class ItemMgr
         // 玩家卸载前先解除生态后端代理，避免同帧 LateUpdate 访问已销毁的 Player。
         AiRuntimeBackendService.Ecology?.ReleasePlayer(player);
 
-        string profileName = player.ProfileName;
+        string profileName = ActorProfileRegistry.GetProfileId(player);
         if (!string.IsNullOrWhiteSpace(profileName) &&
-            Player_DIC.TryGetValue(profileName, out Player registeredPlayer) &&
+            ProfileActors.TryGetValue(profileName, out Item registeredPlayer) &&
             registeredPlayer == player)
         {
-            Player_DIC.Remove(profileName);
+            ProfileActors.Remove(profileName);
         }
 
         _networkPlayers.Remove(player);
         _networkRemoteReplicas.Remove(player);
         _networkInitializedPlayers.Remove(player);
+        ActorProfileRegistry.SetManualControl(player, false, terminating: true);
         DespawnItem(player, saveData: false);
     }
 
@@ -113,23 +111,23 @@ public partial class ItemMgr
     /// </summary>
     public IEnumerator ReloadLocalPlayerAfterResourceReload()
     {
-        Player previousPlayer = User_Player;
-        if (previousPlayer == null || !previousPlayer.IsLocalProfile)
+        Item previousPlayer = LocalControlledActor;
+        if (previousPlayer == null || !ActorProfileRegistry.IsLocallyControlled(previousPlayer))
             yield break;
 
         string profileName = RequireProfileName(previousPlayer);
-        Data_Player playerData = previousPlayer.Data;
+        ItemData playerData = previousPlayer.itemData;
         if (playerData == null)
-            throw new InvalidOperationException("[ItemMgr] F5 重载玩家失败：当前本地玩家缺少 Data_Player。");
+            throw new InvalidOperationException("[ItemMgr] F5 重载玩家失败：当前本地玩家缺少通用角色数据。");
 
-        string prefabId = string.IsNullOrWhiteSpace(playerData.IDName) ? "Player" : playerData.IDName;
+        string prefabId = string.IsNullOrWhiteSpace(playerData.IDName) ? "Human" : playerData.IDName;
         GameObject latestPlayerPrefab = GameRes.Instance.GetPrefab(prefabId);
-        if (latestPlayerPrefab == null || latestPlayerPrefab.GetComponent<Player>() == null)
-            throw new MissingReferenceException($"[ItemMgr] F5 重载玩家失败：最新资源目录中的 {prefabId} Prefab 缺少 Player。");
+        if (latestPlayerPrefab == null || latestPlayerPrefab.GetComponent<Item>() == null)
+            throw new MissingReferenceException($"[ItemMgr] F5 重载玩家失败：最新资源目录中的 {prefabId} Prefab 缺少 Item。");
 
         previousPlayer.Save();
-        playerData.CurrentSceneName = GameplayWorldRegistry.GetItemWorldKey(previousPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = playerData;
+        playerData.GetActorProfileMetadata().WorldKey = GameplayWorldRegistry.GetItemWorldKey(previousPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
+        SaveDataMgr.Instance.SaveData.ProfileActorData[profileName] = playerData;
 
         ReleasePlayerForWorldTransition(previousPlayer);
         UIManager.ExistingInstance?.DestroyRuntimeUiInstancesForResourceReload();
@@ -137,16 +135,13 @@ public partial class ItemMgr
         // Destroy 在帧末生效；等旧 Player / UI 真正销毁后再创建新实例，避免同帧残留输入和 Canvas。
         yield return null;
 
-        Player reloadedPlayer = CreatePlayer(playerData);
-        reloadedPlayer.SetProfileContext(
-            localProfile: true,
-            profileDataWasCreated: false,
-            runtimeProfileName: profileName);
-        Player_DIC[profileName] = reloadedPlayer;
+        Item reloadedPlayer = CreatePlayer(playerData);
+        ActorProfileRegistry.BindProfile(reloadedPlayer, localProfile: true, profileDataWasCreated: false, runtimeProfileName: profileName);
+        ProfileActors[profileName] = reloadedPlayer;
         reloadedPlayer.Load();
 
-        reloadedPlayer.Data.CurrentSceneName = GameplayWorldRegistry.GetItemWorldKey(reloadedPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = reloadedPlayer.Data;
+        reloadedPlayer.itemData.GetActorProfileMetadata().WorldKey = GameplayWorldRegistry.GetItemWorldKey(reloadedPlayer) ?? GameplayWorldRegistry.ExecutionWorldKey;
+        SaveDataMgr.Instance.SaveData.ProfileActorData[profileName] = reloadedPlayer.itemData;
 
         GameManager.NotifyLocalPlayerRuntimeReloaded(reloadedPlayer);
         reloadedPlayer.itemMods
@@ -155,42 +150,39 @@ public partial class ItemMgr
     }
 
     [Tooltip("实例化玩家 但是不初始化")]
-    public Player CreatePlayer(string playerName)
+    public Item CreatePlayer(string playerName)
     {
         return CreatePlayer(playerName, ResolveDefaultPlayerCreationTemplate());
     }
 
-    public Player CreatePlayer(string playerName, PlayerCreationTemplateConfig creationTemplate)
+    public Item CreatePlayer(string playerName, PlayerCreationTemplateConfig creationTemplate)
     {
         if (creationTemplate == null)
             throw new ArgumentNullException(nameof(creationTemplate));
 
         // 加载或者创建玩家数据
-        Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
+        ItemData playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
-        Player player = CreatePlayer(playerData);
+        Item player = CreatePlayer(playerData);
         if (wasCreated)
             ApplyPlayerCreationTemplate(player, creationTemplate);
-        player.SetProfileContext(
-            localProfile: true,
-            profileDataWasCreated: wasCreated,
-            runtimeProfileName: playerName);
+        ActorProfileRegistry.BindProfile(player, localProfile: true, profileDataWasCreated: wasCreated, runtimeProfileName: playerName);
         //设置玩家数据到玩家引用字典
-        ItemMgr.Instance.Player_DIC[player.ProfileName] = player;
+        ItemMgr.Instance.ProfileActors[ActorProfileRegistry.GetProfileId(player)] = player;
 
         return player;
     }
 
     /// <summary>
-    /// 为 Mirror 网络身份创建对应的核心 Player Item。
+    /// 为 Mirror 网络身份创建对应的档案角色 Item。
     /// 本地玩家完整加载模块；远端玩家只创建数据与外观副本，避免重复启用输入、UI 和相机。
     /// </summary>
-    public Player LoadNetworkPlayer(string playerName, int networkGuid, Vector3 spawnPosition, bool initializeLocalModules)
+    public Item LoadNetworkPlayer(string playerName, int networkGuid, Vector3 spawnPosition, bool initializeLocalModules, string actorDefinitionId = "Human")
     {
         if (string.IsNullOrWhiteSpace(playerName))
             throw new ArgumentException("联机玩家名称不能为空", nameof(playerName));
 
-        if (Player_DIC.TryGetValue(playerName, out Player existingPlayer) && existingPlayer != null)
+        if (ProfileActors.TryGetValue(playerName, out Item existingPlayer) && existingPlayer != null)
         {
             if (_networkPlayers.Contains(existingPlayer) && initializeLocalModules)
                 PromoteNetworkPlayerToLocal(existingPlayer, spawnPosition);
@@ -198,34 +190,31 @@ public partial class ItemMgr
             return existingPlayer;
         }
 
-        bool hasSavedData = SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData);
+        bool hasSavedData = SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData playerData);
         if (!hasSavedData || playerData == null)
         {
-            playerData = CreateDefaultPlayerData(playerName);
+            playerData = CreateDefaultPlayerData(playerName, actorDefinitionId);
             if (networkGuid != 0)
                 playerData.Guid = networkGuid;
         }
 
         if (!hasSavedData)
-            playerData.Name_User = playerName;
-        if (!hasSavedData || string.IsNullOrEmpty(playerData.CurrentSceneName))
-            playerData.CurrentSceneName = GameplayWorldRegistry.ExecutionWorldKey;
-        if (!SpaceMgr.IsSpaceScene(playerData.CurrentSceneName))
+            playerData.GetActorProfileMetadata().DisplayName = playerName;
+        if (!hasSavedData || string.IsNullOrEmpty(playerData.GetActorProfileMetadata().WorldKey))
+            playerData.GetActorProfileMetadata().WorldKey = GameplayWorldRegistry.ExecutionWorldKey;
+        if (!SpaceMgr.IsSpaceScene(playerData.GetActorProfileMetadata().WorldKey))
             playerData.transform.position = WorldLocalPresentation.ToLogical(spawnPosition);
         playerData.transform.rotation = Quaternion.identity;
         if (playerData.transform.scale == Vector3.zero)
             playerData.transform.scale = Vector3.one;
 
-        Player player = CreatePlayer(playerData);
-        if (!hasSavedData)
+        Item player = CreatePlayer(playerData);
+        if (!hasSavedData && FlatWorld.Networking.GameNetwork.HasStateAuthority && playerData.IDName == "Human")
             ApplyPlayerCreationTemplate(player, ResolveDefaultPlayerCreationTemplate());
-        player.SetProfileContext(
-            localProfile: initializeLocalModules,
-            profileDataWasCreated: !hasSavedData,
-            runtimeProfileName: playerName);
-        Player_DIC[playerName] = player;
+        ActorProfileRegistry.BindProfile(player, localProfile: initializeLocalModules, profileDataWasCreated: !hasSavedData, runtimeProfileName: playerName);
+        ProfileActors[playerName] = player;
         _networkPlayers.Add(player);
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
+        SaveDataMgr.Instance.SaveData.ProfileActorData[playerName] = playerData;
 
         if (initializeLocalModules)
         {
@@ -240,7 +229,7 @@ public partial class ItemMgr
         return player;
     }
 
-    public void PromoteNetworkPlayerToLocal(Player player, Vector3 spawnPosition)
+    public void PromoteNetworkPlayerToLocal(Item player, Vector3 spawnPosition)
     {
         if (player == null || !_networkPlayers.Contains(player))
             return;
@@ -248,16 +237,13 @@ public partial class ItemMgr
         bool wasAuthority = _networkAuthorityPlayers.Remove(player);
         if (wasAuthority) player.ModuleUnload();
         _networkRemoteReplicas.Remove(player);
-        player.SetProfileContext(
-            localProfile: true,
-            profileDataWasCreated: player.WasProfileDataCreated,
-            runtimeProfileName: player.ProfileName);
+        ActorProfileRegistry.BindProfile(player, localProfile: true, profileDataWasCreated: ActorProfileRegistry.WasProfileCreated(player), runtimeProfileName: ActorProfileRegistry.GetProfileId(player));
         if (wasAuthority)
             foreach (Module module in player.Mods.Values) module?.LoadRuntime();
         InitializeNetworkLocalPlayer(player, spawnPosition);
     }
 
-    public void ReleaseNetworkPlayer(Player player, bool persistData)
+    public void ReleaseNetworkPlayer(Item player, bool persistData)
     {
         if (player == null || !_networkPlayers.Remove(player))
             return;
@@ -266,23 +252,24 @@ public partial class ItemMgr
         _networkInitializedPlayers.Remove(player);
         _networkAuthorityPlayers.Remove(player);
 
-        if (player.Data != null)
+        if (player.itemData != null)
         {
             string profileName = RequireProfileName(player);
-            if (Player_DIC.TryGetValue(profileName, out Player registeredPlayer) && registeredPlayer == player)
-                Player_DIC.Remove(profileName);
+            if (ProfileActors.TryGetValue(profileName, out Item registeredPlayer) && registeredPlayer == player)
+                ProfileActors.Remove(profileName);
 
             if (persistData)
             {
                 SavePlayerAtAuthoritativePosition(player);
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = player.Data;
+                SaveDataMgr.Instance.SaveData.ProfileActorData[profileName] = player.itemData;
             }
         }
 
+        ActorProfileRegistry.SetManualControl(player, false, terminating: true);
         DespawnItem(player, saveData: false);
     }
 
-    private void InitializeNetworkLocalPlayer(Player player, Vector3 spawnPosition)
+    private void InitializeNetworkLocalPlayer(Item player, Vector3 spawnPosition)
     {
         Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
         Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
@@ -301,7 +288,7 @@ public partial class ItemMgr
         player.transform.position = presentationSpawnPosition;
         if (body != null)
             body.position = presentationSpawnPosition;
-        player.Data.transform.position = logicalSpawnPosition;
+        player.itemData.transform.position = logicalSpawnPosition;
 
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         if (controller != null) controller.enabled = true;
@@ -309,10 +296,10 @@ public partial class ItemMgr
     }
 
     #region 远端玩家服务器结算模块
-    private readonly HashSet<Player> _networkAuthorityPlayers = new();
-    public void InitializeNetworkAuthorityPlayer(Player player, bool surfaceCombat = false)
+    private readonly HashSet<Item> _networkAuthorityPlayers = new();
+    public void InitializeNetworkAuthorityPlayer(Item player, bool surfaceCombat = false)
     {
-        if (player == null || player.IsLocalProfile || !_networkAuthorityPlayers.Add(player)) return;
+        if (player == null || ActorProfileRegistry.IsLocallyControlled(player) || !_networkAuthorityPlayers.Add(player)) return;
         _networkRemoteReplicas.Remove(player);
         // 只加载权威结算与手持模块，输入、相机、地表流送仍由本机玩家负责。
         player.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.ClearNetworkVisualHeldItem();
@@ -342,9 +329,9 @@ public partial class ItemMgr
             if (player.itemMods.GetMod_ByID(ModText.Bag) is IInventory bag) picker.AddTargetInventories.Add(bag);
         }
     }
-    public void ReleaseNetworkAuthorityPlayer(Player player)
+    public void ReleaseNetworkAuthorityPlayer(Item player)
     {
-        if (player == null || player.IsLocalProfile || !_networkAuthorityPlayers.Remove(player)) return;
+        if (player == null || ActorProfileRegistry.IsLocallyControlled(player) || !_networkAuthorityPlayers.Remove(player)) return;
         player.SuspendRuntimeForNetworkPresentation();
         _networkRemoteReplicas.Add(player);
         ConfigureRemoteNetworkReplica(player, player.transform.position);
@@ -357,16 +344,13 @@ public partial class ItemMgr
     }
     #endregion
 
-    private static void ConfigureRemoteNetworkReplica(Player player, Vector3 spawnPosition)
+    private static void ConfigureRemoteNetworkReplica(Item player, Vector3 spawnPosition)
     {
         Vector3 logicalSpawnPosition = WorldLocalPresentation.ToLogical(spawnPosition);
         Vector3 presentationSpawnPosition = WorldLocalPresentation.ProjectPosition(logicalSpawnPosition);
-        player.SetProfileContext(
-            localProfile: false,
-            profileDataWasCreated: player.WasProfileDataCreated,
-            runtimeProfileName: player.ProfileName);
+        ActorProfileRegistry.BindProfile(player, localProfile: false, profileDataWasCreated: ActorProfileRegistry.WasProfileCreated(player), runtimeProfileName: ActorProfileRegistry.GetProfileId(player));
         player.transform.position = presentationSpawnPosition;
-        player.Data.transform.position = logicalSpawnPosition;
+        player.itemData.transform.position = logicalSpawnPosition;
 
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
         controller?.SetGameplayInputLocked(true);
@@ -382,29 +366,24 @@ public partial class ItemMgr
         }
     }
 
-    private Data_Player LoadOrCreatePlayerData(string playerName, out bool wasCreated)
+    private ItemData LoadOrCreatePlayerData(string playerName, out bool wasCreated)
     {
         if (string.IsNullOrWhiteSpace(playerName))
             throw new ArgumentException("玩家档案名不能为空", nameof(playerName));
 
         playerName = playerName.Trim();
-        Data_Player playerData;
+        ItemData playerData;
         //检测存档中是否存在玩家数据
-        if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out var loadedPlayerData))
+        if (SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData loadedPlayerData))
         {
             playerData = loadedPlayerData;
             wasCreated = false;
 
-            Player playerTemplate = GameRes.Instance.GetPrefab("Player").GetComponent<Player>();
-            Data_Player currentDefaults = (Data_Player)playerTemplate.Get_NewItemData();
-            ItemInstanceDataFactory.ApplyCurrentDefinition(playerData, currentDefaults);
-
-            // 玩家根数据仍保留自身进度，但背包/快捷栏中的物品必须使用当前 ItemDefinition 配置。
-            ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.Instance, playerData);
+            playerData = ItemDefinitionRuntime.RebasePersistedData(GameRes.Instance, playerData);
 
             // 档案键作为稳定 ID，改显示名不能改变身份。
-            if (string.IsNullOrWhiteSpace(playerData.Name_User))
-                playerData.Name_User = playerName;
+            if (string.IsNullOrWhiteSpace(playerData.GetActorProfileMetadata().DisplayName))
+                playerData.GetActorProfileMetadata().DisplayName = playerName;
         }
         else //如果不存在，则创建默认玩家数据
         {
@@ -414,24 +393,23 @@ public partial class ItemMgr
         return playerData;
     }
 
-    private Data_Player CreateDefaultPlayerData(string playerName)
+    private ItemData CreateDefaultPlayerData(string playerName, string actorDefinitionId = "Human")
     {
-        var prefab = GameRes.Instance.GetPrefab("Player");
-        var defaultPlayer = prefab.GetComponent<Player>();
-        var playerData = (Data_Player)defaultPlayer.Get_NewItemData();
+        GameRes.Instance.TryGetItemDefinition(actorDefinitionId, out RuntimeItemDefinition definition);
+        ItemData playerData = definition.CreateItemData();
         playerData.Guid = playerName.GetHashCode();
-        playerData.Name_User = playerName;
+        playerData.GetActorProfileMetadata().DisplayName = playerName;
         return playerData;
     }
 
-    private Player CreatePlayer(Data_Player data)
+    private Item CreatePlayer(ItemData data)
     {
         // 已有角色必须以存档坐标创建刚体，不能先在原点注册后再由加载流程纠正。
         ItemTransform savedTransform = data?.transform ??
             throw new InvalidOperationException("玩家数据缺少保存位置，无法恢复角色。");
         Transform parent = RuntimeSceneObjectHierarchy.GetOrCreateCategoryRoot(
             GameplayWorldRegistry.CurrentScene, RuntimeSceneObjectCategory.Players);
-        return (Player)ItemMgr.Instance.InstantiateItem(data,
+        return (Item)ItemMgr.Instance.InstantiateItem(data,
             WorldLocalPresentation.ProjectPosition(savedTransform.position),
             savedTransform.rotation, savedTransform.scale, parent.gameObject);
     }
@@ -444,15 +422,15 @@ public partial class ItemMgr
         return PlayerCreationTemplateCatalogService.GetRequired(templateId);
     }
 
-    private static void ApplyPlayerCreationTemplate(Player player, PlayerCreationTemplateConfig creationTemplate)
+    private static void ApplyPlayerCreationTemplate(Item player, PlayerCreationTemplateConfig creationTemplate)
     {
         creationTemplate?.ApplyTo(player);
     }
 
     /// <summary>获取 Player 在存档和运行时字典中的稳定身份键。</summary>
-    private static string RequireProfileName(Player player)
+    private static string RequireProfileName(Item player)
     {
-        string profileName = player?.ProfileId;
+        string profileName = ActorProfileRegistry.GetProfileId(player);
         if (string.IsNullOrWhiteSpace(profileName))
             throw new InvalidOperationException("玩家缺少稳定档案名，禁止保存到错误角色槽位");
 

@@ -19,7 +19,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 只提供独立容器的初态和环境，实际液温、坩埚更新与炉内加热全部走正式生产入口。
-    private static JObject CaptureVesselAmbientHeat(Player player, JObject args)
+    private static JObject CaptureVesselAmbientHeat(Item player, JObject args)
     {
         float current = (float)GameplayTestSystemProbe.Number(args, "current", 20d);
         float ambient = (float)GameplayTestSystemProbe.Number(args, "ambient", 70d);

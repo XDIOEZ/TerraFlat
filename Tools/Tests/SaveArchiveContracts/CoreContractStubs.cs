@@ -4,6 +4,7 @@ using UnityEngine;
 
 // 只补齐未参与 SQLite 核心记录的运行时入口，存档类型从生产源码编译。
 public static class GameplayWorldRegistry { public static string ExecutionWorldKey; }
+public static class Mod_TargetPerceptionSignature { public const string ModuleId = "Actor.TargetPerceptionSignature"; }
 public sealed class WorldAddress { public string WorldKey; public string RootWorldKey; }
 public static class TimeSystemModes { public const string Unlimited = "unlimited"; }
 public static class OrbitalSeasonPhysics { public static double GetSeasonFraction(WorldSeason season, double eccentricity) => .25d; }

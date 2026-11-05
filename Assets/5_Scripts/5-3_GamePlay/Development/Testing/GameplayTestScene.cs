@@ -38,7 +38,7 @@ public sealed class GameplayTestScene : MonoBehaviour
     private GameManager manager;
     private SaveDataMgr saveManager;
     private GameplayTestSaveScope saveScope;
-    private Player player;
+    private Item player;
     private string testPlayerProfile;
     private Vector3 playerStart;
     private string isolatedSaveDirectory;
@@ -106,8 +106,8 @@ public sealed class GameplayTestScene : MonoBehaviour
     {
         showroom?.UpdatePresentation();
         if (report == null || finished) return;
-        if (GameManager.Instance?.IsGameplayReady == true && ItemMgr.Instance?.User_Player != null)
-            player = ItemMgr.Instance.User_Player;
+        if (GameManager.Instance?.IsGameplayReady == true && ItemMgr.Instance?.LocalControlledActor != null)
+            player = ItemMgr.Instance.LocalControlledActor;
         lock (reportLock) DrainCapturedLogs();
         if (periodicScreenshotsEnabled && !screenshotCapturing && !worldExited &&
             activeCase?.Status == "running" && Time.realtimeSinceStartupAsDouble >= nextScreenshotAt &&
@@ -237,14 +237,14 @@ public sealed class GameplayTestScene : MonoBehaviour
         if (!manager.CreateNewWorld(request)) throw new InvalidOperationException("正式建世界入口拒绝了测试请求。");
         saveScope.KeepUntilMenu();
         deadline = Time.realtimeSinceStartup + worldTimeoutSeconds;
-        while (!manager.IsInGameWorld || !manager.IsGameplayReady || ItemMgr.Instance.User_Player == null)
+        while (!manager.IsInGameWorld || !manager.IsGameplayReady || ItemMgr.Instance.LocalControlledActor == null)
         {
             if (!string.IsNullOrEmpty(worldEntryFailure)) throw new InvalidOperationException(worldEntryFailure);
             if (Time.realtimeSinceStartup >= deadline) throw new TimeoutException("等待测试世界和玩家进入超时。");
             yield return null;
         }
-        player = ItemMgr.Instance.User_Player;
-        testPlayerProfile = player.ProfileName;
+        player = ItemMgr.Instance.LocalControlledActor;
+        testPlayerProfile = ActorProfileRegistry.GetProfileId(player);
         playerStart = player.transform.position;
         report.PlayerStart = new GameplayTestPosition(playerStart);
         Record("create_world", "世界和默认玩家就绪", true, planet.Name);
@@ -345,8 +345,8 @@ public sealed class GameplayTestScene : MonoBehaviour
     // 场景迁移可以重建角色，只重绑同档案且属于本轮隔离存档的正式本地玩家。
     private bool RebindTestPlayer()
     {
-        Player current = ItemMgr.GetInstance()?.User_Player;
-        if (current == null || !current.IsLocalProfile || current.ProfileName != testPlayerProfile) return false;
+        Item current = ItemMgr.GetInstance()?.LocalControlledActor;
+        if (current == null || !ActorProfileRegistry.IsLocallyControlled(current) || ActorProfileRegistry.GetProfileId(current) != testPlayerProfile) return false;
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(current);
         if (player != current)
         {
@@ -515,8 +515,8 @@ public sealed class GameplayTestScene : MonoBehaviour
                 Path = GameplayTestArtifacts.CaseScreenshotPath(report, testCase.Id, index),
                 Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
                 Utc = DateTime.UtcNow.ToString("O"), ElapsedSeconds = clock.Elapsed.TotalSeconds,
-                PlayerPosition = ItemMgr.Instance?.User_Player == null ? null :
-                    new GameplayTestPosition(ItemMgr.Instance.User_Player.transform.position)
+                PlayerPosition = ItemMgr.Instance?.LocalControlledActor == null ? null :
+                    new GameplayTestPosition(ItemMgr.Instance.LocalControlledActor.transform.position)
             };
             // 先记录请求，捕获中断时报告仍能说明哪个现场没有保存成功。
             testCase.Screenshots.Add(screenshot);
@@ -538,7 +538,7 @@ public sealed class GameplayTestScene : MonoBehaviour
             screenshot.Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             screenshot.Utc = DateTime.UtcNow.ToString("O");
             screenshot.ElapsedSeconds = clock.Elapsed.TotalSeconds;
-            screenshot.PlayerPosition = new GameplayTestPosition(ItemMgr.Instance.User_Player.transform.position);
+            screenshot.PlayerPosition = new GameplayTestPosition(ItemMgr.Instance.LocalControlledActor.transform.position);
         }
         yield return GameplayTestArtifacts.CaptureScreenshot(this, screenshot.Path,
             error => screenshot.Error = error);
@@ -549,7 +549,7 @@ public sealed class GameplayTestScene : MonoBehaviour
 
     private bool TryGetScreenshotPresentation(out string reason)
     {
-        Player current = ItemMgr.Instance?.User_Player;
+        Item current = ItemMgr.Instance?.LocalControlledActor;
         if (manager?.IsGameplayReady != true || current == null)
         {
             reason = "玩法世界或本地玩家尚未就绪。";

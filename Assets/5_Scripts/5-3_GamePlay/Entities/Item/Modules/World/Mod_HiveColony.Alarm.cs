@@ -5,9 +5,9 @@ using UnityEngine;
 public sealed partial class Mod_HiveColony
 {
     #region 领地警戒
-    private readonly Dictionary<Player, float> playerStay = new(); // 每名玩家的连续停留时间。
-    private readonly HashSet<Player> observedPlayers = new(); // 本轮仍在领地的玩家。
-    private readonly List<Player> expiredPlayers = new(); // 离开领地的玩家。
+    private readonly Dictionary<Item, float> playerStay = new(); // 每名玩家的连续停留时间。
+    private readonly HashSet<Item> observedPlayers = new(); // 本轮仍在领地的玩家。
+    private readonly List<Item> expiredPlayers = new(); // 离开领地的玩家。
 
     /// <summary>静止玩家也能推进蜂巢警戒；只有仍在领地内的蜜蜂接收共享愤怒进度。</summary>
     private void TickTerritoryAlarm(float deltaTime)
@@ -17,7 +17,7 @@ public sealed partial class Mod_HiveColony
         if (manager == null)
             return;
         float highestStay = 0f;
-        foreach (Player player in manager.Player_DIC.Values)
+        foreach (Item player in manager.ProfileActors.Values)
         {
             if (player == null || !player.gameObject.activeInHierarchy || player.DestructionHandled)
                 continue;
@@ -31,10 +31,10 @@ public sealed partial class Mod_HiveColony
         }
 
         expiredPlayers.Clear();
-        foreach (Player player in playerStay.Keys)
+        foreach (Item player in playerStay.Keys)
             if (!observedPlayers.Contains(player))
                 expiredPlayers.Add(player);
-        foreach (Player player in expiredPlayers)
+        foreach (Item player in expiredPlayers)
             playerStay.Remove(player);
 
         ApplyTerritoryAlert(highestStay);

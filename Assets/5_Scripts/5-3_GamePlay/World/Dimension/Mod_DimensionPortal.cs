@@ -152,7 +152,7 @@ public sealed partial class Mod_DimensionPortal : Module, IWorldHoldInteraction,
     /// <summary>圆形进度达标后继续沿用原有权威维度迁移流程。</summary>
     public void OnHoldCompleted(Item playerItem)
     {
-        if (transitionRequested || playerItem is not Player player)
+        if (transitionRequested || !(playerItem is Item player && ActorIdentity.IsPlayer(player)))
             return;
 
         CachePortalContext();

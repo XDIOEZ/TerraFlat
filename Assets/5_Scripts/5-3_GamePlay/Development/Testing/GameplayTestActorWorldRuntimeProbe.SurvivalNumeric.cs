@@ -16,7 +16,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     }
 
     // 自有生物的水冷通知中改变体温，随后检查环境传热与目标清理。
-    private static JObject CaptureTemperatureWaterCallbackOrder(Player player, JObject args)
+    private static JObject CaptureTemperatureWaterCallbackOrder(Item player, JObject args)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player);
         var own = new ActorFixture(new Vector3(site.WorldCell.x + .5f, site.WorldCell.y + .5f));

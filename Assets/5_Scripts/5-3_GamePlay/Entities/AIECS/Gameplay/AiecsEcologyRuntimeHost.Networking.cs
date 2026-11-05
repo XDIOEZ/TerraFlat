@@ -51,7 +51,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void ApplyNetworkActors(string world, AiEcologyNetworkActor[] actors)
         {
             if (GameNetwork.HasStateAuthority || actors == null || actors.Length > 4096 ||
-                ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName != world || !GameplayWorldRegistry.TryGet(world, out _)) return;
+                ItemMgr.Instance?.LocalControlledActor?.itemData?.GetActorProfileMetadata().WorldKey != world || !GameplayWorldRegistry.TryGet(world, out _)) return;
             var owner = (AiecsEcologyRuntimeHost)GetOrCreateWorldHost(world);
             using var scope = GameplayWorldRegistry.UseWorld(world);
             if (owner.replicaRenderer == null)
@@ -103,9 +103,9 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (replicaRenderer == null) return;
             using var scope = UseOwnedWorld();
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             bool projected = SynchronizeEntityWorldPresentation(replicaRenderer, true);
-            Camera camera = projected || player?.Data?.CurrentSceneName == ownedWorldKey ? Camera.main : null;
+            Camera camera = projected || player?.itemData?.GetActorProfileMetadata().WorldKey == ownedWorldKey ? Camera.main : null;
             if (camera == null) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }
             WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;
             if (navigation?.IsNavigationReady != true) { replicaRenderer.DrawRecords(replicaRecords, null, default); return; }

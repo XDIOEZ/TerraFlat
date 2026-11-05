@@ -137,7 +137,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         }
     }
 
-    private static RuntimeTerrainTileSample FindOpenCell(Player player, bool requireLine = false)
+    private static RuntimeTerrainTileSample FindOpenCell(Item player, bool requireLine = false)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         ChunkMgr chunks = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("真实区块管理器未就绪。");
@@ -174,7 +174,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     #endregion
 
     #region AI 正式命令与异步导航
-    private static IEnumerator CaptureAdvance(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureAdvance(Item player, JObject args, Action<JObject> completed)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player, true);
         Vector3 start = new(site.WorldCell.x + .5f, site.WorldCell.y + .5f);
@@ -269,7 +269,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         return null;
     }
 
-    private static JObject CaptureTemperatureConditions(Player player, JObject args)
+    private static JObject CaptureTemperatureConditions(Item player, JObject args)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player);
         Vector3 center = new(site.WorldCell.x + .5f, site.WorldCell.y + .5f);
@@ -344,13 +344,13 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     private sealed class CraftingFixture : IDisposable
     {
         public readonly Mod_HandCraftTable Table;
-        public readonly Player Player;
+        public readonly Item Player;
         public readonly JObject CarryBefore;
         private readonly bool wasOpen;
         private readonly Inventory inputTarget, outputTarget;
         private bool disposed;
 
-        public CraftingFixture(Player player)
+        public CraftingFixture(Item player)
         {
             Table = player.GetComponentInChildren<Mod_HandCraftTable>(true)
                 ?? throw new InvalidOperationException("真实玩家没有手工制作模块。");
@@ -391,7 +391,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         .Where(slot => slot.itemData?.IDName == id).Sum(slot => slot.itemData.Stack.Amount);
 
     /// <summary>只采样正式随身容量和真实制作库存，统计口径由 Lua 对照各阶段断言。</summary>
-    private static JObject CaptureHandcraftCarry(Player player, Mod_HandCraftTable table)
+    private static JObject CaptureHandcraftCarry(Item player, Mod_HandCraftTable table)
     {
         bool available = PlayerCarryCapacityUtility.TryGetSnapshot(player, out var carry);
         return new JObject
@@ -404,7 +404,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         };
     }
 
-    private static JObject CaptureHandcraft(Player player, JObject args)
+    private static JObject CaptureHandcraft(Item player, JObject args)
     {
         var own = new CraftingFixture(player);
         Retain("crafting", own);
@@ -548,12 +548,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         public readonly int OriginalHabitatTreeCount;
         public readonly (int Environment, int Soil, int Navigation) OriginalInputIndexes;
         public NaturalEntityHandle Resource;
-        private readonly Player player;
+        private readonly Item player;
         private readonly IDisposable lease;
         private readonly GrassCellState? grassDelta;
         private bool disposed;
 
-        public TerrainFixture(Player player, RuntimeTerrainTileSample sample)
+        public TerrainFixture(Item player, RuntimeTerrainTileSample sample)
         {
             this.player = player;
             Sample = sample;
@@ -598,7 +598,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         }
     }
 
-    private static JObject CaptureTerrainEcology(Player player, JObject args)
+    private static JObject CaptureTerrainEcology(Item player, JObject args)
     {
         RuntimeTerrainTileSample sample = FindOpenCell(player);
         var own = new TerrainFixture(player, sample);

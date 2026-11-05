@@ -116,9 +116,9 @@ namespace FlatWorld.Spaceflight
                 ReleaseOreAsteroidPresentation();
                 oreAsteroidResourceOwner = resources; oreAsteroidResourceReloadVersion = resources.ResourceReloadVersion;
             }
-            Player player = ItemMgr.Instance?.User_Player;
-            bool canView = IsSpaceView && player != null && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && observer.InSpace;
-            SpaceSectorPosition focus = canView ? GetPassengerPosition(FindPassenger(player.ProfileName)) : default;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            bool canView = IsSpaceView && player != null && TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer) && observer.InSpace;
+            SpaceSectorPosition focus = canView ? GetPassengerPosition(FindPassenger(ActorProfileRegistry.GetProfileId(player))) : default;
             using var removedLease = UnityEngine.Pool.ListPool<string>.Get(out var removed);
             using var idsLease = UnityEngine.Pool.HashSetPool<string>.Get(out var presentIds);
             foreach (SpaceOreAsteroidState asteroid in State.OreAsteroids)

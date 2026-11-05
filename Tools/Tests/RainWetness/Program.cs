@@ -13,7 +13,7 @@ internal static class Program
 
     private static Mod_BuffManager Actor(bool player = false, string id = "Animal")
     {
-        Item item = player ? new Player() : new Item();
+        Item item = new Item { ProfileBound = player };
         item.itemData.IDName = id;
         item.itemMods.Modules[ModText.Hp] = new Mod_DamageReceiver();
         var manager = new Mod_BuffManager { item = item, ModData = new() };

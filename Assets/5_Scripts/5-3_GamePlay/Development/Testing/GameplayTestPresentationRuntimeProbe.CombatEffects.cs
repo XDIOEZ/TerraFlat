@@ -8,7 +8,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 {
     #region 正式命中特效预热与复用采样
 
-    private static JObject CaptureCombatEffectPrewarm(Player player, JObject args)
+    private static JObject CaptureCombatEffectPrewarm(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         GameRes resources = GameRes.ExistingInstance;

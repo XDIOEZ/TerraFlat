@@ -17,7 +17,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 夹具只设置坩埚初态，取油、反应、液化和满槽拒绝均调用正式加热入口。
-    private static JObject CapturePetrochemicalCrucible(Player unusedPlayer, JObject args)
+    private static JObject CapturePetrochemicalCrucible(Item unusedPlayer, JObject args)
     {
         string stage = GameplayTestSystemProbe.Text(args, "stage", "extraction");
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 100);
@@ -50,7 +50,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 故障只注入持久化边界，产物提交、液体扣除和双侧回滚仍走生产实现。
-    private static JObject CapturePetrochemicalPersistenceRollback(Player unusedPlayer, JObject args)
+    private static JObject CapturePetrochemicalPersistenceRollback(Item unusedPlayer, JObject args)
     {
         var liquid = new LiquidContainerState { Temperature = 100f };
         MixedLiquidContents.Add(liquid, "core:crude_oil", 4f, 100f);

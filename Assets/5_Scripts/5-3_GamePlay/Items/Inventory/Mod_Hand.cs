@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_Hand : Module
+public class Mod_Hand : Module, IActorLocalControlModule
 {
     #region 基础参数
 

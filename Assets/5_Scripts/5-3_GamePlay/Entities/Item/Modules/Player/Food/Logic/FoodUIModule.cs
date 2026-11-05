@@ -61,6 +61,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private DisplayedRange healthDisplay;
     private int temperatureDisplayTenths = int.MinValue;
     private bool temperatureDisplayInitialized;
+    private ActorProfileRegistry.Binding controlBinding;
 
     public FoodUIModule(
         IFoodRuntimeContext context,
@@ -92,12 +93,23 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     #region 常驻 HUD 生命周期
 
-    /// <summary>本地玩家加载后创建并显示 HUD，普通食物、动物和远端玩家不创建面板。</summary>
+    /// <summary>营养 HUD 跟随本地控制租约，释放时保留身体状态和面板位置。</summary>
     public void Initialize()
     {
-        if (!(context.Item is Player player) || !player.IsLocalProfile)
-            return;
+        if (context.Item == null || panelPrefab == null) return;
+        controlBinding = ActorProfileRegistry.GetBinding(context.Item);
+        controlBinding.Changed += RefreshControlBoundNutritionHud;
+        RefreshControlBoundNutritionHud();
+    }
 
+    private void RefreshControlBoundNutritionHud()
+    {
+        if (!ActorProfileRegistry.IsLocallyControlled(context.Item))
+        {
+            SavePanelPosition();
+            DestroyPanel();
+            return;
+        }
         if (EnsurePanelExists())
             OpenPanel();
     }
@@ -169,6 +181,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     public void Dispose()
     {
+        if (controlBinding != null) controlBinding.Changed -= RefreshControlBoundNutritionHud;
+        controlBinding = null;
         UnbindHealthChanged();
         DestroyPanel();
     }
@@ -514,7 +528,8 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         if (temperatureFillGraphic == null)
             return;
         Mod_Temperature temperature = ResolveTemperatureModule();
-        if (context.Item is not Player player || player == null || !player.IsLocalProfile ||
+        Item player = context.Item;
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) ||
             player.DestructionHandled || player.IsUnloadingModules ||
             (damageReceiver != null && damageReceiver.Hp <= 0f) ||
             temperature == null || !temperature.IsRuntimeLoaded || temperature.Data == null)

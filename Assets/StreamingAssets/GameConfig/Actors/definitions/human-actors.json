@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "ActorCommon",
+      "abstract": true,
+      "modules": {
+        "Actor.Control": {
+          "prefab": "Module_ActorControl",
+          "id": "Actor.Control",
+          "enabled": true
+        },
+        "Controller模块": {
+          "prefab": "Module_ActorInput",
+          "id": "Controller模块",
+          "enabled": true
+        },
+        "Module_Cam": {
+          "prefab": "Module_Camera",
+          "id": "相机模块",
+          "enabled": true
+        },
+        "Module_ChunkLoder": {
+          "prefab": "Module_ChunkLoder",
+          "id": "区块加载模块",
+          "enabled": true
+        },
+        "Mod_PlayerModuleUIController": {
+          "prefab": "Module_ActorHUD",
+          "id": "Mod_PlayerModuleUIController",
+          "enabled": true
+        },
+        "PlayerDeathState": {
+          "prefab": "Module_ActorProfileDeath",
+          "id": "PlayerDeathState",
+          "enabled": true
+        },
+        "Module_Setting": {
+          "prefab": "Module_Setting",
+          "id": "Module_Setting",
+          "enabled": true
+        }
+      }
+    },
+    {
+      "id": "Human",
+      "parent": "ActorCommon",
+      "formerIds": [
+        "Player"
+      ],
+      "shellPrefab": "CoreActor.Human.Shell",
+      "shellAddress": "flatworld.actor.shell.human",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Player/Human.prefab",
+      "gameName": "人类",
+      "description": "可由AI或人类输入控制的普通人形角色。",
+      "weight": 70,
+      "volume": 500,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "Blood"
+      ],
+      "modules": {
+        "Controller模块": {
+          "prefab": "Controller模块",
+          "id": "Controller模块",
+          "enabled": true
+        },
+        "PlayerDeathState": {
+          "prefab": "PlayerDeathState",
+          "id": "PlayerDeathState",
+          "enabled": true
+        },
+        "Mod_PlayerModuleUIController": {
+          "prefab": "Mod_PlayerModuleUIController",
+          "id": "Mod_PlayerModuleUIController",
+          "enabled": true
+        },
+        "氧气模块": {
+          "prefab": "氧气模块",
+          "id": "氧气模块",
+          "enabled": true
+        },
+        "GameMCP_LLM": {
+          "prefab": "GameMCP_LLM",
+          "id": "GameMCP_LLM",
+          "enabled": true
+        },
+        "气压生存模块": {
+          "prefab": "气压生存模块",
+          "id": "气压生存模块",
+          "enabled": true
+        },
+        "辐射生存模块": {
+          "prefab": "辐射生存模块",
+          "id": "辐射生存模块",
+          "enabled": true
+        },
+        "大气供氧模块": {
+          "prefab": "大气供氧模块",
+          "id": "大气供氧模块",
+          "enabled": true
+        },
+        "roll": {
+          "prefab": "Roll",
+          "id": "Roll",
+          "enabled": true
+        },
+        "shieldCombat": {
+          "prefab": "ShieldCombat",
+          "id": "ShieldCombat",
+          "enabled": true
+        },
+        "Mod_InteractSender": {
+          "prefab": "Module_Hand",
+          "id": "Mod_InteractSender",
+          "enabled": true
+        },
+        "Mod_Hand": {
+          "prefab": "Module_Hand",
+          "id": "Mod_Hand",
+          "enabled": true
+        },
+        "Module_Animator": {
+          "prefab": "Module_Animator",
+          "id": "动画接收模块",
+          "enabled": true
+        },
+        "Module_Bag": {
+          "prefab": "Module_Bag",
+          "id": "背包模块",
+          "enabled": true,
+          "data": {
+            "Data": {
+              "背包模块": {
+                "Name": "背包模块",
+                "itemSlots": [
+                  {
+                    "Index": 0
+                  },
+                  {
+                    "Index": 1
+                  },
+                  {
+                    "Index": 2
+                  },
+                  {
+                    "Index": 3
+                  },
+                  {
+                    "Index": 4
+                  },
+                  {
+                    "Index": 5
+                  },
+                  {
+                    "Index": 6
+                  },
+                  {
+                    "Index": 7
+                  },
+                  {
+                    "Index": 8
+                  },
+                  {
+                    "Index": 9
+                  },
+                  {
+                    "Index": 10
+                  },
+                  {
+                    "Index": 11
+                  },
+                  {
+                    "Index": 12
+                  },
+                  {
+                    "Index": 13
+                  },
+                  {
+                    "Index": 14
+                  },
+                  {
+                    "Index": 15
+                  },
+                  {
+                    "Index": 16
+                  },
+                  {
+                    "Index": 17
+                  },
+                  {
+                    "Index": 18
+                  },
+                  {
+                    "Index": 19
+                  }
+                ],
+                "PanelIsOpen": false,
+                "ToggleActionName": "B",
+                "UIPrefabName": ""
+              }
+            }
+          }
+        },
+        "Buff模块": {
+          "prefab": "Module_BuffManager",
+          "id": "Mod_BuffManager",
+          "enabled": true
+        },
+        "Module_Cam": {
+          "prefab": "Module_Cam",
+          "id": "相机模块",
+          "enabled": true
+        },
+        "Module_ChunkLoder": {
+          "prefab": "Module_ChunkLoder",
+          "id": "区块加载模块",
+          "enabled": true
+        },
+        "Mod_DiscardItem": {
+          "prefab": "Mod_DiscardItem",
+          "id": "Mod_DiscardItem",
+          "enabled": true
+        },
+        "装备模块": {
+          "prefab": "Mod_EquipmentRuntime",
+          "id": "装备模块",
+          "enabled": true
+        },
+        "Module_FocusPoint": {
+          "prefab": "Module_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": true
+        },
+        "Module_Food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 50.0,
+                "Max_Carbohydrates": 100.0,
+                "Fat": 50.0,
+                "Max_Fat": 100.0,
+                "Protein": 50.0,
+                "Max_Protein": 100.0,
+                "Water": 150.0,
+                "Max_Water": 150.0,
+                "Vitamins": 50.0,
+                "Max_Vitamins": 100.0
+              },
+              "Max_EatingProgress": 3.0,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.05000000074505806,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.10000000149011612,
+              "nutritionConsumeRate": 1.0
+            },
+            "MechanicStates": []
+          }
+        },
+        "UI_快捷栏": {
+          "prefab": "Module_Hotbar",
+          "id": "UI_快捷栏",
+          "enabled": true
+        },
+        "Module_Move": {
+          "prefab": "Module_Mover_AI",
+          "id": "移动模块",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 3.5
+              },
+              "slowDownSpeed": 5,
+              "endSpeed": 0.1,
+              "runStaminaConsume": 2,
+              "runSpeedRate": 1.5,
+              "RunStaminaThreshold": 2
+            }
+          }
+        },
+        "Module_Picker": {
+          "prefab": "Module_Picker",
+          "id": "物品拾取模块",
+          "enabled": true
+        },
+        "Module_Stamina": {
+          "prefab": "Module_Stamina",
+          "id": "耐力模块",
+          "enabled": true
+        },
+        "Module_TileReciver": {
+          "prefab": "Module_TileReciver",
+          "id": "TileReciver",
+          "enabled": true
+        },
+        "Module_TurnBack": {
+          "prefab": "Module_TurnBack",
+          "id": "Module_TurnBack",
+          "enabled": true
+        },
+        "Mod_PlayerAdminController": {
+          "prefab": "Module_Player",
+          "id": "Mod_PlayerAdminController",
+          "enabled": true
+        },
+        "PlayerTraits": {
+          "prefab": "Module_Player",
+          "id": "PlayerTraits",
+          "enabled": true
+        },
+        "工作台模块_手工": {
+          "prefab": "Module_HandMaker",
+          "id": "Module_HandMaker",
+          "enabled": true
+        },
+        "Module_Temperature": {
+          "prefab": "Module_Temperature",
+          "id": "体温模块",
+          "enabled": true
+        },
+        "health": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Hp\":50,\"MaxHp\":50,\"UseBodyPartHealth\":true,\"TwoPartHitChance\":0.25,\"BodyPartDataVersion\":2,\"BodyParts\":[{\"Part\":0,\"Hp\":20.0,\"MaxHp\":20.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.5,\"DepletionBuffIds\":[\"core:concussion\"],\"AreaRatio\":0.08,\"InjuryProbability\":1.0},{\"Part\":1,\"Hp\":50.0,\"MaxHp\":50.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[],\"AreaRatio\":0.22,\"InjuryProbability\":1.0},{\"Part\":2,\"Hp\":30.0,\"MaxHp\":30.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[],\"AreaRatio\":0.16,\"InjuryProbability\":1.0},{\"Part\":3,\"Hp\":25.0,\"MaxHp\":25.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[\"core:arm_fracture\"],\"AreaRatio\":0.09,\"InjuryProbability\":1.0},{\"Part\":4,\"Hp\":25.0,\"MaxHp\":25.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[\"core:arm_fracture\"],\"AreaRatio\":0.09,\"InjuryProbability\":1.0},{\"Part\":5,\"Hp\":25.0,\"MaxHp\":25.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[],\"AreaRatio\":0.1,\"InjuryProbability\":1.0},{\"Part\":6,\"Hp\":25.0,\"MaxHp\":25.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[\"core:leg_fracture\"],\"AreaRatio\":0.13,\"InjuryProbability\":1.0},{\"Part\":7,\"Hp\":25.0,\"MaxHp\":25.0,\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"DamageMultiplier\":1.0,\"DepletionBuffIds\":[\"core:leg_fracture\"],\"AreaRatio\":0.13,\"InjuryProbability\":1.0}],\"DefenseValues\":{\"Physical\":0,\"Fire\":0.0,\"Radiation\":0.0},\"AttackersUIDs\":[],\"DamageInterval\":0.1,\"DestroyDelay\":0.0,\"LootTable\":[],\"CombatBalanceVersion\":1}"
+          }
+        },
+        "Module_SweatBalance": {
+          "prefab": "Module_SweatBalance",
+          "id": "Mod_SweatBalance",
+          "enabled": true
+        },
+        "characterAppearance": {
+          "prefab": "Mod_CharacterAppearance",
+          "id": "CharacterAppearance",
+          "enabled": true
+        },
+        "Actor.Control": {
+          "prefab": "Module_ActorControl",
+          "id": "Actor.Control",
+          "enabled": true
+        },
+        "Actor.TargetPerceptionSignature": {
+          "prefab": "Actor.TargetPerceptionSignature",
+          "id": "Actor.TargetPerceptionSignature",
+          "enabled": true
+        },
+        "ai": {
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "behaviorTree": {
+              "root": {
+                "type": "action",
+                "name": "land.wander",
+                "id": "wander"
+              }
+            }
+          }
+        },
+        "detector": {
+          "prefab": "Module_Detector",
+          "id": "物品检测模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "detectionRadius": 5.0,
+            "itemLayer": 1025,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

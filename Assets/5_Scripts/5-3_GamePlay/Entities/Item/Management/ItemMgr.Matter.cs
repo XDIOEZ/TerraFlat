@@ -82,7 +82,7 @@ public partial class ItemMgr
             combustionVisual.Enabled && combustionVisual.IsRuntimeLoaded ? combustionVisual : null;
 
         internal bool BlocksWorldMatter => DropInProgress || hasTileReceiver ||
-            (item is not Player && item is not global::Map &&
+            (!ActorIdentity.IsPlayer(item) && item is not global::Map &&
              (hasAiComponent || MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName))) ||
             (projectile != null && projectile.HasActiveWorldAttachment);
 

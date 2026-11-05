@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Unity.Profiling;
 
-public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
+public partial class Mod_InteractSender : Module, IActorLocalControlModule,IFocusPoint,ITrunDirection
 {
     #region 基础参数
 
@@ -677,9 +677,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>仅本机拥有的玩家手部模块可以驱动交互描边。</summary>
     private bool IsLocalInteractionOwner()
     {
-        Player ownerPlayer = item as Player ?? item?.Owner as Player ??
-            item?.GetComponentInParent<Player>();
-        return ownerPlayer != null && ownerPlayer.IsLocalProfile;
+        Item ownerPlayer = ActorProfileRegistry.GetProfileActorOrNull(item as Item) ?? ActorProfileRegistry.GetProfileActorOrNull(item?.Owner as Item) ??
+            item?.GetComponentInParent<Item>();
+        return ownerPlayer != null && ActorProfileRegistry.IsLocallyControlled(ownerPlayer);
     }
 
     /// <summary>停止当前本地目标的描边，避免对象回收或切换目标后残留。</summary>

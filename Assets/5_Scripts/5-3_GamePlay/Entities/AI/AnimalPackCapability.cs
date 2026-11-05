@@ -65,14 +65,17 @@ public sealed class AnimalPackCapability : AnimalBehaviorTreeCapability
         leader = this;
     }
 
-    public override void Tick(float deltaTime)
+    public override void Tick(float deltaTime) => TickControlState(deltaTime, true);
+    public override void TickWhileManuallyControlled(float deltaTime) => TickControlState(deltaTime, false);
+
+    private void TickControlState(float deltaTime, bool autonomous)
     {
         if (!memory.HasMemory) alertTimer = assistTimer = 0f;
         callTimer = Mathf.Max(0f, callTimer - deltaTime);
         assistTimer = Mathf.Max(0f, assistTimer - deltaTime);
         alertTimer = Mathf.Max(0f, alertTimer - deltaTime);
         refreshTimer -= deltaTime;
-        if (refreshTimer > 0f) return;
+        if (!autonomous || refreshTimer > 0f) return;
         refreshTimer = Mathf.Max(.01f, AnimalLandTargetRules.Number(config, "decisionInterval", .15f));
         RefreshGroupAndThreat();
     }

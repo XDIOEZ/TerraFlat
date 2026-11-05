@@ -26,7 +26,7 @@ namespace FlatWorld.GameplayMCP
         }
         private sealed class Binding
         {
-            internal Player Player;
+            internal Item Player;
             internal uint PlayerGeneration;
             internal int Scene;
             internal GameplayWorldRuntime World;
@@ -38,7 +38,7 @@ namespace FlatWorld.GameplayMCP
         private static readonly string session = System.Guid.NewGuid().ToString("N");
         private static ulong sequence;
 
-        internal static string Bind(Target target, Player player)
+        internal static string Bind(Target target, Item player)
         {
             while (issued.Count >= MaximumBindings) bindings.Remove(issued.Dequeue());
             string token = session + ":" + (++sequence).ToString("x");
@@ -49,7 +49,7 @@ namespace FlatWorld.GameplayMCP
             return token;
         }
 
-        internal static bool TryResolve(string token, Player player, out Target target, out string error)
+        internal static bool TryResolve(string token, Item player, out Target target, out string error)
         {
             target = null;
             if (player == null || player.DestructionHandled)
@@ -69,7 +69,7 @@ namespace FlatWorld.GameplayMCP
         #endregion
 
         #region 当前世界只读查询
-        internal static object Query(Player player, JObject parameters, HashSet<string> identities)
+        internal static object Query(Item player, JObject parameters, HashSet<string> identities)
         {
             float radius;
             int limit, offset;
@@ -155,7 +155,7 @@ namespace FlatWorld.GameplayMCP
         #endregion
 
         #region 后端实时解析
-        private static Target Runtime(Item item, Player player)
+        private static Target Runtime(Item item, Item player)
         {
             uint generation = item.RuntimeGeneration;
             ItemData data = item.itemData;

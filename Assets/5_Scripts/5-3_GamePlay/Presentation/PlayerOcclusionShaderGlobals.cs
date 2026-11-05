@@ -83,7 +83,7 @@ public static class PlayerOcclusionShaderGlobals
     private static readonly int FeatherId = Shader.PropertyToID("_PlayerOcclusionFeather");
     private static readonly int AlphaId = Shader.PropertyToID("_PlayerOcclusionAlpha");
     private static readonly int VerticalPaddingId = Shader.PropertyToID("_PlayerOcclusionVerticalPadding");
-    private static Player localPlayer;
+    private static Item localPlayer;
 
     #endregion
 
@@ -125,9 +125,9 @@ public static class PlayerOcclusionShaderGlobals
     #region Rendering
 
     /// <summary>只追踪本地档案玩家，远程玩家不会驱动本机遮挡窗口。</summary>
-    private static void HandlePlayerEnteredWorld(Player player)
+    private static void HandlePlayerEnteredWorld(Item player)
     {
-        if (player != null && player.IsLocalProfile)
+        if (player != null && ActorProfileRegistry.IsLocallyControlled(player))
             localPlayer = player;
     }
 

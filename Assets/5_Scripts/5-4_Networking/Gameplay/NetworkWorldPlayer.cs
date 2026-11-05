@@ -39,8 +39,11 @@ namespace FlatWorld.Networking.Gameplay
         [SerializeField, Min(0.02f)] private float maxRemoteExtrapolation = 0.08f;
         [SerializeField, Min(0.1f)] private float itemStateFallbackInterval = 0.75f;
 
-        [SyncVar(hook = nameof(OnDisplayNameChanged))]
+        [SyncVar(hook = nameof(OnProfileIdChanged))]
+        private string profileId = "";
+        [SyncVar(hook = nameof(OnActualDisplayNameChanged))]
         private string displayName = "玩家";
+        [SyncVar] private string actorDefinitionId = "Human";
 
         [SyncVar(hook = nameof(OnPlayerColorChanged))]
         private Color playerColor = Color.white;
@@ -63,7 +66,7 @@ namespace FlatWorld.Networking.Gameplay
         private Camera followCamera;
         private Renderer cachedRenderer;
         private TextMeshPro nameLabel;
-        private Player corePlayer;
+        private Item corePlayer;
         private Mod_Mover coreMover;
         private Rigidbody2D coreBody => WorldPhysicsService2D.GetItemRigidbody(corePlayer);
         private Mod_TurnBack coreTurnBack;
@@ -91,8 +94,9 @@ namespace FlatWorld.Networking.Gameplay
         private int lastAppliedAnimatorStateHash;
         private bool lastAppliedVisualAttacking;
 
+        public string ProfileId => profileId;
         public string DisplayName => displayName;
-        public Player CorePlayer => corePlayer;
+        public Item CorePlayer => corePlayer;
         /// <summary>服务器权威逻辑坐标；协议、距离校验和存档禁止读取本机表现 Transform 代替它。</summary>
         public Vector3 AuthoritativeLogicalPosition => IsInSpace && SpaceSessionForNetwork != null
             ? (Vector3)SpaceSessionForNetwork.ProjectPosition(AuthoritativeSpacePosition)
@@ -107,16 +111,20 @@ namespace FlatWorld.Networking.Gameplay
             {
                 if (IsInSpace || !isOwned || corePlayer == null) return AuthoritativeLogicalPosition;
                 if (SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) == true)
-                    return SpaceSessionForNetwork.TryGetPassengerSurfacePosition(displayName, out Vector2 surface)
+                    return SpaceSessionForNetwork.TryGetPassengerSurfacePosition(profileId, out Vector2 surface)
                         ? (Vector3)WorldTopologyRuntime.NormalizePosition(WorldLocalPresentation.ToLogical(surface)) : AuthoritativeLogicalPosition;
                 return WorldTopologyRuntime.NormalizePosition(corePlayer.transform.position);
             }
         }
 
         [Server]
-        public void InitializeOnServer(string playerName, int playerIndex)
+        public void InitializeOnServer(string playerName, int playerIndex, string actualDisplayName = null)
         {
-            displayName = playerName;
+            profileId = playerName;
+            displayName = actualDisplayName ?? playerName;
+            ActorProfileRegistry.ProfileActors.TryGetValue(profileId, out Item boundActor);
+            SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(profileId, out ItemData savedActor);
+            actorDefinitionId = boundActor?.itemData?.IDName ?? savedActor?.IDName ?? "Human";
             int colorIndex = Mathf.Abs(playerIndex) % PlayerColors.Length;
             playerColor = PlayerColors[colorIndex];
             authoritativePosition = transform.position;
@@ -141,9 +149,9 @@ namespace FlatWorld.Networking.Gameplay
 
             ApplyPlayerColor(playerColor);
             EnsureNameLabel();
-            ApplyDisplayName(displayName);
+            ApplyDisplayName(profileId);
             if (isOwned)
-                SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
+                SaveDataMgr.Instance.CurrentContrrolPlayerName = profileId;
             EnsureCorePlayer(isOwned);
             NetworkChunkStreamingCoordinator.Register(transform);
             ItemNetworkStateSerialization.RuntimeStateChanged += OnRuntimeItemStateChanged;
@@ -154,8 +162,8 @@ namespace FlatWorld.Networking.Gameplay
         {
             base.OnStartLocalPlayer();
             BindTeleport();
-            ApplyDisplayName(displayName);
-            SaveDataMgr.Instance.CurrentContrrolPlayerName = displayName;
+            ApplyDisplayName(profileId);
+            SaveDataMgr.Instance.CurrentContrrolPlayerName = profileId;
             EnsureCorePlayer(true);
 
             if (corePlayer != null && !localPlayerEnterNotified && !reusedLocalWorldPlayer)
@@ -165,7 +173,7 @@ namespace FlatWorld.Networking.Gameplay
             }
 
             CreateFollowCamera();
-            Debug.Log($"[联机] 本地核心 Player Item 已生成：{displayName} / netId={netId}", this);
+            Debug.Log($"[联机] 本地档案角色 Item 已生成：{profileId} / netId={netId}", this);
         }
 
         public override void OnStopClient()
@@ -207,6 +215,7 @@ namespace FlatWorld.Networking.Gameplay
                 serverStateTimer -= Time.unscaledDeltaTime;
                 using var worldScope = NetworkGameplayWorldScope.Use(this);
                 if (corePlayer == null) EnsureCorePlayer(isOwned);
+                if (corePlayer?.itemData != null) displayName = corePlayer.itemData.GetActorProfileMetadata().DisplayName;
                 MaintainPlayerAuthority();
                 SynchronizeGroundObserver();
                 RefreshSpaceAuthority();
@@ -298,9 +307,9 @@ namespace FlatWorld.Networking.Gameplay
 
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return;
 
-            if (!IsInSpace && corePlayer.Data?.transform != null &&
+            if (!IsInSpace && corePlayer.itemData?.transform != null &&
                 SpaceSessionForNetwork?.IsPlayerInShipInteriorWorld(corePlayer) != true)
-                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
+                corePlayer.itemData.transform.position = WorldTopologyRuntime.NormalizePosition(
                     ShipSurfacePresentation.GroundPosition(corePlayer.gameObject, corePlayer.transform.position));
 
             if (isServer) return;
@@ -419,7 +428,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!isOwned && !groundCombatFrozen)
             {
                 if (!ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData incoming) ||
-                    incoming is not Data_Player || incoming.Guid != corePlayer.itemData.Guid) return;
+                    incoming is not ItemData || incoming.Guid != corePlayer.itemData.Guid) return;
                 // 客户端只提交快捷栏选择，数量和生命状态始终来自服务器事务。
                 foreach (Module module in corePlayer.Mods.Values)
                     if (module is Mod_HotBar hotbar && incoming.ModuleDataDic.TryGetValue(module.StableName, out ModuleData state))
@@ -573,7 +582,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
             SetNetworkVisibility(true);
-            if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(displayName, out Vector2 passengerPosition))
+            if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(profileId, out Vector2 passengerPosition))
             {
                 transform.position = passengerPosition;
                 SyncCorePlayerPosition(passengerPosition);
@@ -782,17 +791,17 @@ namespace FlatWorld.Networking.Gameplay
 
             try
             {
-                Player existingLocalPlayer = ItemMgr.Instance.User_Player;
+                Item existingLocalPlayer = ItemMgr.Instance.LocalControlledActor;
                 if (corePlayer == null && existingLocalPlayer != null && existingLocalPlayer.IsInitialized &&
-                    existingLocalPlayer.ProfileName == displayName && existingLocalPlayer.IsLocalProfile)
+                    ActorProfileRegistry.GetProfileId(existingLocalPlayer) == profileId && ActorProfileRegistry.IsLocallyControlled(existingLocalPlayer))
                     reusedLocalWorldPlayer = true;
                 int networkGuid = unchecked((int)(0x40000000u | (netId & 0x3fffffffu)));
                 Vector3 logicalSpawnPosition = IsInSpace ? AuthoritativeLogicalPosition : localControl
                     ? WorldTopologyRuntime.NormalizePosition(transform.position)
                     : AuthoritativeLogicalPosition;
-                corePlayer = ItemMgr.Instance.LoadNetworkPlayer(displayName, networkGuid, logicalSpawnPosition, localControl);
-                if (corePlayer == null)
-                    return;
+                corePlayer = ItemMgr.Instance.LoadNetworkPlayer(profileId, networkGuid, logicalSpawnPosition, localControl, actorDefinitionId);
+                if (corePlayer == null) return;
+                corePlayer.itemData.GetActorProfileMetadata().DisplayName = displayName;
 
                 if (localControl && !coreAvatarIsLocal)
                     ItemMgr.Instance.PromoteNetworkPlayerToLocal(corePlayer, logicalSpawnPosition);
@@ -801,7 +810,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!coreAvatarIsLocal)
                 {
                     BindRemoteVisualModules(corePlayer);
-                    if (isServer && IsInSpace) ItemMgr.Instance.InitializeNetworkAuthorityPlayer(corePlayer);
+                    if (isServer) ItemMgr.Instance.InitializeNetworkAuthorityPlayer(corePlayer);
                 }
 
                 coreMover = corePlayer.GetComponentInChildren<Mod_Mover>(true);
@@ -809,6 +818,8 @@ namespace FlatWorld.Networking.Gameplay
                 coreAnimator = corePlayer.itemMods?.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
                 coreAnimatorReceiver = coreAnimator as Mod_AnimatorController_Receiver;
                 BindNetworkRoll();
+                var control = corePlayer.itemMods.GetMod_ByID<Mod_ActorControl>(Mod_ActorControl.ModuleId);
+                if (control != null && isOwned && !isServer) control.NetworkBodyAttackRequest = RequestNetworkBodyAttack;
                 if (coreAvatarIsLocal)
                     coreAnimator?.SetNetworkPresentation(false, false);
                 if (!coreAvatarIsLocal && !isServer && coreTurnBack != null)
@@ -828,7 +839,7 @@ namespace FlatWorld.Networking.Gameplay
                     : IsInSpace ? AuthoritativeLogicalPosition : WorldLocalPresentation.ProjectPosition(AuthoritativeLogicalPosition));
                 if (isServer) SpaceSessionForNetwork?.EnsureNetworkPassenger(corePlayer);
                 itemStateDirty = true;
-                ApplyDisplayName(displayName);
+                ApplyDisplayName(profileId);
 
                 if (!isServer && !isOwned && ItemNetworkStateSerialization.IsValidPayload(authoritativeItemState))
                     ApplyRemoteItemState(authoritativeItemState);
@@ -841,7 +852,7 @@ namespace FlatWorld.Networking.Gameplay
             }
             catch (System.Exception exception)
             {
-                Debug.LogError($"[联机] 创建核心 Player Item 失败：{displayName}\n{exception}", this);
+                Debug.LogError($"[联机] 创建档案角色 Item 失败：{profileId}\n{exception}", this);
             }
         }
 
@@ -862,7 +873,7 @@ namespace FlatWorld.Networking.Gameplay
 
         #endregion
 
-        private static void BindRemoteVisualModules(Player player)
+        private static void BindRemoteVisualModules(Item player)
         {
             if (player == null || player.itemData == null || player.itemMods == null || player.itemMods.Mods.Count > 0)
                 return;
@@ -952,9 +963,9 @@ namespace FlatWorld.Networking.Gameplay
                     corePlayer.transform.position = position;
             }
 
-            if (!IsInSpace && corePlayer.Data != null)
-                corePlayer.Data.transform.position = WorldTopologyRuntime.NormalizePosition(
-                    SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerSurfacePosition(displayName, out Vector2 ground)
+            if (!IsInSpace && corePlayer.itemData != null)
+                corePlayer.itemData.transform.position = WorldTopologyRuntime.NormalizePosition(
+                    SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetPassengerSurfacePosition(profileId, out Vector2 ground)
                         ? (Vector3)ground : position);
         }
 
@@ -1136,7 +1147,30 @@ namespace FlatWorld.Networking.Gameplay
                 Debug.LogError("[联机玩家] FlatWorldNetworkPlayer.prefab 缺少“玩家名称”TextMeshPro 节点。", this);
         }
 
-        private void OnDisplayNameChanged(string oldName, string newName) => ApplyDisplayName(newName);
+        #region 通用角色本体攻击请求
+        private bool RequestNetworkBodyAttack(Vector3 target)
+        {
+            var brain = corePlayer.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(Mod_AnimalBehaviorTree.ModuleId);
+            if (brain?.TryStartManuallyRequestedBodyAttack(target) != true) return false;
+            CmdRequestBodyAttack(target, authoritativeRealmRevision);
+            return true;
+        }
+        [Command]
+        private void CmdRequestBodyAttack(Vector3 target, uint realmRevision)
+        {
+            if (authoritativeWorldTransferPending || realmRevision != authoritativeRealmRevision ||
+                !IsValidPosition(target) || corePlayer == null) return;
+            using var scope = NetworkGameplayWorldScope.Use(this);
+            corePlayer.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(Mod_AnimalBehaviorTree.ModuleId)?.TryStartManuallyRequestedBodyAttack(target);
+        }
+        #endregion
+
+        private void OnProfileIdChanged(string oldName, string newName) => ApplyDisplayName(newName);
+        private void OnActualDisplayNameChanged(string oldName, string newName)
+        {
+            if (corePlayer?.itemData != null) corePlayer.itemData.GetActorProfileMetadata().DisplayName = newName;
+            ApplyDisplayName(profileId);
+        }
 
         private void ApplyDisplayName(string value)
         {
@@ -1145,9 +1179,9 @@ namespace FlatWorld.Networking.Gameplay
             {
                 // 每个客户端只显示其他玩家的头顶名字。
                 nameLabel.enabled = !isLocalPlayer;
-                nameLabel.text = SaveDataMgr.Instance?.SaveData?.PlayerData_Dict is { } profiles &&
-                    profiles.TryGetValue(value, out Data_Player data) && !string.IsNullOrWhiteSpace(data.Name_User)
-                    ? data.Name_User : value;
+                nameLabel.text = SaveDataMgr.Instance?.SaveData?.ProfileActorData is { } profiles &&
+                    profiles.TryGetValue(value, out ItemData data) && !string.IsNullOrWhiteSpace(data.GetActorProfileMetadata().DisplayName)
+                    ? data.GetActorProfileMetadata().DisplayName : displayName;
             }
         }
 

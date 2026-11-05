@@ -16,7 +16,7 @@ public static class GameplayTestAtmosphereAnalyzerRuntimeProbe
     private static void Register() => GameplayTestRuntimeProbe.RegisterAsync(
         "environment", "atmosphere_analyzer_lifecycle", CaptureAnalyzerLifecycle);
 
-    private static IEnumerator CaptureAnalyzerLifecycle(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureAnalyzerLifecycle(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var scope = new AnalyzerScope();

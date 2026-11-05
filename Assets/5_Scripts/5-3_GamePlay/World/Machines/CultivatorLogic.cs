@@ -333,7 +333,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
         if (changed) { Capture(); NotifyChanged(); }
         return changed;
     }
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation == "begin-interaction") return true;
         if (operation == "work" || operation == "cultivator.harvest") return HarvestMature();
@@ -383,7 +383,7 @@ public sealed class CultivatorLogic : MachineLogic, IContainerPortProvider
     }
     public void CollectContainerPorts(List<IContainerPort> ports)
     { using var scope = MachineWorld.UseNodeScope(Entity); if (MachineWorld.Contains(Entity)) ports.Add(WaterInputPort); }
-    public bool FillFromHeldVessel(Player actor)
+    public bool FillFromHeldVessel(Item actor)
     {
         var held = actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem
             ?.itemMods?.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);

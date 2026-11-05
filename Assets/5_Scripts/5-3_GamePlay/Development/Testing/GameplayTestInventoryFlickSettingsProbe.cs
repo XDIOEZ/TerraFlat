@@ -154,7 +154,7 @@ public static class GameplayTestInventoryFlickSettingsProbe
     #endregion
 
     #region 正式游戏操作页控件现场
-    private static IEnumerator CaptureControls(Player player, JObject args, Action<JObject> complete)
+    private static IEnumerator CaptureControls(Item player, JObject args, Action<JObject> complete)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         UIManager ui = UIManager.ExistingInstance ?? throw new InvalidOperationException("正式 UIManager 尚未就绪。");

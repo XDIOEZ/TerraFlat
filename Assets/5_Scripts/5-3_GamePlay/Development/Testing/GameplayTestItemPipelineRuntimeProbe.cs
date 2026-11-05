@@ -30,7 +30,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
 
     #region 冷外壳与复用装配
     // 自有停用外壳只走正式配置、对象池和准备布局，不登记世界身份或加载模块运行态。
-    private static JObject CaptureShellFinalConfiguration(Player player, JObject args)
+    private static JObject CaptureShellFinalConfiguration(Item player, JObject args)
     {
         const string itemId = "Knife_Flint";
         GameRes resources = GameRes.ExistingInstance;
@@ -144,7 +144,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 掉落物中心查询真实空间索引
-    private static JObject CaptureCenterSpatialQuery(Player player, JObject args)
+    private static JObject CaptureCenterSpatialQuery(Item player, JObject args)
     {
         Item sample = null;
         ItemMgr manager = ItemMgr.Instance;
@@ -186,7 +186,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     $"活动场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}，" +
                     $"执行场景={GameplayWorldRegistry.CurrentScene.name}，执行世界={GameplayWorldRegistry.ExecutionWorldKey}，" +
                     $"存在执行上下文={GameplayWorldRegistry.HasExecutionContext}，玩家场景={player.gameObject.scene.name}，" +
-                    $"玩家存档世界={player.Data?.CurrentSceneName}。");
+                    $"玩家存档世界={player.itemData?.GetActorProfileMetadata().WorldKey}。");
             }
             WorldTopologyMode originalTopology = activePlanet.TopologyMode;
             try
@@ -229,10 +229,10 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 自有实例和模块状态
-    private static Item Spawn(Player player) => LoadSpawned(ItemMgr.Instance.InstantiateItem("Knife_Flint",
+    private static Item Spawn(Item player) => LoadSpawned(ItemMgr.Instance.InstantiateItem("Knife_Flint",
         player.transform.position + new Vector3(1.5f, 0f, 0f)));
 
-    private static Item SpawnHeld(Player player, ItemData data) =>
+    private static Item SpawnHeld(Item player, ItemData data) =>
         LoadSpawned(ItemMgr.Instance.InstantiateHeldItem(data, player, player.transform));
 
     private static Item LoadSpawned(Item item)
@@ -251,7 +251,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         }
     }
 
-    private static JObject State(Item item, Player player) => new()
+    private static JObject State(Item item, Item player) => new()
     {
         ["initialized"] = item.IsInitialized, ["active"] = item.gameObject.activeInHierarchy,
         ["destructionHandled"] = item.DestructionHandled, ["inPool"] = item.IsInPool,
@@ -275,7 +275,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 正式加载卸载与重新生成
-    private static IEnumerator CaptureLifecycle(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureLifecycle(Item player, JObject args, Action<JObject> completed)
     {
         Item first = null, second = null;
         int registered = 0, unregistered = 0;
@@ -344,7 +344,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         };
 
         // 目标、帧率与观察器均属于当前 Lua，断言失败和中断时恢复。
-        public void Prepare(Player player, Mod_Damage source, float timeScale)
+        public void Prepare(Item player, Mod_Damage source, float timeScale)
         {
             damage = source;
             QualitySettings.vSyncCount = 0;
@@ -420,7 +420,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
         }
     }
 
-    private static IEnumerator CaptureHeldWeaponAction(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureHeldWeaponAction(Item player, JObject args, Action<JObject> completed)
     {
         Item weapon = null;
         HeldWeaponFixedStepObservation fixedStep = null;
@@ -576,7 +576,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region 投射物调度与来源生命周期
-    private static IEnumerator CaptureProjectileTickLifecycle(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureProjectileTickLifecycle(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var scope = new ProjectileTickProbeScope();
@@ -707,7 +707,7 @@ public static class GameplayTestItemPipelineRuntimeProbe
     #endregion
 
     #region MOD Lua 对真实物品的生命周期调用
-    private static JObject CaptureLuaModule(Player player, JObject args)
+    private static JObject CaptureLuaModule(Item player, JObject args)
     {
         string root = GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         string directory = Path.Combine(root, "LuaModuleProbes", Guid.NewGuid().ToString("N"));
@@ -788,7 +788,7 @@ return callbacks");
     #endregion
 
     #region 真实网络负载与远程副本权威隔离
-    private static JObject CaptureReplica(Player player, JObject args)
+    private static JObject CaptureReplica(Item player, JObject args)
     {
         Item source = null, replica = null;
         var result = new JObject();

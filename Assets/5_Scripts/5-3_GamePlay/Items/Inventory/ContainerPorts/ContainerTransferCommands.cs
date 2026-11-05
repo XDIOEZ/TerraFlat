@@ -33,10 +33,10 @@ public sealed class ContainerTransferIntent
 public static class ContainerTransferCommands
 {
     #region 容器命令
-    public static event Func<ContainerTransferIntent, Player, bool> RemoteRequested;
+    public static event Func<ContainerTransferIntent, Item, bool> RemoteRequested;
     public static event Action<ContainerTransferResult> Completed;
     public static void CompleteRemote(ContainerTransferResult result) => Completed?.Invoke(result);
-    public static bool Request(ContainerTransferIntent intent, Player actor)
+    public static bool Request(ContainerTransferIntent intent, Item actor)
     {
         if (intent == null || actor == null) return false;
         if (!GameNetwork.HasStateAuthority) return RemoteRequested?.Invoke(intent, actor) == true;
@@ -45,7 +45,7 @@ public static class ContainerTransferCommands
     }
     public static bool RequestLiquidTransfer(ILiquidVessel source, ILiquidVessel target, Item actor, float servings, string sourcePortId = null, string targetPortId = null)
     {
-        if (actor is not Player player || !TryAddress(player, source, ContainerPortDirection.Output, out var from, sourcePortId) ||
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) || !TryAddress(player, source, ContainerPortDirection.Output, out var from, sourcePortId) ||
             !TryAddress(player, target, ContainerPortDirection.Input, out var to, targetPortId)) return false;
         return Request(new ContainerTransferIntent { Operation = "liquid", Source = from, Target = to, Amount = servings }, player);
     }
@@ -53,13 +53,13 @@ public static class ContainerTransferCommands
         Vector2Int worldCell = default, int horizontalCellOffset = 0, string portId = null)
     {
         ContainerPortDirection direction = operation == "world-fill" ? ContainerPortDirection.Input : ContainerPortDirection.Output;
-        if (actor is not Player player || !TryAddress(player, target, direction, out var address, portId)) return false;
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) || !TryAddress(player, target, direction, out var address, portId)) return false;
         return Request(new ContainerTransferIntent { Operation = operation, Target = address, Amount = amount,
             WorldCellX = worldCell.x, WorldCellY = worldCell.y, HorizontalCellOffset = Math.Sign(horizontalCellOffset) }, player);
     }
     public static bool RequestInventoryFill(ILiquidVessel target, ItemData source, Item actor, Inventory inventory, float maximum, string portId = null)
     {
-        if (actor is not Player player || source == null || float.IsNaN(maximum) || maximum <= 0f ||
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) || source == null || float.IsNaN(maximum) || maximum <= 0f ||
             !TryAddress(player, target, ContainerPortDirection.Input, out var to, portId) || !MachineInventoryCommands.TryAddress(player, inventory, out var address)) return false;
         int slot = inventory.Data.itemSlots.FindIndex(candidate => ReferenceEquals(candidate?.itemData, source));
         if (slot < 0) return false;
@@ -73,12 +73,12 @@ public static class ContainerTransferCommands
     // 固体出料只上传容器、真实槽位与原实例身份，不接受客户端提供物品载荷。
     public static bool RequestContentsSpill(ILiquidVessel target, Item actor, int slot, int guid, int direction)
     {
-        if (actor is not Player player ||
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) ||
             !TryAddress(player, target, ContainerPortDirection.Output, out var address)) return false;
         return Request(new ContainerTransferIntent { Operation = "spill-items", Target = address, Amount = 1,
             ContentSlot = slot, ExpectedContentGuid = guid, HorizontalCellOffset = Math.Sign(direction) }, player);
     }
-    public static bool TryAddress(Player actor, ILiquidVessel vessel, ContainerPortDirection direction, out ContainerPortAddress address, string portId = null)
+    public static bool TryAddress(Item actor, ILiquidVessel vessel, ContainerPortDirection direction, out ContainerPortAddress address, string portId = null)
     {
         address = null;
         ILiquidTransferPort port = vessel == null ? null : LiquidVesselOperations.Port(vessel, direction, portId);
@@ -94,7 +94,7 @@ public static class ContainerTransferCommands
         address.MachineId = vessel.Machine?.Id ?? 0;
         return address.MachineId != 0 || vessel.Item != null;
     }
-    public static ILiquidVessel ResolveVessel(Player actor, ContainerPortAddress address)
+    public static ILiquidVessel ResolveVessel(Item actor, ContainerPortAddress address)
     {
         if (actor == null || address == null) return null;
         if (address.ColdItem)
@@ -111,7 +111,7 @@ public static class ContainerTransferCommands
         Item item = ItemMgr.Instance?.GetItemByGuid(address.ItemGuid);
         return item != null && item.itemData.IDName == address.ItemId ? item.itemMods?.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId) : null;
     }
-    public static IContainerPort Resolve(Player actor, ContainerPortAddress address)
+    public static IContainerPort Resolve(Item actor, ContainerPortAddress address)
     {
         if (address == null || string.IsNullOrWhiteSpace(address.PortId)) return null;
         var ports = new List<IContainerPort>();
@@ -133,13 +133,13 @@ public static class ContainerTransferCommands
         foreach (var port in ports) if (port.IsValid && port.Reference.PortId == address.PortId) return port;
         return null;
     }
-    public static ItemData ResolveColdItem(Player actor, ContainerPortAddress address, out Inventory inventory)
+    public static ItemData ResolveColdItem(Item actor, ContainerPortAddress address, out Inventory inventory)
     {
         inventory = address == null ? null : MachineInventoryCommands.Resolve(actor, address.Inventory);
         ItemData item = inventory != null && (uint)address.Slot < (uint)inventory.Data.itemSlots.Count ? inventory.Data.itemSlots[address.Slot]?.itemData : null;
         return item?.Guid == address?.ItemGuid && item?.IDName == address?.ItemId ? item : null;
     }
-    public static ContainerTransferResult Execute(ContainerTransferIntent intent, Player actor, ContainerTransferContext context)
+    public static ContainerTransferResult Execute(ContainerTransferIntent intent, Item actor, ContainerTransferContext context)
     {
         if (!GameNetwork.HasStateAuthority) return new(ContainerTransferFailure.NoAuthority);
         if (intent == null || intent.Version != ContainerTransferService.ContractVersion || actor == null || actor.DestructionHandled ||

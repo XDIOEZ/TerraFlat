@@ -35,9 +35,9 @@ namespace FlatWorld.Dialogue
                 "把书放入快捷栏，选中并使用即可阅读；再次输入可领取一份最新目录。");
         }
 
-        private static void Attach(Player player)
+        private static void Attach(Item player)
         {
-            if (player == null || !player.IsLocalProfile)
+            if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
                 return;
             PlayerChatInputController chat = player.GetComponent<PlayerChatInputController>();
             if (chat == null)
@@ -57,7 +57,7 @@ namespace FlatWorld.Dialogue
                 return PlayerChatCommandResult.NotHandled();
             if (context.Arguments.Length != 0)
                 return PlayerChatCommandResult.HandledWith($"用法：/{CommandName}，直接领取一本命令手册。");
-            if (context.Sender == null || context.Sender != GetComponent<Player>() || !context.Sender.IsLocalProfile)
+            if (context.Sender == null || context.Sender != GetComponent<Item>() || !ActorProfileRegistry.IsLocallyControlled(context.Sender))
                 return PlayerChatCommandResult.HandledWith("当前本地玩家尚未就绪。");
 
             IReadOnlyList<ReadableBookPageContent> pages;

@@ -15,7 +15,7 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
     private Material material;
     private OverviewPass pass;
     private IDisposable zoomRegistration;
-    private Player playerOwner;
+    private Item playerOwner;
     private SpaceSessionState stateOwner;
     private int sceneHandle;
     private float opacity;
@@ -38,7 +38,7 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
     {
         profile = default;
         if (!Application.isPlaying || !isActive || pass == null || camera == null || camera.HasFollowOverride ||
-            camera.Player == null || !camera.Player.IsLocalProfile || !camera.isActiveAndEnabled)
+            camera.Player == null || !ActorProfileRegistry.IsLocallyControlled(camera.Player) || !camera.isActiveAndEnabled)
             return false;
         var config = WorldRenderingConfigCatalog.Default.universeView;
         if (SpaceMgr.IsSpaceScene(camera.Player.gameObject.scene.name))
@@ -65,8 +65,8 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
         session = SpaceSession.Current;
         body = null;
         DimensionManager dimensions = DimensionManager.ExistingInstance;
-        Player player = camera != null ? camera.Player : null;
-        if (session?.State == null || player == null || !player.IsLocalProfile ||
+        Item player = camera != null ? camera.Player : null;
+        if (session?.State == null || player == null || !ActorProfileRegistry.IsLocallyControlled(player) ||
             !player.gameObject.activeInHierarchy || camera.HasFollowOverride ||
             dimensions == null || dimensions.IsTransitioning || !dimensions.ActiveAddress.IsSurface ||
             SpaceMgr.IsSpaceScene(player.gameObject.scene.name)) return false;
@@ -105,7 +105,7 @@ public sealed class UniverseOverviewRendererFeature : ScriptableRendererFeature,
     {
         if (!Application.isPlaying || pass == null || renderingData.cameraData.cameraType != CameraType.Game)
             return;
-        Player player = ItemMgr.GetInstance()?.User_Player;
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
         Mod_Cam camera = player?.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
         if (!TryResolveAnchor(camera, out SpaceSession session, out BodyState anchor))
         {

@@ -228,7 +228,7 @@ public sealed partial class Mod_ColonyResident
         Mod_DamageReceiver health = candidate.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (health == null || health.Hp <= 0f)
             return false;
-        return candidate is Player ||
+        return ActorIdentity.IsPlayer(candidate as Item) ||
             (GameRes.Instance.TryGetItemDefinition(candidate.itemData.IDName, out RuntimeItemDefinition definition) &&
              definition.IsActor);
     }

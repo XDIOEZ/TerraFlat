@@ -15,7 +15,7 @@ namespace FlatWorld.Gameplay.Quests
         bool IsStateBased { get; }
         bool Validate(QuestObjectiveDefinition definition, out string error);
         float ApplySignal(QuestObjectiveDefinition definition, float current, GameplayProgressSignal signal);
-        float EvaluateState(Player player, QuestObjectiveDefinition definition);
+        float EvaluateState(Item player, QuestObjectiveDefinition definition);
     }
 
     /// <summary>任务接取条件处理器。</summary>
@@ -32,7 +32,7 @@ namespace FlatWorld.Gameplay.Quests
         string Type { get; }
         bool Validate(QuestRewardDefinition definition, out string error);
         bool TryPrepare(
-            Player player,
+            Item player,
             QuestRewardDefinition definition,
             QuestRewardPlan plan,
             out string error);
@@ -174,7 +174,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         public bool TryCommit(
-            Player player,
+            Item player,
             out IReadOnlyList<GameplayProgressSignal> deferredSignals,
             out string error)
         {
@@ -254,7 +254,7 @@ namespace FlatWorld.Gameplay.Quests
             return Mathf.Min(definition.Required, current + Mathf.Max(0f, signal.Amount));
         }
 
-        public float EvaluateState(Player player, QuestObjectiveDefinition definition)
+        public float EvaluateState(Item player, QuestObjectiveDefinition definition)
         {
             return 0f;
         }
@@ -280,7 +280,7 @@ namespace FlatWorld.Gameplay.Quests
             return current;
         }
 
-        public float EvaluateState(Player player, QuestObjectiveDefinition definition)
+        public float EvaluateState(Item player, QuestObjectiveDefinition definition)
         {
             string itemId = definition.Parameters?.Value<string>("itemId")?.Trim();
             return Mathf.Min(definition.Required, QuestInventoryAccess.CountItem(player, itemId));
@@ -323,7 +323,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         public bool TryPrepare(
-            Player player,
+            Item player,
             QuestRewardDefinition definition,
             QuestRewardPlan plan,
             out string error)
@@ -370,7 +370,7 @@ namespace FlatWorld.Gameplay.Quests
         }
 
         public bool TryPrepare(
-            Player player,
+            Item player,
             QuestRewardDefinition definition,
             QuestRewardPlan plan,
             out string error)
@@ -398,7 +398,7 @@ namespace FlatWorld.Gameplay.Quests
     public static class QuestInventoryAccess
     {
         public static float CountItem(
-            Player player,
+            Item player,
             string itemId,
             StringComparison comparison = StringComparison.OrdinalIgnoreCase)
         {
@@ -419,7 +419,7 @@ namespace FlatWorld.Gameplay.Quests
             return total;
         }
 
-        public static Inventory FindRewardInventory(Player player)
+        public static Inventory FindRewardInventory(Item player)
         {
             if (player?.itemMods == null)
                 return null;

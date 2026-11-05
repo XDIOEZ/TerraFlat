@@ -5,6 +5,12 @@
   "buildShowroom": false,
   "cases": [
     {
+      "id": "ai_actor_control_gameplay",
+      "name": "人形与动物原身体接管及恢复AI",
+      "luaPath": "GameplayTests/Systems/AI/actor-control-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_creature_creation_gameplay",
       "name": "统一生物出生：身份、回滚与居民恢复",
       "luaPath": "GameplayTests/Systems/AI/creature-creation.lua",

@@ -15,7 +15,7 @@ public static partial class GameplayTestRuntimeProbe
     private static void RegisterPartialPickupRuntime()
         => Register("inventory", "dropped_partial_pickup", CaptureDroppedPartialPickup);
 
-    private static Vector2 FindPartialPickupSite(Player player)
+    private static Vector2 FindPartialPickupSite(Item player)
     {
         Vector2Int origin = Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(player.transform.position));
         for (int radius = 0; radius <= 6; radius++)
@@ -39,7 +39,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 只用自有拾取器、冷库存与真实掉落运行时，断言和预期数量由 Lua 持有。
-    private static JObject CaptureDroppedPartialPickup(Player player, JObject args)
+    private static JObject CaptureDroppedPartialPickup(Item player, JObject args)
     {
         if (!GameRes.ExistingInstance.TryGetItemDefinition("Log", out RuntimeItemDefinition definition))
             throw new InvalidOperationException("部分拾取采样缺少正式原木定义。");

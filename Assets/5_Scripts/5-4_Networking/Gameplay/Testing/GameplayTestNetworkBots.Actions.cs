@@ -27,7 +27,7 @@ namespace FlatWorld.Networking.Gameplay
             private readonly IDisposable windLease;
             private bool disposed;
 
-            public LocalPlayerMotionIsolation(Player local)
+            public LocalPlayerMotionIsolation(Item local)
             {
                 controller = local.GetComponentInChildren<Mod_GameController>(true) ??
                     throw new InvalidOperationException("本地主角缺少正式输入控制器。");
@@ -75,7 +75,7 @@ namespace FlatWorld.Networking.Gameplay
             private readonly IDisposable localWindSuppression;
             private bool disposed;
 
-            public BotActionScene(BotWorld world, Player local)
+            public BotActionScene(BotWorld world, Item local)
             {
                 World = world;
                 // 假人碰撞验证只排除测试主角受天气风力推动，保留真实物理碰撞。
@@ -105,7 +105,7 @@ namespace FlatWorld.Networking.Gameplay
             }
         }
 
-        private static IEnumerator CaptureActions(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureActions(Item local, JObject args, Action<JObject> completed)
         {
             if (activeActionScene != null)
                 throw new InvalidOperationException("上一份联机假人动作现场尚未清理。");
@@ -259,7 +259,7 @@ namespace FlatWorld.Networking.Gameplay
             completed(result);
         }
 
-        private static IEnumerator CaptureActionsCleanup(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureActionsCleanup(Item local, JObject args, Action<JObject> completed)
         {
             BotActionScene scene = activeActionScene ?? throw new InvalidOperationException("没有可回收的假人动作现场。");
             BotWorld world = scene.World;

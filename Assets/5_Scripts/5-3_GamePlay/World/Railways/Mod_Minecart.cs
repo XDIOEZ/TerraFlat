@@ -34,7 +34,7 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     public int TrainCount => train?.Cars.Count ?? 1;
     public float SignedTravelSpeed => onRail && railPosition.IsValid
         ? Vector2.Dot(Carrier.CurrentVelocity, railPosition.Tangent) : Carrier.CurrentVelocity.magnitude;
-    public static event Action<Mod_Minecart, Player> MenuRequested;
+    public static event Action<Mod_Minecart, Item> MenuRequested;
     private Mod_MinecartInventory inventory;
     private MinecartState state;
     private Mod_Minecart previous, next;
@@ -136,8 +136,8 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     #endregion
 
     #region 统一座位和交互命令
-    public bool CanAccess(Player player)
-        => IsAvailable && GameNetwork.HasStateAuthority && player != null && player.IsLocalProfile &&
+    public bool CanAccess(Item player)
+        => IsAvailable && GameNetwork.HasStateAuthority && player != null && ActorProfileRegistry.IsLocallyControlled(player) &&
             player.gameObject.scene == item.gameObject.scene &&
             (Carrier.Rider?.item == player || WorldTopologyRuntime.Distance(player.transform.position, item.transform.position) <=
                 ResolveInteractionDistance(player));
@@ -151,39 +151,39 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
         return true;
     }
 
-    private static float ResolveInteractionDistance(Player player)
+    private static float ResolveInteractionDistance(Item player)
     {
         var senders = player.itemMods.GetCapabilities<Mod_InteractSender>();
         return senders.Count == 0 ? Mod_InteractSender.DefaultMaxInteractDistance : senders[0].maxInteractDistance;
     }
 
-    public bool CanInteractWithCarrier(Player player, Mod_Mover mover)
+    public bool CanInteractWithCarrier(Item player, Mod_Mover mover)
         => CanAccess(player) && mover != null;
 
-    public void InteractWithCarrier(Player player, Mod_Mover mover)
+    public void InteractWithCarrier(Item player, Mod_Mover mover)
     {
         if (!CanInteractWithCarrier(player, mover)) return;
         if (Carrier.Rider == mover) { TryLeave(player); return; }
         if (Carrier.Rider == null && mover.CarrierSource == null) TryBoard(player);
     }
 
-    public void InteractWithCarrierOnTap(Player player, Mod_Mover mover)
+    public void InteractWithCarrierOnTap(Item player, Mod_Mover mover)
     {
         if (CanInteractWithCarrier(player, mover)) MenuRequested?.Invoke(this, player);
     }
-    public bool TryBoard(Player player)
+    public bool TryBoard(Item player)
     {
         if (!CanAccess(player) || Carrier.Rider != null) return false;
         Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         return mover != null && Carrier.ToggleRider(player, mover);
     }
-    public bool TryLeave(Player player)
+    public bool TryLeave(Item player)
     {
         if (!CanAccess(player)) return false;
         Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         return mover != null && Carrier.Rider == mover && Carrier.ToggleRider(player, mover);
     }
-    public bool TryConnectNearest(Player player, out string reason)
+    public bool TryConnectNearest(Item player, out string reason)
     {
         reason = "没有找到同一铁路上可连接的相邻矿车。";
         if (!CanAccess(player)) return false;
@@ -222,7 +222,7 @@ public sealed partial class Mod_Minecart : Module, ICarrierMotionDriver, ICarrie
     private bool HasUnresolvedConnection => state != null &&
         (state.PreviousGuid != 0 && previous == null || state.NextGuid != 0 && next == null);
 
-    public void Disconnect(Player player)
+    public void Disconnect(Item player)
     {
         if (!CanAccess(player)) return;
         DisconnectAll();

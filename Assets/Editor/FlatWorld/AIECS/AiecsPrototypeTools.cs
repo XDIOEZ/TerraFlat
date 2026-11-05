@@ -122,7 +122,7 @@ namespace FlatWorld.AIECS.Editor
         /// <summary>复制玩家实际静态 Sprite 层级与组内顺序，禁止把玩家玩法组件带入原型。</summary>
         private static void AddPlayerReference(Transform parent)
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/Gameplay/Player/Player.prefab");
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/Gameplay/Player/Human.prefab");
             var root = new GameObject("玩家静态显示参照");
             root.transform.SetParent(parent, false);
             var group = root.AddComponent<SortingGroup>();

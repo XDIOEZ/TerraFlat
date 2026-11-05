@@ -15,7 +15,7 @@ namespace FlatWorld.Gameplay.Building
         public Item SourceItem;
         public Inventory_Data SourceInventory;
         public ItemSlot SourceSlot;
-        public Player Actor;
+        public Item Actor;
         public Vector3 Position;
         public Vector3 AuthorityPosition;
         public float MaximumDistance;

@@ -27,7 +27,7 @@ namespace FlatWorld.AIECS.Gameplay
         public bool ShowFootShadows = true; // 仅控制当前开发群体的阴影，供渲染开销对照。
         public string Status { get; private set; } = "等待正式游戏世界；请新建临时世界。";
         private static AiecsPlayground active;
-        private Player player;
+        private Item player;
         private AiecsGameplayBridge bridge;
         private AiecsWorldRenderer display;
         private AiecsPlaygroundMode mode;
@@ -57,12 +57,12 @@ namespace FlatWorld.AIECS.Gameplay
             if (active != this) return;
             if (LoadGameStartOnPlay && SceneManager.GetActiveScene().name != "GameStartScene")
                 SceneManager.LoadScene("GameStartScene");
-            else if (ItemMgr.Instance != null && ItemMgr.Instance.User_Player != null)
-                OnPlayerEntered(ItemMgr.Instance.User_Player);
+            else if (ItemMgr.Instance != null && ItemMgr.Instance.LocalControlledActor != null)
+                OnPlayerEntered(ItemMgr.Instance.LocalControlledActor);
         }
 
         /// <summary>正式玩家入场后等待真实导航窗口，不能在数据尚未准备好时创建替代网格。</summary>
-        private void OnPlayerEntered(Player value)
+        private void OnPlayerEntered(Item value)
         {
             player = value; startRequested = autoStartScenario && bridge == null;
             if (manager != null) manager.Event_GameWorldExit -= OnWorldExit;
@@ -130,7 +130,7 @@ namespace FlatWorld.AIECS.Gameplay
                     display.SetSortingKeyCallbacks(ApplyPresentationSortingKey, RemovePresentationSortingKey);
                 }
             }
-            bool local = bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) &&
+            bool local = bridge.IsCurrentWorld(ItemMgr.Instance?.LocalControlledActor) &&
                 GameplayWorldRegistry.LocalPresentationWorldKey == bridge.WorldKey;
             display.SetWorldPresentation(domain?.Root, matrix, projected ? visible : local);
             if (projected ? !visible : !local)
@@ -323,8 +323,8 @@ namespace FlatWorld.AIECS.Gameplay
             playground.Catalog = catalog;
             playground.LoadGameStartOnPlay = false;
             playground.autoStartScenario = false;
-            if (ItemMgr.Instance?.User_Player != null)
-                playground.OnPlayerEntered(ItemMgr.Instance.User_Player);
+            if (ItemMgr.Instance?.LocalControlledActor != null)
+                playground.OnPlayerEntered(ItemMgr.Instance.LocalControlledActor);
             return playground;
         }
 
@@ -437,7 +437,7 @@ namespace FlatWorld.AIECS.Gameplay
         private void OnGUI()
         {
             if (active != this || !ShowHealth || HealthOverlaySuppressed || bridge == null || display == null) return;
-            if (!bridge.IsCurrentWorld(ItemMgr.Instance?.User_Player) ||
+            if (!bridge.IsCurrentWorld(ItemMgr.Instance?.LocalControlledActor) ||
                 GameplayWorldRegistry.LocalPresentationWorldKey != bridge.WorldKey) return;
             display.DrawHealth(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain);
         }

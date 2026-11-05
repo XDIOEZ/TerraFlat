@@ -10,29 +10,29 @@ namespace FlatWorld.Spaceflight
         public event Action<string> LocalManualConsoleEnterRequested;
 
         // 主动退出单独通知本地表现，自动触地和失去支撑仍沿用普通释放流程。
-        public bool RequestConsoleExit(Player player)
+        public bool RequestConsoleExit(Item player)
         {
             if (player == null || State == null) return false;
-            SpacePassengerState passenger = FindPassenger(player.ProfileName);
+            SpacePassengerState passenger = FindPassenger(ActorProfileRegistry.GetProfileId(player));
             string shipId = passenger?.ShipId;
             bool wasDriving = !string.IsNullOrWhiteSpace(passenger?.ConsolePieceId);
             if (!ExitConsole(player)) return false;
-            if (wasDriving && player.IsLocalProfile) LocalManualConsoleExitRequested?.Invoke(shipId);
+            if (wasDriving && ActorProfileRegistry.IsLocallyControlled(player)) LocalManualConsoleExitRequested?.Invoke(shipId);
             return true;
         }
 
-        private void NotifyLocalManualConsoleEntry(Player player, string pieceId)
+        private void NotifyLocalManualConsoleEntry(Item player, string pieceId)
         {
-            if (player.IsLocalProfile && FindPiece(pieceId, out ShipState ship, out _))
+            if (ActorProfileRegistry.IsLocallyControlled(player) && FindPiece(pieceId, out ShipState ship, out _))
                 LocalManualConsoleEnterRequested?.Invoke(ship.ShipId);
         }
 
         // HUD 只读取已有乘员和真实飞行状态，不因展示界面创建乘员或发出驾驶指令。
-        public bool TryGetShipFlightHudSnapshot(Player player, out ShipFlightHudSnapshot snapshot)
+        public bool TryGetShipFlightHudSnapshot(Item player, out ShipFlightHudSnapshot snapshot)
         {
             snapshot = default;
             if (State == null || player == null) return false;
-            SpacePassengerState passenger = FindPassenger(player.ProfileName);
+            SpacePassengerState passenger = FindPassenger(ActorProfileRegistry.GetProfileId(player));
             if (passenger == null) return false;
             ShipState ship = GetShip(passenger.ShipId);
             ShipFlightState flight = ship != null ? GetFlight(ship.ShipId) : null;

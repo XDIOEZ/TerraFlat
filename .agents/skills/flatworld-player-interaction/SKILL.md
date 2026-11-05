@@ -9,7 +9,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 
 `Assets/5_Scripts/5-3_GamePlay/`：
 
-- `Entities/Item/Player/Player.cs`：玩家；数据为 `Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`。
+- `Entities/Item/Management/ActorProfileRegistry.cs`：ProfileId→通用 Item；角色数据为 ItemData，默认 Human 来自 Actor JSON 与 Human.prefab。
 - `Player/Controller/`：`Mod_GameController` 输入，`InputBindingService` 重绑定，`PlayerAimCursorSystem` 指针，`Mod_InteractSender/Mod_InteractReciver` 交互，`Mod_PlayerAdminController` 权限。
 - `Entities/Move/`：移动、相机、焦点；相机 Prefab 为 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`。
 - `Mod_Mover` 按核心、`MotionControl`（主动移动/手机输入/网络消耗）、`Carrier`（承载/推动）、`Space`、`Audio` 五份组织；同一职责优先并入对应文件。
@@ -18,11 +18,12 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 
 ## 身份与生命周期
 
-- `IsLocalProfile/ProfileContext` 区分本地档案；远程副本无本地保存、教程或语音。`ProfileName/ProfileId` 是角色槽位身份，`Name_User` 仅为显示名。
+- 档案归属、独占控制租约与 Mirror 权威分离：`GetProfileId/IsProfileBound` 查身份，`IsLocallyControlled` 查本地输入；显示名/世界地址在 `ActorProfileMetadata`，不能用名字授权。
 - 来源无关的玩家身份共用 `ActorIdentity.IsPlayer`，角色数值修正共用 `ActorRuleModifiers` 与 `GameRuleConfiguration`；业务不引用难度服务或借难度工具识别玩家。
-- 创建模板在新档案 `Player.Load()` 前解析注入；MOD 使用 `playerCreationTemplates` 或 `playerTemplate:ID` Patch。管理员控制器唯一位于 `Module_Player`。
+- `Mod_ActorControl` 接管时中止 AI 动作、导航与攻击窗口；空闲/UI/输入锁只停输入，显式释放才恢复同一树上下文。冷却、受击记忆及生理继续。输入/相机/HUD 按本地租约加载并逆序卸载，身体模块监听 Binding.Changed 重绑。体力/营养 HUD 与濒死面板也随控制权创建、清理，不能卸载身体能力来隐藏 HUD。
+- 创建模板在新档案 `Item.Load()` 前直接注入能力模块；MOD 使用 `playerCreationTemplates` 或 `playerTemplate:ID` Patch。接管不补装背包、装备、制作、翻滚；ActorCommon 只组合控制及本地表现，Human 自带人形能力。
 - 管理员权限来自通用 `Mod_Administrator`，任意 Item/动物加载模块即获权；`Mod_PlayerAdminController` 仅适配玩家输入，Ctrl+F1/GM 临时装配模块，不读写名字。角色定义通过 `modules` 的 `prefab/id: Module_Administrator` 固定组合；临时模块不改变定义，重建后需重新装配。回归 `player/administrator_identity`。
-- 单机 F5 资源发布保存本地 Data、注销旧 Player、清理运行时 UI、从最新 Prefab 重建同一档案；世界/区块/存档会话保留，引用重绑事件为 `Event_LocalPlayerRuntimeReloaded`。
+- 单机 F5 保存通用 ItemData、卸载旧角色，再从其当前 Actor 定义重建同一档案；世界/存档会话保留，重绑事件为 `Event_LocalPlayerRuntimeReloaded`。控制回归：AI 的 actor-control.lua 与 actor-control-gameplay.lua。
 - Wrapped 世界的本地刚体/Transform 在局部平面连续移动，`PlayerWorldWrapController` 规范化 Data 并发布跨周重投影；存档权威坐标与表现坐标分离。实体非 Trigger 碰撞体为 Player 层，模块 Trigger 保留专用层。
 
 ## 输入与指针

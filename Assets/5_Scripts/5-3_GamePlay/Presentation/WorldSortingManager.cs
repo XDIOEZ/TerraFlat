@@ -286,7 +286,7 @@ public sealed class WorldSortingManager : SingletonMono<WorldSortingManager>
     /// <summary>类别判断集中在一个具名入口，供后续实体类型或 MOD 替换。</summary>
     private static string ResolveCategory(Item item)
     {
-        if (item is Player) return PlayerCategory;
+        if (ActorIdentity.IsPlayer(item as Item)) return PlayerCategory;
         if (RuntimeAiEntityUtility.IsAiEntity(item)) return CreatureCategory;
         if (item.GetComponentInChildren<Mod_Carrier>(true) != null) return VehicleCategory;
         Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);

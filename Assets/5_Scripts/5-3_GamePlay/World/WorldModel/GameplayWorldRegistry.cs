@@ -714,7 +714,7 @@ public static partial class GameplayWorldRegistry
 
     public static void RegisterPresentation(GameObject root)
     {
-        if (root == null || root.GetComponentInParent<Player>() != null) return;
+        if (root == null || root.GetComponentInParent<Item>() != null) return;
         Item item = root.GetComponent<Item>();
         string worldKey;
         if (item != null) worldKey = GameplayWorldRegistry.GetItemWorldKey(item);

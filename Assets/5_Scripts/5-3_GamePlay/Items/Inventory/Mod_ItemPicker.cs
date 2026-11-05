@@ -351,7 +351,7 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
     private void ShowInventoryFullPrompt(ItemData attemptedItem)
     {
         // 容量提示只属于本地玩家，非玩家和远端拾取器不操作本机 HUD。
-        if (item is not Player { IsLocalProfile: true }) return;
+        if (!ActorProfileRegistry.IsLocallyControlled(item)) return;
         float now = Time.unscaledTime;
         if (now < nextInventoryFullPromptTime)
             return;
@@ -370,7 +370,7 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
     /// <summary>优先告诉玩家具体卡在重量还是体积；纯槽位不足继续使用通用“背包满了”。</summary>
     private string ResolveInventoryFullMessage(ItemData attemptedItem)
     {
-        if (item is Player player &&
+        if ((item is Item player && ActorIdentity.IsPlayer(player)) &&
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot) &&
             !snapshot.IsUnlimited)
         {
@@ -476,7 +476,7 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
                 ? dimensionManager.ActiveAddress.DimensionId
                 : null;
             GameplayProgressEvents.PublishPickupSucceeded(
-                item as Player,
+                ActorProfileRegistry.GetProfileActorOrNull(item as Item),
                 itemData.IDName,
                 totalAddedAmount,
                 dimensionId);
@@ -546,10 +546,10 @@ public partial class Mod_ItemPicker : Module, IWorldPhysicsTriggerReceiver2D, II
         if (itemData?.Stack == null || requestedAmount <= 0f)
             return 0f;
 
-        if (item is Player creativePlayer && CreativeInventoryState.IsEnabled(creativePlayer))
+        if ((item is Item creativePlayer && ActorIdentity.IsPlayer(creativePlayer)) && CreativeInventoryState.IsEnabled(creativePlayer))
             return requestedAmount;
 
-        if (item is Player player &&
+        if ((item is Item player && ActorIdentity.IsPlayer(player)) &&
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot playerSnapshot))
         {
             return playerSnapshot.GetCapacityLimitedAmount(itemData, requestedAmount);

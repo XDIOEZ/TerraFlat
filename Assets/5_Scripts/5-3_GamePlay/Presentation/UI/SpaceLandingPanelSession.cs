@@ -17,7 +17,7 @@ public sealed class SpaceLandingPanelSession : IDisposable
     private readonly RawImage map;
     private readonly Texture2D texture;
     private SpaceSession session;
-    private Player player;
+    private Item player;
     private string bodyId, eventKey;
     private Vector2 origin, selected;
     private float nextMapRefresh;
@@ -49,7 +49,7 @@ public sealed class SpaceLandingPanelSession : IDisposable
         var picker = map.gameObject.AddComponent<SpaceLandingMapPicker>();
         picker.Selected = normalized => Select(origin + (normalized - Vector2.one * .5f) * (float)(SpaceGameplaySettings.Current.LandingChoiceRadiusMeters * 2d));
     }
-    public static void Refresh(SpaceSession session, Player player)
+    public static void Refresh(SpaceSession session, Item player)
     {
         if (session?.State == null || player == null) { current?.Dispose(); return; }
         var passenger = session.GetPassenger(player);

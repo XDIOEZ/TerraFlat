@@ -31,7 +31,7 @@ def validate_assets():
         assert (ROOT/path).exists()
         guid=re.search(r'^guid: (\w+)',(ROOT/(path+'.meta')).read_text('utf-8'),re.M).group(1)
         assert len(guid)==32 and f'm_GUID: {guid}' in entries
-    for relative in ['Assets/2_Prefabs/Gameplay/Player/Player.prefab','Assets/2_Prefabs/Gameplay/Modules/Combat/Module_Shield.prefab',
+    for relative in ['Assets/2_Prefabs/Gameplay/Player/Human.prefab','Assets/2_Prefabs/Gameplay/Modules/Combat/Module_Shield.prefab',
                      'Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Equipment.prefab']:
         text=(ROOT/relative).read_text('utf-8')
         ids=re.findall(r'^--- !u!\d+ &(\d+)',text,re.M)

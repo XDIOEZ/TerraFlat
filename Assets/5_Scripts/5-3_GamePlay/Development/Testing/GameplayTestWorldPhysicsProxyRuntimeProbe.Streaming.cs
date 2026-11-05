@@ -110,7 +110,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     }
 
     #region 正式区块资源领取与迁移
-    private static IEnumerator CaptureProxyChunkStreaming(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureProxyChunkStreaming(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();
@@ -473,7 +473,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 
     #region 同坐标真实资源的原生世界隔离
-    private static IEnumerator CaptureResourceProxyWorldIsolation(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureResourceProxyWorldIsolation(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();

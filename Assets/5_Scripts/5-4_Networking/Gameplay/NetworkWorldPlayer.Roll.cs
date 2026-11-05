@@ -87,7 +87,7 @@ namespace FlatWorld.Networking.Gameplay
             bool accepted = false;
             if (fresh && !rollStaminaHandoff.IsPending && corePlayer != null &&
                 ItemNetworkStateSerialization.TryDeserializeItemData(baseline, out ItemData incoming) &&
-                incoming is Data_Player && incoming.Guid == corePlayer.itemData.Guid && incoming.IDName == corePlayer.itemData.IDName)
+                incoming is ItemData && incoming.Guid == corePlayer.itemData.Guid && incoming.IDName == corePlayer.itemData.IDName)
             {
                 ApplyItemStateOnServer(baseline);
                 float previousStamina = ReadServerRollStamina();

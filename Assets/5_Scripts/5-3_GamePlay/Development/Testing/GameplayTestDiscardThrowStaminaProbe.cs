@@ -60,7 +60,7 @@ public static class GameplayTestDiscardThrowStaminaProbe
 
     #region 隔离投掷事务与失败回退采样
 
-    private static JObject CaptureDiscardThrowStaminaTransaction(Player player, JObject args)
+    private static JObject CaptureDiscardThrowStaminaTransaction(Item player, JObject args)
     {
         using var world = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
         var root = new GameObject("[LuaDiscardThrowStamina]");

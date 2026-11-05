@@ -1,4 +1,4 @@
-﻿// AI-Context: FlatWorld Mirror 会话与场景生命周期总控；只在服务器创建权威对象并分配玩家身份。
+// AI-Context: FlatWorld Mirror 会话与场景生命周期总控；只在服务器创建权威对象并分配玩家身份。
 
 using System;
 using System.Collections;
@@ -20,6 +20,8 @@ namespace FlatWorld.Networking.Gameplay
     /// </summary>
     public sealed class FlatWorldGameNetworkManager : FlatWorldNetworkManager
     {
+        private readonly Dictionary<int, string> pendingDisplayNames = new();
+        private string localProfileId;
         private readonly Dictionary<int, string> pendingPlayerNames = new Dictionary<int, string>();
         private readonly Dictionary<int, NetworkProtocolHello> clientProtocolHellos = new Dictionary<int, NetworkProtocolHello>();
         private readonly HashSet<int> pendingPlayerSpawns = new HashSet<int>();
@@ -86,6 +88,16 @@ namespace FlatWorld.Networking.Gameplay
         public void PrepareLocalPlayer(string playerName)
         {
             localPlayerName = SanitizePlayerName(playerName);
+            localProfileId = ActorProfileRegistry.GetProfileId(ItemMgr.Instance?.LocalControlledActor);
+            if (string.IsNullOrEmpty(localProfileId))
+            {
+                localProfileId = PlayerPrefs.GetString("FlatWorld.Network.ProfileId", "");
+                if (string.IsNullOrEmpty(localProfileId))
+                {
+                    localProfileId = Guid.NewGuid().ToString("N");
+                    PlayerPrefs.SetString("FlatWorld.Network.ProfileId", localProfileId);
+                }
+            }
         }
 
         #region 复用当前世界的局域网会话
@@ -94,7 +106,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             SaveDataMgr saveManager = SaveDataMgr.Instance;
             GameManager gameManager = GameManager.Instance;
-            Player localPlayer = ItemMgr.Instance?.User_Player;
+            Item localPlayer = ItemMgr.Instance?.LocalControlledActor;
             if (gameManager == null || !gameManager.IsInGameWorld || !gameManager.IsGameplayReady ||
                 saveManager?.SaveData == null || localPlayer == null || !localPlayer.IsInitialized ||
                 DayTimeSystem.GetInstance() == null)
@@ -105,7 +117,7 @@ namespace FlatWorld.Networking.Gameplay
                 throw new InvalidOperationException("当前世界数据尚未就绪，无法公开到局域网。");
 
             // 公开会话只接管现有角色身份，不再创建第二份世界或改写生成参数。
-            localPlayerName = localPlayer.ProfileName;
+            localProfileId = localPlayerName = ActorProfileRegistry.GetProfileId(localPlayer);
 
             // 快照和生成设置哈希必须使用同一份已冻结的生态配置。
             ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
@@ -151,7 +163,7 @@ namespace FlatWorld.Networking.Gameplay
                 ModSetHash = modRuntime?.ModSetHash ?? string.Empty,
                 ModSummary = modRuntime?.GetNetworkSummary() ?? string.Empty
             });
-            NetworkClient.Send(new NetworkJoinRequest { PlayerName = localPlayerName });
+            NetworkClient.Send(new NetworkJoinRequest { ProfileId = localProfileId, PlayerName = localPlayerName });
             SetGameplayStatus("已连接，正在同步世界数据");
         }
 
@@ -185,9 +197,9 @@ namespace FlatWorld.Networking.Gameplay
                     SpaceSession space = SpaceSession.EnsureLoaded();
                     bool spaceSpawn = space.TryGetNetworkObserver(playerName, out SpaceNetworkObserver observer) && observer.InSpace;
                     Vector3 spawnPosition = spaceSpawn ? (Vector3)space.ProjectPosition(observer.Position) : default;
-                    Player localPlayer = ItemMgr.Instance?.User_Player;
+                    Item localPlayer = ItemMgr.Instance?.LocalControlledActor;
                     bool reuseLocalPlayer = connection is LocalConnectionToClient && localPlayer != null &&
-                        localPlayer.ProfileName == playerName;
+                        ActorProfileRegistry.GetProfileId(localPlayer) == playerName;
                     if (reuseLocalPlayer && !spaceSpawn)
                         spawnPosition = WorldTopologyRuntime.NormalizePosition(
                             ShipSurfacePresentation.GroundPosition(localPlayer.gameObject, localPlayer.transform.position));
@@ -198,8 +210,8 @@ namespace FlatWorld.Networking.Gameplay
                             string worldKey = ResolveCurrentPlanetName();
                             space.SetNetworkPlayerRealm(playerName, false,
                                 new SpaceSectorPosition(default, SpaceVector2.FromVector2(spawnPosition)), worldKey);
-                            if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player savedPlayer))
-                                savedPlayer.CurrentSceneName = worldKey;
+                            if (SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData savedPlayer))
+                                savedPlayer.GetActorProfileMetadata().WorldKey = worldKey;
                         }
                         GameObject playerObject = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
                         playerObject.name = $"网络玩家_{playerName}";
@@ -208,10 +220,11 @@ namespace FlatWorld.Networking.Gameplay
                         if (player == null)
                             throw new MissingComponentException("联机玩家预制体缺少 NetworkWorldPlayer");
 
-                        player.InitializeOnServer(playerName, playerIndex);
+                        player.InitializeOnServer(playerName, playerIndex, pendingDisplayNames.TryGetValue(connectionId, out string label) ? label :
+                            SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out var data) ? data.GetActorProfileMetadata().DisplayName : localPlayerName);
                         NetworkServer.AddPlayerForConnection(connection, playerObject);
-                        if (!spaceSpawn && player.CorePlayer?.Data != null)
-                            player.CorePlayer.Data.CurrentSceneName = ResolveCurrentPlanetName();
+                        if (!spaceSpawn && player.CorePlayer?.itemData!= null)
+                            player.CorePlayer.itemData.GetActorProfileMetadata().WorldKey = ResolveCurrentPlanetName();
                         SetGameplayStatus(spaceSpawn ? "玩家已进入：{0}（太空恢复 {1}）" : "玩家已进入：{0}（陆地出生 {1}）", playerName, spawnPosition);
                         yield break;
                     }
@@ -369,7 +382,10 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
 
-            string playerName = MakeUniquePlayerName(SanitizePlayerName(request.PlayerName), connection.connectionId);
+            string requestedProfileId = string.IsNullOrWhiteSpace(request.ProfileId) ? Guid.NewGuid().ToString("N") : request.ProfileId.Trim();
+            string playerName = MakeUniquePlayerName(requestedProfileId, connection.connectionId);
+            pendingDisplayNames[connection.connectionId] = SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out var savedActor)
+                ? savedActor.GetActorProfileMetadata().DisplayName : SanitizePlayerName(request.PlayerName);
 
             ItemMgr.Instance.SavePlayer();
             SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.GetInstance().GetSaveData();
@@ -864,10 +880,10 @@ namespace FlatWorld.Networking.Gameplay
             var used = new HashSet<string>(pendingPlayerNames.Values, StringComparer.Ordinal);
             // 远端不能占用现有角色档案；本地主机仍可接管自己的离线角色。
             if (ItemMgr.Instance != null)
-                foreach (var entry in ItemMgr.Instance.Player_DIC)
-                    if (entry.Value != null && (connectionId != 0 || !entry.Value.IsLocalProfile)) used.Add(entry.Key);
+                foreach (var entry in ItemMgr.Instance.ProfileActors)
+                    if (entry.Value != null && (connectionId != 0 || !ActorProfileRegistry.IsLocallyControlled(entry.Value))) used.Add(entry.Key);
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
-                if (connection?.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player) used.Add(player.DisplayName);
+                if (connection?.identity?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player) used.Add(player.ProfileId);
             string candidate = requestedName;
             int suffix = 0;
             while (used.Contains(candidate)) candidate = $"{requestedName}_{connectionId}_{++suffix}";
@@ -883,8 +899,8 @@ namespace FlatWorld.Networking.Gameplay
             if (GameManager.Instance == null || ChunkMgr.Instance == null)
                 return false;
 
-            if (SaveDataMgr.Instance?.SaveData?.PlayerData_Dict != null &&
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData) &&
+            if (SaveDataMgr.Instance?.SaveData?.ProfileActorData != null &&
+                SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData playerData) &&
                 playerData?.transform != null)
             {
                 Vector3 savedPosition = playerData.transform.position;

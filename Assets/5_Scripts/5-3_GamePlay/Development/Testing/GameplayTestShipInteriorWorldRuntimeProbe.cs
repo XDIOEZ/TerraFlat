@@ -24,7 +24,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     private static void Register() => GameplayTestRuntimeProbe.RegisterAsync(
         "space", "ship_interior_world", CaptureShipInteriorWorld);
 
-    private static IEnumerator CaptureShipInteriorWorld(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureShipInteriorWorld(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         if (FlatWorld.Networking.GameNetwork.IsOnline || !FlatWorld.Networking.GameNetwork.HasStateAuthority ||
@@ -439,7 +439,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         completed(result);
     }
 
-    private static JObject CaptureShipInteriorSortingDomainSampling(SpaceSession session, Player player,
+    private static JObject CaptureShipInteriorSortingDomainSampling(SpaceSession session, Item player,
         ShipState firstShip, ShipInteriorWorldRuntime firstWorld, ShipInteriorWorldRuntime secondWorld,
         Item ordinaryItem, MachineFixture machines, MachineEntity mechanicalShaft,
         out WorldPresentationSortingDomain firstDomain, out WorldPresentationSortingDomain secondDomain,
@@ -918,7 +918,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     }
 
     // 正式伤害窗口扫描和显式碰撞都走同一真实武器结算。
-    private static JObject ApplyOrdinaryShipBuildingWeaponHit(Player attacker, Item target, ShipInteriorWorldRuntime world,
+    private static JObject ApplyOrdinaryShipBuildingWeaponHit(Item attacker, Item target, ShipInteriorWorldRuntime world,
         SpaceSession session, string targetPieceId, MachineEntity dataTarget = null)
     {
         Item weapon = null;
@@ -980,7 +980,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
 
     // 用真实地层、ECS 作物和液体记录验证事务的回滚与反向清理。
     private static JObject TransferShipTerrainPayload(ShipInteriorWorldRuntime sourceWorld,
-        ShipInteriorWorldRuntime destinationWorld, Player actor)
+        ShipInteriorWorldRuntime destinationWorld, Item actor)
     {
         Vector2 cellCenter = new(1.5f, .5f);
         if (!GameRes.ExistingInstance.TryGetTileDefinition("Tile_Farmland", out RuntimeTileDefinition soil) ||
@@ -1131,7 +1131,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     private static int StoredLiquidLevel(RuntimeTerrainTileSample sample)
         => sample.Terrain.GetLiquidLevel(sample.LocalCell.x, sample.LocalCell.y);
 
-    private static bool RollbackTransferredCrop(ShipInteriorWorldRuntime world, Player actor,
+    private static bool RollbackTransferredCrop(ShipInteriorWorldRuntime world, Item actor,
         string cropId, int cropGuid, Vector2 cellCenter)
     {
         using var scope = GameplayWorldRegistry.UseWorld(world.WorldKey);
@@ -1178,7 +1178,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
     }
 
     private static JObject PlaceAndRemoveOrdinaryShipWall(ShipInteriorFixture fixture, ShipState ship,
-        ShipInteriorWorldRuntime world, Player actor)
+        ShipInteriorWorldRuntime world, Item actor)
     {
         ItemData source = GameRes.ExistingInstance.CreateItemData("Wall_Iron_Summoner");
         source.Stack.Amount = 1f;
@@ -1377,7 +1377,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         throw new InvalidOperationException("结构拆分采样缺少目标地板：" + x);
     }
 
-    private static Vector2 OffsetFromPlayer(Player player, SpaceSession session, float distance)
+    private static Vector2 OffsetFromPlayer(Item player, SpaceSession session, float distance)
     {
         Vector2 candidate = (Vector2)player.transform.position + Vector2.right * distance;
         return session.IsSpaceView ? candidate : WorldLocalPresentation.ProjectPosition(
@@ -1420,7 +1420,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
             default, out GridInteractionHit hit) && hit.Layer == node.Definition.VisualLayer;
     }
 
-    private static bool RegisteredPlayerChildrenUseWorld(Player player, string worldKey)
+    private static bool RegisteredPlayerChildrenUseWorld(Item player, string worldKey)
     {
         foreach (Item child in player.GetComponentsInChildren<Item>(true))
         {
@@ -1431,7 +1431,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         return true;
     }
 
-    private static bool CameraFollowsProjection(Player player, Vector2 displayPosition)
+    private static bool CameraFollowsProjection(Item player, Vector2 displayPosition)
     {
         Mod_Cam camera = player.itemMods?.GetMod_ByID<Mod_Cam>(ModText.Camera);
         Transform follow = camera?.Vcam != null ? camera.Vcam.Follow : null;
@@ -1493,23 +1493,23 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
         private readonly HashSet<int> originalLooseGuids = new();
 
         public readonly SpaceSession Session;
-        public readonly Player Player;
+        public readonly Item Player;
         public SpacePassengerState Passenger;
         public readonly List<string> PieceIds = new();
         public readonly List<GameObject> PhysicsObjects = new();
         public readonly Dictionary<string, MachineFixture> MachineSnapshots = new(StringComparer.Ordinal);
 
-        public ShipInteriorFixture(SpaceSession session, Player player)
+        public ShipInteriorFixture(SpaceSession session, Item player)
         {
             Session = session; Player = player;
             originalWorldKey = GameplayWorldRegistry.GetItemWorldKey(player);
             originalScene = player.gameObject.scene;
             originalPosition = player.transform.position;
             originalRotation = player.transform.rotation;
-            originalSceneName = player.Data?.CurrentSceneName;
+            originalSceneName = player.itemData?.GetActorProfileMetadata().WorldKey;
             originalDataPosition = player.itemData?.transform != null ? player.itemData.transform.position : originalPosition;
             originalDataRotation = player.itemData?.transform != null ? player.itemData.transform.rotation : originalRotation;
-            SpacePassengerState previous = session.State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState previous = session.State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
             hadPassenger = previous != null;
             originalPassengerJson = previous != null ? JsonConvert.SerializeObject(previous) : null;
             body = player.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.rb;
@@ -1572,7 +1572,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 Player.itemData.transform.position = originalDataPosition;
                 Player.itemData.transform.rotation = originalDataRotation;
             }
-            if (Player.Data != null) Player.Data.CurrentSceneName = originalSceneName;
+            if (Player.itemData != null) Player.itemData.GetActorProfileMetadata().WorldKey = originalSceneName;
             if (body != null)
             {
                 body.bodyType = originalBodyType;
@@ -1583,7 +1583,7 @@ public static class GameplayTestShipInteriorWorldRuntimeProbe
                 body.velocity = originalBodyVelocity;
                 body.angularVelocity = originalAngularVelocity;
             }
-            Session.State.Passengers.RemoveAll(value => value.ProfileId == Player.ProfileName);
+            Session.State.Passengers.RemoveAll(value => value.ProfileId == ActorProfileRegistry.GetProfileId(Player));
             if (hadPassenger && originalPassengerJson != null)
                 Session.State.Passengers.Add(JsonConvert.DeserializeObject<SpacePassengerState>(originalPassengerJson));
         }

@@ -190,7 +190,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         // 玩家随身制作界面跨场景保留，世界工作台界面随所在场景销毁。
         UIManager uiManager = UIManager.Instance;
-        BasePanel createdPanel = item is Player
+        BasePanel createdPanel = ActorIdentity.IsPlayer(item as Item)
             ? uiManager.CreatePersistentPanelFromGameObject(InventoryPanel_Prefab)
             : uiManager.CreatePanelFromGameObject(InventoryPanel_Prefab);
         basePanel = createdPanel.GetComponentInChildren<BasePanel>();
@@ -448,9 +448,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     #region 合成日志
 
-    private Player ResolveCraftActor()
+    private Item ResolveCraftActor()
     {
-        return item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
+        return ActorProfileRegistry.GetProfileActorOrNull(item as Item) ?? ActorProfileRegistry.GetProfileActorOrNull(item?.Owner as Item) ?? item?.GetComponentInParent<Item>();
     }
 
     private void LogCraftDebug(string message)
@@ -469,7 +469,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private void BindCarryWeightEvents()
     {
         UnbindCarryWeightEvents();
-        if (item is not Player player)
+        if (!(item is Item player && ActorIdentity.IsPlayer(player)))
             return;
 
         _carryInputData = inputInventory.Data;
@@ -492,7 +492,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void HandleCarryWeightChanged(Inventory_Data _)
     {
-        if (item is Player player)
+        if ((item is Item player && ActorIdentity.IsPlayer(player)))
             PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 

@@ -56,4 +56,4 @@ MonoBehaviour:
   CameraFollowItem: {fileID: 0}
   Player: {fileID: 0}
   Mod_GameController: {fileID: 0}
-  CamPrefab: {fileID: 0}
+  CamPrefab: {fileID: 5819911811838294429, guid: 42acff50be302dc4d99613be14b0844e, type: 3}

@@ -11,7 +11,7 @@ using FlatWorld.Settings;
 /// 并统一管理面板期间的玩法输入锁和单机暂停。返回主界面与返回桌面共用一个保存退出确认层，
 /// 最终保存与清理仍交给 GameManager 的权威退出流程。
 /// </summary>
-public class Mod_SettingCanvas : Module, IInstanceUI
+public class Mod_SettingCanvas : Module, IActorLocalControlModule, IInstanceUI
 {
     [ReadOnly]
     public BasePanel basePanel;
@@ -77,8 +77,8 @@ public class Mod_SettingCanvas : Module, IInstanceUI
 
         // 先取消导航选点，再退出驾驶，右键始终留给手持物使用。
         FlatWorld.Spaceflight.SpaceSession spaceSession = FlatWorld.Spaceflight.SpaceSession.Current;
-        if (spaceSession?.TryCancelNavigationPicking(item as Player) == true ||
-            spaceSession?.RequestConsoleExit(item as Player) == true)
+        if (spaceSession?.TryCancelNavigationPicking(ActorProfileRegistry.GetProfileActorOrNull(item as Item)) == true ||
+            spaceSession?.RequestConsoleExit(ActorProfileRegistry.GetProfileActorOrNull(item as Item)) == true)
         {
             uiManager.NotifyCancelHandled();
             return true;

@@ -71,9 +71,9 @@ public static class CombatAudioFeedback
         }
         else if (location.InSpace)
         {
-            Player listener = ItemMgr.Instance?.User_Player;
+            Item listener = ItemMgr.Instance?.LocalControlledActor;
             if (session == null || listener == null ||
-                !session.TryGetNetworkObserver(listener.ProfileName, out SpaceNetworkObserver observer) || !observer.InSpace) return;
+                !session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(listener), out SpaceNetworkObserver observer) || !observer.InSpace) return;
             if (!string.IsNullOrEmpty(observer.ShipId) && listenerWorld == "ship:" + observer.ShipId)
             {
                 ShipState ship = session.GetShip(observer.ShipId);

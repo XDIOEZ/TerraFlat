@@ -38,7 +38,7 @@ public static partial class DimensionTravelProgressStore
 
     #region 最后位置
 
-    public static bool TryGetLastPosition(Data_Player playerData, WorldAddress address, out Vector3 position)
+    public static bool TryGetLastPosition(ItemData playerData, WorldAddress address, out Vector3 position)
     {
         position = default;
         if (playerData == null || !address.IsValid)
@@ -47,7 +47,7 @@ public static partial class DimensionTravelProgressStore
         return GetPlayerReadCache(playerData).LastPositions.TryGetValue(address.WorldKey, out position);
     }
 
-    public static void SetLastPosition(Data_Player playerData, WorldAddress address, Vector3 position)
+    public static void SetLastPosition(ItemData playerData, WorldAddress address, Vector3 position)
     {
         if (playerData == null || !address.IsValid || !IsFinite(position.x) || !IsFinite(position.y) || !IsFinite(position.z))
             return;

@@ -163,13 +163,22 @@ public sealed partial class Mod_ColonyResident : Module, IItemModuleDependencyBi
     #endregion
 
     #region 群落状态与节点动作
-    public void TickColonyEnvironmentAndThreats(float deltaTime)
+    public void TickColonyEnvironmentAndThreats(float deltaTime, bool autonomous = true)
     {
         if (!IsRuntimeLoaded || !IsAlive || !GameNetwork.HasStateAuthority ||
             (colony == null && !state.Orphaned)) return;
         float step = Mathf.Max(0f, deltaTime);
         stingRemaining = Mathf.Max(0f, stingRemaining - step);
         forageScanRemaining -= step;
+        if (!autonomous)
+        {
+            targetScanElapsed += step;
+            state.Anger = Mathf.Max(0f, state.Anger - AngerDecayPerSecond * step);
+            lostTargetAngerRemaining = Mathf.Max(0f, lostTargetAngerRemaining - step);
+            if (state.Anger <= 0f) state.Angry = false;
+            DrainSatiety(step);
+            return;
+        }
         if (hiveDefenseTarget == null && !(nightSleepRequested && colony != null && !HasActiveAngryPursuit))
             TickTargetAwareness(step);
         RefreshColonyThreatMemory();

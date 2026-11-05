@@ -33,7 +33,7 @@ public sealed class ElectricLightLogic : MachineLogic
         NotifyChanged(visual: true);
     }
 
-    public override bool Execute(string operation, string argument, Player actor) => operation == "begin-interaction";
+    public override bool Execute(string operation, string argument, Item actor) => operation == "begin-interaction";
     public override void Capture() => MachinePersistence.Write(Entity.Snapshot, "electric-light", state);
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
     {

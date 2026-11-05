@@ -8,15 +8,15 @@ public interface ICarrierMotionDriver
     void ActivateCarrier(Mod_Carrier carrier, Rigidbody2D body);
     void StepCarrierMotion(Mod_Carrier carrier, Vector2 input, bool controlsLocked, float deltaTime);
     void StopCarrierMotion();
-    bool CanInteractWithCarrier(Player player, Mod_Mover mover);
-    void InteractWithCarrier(Player player, Mod_Mover mover);
+    bool CanInteractWithCarrier(Item player, Mod_Mover mover);
+    void InteractWithCarrier(Item player, Mod_Mover mover);
     #endregion
 }
 
 /// <summary>短按交互键仅执行载具自己的辅助操作，上下车由长按统一处理。</summary>
 public interface ICarrierTapInteractionPolicy
 {
-    void InteractWithCarrierOnTap(Player player, Mod_Mover mover);
+    void InteractWithCarrierOnTap(Item player, Mod_Mover mover);
 }
 
 /// <summary>手推等站立操作的载具可自定义操作者站位和行走表现。</summary>

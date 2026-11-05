@@ -26,9 +26,9 @@ using UnityEngine.Serialization;
 public partial class GameManager : SingletonAutoMono<GameManager>
 {
     #region Events
-    public static event Action<Player> Event_PlayerEnterWorld;
+    public static event Action<Item> Event_PlayerEnterWorld;
     /// <summary>F5 仅重建本地玩家运行时外壳时发布；不得当作重新进入世界事件使用。</summary>
-    public static event Action<Player> Event_LocalPlayerRuntimeReloaded;
+    public static event Action<Item> Event_LocalPlayerRuntimeReloaded;
     #endregion
 
     #region 游戏生命周期状态
@@ -261,8 +261,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         FlatWorld.Spaceflight.SpaceSession.EndSession();
         MachineWorld.ReleaseWorld(capture: false);
 
-        // 通过 ItemMgr 正式注销玩家，确保运行时索引、感知空间哈希和 Player_DIC 同步清理。
-        if (playerItem is Player player)
+        // 通过 ItemMgr 正式注销玩家，确保运行时索引、感知空间哈希和 ProfileActors 同步清理。
+        if ((playerItem is Item player && ActorIdentity.IsPlayer(player)))
         {
             ItemMgr.Instance.ReleasePlayerForWorldTransition(player);
             Debug.Log("[ExitGame] 已注销玩家对象");
@@ -681,7 +681,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             saveDataMgr.CurrentContrrolPlayerName = playerName;
 
             // 1. 根据存档立即确定玩家所在的星球名
-            saveDataMgr.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData);
+            saveDataMgr.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData playerData);
             string planetName = onWorldActivated != null
                 ? fallbackPlanetName
                 : ResolveWorldKeyForPlayer(saveDataMgr.SaveData, playerData, fallbackPlanetName);
@@ -730,7 +730,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private string ResolveWorldKeyForPlayer(
         GameSaveData saveData,
-        Data_Player playerData,
+        ItemData playerData,
         string preferredWorldKey)
     {
         if (saveData?.PlanetData_Dict == null)
@@ -739,8 +739,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         string spaceWorld = ResolveSavedSpacePlayerWorld(saveData, playerData);
         if (!string.IsNullOrWhiteSpace(spaceWorld)) return spaceWorld;
 
-        if (!string.IsNullOrWhiteSpace(playerData?.CurrentSceneName))
-            return playerData.CurrentSceneName;
+        if (!string.IsNullOrWhiteSpace(playerData?.GetActorProfileMetadata().WorldKey))
+            return playerData.GetActorProfileMetadata().WorldKey;
 
         if (!string.IsNullOrWhiteSpace(preferredWorldKey) &&
             saveData.PlanetData_Dict.ContainsKey(preferredWorldKey))
@@ -1087,13 +1087,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// <summary>新角色用显示名初始化数据，现有角色恢复仍经过单参数入口。</summary>
     private void LoadPlayer(string playerName, string newPlayerDisplayName)
     {
-        Player player = string.IsNullOrWhiteSpace(newPlayerDisplayName)
+        Item player = string.IsNullOrWhiteSpace(newPlayerDisplayName)
             ? ItemMgr.Instance.LoadPlayer(playerName)
             : ItemMgr.Instance.LoadPlayer(playerName, newPlayerDisplayName);
-        if (player?.Data != null)
+        if (player?.itemData!= null)
         {
-            player.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.ProfileName] = player.Data;
+            player.itemData.GetActorProfileMetadata().WorldKey = SceneManager.GetActiveScene().name;
+            SaveDataMgr.Instance.SaveData.ProfileActorData[ActorProfileRegistry.GetProfileId(player)] = player.itemData;
         }
 
         if (RequiresInitialPlayerPlacement(player))
@@ -1108,7 +1108,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>通知只缓存本地主角运行时引用的系统重新绑定，不触发世界进入语义。</summary>
-    internal static void NotifyLocalPlayerRuntimeReloaded(Player player)
+    internal static void NotifyLocalPlayerRuntimeReloaded(Item player)
     {
         if (player == null || Event_LocalPlayerRuntimeReloaded == null)
             return;
@@ -1117,7 +1117,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         {
             try
             {
-                ((Action<Player>)callback)(player);
+                ((Action<Item>)callback)(player);
             }
             catch (Exception exception)
             {
@@ -1126,16 +1126,16 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
     }
 
-    private static bool RequiresInitialPlayerPlacement(Player player)
+    private static bool RequiresInitialPlayerPlacement(Item player)
     {
         // 世界原点是合法存档坐标，不能再用 Vector3.zero 充当“新玩家”哨兵。
-        return player != null && player.IsNewProfile;
+        return player != null && ActorProfileRegistry.IsNewLocalProfile(player);
     }
 
     /// <summary>
-    /// 联机身份完成核心 Player Item 初始化后，复用单机玩家进入世界事件。
+    /// 联机身份完成档案角色 Item 初始化后，复用单机玩家进入世界事件。
     /// </summary>
-    public void NotifyNetworkLocalPlayerEntered(Player player)
+    public void NotifyNetworkLocalPlayerEntered(Item player)
     {
         if (player == null)
             throw new ArgumentNullException(nameof(player));
@@ -1145,9 +1145,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     #region 玩家陆地出生定位
 
-    private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Player player)
+    private IEnumerator PlaceNewPlayerOnLandThenEnterWorld(Item player)
     {
-        if (player == null || player.Data == null)
+        if (player == null || player.itemData == null)
         {
             FailWorldEntry("新玩家数据无效，无法准备出生区域。");
             yield break;
@@ -1212,10 +1212,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         Vector3 spawnPosition = new Vector3(landPosition.x + 0.5f, landPosition.y + 0.5f, 0f);
         player.transform.position = WorldLocalPresentation.ProjectPosition(spawnPosition);
-        player.Data.transform.position = spawnPosition;
+        player.itemData.transform.position = spawnPosition;
         // 以最终确认的安全陆地坐标写入一次主世界出生点，确保复活不会回到死亡位置。
         PlayerMainWorldSpawnStore.SetMainWorldSpawn(
-            player.Data,
+            player.itemData,
             SceneManager.GetActiveScene().name,
             spawnPosition);
         Debug.Log($"[GameManager] 新玩家出生点已按种子定位到安全陆地：seed={worldSeed}, anchor={seedAnchor}, spawn={spawnPosition}");

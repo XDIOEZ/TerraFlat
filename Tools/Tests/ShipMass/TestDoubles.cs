@@ -75,8 +75,6 @@ public sealed class ItemInstanceSnapshot
 }
 public static class ItemSnapshotSerialization
 { public static byte[] SerializePayload<T>(T data) => MemoryPack.MemoryPackSerializer.Serialize(data); }
-public sealed class Data_Player : ItemData
-{ public Dictionary<string, Inventory_Data> _inventoryData = new(); }
 public sealed class StackData
 {
     public float Amount = 1f;
@@ -138,6 +136,7 @@ public sealed class ItemMods
 public class Module { public bool Enabled = true, IsRuntimeLoaded = true; }
 public sealed class Mod_Inventory : Module
 {
+    public Inventory_ModuleData Data = new();
     public List<Inventory> InventoryInstances = new();
     public Dictionary<string, Inventory> InventoryRefDic = new();
 }

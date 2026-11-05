@@ -170,17 +170,17 @@ namespace FlatWorld.Spaceflight
     public sealed partial class SpaceSession
     {
         #region 乘员整体高度与排序恢复
-        private readonly System.Collections.Generic.HashSet<Player> surfacePassengers = new();
-        private readonly System.Collections.Generic.HashSet<Player> visibleSurfacePassengers = new();
-        private readonly System.Collections.Generic.List<Player> expiredSurfacePassengers = new();
+        private readonly System.Collections.Generic.HashSet<Item> surfacePassengers = new();
+        private readonly System.Collections.Generic.HashSet<Item> visibleSurfacePassengers = new();
+        private readonly System.Collections.Generic.List<Item> expiredSurfacePassengers = new();
 
         private void SynchronizeRemotePassengerSurfaceVisuals()
         {
             visibleSurfacePassengers.Clear();
             foreach (SpacePassengerState passenger in State.Passengers)
             {
-                Player player = FindNetworkPlayer(passenger.ProfileId);
-                if (player == null || player == ItemMgr.Instance?.User_Player) continue;
+                Item player = FindNetworkPlayer(passenger.ProfileId);
+                if (player == null || player == ItemMgr.Instance?.LocalControlledActor) continue;
                 ShipState ship = GetShip(passenger.ShipId);
                 if (passenger.Supported && IsInPresentationWorld(ship))
                     PlacePassenger(player, passenger, ship, true);
@@ -190,13 +190,13 @@ namespace FlatWorld.Spaceflight
                 visibleSurfacePassengers.Add(player);
             }
             expiredSurfacePassengers.Clear();
-            foreach (Player player in surfacePassengers)
-                if (player != ItemMgr.Instance?.User_Player &&
+            foreach (Item player in surfacePassengers)
+                if (player != ItemMgr.Instance?.LocalControlledActor &&
                     (player == null || !visibleSurfacePassengers.Contains(player))) expiredSurfacePassengers.Add(player);
-            foreach (Player player in expiredSurfacePassengers) RestorePassengerSurface(player);
+            foreach (Item player in expiredSurfacePassengers) RestorePassengerSurface(player);
         }
 
-        private void RestorePassengerSurface(Player player)
+        private void RestorePassengerSurface(Item player)
         {
             surfacePassengers.Remove(player);
             ShipSurfacePresentation.ClearPassenger(player != null ? player.gameObject : null);
@@ -207,22 +207,22 @@ namespace FlatWorld.Spaceflight
         private void ReleasePassengerSurfacePresentation()
         {
             expiredSurfacePassengers.Clear(); expiredSurfacePassengers.AddRange(surfacePassengers);
-            foreach (Player player in expiredSurfacePassengers) RestorePassengerSurface(player);
+            foreach (Item player in expiredSurfacePassengers) RestorePassengerSurface(player);
             visibleSurfacePassengers.Clear(); expiredSurfacePassengers.Clear();
-            ShipSurfacePresentation.SetElevated(ItemMgr.Instance?.User_Player?.gameObject, false, ShipSurfacePresentation.PassengerCategory);
+            ShipSurfacePresentation.SetElevated(ItemMgr.Instance?.LocalControlledActor?.gameObject, false, ShipSurfacePresentation.PassengerCategory);
         }
 
         private bool IsPassengerSurfaceDescendingHere(SpacePassengerState passenger) => passenger.SurfaceDescending && !IsSpaceView &&
             passenger.LandingWorldKey == UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
-        private void PlaceDescendingPassenger(Player player, SpacePassengerState passenger)
+        private void PlaceDescendingPassenger(Item player, SpacePassengerState passenger)
         {
             Vector2 ground = WorldLocalPresentation.ProjectPosition(new Vector2((float)passenger.LandingX, (float)passenger.LandingY));
             SetPassengerSurfacePose(player, ground, ground,
                 (float)ShipLandingGuidance.SurfaceVisualRise(passenger.SurfaceHeight), passenger.SurfaceHeight > 0d);
         }
 
-        private void SetPassengerSurfacePose(Player player, Vector2 position, Vector2 authoritativePosition, float rise,
+        private void SetPassengerSurfacePose(Item player, Vector2 position, Vector2 authoritativePosition, float rise,
             bool elevated, bool inSortingDomain = false)
         {
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);

@@ -15,7 +15,7 @@ namespace FlatWorld.Networking.Gameplay
             if (!isServer || authoritativeWorldTransferPending || HasServerPickupTransaction || authoritativeGroundCombatPending ||
                 coreRoll?.IsRolling == true || pendingRollRequestId != 0 || pendingTeleportRequest != 0) return false;
             authoritativeWorldTransferPending = true;
-            SpaceSessionForNetwork?.RemoveNetworkPassengerInput(displayName);
+            SpaceSessionForNetwork?.RemoveNetworkPassengerInput(profileId);
             return true;
         }
         public void FinishWorldTransfer(bool accepted)

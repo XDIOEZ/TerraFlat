@@ -8,7 +8,7 @@ using UnityEngine;
 public interface IWorldNavigationFlowSource
 {
     /// <summary>取得本后端当前玩家的共享流场及目标句柄；不存在有效目标时返回 false。</summary>
-    bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal);
+    bool TryGetPlayerFlow(Item player, out FlowNavigationCache cache, out FlowGoalHandle goal);
 }
 
 /// <summary>
@@ -30,7 +30,7 @@ public static class WorldNavigationFlowRegistry
     public static void Unregister(IWorldNavigationFlowSource source) => Sources.Remove(source);
 
     /// <summary>按本地玩家身份取得实际目标，不创建网格、加载区块或修改导航。</summary>
-    public static bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal)
+    public static bool TryGetPlayerFlow(Item player, out FlowNavigationCache cache, out FlowGoalHandle goal)
     {
         cache = null;
         goal = default;

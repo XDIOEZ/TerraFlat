@@ -43,7 +43,7 @@ namespace FlatWorld.Gameplay.Progress
 
         #region 命名空间
 
-        public static JObject ReadNamespace(Data_Player playerData, string namespaceKey)
+        public static JObject ReadNamespace(ItemData playerData, string namespaceKey)
         {
             ValidateNamespaceKey(namespaceKey);
             if (playerData == null)
@@ -55,7 +55,7 @@ namespace FlatWorld.Gameplay.Progress
                 : new JObject();
         }
 
-        public static void WriteNamespace(Data_Player playerData, string namespaceKey, JObject namespaceData)
+        public static void WriteNamespace(ItemData playerData, string namespaceKey, JObject namespaceData)
         {
             if (playerData == null)
                 throw new ArgumentNullException(nameof(playerData));

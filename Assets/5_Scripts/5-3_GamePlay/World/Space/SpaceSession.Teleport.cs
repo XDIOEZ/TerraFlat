@@ -10,13 +10,13 @@ namespace FlatWorld.Spaceflight
         #region 玩家太空传送事务
 
         // 传送只接收宇宙运动状态，目标选择规则交给调用方。
-        public bool TryTeleportPlayerToSpace(Player player, SpaceMotionState motion, Action<bool> completed = null)
+        public bool TryTeleportPlayerToSpace(Item player, SpaceMotionState motion, Action<bool> completed = null)
         {
             if (State == null || Universe == null || transitionRunning || GameNetwork.IsOnline ||
                 !GameNetwork.HasStateAuthority || GameManager.Instance?.IsGameplayReady != true ||
-                DimensionManager.Instance.IsTransitioning || player == null || !player.IsLocalProfile ||
-                player != ItemMgr.Instance?.User_Player || player.Data == null ||
-                string.IsNullOrWhiteSpace(player.ProfileName) || motion == null ||
+                DimensionManager.Instance.IsTransitioning || player == null || !ActorProfileRegistry.IsLocallyControlled(player) ||
+                player != ItemMgr.Instance?.LocalControlledActor || player.itemData == null ||
+                string.IsNullOrWhiteSpace(ActorProfileRegistry.GetProfileId(player)) || motion == null ||
                 !motion.PositionMeters.IsFinite || !motion.VelocityMetersPerSecond.IsFinite ||
                 !SpaceVector2.Finite(motion.RadiusMeters) || motion.RadiusMeters < 0d)
                 return false;
@@ -34,7 +34,7 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        private IEnumerator TeleportPlayerToSpace(Player player, SpaceMotionState motion, Action<bool> completed)
+        private IEnumerator TeleportPlayerToSpace(Item player, SpaceMotionState motion, Action<bool> completed)
         {
             SpaceSessionState sessionState = State;
             SpacePassengerState previous = GetPassenger(player);
@@ -72,15 +72,15 @@ namespace FlatWorld.Spaceflight
                     while (DimensionManager.Instance.IsTransitioning) yield return null;
                 }
 
-                Player currentPlayer = ItemMgr.Instance?.User_Player;
+                Item currentPlayer = ItemMgr.Instance?.LocalControlledActor;
                 if (State != sessionState || !IsSpaceView || currentPlayer == null ||
-                    currentPlayer.ProfileName != target.ProfileId || GameManager.Instance?.IsInGameWorld != true ||
+                    ActorProfileRegistry.GetProfileId(currentPlayer) != target.ProfileId || GameManager.Instance?.IsInGameWorld != true ||
                     GameManager.Instance.IsWorldEntryInProgress)
                     yield break;
 
                 RestorePassengerPose(currentPlayer);
-                currentPlayer.Data.transform.position = currentPlayer.transform.position;
-                currentPlayer.Data.transform.rotation = currentPlayer.transform.rotation;
+                currentPlayer.itemData.transform.position = currentPlayer.transform.position;
+                currentPlayer.itemData.transform.rotation = currentPlayer.transform.rotation;
                 Mod_Mover mover = currentPlayer.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
                 if (mover?.rb != null) { mover.rb.velocity = Vector2.zero; mover.rb.angularVelocity = 0f; }
                 ItemMgr.Instance.NotifyRuntimeItemMoved(currentPlayer);
@@ -97,8 +97,8 @@ namespace FlatWorld.Spaceflight
                         SaveDataMgr saveManager = SaveDataMgr.Instance;
                         if (migrationStarted && ReferenceEquals(saveManager?.SaveData, owner))
                             saveManager.Save_And_WriteToDisk();
-                        Player restored = ItemMgr.Instance?.User_Player;
-                        if (restored != null && restored.ProfileName == previous.ProfileId)
+                        Item restored = ItemMgr.Instance?.LocalControlledActor;
+                        if (restored != null && ActorProfileRegistry.GetProfileId(restored) == previous.ProfileId)
                         {
                             RestorePassengerPose(restored);
                             SetTerrainSuppression(restored, previous.Supported);

@@ -21,7 +21,7 @@ public static class GameplayTestCombatHealthPanelRuntimeProbe
 
     #region 世界血条实例与延时采样
 
-    private static IEnumerator CaptureLifecycle(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureLifecycle(Item player, JObject args, Action<JObject> completed)
     {
         Item actor = null;
         var result = new JObject();

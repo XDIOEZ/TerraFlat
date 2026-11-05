@@ -110,8 +110,8 @@ namespace FlatWorld.Spaceflight
                 completed?.Invoke(success, reason);
                 return;
             }
-            Player player = ItemMgr.Instance?.User_Player;
-            if (player == null || !SpaceNetworkBridge.SendIntent(player.ProfileName,
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            if (player == null || !SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(player),
                 new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.ToggleIgnition, PieceId = consoleId }, completed))
                 completed?.Invoke(false, FlatWorldLocalizationService.GetUiText("联机连接尚未就绪，请稍后重试。"));
         }
@@ -233,7 +233,7 @@ namespace FlatWorld.Spaceflight
             }
             if (ShipLandingGuidance.CanCompleteTakeoff(flight.VerticalSpeed, flight.SurfaceStageElapsedSeconds, settings))
             {
-                if (PlayerInAssembly(assembly)) GameManager.Instance.PrepareShipTakeoffPresentation(this, ItemMgr.Instance?.User_Player);
+                if (PlayerInAssembly(assembly)) GameManager.Instance.PrepareShipTakeoffPresentation(this, ItemMgr.Instance?.LocalControlledActor);
                 SpaceMotionState lifted = ShipLandingGuidance.CreateParkedSpaceEntry(GetUniverse(body.Sector), body,
                     flight.SurfaceAngle, AssemblyRadius(assembly), settings);
                 assembly.Sector = body.Sector;
@@ -280,7 +280,7 @@ namespace FlatWorld.Spaceflight
         }
         private bool PlayerInAssembly(ShipAssemblyState assembly)
         {
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             return player != null && assembly.MemberShipIds.Contains(GetPassenger(player).ShipId);
         }
         #endregion
@@ -296,7 +296,7 @@ namespace FlatWorld.Spaceflight
         }
         private bool ResumePendingPassengerTransfer()
         {
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (player == null) return false;
             if (IsPlayerInShipInteriorWorld(player)) return false;
             SpacePassengerState passenger = GetPassenger(player);
@@ -373,15 +373,15 @@ namespace FlatWorld.Spaceflight
                 ApplyTerrainImpact(GetShip(assembly.MemberShipIds[0]), impactSpeed, assembly.MassKg, point.ToVector2(), impactRadius);
             if (carryingPlayer && damage > absorber)
             {
-                Player player = ItemMgr.Instance?.User_Player;
+                Item player = ItemMgr.Instance?.LocalControlledActor;
                 double playerMass = Math.Max(1d, player?.itemData?.Stack?.CurrentWeight ?? 70f);
                 double remaining = playerMass * stoppingAcceleration / Math.Max(1d, settings.ImpactForcePerDurability) * (1d - absorber / damage);
                 float playerDamage = SpacesuitSystem.AbsorbLandingImpact(player, (float)remaining);
                 if (playerDamage > 0f) player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.ApplyStructuralDamage(playerDamage);
             }
             ProcessStructureChanges();
-            if (carryingPlayer) EndDescentControl(ItemMgr.Instance?.User_Player);
-            if (carryingPlayer && !applyImpact) ExitConsole(ItemMgr.Instance?.User_Player);
+            if (carryingPlayer) EndDescentControl(ItemMgr.Instance?.LocalControlledActor);
+            if (carryingPlayer && !applyImpact) ExitConsole(ItemMgr.Instance?.LocalControlledActor);
             if (carryingPlayer && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, point.ToVector2()));
             return true;
         }
@@ -424,20 +424,20 @@ namespace FlatWorld.Spaceflight
             }
             BeginGroundPreparation(assembly, world);
             // 有动力也保留完整下降阶段，期间燃料或供电中断会转为真实坠落。
-            if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.User_Player);
+            if (carrying) ShipPanelSession.CloseForPlayer(this, ItemMgr.Instance?.LocalControlledActor);
             if (carrying && IsSpaceView) StartCoroutine(TransferPlayerToSurface(world, center.ToVector2()));
         }
         private IEnumerator TransferPlayerToSpace()
         {
             if (GameNetwork.IsOnline)
             {
-                Player actor = ItemMgr.Instance?.User_Player;
-                if (actor != null && TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer))
+                Item actor = ItemMgr.Instance?.LocalControlledActor;
+                if (actor != null && TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver observer))
                     GameManager.Instance.ApplyNetworkLocalSpaceObserver(actor, observer);
                 yield break;
             }
             if (transitionRunning) yield break;
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (player == null) yield break;
             transitionRunning = true;
             SpacePassengerState passenger = GetPassenger(player);
@@ -447,7 +447,7 @@ namespace FlatWorld.Spaceflight
             while (began && DimensionManager.Instance.IsTransitioning) yield return null;
             if (IsSpaceView)
             {
-                Player currentPlayer = ItemMgr.Instance?.User_Player;
+                Item currentPlayer = ItemMgr.Instance?.LocalControlledActor;
                 RestorePassengerPose(currentPlayer);
                 if (currentPlayer != null && passenger.Supported && GetConnectedAssembly(passenger.ShipId) is ShipAssemblyState assembly)
                 {
@@ -466,19 +466,19 @@ namespace FlatWorld.Spaceflight
         {
             if (GameNetwork.IsOnline)
             {
-                TryBeginNetworkSurfaceTransfer(ItemMgr.Instance?.User_Player, world, position);
+                TryBeginNetworkSurfaceTransfer(ItemMgr.Instance?.LocalControlledActor, world, position);
                 yield break;
             }
             if (transitionRunning) yield break;
             transitionRunning = true;
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (player == null) { transitionRunning = false; yield break; }
             SpacePassengerState passenger = GetPassenger(player);
             passenger.IsInSpace = false;
             SuspendViews();
             bool began = DimensionManager.Instance.TryBeginPlanetLanding(player, WorldAddress.FromWorldKey(world), position);
             while (began && DimensionManager.Instance.IsTransitioning) yield return null;
-            if (began && SceneManager.GetActiveScene().name == world) RestorePassengerPose(ItemMgr.Instance?.User_Player);
+            if (began && SceneManager.GetActiveScene().name == world) RestorePassengerPose(ItemMgr.Instance?.LocalControlledActor);
             else if (IsSpaceView) passenger.IsInSpace = true;
             transitionRunning = false;
         }

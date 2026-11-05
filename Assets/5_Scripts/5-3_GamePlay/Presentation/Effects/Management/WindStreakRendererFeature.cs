@@ -13,7 +13,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
     private readonly WindStreakObstacleField obstacleField = new();
     private Material material;
     private WindPass pass;
-    private Player localPlayer;
+    private Item localPlayer;
     private Mod_Cam cameraModule;
     private Camera sourceCamera;
     private int worldSceneHandle;
@@ -58,7 +58,7 @@ public sealed class WindStreakRendererFeature : ScriptableRendererFeature
         if (cameraData.cameraType != CameraType.Game)
             return;
 
-        Player player = ItemMgr.GetExistingInstance()?.User_Player;
+        Item player = ItemMgr.GetExistingInstance()?.LocalControlledActor;
         WeatherMgr weather = player != null ? WeatherMgr.GetForWorld(player.gameObject.scene.name, false) : null;
         if (!WeatherScreenRenderingContext.IsLocalPlayer(player) ||
             weather == null || !weather.isActiveAndEnabled || !weather.IsLocalWeatherWorld)

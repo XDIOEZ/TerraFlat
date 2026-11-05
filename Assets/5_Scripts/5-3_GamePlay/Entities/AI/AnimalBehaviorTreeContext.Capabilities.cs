@@ -8,6 +8,7 @@ using UnityEngine;
 /// <summary>能力维护自己的事实和计时，动作选择只由行为树负责。</summary>
 public abstract class AnimalBehaviorTreeCapability : IDisposable
 {
+    public virtual void TickWhileManuallyControlled(float deltaTime) => Tick(deltaTime);
     public virtual void Tick(float deltaTime) { }
     public virtual JObject CaptureSaveData() => new();
     public virtual void Dispose() { }

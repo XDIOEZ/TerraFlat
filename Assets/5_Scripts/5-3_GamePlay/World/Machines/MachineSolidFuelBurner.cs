@@ -9,7 +9,7 @@ public sealed class MachineSolidFuelBurner
     private readonly MachineEntity entity;
     private readonly Inventory inventory;
     private readonly float absorptionSeconds;
-    private Player ignitionActor;
+    private Item ignitionActor;
     public FurnaceRuntimeState State { get; private set; }
     public FuelData Fuel => State.Fuel;
     public bool IsBurning => !MachineWorld.GetFluidState(entity).Ruptured &&
@@ -53,7 +53,7 @@ public sealed class MachineSolidFuelBurner
         return false;
     }
 
-    public bool Toggle(Player actor)
+    public bool Toggle(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || MachineWorld.GetFluidState(entity).Ruptured) return false;
         if (IsIgnited) { Extinguish(); return true; }

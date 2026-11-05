@@ -223,7 +223,7 @@ namespace FlatWorld.Spaceflight
             members.SeenItems.Clear();
             foreach (Item item in interiorWorldItems)
             {
-                if (item == null || item.itemData == null || item is Player ||
+                if (item == null || item.itemData == null || ActorIdentity.IsPlayer(item as Item) ||
                     manager == null || !manager.IsRuntimeItemRegistered(item)) continue;
                 members.SeenItems.Add(item);
                 if (interiorItemOwners.TryGetValue(item, out ShipInteriorPresentationMembers previous) && previous != members)
@@ -398,7 +398,7 @@ namespace FlatWorld.Spaceflight
             expiredInteriorPassengers.Clear();
             foreach (var pair in passengerProjections)
                 if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorPassengers.Add(pair.Key);
-            foreach (Player player in expiredInteriorPassengers) ReleasePassengerInteriorProjection(player);
+            foreach (Item player in expiredInteriorPassengers) ReleasePassengerInteriorProjection(player);
             expiredInteriorEngines.Clear();
             foreach (var pair in interiorEngineExhausts)
                 if (pair.Value != null && root != null && pair.Value.transform.IsChildOf(root)) expiredInteriorEngines.Add(pair.Key);
@@ -466,7 +466,7 @@ namespace FlatWorld.Spaceflight
             RemoveExpiredShipColliderPresenters();
             RemoveExpiredSurfaceShadows();
             SynchronizeRemotePassengerSurfaceVisuals();
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (player == null)
             {
                 EndShipInteriorPresentation();

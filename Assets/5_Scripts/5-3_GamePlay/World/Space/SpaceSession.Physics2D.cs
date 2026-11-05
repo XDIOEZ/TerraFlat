@@ -48,9 +48,9 @@ namespace FlatWorld.Spaceflight
                 body.Position = new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters);
                 body.Velocity = passenger.FreeMotion.VelocityMetersPerSecond;
                 body.AngleRadians = body.AngularVelocityRadians = 0d;
-                Player player = FindNetworkPlayer(passenger.ProfileId);
-                Data_Player data = player?.Data;
-                if (data == null) owner.PlayerData_Dict.TryGetValue(passenger.ProfileId, out data);
+                Item player = FindNetworkPlayer(passenger.ProfileId);
+                ItemData data = player?.itemData;
+                if (data == null) owner.ProfileActorData.TryGetValue(passenger.ProfileId, out data);
                 contactMassReader.Reset();
                 body.MassKg = Math.Max(.001d, data == null ? 70d : contactMassReader.ReadItem(data, player, 0));
                 ConfigureSpaceCircle(body, Math.Max(.01d, passenger.FreeMotion.RadiusMeters), true);
@@ -128,7 +128,7 @@ namespace FlatWorld.Spaceflight
                 foreach (SpacePassengerState passenger in State.Passengers)
                 {
                     if (!passenger.Supported || passenger.ShipId != id) continue;
-                    Player player = FindNetworkPlayer(passenger.ProfileId);
+                    Item player = FindNetworkPlayer(passenger.ProfileId);
                     if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(id)) continue;
                     // 支撑乘员的质量已计入整船，碰撞圆也归同一个原生刚体，避免重复计重。
                     body.Shapes.Add(new SpacePhysicsShape(SpacePhysicsShipOffset(ship, passenger.LocalX, passenger.LocalY, assembly, member),

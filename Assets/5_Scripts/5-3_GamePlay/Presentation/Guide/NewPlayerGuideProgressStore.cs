@@ -10,13 +10,13 @@ namespace FlatWorld.Guide
 
         public const string TutorialNamespace = "flatworld.tutorial";
 
-        public static bool HasEligibility(Data_Player playerData)
+        public static bool HasEligibility(ItemData playerData)
         {
             return playerData != null &&
                    ItemSpecialDataJsonStore.ReadNamespace(playerData, TutorialNamespace).Value<bool?>("eligible") == true;
         }
 
-        public static void EstablishEligibility(Data_Player playerData)
+        public static void EstablishEligibility(ItemData playerData)
         {
             if (playerData == null || HasEligibility(playerData))
                 return;

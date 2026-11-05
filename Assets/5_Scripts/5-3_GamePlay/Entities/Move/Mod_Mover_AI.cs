@@ -109,6 +109,13 @@ public class Mod_Mover_AI : Mod_Mover, ISimulationRangeAware, ITemperatureSafety
 
     public override void ModUpdate(float deltaTime)
     {
+        if (ActorProfileRegistry.IsManuallyControlled(item))
+        {
+            foreach (var motion in item.itemMods.GetCapabilities<IActorManualMotionOverride>())
+                if (motion.ConsumesManualMovement) return;
+            if (ActorProfileRegistry.IsLocallyControlled(item) || networkAuthorityMovement) base.ModUpdate(deltaTime);
+            return;
+        }
         if (NavigationAgent == null)
             return;
 

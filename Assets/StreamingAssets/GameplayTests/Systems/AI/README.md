@@ -1,5 +1,9 @@
 # AI 生物测试
 
+2026-11-05 统一角色控制：actor-control.lua 检查独占租约、过期释放、档案保留及旧库存按键合并/快捷栏去重；actor-control-gameplay.lua 用正式 Human/Wolf 工厂检查输入锁期间保持接管、释放恢复同一树/身体、原生攻击冷却、能力不补装、本地模块卸载和两轮接管的体力/营养 HUD 创建清理。已外部编译；其他 Agent 正在修改，Unity 规则与现场尚未执行。离线行为树、存档合同与22组质量回归通过，不能据此宣称镜头/HUD、载具/洞穴/太空或双端联网通过。
+
+本轮另通过 BearProvocation 的实际XLua及24项命中归属断言、RainWetness 的54项断言。ShipContacts、RuntimeAiWorldOwnership、AiTargetMemory 离线夹具仍分别缺 MemoryPack/SpaceElevator、世界层级/物理状态、导航依赖，未通过；全目录 sync_catalog.py 被既有 space 超过10份 Lua 阻断，已按AI清单单独同步总入口和索引，AI共8份Lua。
+
 2026-11-04 狼近身攻击：`ai/wolf_attack_distance` 对0.89/0.9/0.91/1.8/2.1米与1/1.5/2倍命中容错交叉采样正式树，检查0.9米内才停步起手、圈外继续接近、技能默认范围和近身槽位；`aiecs_tree_parameters`同步检查独立倍率。原狼站位、拥挤、超额成员、连续攻击和包抄夹具改用新距离。Unity处于PlayMode，本轮未编译或运行测试；双狼/四狼/十二狼对静止与移动玩家的真实碰撞、命中和截图仍未验收。
 
 2026-10-30 动物行为树：`behavior-tree.lua` 调用正式树执行器，检查优先级抢占、动作进入退出、中断、顺序节点续跑与条件失效、后台服务、参数化嵌套子树、实例隔离、非法引用及模块继承替换；`ai/animal_tree_catalog` 从正式继承目录装配全部 13 种生物的模块并加载树，检查唯一 AI 身份、失效脚本、共享子树与特定能力；`ai/aiecs_tree_parameters` 检查狼、雪豹、熊、鸡和野猪的 ECS 参数映射与显式覆盖。`python Tools/Tests/AnimalBehaviorTree/verify.py` 使用项目 XLua 执行 9 组规则，包含正式继承、ECS 参数、雪豹伤害和出血，并编译 13 份最终动物树与正式共享子树；节点工厂使用替身，不加载动物外壳。鱼觅食、目标记忆和熊领地能力分别有离线入口 `AiApproachRanges`、`AiTargetMemory`、`BearProvocation`；树目录装配及狼熊实际节点仍需 Unity 编辑态运行，飞行捕食、蜂巢抢占、水域导航、实际战斗和联机现场仍需验收。

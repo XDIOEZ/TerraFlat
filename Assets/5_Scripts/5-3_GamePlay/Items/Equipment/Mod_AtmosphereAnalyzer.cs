@@ -7,8 +7,8 @@ public sealed class Mod_AtmosphereAnalyzer : Module, ILocalItemUsePresentation, 
     #region 道具生命周期与面板能力
     public const string ModuleId = "Mod_AtmosphereAnalyzer";
     public Ex_ModData Data = new();
-    public static event Action<Mod_AtmosphereAnalyzer, Player> OpenRequested;
-    public static event Action<Mod_AtmosphereAnalyzer, Player> CloseRequested;
+    public static event Action<Mod_AtmosphereAnalyzer, Item> OpenRequested;
+    public static event Action<Mod_AtmosphereAnalyzer, Item> CloseRequested;
     public static Func<Mod_AtmosphereAnalyzer, bool> PanelOpenProbe { get; set; }
     private AtmosphereState measuredAtmosphere;
     private AtmosphereMeasurementSnapshot measurement;
@@ -37,17 +37,17 @@ public sealed class Mod_AtmosphereAnalyzer : Module, ILocalItemUsePresentation, 
     public override void Act() => I_TogglePanel();
     public void I_ShowPanel()
     {
-        if (item?.Owner is Player player && CanMeasure(player)) OpenRequested?.Invoke(this, player);
+        if ((item?.Owner is Item player && ActorIdentity.IsPlayer(player)) && CanMeasure(player)) OpenRequested?.Invoke(this, player);
     }
-    public void I_ClosePanel() => CloseRequested?.Invoke(this, item?.Owner as Player);
+    public void I_ClosePanel() => CloseRequested?.Invoke(this, ActorProfileRegistry.GetProfileActorOrNull(item?.Owner as Item));
     public void I_TogglePanel() { if (IsPanelOpen) I_ClosePanel(); else I_ShowPanel(); }
 
-    public bool CanMeasure(Player actor) => IsRuntimeLoaded && item != null && !item.DestructionHandled &&
-        item.InHand && actor != null && !actor.DestructionHandled && actor.IsLocalProfile && item.Owner == actor;
+    public bool CanMeasure(Item actor) => IsRuntimeLoaded && item != null && !item.DestructionHandled &&
+        item.InHand && actor != null && !actor.DestructionHandled && ActorProfileRegistry.IsLocallyControlled(actor) && item.Owner == actor;
     #endregion
 
     #region 实时只读测量与版本缓存
-    public AtmosphereMeasurementSnapshot ReadMeasurement(Player actor)
+    public AtmosphereMeasurementSnapshot ReadMeasurement(Item actor)
     {
         if (!CanMeasure(actor)) return AtmosphereMeasurementSnapshot.Unavailable;
         string worldKey = GameplayWorldRegistry.GetItemWorldKey(actor);

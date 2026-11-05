@@ -24,9 +24,9 @@ namespace FlatWorld.Dialogue
         }
 
         /// <summary>只为触发事件的本地玩家显示非法放置气泡。</summary>
-        private static void HandlePlacementRejected(Player actor, BuildingPlacementFailureReason reason, string detail)
+        private static void HandlePlacementRejected(Item actor, BuildingPlacementFailureReason reason, string detail)
         {
-            if (actor == null || !actor.IsLocalProfile)
+            if (actor == null || !ActorProfileRegistry.IsLocallyControlled(actor))
                 return;
 
             CharacterSoliloquyController speechController =

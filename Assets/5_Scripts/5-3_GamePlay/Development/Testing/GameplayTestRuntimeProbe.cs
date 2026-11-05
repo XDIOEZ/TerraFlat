@@ -14,7 +14,7 @@ public static partial class GameplayTestRuntimeProbe
 {
     #region 真实流程操作登记
 
-    private static readonly Dictionary<string, Func<Player, JObject, JObject>> operations = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, Func<Item, JObject, JObject>> operations = new(StringComparer.Ordinal)
     {
         ["testing/resource_cache"] = (_, _) => GameplayTestResourceCache.Sample(),
         ["testing/profiler_marker"] = GameplayTestProfilerEvidenceBehaviour.Create,
@@ -46,7 +46,7 @@ public static partial class GameplayTestRuntimeProbe
         ["industrial_fluids/surface_outlet"] = GameplayTestFluidSurface.CaptureOutletFlow
     };
 
-    public static void Register(string systemId, string operationId, Func<Player, JObject, JObject> handler)
+    public static void Register(string systemId, string operationId, Func<Item, JObject, JObject> handler)
     {
         if (handler == null) throw new ArgumentNullException(nameof(handler));
         string key = Key(systemId, operationId);
@@ -62,7 +62,7 @@ public static partial class GameplayTestRuntimeProbe
     public static bool Supports(string systemId, string operationId) => operations.ContainsKey(Key(systemId, operationId)) ||
         asyncOperations.ContainsKey(Key(systemId, operationId));
 
-    public static JObject Capture(Player player, string systemId, string operationId, JObject arguments)
+    public static JObject Capture(Item player, string systemId, string operationId, JObject arguments)
     {
         if (!operations.TryGetValue(Key(systemId, operationId), out var operation))
             throw new ArgumentException("未登记的真实流程测试操作：" + systemId + "/" + operationId);
@@ -92,7 +92,7 @@ public static partial class GameplayTestRuntimeProbe
     #region 交互按键停用恢复采样
 
     // 用独立虚拟键盘走真实 F 回调，检查临时停用后的恢复与重复订阅。
-    private static JObject CaptureInteractionInputReenable(Player player, JObject args)
+    private static JObject CaptureInteractionInputReenable(Item player, JObject args)
     {
         Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
         Mod_GameController controller = player.GetComponentInChildren<Mod_GameController>(true);
@@ -168,7 +168,7 @@ public static partial class GameplayTestRuntimeProbe
     #region 正式玩家背包采样
 
     // 只读取隔离玩家的正式背包状态，由 Lua 检查动态槽位及重复填充后的物品守恒。
-    private static JObject CaptureCreativeInventory(Player player, JObject args)
+    private static JObject CaptureCreativeInventory(Item player, JObject args)
     {
         Inventory_Data data = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)
             ?.GetDefaultTargetInventory()?.Data;
@@ -202,7 +202,7 @@ public static partial class GameplayTestRuntimeProbe
         };
     }
 
-    private static JObject CaptureInventorySlotBounds(Player player, JObject args)
+    private static JObject CaptureInventorySlotBounds(Item player, JObject args)
     {
         Inventory_Data data = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)
             ?.GetDefaultTargetInventory()?.Data;
@@ -225,7 +225,7 @@ public static partial class GameplayTestRuntimeProbe
     // 创造背包会给角色增加数百种物品，必须在本 Lua 结束前归还原库存，避免虚增后续飞船载荷。
     private sealed class CreativeInventoryScope : IDisposable
     {
-        private readonly Player player;
+        private readonly Item player;
         private readonly Inventory inventory;
         private readonly Inventory_Data data;
         private readonly InventoryInstanceSnapshot snapshot;
@@ -235,13 +235,13 @@ public static partial class GameplayTestRuntimeProbe
         public readonly float OriginalWeight;
         public bool Restored { get; private set; }
 
-        public CreativeInventoryScope(Player player, Inventory inventory)
+        public CreativeInventoryScope(Item player, Inventory inventory)
         {
             this.player = player;
             this.inventory = inventory;
             data = inventory.Data ?? throw new InvalidOperationException("创造背包现场缺少原始库存数据。");
             snapshot = InventoryInstanceSnapshot.Capture(data);
-            playerSpecialData = player.Data.ItemSpecialData;
+            playerSpecialData = player.itemData.ItemSpecialData;
             originalSlots = data.HasUnlimitedSlots;
             originalCarry = data.HasUnlimitedCarryCapacity;
             originalStack = data.HasUnlimitedStackSize;
@@ -261,7 +261,7 @@ public static partial class GameplayTestRuntimeProbe
                     ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, item) : item);
                 if (data.itemSlots.Count > OriginalSlotCount)
                     data.itemSlots.RemoveRange(OriginalSlotCount, data.itemSlots.Count - OriginalSlotCount);
-                player.Data.ItemSpecialData = playerSpecialData;
+                player.itemData.ItemSpecialData = playerSpecialData;
                 data.SetUnlimitedCarryCapacity(originalCarry);
                 data.SetUnlimitedStackSize(originalStack);
                 data.SetUnlimitedSlots(originalSlots);
@@ -284,11 +284,11 @@ public static partial class GameplayTestRuntimeProbe
             ["originalWeight"] = OriginalWeight,
             ["capacityRestored"] = data.HasUnlimitedSlots == originalSlots &&
                 data.HasUnlimitedCarryCapacity == originalCarry && data.HasUnlimitedStackSize == originalStack,
-            ["playerStateRestored"] = player.Data.ItemSpecialData == playerSpecialData
+            ["playerStateRestored"] = player.itemData.ItemSpecialData == playerSpecialData
         };
     }
 
-    private static JObject BeginCreativeInventoryScope(Player player, JObject args)
+    private static JObject BeginCreativeInventoryScope(Item player, JObject args)
     {
         if (activeCreativeInventoryScope != null)
             throw new InvalidOperationException("同一 Lua 用例重复登记创造背包现场。");
@@ -302,7 +302,7 @@ public static partial class GameplayTestRuntimeProbe
             ["originalWeight"] = scope.OriginalWeight };
     }
 
-    private static JObject RestoreCreativeInventoryScope(Player player, JObject args)
+    private static JObject RestoreCreativeInventoryScope(Item player, JObject args)
     {
         CreativeInventoryScope scope = activeCreativeInventoryScope ??
             throw new InvalidOperationException("创造背包测试没有登记恢复现场。");
@@ -342,7 +342,7 @@ public static partial class GameplayTestRuntimeProbe
         };
     }
 
-    private static JObject CaptureInventoryDirectDrag(Player player, JObject args)
+    private static JObject CaptureInventoryDirectDrag(Item player, JObject args)
     {
         Inventory source = CreateDragInventory("lua.drag.source", CreateDragItem("Twine", 6),
             CreateDragItem("Rope", 2), CreateDragItem("Twine", 3), CreateDragItem("Twine", 2));
@@ -400,7 +400,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 使用自有库存验证甩动的来源校验和正式快速转移，不改隔离玩家物品。
-    private static JObject CaptureInventoryFlickTransfer(Player player, JObject args)
+    private static JObject CaptureInventoryFlickTransfer(Item player, JObject args)
     {
         Inventory source = CreateDragInventory("lua.flick.source", CreateDragItem("Twine", 6));
         Inventory target = CreateDragInventory("lua.flick.target", new ItemData[1]);
@@ -429,7 +429,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 只采集正式快速转移的提交反馈，Lua检查分堆、失败和数据守恒。
-    private static JObject CaptureInventoryQuickTransferFeedback(Player player, JObject args)
+    private static JObject CaptureInventoryQuickTransferFeedback(Item player, JObject args)
     {
         Inventory source = CreateDragInventory("lua.quick.feedback.source", CreateDragItem("Twine", 6));
         Inventory target = CreateDragInventory("lua.quick.feedback.target", CreateDragItem("Twine", 3), null, null);
@@ -476,7 +476,7 @@ public static partial class GameplayTestRuntimeProbe
         finally { FlatWorld.Gameplay.InventoryFeedback.InventoryQuickTransferFeedbackEvents.Committed -= Capture; }
     }
 
-    private static JObject CaptureInventoryEquipmentDrag(Player player, JObject args)
+    private static JObject CaptureInventoryEquipmentDrag(Item player, JObject args)
     {
         Inventory source = CreateDragInventory("lua.gear.source", CreateDragItem("Spacesuit_Head"),
             CreateDragItem("Spacesuit_Torso"), CreateDragItem("Spacesuit_Head"));
@@ -528,7 +528,7 @@ public static partial class GameplayTestRuntimeProbe
     #region 正式装备配置入口现场
 
     // 夹具只暂存隔离玩家原装备，配置目标始终由正式装备效果和公开入口生成。
-    private static JObject CaptureEquipmentConfiguration(Player player, JObject args)
+    private static JObject CaptureEquipmentConfiguration(Item player, JObject args)
     {
         Mod_Equipment equipment = player.itemMods?.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
         Inventory_Equipment inventory = equipment?.EquipmentInventory;
@@ -638,9 +638,9 @@ public static partial class GameplayTestRuntimeProbe
 
     #region 隔离边界
 
-    public static string RequireIsolatedSaveRoot(Player player)
+    public static string RequireIsolatedSaveRoot(Item player)
     {
-        if (!Application.isEditor || !Application.isPlaying || player == null || !player.IsLocalProfile)
+        if (!Application.isEditor || !Application.isPlaying || player == null || !ActorProfileRegistry.IsLocallyControlled(player))
             throw new InvalidOperationException("真实流程测试只允许 Editor PlayMode 中已进入隔离世界的本地测试角色。");
         SaveDataMgr saves = SaveDataMgr.TestExistingInstance;
         if (saves == null || saves.SaveData == null || string.IsNullOrWhiteSpace(saves.UserSavePath))
@@ -662,8 +662,8 @@ public static partial class GameplayTestRuntimeProbe
             if (string.Equals(cursor, projectRoot, StringComparison.OrdinalIgnoreCase)) break;
             cursor = Path.GetDirectoryName(cursor);
         }
-        if (!saves.SaveData.PlayerData_Dict.TryGetValue(player.ProfileName, out Data_Player stored) ||
-            !ReferenceEquals(stored, player.Data))
+        if (!saves.SaveData.ProfileActorData.TryGetValue(ActorProfileRegistry.GetProfileId(player), out ItemData stored) ||
+            !ReferenceEquals(stored, player.itemData))
             throw new InvalidOperationException("当前角色不属于本轮测试存档。");
         return root;
     }
@@ -672,7 +672,7 @@ public static partial class GameplayTestRuntimeProbe
 
     #region 正式入世与流送观察
 
-    private static JObject CaptureLiveEntry(Player player, JObject args)
+    private static JObject CaptureLiveEntry(Item player, JObject args)
     {
         GameManager manager = UnityEngine.Object.FindObjectOfType<GameManager>();
         GameRes resources = GameRes.ExistingInstance;
@@ -703,8 +703,8 @@ public static partial class GameplayTestRuntimeProbe
             ["sceneHierarchy"] = GameplayTestSystemProbe.CaptureRuntimeSceneHierarchy(player, foot),
             ["resourceState"] = resources?.LoadState.ToString(), ["startupReady"] = resources != null && resources.IsStartupReady,
             ["inWorld"] = manager != null && manager.IsInGameWorld, ["gameplayReady"] = manager != null && manager.IsGameplayReady,
-            ["entryInProgress"] = manager != null && manager.IsWorldEntryInProgress, ["localProfile"] = player.IsLocalProfile,
-            ["profile"] = player.ProfileName, ["playerInitialized"] = player.IsInitialized,
+            ["entryInProgress"] = manager != null && manager.IsWorldEntryInProgress, ["localProfile"] = ActorProfileRegistry.IsLocallyControlled(player),
+            ["profile"] = ActorProfileRegistry.GetProfileId(player), ["playerInitialized"] = player.IsInitialized,
             ["playerActive"] = player.gameObject.activeInHierarchy, ["footViewReady"] = footReady,
             ["windowReady"] = chunks != null && chunks.AreRuntimeWindowPresentationsReady,
             ["hotbarCount"] = hotbarCount, ["handCount"] = handCount,
@@ -738,7 +738,7 @@ public static partial class GameplayTestRuntimeProbe
 #endif
     }
 
-    private static JObject CaptureLiveWindow(Player player, JObject args)
+    private static JObject CaptureLiveWindow(Item player, JObject args)
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || manager.WorldRuntime == null) throw new InvalidOperationException("真实世界流送未建立。");
@@ -771,15 +771,15 @@ public static partial class GameplayTestRuntimeProbe
 
     #region 正式隔离写盘与非发布恢复
 
-    private static JObject CaptureIsolatedRoundtrip(Player player, JObject args)
+    private static JObject CaptureIsolatedRoundtrip(Item player, JObject args)
     {
         string root = RequireIsolatedSaveRoot(player);
         SaveDataMgr saves = SaveDataMgr.TestExistingInstance;
         GameSaveData original = saves.SaveData;
         string originalName = original.saveName, originalSeed = original.SaveSeed;
         string originalDirectory = saves.UserSavePath;
-        int originalPlayers = original.PlayerData_Dict.Count, originalPlanets = original.PlanetData_Dict.Count;
-        Data_Player originalPlayer = player.Data;
+        int originalPlayers = original.ProfileActorData.Count, originalPlanets = original.PlanetData_Dict.Count;
+        ItemData originalPlayer = player.itemData;
         int originalGuid = originalPlayer.Guid;
         string originalSpecial = originalPlayer.ItemSpecialData;
         var copy = MemoryPackSerializer.Deserialize<GameSaveData>(MemoryPackSerializer.Serialize(original));
@@ -794,11 +794,11 @@ public static partial class GameplayTestRuntimeProbe
             IDName = "Stick_Wood", code = "lua-save-probe", Guid = 910143,
             Stack = new ItemStack { Amount = amount }, ItemSpecialData = "{\"roundtrip\":true}"
         };
-        var marker = new Data_Player { IDName = "Player", Guid = 910144, Name_User = "Lua隔离恢复", ItemSpecialData = "{\"probe\":1}" };
+        ItemData marker = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "Player", Guid = 910144, ItemSpecialData = "{\"probe\":1}" }, "Lua隔离恢复", null);
         Vector3 savedPosition = new(101.423f, -460.583f, 0f);
         marker.transform.position = savedPosition;
-        marker._inventoryData["probe"] = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = item } }, "probe");
-        copy.PlayerData_Dict.Add(markerProfile, marker);
+        GameplayTestSystemProbe.GetTestActorInventories(marker)["probe"] = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = item } }, "probe");
+        copy.ProfileActorData.Add(markerProfile, marker);
         string directory = Path.Combine(root, "Roundtrips", Guid.NewGuid().ToString("N"));
         copy.ArchiveId = Guid.NewGuid().ToString("N");
         string file = Path.Combine(directory, copy.ArchiveId, "save.sqlite");
@@ -817,7 +817,7 @@ public static partial class GameplayTestRuntimeProbe
             store.BackupAsync(backup).GetAwaiter().GetResult();
         }
         item.Stack.Amount = amount + 1;
-        copy.PlayerData_Dict[markerProfile].ItemSpecialData = "{\"probe\":2}";
+        copy.ProfileActorData[markerProfile].ItemSpecialData = "{\"probe\":2}";
         RequireIsolatedSaveRoot(player);
         bool secondWritten = saves.SaveToDisk(copy, directory, "roundtrip");
         if (!secondWritten) throw new IOException("正式隔离替换写盘失败。");
@@ -832,31 +832,31 @@ public static partial class GameplayTestRuntimeProbe
         GameSaveData first = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(previousPath, previous: true);
         GameSaveData second = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(file);
         GameSaveData backedUp = SaveDataMgr.ReadTestSqliteArchiveWithoutPublishing(backup);
-        var firstItem = first.PlayerData_Dict[markerProfile]._inventoryData["probe"].itemSlots[0].itemData;
-        var secondItem = second.PlayerData_Dict[markerProfile]._inventoryData["probe"].itemSlots[0].itemData;
+        var firstItem = GameplayTestSystemProbe.GetTestActorInventories(first.ProfileActorData[markerProfile])["probe"].itemSlots[0].itemData;
+        var secondItem = GameplayTestSystemProbe.GetTestActorInventories(second.ProfileActorData[markerProfile])["probe"].itemSlots[0].itemData;
         return new JObject
         {
             ["firstWritten"] = firstWritten, ["secondWritten"] = secondWritten, ["path"] = file,
             ["firstBytes"] = firstBytes, ["secondBytes"] = secondBytes,
             ["temporaryRemaining"] = File.Exists(file + ".tmp"), ["backupExists"] = File.Exists(backup),
-            ["backupMatchesFirst"] = backedUp.PlayerData_Dict[markerProfile].ItemSpecialData == first.PlayerData_Dict[markerProfile].ItemSpecialData,
+            ["backupMatchesFirst"] = backedUp.ProfileActorData[markerProfile].ItemSpecialData == first.ProfileActorData[markerProfile].ItemSpecialData,
             ["previousGenerationPreserved"] = previousGeneration == firstGeneration,
             ["stableArchiveId"] = second.ArchiveId == copy.ArchiveId,
             ["firstAmount"] = firstItem.Stack.Amount, ["secondAmount"] = secondItem.Stack.Amount,
             ["firstGuid"] = firstItem.Guid, ["secondGuid"] = secondItem.Guid,
             ["firstId"] = firstItem.IDName, ["secondId"] = secondItem.IDName,
-            ["firstSpecial"] = first.PlayerData_Dict[markerProfile].ItemSpecialData,
-            ["secondSpecial"] = second.PlayerData_Dict[markerProfile].ItemSpecialData,
-            ["firstPositionPreserved"] = Vector3.Distance(first.PlayerData_Dict[markerProfile].transform.position, savedPosition) < 0.001f,
-            ["secondPositionPreserved"] = Vector3.Distance(second.PlayerData_Dict[markerProfile].transform.position, savedPosition) < 0.001f,
-            ["firstPlayers"] = first.PlayerData_Dict.Count, ["secondPlayers"] = second.PlayerData_Dict.Count,
+            ["firstSpecial"] = first.ProfileActorData[markerProfile].ItemSpecialData,
+            ["secondSpecial"] = second.ProfileActorData[markerProfile].ItemSpecialData,
+            ["firstPositionPreserved"] = Vector3.Distance(first.ProfileActorData[markerProfile].transform.position, savedPosition) < 0.001f,
+            ["secondPositionPreserved"] = Vector3.Distance(second.ProfileActorData[markerProfile].transform.position, savedPosition) < 0.001f,
+            ["firstPlayers"] = first.ProfileActorData.Count, ["secondPlayers"] = second.ProfileActorData.Count,
             ["expectedPlayers"] = originalPlayers + 1,
             ["activeSaveReferencePreserved"] = ReferenceEquals(saves.SaveData, original),
-            ["activePlayerReferencePreserved"] = ReferenceEquals(originalPlayer, player.Data),
+            ["activePlayerReferencePreserved"] = ReferenceEquals(originalPlayer, player.itemData),
             ["activeManagerPreserved"] = ReferenceEquals(saves, SaveDataMgr.TestExistingInstance),
             ["activeNamePreserved"] = original.saveName == originalName,
             ["activeSeedPreserved"] = original.SaveSeed == originalSeed,
-            ["activeCountsPreserved"] = original.PlayerData_Dict.Count == originalPlayers && original.PlanetData_Dict.Count == originalPlanets,
+            ["activeCountsPreserved"] = original.ProfileActorData.Count == originalPlayers && original.PlanetData_Dict.Count == originalPlanets,
             ["activePlayerStatePreserved"] = originalPlayer.Guid == originalGuid && originalPlayer.ItemSpecialData == originalSpecial,
             ["activeDirectoryPreserved"] = string.Equals(saves.UserSavePath, originalDirectory, StringComparison.Ordinal) &&
                 string.Equals(RequireIsolatedSaveRoot(player), root, StringComparison.OrdinalIgnoreCase)

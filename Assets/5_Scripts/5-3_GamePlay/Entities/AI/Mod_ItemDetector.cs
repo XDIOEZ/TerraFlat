@@ -453,7 +453,7 @@ public class Mod_ItemDetector : Module
 
             bool matches = detectedItem.itemData != null && HasAnyTag(detectedItem.itemData.Tags, tags);
             if (!matches && includePlayerEntities)
-                matches = detectedItem is Player ||
+                matches = ActorIdentity.IsPlayer(detectedItem as Item) ||
                           detectedItem.itemData?.Tags?.ContainsTag(Tag.Player) == true;
             if (!matches)
                 continue;

@@ -55,7 +55,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkPressureExplosion>();
             receivedPressureExplosions.Clear(); lastHelmetReply = 0; lastPortableFillReply = 0;
         }
-        private bool SendSuitHelmet(Player actor, int guid, bool on)
+        private bool SendSuitHelmet(Item actor, int guid, bool on)
         {
             if (!NetworkClient.ready || NetworkServer.active || actor == null || guid == 0) return false;
             NetworkClient.Send(new NetworkSpacesuitHelmetRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = NextMachineToken(), SuitGuid = guid, On = on });
@@ -64,7 +64,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnSuitHelmet(NetworkConnectionToClient connection, NetworkSpacesuitHelmetRequest request)
         {
             if (!AcceptMachineToken(connection, request.Token)) return;
-            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (actor == null || actor.DestructionHandled || actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f) return;
             if (!SpacesuitCommands.SetHelmet(actor, request.SuitGuid, request.On)) return;
             foreach (ItemData suit in MachineInventoryCommands.OwnedSpacesuits(actor))
@@ -81,7 +81,7 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkServer.active || response.Token == 0 || unchecked((int)(response.Token - lastHelmetReply)) <= 0 ||
                 response.State == null || response.State.Length > 1024 * 1024) return;
             lastHelmetReply = response.Token;
-            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             foreach (ItemData suit in MachineInventoryCommands.OwnedSpacesuits(actor))
                 if (suit.Guid == response.SuitGuid)
                 {
@@ -92,7 +92,7 @@ namespace FlatWorld.Networking.Gameplay
                     return;
                 }
         }
-        private bool SendPortableTankFill(Player actor, int guid)
+        private bool SendPortableTankFill(Item actor, int guid)
         {
             if (!NetworkClient.ready || NetworkServer.active || actor == null || guid == 0 ||
                 actor != NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer ||
@@ -104,7 +104,7 @@ namespace FlatWorld.Networking.Gameplay
         private void OnPortableTankFill(NetworkConnectionToClient connection, NetworkPortableTankFillRequest request)
         {
             if (!AcceptMachineToken(connection, request.Token)) return;
-            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             Item tank = ItemMgr.Instance?.GetItemByGuid(request.TankGuid);
             bool accepted = actor != null && !actor.DestructionHandled &&
                 connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction != true &&
@@ -145,9 +145,9 @@ namespace FlatWorld.Networking.Gameplay
             foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
             {
                 if (!connection.isReady || connection.identity == null) continue;
-                Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
-                if (actor == null || !AtmosphereService.TryGetForWorld(actor.Data.CurrentSceneName, out AtmosphereState atmosphere)) continue;
-                connection.Send(new NetworkAtmosphereState { WorldKey = actor.Data.CurrentSceneName,
+                Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+                if (actor == null || !AtmosphereService.TryGetForWorld(actor.itemData.GetActorProfileMetadata().WorldKey, out AtmosphereState atmosphere)) continue;
+                connection.Send(new NetworkAtmosphereState { WorldKey = actor.itemData.GetActorProfileMetadata().WorldKey,
                     State = MemoryPackSerializer.Serialize(atmosphere) });
             }
         }

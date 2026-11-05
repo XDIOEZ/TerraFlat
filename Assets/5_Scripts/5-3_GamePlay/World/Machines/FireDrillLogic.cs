@@ -51,7 +51,7 @@ public class FireDrillLogic : MachineLogic
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool Rub(Player actor)
+    public bool Rub(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || !CanAct) return false;
         bool completed = Heater.Rub(GetAmbientTemperature(), actor, out bool worked);
@@ -63,7 +63,7 @@ public class FireDrillLogic : MachineLogic
         return completed;
     }
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation == "begin-interaction") return true;
         if (operation != "work") return false;
@@ -104,7 +104,7 @@ public sealed class MaterialHeatingProcessor
     public Inventory Output { get; }
     public float SourceTemperature = 150f;
     public float TemperaturePerClick = 10f;
-    private Player lastActor;
+    private Item lastActor;
     private bool isCommitting;
     private ItemData Material => Input.Data.GetItemSlot(0)?.itemData;
     public bool CanRub => !isCommitting && Material?.Stack?.Amount > 0f &&
@@ -154,9 +154,9 @@ public sealed class MaterialHeatingProcessor
     #endregion
 
     #region 供热与物质转化
-    public bool Rub(float ambientTemperature, Player actor) => Rub(ambientTemperature, actor, out _);
+    public bool Rub(float ambientTemperature, Item actor) => Rub(ambientTemperature, actor, out _);
 
-    public bool Rub(float ambientTemperature, Player actor, out bool worked)
+    public bool Rub(float ambientTemperature, Item actor, out bool worked)
     {
         worked = false;
         if (!CanRub) return false;

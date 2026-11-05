@@ -62,7 +62,7 @@ namespace FlatWorld.Dialogue
         {
             EndObserving();
             observingController = controller;
-            Player player = controller.GetComponentInParent<Player>();
+            Item player = controller.GetComponentInParent<Item>();
             observedTemperature = player?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
             if (observedTemperature == null)
                 return;
@@ -126,8 +126,8 @@ namespace FlatWorld.Dialogue
         /// <summary>只消费本地角色已有体温状态；客户端由复制模块数据驱动，不另算玩法。</summary>
         public void Contribute(CharacterSpeechContext context)
         {
-            Player player = context.Actor != null ? context.Actor.GetComponentInParent<Player>() : null;
-            if (player == null || !player.IsLocalProfile)
+            Item player = context.Actor != null ? context.Actor.GetComponentInParent<Item>() : null;
+            if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
                 return;
             Mod_Temperature temperature = player.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
             if (temperature == null)

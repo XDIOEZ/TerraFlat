@@ -11,7 +11,7 @@ public partial class Mod_InteractSender
     }
 
     private bool IsShipInteriorInteractionOwner
-        => item is Player player && FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
+        => (item is Item player && ActorIdentity.IsPlayer(player)) && FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
 
     private float MeasureActorInteractionDistance(Vector3 origin, Vector3 target)
         => IsShipInteriorInteractionOwner

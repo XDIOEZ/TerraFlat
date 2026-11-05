@@ -712,7 +712,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject ServiceSpecialNamespace(JObject args)
     {
-        var player = new Data_Player { ItemSpecialData = Text(args, "raw", "{\"other\":{\"keep\":42}}") };
+        ItemData player = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { ItemSpecialData = Text(args, "raw", "{\"other\":{\"keep\":42}}") }, null, null);
         string key = Text(args, "namespace", "probe.service");
         var payload = new JObject { ["counter"] = Number(args, "counter", 3) };
         ItemSpecialDataJsonStore.WriteNamespace(player, key, payload);

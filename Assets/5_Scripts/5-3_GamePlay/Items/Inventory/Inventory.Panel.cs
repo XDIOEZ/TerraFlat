@@ -75,7 +75,7 @@ public partial class Inventory
     private void PublishPlayerBagOpened()
     {
         // Unity 已销毁对象仍可能保留托管引用，先走 UnityEngine.Object 的空判断。
-        if (item == null || item is not Player player || player.itemMods == null)
+        if (item == null || !(item is Item player && ActorIdentity.IsPlayer(player)) || player.itemMods == null)
             return;
 
         Mod_Inventory bag = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag);
@@ -152,7 +152,7 @@ public partial class Inventory
 
         // 玩家库存跨场景保留，其他实体的库存面板跟随当前场景销毁。
         UIManager uiManager = UIManager.Instance;
-        BasePanel createdPanel = item is Player
+        BasePanel createdPanel = ActorIdentity.IsPlayer(item as Item)
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         basePanel = createdPanel.GetComponentInChildren<BasePanel>();
@@ -203,7 +203,7 @@ public partial class Inventory
         }
 
         // 容器标题读取物品名称，玩家行囊保留自身标题。
-        if (item != null && item is not Player &&
+        if (item != null && !ActorIdentity.IsPlayer(item) &&
             basePanel.TryGetText("FWUI_标题", out TextMeshProUGUI titleText))
             LocalizedTextRuntime.SetProvider(titleText, ResolveContainerPanelTitle);
 
@@ -666,7 +666,7 @@ public partial class Inventory
     private void BindCarryCapacityLinkedInventory()
     {
         UnbindCarryCapacityLinkedInventory();
-        if (!IsPlayerBagInventory() || item is not Player player)
+        if (!IsPlayerBagInventory() || !(item is Item player && ActorIdentity.IsPlayer(player)))
             return;
 
         _linkedCarryUsageData ??= new List<Inventory_Data>();
@@ -710,7 +710,7 @@ public partial class Inventory
         string maxWeight;
         string maxVolume;
 
-        if (IsPlayerBagInventory() && item is Player player &&
+        if (IsPlayerBagInventory() && (item is Item player && ActorIdentity.IsPlayer(player)) &&
             PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot))
         {
             currentWeight = snapshot.CurrentWeight;

@@ -103,22 +103,22 @@ public sealed class LightningEffectController : MonoBehaviour
 
     #region 单次雷电表现
 
-    private bool TryGetPresentationPlayer(out Player player)
+    private bool TryGetPresentationPlayer(out Item player)
     {
         player = null;
         if (weather == null || !weather.IsLocalWeatherWorld || !weather.isActiveAndEnabled ||
             WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.ExistingInstance?.ActiveDefinition))
             return false;
 
-        player = ItemMgr.GetInstance()?.User_Player;
-        return player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy &&
+        player = ItemMgr.GetInstance()?.LocalControlledActor;
+        return player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.gameObject.activeInHierarchy &&
                player.gameObject.scene.IsValid() && player.gameObject.scene.isLoaded;
     }
 
     private void HandleLightning(RegionalLightningEvent lightning)
     {
         if (!float.IsFinite(lightning.Position.x) || !float.IsFinite(lightning.Position.y) ||
-            !float.IsFinite(lightning.Strength) || !TryGetPresentationPlayer(out Player player) ||
+            !float.IsFinite(lightning.Strength) || !TryGetPresentationPlayer(out Item player) ||
             !string.Equals(lightning.WorldKey, weather.WorldKey, StringComparison.Ordinal))
             return;
 
@@ -147,7 +147,7 @@ public sealed class LightningEffectController : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!TryGetPresentationPlayer(out Player player) ||
+        if (!TryGetPresentationPlayer(out Item player) ||
             (effectsRoot != null && (effectsRoot.scene != player.gameObject.scene ||
              !string.Equals(presentationWorldKey, weather.WorldKey, StringComparison.Ordinal))))
         {
@@ -169,14 +169,14 @@ public sealed class LightningEffectController : MonoBehaviour
         }
     }
 
-    private float GetDistanceAttenuation(Player player, Vector2 logicalPosition)
+    private float GetDistanceAttenuation(Item player, Vector2 logicalPosition)
     {
         Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         float distance = WorldTopologyRuntime.ShortestDelta(logicalPlayer, logicalPosition).magnitude;
         return weather.GetLightningDistanceAttenuation(distance);
     }
 
-    private void UpdateVisual(LightningVisual visual, Player player, float now)
+    private void UpdateVisual(LightningVisual visual, Item player, float now)
     {
         // 落点保持权威逻辑坐标，每帧选本地玩家附近的镜像，跨循环边界不会闪到另一边。
         visual.Root.transform.position = WorldLocalPresentation.ProjectPosition(visual.LogicalPosition,
@@ -223,7 +223,7 @@ public sealed class LightningEffectController : MonoBehaviour
 
     #region 共享资源与有限对象池
 
-    private bool EnsureResources(Player player, string worldKey)
+    private bool EnsureResources(Item player, string worldKey)
     {
         if (effectsRoot != null && (effectsRoot.scene != player.gameObject.scene ||
             !string.Equals(presentationWorldKey, worldKey, StringComparison.Ordinal)))
@@ -256,7 +256,7 @@ public sealed class LightningEffectController : MonoBehaviour
         return true;
     }
 
-    private LightningVisual AcquireVisual(Player player)
+    private LightningVisual AcquireVisual(Item player)
     {
         foreach (LightningVisual visual in visuals)
             if (!visual.Active && visual.Root != null) return visual;

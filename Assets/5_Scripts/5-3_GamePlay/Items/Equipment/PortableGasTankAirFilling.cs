@@ -8,7 +8,7 @@ using UnityEngine;
 public static class PortableGasTankAirFilling
 {
     #region 配置能力、操作资格与权威入口
-    public static event Func<Player, int, bool> RemoteFillRequested;
+    public static event Func<Item, int, bool> RemoteFillRequested;
 
     private static bool CanAccess(Item tank, Item actor)
     {
@@ -39,7 +39,7 @@ public static class PortableGasTankAirFilling
             CanFillFromSource(source, contents, config.GasCapacityStandardLiters, config.NaturalFillFraction);
     }
 
-    public static bool Fill(Item tank, Player actor)
+    public static bool Fill(Item tank, Item actor)
     {
         if (tank == null || actor == null || !FluidTankStorage.AllowsManualAirFill(tank.itemData)) return false;
         if (!GameNetwork.HasStateAuthority)

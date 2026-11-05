@@ -18,7 +18,7 @@ public static partial class GameplayTestRuntimeProbe
     private static void RegisterTouchTooltip() => RegisterAsync("inventory", "touch_tooltip", CaptureTouchTooltip);
 
     // 正式槽位和正式悬浮窗仅使用自有物品，手部库存引用在中断或异常时也恢复。
-    private static IEnumerator CaptureTouchTooltip(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureTouchTooltip(Item player, JObject args, Action<JObject> completed)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "inspect");
         string panelPrefab = GameplayTestSystemProbe.Text(args, "panelPrefab", "");

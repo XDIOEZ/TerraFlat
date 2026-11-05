@@ -16,7 +16,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     private readonly TMP_InputField primary, secondary;
     private readonly Button apply, phase, rotate;
     private readonly Inventory input, output;
-    private Player actor;
+    private Item actor;
     private Mod_WaterVessel HeldLiquidVessel => actor?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem
         ?.itemMods?.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
     private Coroutine refresh;
@@ -73,7 +73,7 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        actor = player as Player ?? player?.GetComponentInParent<Player>();
+        actor = ActorProfileRegistry.GetProfileActorOrNull(player as Item) ?? player?.GetComponentInParent<Item>();
         Inventory hand = player?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (actor == null || hand == null) throw new InvalidOperationException("工业交互缺少玩家和手部库存。");
         MachineWorld.RequestOperation(logic.Entity, "begin-interaction", "", actor);

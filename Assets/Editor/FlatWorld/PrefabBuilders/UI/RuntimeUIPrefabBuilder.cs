@@ -33,7 +33,7 @@ public static partial class RuntimeUIPrefabBuilder
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string InventoryComponentsRoot = PrefabRoot + "Gameplay/Inventory/Components/";
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
-    private const string PlayerPrefab = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
+    private const string PlayerPrefab = "Assets/2_Prefabs/Gameplay/Player/Human.prefab";
 
     private static Color Canvas => FlatWorldUITheme.Canvas;
     private static Color Surface => FlatWorldUITheme.SurfaceLow;

@@ -36,7 +36,7 @@ public sealed partial class Mod_AnimalFlightMovement
         if (state.Phase != BirdFlightPhase.Ground || escapeRemaining > 0f ||
             !state.EggLaying.IsDue(currentDay, layEggMinimumIntervalDays))
             return;
-        if (TryGetNearbyThreat(fleeTriggerDistance, out _) || !CanLand(body.position))
+        if ((!ActorProfileRegistry.IsManuallyControlled(item) && TryGetNearbyThreat(fleeTriggerDistance, out _)) || !CanLand(body.position))
             return;
 
         // 单机与联机都复用世界掉落入口；只有成功生成这一颗后才开始新的完整冷却。

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using FlatWorld.Gameplay.Progress;
@@ -15,14 +15,14 @@ namespace FlatWorld.Spaceflight
     public static class ShipGroundAssembly
     {
         #region 普通地面控制台与离散落点
-        public static bool TryGetGroundConsole(Player actor, int consoleGuid, out MachineEntity console)
+        public static bool TryGetGroundConsole(Item actor, int consoleGuid, out MachineEntity console)
         {
             console = null;
             if (actor == null) return false;
-            string world = actor.Data?.CurrentSceneName ?? actor.gameObject.scene.name;
+            string world = actor.itemData?.GetActorProfileMetadata().WorldKey ?? actor.gameObject.scene.name;
             Vector2 position = WorldLocalPresentation.ToLogical(actor.transform.position);
             if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority &&
-                SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) == true)
+                SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver observer) == true)
             {
                 if (observer.InSpace) return false;
                 world = observer.WorldKey; position = observer.Position.LocalMeters.ToVector2();
@@ -40,7 +40,7 @@ namespace FlatWorld.Spaceflight
             }
         }
 
-        public static bool TryLaunch(Player actor, int consoleGuid, out ShipState ship, out string reason)
+        public static bool TryLaunch(Item actor, int consoleGuid, out ShipState ship, out string reason)
         {
             ship = null;
             if (!GameNetwork.HasStateAuthority || !TryGetGroundConsole(actor, consoleGuid, out MachineEntity console))
@@ -49,20 +49,20 @@ namespace FlatWorld.Spaceflight
         }
 
         // 地面点火统一由权威端装配，客户端只申请控制台操作并等待真实结果。
-        public static bool RequestLaunch(Player actor, int consoleGuid, bool driveAfterLaunch, Action<bool, string> completed)
+        public static bool RequestLaunch(Item actor, int consoleGuid, bool driveAfterLaunch, Action<bool, string> completed)
         {
             if (actor == null) { completed?.Invoke(false, "当前玩家尚未就绪。"); return false; }
             var intent = new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.LaunchGroundShip,
                 PieceId = consoleGuid.ToString(CultureInfo.InvariantCulture), Action = driveAfterLaunch ? 1 : 0 };
             if (!GameNetwork.HasStateAuthority)
             {
-                bool submitted = SpaceNetworkBridge.SendIntent(actor.ProfileName, intent, completed);
+                bool submitted = SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(actor), intent, completed);
                 if (!submitted) completed?.Invoke(false, "联机连接尚未就绪，无法申请点火。");
                 return submitted;
             }
             SpaceSession session = SpaceSession.EnsureLoaded();
             session.EnsureNetworkPassenger(actor);
-            bool accepted = session.ExecuteNetworkIntent(actor.ProfileName, intent, out string reason);
+            bool accepted = session.ExecuteNetworkIntent(ActorProfileRegistry.GetProfileId(actor), intent, out string reason);
             completed?.Invoke(accepted, reason);
             return true;
         }
@@ -95,7 +95,7 @@ namespace FlatWorld.Spaceflight
         #region 起飞时从普通建筑装配
         private const string GroundPartStateKey = "flatworld.ship-part-state";
 
-        internal bool TryLaunchGroundShip(Player actor, MachineEntity console, out ShipState ship, out string reason)
+        internal bool TryLaunchGroundShip(Item actor, MachineEntity console, out ShipState ship, out string reason)
         {
             ship = null; reason = null;
             string world = console.ScopeKey;
@@ -674,11 +674,11 @@ namespace FlatWorld.Spaceflight
             GameplayWorldRegistry.CopyWorldItems(worldKey, items);
             foreach (Item item in items)
             {
-                if (item == null || item is Player || item.GetComponentInParent<Player>(true) != null) continue;
+                if (item == null || ActorIdentity.IsPlayer(item as Item) || item.GetComponentInParent<Item>(true) != null) continue;
                 Item ownerItem = item.Owner;
                 int depth = 0;
-                while (ownerItem != null && ownerItem is not Player && depth++ < 64) ownerItem = ownerItem.Owner;
-                if (ownerItem is not Player) return true;
+                while (ownerItem != null && !ActorIdentity.IsPlayer(ownerItem) && depth++ < 64) ownerItem = ownerItem.Owner;
+                if (!ActorIdentity.IsPlayer(ownerItem)) return true;
             }
             if (!TryGetShipInteriorWorld(ship.ShipId, out var world)) return false;
             using var scope = GameplayWorldRegistry.UseWorld(worldKey);
@@ -707,7 +707,7 @@ namespace FlatWorld.Spaceflight
                         foreach (SpacePassengerState passenger in State.Passengers)
                         {
                             if (passenger.ShipId != ship.ShipId) continue;
-                            Player player = FindNetworkPlayer(passenger.ProfileId);
+                            Item player = FindNetworkPlayer(passenger.ProfileId);
                             Mod_Mover mover = player?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
                             if (player != null && GameplayWorldRegistry.GetItemWorldKey(player) == MachineWorld.GetShipScopeKey(ship.ShipId) && mover?.rb != null)
                             { passenger.LocalX = mover.rb.position.x; passenger.LocalY = mover.rb.position.y; }

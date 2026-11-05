@@ -44,6 +44,7 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     private AnimalBehaviorTreeRuntime runtime;
     private readonly List<Mod_Damage> bodyDamageSources = new();
     private bool stoppedForDeath;
+    private bool autonomousControlSuspended;
     private ITemperatureSafetyMovement temperatureMovement;
     private Vector2 temperatureDestination;
     private readonly GUIContent debugContent = new();
@@ -60,7 +61,19 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     private static readonly PerformanceDebugPoint BindContextMarker = new("FlatWorld.AnimalBehaviorTree.BindContext");
     private static readonly PerformanceDebugPoint CreateNodesMarker = new("FlatWorld.AnimalBehaviorTree.CreateNodes");
 
-    protected override void OnLoad() => BuildRuntime(ReadSave());
+    protected override void OnLoad()
+    {
+        autonomousControlSuspended = ActorProfileRegistry.IsManuallyControlled(item);
+        BuildRuntime(ReadSave());
+    }
+    public bool TryStartManuallyRequestedBodyAttack(Vector3 targetPosition)
+    {
+        if (!IsAlive || !ActorProfileRegistry.IsManuallyControlled(item) || Context == null ||
+            !Context.TryGetCapability("combat", out AnimalCombatCapability combat) || !combat.IsCooldownDone || combat.IsAttackLocked) return false;
+        combat.EnterAttack();
+        combat.StartAttack(targetPosition);
+        return true;
+    }
 
     private void BuildRuntime(SaveData saved)
     {
@@ -89,6 +102,8 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
             runtime.ActionChanged += HandleActionChanged;
             bodyDamageSources.Clear();
             item.GetComponentsInChildren(true, bodyDamageSources);
+            if (autonomousControlSuspended)
+                foreach (var damage in bodyDamageSources) damage.SetDamageEnabled(false);
             ResolveTemperatureMovement();
             stoppedForDeath = false;
             if (Context.Health != null) Context.Health.DeathStarted += HandleDeathStarted;
@@ -109,15 +124,32 @@ public sealed class Mod_AnimalBehaviorTree : Module, IModuleJsonParameterValidat
     public override void ModUpdate(float deltaTime)
     {
         if (runtime == null) return;
-        if (!GameNetwork.HasStateAuthority) return;
+        bool manual = autonomousControlSuspended || ActorProfileRegistry.IsManuallyControlled(item);
+        if (!GameNetwork.HasStateAuthority && !manual) return;
         if (!IsAlive)
         {
             HandleDeathStarted(Context.Health);
             return;
         }
-        Context.Tick(deltaTime);
+        Context.Tick(deltaTime, manual);
         if (!IsAlive) { HandleDeathStarted(Context.Health); return; }
-        runtime.Tick(deltaTime);
+        if (!manual) runtime.Tick(deltaTime);
+    }
+
+    public void SetAutonomousControlSuspended(bool suspended)
+    {
+        if (autonomousControlSuspended == suspended) return;
+        autonomousControlSuspended = suspended;
+        if (!suspended)
+        {
+            Context?.StopAllCombatCapabilities();
+            return;
+        }
+        runtime?.Abort();
+        ClearTemperatureSafetyDestination();
+        Context?.Mod_Mover?.StopMovement();
+        Context?.StopAllCombatCapabilities();
+        foreach (var damage in bodyDamageSources) if (damage != null) damage.SetDamageEnabled(false);
     }
 
     protected override void OnSave() => ModData.WriteData(CaptureSave());

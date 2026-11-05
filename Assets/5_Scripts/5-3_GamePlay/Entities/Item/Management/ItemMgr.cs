@@ -116,45 +116,40 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
         get
         {
             string playerName = SaveDataMgr.Instance.CurrentContrrolPlayerName;
-            if (Player_DIC.TryGetValue(playerName, out Player runtimePlayer) && runtimePlayer?.Data != null)
+            if (ProfileActors.TryGetValue(playerName, out Item runtimePlayer) && runtimePlayer?.itemData!= null)
             {
-                return runtimePlayer.Data.CurrentSceneName;
+                return runtimePlayer.itemData.GetActorProfileMetadata().WorldKey;
             }
 
             // 联机玩家尚未完成 Item 实例创建时，从同步后的玩家存档提供当前场景作为保底。
-            if (SaveDataMgr.Instance.SaveData?.PlayerData_Dict != null &&
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out Data_Player playerData) &&
-                !string.IsNullOrWhiteSpace(playerData.CurrentSceneName))
+            if (SaveDataMgr.Instance.SaveData?.ProfileActorData != null &&
+                SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(playerName, out ItemData playerData) &&
+                !string.IsNullOrWhiteSpace(playerData.GetActorProfileMetadata().WorldKey))
             {
-                return playerData.CurrentSceneName;
+                return playerData.GetActorProfileMetadata().WorldKey;
             }
 
             return GameplayWorldRegistry.ExecutionWorldKey;
         }
     }
 
-    public Player User_Player
+    public Item LocalControlledActor
     {
         get
         {
-            if (Player_DIC.TryGetValue(SaveDataMgr.Instance.CurrentContrrolPlayerName, out var player))
-            {
-                return player;
-            }
-
-            return null;
+            return ActorProfileRegistry.LocalControlledActor;
         }
     }
 
     /// <summary>
-    /// 当前本地玩家的 Transform。单机与联机模式均优先返回核心 Player Item。
+    /// 当前本地玩家的 Transform。单机与联机模式均优先返回档案角色 Item。
     /// </summary>
-    public Transform UserPlayerTransform
+    public Transform LocalControlledActorTransform
     {
         get
         {
-            string playerName = SaveDataMgr.Instance.CurrentContrrolPlayerName;
-            if (Player_DIC.TryGetValue(playerName, out Player runtimePlayer) && runtimePlayer != null)
+            Item runtimePlayer = LocalControlledActor;
+            if (runtimePlayer != null)
                 return runtimePlayer.transform;
 
             return _externalPlayerTransform;
@@ -360,15 +355,15 @@ public partial class ItemMgr : SingletonMono<ItemMgr>, IGameplayFixedStepSimulat
     private void RefreshSimulationPlayers()
     {
         _simulationPlayers.Clear();
-        foreach (Player player in Player_DIC.Values)
+        foreach (Item player in ProfileActors.Values)
         {
             if (player != null && player.gameObject.activeInHierarchy &&
                 !_simulationPlayers.Contains(player.transform))
                 _simulationPlayers.Add(player.transform);
         }
 
-        if (_simulationPlayers.Count == 0 && UserPlayerTransform != null)
-            _simulationPlayers.Add(UserPlayerTransform);
+        if (_simulationPlayers.Count == 0 && LocalControlledActorTransform != null)
+            _simulationPlayers.Add(LocalControlledActorTransform);
     }
 
     #endregion

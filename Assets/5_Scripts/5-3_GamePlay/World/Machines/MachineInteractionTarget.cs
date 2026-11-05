@@ -72,7 +72,7 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
         if (!GameNetwork.HasStateAuthority)
         {
             if (Time.unscaledTime >= nextRemoteCrank)
-            { nextRemoteCrank = Time.unscaledTime + .1f; MachineWorld.RequestOperation(node, "crank", "", actor as Player); }
+            { nextRemoteCrank = Time.unscaledTime + .1f; MachineWorld.RequestOperation(node, "crank", "", ActorProfileRegistry.GetProfileActorOrNull(actor as Item)); }
             return;
         }
         float buffer = Mathf.Min(MachineCatalog.Settings.ManualReserveSeconds,
@@ -143,7 +143,7 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
         => node.Definition.ManualDriveTorque <= 0 || !GameNetwork.HasStateAuthority || MachineWorld.CanManualDrive(node);
 
     /// <summary>面板操作直接修改权威节点，拓扑变更在下一次机械 Tick 重构。</summary>
-    private void PerformOperation(Player actor)
+    private void PerformOperation(Item actor)
     {
         if (node.Definition.Transport != null)
         {

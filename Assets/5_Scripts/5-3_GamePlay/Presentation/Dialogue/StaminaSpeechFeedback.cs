@@ -17,7 +17,7 @@ namespace FlatWorld.Dialogue
         // 仅在本地玩家主动工作被体力不足拒绝时请求气泡。
         private static void HandleConsumptionRejected(Mod_Stamina stamina, string sourceId)
         {
-            if (stamina == null || stamina.item is not Player player || !player.IsLocalProfile)
+            if (stamina == null || !(stamina.item is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
                 return;
 
             player.GetComponent<ConfiguredSpeechProvider>()?.TrySpeakEntry(ExhaustedEntryId);

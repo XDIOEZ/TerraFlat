@@ -465,12 +465,15 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
     internal void LoadRuntime()
     {
+        if (!ActorControlModuleLifecycle.CanLoad(this)) return;
         if (lifecycleState != RuntimeLifecycleState.Unloaded || !Enabled ||
             item?.DestructionHandled == true || item?.IsUnloadingModules == true)
             return;
         if (item == null || Item_Data == null || _Data == null)
             throw new InvalidOperationException($"模块 {StableName} 必须先通过 ModuleInit 绑定，再加载。");
 
+        if (this is not Mod_GameController && ActorProfileRegistry.IsLocallyControlled(item))
+            item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller)?.LoadRuntime();
         RestoreBoundRuntimeIdentity();
         lifecycleState = RuntimeLifecycleState.Loading;
         unloadAfterLoading = false;

@@ -76,7 +76,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
     }
 
     public bool Drink(Item actor) => GameNetwork.HasStateAuthority ? LiquidVesselOperations.Drink(this, actor)
-        : CanOperate(actor) && MachineWorld.RequestOperation(Entity, "vessel.drink", "", actor as Player);
+        : CanOperate(actor) && MachineWorld.RequestOperation(Entity, "vessel.drink", "", ActorProfileRegistry.GetProfileActorOrNull(actor as Item));
     public float PourToGround(Item actor, float amount)
     {
         if (GameNetwork.HasStateAuthority) return LiquidVesselOperations.PourToGround(this, actor, amount);
@@ -84,12 +84,12 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
         nextRemotePour = Time.unscaledTime + .1f;
         float value = Mathf.Min(amount, Data.Amount);
         if (value <= 0f) return 0f;
-        return MachineWorld.RequestOperation(Entity, "vessel.pour", value.ToString("R", CultureInfo.InvariantCulture), actor as Player) ? value : 0f;
+        return MachineWorld.RequestOperation(Entity, "vessel.pour", value.ToString("R", CultureInfo.InvariantCulture), ActorProfileRegistry.GetProfileActorOrNull(actor as Item)) ? value : 0f;
     }
     public bool TransferFromInventoryItem(ItemData source, Item actor, float maximumItemAmount = float.PositiveInfinity)
     {
         if (GameNetwork.HasStateAuthority) return LiquidVesselOperations.TransferFromInventory(this, source, actor, maximumItemAmount);
-        if (!CanOperate(actor) || actor is not Player player || source == null || float.IsNaN(maximumItemAmount) || maximumItemAmount <= 0f ||
+        if (!CanOperate(actor) || !(actor is Item player && ActorIdentity.IsPlayer(player)) || source == null || float.IsNaN(maximumItemAmount) || maximumItemAmount <= 0f ||
             !InventoryContextResolver.TryResolveContainingInventory(actor, source, out Inventory inventory) ||
             !MachineInventoryCommands.TryAddress(player, inventory, out var address)) return false;
         int slot = inventory.Data.itemSlots.FindIndex(value => ReferenceEquals(value?.itemData, source));
@@ -103,7 +103,7 @@ public class VesselLogic : MachineLogic, ILiquidVessel, IVesselContents, IContai
     public float AddLiquid(string id, float amount) => LiquidVesselOperations.Add(this, id, amount);
     public float RemoveLiquid(float amount) => LiquidVesselOperations.Remove(this, amount);
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (!GameNetwork.HasStateAuthority || !CanOperate(actor)) return false;
         if (operation == "vessel.drink") return Drink(actor);

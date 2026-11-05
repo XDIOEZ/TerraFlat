@@ -160,7 +160,10 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
         context.RequireMinimumDetectionRadius(Mathf.Max(hungryRange, lossRange));
     }
 
-    public override void Tick(float deltaTime)
+    public override void Tick(float deltaTime) => TickControlState(deltaTime, true);
+    public override void TickWhileManuallyControlled(float deltaTime) => TickControlState(deltaTime, false);
+
+    private void TickControlState(float deltaTime, bool autonomous)
     {
         hungerRemaining = Mathf.Max(0f, hungerRemaining - Mathf.Max(0f, deltaTime));
         reacquireRemaining = Mathf.Max(0f, reacquireRemaining - Mathf.Max(0f, deltaTime));
@@ -181,7 +184,7 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
             pursueElapsed += Mathf.Max(0f, deltaTime);
             if (pursueElapsed >= Mathf.Max(.1f, pursuitLimit)) { Clear(); reacquireRemaining = reacquireDelay; }
         }
-        if (target == null && reacquireRemaining <= 0f && targetRefreshRemaining <= 0f)
+        if (autonomous && target == null && reacquireRemaining <= 0f && targetRefreshRemaining <= 0f)
         { targetRefreshRemaining = .15f; AcquireNearestTarget(); }
     }
 

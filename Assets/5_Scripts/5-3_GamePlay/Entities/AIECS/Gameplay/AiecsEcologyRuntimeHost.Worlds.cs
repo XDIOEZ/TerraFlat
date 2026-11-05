@@ -11,7 +11,7 @@ namespace FlatWorld.AIECS.Gameplay
         private static string creatingWorld;
         private string ownedWorldKey;
         private bool ownsWorldObject;
-        private readonly List<Player> worldPlayers = new();
+        private readonly List<Item> worldPlayers = new();
         private Unity.Mathematics.float2[] observerPositions = Array.Empty<Unity.Mathematics.float2>();
         public string OwnedWorldKey => ownedWorldKey;
 
@@ -50,14 +50,14 @@ namespace FlatWorld.AIECS.Gameplay
         private GameplayWorldRegistry.WorldExecutionScope UseOwnedWorld() => string.IsNullOrEmpty(ownedWorldKey) ? default : GameplayWorldRegistry.UseWorld(ownedWorldKey);
 
         // 每个世界从自己的玩家集合取得观察和战斗代理，不依赖主机正在看哪一层。
-        private Player RefreshWorldPlayers()
+        private Item RefreshWorldPlayers()
         {
             worldPlayers.Clear();
             ItemMgr items = ItemMgr.GetInstance();
             if (items != null)
-                foreach (Player player in items.Player_DIC.Values)
+                foreach (Item player in items.ProfileActors.Values)
                     if (player != null && player.IsInitialized && player.gameObject.activeInHierarchy &&
-                        player.gameObject.scene.name == ownedWorldKey && player.Data?.CurrentSceneName == ownedWorldKey)
+                        player.gameObject.scene.name == ownedWorldKey && player.itemData?.GetActorProfileMetadata().WorldKey == ownedWorldKey)
                         worldPlayers.Add(player);
             return worldPlayers.Count > 0 ? worldPlayers[0] : null;
         }
@@ -80,7 +80,7 @@ namespace FlatWorld.AIECS.Gameplay
         {
             position = default;
             float best = float.PositiveInfinity;
-            foreach (Player player in worldPlayers)
+            foreach (Item player in worldPlayers)
             {
                 if (player == null) continue;
                 Vector3 candidate = player.transform.position;

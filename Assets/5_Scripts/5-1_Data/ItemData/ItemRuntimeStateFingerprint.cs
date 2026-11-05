@@ -15,13 +15,13 @@ public static class ItemRuntimeStateFingerprint
     {
         signature = 0;
         if (data == null || visiting == null || visiting.Count >= MaxNestedItems ||
-            (data.GetType() != typeof(Data_GeneralItem) && data.GetType() != typeof(BlockData) && data.GetType() != typeof(Data_Player)) ||
+            (data.GetType() != typeof(Data_GeneralItem) && data.GetType() != typeof(BlockData)) ||
             data.PreservedModuleStates?.Length > 0 || !visiting.Add(data)) return false;
         try
         {
             var hash = new ItemRuntimeFingerprintBuilder();
             hash.Add(ModuleInstanceStateCodecs.Revision);
-            hash.Add(data.GetType() == typeof(Data_GeneralItem) ? 0 : data.GetType() == typeof(Data_Player) ? 1 : 3);
+            hash.Add(data.GetType() == typeof(Data_GeneralItem) ? 0 : 3);
             hash.Add(data.IDName);
             hash.Add(data.Guid);
             if (data.Stack != null && data.Stack.GetType() != typeof(ItemStack)) return false;
@@ -77,50 +77,10 @@ public static class ItemRuntimeStateFingerprint
                     hash.Add(moduleSignature);
                 }
             if (data is Data_GeneralItem general) hash.Add(general.code);
-            if (data is Data_Player player && !AppendPlayer(ref hash, player, publicState, visiting)) return false;
             signature = hash.Value;
             return true;
         }
         finally { visiting.Remove(data); }
-    }
-
-    #endregion
-
-    #region 玩家实例状态指纹
-
-    // 与 PlayerInstanceSnapshot 的公开和私有字段保持一致，未覆盖的扩展类型仍完整捕获。
-    private static bool AppendPlayer(ref ItemRuntimeFingerprintBuilder hash, Data_Player player,
-        bool publicState, HashSet<ItemData> visiting)
-    {
-        hash.Add(player.CurrentSceneName);
-        hash.Add(player.hp != null);
-        if (player.hp != null)
-        {
-            if (player.hp.GetType() != typeof(Hp)) return false;
-            hash.Add(player.hp.Value);
-            hash.Add(player.hp.maxValue);
-            AppendStrings(ref hash, player.hp.Weaknesses);
-        }
-        hash.Add(player.Speed != null);
-        if (player.Speed != null)
-        {
-            if (player.Speed.GetType() != typeof(GameValue_float)) return false;
-            hash.Add(player.Speed.BaseValue);
-            hash.Add(player.Speed.BaseAdditive);
-            hash.Add(player.Speed.AdditiveModifier);
-            hash.Add(player.Speed.MultiplicativeModifier);
-            hash.Add(player.Speed.FinalAdditive);
-        }
-        hash.Add(player.stamina);
-        hash.Add(player.staminaMax);
-        hash.Add(player.staminaRecoverySpeed);
-        hash.Add(player.Name_User);
-        hash.Add(player.PlayerPov);
-        hash.Add(player.MaxCarryWeight);
-        hash.Add(player.MaxCarryVolume);
-        hash.Add(player.PerceptionRadiusMultiplier);
-        hash.Add(publicState);
-        return publicState || AppendInventories(ref hash, player._inventoryData, visiting);
     }
 
     #endregion

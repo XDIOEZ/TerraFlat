@@ -10,6 +10,8 @@ out = root / "Temp" / "SqliteArchiveContractValidation"
 out.mkdir(parents=True, exist_ok=True)
 response = max((root / "Library/Bee").rglob("Data.rsp"), key=lambda path: path.stat().st_mtime)
 text = response.read_text(encoding="utf-8-sig")
+# 隔离分支允许复用Editor响应文件，已删除的源码不参与本轮编译。
+text = "\n".join(line for line in text.splitlines() if not line.strip('"').endswith('.cs') or (root / line.strip('"')).exists())
 text = re.sub(r"^-out:.*$", f'-out:"{(out / "Data.dll").as_posix()}"', text, flags=re.M)
 text = re.sub(r"^-refout:.*$", f'-refout:"{(out / "Data.ref.dll").as_posix()}"', text, flags=re.M)
 for path in (root / "Assets/5_Scripts/5-1_Data").rglob("*.cs"):
@@ -36,6 +38,8 @@ group = ET.SubElement(project, "ItemGroup")
 ET.SubElement(group, "Compile", Include=str(Path(__file__).with_name("Program.cs")))
 ET.SubElement(group, "Compile", Include=str(Path(__file__).with_name("MachineArchiveStubs.cs")))
 ET.SubElement(group, "Compile", Include=str(Path(__file__).with_name("CoreContractStubs.cs")))
+ET.SubElement(group, "Compile", Include=str(root / "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/ActorModuleState.cs"))
+ET.SubElement(group, "Compile", Include=str(root / "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/ModText.cs"))
 ET.SubElement(group, "Compile", Include=str(root / "Assets/5_Scripts/5-3_GamePlay/World/Machines/MachineArchiveMetadataSnapshot.cs"))
 ET.SubElement(group, "Compile", Include=str(root / "Assets/5_Scripts/5-3_GamePlay/World/Fluids/Core/FluidState.cs"))
 ET.SubElement(group, "Compile", Include=str(root / "Assets/5_Scripts/5-3_GamePlay/World/Fluids/Atmosphere/AtmosphereState.cs"))
@@ -77,6 +81,7 @@ snapshot_source = "using System; using System.Collections.Generic; using System.
     snapshot_definition(game_save / "SaveDataMgr.SqliteArchive.cs", "SqliteChunkSnapshot"),
     snapshot_definition(game_save / "SaveDataMgr.Fire.cs", "FireCellSaveData"),
     snapshot_definition(game_save / "CombustibilityCellSaveData.cs", "CombustibilityCellSaveData"),
+    snapshot_definition(root / "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_HotBar.cs", "InventoryHotBarSaveState"),
     *[snapshot_definition(root / path, name) for path, name in [
         ("Assets/5_Scripts/5-3_GamePlay/World/Machines/CultivatorLogic.cs", "CultivatorHarvestOutput"),
         ("Assets/5_Scripts/5-3_GamePlay/World/Machines/CultivatorLogic.cs", "CultivatorPlotState"),
@@ -106,6 +111,7 @@ snapshot_source = "using System; using System.Collections.Generic; using System.
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.Agriculture.cs", "AgricultureCellSaveData"),
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "SupportCellSaveData"),
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "GroundLayerCellSaveData"),
+        ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "GroundStratumSaveData"),
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "GroundCoverLayerSaveData"),
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "LiquidCellSaveData"),
         ("Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.TerrainLayers.cs", "ContaminationCellSaveData"),

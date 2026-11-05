@@ -1128,18 +1128,13 @@ public static class FlatWorldContentValidator
                             prototype);
                     }
 
-                    // 正式生物统一单图摇摆，静态首帧不能再依赖旧 Animator 的状态名。
+                    // 单图角色校验静态首帧，分层人形沿用自身 Animator 表现。
                     string modeText = pair.Value.Parameters?["visualMode"]?.ToString();
                     Mod_AnimatorController.VisualMode mode = animation.visualMode;
                     if (modeText != null)
                         Enum.TryParse(modeText, true, out mode);
-                    if (mode != Mod_AnimatorController.VisualMode.SingleSprite)
-                    {
-                        AddError(report, "FWC-ACTORJSON-007", ActorManifestAssetPath,
-                            $"{actorField}.modules[{pair.Key}].parameters.visualMode",
-                            "正式生物必须使用 SingleSprite 摇摆模式。", prototype);
-                    }
-                    if (!ItemDefinitionCatalogLoader.TryLoadEditorSprite(definition.Visual?.SpriteAddress,
+                    if (mode == Mod_AnimatorController.VisualMode.SingleSprite &&
+                        !ItemDefinitionCatalogLoader.TryLoadEditorSprite(definition.Visual?.SpriteAddress,
                         out _, out string spriteError))
                     {
                         AddError(report, "FWC-ACTORJSON-008", ActorManifestAssetPath,

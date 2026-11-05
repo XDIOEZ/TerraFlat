@@ -113,7 +113,6 @@ namespace FlatWorld.WorldModel
 public sealed class ModuleData { public string ID; public string Name; }
 public class ItemData { public string IDName; public int Guid; public Dictionary<string, ModuleData> ModuleDataDic; }
 public class Item : MonoBehaviour { public ItemData itemData; }
-public sealed class Player : Item { }
 public sealed class Map : Item { }
 public sealed class Mod_ItemChunkAssigner : MonoBehaviour { }
 public interface IAIActor { }

@@ -189,7 +189,7 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
     {
         Transform player = ResolvePlayerTransform();
         if (player == null) return false;
-        Item playerItem = player.GetComponentInParent<Player>();
+        Item playerItem = player.GetComponentInParent<Item>();
         float radius = item.ClampPerceptionRadius(
             Mod_ItemDetector.CalculateEffectiveDetectionRadius(perceptionRadius, playerItem));
         return WorldTopologyRuntime.SqrDistance(item.transform.position, player.position) <= radius * radius;
@@ -361,7 +361,7 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
 
     /// <summary>
     /// 获取当前本地玩家，优先使用 ItemMgr 的正式入口；当存档玩家名尚未同步时，
-    /// 回退到 Player_DIC 中已标记为本地档案且仍处于激活状态的玩家，避免幽灵目标为空。
+    /// 回退到 ProfileActors 中已标记为本地档案且仍处于激活状态的玩家，避免幽灵目标为空。
     /// </summary>
     private Transform ResolvePlayerTransform()
     {
@@ -369,13 +369,13 @@ public partial class Mod_LightSensitiveNavigation : Module, ISimulationRangeAwar
         if (itemManager == null)
             return null;
 
-        Transform playerTransform = itemManager.UserPlayerTransform;
+        Transform playerTransform = itemManager.LocalControlledActorTransform;
         if (playerTransform != null && playerTransform.gameObject.activeInHierarchy)
             return playerTransform;
 
-        foreach (Player player in itemManager.Player_DIC.Values)
+        foreach (Item player in itemManager.ProfileActors.Values)
         {
-            if (player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy)
+            if (player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.gameObject.activeInHierarchy)
                 return player.transform;
         }
 

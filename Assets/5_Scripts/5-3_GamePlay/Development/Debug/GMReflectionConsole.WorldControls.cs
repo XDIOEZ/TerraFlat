@@ -262,7 +262,7 @@ public sealed partial class GMReflectionConsole
     {
         RefreshDayTimeControl();
 
-        Player localPlayer = FindLocalPlayer();
+        Item localPlayer = FindLocalPlayer();
         Mod_PlayerAdminController controller = localPlayer != null
             ? localPlayer.GetComponentInChildren<Mod_PlayerAdminController>(true)
             : null;
@@ -327,14 +327,14 @@ public sealed partial class GMReflectionConsole
     /// <summary>世界页只控制本机玩家，不把滑条绑定到联机远程玩家副本。</summary>
     private static T FindLocalPlayerModule<T>() where T : Component
     {
-        Player localPlayer = FindLocalPlayer();
+        Item localPlayer = FindLocalPlayer();
         return localPlayer != null ? localPlayer.GetComponentInChildren<T>(true) : null;
     }
 
-    private static Player FindLocalPlayer()
+    private static Item FindLocalPlayer()
     {
-        return FindObjectsOfType<Player>(true)
-            .FirstOrDefault(player => player.IsLocalProfile);
+        return ActorProfileRegistry.GetProfileActors()
+            .FirstOrDefault(player => ActorProfileRegistry.IsLocallyControlled(player));
     }
 
     #endregion

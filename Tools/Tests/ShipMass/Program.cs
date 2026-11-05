@@ -19,6 +19,7 @@ internal static partial class Program
         Run("手动砧工具与材料分存且冷热库存不重复计重", ManualToolMass);
         Run("冷机器只解析一次根文档和已有载荷", ColdMachine);
         Run("运行库存、堆叠和流体每步读取真实状态", LiveChanges);
+        Run("旧库存兼容键的质量与实例去重", LegacyInventoryMass);
         Run("运行机器库存和容器优先于冷载荷", LiveMachine);
         Run("嵌套库存、循环和重复 GUID 去重", NestedIdentity);
         Run("共享气罐和液体引用去重", SharedFluid);
@@ -201,6 +202,22 @@ internal static partial class Program
         reader.Reset(); Near(12d, reader.ReadItem(owner, live), "live gas mass");
         gas.Components[0].GasMoles = 2d;
         reader.Reset(); Near(11d, reader.ReadItem(owner, live), "gas consumption updates next step");
+    }
+    private static void LegacyInventoryMass()
+    {
+        var reader = new Reader();
+        var owner = Cargo(1, 1d);
+        var visible = Inventory(Cargo(2, 2d));
+        var module = new Mod_Inventory { InventoryInstances = new() { new Inventory { Data = visible } } };
+        module.Data.Data["bag"] = visible;
+        module.Data.Data["legacy:bag"] = Inventory(Cargo(2, 2d), Cargo(3, 5d));
+        owner.ModuleDataDic["bag"] = module.Data;
+        var live = new Item();
+        live.SetModule("bag", module);
+        reader.Reset();
+        Near(8d, reader.ReadItem(owner, live), "hidden compatibility cargo counts once with duplicate Guid removed");
+        reader.Reset();
+        Near(8d, reader.ReadItem(owner, null), "cold compatibility cargo retains the same mass");
     }
     private static void NestedIdentity()
     {

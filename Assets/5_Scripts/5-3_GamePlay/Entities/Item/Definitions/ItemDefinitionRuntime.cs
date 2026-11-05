@@ -120,14 +120,13 @@ public static class ItemDefinitionRuntime
         return rebasedData;
     }
 
-    /// <summary>只刷新物品内部库存中的 ItemData；用于 Player 等不由 ItemDefinition 创建的根数据。</summary>
+    /// <summary>提升库存中的通用实例配置，并消费旧角色的兼容模块状态。</summary>
     public static void RebaseNestedPersistedItems(GameRes gameRes, ItemData itemData, bool onlyColdData = false)
     {
         if (gameRes == null || itemData == null)
             return;
 
-        if (itemData is Data_Player playerData)
-            RebaseInventoryDictionary(gameRes, playerData._inventoryData, onlyColdData);
+        ActorModuleState.ApplyLegacyModuleState(itemData);
 
         if (itemData.ModuleDataDic == null)
             return;

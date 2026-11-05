@@ -21,7 +21,7 @@ namespace FlatWorld.Dialogue
 
         private static void HandleConsumptionCompleted(FoodConsumeResult result)
         {
-            if (result.Consumer is not Player { IsLocalProfile: true } player ||
+            if (!(result.Consumer is Item player && ActorProfileRegistry.IsLocallyControlled(player)) ||
                 string.IsNullOrWhiteSpace(result.ConsumedItemId))
             {
                 return;

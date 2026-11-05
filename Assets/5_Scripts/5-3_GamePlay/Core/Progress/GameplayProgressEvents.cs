@@ -10,7 +10,7 @@ namespace FlatWorld.Gameplay.Progress
     /// </summary>
     public readonly struct GameplayProgressSignal
     {
-        public GameplayProgressSignal(Player actor, string type, string targetId, float amount, JObject payload = null)
+        public GameplayProgressSignal(Item actor, string type, string targetId, float amount, JObject payload = null)
         {
             Actor = actor;
             Type = type;
@@ -19,7 +19,7 @@ namespace FlatWorld.Gameplay.Progress
             Payload = payload;
         }
 
-        public Player Actor { get; }
+        public Item Actor { get; }
         public string Type { get; }
         public string TargetId { get; }
         public float Amount { get; }
@@ -48,13 +48,13 @@ namespace FlatWorld.Gameplay.Progress
 
         #region 事件
 
-        public static event Action<Player> InventoryOpened;
-        public static event Action<Player, string> PickupSucceeded;
-        public static event Action<Player, string> CraftSucceeded;
-        public static event Action<Player, string> SmeltSucceeded;
-        public static event Action<Player, string> BuildingPlaced;
-        public static event Action<Player, string> FireSeedCreated;
-        public static event Action<Player, string> FurnaceIgnited;
+        public static event Action<Item> InventoryOpened;
+        public static event Action<Item, string> PickupSucceeded;
+        public static event Action<Item, string> CraftSucceeded;
+        public static event Action<Item, string> SmeltSucceeded;
+        public static event Action<Item, string> BuildingPlaced;
+        public static event Action<Item, string> FireSeedCreated;
+        public static event Action<Item, string> FurnaceIgnited;
         public static event Action<GameplayProgressSignal> SignalPublished;
 
         #endregion
@@ -78,7 +78,7 @@ namespace FlatWorld.Gameplay.Progress
 
         #region 发布
 
-        public static void PublishInventoryOpened(Player actor)
+        public static void PublishInventoryOpened(Item actor)
         {
             if (actor == null)
                 return;
@@ -88,7 +88,7 @@ namespace FlatWorld.Gameplay.Progress
         }
 
         public static void PublishPickupSucceeded(
-            Player actor,
+            Item actor,
             string itemId,
             float amount = 1f,
             string dimensionId = null)
@@ -108,7 +108,7 @@ namespace FlatWorld.Gameplay.Progress
                 payload));
         }
 
-        public static void PublishCraftSucceeded(Player actor, string outputItemId, float amount = 1f)
+        public static void PublishCraftSucceeded(Item actor, string outputItemId, float amount = 1f)
         {
             if (actor == null || string.IsNullOrWhiteSpace(outputItemId))
                 return;
@@ -118,7 +118,7 @@ namespace FlatWorld.Gameplay.Progress
         }
 
         /// <summary>仅在熔炼产物已写入输出库存后发布，失败、烧焦和预览都不得调用。</summary>
-        public static void PublishSmeltSucceeded(Player actor, string outputItemId, float amount = 1f)
+        public static void PublishSmeltSucceeded(Item actor, string outputItemId, float amount = 1f)
         {
             if (actor == null || string.IsNullOrWhiteSpace(outputItemId))
                 return;
@@ -127,7 +127,7 @@ namespace FlatWorld.Gameplay.Progress
             PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.SmeltSucceeded, outputItemId, amount));
         }
 
-        public static void PublishBuildingPlaced(Player actor, string buildingId, float amount = 1f)
+        public static void PublishBuildingPlaced(Item actor, string buildingId, float amount = 1f)
         {
             if (actor == null || string.IsNullOrWhiteSpace(buildingId))
                 return;
@@ -136,7 +136,7 @@ namespace FlatWorld.Gameplay.Progress
             PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.BuildingPlaced, buildingId, amount));
         }
 
-        public static void PublishFireSeedCreated(Player actor, string itemId, float amount = 1f)
+        public static void PublishFireSeedCreated(Item actor, string itemId, float amount = 1f)
         {
             if (actor == null || string.IsNullOrWhiteSpace(itemId))
                 return;
@@ -145,7 +145,7 @@ namespace FlatWorld.Gameplay.Progress
             PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.FireSeedCreated, itemId, amount));
         }
 
-        public static void PublishFurnaceIgnited(Player actor, string furnaceId, float amount = 1f)
+        public static void PublishFurnaceIgnited(Item actor, string furnaceId, float amount = 1f)
         {
             if (actor == null || string.IsNullOrWhiteSpace(furnaceId))
                 return;

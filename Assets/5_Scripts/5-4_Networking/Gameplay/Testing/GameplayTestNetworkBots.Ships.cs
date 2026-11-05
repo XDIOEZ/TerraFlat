@@ -28,7 +28,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         // 假人发送真实 Mirror 消息，只采回复与权威世界；Lua 持有拒绝断言。
-        private static IEnumerator CaptureShipRequests(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureShipRequests(Item local, JObject args, Action<JObject> completed)
         {
             var streamingWindows = new JArray { CaptureLocalStreamingWindow("before", local) };
             IReadOnlyList<FixedStructureDefinition> templates = null;
@@ -47,8 +47,8 @@ namespace FlatWorld.Networking.Gameplay
             NetworkWorldPlayer actor = world.Core(94), witness = world.Core(95);
             actor.TryGetSpaceObserver(out SpaceNetworkObserver observer);
             uint netId = actor.netId;
-            Player originalCore = actor.CorePlayer;
-            Data_Player originalData = actor.CorePlayer.Data;
+            Item originalCore = actor.CorePlayer;
+            ItemData originalData = actor.CorePlayer.itemData;
             int ships = world.Session.State.Ships.Count;
             var samples = new JArray();
             var request = new NetworkFixedShipRequest { Token = 1, WorldKey = observer.WorldKey,
@@ -74,7 +74,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 ["transport"] = "mirror-in-memory", ["samples"] = samples,
                 ["launchAccepted"] = launch.Accepted, ["launchReason"] = launch.Reason,
-                ["actorIdentityPreserved"] = actor.netId == netId && ReferenceEquals(actor.CorePlayer, originalCore) && ReferenceEquals(actor.CorePlayer.Data, originalData),
+                ["actorIdentityPreserved"] = actor.netId == netId && ReferenceEquals(actor.CorePlayer, originalCore) && ReferenceEquals(actor.CorePlayer.itemData, originalData),
                 ["independentActors"] = !ReferenceEquals(actor.CorePlayer, witness.CorePlayer) && !ReferenceEquals(actor.CorePlayer, local),
                 ["shipCountUnchanged"] = world.Session.State.Ships.Count == ships,
                 ["witnessReplies"] = world.Transport.Count<NetworkFixedShipResponse>(95) + world.Transport.Count<NetworkSpaceIntentResponse>(95)
@@ -120,7 +120,7 @@ namespace FlatWorld.Networking.Gameplay
             result["authoritativeShipCreated"] = launched != null;
             result["flightIgnited"] = launched != null && world.Session.GetFlight(launched.ShipId)?.Ignited == true;
             result["groundOwnershipTransferred"] = !ShipGroundBuildingStore.Collect(observer.WorldKey).Any(value => entries.Any(own => own.Guid == value.Guid));
-            result["identityAfterLaunch"] = actor.netId == netId && ReferenceEquals(actor.CorePlayer, originalCore) && ReferenceEquals(actor.CorePlayer.Data, originalData);
+            result["identityAfterLaunch"] = actor.netId == netId && ReferenceEquals(actor.CorePlayer, originalCore) && ReferenceEquals(actor.CorePlayer.itemData, originalData);
             streamingWindows.Add(CaptureLocalStreamingWindow("ship-launched", local));
             shipFixture.Dispose();
             world.Dispose();
@@ -138,7 +138,7 @@ namespace FlatWorld.Networking.Gameplay
         }
 
         // 比较本地玩家流送目标与云雾采用的实际交接窗口，定位测试前后的画面残留。
-        private static JObject CaptureLocalStreamingWindow(string stage, Player local)
+        private static JObject CaptureLocalStreamingWindow(string stage, Item local)
         {
             Mod_ChunkLoader loader = local.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
             Mod_Cam cameraModule = local.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
@@ -177,7 +177,7 @@ namespace FlatWorld.Networking.Gameplay
         private static ShipStreamingBoundaryFixture streamingBoundary;
 
         // 使用正式传送与 Lua 自带移动输入复现玩家跨区块后的窗口交接。
-        private static JObject PrepareShipStreamingBoundary(Player player, JObject args)
+        private static JObject PrepareShipStreamingBoundary(Item player, JObject args)
         {
             if (streamingBoundary != null) throw new InvalidOperationException("区块边界现场尚未释放。");
             var fixture = new ShipStreamingBoundaryFixture(player);
@@ -187,7 +187,7 @@ namespace FlatWorld.Networking.Gameplay
             return new JObject { ["prepared"] = true, ["boundaryX"] = ShipStreamingBoundaryFixture.BoundaryX };
         }
 
-        private static IEnumerator CaptureShipStreamingBoundary(Player player, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureShipStreamingBoundary(Item player, JObject args, Action<JObject> completed)
         {
             ShipStreamingBoundaryFixture fixture = streamingBoundary ??
                 throw new InvalidOperationException("区块边界现场未准备。");
@@ -208,7 +208,7 @@ namespace FlatWorld.Networking.Gameplay
         private sealed class ShipStreamingBoundaryFixture : IDisposable
         {
             internal const float BoundaryX = 176f;
-            private readonly Player player;
+            private readonly Item player;
             private readonly Mod_PlayerTraits traits;
             private readonly Mod_Mover mover;
             private readonly Vector3 originalPosition;
@@ -216,7 +216,7 @@ namespace FlatWorld.Networking.Gameplay
             private bool disposed;
             internal bool Restored { get; private set; }
 
-            internal ShipStreamingBoundaryFixture(Player player)
+            internal ShipStreamingBoundaryFixture(Item player)
             {
                 this.player = player;
                 traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId)

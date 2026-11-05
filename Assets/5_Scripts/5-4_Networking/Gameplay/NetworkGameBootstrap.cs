@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Networking.MirrorAdapter;
 using kcp2k;
 using UnityEngine;
@@ -34,7 +34,7 @@ namespace FlatWorld.Networking.Gameplay
             if (manager == null || automaticSessionSuppressions > 0 || Mirror.NetworkServer.active || Mirror.NetworkClient.active) return;
             GameManager game = GameManager.ExistingInstance;
             GameSaveData save = SaveDataMgr.Instance?.SaveData;
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (game?.IsInGameWorld != true || !game.IsGameplayReady || player?.IsInitialized != true ||
                 save == null || ReferenceEquals(save, attemptedWorld)) return;
             attemptedWorld = save;

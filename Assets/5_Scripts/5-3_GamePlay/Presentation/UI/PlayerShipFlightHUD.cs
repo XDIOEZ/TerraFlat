@@ -6,7 +6,7 @@ using UnityEngine;
 
 /// <summary>本地驾驶员起降时显示真实飞行高度，落地完成凭证只短暂提示一次。</summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public sealed class PlayerShipFlightHUD : MonoBehaviour
 {
     #region 本地驾驶与正式 HUD
@@ -17,7 +17,7 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
     private const string LandedSource = "已着陆，飞船已固定";
     private readonly ShipFlightHudPresentationTracker tracker = new();
     private readonly string[] tickLabels = new string[5];
-    private Player player;
+    private Item player;
     private SpaceSession boundSession;
     private ShipFlightHudView view;
     private RectTransform viewRect, coordinateHudRect, mobileMoveRect;
@@ -41,12 +41,12 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
     #endregion
 
     #region 玩家生命周期
-    private void Awake() => player = GetComponent<Player>();
+    private void Awake() => player = GetComponent<Item>();
 
     private void OnEnable()
     {
-        player ??= GetComponent<Player>();
-        if (player != null) player.ProfileContextChanged += HandleProfileContextChanged;
+        player ??= GetComponent<Item>();
+        if (player != null) ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
         RefreshLocalization();
         tracker.Reset();
@@ -54,7 +54,7 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
 
     private void OnDisable()
     {
-        if (player != null) player.ProfileContextChanged -= HandleProfileContextChanged;
+        if (player != null) ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         tracker.Reset();
         BindSession(null);
@@ -124,7 +124,7 @@ public sealed class PlayerShipFlightHUD : MonoBehaviour
 
     private bool CanDisplay()
     {
-        if (!isActiveAndEnabled || player == null || !player.IsLocalProfile || player.DestructionHandled ||
+        if (!isActiveAndEnabled || player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.DestructionHandled ||
             player.IsUnloadingModules || player.itemMods == null || GameManager.Instance?.IsInGameWorld != true) return false;
         Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         return health != null && health.Hp > 0f &&

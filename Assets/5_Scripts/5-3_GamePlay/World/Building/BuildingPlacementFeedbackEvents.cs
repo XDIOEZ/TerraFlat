@@ -11,8 +11,8 @@ namespace FlatWorld.Gameplay.Building
     public static class BuildingPlacementFeedbackEvents
     {
         /// <summary>玩家主动提交的位置未通过建筑放置校验。</summary>
-        public static event Action<Player, BuildingPlacementFailureReason> PlacementRejected;
-        public static event Action<Player, BuildingPlacementFailureReason, string> PlacementRejectedDetailed;
+        public static event Action<Item, BuildingPlacementFailureReason> PlacementRejected;
+        public static event Action<Item, BuildingPlacementFailureReason, string> PlacementRejectedDetailed;
 
         /// <summary>进入新的运行时会话前清理静态订阅。</summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -23,7 +23,7 @@ namespace FlatWorld.Gameplay.Building
         }
 
         /// <summary>向表现层发布一次玩家建筑放置失败反馈。</summary>
-        public static void PublishPlacementRejected(Player actor,
+        public static void PublishPlacementRejected(Item actor,
             BuildingPlacementFailureReason reason = BuildingPlacementFailureReason.InvalidPosition, string detail = null)
         {
             if (actor == null)
@@ -33,7 +33,7 @@ namespace FlatWorld.Gameplay.Building
             if (PlacementRejectedDetailed != null)
                 foreach (Delegate callback in PlacementRejectedDetailed.GetInvocationList())
                 {
-                    try { ((Action<Player, BuildingPlacementFailureReason, string>)callback)(actor, reason, detail); }
+                    try { ((Action<Item, BuildingPlacementFailureReason, string>)callback)(actor, reason, detail); }
                     catch (Exception exception) { Debug.LogException(exception); }
                 }
             if (PlacementRejected == null) return;
@@ -41,7 +41,7 @@ namespace FlatWorld.Gameplay.Building
             {
                 try
                 {
-                    ((Action<Player, BuildingPlacementFailureReason>)callback)(actor, reason);
+                    ((Action<Item, BuildingPlacementFailureReason>)callback)(actor, reason);
                 }
                 catch (Exception exception)
                 {

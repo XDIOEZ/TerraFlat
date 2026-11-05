@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Diagnostics;
 using UnityEngine;
@@ -65,7 +65,7 @@ public partial class ItemMgr
             candidateObject = _itemObjectPool.Acquire(temporaryData.IDName,
                 _ => Instantiate(prefab, staging, false));
             candidate = candidateObject.GetComponent<Item>();
-            if (candidate == null || candidate is Player || candidate is Map)
+            if (candidate == null || ActorIdentity.IsPlayer(candidate as Item) || candidate is Map)
                 throw new InvalidOperationException($"准备目标 {temporaryData.IDName} 必须是普通 Item。");
             candidateObject.SetActive(false);
             candidateObject.transform.SetParent(staging, false);
@@ -232,7 +232,7 @@ public partial class ItemMgr
                 _itemObjectPool.Adopt(data.IDName, candidateObject);
             }
             candidate = candidateObject.GetComponent<Item>();
-            if (candidate == null || candidate is Player || candidate is Map)
+            if (candidate == null || ActorIdentity.IsPlayer(candidate as Item) || candidate is Map)
                 throw new InvalidOperationException("分帧创建只支持普通 Item。");
             candidateObject.SetActive(false);
             candidate.PrepareForPoolReuse();

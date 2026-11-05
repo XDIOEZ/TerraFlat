@@ -27,7 +27,7 @@ public sealed class AtmosphereAnalyzerPanel : MonoBehaviour
     private readonly List<AtmosphereAnalyzerGasRow> rows = new();
     private BasePanel panel;
     private Mod_AtmosphereAnalyzer analyzer;
-    private Player actor;
+    private Item actor;
     private static AtmosphereAnalyzerPanel current;
     private FluidCatalog measurementCatalog;
     public static AtmosphereAnalyzerPanel Current => current;
@@ -53,7 +53,7 @@ public sealed class AtmosphereAnalyzerPanel : MonoBehaviour
     public static bool IsShowing(Mod_AtmosphereAnalyzer target) => current != null &&
         ReferenceEquals(current.analyzer, target) && current.panel != null && current.panel.IsOpen();
 
-    private static void Show(Mod_AtmosphereAnalyzer target, Player player)
+    private static void Show(Mod_AtmosphereAnalyzer target, Item player)
     {
         if (target == null || !target.CanMeasure(player)) return;
         if (current == null)
@@ -72,7 +72,7 @@ public sealed class AtmosphereAnalyzerPanel : MonoBehaviour
         current.panel.Open();
     }
 
-    private static void CloseTarget(Mod_AtmosphereAnalyzer target, Player player)
+    private static void CloseTarget(Mod_AtmosphereAnalyzer target, Item player)
     { if (IsShowing(target)) current.panel.Close(); }
 
     private void Awake()

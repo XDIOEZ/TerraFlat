@@ -78,7 +78,7 @@ internal static class ItemNetworkCaptureCache
             instance.States.Clear();
         }
 
-        bool publicState = item is Player;
+        bool publicState = ActorIdentity.IsPlayer(item as Item);
         int mode = (ignoreTransform ? 1 : 0) | (publicState ? 2 : 0);
         if (!instance.States.TryGetValue(mode, out CaptureState state))
             instance.States.Add(mode, state = new CaptureState());

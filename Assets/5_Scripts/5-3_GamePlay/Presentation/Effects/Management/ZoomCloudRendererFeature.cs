@@ -17,7 +17,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
     [SerializeField] private Shader cloudShader;
     private Material material;
     private CloudPass pass;
-    private Player localPlayer;
+    private Item localPlayer;
     private Mod_Cam cameraModule;
     private Mod_ChunkLoader chunkLoader;
     private bool hasSample;
@@ -70,7 +70,7 @@ public sealed class ZoomCloudRendererFeature : ScriptableRendererFeature
         if (cameraData.cameraType != CameraType.Game)
             return;
 
-        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Player player))
+        if (!WeatherScreenRenderingContext.TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Item player))
         {
             ResetPresentation();
             return;

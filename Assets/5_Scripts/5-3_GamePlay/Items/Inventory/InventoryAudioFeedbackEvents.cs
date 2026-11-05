@@ -47,18 +47,18 @@ namespace FlatWorld.Gameplay.InventoryFeedback
     public static class EquipmentAudioFeedbackEvents
     {
         #region 装备通知
-        public static event Action<Player, bool> Committed;
+        public static event Action<Item, bool> Committed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => Committed = null;
 
-        public static void Publish(Player actor, bool equipped)
+        public static void Publish(Item actor, bool equipped)
         {
             if (actor == null || Committed == null)
                 return;
             foreach (Delegate callback in Committed.GetInvocationList())
             {
-                try { ((Action<Player, bool>)callback)(actor, equipped); }
+                try { ((Action<Item, bool>)callback)(actor, equipped); }
                 catch (Exception exception) { Debug.LogException(exception); }
             }
         }

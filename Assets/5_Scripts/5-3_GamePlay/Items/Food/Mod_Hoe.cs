@@ -74,7 +74,7 @@ public partial class Mod_Hoe : Module, IItemModuleDependencyBinder, IContinuousH
     /// <summary>手持时复用装水的单格白框；预览和右键都读取同一锄地资格。</summary>
     private void LateUpdate()
     {
-        if (item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
+        if (item == null || !item.InHand || !(item.Owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
         {
             targetOutline?.Hide();
             ownerController = null;

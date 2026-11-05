@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -11,24 +11,24 @@ namespace FlatWorld.Spaceflight
         #region 玩家重生迁移
 
         // 重生暂时解除船体与下落归属，完整迁移失败时恢复原来的乘员权威状态。
-        public bool TryBeginRespawnTransition(Player player, WorldAddress targetAddress,
+        public bool TryBeginRespawnTransition(Item player, WorldAddress targetAddress,
             Vector3 targetPosition, Action preparePlayerForSave)
         {
             return NetworkDimensionBridge.RequestRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
         }
 
-        public void ResetPassengerForRespawn(Player player)
+        public void ResetPassengerForRespawn(Item player)
         {
             if (State == null || player == null) return;
             RestorePassengerSurface(player);
-            SpacePassengerState previous = State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState previous = State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
             if (!string.IsNullOrWhiteSpace(previous?.ConsolePieceId))
             {
                 ClearControl(previous.ConsolePieceId);
                 player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.SetOrthographicSize(
                     (float)Math.Max(1d, previous.SavedCameraSize));
             }
-            if (player == ItemMgr.Instance?.User_Player)
+            if (player == ItemMgr.Instance?.LocalControlledActor)
             {
                 ReleaseDrivingCamera();
                 pickingNavigationConsole = null;
@@ -37,13 +37,13 @@ namespace FlatWorld.Spaceflight
             }
             SetTerrainSuppression(player, false);
             player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
-            State.Passengers.RemoveAll(value => value.ProfileId == player.ProfileName);
-            string world = player.Data?.CurrentSceneName;
+            State.Passengers.RemoveAll(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
+            string world = player.itemData?.GetActorProfileMetadata().WorldKey;
             Vector2 position = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             // 中立乘员仍保留地表归属和位置，避免后续联机保存覆盖玩家世界。
             State.Passengers.Add(new SpacePassengerState
             {
-                ProfileId = player.ProfileName, LandingResolved = true,
+                ProfileId = ActorProfileRegistry.GetProfileId(player), LandingResolved = true,
                 RealmRevision = previous?.RealmRevision ?? 0,
                 LandingWorldKey = SpaceMgr.IsSpaceScene(world) ? null : world,
                 LandingX = position.x, LandingY = position.y,
@@ -88,8 +88,8 @@ namespace FlatWorld.Spaceflight
             if (previous != null) State.Passengers.Add(previous);
             if (previousControl != null) controlRequests[previousControl.ConsolePieceId] = previousControl;
             pickingNavigationConsole = previousPickingConsole;
-            Player player = ItemMgr.Instance?.User_Player;
-            if (player == null || player.ProfileName != profileId || previous == null) return;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            if (player == null || ActorProfileRegistry.GetProfileId(player) != profileId || previous == null) return;
             SetTerrainSuppression(player, previous.Supported);
             RestorePassengerPose(player);
             if (!string.IsNullOrWhiteSpace(previous.ConsolePieceId))

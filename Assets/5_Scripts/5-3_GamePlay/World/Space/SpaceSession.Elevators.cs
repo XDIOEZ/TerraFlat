@@ -25,12 +25,12 @@ namespace FlatWorld.Spaceflight
 
         public static bool HasSpaceElevatorAuthority(bool hasStateAuthority, bool isLocalPlayer) => hasStateAuthority && isLocalPlayer;
 
-        private bool CanOperateElevator(Player actor, out string reason)
+        private bool CanOperateElevator(Item actor, out string reason)
         {
             reason = null;
-            if (!HasSpaceElevatorAuthority(GameNetwork.HasStateAuthority, actor != null && actor.IsLocalProfile && actor == ItemMgr.Instance?.User_Player))
+            if (!HasSpaceElevatorAuthority(GameNetwork.HasStateAuthority, actor != null && ActorProfileRegistry.IsLocallyControlled(actor) && actor == ItemMgr.Instance?.LocalControlledActor))
                 reason = "电梯原型目前仅支持本机房主操作，远程客户端暂未开放。";
-            else if (State == null || GameManager.Instance?.IsGameplayReady != true || actor.Data == null ||
+            else if (State == null || GameManager.Instance?.IsGameplayReady != true || actor.itemData == null ||
                 actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f)
                 reason = "玩家或电梯会话尚未就绪。";
             else if (transitionRunning || DimensionManager.Instance.IsTransitioning)
@@ -38,7 +38,7 @@ namespace FlatWorld.Spaceflight
             return reason == null;
         }
 
-        public bool TryGetSpaceElevatorEndpoint(Player actor, string terminalPieceId, out SpaceElevatorState elevator,
+        public bool TryGetSpaceElevatorEndpoint(Item actor, string terminalPieceId, out SpaceElevatorState elevator,
             out SpaceElevatorEndpoint endpoint, out string reason)
         {
             elevator = null; endpoint = default;
@@ -55,11 +55,11 @@ namespace FlatWorld.Spaceflight
             reason = "这个终端还没有绑定电梯线路。"; return false;
         }
 
-        private bool IsAtElevatorEndpoint(Player actor, SpaceElevatorState elevator, SpaceElevatorEndpoint endpoint)
+        private bool IsAtElevatorEndpoint(Item actor, SpaceElevatorState elevator, SpaceElevatorEndpoint endpoint)
         {
-            if (actor?.Data == null || actor.DestructionHandled ||
+            if (actor?.itemData== null || actor.DestructionHandled ||
                 actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f) return false;
-            SpacePassengerState passenger = FindPassenger(actor.ProfileName);
+            SpacePassengerState passenger = FindPassenger(ActorProfileRegistry.GetProfileId(actor));
             if (endpoint == SpaceElevatorEndpoint.Station)
             {
                 if (!IsSpaceView || passenger?.Supported != true || passenger.ShipId != elevator.StationShipId ||
@@ -84,7 +84,7 @@ namespace FlatWorld.Spaceflight
             return null;
         }
 
-        private bool TryGetElevatorForActor(Player actor, string id, out SpaceElevatorState elevator,
+        private bool TryGetElevatorForActor(Item actor, string id, out SpaceElevatorState elevator,
             out SpaceElevatorEndpoint endpoint, out string reason)
         {
             elevator = null; endpoint = default;
@@ -148,7 +148,7 @@ namespace FlatWorld.Spaceflight
             return SpaceElevatorDomain.HasStationFootprintClearance(offset, anchor, bounds.Min, bounds.Max);
         }
 
-        public bool TryCreateSpaceElevator(Player actor, Item terminal, out SpaceElevatorState elevator, out string reason)
+        public bool TryCreateSpaceElevator(Item actor, Item terminal, out SpaceElevatorState elevator, out string reason)
         {
             elevator = null;
             if (!CanOperateElevator(actor, out reason)) return false;
@@ -386,7 +386,7 @@ namespace FlatWorld.Spaceflight
             return inventory;
         }
 
-        public bool TryTransferSpaceElevatorCargo(Player actor, string elevatorId, Inventory_Data playerInventory,
+        public bool TryTransferSpaceElevatorCargo(Item actor, string elevatorId, Inventory_Data playerInventory,
             int sourceIndex, bool loadCargo, out string reason)
         {
             if (!TryGetElevatorForActor(actor, elevatorId, out SpaceElevatorState elevator, out SpaceElevatorEndpoint endpoint, out reason)) return false;
@@ -396,7 +396,7 @@ namespace FlatWorld.Spaceflight
                 loadCargo ? cargo : playerInventory, out reason);
         }
 
-        private static bool OwnsElevatorInventory(Player player, Inventory_Data inventory)
+        private static bool OwnsElevatorInventory(Item player, Inventory_Data inventory)
         {
             if (inventory == null) return false;
             foreach (Module module in player.itemMods.Mods.Values)
@@ -443,7 +443,7 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 运行调度与玩家乘坐预约
-        public bool TryPackAndSendSpaceElevatorCargo(Player actor, string elevatorId,
+        public bool TryPackAndSendSpaceElevatorCargo(Item actor, string elevatorId,
             Action<bool, string> completed, out string reason)
         {
             if (!TryGetElevatorForActor(actor, elevatorId, out SpaceElevatorState elevator,
@@ -470,24 +470,24 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        public bool TryCallSpaceElevator(Player actor, string elevatorId, out string reason)
+        public bool TryCallSpaceElevator(Item actor, string elevatorId, out string reason)
         {
             if (!TryGetElevatorForActor(actor, elevatorId, out SpaceElevatorState elevator, out SpaceElevatorEndpoint endpoint, out reason)) return false;
             return SpaceElevatorDomain.TryBegin(elevator, endpoint, SpaceGameplaySettings.Current.ElevatorTravelSeconds, out reason);
         }
 
-        public bool TryDispatchSpaceElevator(Player actor, string elevatorId, bool ride, Action<bool, string> completed, out string reason)
+        public bool TryDispatchSpaceElevator(Item actor, string elevatorId, bool ride, Action<bool, string> completed, out string reason)
         {
             if (!ride) return TryPackAndSendSpaceElevatorCargo(actor, elevatorId, completed, out reason);
             if (!TryGetElevatorForActor(actor, elevatorId, out SpaceElevatorState elevator, out SpaceElevatorEndpoint endpoint, out reason)) return false;
             if (!SpaceElevatorDomain.CanAccessCargo(elevator, endpoint))
             { reason = "轿厢尚未停在这一端。"; return false; }
-            if (ride && State.Elevators.Exists(value => value.RiderProfileId == actor.ProfileName))
+            if (ride && State.Elevators.Exists(value => value.RiderProfileId == ActorProfileRegistry.GetProfileId(actor)))
             { reason = "你已有一个乘坐预约。"; return false; }
             SpaceElevatorEndpoint destination = endpoint == SpaceElevatorEndpoint.Ground ? SpaceElevatorEndpoint.Station : SpaceElevatorEndpoint.Ground;
             if (ride && destination == SpaceElevatorEndpoint.Station && !TryGetElevatorArrival(elevator, destination, out _, out reason)) return false;
             if (!SpaceElevatorDomain.TryBegin(elevator, destination, SpaceGameplaySettings.Current.ElevatorTravelSeconds, out reason)) return false;
-            elevator.RiderProfileId = ride ? actor.ProfileName : null;
+            elevator.RiderProfileId = ride ? ActorProfileRegistry.GetProfileId(actor) : null;
             if (completed != null) elevatorReceipts[elevatorId] = completed;
             reason = ride ? "已预约乘坐，请留在终端附近；走开会取消乘坐，货运继续。" : "轿厢已出发。";
             return true;
@@ -501,8 +501,8 @@ namespace FlatWorld.Spaceflight
                     !elevatorWarehouses.ContainsKey((elevator.ElevatorId, elevator.CargoDestination))))
                     DeliverElevatorCargo(elevator);
                 if (!elevator.Travelling) continue;
-                Player rider = string.IsNullOrWhiteSpace(elevator.RiderProfileId) ? null : ItemMgr.Instance?.User_Player;
-                if (!string.IsNullOrWhiteSpace(elevator.RiderProfileId) && (rider?.ProfileName != elevator.RiderProfileId ||
+                Item rider = string.IsNullOrWhiteSpace(elevator.RiderProfileId) ? null : ItemMgr.Instance?.LocalControlledActor;
+                if (!string.IsNullOrWhiteSpace(elevator.RiderProfileId) && (ActorProfileRegistry.GetProfileId(rider) != elevator.RiderProfileId ||
                     !IsAtElevatorEndpoint(rider, elevator, elevator.CabinEndpoint)))
                 {
                     elevator.RiderProfileId = null;
@@ -510,7 +510,7 @@ namespace FlatWorld.Spaceflight
                 }
                 if (!SpaceElevatorDomain.Step(elevator, seconds)) continue;
                 DeliverElevatorCargo(elevator);
-                if (rider != null && elevator.RiderProfileId == rider.ProfileName)
+                if (rider != null && elevator.RiderProfileId == ActorProfileRegistry.GetProfileId(rider))
                     StartCoroutine(TransferElevatorPassenger(elevator, rider));
                 else CompleteElevatorReceipt(elevator, true, elevator.DeliveryPending
                     ? "已抵达；目的地仓库空间不足，余货会在腾出空位后自动入库。"
@@ -575,7 +575,7 @@ namespace FlatWorld.Spaceflight
             reason = "地面终端周围没有安全落脚点，请先清空周围位置。"; return false;
         }
 
-        private IEnumerator TransferElevatorPassenger(SpaceElevatorState elevator, Player actor)
+        private IEnumerator TransferElevatorPassenger(SpaceElevatorState elevator, Item actor)
         {
             elevator.RiderProfileId = null;
             if (!CanOperateElevator(actor, out string reason))
@@ -584,7 +584,7 @@ namespace FlatWorld.Spaceflight
             SpacePassengerState currentPassenger = GetPassenger(actor);
             SpacePassengerState previous = Newtonsoft.Json.JsonConvert.DeserializeObject<SpacePassengerState>(
                 Newtonsoft.Json.JsonConvert.SerializeObject(currentPassenger));
-            string profile = actor.ProfileName;
+            string profile = ActorProfileRegistry.GetProfileId(actor);
             int index = State.Passengers.IndexOf(currentPassenger);
             uint revision = previous.RealmRevision;
             bool succeeded = false, committed = false;
@@ -602,12 +602,12 @@ namespace FlatWorld.Spaceflight
                     if (preparationFailure != null) { reason = preparationFailure.Message; yield break; }
                 }
                 SpaceElevatorEndpoint departure = elevator.CabinEndpoint == SpaceElevatorEndpoint.Ground ? SpaceElevatorEndpoint.Station : SpaceElevatorEndpoint.Ground;
-                if (State != savedSession || actor != ItemMgr.Instance?.User_Player || !IsAtElevatorEndpoint(actor, elevator, departure))
+                if (State != savedSession || actor != ItemMgr.Instance?.LocalControlledActor || !IsAtElevatorEndpoint(actor, elevator, departure))
                 { reason = "乘坐准备期间玩家离开终端，已取消乘坐。"; yield break; }
                 Vector2 point;
                 while (!TryGetElevatorArrival(elevator, elevator.CabinEndpoint, out point, out reason))
                 {
-                    if (reason != ElevatorGroundLoadingReason || State != savedSession || actor != ItemMgr.Instance?.User_Player ||
+                    if (reason != ElevatorGroundLoadingReason || State != savedSession || actor != ItemMgr.Instance?.LocalControlledActor ||
                         !IsAtElevatorEndpoint(actor, elevator, departure)) yield break;
                     yield return null;
                 }
@@ -632,7 +632,7 @@ namespace FlatWorld.Spaceflight
                     bool replied = false, accepted = false;
                     yield return DimensionTransitionService.ExecuteExact(actor, WorldAddress.FromWorldKey(elevator.GroundWorldKey), point,
                         (success, message) => { replied = true; accepted = success; reason = message; },
-                        () => State == savedSession && actor == ItemMgr.Instance?.User_Player &&
+                        () => State == savedSession && actor == ItemMgr.Instance?.LocalControlledActor &&
                             actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f);
                     if (!replied || !accepted) yield break;
                     committed = true;
@@ -652,8 +652,8 @@ namespace FlatWorld.Spaceflight
                     ? SpaceSectorCoordinates.SceneKey(GetShip(elevator.StationShipId).Sector) : elevator.GroundWorldKey;
                 while (State == savedSession && Time.realtimeSinceStartupAsDouble < deadline)
                 {
-                    Player current = ItemMgr.Instance?.User_Player;
-                    if (current == null || current.ProfileName != profile || current.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f) break;
+                    Item current = ItemMgr.Instance?.LocalControlledActor;
+                    if (current == null || ActorProfileRegistry.GetProfileId(current) != profile || current.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp <= 0f) break;
                     if (current.gameObject.scene.name == targetWorld && SceneManager.GetActiveScene().name == targetWorld && !DimensionManager.Instance.IsTransitioning)
                     {
                         RestorePassengerPose(current);
@@ -669,12 +669,12 @@ namespace FlatWorld.Spaceflight
             {
                 if (!succeeded && committed && State == savedSession && index < State.Passengers.Count &&
                     State.Passengers[index].ProfileId == profile && State.Passengers[index].RealmRevision == unchecked(revision + 1) &&
-                    ItemMgr.Instance?.User_Player?.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f)
+                    ItemMgr.Instance?.LocalControlledActor?.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f)
                 {
                     State.Passengers[index] = previous;
                     unchecked { previous.RealmRevision += 2; }
-                    Player current = ItemMgr.Instance?.User_Player;
-                    if (current?.ProfileName == profile && GameNetwork.IsOnline && TryGetNetworkObserver(profile, out SpaceNetworkObserver observer))
+                    Item current = ItemMgr.Instance?.LocalControlledActor;
+                    if (ActorProfileRegistry.GetProfileId(current) == profile && GameNetwork.IsOnline && TryGetNetworkObserver(profile, out SpaceNetworkObserver observer))
                         GameManager.Instance.ApplyNetworkLocalSpaceObserver(current, observer);
                 }
                 controller?.ReleaseGameplayInputLock(inputLease);

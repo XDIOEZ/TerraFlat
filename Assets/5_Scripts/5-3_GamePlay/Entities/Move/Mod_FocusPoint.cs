@@ -32,9 +32,9 @@ public partial class Mod_FocusPoint : Module
         ModData.ReadData(ref Data);
 
         // 优先从物品所有者获取Controller
-        Mod_GameController = item.Owner != null
-            ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<Mod_GameController>()
-            : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<Mod_GameController>();
+        ActorProfileRegistry.GetBinding(item.Owner ?? item).Changed -= RefreshManualControlInputBindings;
+        ActorProfileRegistry.GetBinding(item.Owner ?? item).Changed += RefreshManualControlInputBindings;
+        RefreshManualControlInputBindings();
 
         // 获取TurnBody组件
         turnBody = item.Owner != null
@@ -59,8 +59,16 @@ public partial class Mod_FocusPoint : Module
         _needsRefresh = true;
     }
 
+    private void RefreshManualControlInputBindings()
+    {
+        Item actor = item.Owner ?? item;
+        Mod_GameController = ActorProfileRegistry.IsLocallyControlled(actor)
+            ? actor.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller) : null;
+    }
+    protected override void OnUnload() => ActorProfileRegistry.GetBinding(item.Owner ?? item).Changed -= RefreshManualControlInputBindings;
+
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
-    public override bool WantsInputFrameUpdate => true;
+    public override bool WantsInputFrameUpdate => ActorProfileRegistry.IsLocallyControlled(item.Owner ?? item);
     public override bool WantsRenderFrameUpdate => false;
 
     public override void ModInputUpdate(float deltaTime)

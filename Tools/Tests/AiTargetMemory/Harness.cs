@@ -221,7 +221,6 @@ public class Item
     public bool DestructionHandled, IsUnloadingModules, Visible = true;
     public uint RuntimeGeneration;
 }
-public class Player : Item { }
 public class ItemData { public int Guid; public List<string> Tags = new(); }
 public class GameObject { public bool activeInHierarchy = true; public int scene; }
 public class Transform { public Vector3 position; }
@@ -232,6 +231,7 @@ public class ItemMods
     public T GetMod_ByID<T>(string id) where T : class => Health as T;
 }
 public static class Tag { public const string Player = "Player"; }
+public static class ActorIdentity { public static bool IsPlayer(Item actor) => false; }
 public static class TagExtensions { public static bool ContainsTag(this List<string> tags, string tag) => tags.Contains(tag); }
 public static class ModText { public const string Hp = "Hp"; }
 public enum FactionRelation { Friendly }

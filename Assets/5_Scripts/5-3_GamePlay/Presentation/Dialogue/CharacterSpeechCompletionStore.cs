@@ -16,7 +16,7 @@ namespace FlatWorld.Dialogue
 
         private readonly Component owner;
         private readonly HashSet<string> completed = new(StringComparer.Ordinal);
-        private Data_Player loadedPlayerData;
+        private ItemData loadedPlayerData;
 
         public CharacterSpeechCompletionStore(Component owner)
         {
@@ -57,7 +57,7 @@ namespace FlatWorld.Dialogue
 
         private void EnsureLoaded()
         {
-            Data_Player playerData = ResolvePlayerData();
+            ItemData playerData = ResolvePlayerData();
             if (ReferenceEquals(playerData, loadedPlayerData))
                 return;
 
@@ -80,10 +80,10 @@ namespace FlatWorld.Dialogue
             }
         }
 
-        private Data_Player ResolvePlayerData()
+        private ItemData ResolvePlayerData()
         {
             Item actorItem = owner != null ? owner.GetComponentInParent<Item>() : null;
-            return actorItem?.itemData as Data_Player;
+            return actorItem?.itemData as ItemData;
         }
 
         #endregion

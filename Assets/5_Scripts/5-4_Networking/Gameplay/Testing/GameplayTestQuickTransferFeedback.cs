@@ -19,7 +19,7 @@ namespace FlatWorld.Networking.Gameplay
 #endif
         private static void Register() => GameplayTestRuntimeProbe.Register("inventory", "quick_transfer_receipts", Capture);
 
-        private static JObject Capture(Player player, JObject args)
+        private static JObject Capture(Item player, JObject args)
         {
             ItemData Item(float amount)
             {

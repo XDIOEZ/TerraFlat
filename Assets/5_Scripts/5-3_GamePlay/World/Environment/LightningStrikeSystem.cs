@@ -121,7 +121,7 @@ public static class LightningStrikeSystem
         ItemMgr items = ItemMgr.Instance;
         if (items == null) return;
         var targets = new HashSet<Item>(items.WorldRunTimeItems.Values);
-        foreach (Player player in items.Player_DIC.Values) targets.Add(player);
+        foreach (Item player in items.ProfileActors.Values) targets.Add(player);
         foreach (Item target in targets)
         {
             if (target == null || target.itemData == null || target.Owner != null || target.InHand || target.PersistenceOwner != null ||

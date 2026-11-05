@@ -68,26 +68,26 @@ public partial class SaveDataMgr
         { reason = "名称不能为空"; return false; }
         if (displayName.Length > 48)
         { reason = "名称不能超过48个字符。"; return false; }
-        if (SaveData?.PlayerData_Dict == null)
+        if (SaveData?.ProfileActorData == null)
         { reason = "当前存档尚未载入，无法修改角色名称。"; return false; }
         if (string.IsNullOrWhiteSpace(profileId) ||
-            !SaveData.PlayerData_Dict.TryGetValue(profileId, out Data_Player playerData) || playerData == null)
+            !SaveData.ProfileActorData.TryGetValue(profileId, out ItemData playerData) || playerData == null)
         { reason = "所选角色已不存在，请重新选择。"; return false; }
-        if (string.Equals(playerData.Name_User, displayName, StringComparison.Ordinal))
+        if (string.Equals(playerData.GetActorProfileMetadata().DisplayName, displayName, StringComparison.Ordinal))
             return true;
-        foreach (KeyValuePair<string, Data_Player> profile in SaveData.PlayerData_Dict)
+        foreach (KeyValuePair<string, ItemData> profile in SaveData.ProfileActorData)
         {
             if (!string.Equals(profile.Key, profileId, StringComparison.Ordinal) &&
-                string.Equals(profile.Value?.Name_User, displayName, StringComparison.OrdinalIgnoreCase))
+                string.Equals(profile.Value?.GetActorProfileMetadata().DisplayName, displayName, StringComparison.OrdinalIgnoreCase))
             { reason = "当前存档中已有同名角色。"; return false; }
         }
 
-        string previousName = playerData.Name_User;
-        playerData.Name_User = displayName;
+        string previousName = playerData.GetActorProfileMetadata().DisplayName;
+        playerData.GetActorProfileMetadata().DisplayName = displayName;
         if (SaveToDisk(SaveData, UserSavePath, SaveData.saveName))
             return true;
 
-        playerData.Name_User = previousName;
+        playerData.GetActorProfileMetadata().DisplayName = previousName;
         reason = "角色名称写盘失败，已保留原名称。";
         return false;
     }

@@ -23,7 +23,7 @@ namespace FlatWorld.Gameplay.Quests
 
         #region 读写
 
-        public static QuestProgressSaveDocument Load(Data_Player playerData)
+        public static QuestProgressSaveDocument Load(ItemData playerData)
         {
             if (playerData == null)
                 throw new ArgumentNullException(nameof(playerData));
@@ -57,7 +57,7 @@ namespace FlatWorld.Gameplay.Quests
             return document;
         }
 
-        public static void Save(Data_Player playerData, QuestProgressSaveDocument document)
+        public static void Save(ItemData playerData, QuestProgressSaveDocument document)
         {
             if (playerData == null)
                 throw new ArgumentNullException(nameof(playerData));

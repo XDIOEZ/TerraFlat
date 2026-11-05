@@ -66,7 +66,7 @@ public sealed class ShipDeviceLogic : MachineLogic
         if (groundConfiguration?.SupplyMolesPerSecond > 0f)
             SpaceSession.Current?.SupplyGroundAtmosphere(Entity, groundConfiguration, seconds);
     }
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (Entity.ScopeKey?.StartsWith("ship:", System.StringComparison.Ordinal) != true)
             return operation == "ignite" && ShipGroundAssembly.TryLaunch(actor, Entity.Id, out _, out _);

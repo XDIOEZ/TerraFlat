@@ -214,9 +214,8 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject ProbeDroppedItemPublicPayload(JObject args)
     {
-        var player = new Data_Player
-        { IDName = "probe:nested-player", Guid = 4402, Stack = new ItemStack(), ItemSpecialData = "private-special" };
-        player._inventoryData["private"] = new Inventory_Data(new List<ItemSlot>
+        ItemData player = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "probe:nested-player", Guid = 4402, Stack = new ItemStack(), ItemSpecialData = "private-special" }, null, null);
+        GameplayTestSystemProbe.GetTestActorInventories(player)["private"] = new Inventory_Data(new List<ItemSlot>
         { new(0) { itemData = new Data_GeneralItem { IDName = "probe:secret", Guid = 4403, Stack = new ItemStack { Amount = 9f } } } }, "private");
         var module = new Inventory_ModuleData { StableName = "bag", ModuleId = "probe:bag" };
         module.Data["bag"] = new Inventory_Data(new List<ItemSlot> { new(0) { itemData = player } }, "bag");
@@ -226,39 +225,39 @@ public static partial class GameplayTestSystemProbe
         simulation.Create(new LightweightDroppedBody { Id = 4401, Amount = 1f, Scale = new float2(1f), Pickable = 1 });
         var cache = new DroppedItemPayloadCaptureCache();
         DroppedItemSaveRecord privateRecord = DroppedItemSaveRecord.Capture(root, simulation, 4401, cache);
-        Data_Player Child(DroppedItemSaveRecord value) => (Data_Player)((Inventory_ModuleData)value.Data.ModuleDataDic["bag"]).Data["bag"].itemSlots[0].itemData;
-        Data_Player privateBefore = Child(MemoryPackSerializer.Deserialize<DroppedItemSaveRecord>(MemoryPackSerializer.Serialize(privateRecord)));
+        ItemData Child(DroppedItemSaveRecord value) => (ItemData)((Inventory_ModuleData)value.Data.ModuleDataDic["bag"]).Data["bag"].itemSlots[0].itemData;
+        ItemData privateBefore = Child(MemoryPackSerializer.Deserialize<DroppedItemSaveRecord>(MemoryPackSerializer.Serialize(privateRecord)));
         bool publicReused;
         string publicSpecial, serializedPublicSpecial;
         int publicInventoryCount, serializedPublicInventoryCount;
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-special"))
+        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-special", data => ReferenceEquals(data, player)))
         {
             DroppedItemSaveRecord firstPublic = DroppedItemSaveRecord.Capture(root, simulation, 4401, cache);
             DroppedItemSaveRecord secondPublic = DroppedItemSaveRecord.Capture(root, simulation, 4401, cache);
             publicReused = ReferenceEquals(firstPublic.EncodedItemPayload, secondPublic.EncodedItemPayload);
-            Data_Player publicChild = Child(firstPublic);
+            ItemData publicChild = Child(firstPublic);
             publicSpecial = publicChild.ItemSpecialData;
-            publicInventoryCount = publicChild._inventoryData.Count;
+            publicInventoryCount = GameplayTestSystemProbe.GetTestActorInventories(publicChild).Count;
             DroppedItemSaveRecord publicArchiveRecord = MemoryPackSerializer.Deserialize<DroppedItemSaveRecord>(MemoryPackSerializer.Serialize(privateRecord));
-            Data_Player serializedPublicChild = Child(publicArchiveRecord);
+            ItemData serializedPublicChild = Child(publicArchiveRecord);
             serializedPublicSpecial = serializedPublicChild.ItemSpecialData;
-            serializedPublicInventoryCount = serializedPublicChild._inventoryData.Count;
+            serializedPublicInventoryCount = GameplayTestSystemProbe.GetTestActorInventories(serializedPublicChild).Count;
         }
         DroppedItemSaveRecord privateAfter = MemoryPackSerializer.Deserialize<DroppedItemSaveRecord>(MemoryPackSerializer.Serialize(privateRecord));
-        Data_Player privateAfterChild = Child(privateAfter);
+        ItemData privateAfterChild = Child(privateAfter);
         DroppedItemSaveRecord privateRecapture = DroppedItemSaveRecord.Capture(root, simulation, 4401, cache);
-        Data_Player privateRecapturedChild = Child(privateRecapture);
+        ItemData privateRecapturedChild = Child(privateRecapture);
         return new JObject
         {
             ["privateBeforeSpecial"] = privateBefore.ItemSpecialData,
-            ["privateBeforeCount"] = privateBefore._inventoryData.Count,
+            ["privateBeforeCount"] = GameplayTestSystemProbe.GetTestActorInventories(privateBefore).Count,
             ["publicSpecial"] = publicSpecial, ["publicCount"] = publicInventoryCount,
             ["serializedPublicSpecial"] = serializedPublicSpecial, ["serializedPublicCount"] = serializedPublicInventoryCount,
             ["publicReused"] = publicReused,
             ["privateAfterSpecial"] = privateAfterChild.ItemSpecialData,
-            ["privateAfterCount"] = privateAfterChild._inventoryData.Count,
+            ["privateAfterCount"] = GameplayTestSystemProbe.GetTestActorInventories(privateAfterChild).Count,
             ["privateRecapturedSpecial"] = privateRecapturedChild.ItemSpecialData,
-            ["privateRecapturedCount"] = privateRecapturedChild._inventoryData.Count
+            ["privateRecapturedCount"] = GameplayTestSystemProbe.GetTestActorInventories(privateRecapturedChild).Count
         };
     }
 

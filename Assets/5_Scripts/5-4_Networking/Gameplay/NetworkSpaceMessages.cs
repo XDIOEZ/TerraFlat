@@ -1,4 +1,4 @@
-﻿using FlatWorld.Spaceflight;
+using FlatWorld.Spaceflight;
 using Mirror;
 
 namespace FlatWorld.Networking.Gameplay

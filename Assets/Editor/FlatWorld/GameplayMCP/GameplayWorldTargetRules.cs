@@ -21,8 +21,8 @@ namespace FlatWorld.GameplayMCP
             otherRoot.SetActive(false);
             try
             {
-                Player player = root.AddComponent<Player>();
-                Player other = otherRoot.AddComponent<Player>();
+                Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
+                Item other = ActorProfileRegistry.CreateProfileActorForFixture(otherRoot);
                 bool alive = true;
                 int refreshes = 0;
                 var projection = new GameplayWorldTargets.Target { Backend = "contract", Guid = 7, ItemId = "test:target",
@@ -56,8 +56,8 @@ namespace FlatWorld.GameplayMCP
             finally
             {
                 // 自有失活夹具没有登记世界索引，销毁前关闭正常物品回收通知。
-                otherRoot.GetComponent<Player>()?.PrepareForDespawn(false);
-                root.GetComponent<Player>()?.PrepareForDespawn(false);
+                otherRoot.GetComponent<Item>()?.PrepareForDespawn(false);
+                root.GetComponent<Item>()?.PrepareForDespawn(false);
                 Object.DestroyImmediate(otherRoot); Object.DestroyImmediate(root);
             }
         }

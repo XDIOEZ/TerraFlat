@@ -37,7 +37,7 @@ public sealed class CraftingStationController : IDisposable
     private readonly CraftingCapabilities capabilities;
     private readonly Button craftButton;
     private readonly Func<int> requiredClickCount;
-    private readonly Func<Player> resolveActor;
+    private readonly Func<Item> resolveActor;
     private readonly Action<string> log;
     private readonly RectTransform candidateContent;
     private readonly Button candidateTemplate;
@@ -104,7 +104,7 @@ public sealed class CraftingStationController : IDisposable
         Inventory outputInventory,
         CraftingCapabilities capabilities,
         Func<int> requiredClickCount,
-        Func<Player> resolveActor,
+        Func<Item> resolveActor,
         Action<string> log = null,
         RecipeProcessor authoritativeProcessor = null,
         Action<string> selectRecipe = null,
@@ -285,8 +285,8 @@ public sealed class CraftingStationController : IDisposable
     private void PlayManualWorkCue(RuntimeRecipe recipe)
     {
         if (string.IsNullOrWhiteSpace(recipe?.ManualWorkCueId)) return;
-        Player actor = resolveActor();
-        if (actor != null && actor.IsLocalProfile)
+        Item actor = resolveActor();
+        if (actor != null && ActorProfileRegistry.IsLocallyControlled(actor))
             AudioService.Instance.PlayAt(recipe.ManualWorkCueId, actor.transform.position, 0.75f);
     }
 

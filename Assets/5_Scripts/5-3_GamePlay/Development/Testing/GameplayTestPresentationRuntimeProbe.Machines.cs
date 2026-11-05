@@ -9,7 +9,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 {
     #region 全目录冷机器配置与落地表现预备
     // 克隆全部正式机器定义，冷读取和预备表现不得创建逻辑、库存或改写共享定义。
-    private static JObject CaptureColdMachineContentAndPreparedVisuals(Player player, JObject args)
+    private static JObject CaptureColdMachineContentAndPreparedVisuals(Item player, JObject args)
     {
         GameRes resources = GameRes.ExistingInstance;
         var root = new GameObject("ColdMachinePresentationProbe");
@@ -83,7 +83,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
     #region 机械气泵零件装配换算
     // 用正式物品定义与GetPartPose核验拆件PPU和源画布坐标的换算。
-    private static JObject CaptureMechanicalPumpArticulatedSpritePose(Player player, JObject args)
+    private static JObject CaptureMechanicalPumpArticulatedSpritePose(Item player, JObject args)
     {
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition("GasPump_Mechanical", out RuntimeItemDefinition item) ||

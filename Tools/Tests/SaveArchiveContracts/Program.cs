@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Linq;
 using MemoryPack;
 using UnityEngine;
 
@@ -12,25 +13,55 @@ internal static class Program
         if (!value) throw new Exception(label);
     }
 
+    private static void LegacyActorInventory()
+    {
+        Inventory_Data Inventory(string name, params int[] ids) => new(ids.Select((id, index) => new ItemSlot(index)
+        { itemData = new Data_GeneralItem { IDName = "cargo", Guid = id, Stack = new ItemStack { Amount = 1 } } }).ToList(), name);
+        var actor = new Data_GeneralItem { IDName = "Human" };
+        var bag = new Inventory_ModuleData { StableName = "bag", ModuleId = ModText.Bag };
+        var actual = Inventory("bag", 701);
+        bag.Data["bag"] = actual;
+        bag.Data["empty"] = Inventory("empty");
+        var hotbar = new Ex_ModData_MemoryPackable { StableName = "hotbar", ModuleId = ModText.Hotbar,
+            BitData = MemoryPackSerializer.Serialize(new InventoryHotBarSaveState
+            { Version = InventoryHotBarSaveState.CurrentVersion, Inventory = InventoryInstanceSnapshot.Capture(Inventory("hotbar", 703)) }) };
+        var legacy = new Inventory_ModuleData { StableName = LegacyActorModuleState.InventoriesKey,
+            ModuleId = LegacyActorModuleState.InventoriesKey };
+        legacy.Data["bag"] = Inventory("bag", 701, 702, 703);
+        legacy.Data["empty"] = Inventory("empty", 701, 704);
+        actor.ModuleDataDic[bag.StableName] = bag;
+        actor.ModuleDataDic[hotbar.StableName] = hotbar;
+        actor.ModuleDataDic[legacy.StableName] = legacy;
+        ActorModuleState.ApplyLegacyModuleState(actor);
+        var ids = bag.Data.Values.SelectMany(value => value.itemSlots).Where(slot => slot?.itemData != null)
+            .Select(slot => slot.itemData.Guid).OrderBy(id => id).ToArray();
+        Check(ReferenceEquals(actual, bag.Data["bag"]) && ids.SequenceEqual(new[] { 701, 702, 704 }),
+            "legacy root inventories preserve unique cargo, module priority and hotbar identity");
+        Check(bag.Data.ContainsKey("legacy:bag") && bag.Data["empty"].itemSlots[1].itemData.Guid == 704 &&
+            !actor.ModuleDataDic.ContainsKey(LegacyActorModuleState.InventoriesKey), "legacy inventory key merge and consumption");
+        var restored = ItemInstanceSnapshot.Capture(actor).CreateColdData();
+        Check(((Inventory_ModuleData)restored.ModuleDataDic["bag"]).Data.ContainsKey("legacy:bag"), "compatibility inventory snapshot survives");
+    }
+
     public static void Main()
     {
-        var player = new Data_Player
+        LegacyActorInventory();
+        var player = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem
         {
-            IDName = "test:player", Guid = 17, Name_User = "玩家", CurrentSceneName = "星球",
-            hp = new Hp(42) { maxValue = 55, Weaknesses = new List<string> { "fire" } },
-            Speed = new GameValue_float { BaseValue = 2, BaseAdditive = 3, AdditiveModifier = .2f,
-                MultiplicativeModifier = 1.5f, FinalAdditive = 4 },
+            IDName = "Human", Guid = 17,
             transform = new ItemTransform { position = new Vector3(4, -5, 6),
                 rotation = new Quaternion(.1f, .2f, .3f, .4f), scale = new Vector3(2, 3, 4) },
             MatterState = new ItemMatterState { Initialized = true, TemperatureCelsius = 33, Moisture = .2f, IsBurning = true, CombustionElapsedSeconds = 9 },
             PhysicsState = new ItemPhysicsRuntimeState { Velocity = new Vector2(7, -8), AngularVelocity = 3, PersistentWorldResident = true },
             Stack = new ItemStack { Amount = 1 }, MaxDurability = 1, Durability = 1
-        };
+        }, "玩家", "星球");
+        var health = new Ex_ModData { StableName = "health", ModuleId = "test:health", BitData = "{\"Hp\":42,\"MaxHp\":55}" };
+        player.ModuleDataDic[health.StableName] = health;
         var item = ItemInstanceSnapshot.Capture(player);
         var frozen = MemoryPackSerializer.Serialize(item);
         var golden = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(System.IO.File.ReadAllBytes("Tools/Tests/SaveArchiveContracts/item-v1.bin"));
-        var goldenPlayer = (Data_Player)golden.CreateColdData();
-        Check(goldenPlayer.Guid == 17 && goldenPlayer.hp.Value == 42 && goldenPlayer.MatterState.TemperatureCelsius == 33 &&
+        var goldenPlayer = golden.CreateColdData();
+        Check(goldenPlayer is Data_GeneralItem && goldenPlayer.Guid == 17 && goldenPlayer.GetActorProfileMetadata().DisplayName == "玩家" && goldenPlayer.MatterState.TemperatureCelsius == 33 &&
             goldenPlayer.transform.position == new Vector3(4, -5, 6), "stored v1 player fixture decodes");
         var chunk = new SqliteChunkSnapshot
         {
@@ -40,16 +71,21 @@ internal static class Program
         };
         var goldenChunk = MemoryPackSerializer.Deserialize<SqliteChunkSnapshot>(System.IO.File.ReadAllBytes("Tools/Tests/SaveArchiveContracts/chunk-v1.bin"));
         Check(goldenChunk.Terrain[1] == 2 && goldenChunk.Ecology.WorldKey == "世界" &&
-            ((Data_Player)MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(goldenChunk.Ecology.ChangedItems[0]).CreateColdData()).Guid == 17,
+            MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(goldenChunk.Ecology.ChangedItems[0]).CreateColdData().Guid == 17,
             "stored v1 chunk, ecology and embedded item fixture decode");
         var currentChunk = MemoryPackSerializer.Deserialize<SqliteChunkSnapshot>(MemoryPackSerializer.Serialize(chunk));
         Check(currentChunk.Terrain[2] == 3 && currentChunk.Ecology.ChunkData[1] == 5,
             "chunk and ecology current roundtrip");
-        var restored = (Data_Player)MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(frozen).CreateColdData();
-        Check(restored.Name_User == "玩家" && restored.CurrentSceneName == "星球" && restored.hp.Value == 42 &&
-            restored.hp.maxValue == 55 && restored.hp.Weaknesses[0] == "fire", "player health and identity roundtrip");
-        Check(restored.Speed.BaseAdditive == 3 &&
-            restored.Speed.MultiplicativeModifier == 1.5f, "player speed roundtrip without obsolete defense");
+        var restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(frozen).CreateColdData();
+        Check(restored is Data_GeneralItem && ((Ex_ModData)restored.ModuleDataDic["health"]).BitData == health.BitData,
+            "generic actor module health roundtrip");
+        var profile = MemoryPackSerializer.Deserialize<ActorProfileSnapshot>(MemoryPackSerializer.Serialize(ActorProfileSnapshot.Capture(player))).RestoreActorData();
+        Check(profile.GetActorProfileMetadata().DisplayName == "玩家" && profile.GetActorProfileMetadata().WorldKey == "星球",
+            "profile metadata roundtrip outside body snapshot");
+        var rootSave = new GameSaveData(); rootSave.ProfileActorData["stable-id"] = player;
+        var rootRestored = MemoryPackSerializer.Deserialize<GameSaveData>(MemoryPackSerializer.Serialize(rootSave));
+        Check(rootRestored.ProfileActorData["stable-id"].Guid == 17 &&
+            rootRestored.ProfileActorData["stable-id"].GetActorProfileMetadata().DisplayName == "玩家", "root field22 actor + field29 profile roundtrip");
         Check(restored.transform.position == new Vector3(4, -5, 6) && restored.transform.scale == new Vector3(2, 3, 4) &&
             restored.PhysicsState.Velocity == new Vector2(7, -8), "primitive transform roundtrip");
         Check(restored.MatterState.TemperatureCelsius == 33 && restored.MatterState.IsBurning &&
@@ -180,7 +216,7 @@ internal static class Program
         var save = MemoryPackSerializer.Deserialize<GameSaveData>(bytes);
         var time = save.DayTimeData.WorldTimeDict["世界"];
         Check(save.saveName == "样本档" && save.Seed == 111 && save.Time == 42 && save.Difficulty == GameDifficultyId.Level3 &&
-            save.CustomPlayerAttackMultiplier == 1.25f && save.PlanetData_Dict.Count == 0 && save.PlayerData_Dict.Count == 0,
+            save.CustomPlayerAttackMultiplier == 1.25f && save.PlanetData_Dict.Count == 0 && save.ProfileActorData.Count == 0,
             "core identity, difficulty and separated worlds/players");
         Check(time.CurrentTime == 120 && time.TotalDays == 7 && time.OrbitalOffsetSeconds == 125 &&
             time.Seasons.WinterTemperatureOffset == -31 && time.SeasonHistory[0].Settings.SummerTemperatureOffset == 13 &&

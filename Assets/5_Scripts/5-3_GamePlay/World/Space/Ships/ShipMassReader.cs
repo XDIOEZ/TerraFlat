@@ -202,6 +202,8 @@ namespace FlatWorld.Spaceflight
                         {
                             if (storage.InventoryInstances != null) foreach (Inventory inventory in storage.InventoryInstances) mass += ReadRuntimeInventory(inventory, depth + 1);
                             if (storage.InventoryRefDic != null) foreach (Inventory inventory in storage.InventoryRefDic.Values) mass += ReadRuntimeInventory(inventory, depth + 1);
+                            if (storage.Data?.Data != null)
+                                foreach (var inventory in storage.Data.Data.Values) mass += ReadInventory(inventory, depth + 1);
                             liveModules.Add(entry.Key);
                         }
                         else if (module is Mod_VesselContents vessel)
@@ -222,8 +224,6 @@ namespace FlatWorld.Spaceflight
                         }
                     }
                 }
-                if (data is Data_Player player && player._inventoryData != null)
-                    foreach (Inventory_Data inventory in player._inventoryData.Values) mass += ReadInventory(inventory, depth + 1);
                 if (machine?.Logic != null)
                     for (int i = 0; i < machine.Logic.Inventories.Count; i++) mass += ReadInventory(machine.Logic.Inventories[i]?.Data, depth + 1);
                 if (machine?.Processor != null)

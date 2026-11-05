@@ -71,7 +71,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     private double pushValidUntil;
     private CarrierWaterWake waterWake;
     private ICarrierMotionDriver motionDriver;
-    private Player holdingPlayer;
+    private Item holdingPlayer;
     private bool holdCompleted;
     public bool AllowsRiderBoost => motionDriver == null || motionDriver.AllowsRiderBoost;
     public Rigidbody2D Body => body;
@@ -230,8 +230,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
 
     public bool CanInteract(Item actor)
     {
-        Player player = ResolvePlayer(actor);
-        if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !player.IsLocalProfile)
+        Item player = ResolvePlayer(actor);
+        if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !ActorProfileRegistry.IsLocallyControlled(player))
             return false;
         Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         if (motionDriver != null) return motionDriver.CanInteractWithCarrier(player, mover);
@@ -265,7 +265,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
 
     public void OnInteractEnd(Item actor)
     {
-        Player player = ResolvePlayer(actor);
+        Item player = ResolvePlayer(actor);
         bool isTap = player != null && player == holdingPlayer && !holdCompleted;
         ResetHeldInteraction();
         if (isTap && CanInteract(actor) && motionDriver is ICarrierTapInteractionPolicy tapPolicy)
@@ -279,7 +279,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     }
 
     /// <summary>所有车型共用单座上下车与安全下车规则。</summary>
-    public bool ToggleRider(Player player, Mod_Mover mover)
+    public bool ToggleRider(Item player, Mod_Mover mover)
     {
         if (!IsAvailable || player == null || mover == null || !GameNetwork.HasStateAuthority) return false;
         if (Rider == mover)
@@ -303,8 +303,8 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, ICarrierRiderTer
     }
 
     /// <summary>输入发送者可能是玩家自己的手部 Item，身份沿正式 Owner 链解析。</summary>
-    private static Player ResolvePlayer(Item actor)
-        => actor as Player ?? actor?.Owner as Player ?? actor?.GetComponentInParent<Player>();
+    private static Item ResolvePlayer(Item actor)
+        => ActorProfileRegistry.GetProfileActorOrNull(actor as Item) ?? ActorProfileRegistry.GetProfileActorOrNull(actor?.Owner as Item) ?? actor?.GetComponentInParent<Item>();
 
     /// <summary>焦点取消和临时输入锁不是下船指令。</summary>
     public void OnInteractCancel(Item actor) => ResetHeldInteraction();

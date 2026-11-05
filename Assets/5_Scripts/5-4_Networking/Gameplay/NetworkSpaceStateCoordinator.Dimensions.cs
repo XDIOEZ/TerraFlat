@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -72,30 +72,30 @@ namespace FlatWorld.Networking.Gameplay
             if (NetworkDimensionBridge.RespawnSender == SendDimensionRespawn) NetworkDimensionBridge.RespawnSender = null;
             if (NetworkDimensionBridge.ExactTransferSender == SendExactDimensionTransfer) NetworkDimensionBridge.ExactTransferSender = null;
         }
-        private bool SendDimensionTransition(Player actor, string target, int portal, bool generated, Action<bool, string> completed)
+        private bool SendDimensionTransition(Item actor, string target, int portal, bool generated, Action<bool, string> completed)
         {
-            if (actor == null || actor != ItemMgr.Instance?.User_Player || string.IsNullOrWhiteSpace(target)) return false;
+            if (actor == null || actor != ItemMgr.Instance?.LocalControlledActor || string.IsNullOrWhiteSpace(target)) return false;
             uint sequence = NextToken(ref dimensionSequence);
-            if (SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver source) != true) return false;
+            if (SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver source) != true) return false;
             var request = new NetworkDimensionRequest { Sequence = sequence, TargetDimension = target, PortalGuid = portal, Generated = generated,
                 SourceWorldKey = source.WorldKey, RealmRevision = source.RealmRevision };
             if (NetworkServer.active)
             {
                 StartCoroutine(ExecuteDimensionTransition(null, actor, request, completed)); return true;
             }
-            if (!NetworkClient.ready || !OwnsProfile(actor.ProfileName)) return false;
+            if (!NetworkClient.ready || !OwnsProfile(ActorProfileRegistry.GetProfileId(actor))) return false;
             dimensionReplies.Add(sequence, completed);
             NetworkClient.Send(request);
             StartCoroutine(WaitDimensionReply(sequence));
             return true;
         }
-        private bool SendExactDimensionTransfer(Player actor, WorldAddress target, Vector3 position, Action<bool, string> completed)
+        private bool SendExactDimensionTransfer(Item actor, WorldAddress target, Vector3 position, Action<bool, string> completed)
         {
-            if (!NetworkServer.active || actor == null || actor != ItemMgr.Instance?.User_Player) return false;
+            if (!NetworkServer.active || actor == null || actor != ItemMgr.Instance?.LocalControlledActor) return false;
             StartCoroutine(ExecuteExactDimensionTransfer(actor, target, position, completed));
             return true;
         }
-        private IEnumerator ExecuteExactDimensionTransfer(Player actor, WorldAddress target, Vector3 position, Action<bool, string> completed)
+        private IEnumerator ExecuteExactDimensionTransfer(Item actor, WorldAddress target, Vector3 position, Action<bool, string> completed)
         {
             NetworkWorldPlayer networkActor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (networkActor?.CorePlayer != actor || !networkActor.TryBeginWorldTransfer())
@@ -112,15 +112,15 @@ namespace FlatWorld.Networking.Gameplay
             }
             finally { networkActor.FinishWorldTransfer(committed); }
         }
-        private bool SendDimensionRespawn(Player actor, WorldAddress target, Vector3 position, Action preparePlayer, Action<bool, string> completed)
+        private bool SendDimensionRespawn(Item actor, WorldAddress target, Vector3 position, Action preparePlayer, Action<bool, string> completed)
         {
-            if (actor == null || actor != ItemMgr.Instance?.User_Player) return false;
+            if (actor == null || actor != ItemMgr.Instance?.LocalControlledActor) return false;
             if (!NetworkServer.active)
-                return SpaceNetworkBridge.SendIntent(actor.ProfileName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.Respawn }, completed);
+                return SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(actor), new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.Respawn }, completed);
             StartCoroutine(ExecuteDimensionRespawn(null, actor, 0, completed));
             return true;
         }
-        private IEnumerator ExecuteDimensionRespawn(NetworkConnectionToClient connection, Player actor, uint sequence, Action<bool, string> completed)
+        private IEnumerator ExecuteDimensionRespawn(NetworkConnectionToClient connection, Item actor, uint sequence, Action<bool, string> completed)
         {
             NetworkWorldPlayer networkActor = connection?.identity?.GetComponent<NetworkWorldPlayer>() ?? NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (networkActor == null || !networkActor.TryBeginWorldTransfer())
@@ -136,7 +136,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (committed)
                 {
                     networkActor.RefreshSpaceAuthority();
-                    if (connection != null) SendSnapshot(connection, actor.ProfileName);
+                    if (connection != null) SendSnapshot(connection, ActorProfileRegistry.GetProfileId(actor));
                 }
                 ReplyRespawn(connection, sequence, committed, reason, completed);
             }
@@ -154,11 +154,11 @@ namespace FlatWorld.Networking.Gameplay
             yield return new WaitForSecondsRealtime(100f);
             if (dimensionReplies.Remove(sequence, out Action<bool, string> completed)) completed?.Invoke(false, "维度切换等待服务器回复超时。");
         }
-        private void SendDimensionReady(Player actor, string worldKey)
+        private void SendDimensionReady(Item actor, string worldKey)
         {
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (player == null || player.CorePlayer != actor) return;
-            uint realm = SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) == true
+            uint realm = SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver observer) == true
                 ? observer.RealmRevision : player.RealmRevision;
             if (NetworkServer.active) player.AcknowledgeWorldTransfer(worldKey, realm);
             else if (NetworkClient.ready)
@@ -194,9 +194,9 @@ namespace FlatWorld.Networking.Gameplay
             dimensionRequests[connection] = request.Sequence;
             StartCoroutine(ExecuteDimensionTransition(connection, player.CorePlayer, request, null));
         }
-        private IEnumerator ExecuteDimensionTransition(NetworkConnectionToClient connection, Player actor, NetworkDimensionRequest request, Action<bool, string> completed)
+        private IEnumerator ExecuteDimensionTransition(NetworkConnectionToClient connection, Item actor, NetworkDimensionRequest request, Action<bool, string> completed)
         {
-            string profile = actor?.ProfileName;
+            string profile = ActorProfileRegistry.GetProfileId(actor);
             if (string.IsNullOrWhiteSpace(profile) || !dimensionProfiles.Add(profile))
             { ReplyDimension(connection, request.Sequence, false, "该玩家正在切换维度。", null, default, completed); yield break; }
             NetworkWorldPlayer networkActor = connection?.identity?.GetComponent<NetworkWorldPlayer>() ?? NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();

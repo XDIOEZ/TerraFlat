@@ -15,13 +15,13 @@ namespace FlatWorld.Gameplay.Quests
         #region 字段与事件
 
         private const int MaximumStabilizationRounds = 128;
-        private readonly Player player;
+        private readonly Item player;
         private readonly Queue<GameplayProgressSignal> pendingSignals = new();
         private QuestProgressSaveDocument document;
         private bool processingSignals;
 
-        public Player Player => player;
-        public Data_Player PlayerData { get; private set; }
+        public Item Player => player;
+        public ItemData PlayerData { get; private set; }
         public bool IsEnabled { get; private set; }
         public event Action<QuestSnapshot> QuestChanged;
 
@@ -29,7 +29,7 @@ namespace FlatWorld.Gameplay.Quests
 
         #region 生命周期
 
-        public PlayerQuestRuntime(Player player)
+        public PlayerQuestRuntime(Item player)
         {
             this.player = player ?? throw new ArgumentNullException(nameof(player));
         }
@@ -42,7 +42,7 @@ namespace FlatWorld.Gameplay.Quests
                 error = "任务目录尚未完成加载";
                 return false;
             }
-            if (player.Data == null)
+            if (player.itemData == null)
             {
                 error = "玩家数据为空";
                 return false;
@@ -50,14 +50,14 @@ namespace FlatWorld.Gameplay.Quests
 
             try
             {
-                PlayerData = player.Data;
-                document = QuestProgressStore.Load(player.Data);
+                PlayerData = player.itemData;
+                document = QuestProgressStore.Load(player.itemData);
                 bool changed = NormalizeKnownRecords();
                 var changedQuestIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var deferredSignals = new List<GameplayProgressSignal>();
                 changed |= Stabilize(changedQuestIds, deferredSignals);
                 if (changed)
-                    QuestProgressStore.Save(player.Data, document);
+                    QuestProgressStore.Save(player.itemData, document);
 
                 IsEnabled = true;
                 NotifyChanged(changedQuestIds);
@@ -113,7 +113,7 @@ namespace FlatWorld.Gameplay.Quests
             AddActiveRecord(definition);
             changedQuestIds.Add(definition.Id);
             Stabilize(changedQuestIds, deferredSignals);
-            QuestProgressStore.Save(player.Data, document);
+            QuestProgressStore.Save(player.itemData, document);
             NotifyChanged(changedQuestIds);
             PublishDeferredSignals(deferredSignals);
             return true;
@@ -140,7 +140,7 @@ namespace FlatWorld.Gameplay.Quests
                 definition.Id
             };
             Stabilize(changedQuestIds, deferredSignals);
-            QuestProgressStore.Save(player.Data, document);
+            QuestProgressStore.Save(player.itemData, document);
             NotifyChanged(changedQuestIds);
             PublishDeferredSignals(deferredSignals);
             return true;
@@ -156,7 +156,7 @@ namespace FlatWorld.Gameplay.Quests
             if (!Stabilize(changedQuestIds, deferredSignals))
                 return;
 
-            QuestProgressStore.Save(player.Data, document);
+            QuestProgressStore.Save(player.itemData, document);
             NotifyChanged(changedQuestIds);
             PublishDeferredSignals(deferredSignals);
         }
@@ -279,7 +279,7 @@ namespace FlatWorld.Gameplay.Quests
             if (!changed)
                 return;
 
-            QuestProgressStore.Save(player.Data, document);
+            QuestProgressStore.Save(player.itemData, document);
             NotifyChanged(changedQuestIds);
             PublishDeferredSignals(deferredSignals);
         }

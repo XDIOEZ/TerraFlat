@@ -14,7 +14,7 @@ namespace FlatWorld.Dialogue
 
         private static void HandleFeedback(Item owner, string text)
         {
-            if (owner is not Player player || !player.IsLocalProfile) return;
+            if (!(owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player)) return;
             player.GetComponent<CharacterSoliloquyController>()?.Say(text,
                 CharacterSpeechPriority.Player, topic: "fishing.rig");
         }

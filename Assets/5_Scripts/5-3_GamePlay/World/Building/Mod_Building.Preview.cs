@@ -89,7 +89,7 @@ public partial class Mod_Building
         }
 
         FlatWorld.Spaceflight.SpaceSession session = FlatWorld.Spaceflight.SpaceSession.Current;
-        Player actor = ResolvePlacementActor();
+        Item actor = ResolvePlacementActor();
         GhostShadow.transform.position = session != null && session.TryGetPlacementWorldShip(actor, out FlatWorld.Spaceflight.ShipState ship)
             ? (Vector3)session.ProjectShipInteriorPosition(ship, mouse) : WorldLocalPresentation.ProjectPosition(mouse);
         GhostShadow.UpdateAlpha(1f);
@@ -415,15 +415,15 @@ public partial class Mod_Building
         => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
 
     /// <summary>建筑预览和提交共用放置距离，创造背包启用后解除距离上限。</summary>
-    public float GetMaxPlacementDistance(Player placementActor = null)
+    public float GetMaxPlacementDistance(Item placementActor = null)
     {
-        Player actor = placementActor != null ? placementActor : item?.Owner as Player;
+        Item actor = placementActor != null ? placementActor : ActorProfileRegistry.GetProfileActorOrNull(item?.Owner as Item);
         return ResolveMaxPlacementDistance(actor, Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance,
             item?.Owner);
     }
 
     /// <summary>预览、手机准星与服务器提交共用玩家实际交互半径。</summary>
-    public static float ResolveMaxPlacementDistance(Player actor, float fallbackDistance, Item owner = null)
+    public static float ResolveMaxPlacementDistance(Item actor, float fallbackDistance, Item owner = null)
     {
         if (CreativeInventoryState.IsEnabled(actor))
             return float.PositiveInfinity;

@@ -148,14 +148,14 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     #endregion
 
     #region 副产物容器取液
-    public bool CanTransferLiquidResidueTo(ILiquidVessel target, Player actor)
+    public bool CanTransferLiquidResidueTo(ILiquidVessel target, Item actor)
     {
         if (actor == null || target == null || !target.CanOperate(actor)) return false;
         return ContainerTransferService.PreviewLiquid(LiquidResiduePort,
             LiquidVesselOperations.Port(target, ContainerPortDirection.Input),
             new ContainerTransferContext(actor, ContainerAccessKind.Manual, "liquid-residue"), Mod_WaterVessel.AmountStep).Success;
     }
-    public bool TransferLiquidResidueTo(ILiquidVessel target, Player actor)
+    public bool TransferLiquidResidueTo(ILiquidVessel target, Item actor)
     {
         if (actor == null || target == null || LiquidResiduePort == null ||
             !ContainerTransferCommands.TryAddress(actor, target, ContainerPortDirection.Input, out var to)) return false;
@@ -172,7 +172,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     #endregion
 
     #region 权威配置操作
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation == "begin-interaction") return true;
         if (operation == "work" && SolidFuelBurner != null)

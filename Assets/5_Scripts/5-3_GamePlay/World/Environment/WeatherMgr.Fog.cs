@@ -85,7 +85,7 @@ public partial class WeatherMgr
     private void TrackFogCreature(Item creature)
     {
         if (creature == null) return;
-        if (creature is Player || creature.gameObject.scene.name != ownedWorld)
+        if (ActorIdentity.IsPlayer(creature as Item) || creature.gameObject.scene.name != ownedWorld)
         {
             ReleaseFogCreature(creature);
             return;

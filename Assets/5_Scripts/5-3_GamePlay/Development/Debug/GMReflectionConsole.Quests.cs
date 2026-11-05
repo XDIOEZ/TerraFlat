@@ -249,8 +249,8 @@ public sealed partial class GMReflectionConsole
     private void BindQuestRuntime()
     {
         Transform playerTransform = GetLocalPlayerTransform();
-        Player player = playerTransform != null
-            ? playerTransform.GetComponent<Player>() ?? playerTransform.GetComponentInParent<Player>()
+        Item player = playerTransform != null
+            ? playerTransform.GetComponent<Item>() ?? playerTransform.GetComponentInParent<Item>()
             : null;
         PlayerQuestRuntime runtime = null;
         if (player != null && QuestManager.Instance != null)

@@ -48,7 +48,7 @@ public partial class Mod_GameController
             _externalGameplayControlOwner = owner;
             _externalMoveInput = Vector2.zero;
             Vector3 aimOrigin = transform.position;
-            if (item is Player player && FlatWorld.Spaceflight.SpaceSession.Current != null &&
+            if ((item is Item player && ActorIdentity.IsPlayer(player)) && FlatWorld.Spaceflight.SpaceSession.Current != null &&
                 FlatWorld.Spaceflight.SpaceSession.Current.TryGetShipInteriorPresentationPosition(player, out Vector2 projected))
                 aimOrigin = projected;
             _externalAimWorldPosition = aimOrigin + Vector3.right;
@@ -110,7 +110,7 @@ public partial class Mod_GameController
         }
 
         worldPosition.z = 0f;
-        bool shipInterior = item is Player player &&
+        bool shipInterior = (item is Item player && ActorIdentity.IsPlayer(player)) &&
             FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
         _externalAimWorldPosition = shipInterior || FlatWorld.Spaceflight.SpaceSession.TryGetCombatFrame(item, out _, out _)
             ? worldPosition : WorldTopologyRuntime.NormalizePosition(worldPosition);

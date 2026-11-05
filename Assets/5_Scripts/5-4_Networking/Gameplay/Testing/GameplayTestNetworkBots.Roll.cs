@@ -60,13 +60,13 @@ namespace FlatWorld.Networking.Gameplay
                 functionHash = command.GetStableHashCode16(), payload = writer.ToArraySegment()
             });
 
-        private static IEnumerator CaptureRoll(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureRoll(Item local, JObject args, Action<JObject> completed)
         {
             const int botId = 91;
             using var world = new BotWorld(local);
             yield return world.Join(botId, world.Prefix + "翻滚");
             NetworkWorldPlayer actor = world.Core(botId);
-            Player player = actor.CorePlayer;
+            Item player = actor.CorePlayer;
             Mod_Roll roll = player.itemMods.GetMod_ByID<Mod_Roll>(Mod_Roll.ModuleId) ??
                 throw new InvalidOperationException("正式网络玩家缺少翻滚模块。");
             Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
@@ -79,7 +79,7 @@ namespace FlatWorld.Networking.Gameplay
             stamina.modData.WriteData(stamina.Data);
             byte[] beforeRoll = ItemNetworkStateSerialization.Capture(player, true);
             bool baselineReadable = ItemNetworkStateSerialization.TryDeserializeItemData(beforeRoll, out ItemData baselineData);
-            bool baselineIdentity = baselineData is Data_Player && baselineData.Guid == player.itemData.Guid &&
+            bool baselineIdentity = baselineData is ItemData && baselineData.Guid == player.itemData.Guid &&
                 baselineData.IDName == player.itemData.IDName;
             float before = stamina.CurrentValue, hpBefore = health.Hp;
             RigidbodyType2D originalBodyType = body.bodyType;
@@ -153,7 +153,7 @@ namespace FlatWorld.Networking.Gameplay
             SendRollStaminaAck(world, actor, botId, 4, secondPaid);
             world.Transport.ServerDisconnect(botId);
             yield return null;
-            result["disconnectedRuntimeRemoved"] = !ItemMgr.Instance.Player_DIC.ContainsKey(actor.DisplayName);
+            result["disconnectedRuntimeRemoved"] = !ItemMgr.Instance.ProfileActors.ContainsKey(actor.ProfileId);
             world.Dispose();
             result["cleanup"] = world.CleanupSample();
             completed(result);

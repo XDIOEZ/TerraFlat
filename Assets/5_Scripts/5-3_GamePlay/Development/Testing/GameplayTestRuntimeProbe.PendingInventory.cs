@@ -24,7 +24,7 @@ public static partial class GameplayTestRuntimeProbe
 
     private sealed class PendingPickupDropProvider : IDroppedItemSpawnProvider
     {
-        public Player Owner;
+        public Item Owner;
         public Transform Root;
         public int Calls;
         public float GeneratedAmount;
@@ -46,7 +46,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 桥与生成接管仅在自有对象的同步调用期间替换，finally 恢复，不驱动当前测试玩家。
-    private static JObject CapturePendingPickupGuards(Player player, JObject args)
+    private static JObject CapturePendingPickupGuards(Item player, JObject args)
     {
         var root = new GameObject("[LuaPendingPickupGuards]");
         // 模拟丢弃的回滚句柄需要归属于隔离玩家的真实世界场景。
@@ -56,7 +56,7 @@ public static partial class GameplayTestRuntimeProbe
         IDisposable spawnLease = null;
         int completedFoodEvents = 0;
         string completedFoodId = string.Empty;
-        Player owner = null;
+        Item owner = null;
         void HandleFoodCompleted(FoodConsumeResult result)
         {
             if (!ReferenceEquals(result.Consumer, owner)) return;
@@ -67,12 +67,9 @@ public static partial class GameplayTestRuntimeProbe
         FoodConsumptionService.ConsumptionCompleted += HandleFoodCompleted;
         try
         {
-            owner = root.AddComponent<Player>();
-            owner.BindData(new Data_Player
-            {
-                IDName = "test:pending_pickup_player", Stack = new ItemStack { CanBePickedUp = false }
-            });
-            owner.SetProfileContext(GameplayTestSystemProbe.Flag(args, "localProfile", true), false, "LuaPendingPickupGuards");
+            owner = ActorProfileRegistry.CreateProfileActorForFixture(root);
+            owner.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "test:pending_pickup_player", Stack = new ItemStack { CanBePickedUp = false } }, null, null));
+            ActorProfileRegistry.BindProfile(owner, GameplayTestSystemProbe.Flag(args, "localProfile", true), false, "LuaPendingPickupGuards");
             bool pending = true;
             ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = () => pending;
 

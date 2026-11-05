@@ -39,7 +39,7 @@ namespace FlatWorld.Dialogue
         private Coroutine providerRoutine;
         private bool started;
         private int requestGeneration;
-        private Player actorPlayer;
+        private Item actorPlayer;
 
         public event Action<CharacterSpeechRequest> SpeechRequested;
         public event Action<CharacterSpeechRequest> SpeechShown;
@@ -63,7 +63,7 @@ namespace FlatWorld.Dialogue
         {
             StopController();
             if (actorPlayer != null)
-                actorPlayer.ProfileContextChanged -= HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actorPlayer).Changed -= HandleProfileContextChanged;
             actorPlayer = null;
         }
 
@@ -139,16 +139,16 @@ namespace FlatWorld.Dialogue
 
         private void RefreshActorPlayerSubscription()
         {
-            Player resolvedPlayer = GetComponentInParent<Player>();
+            Item resolvedPlayer = GetComponentInParent<Item>();
             if (ReferenceEquals(actorPlayer, resolvedPlayer))
                 return;
 
             if (actorPlayer != null)
-                actorPlayer.ProfileContextChanged -= HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actorPlayer).Changed -= HandleProfileContextChanged;
 
             actorPlayer = resolvedPlayer;
             if (actorPlayer != null)
-                actorPlayer.ProfileContextChanged += HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actorPlayer).Changed += HandleProfileContextChanged;
         }
 
         private void HandleProfileContextChanged()
@@ -164,7 +164,7 @@ namespace FlatWorld.Dialogue
 
         private bool CanRunForActor()
         {
-            return actorPlayer == null || actorPlayer.IsLocalProfile;
+            return actorPlayer == null || ActorProfileRegistry.IsLocallyControlled(actorPlayer);
         }
 
         private void StopController()

@@ -345,7 +345,7 @@ namespace FlatWorld.Spaceflight
             SynchronizeOreAsteroidPresentation();
             PresentationSynchronized?.Invoke();
             ShipPanelSession.RefreshOpen(this);
-            SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.User_Player);
+            SpaceLandingPanelSession.Refresh(this, ItemMgr.Instance?.LocalControlledActor);
         }
         public ShipState GetShip(string id)
             => shipQueryIndex.Find(State?.Ships, id);
@@ -410,8 +410,8 @@ namespace FlatWorld.Spaceflight
         {
             if (!IsInPresentationWorld(ship)) return false;
             if (!IsSpaceView) return true;
-            Player player = ItemMgr.Instance?.User_Player;
-            SpacePassengerState observer = player != null ? FindPassenger(player.ProfileName) : null;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            SpacePassengerState observer = player != null ? FindPassenger(ActorProfileRegistry.GetProfileId(player)) : null;
             if (observer != null && observer.Supported && observer.ShipId == ship.ShipId) return true;
             // 浮动原点只保障坐标精度，可见距离必须围绕当前乘员的权威位置计算。
             SpaceSectorPosition focus = observer != null ? GetPassengerPosition(observer) : new SpaceSectorPosition(ViewSector, ViewOrigin);
@@ -421,7 +421,7 @@ namespace FlatWorld.Spaceflight
         private void UpdateViewOrigin()
         {
             if (!IsSpaceView) return;
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             SpacePassengerState passenger = player != null ? GetPassenger(player) : null;
             if (passenger == null) return;
             UpdateProjection(GetPassengerPosition(passenger));

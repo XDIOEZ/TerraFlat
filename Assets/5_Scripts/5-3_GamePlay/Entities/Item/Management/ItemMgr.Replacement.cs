@@ -44,7 +44,7 @@ public partial class ItemMgr
     {
         if (original == null) throw new ArgumentNullException(nameof(original));
         if (replacement == null) throw new ArgumentNullException(nameof(replacement));
-        if (original is Player || original is Map)
+        if (ActorIdentity.IsPlayer(original as Item) || original is Map)
             throw new InvalidOperationException("玩家和地图必须通过各自的生命周期入口替换。");
         if (original.DestructionHandled || original.IsInPool || original.IsRuntimeTransitioning || !original.IsInitialized ||
             !_runtimeRegistry.TryGetRegisteredGuid(original, out int guid) || original.itemData?.Guid != guid)
@@ -202,7 +202,7 @@ public partial class ItemMgr
             transfer.CandidateObject = Instantiate(prefab, staging.transform, false);
             Item candidate = transfer.CandidateObject.GetComponent<Item>();
             transfer.Candidate = candidate;
-            if (candidate == null || candidate is Player || candidate is Map)
+            if (candidate == null || ActorIdentity.IsPlayer(candidate as Item) || candidate is Map)
                 throw new InvalidOperationException($"替换目标 {data.IDName} 必须是普通 Item 外壳。");
             candidate.gameObject.SetActive(false);
             candidate.PrepareForPoolReuse();

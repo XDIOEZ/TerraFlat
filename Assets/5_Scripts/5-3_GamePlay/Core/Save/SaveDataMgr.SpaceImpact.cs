@@ -63,7 +63,7 @@ public partial class SaveDataMgr
         {
             foreach (Item item in new List<Item>(ItemMgr.Instance.WorldRunTimeItems.Values))
             {
-                if (item == null || item is Player || item.InHand || item.Owner != null || item.PersistenceOwner != null ||
+                if (item == null || ActorIdentity.IsPlayer(item as Item) || item.InHand || item.Owner != null || item.PersistenceOwner != null ||
                     item.gameObject.scene.name != address.WorldKey || item.itemData == null ||
                     SpaceSession.Current?.Owns(item.itemData.Guid) == true || processed.Contains(item.itemData.Guid)) continue;
                 Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);

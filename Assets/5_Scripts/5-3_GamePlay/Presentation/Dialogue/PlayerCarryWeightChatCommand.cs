@@ -41,9 +41,9 @@ namespace FlatWorld.Dialogue
         }
 
         /// <summary>首次入世与角色重建后定向补齐组件，并更新聊天控制器的命令列表。</summary>
-        private static void Attach(Player player)
+        private static void Attach(Item player)
         {
-            if (player == null || !player.IsLocalProfile)
+            if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
                 return;
 
             PlayerChatInputController chat = player.GetComponent<PlayerChatInputController>();
@@ -73,7 +73,7 @@ namespace FlatWorld.Dialogue
                     ? $"用法：/{WeightCommandName} 5000，重量必须是大于 0 的有限数字，单位 kg。"
                     : $"用法：/{VolumeCommandName} 5000，体积必须是大于 0 的有限数字，单位 L（升）。");
 
-            if (context.Sender == null || context.Sender != GetComponent<Player>())
+            if (context.Sender == null || context.Sender != GetComponent<Item>())
                 return PlayerChatCommandResult.HandledWith("当前本地玩家尚未就绪。");
 
             string failureReason;

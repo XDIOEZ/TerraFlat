@@ -76,7 +76,7 @@ public sealed class ManualProcessingRuntime : IDisposable
         Processor.ApplyRemoteState(incoming.Processing);
     }
 
-    private CraftingResult Commit(Player actor)
+    private CraftingResult Commit(Item actor)
     {
         CraftingResult preview = Preview();
         if (!preview.Success) return preview;

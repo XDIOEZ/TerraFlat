@@ -16,7 +16,7 @@ public static class GameplayTestBicycleRuntimeProbe
 #endif
     private static void Register() => GameplayTestRuntimeProbe.Register("player", "bicycle_lifecycle", CaptureBicycleLifecycle);
 
-    private static JObject CaptureBicycleLifecycle(Player player, JObject args)
+    private static JObject CaptureBicycleLifecycle(Item player, JObject args)
     {
         string action = args.Value<string>("action") ?? "begin";
         if (action == "begin")
@@ -42,7 +42,7 @@ public static class GameplayTestBicycleRuntimeProbe
     #region 临时车体、液体与玩家位置租约
     private sealed class BicycleScope : IDisposable
     {
-        private readonly Player player;
+        private readonly Item player;
         private readonly Vector3 originalPosition;
         private readonly List<(Vector2 position, string liquid, int level)> liquids = new();
         private Item bicycle;
@@ -56,7 +56,7 @@ public static class GameplayTestBicycleRuntimeProbe
         public Mod_Mover Mover { get; }
         public Mod_Carrier Carrier { get; private set; }
 
-        public BicycleScope(Player actor)
+        public BicycleScope(Item actor)
         {
             player = actor;
             originalPosition = actor.transform.position;

@@ -8,7 +8,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
 {
     #region 自然物正式链路拆分回归
     // 在隔离存档中生成真实 Leaf，重绑整块视图后核对同一份数据、模块与物理租约。
-    private static IEnumerator CaptureNaturalItemDecoupling(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureNaturalItemDecoupling(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();

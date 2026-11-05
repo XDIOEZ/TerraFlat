@@ -331,7 +331,7 @@ public static class GameplayTestSpacePresentationProbe
 
     #region 乘员整体高度与碰撞恢复采样
 
-    public static JObject CapturePassengerPose(Player player)
+    public static JObject CapturePassengerPose(Item player)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var root = new GameObject("乘员高度独立夹具");
@@ -394,7 +394,7 @@ public static class GameplayTestSpacePresentationProbe
 
     #region 太空驾驶镜头租约采样
 
-    public static JObject CaptureCameraOverride(Player player)
+    public static JObject CaptureCameraOverride(Item player)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         string[] keys = { "FlatWorld.Camera.Lookahead", "FlatWorld.Camera.LookaheadSmoothing", "FlatWorld.Camera.LookaheadZoomInfluence" };

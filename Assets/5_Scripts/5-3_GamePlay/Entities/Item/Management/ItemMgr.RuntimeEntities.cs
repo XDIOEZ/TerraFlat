@@ -21,7 +21,7 @@ internal static class RuntimeAiEntityUtility
     /// <summary>判断当前 Item 是否承载可运行的实体 AI。</summary>
     public static bool IsAiEntity(Item item)
     {
-        if (item == null || item is Player || item is Map)
+        if (item == null || item is Map)
             return false;
 
         if (MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName) ||
@@ -95,7 +95,7 @@ internal static class RuntimeWorldResidentEntityUtility
 
     internal static bool AllowsIndependentWorldResidentPersistence(Item item)
     {
-        if (item == null || item is Player || item is Map || item.itemData == null || item.itemData.inHand ||
+        if (item == null || ActorIdentity.IsPlayer(item as Item) || item is Map || item.itemData == null || item.itemData.inHand ||
             item.PersistenceOwner != null) return false;
         using var scratch = ListPool<MonoBehaviour>.Get(out var behaviours);
         item.GetComponentsInChildren(true, behaviours);
@@ -120,9 +120,8 @@ internal static class RuntimeWorldResidentEntityUtility
     }
 
     internal static bool IsPersistentWorldEntity(Item item)
-        => item != null && item is not Player && item is not Map &&
-           (RuntimeAiEntityUtility.IsAiEntity(item) || AllowsIndependentWorldResidentPersistence(item) &&
-            (IsPersistentWorldEntityData(item.itemData) || HasRegisteredIndependentPhysicsProxy(item)));
+        => AllowsIndependentWorldResidentPersistence(item) &&
+           (RuntimeAiEntityUtility.IsAiEntity(item) || IsPersistentWorldEntityData(item.itemData) || HasRegisteredIndependentPhysicsProxy(item));
     #endregion
 }
 
@@ -239,7 +238,7 @@ public partial class ItemMgr
 
     internal void RefreshPhysicsWorldResidentOwnership(Item item)
     {
-        if (item == null || item.itemData == null || !IsRuntimeItemRegistered(item) || item is Player || item is Map)
+        if (item == null || item.itemData == null || !IsRuntimeItemRegistered(item) || ActorIdentity.IsPlayer(item as Item) || item is Map)
             return;
         bool independent = RuntimeWorldResidentEntityUtility.IsIndependentPhysicsItem(item);
         if (independent)
@@ -355,7 +354,7 @@ public partial class ItemMgr
     /// <summary>具有宿主所有权的实体由宿主恢复，不再另存一份自由 AI。</summary>
     private static bool ShouldPersistRuntimeAi(Item item)
     {
-        if (item == null || item.PersistenceOwner != null) return false;
+        if (!RuntimeWorldResidentEntityUtility.AllowsIndependentWorldResidentPersistence(item)) return false;
         using var scratch = ListPool<MonoBehaviour>.Get(out var behaviours);
         item.GetComponentsInChildren(true, behaviours);
         foreach (MonoBehaviour behaviour in behaviours)
@@ -428,7 +427,7 @@ public partial class ItemMgr
     }
 
     /// <summary>从新版实体索引移除 Item，并把原地址标记为需要保存。</summary>
-    private void RemoveRuntimeAiEntity(Item item, bool markDirty = true, int? registeredGuid = null)
+    internal void RemoveRuntimeAiEntity(Item item, bool markDirty = true, int? registeredGuid = null)
     {
         if (ReferenceEquals(item, null) || !runtimeAiOwnership.Remove(item, out RuntimeAiOwnership owner)) return;
         RemoveRuntimeAiFromOwnedWorld(item, owner.WorldKey, registeredGuid ?? owner.Guid, markDirty);

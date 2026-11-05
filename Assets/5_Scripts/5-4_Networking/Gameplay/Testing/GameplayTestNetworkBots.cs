@@ -51,7 +51,7 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 独立玩家、正式入世快照与重复就绪
-        private static IEnumerator CaptureSession(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureSession(Item local, JObject args, Action<JObject> completed)
         {
             int count = args.Value<int?>("count") ?? 4;
             if (count < 2 || count > 8) throw new ArgumentOutOfRangeException(nameof(args), "假人数量限 2～8。");
@@ -83,18 +83,18 @@ namespace FlatWorld.Networking.Gameplay
             result["players"] = players;
             result["replayedHandshake"] = world.ReplayedHandshake;
             result["independentData"] = players.Count == count &&
-                Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data).Distinct().Count() == count;
+                Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.itemData).Distinct().Count() == count;
             // 地表远端默认只加载轻量表现；先走正式服务器权威启用再核验真正的库存容器。
             for (int i = 0; i < count; i++)
             {
-                Player bot = world.Core(31 + i).CorePlayer;
+                Item bot = world.Core(31 + i).CorePlayer;
                 ItemMgr.Instance.InitializeNetworkAuthorityPlayer(bot);
                 yield return Wait(() => bot.IsInitialized, "假人权威库存模块加载");
             }
             result["authorityInitialized"] = Enumerable.Range(31, count)
                 .All(id => world.Core(id).CorePlayer.IsInitialized);
             result["hostStatePublishing"] = CaptureHostStatePublishing(world.Core(31));
-            var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.Data.ModuleDataDic.Values
+            var inventories = Enumerable.Range(31, count).Select(id => world.Core(id).CorePlayer.itemData.ModuleDataDic.Values
                 .OfType<Inventory_ModuleData>().ToArray()).ToArray();
             Inventory_ModuleData[] native = inventories.SelectMany(value => value).ToArray();
             Inventory_Data[][] containers = inventories.Select(modules => modules
@@ -108,9 +108,9 @@ namespace FlatWorld.Networking.Gameplay
                 HaveSeparateInventoryContainers(containers);
             // 实际主角使用长稳定 ID，另准备短名角色来确保覆盖真实的档案名冲突。
             string occupiedProfile = world.Prefix + "occupied";
-            world.PlaceSpawn(occupiedProfile, local.Data.transform.position);
-            Player occupied = ItemMgr.Instance.LoadNetworkPlayer(occupiedProfile, 0,
-                WorldLocalPresentation.ProjectPosition(local.Data.transform.position), false);
+            world.PlaceSpawn(occupiedProfile, local.itemData.transform.position);
+            Item occupied = ItemMgr.Instance.LoadNetworkPlayer(occupiedProfile, 0,
+                WorldLocalPresentation.ProjectPosition(local.itemData.transform.position), false);
             // 这个自有短名占位角色只验证身份，不参与物理拾取。
             foreach (Collider2D collider in occupied.GetComponentsInChildren<Collider2D>(true)) collider.enabled = false;
             yield return world.Join(89, occupiedProfile);
@@ -118,7 +118,7 @@ namespace FlatWorld.Networking.Gameplay
             result["occupiedCoreReused"] = ReferenceEquals(world.Core(89).CorePlayer, occupied);
             result["occupiedProfile"] = occupiedProfile;
             ItemMgr.Instance.ReleaseNetworkPlayer(occupied, persistData: false);
-            yield return world.Join(90, local.ProfileName);
+            yield return world.Join(90, ActorProfileRegistry.GetProfileId(local));
             result["localNameCollision"] = BotSample(world.Core(90), local);
             // 同一连接先验证正常世界请求，再移走观察者验证不会在主机世界误处理。
             NetworkWorldPlayer scopedBot = world.Core(90);
@@ -128,7 +128,7 @@ namespace FlatWorld.Networking.Gameplay
             yield return Wait(() => world.Transport.Read<NetworkMechanicalNodeMessage>(90)
                 .Count(message => message.Reset) > resetCountBefore, "有效世界物品同步请求");
             int resetCountAfterValid = world.Transport.Read<NetworkMechanicalNodeMessage>(90).Count(message => message.Reset);
-            SpacePassengerState detached = world.Session.State.Passengers.Find(value => value.ProfileId == scopedBot.DisplayName);
+            SpacePassengerState detached = world.Session.State.Passengers.Find(value => value.ProfileId == scopedBot.ProfileId);
             if (detached == null) throw new InvalidOperationException("假人缺少可用于隔离验证的世界观察者");
             bool invalidDispatched;
             world.Session.State.Passengers.Remove(detached);
@@ -292,16 +292,16 @@ namespace FlatWorld.Networking.Gameplay
             return true;
         }
 
-        private static JObject BotSample(NetworkWorldPlayer bot, Player local) => new()
+        private static JObject BotSample(NetworkWorldPlayer bot, Item local) => new()
         {
-            ["profile"] = bot.DisplayName, ["netId"] = bot.netId,
+            ["profile"] = bot.ProfileId, ["netId"] = bot.netId,
             ["guid"] = bot.CorePlayer.itemData.Guid,
-            ["profileBound"] = bot.CorePlayer.ProfileName == bot.DisplayName,
-            ["isLocalProfile"] = bot.CorePlayer.IsLocalProfile,
+            ["profileBound"] = ActorProfileRegistry.GetProfileId(bot.CorePlayer) == bot.ProfileId,
+            ["isLocalProfile"] = ActorProfileRegistry.IsLocallyControlled(bot.CorePlayer),
             ["sameAsLocal"] = ReferenceEquals(bot.CorePlayer, local),
             ["ready"] = bot.connectionToClient.isReady,
             ["authenticated"] = bot.connectionToClient.isAuthenticated,
-            ["indexed"] = ReferenceEquals(ItemMgr.Instance.Player_DIC[bot.DisplayName], bot.CorePlayer)
+            ["indexed"] = ReferenceEquals(ItemMgr.Instance.ProfileActors[bot.ProfileId], bot.CorePlayer)
         };
 
         private static JObject SnapshotSample(GameplayTestBotTransport transport, int id)
@@ -347,7 +347,7 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 未入世、版本和 MOD 不符拒绝
-        private static IEnumerator CaptureRejection(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureRejection(Item local, JObject args, Action<JObject> completed)
         {
             using var world = new BotWorld(local);
             var samples = new JArray();
@@ -368,7 +368,7 @@ namespace FlatWorld.Networking.Gameplay
                 else if (i == 1) hello.ModApiVersion--;
                 else hello.ModSetHash = "lua-bot-mismatched-mods";
                 world.Transport.Receive(id, hello);
-                world.Transport.Receive(id, new NetworkJoinRequest { PlayerName = world.Prefix + id });
+                world.Transport.Receive(id, new NetworkJoinRequest { ProfileId = world.Prefix + id, PlayerName = world.Prefix + id });
                 world.Transport.Receive(id, new NetworkWorldReady());
                 world.Transport.Receive(id, new AddPlayerMessage());
                 yield return Wait(() => !NetworkServer.connections.ContainsKey(id), "拒绝连接断开");
@@ -391,11 +391,11 @@ namespace FlatWorld.Networking.Gameplay
             NetworkProtocolHello invalid = Hello();
             invalid.Version--;
             world.Transport.Receive(62, invalid);
-            world.Transport.Receive(62, new NetworkJoinRequest { PlayerName = world.Prefix + "stale" });
+            world.Transport.Receive(62, new NetworkJoinRequest { ProfileId = world.Prefix + "stale", PlayerName = world.Prefix + "stale" });
             world.Transport.ServerDisconnect(62);
             world.Transport.ConnectBot(62);
             world.Transport.Receive(62, Hello());
-            world.Transport.Receive(62, new NetworkJoinRequest { PlayerName = world.Prefix + "fresh" });
+            world.Transport.Receive(62, new NetworkJoinRequest { ProfileId = world.Prefix + "fresh", PlayerName = world.Prefix + "fresh" });
             yield return Wait(() => world.Transport.Count<NetworkWorldSnapshotBegin>(62) == 1, "复用连接正常获取世界快照");
             yield return null;
             samples.Add(new JObject { ["kind"] = "stale_rejection", ["connected"] = world.Transport.IsBotConnected(62),
@@ -407,12 +407,12 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 连接绑定输入、乱序拒绝、超时与断线
-        private static IEnumerator CaptureInput(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureInput(Item local, JObject args, Action<JObject> completed)
         {
             using var world = new BotWorld(local);
             yield return world.Join(61, world.Prefix + "A");
             yield return world.Join(62, world.Prefix + "B");
-            string a = world.Core(61).DisplayName, b = world.Core(62).DisplayName;
+            string a = world.Core(61).ProfileId, b = world.Core(62).ProfileId;
             var result = new JObject();
             void Send(int id, uint sequence, float x, float y = 0f) => world.Transport.Receive(id,
                 new NetworkSpaceInput { Sequence = sequence, Input = new SpacePassengerInput { MoveX = x, MoveY = y } }, Channels.Unreliable);
@@ -501,9 +501,9 @@ namespace FlatWorld.Networking.Gameplay
             world.Transport.ServerDisconnect(61);
             result["disconnectedA"] = InputSample(world.Session, a);
             result["oldSpawnPresent"] = NetworkServer.spawned.ContainsKey(oldId);
-            result["oldRuntimePresent"] = ItemMgr.Instance.Player_DIC.ContainsKey(a);
+            result["oldRuntimePresent"] = ItemMgr.Instance.ProfileActors.ContainsKey(a);
             result["bAfterDisconnect"] = InputSample(world.Session, b);
-            result["savedProfileRetained"] = SaveDataMgr.Instance.SaveData.PlayerData_Dict.ContainsKey(a);
+            result["savedProfileRetained"] = SaveDataMgr.Instance.SaveData.ProfileActorData.ContainsKey(a);
             world.Dispose();
             yield return null;
             result["cleanup"] = world.CleanupSample();
@@ -523,24 +523,24 @@ namespace FlatWorld.Networking.Gameplay
         #endregion
 
         #region 同档案重连与连接 ID 复用
-        private static IEnumerator CaptureReconnect(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureReconnect(Item local, JObject args, Action<JObject> completed)
         {
             using var world = new BotWorld(local);
             var rounds = new JArray();
             string profile = world.Prefix + "reconnect";
-            Data_Player previousData = null;
+            ItemData previousData = null;
             uint previousId = 0;
             NetworkConnectionToClient previousConnection = null;
             for (int i = 0; i < 3; i++)
             {
                 yield return world.Join(71, profile);
                 NetworkWorldPlayer bot = world.Core(71);
-                var sample = new JObject { ["profile"] = bot.DisplayName, ["netId"] = bot.netId,
-                    ["sameSavedData"] = i == 0 || ReferenceEquals(previousData, bot.CorePlayer.Data),
+                var sample = new JObject { ["profile"] = bot.ProfileId, ["netId"] = bot.netId,
+                    ["sameSavedData"] = i == 0 || ReferenceEquals(previousData, bot.CorePlayer.itemData),
                     ["oldSpawnPresent"] = previousId != 0 && NetworkServer.spawned.ContainsKey(previousId),
                     ["connections"] = NetworkServer.connections.Count,
                     ["canPauseWithRemotePlayer"] = GameNetwork.CanPauseLocalWorld };
-                previousData = bot.CorePlayer.Data;
+                previousData = bot.CorePlayer.itemData;
                 previousId = bot.netId;
                 world.Transport.Receive(71, new NetworkSpaceInput { Sequence = 1, Input = new SpacePassengerInput { MoveX = .5f } });
                 sample["freshSequence"] = InputSample(world.Session, profile);
@@ -553,9 +553,9 @@ namespace FlatWorld.Networking.Gameplay
                 previousConnection = NetworkServer.connections[71];
                 world.Transport.ServerDisconnect(71);
                 sample["canPauseWithoutRemotePlayer"] = GameNetwork.CanPauseLocalWorld && NetworkServer.active;
-                sample["runtimePresentAfterDisconnect"] = ItemMgr.Instance.Player_DIC.ContainsKey(profile);
+                sample["runtimePresentAfterDisconnect"] = ItemMgr.Instance.ProfileActors.ContainsKey(profile);
                 sample["inputAfterDisconnect"] = InputSample(world.Session, profile);
-                sample["savedAfterDisconnect"] = SaveDataMgr.Instance.SaveData.PlayerData_Dict.ContainsKey(profile);
+                sample["savedAfterDisconnect"] = SaveDataMgr.Instance.SaveData.ProfileActorData.ContainsKey(profile);
                 rounds.Add(sample);
                 yield return null;
             }
@@ -576,9 +576,9 @@ namespace FlatWorld.Networking.Gameplay
             public readonly FlatWorldGameNetworkManager Manager;
             public readonly SpaceSession Session;
             public readonly string Prefix = "B_" + Guid.NewGuid().ToString("N").Substring(0, 4) + "_";
-            private readonly Player local;
-            private readonly Data_Player localData;
-            private readonly Dictionary<string, Data_Player> originalProfiles;
+            private readonly Item local;
+            private readonly ItemData localData;
+            private readonly Dictionary<string, ItemData> originalProfiles;
             private readonly HashSet<string> ownedProfiles = new(StringComparer.Ordinal);
             private readonly Dictionary<int, bool> prematureSpawns = new();
             private readonly HashSet<Component> originalComponents;
@@ -593,14 +593,14 @@ namespace FlatWorld.Networking.Gameplay
             public JObject HostPreparation { get; private set; }
             public bool CanPauseDuringRemoteHandshake { get; private set; }
 
-            public BotWorld(Player player)
+            public BotWorld(Item player)
             {
                 GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
                 if (NetworkServer.active || NetworkClient.active || GameNetwork.IsOnline)
                     throw new InvalidOperationException("假人测试只接管隔离世界的离线会话。");
-                local = player; localData = player.Data;
+                local = player; localData = player.itemData;
                 initialScene = SceneManager.GetActiveScene();
-                originalProfiles = new Dictionary<string, Data_Player>(SaveDataMgr.Instance.SaveData.PlayerData_Dict);
+                originalProfiles = new Dictionary<string, ItemData>(SaveDataMgr.Instance.SaveData.ProfileActorData);
                 originalActive = Mirror.Transport.active;
                 originalAoi = NetworkServer.aoi; originalClientAoi = NetworkClient.aoi;
                 Manager = NetworkManager.singleton as FlatWorldGameNetworkManager;
@@ -644,7 +644,7 @@ namespace FlatWorld.Networking.Gameplay
                     !dayTime.TryGetResolvedTimeData(initialScene.name, out _, out TimeData clock))
                     throw new InvalidOperationException("公开世界回归要求正式星球与昼夜时钟已经就绪。");
                 var planets = save.PlanetData_Dict;
-                var profiles = save.PlayerData_Dict;
+                var profiles = save.ProfileActorData;
                 DayTimeSaveData savedTime = save.DayTimeData;
                 var clocks = dayTime.WorldTimeDict;
                 JObject before = HostWorldValues(save, planet, clock);
@@ -663,16 +663,16 @@ namespace FlatWorld.Networking.Gameplay
                     ["saveSame"] = ReferenceEquals(save, afterSave),
                     ["planetSame"] = ReferenceEquals(planet, afterPlanet),
                     ["planetDictionarySame"] = ReferenceEquals(planets, afterSave?.PlanetData_Dict),
-                    ["playerDictionarySame"] = ReferenceEquals(profiles, afterSave?.PlayerData_Dict),
-                    ["localSame"] = ReferenceEquals(local, ItemMgr.Instance.User_Player),
-                    ["localDataSame"] = ReferenceEquals(localData, ItemMgr.Instance.User_Player?.Data),
+                    ["playerDictionarySame"] = ReferenceEquals(profiles, afterSave?.ProfileActorData),
+                    ["localSame"] = ReferenceEquals(local, ItemMgr.Instance.LocalControlledActor),
+                    ["localDataSame"] = ReferenceEquals(localData, ItemMgr.Instance.LocalControlledActor?.itemData),
                     ["dayTimeSame"] = ReferenceEquals(dayTime, afterDayTime),
                     ["savedTimeSame"] = ReferenceEquals(savedTime, afterSave?.DayTimeData),
                     ["clockDictionarySame"] = ReferenceEquals(clocks, afterDayTime?.WorldTimeDict),
                     ["clockSame"] = hasClock && ReferenceEquals(clock, afterClock),
                     ["sceneSame"] = SceneManager.GetActiveScene() == initialScene,
                     ["planetName"] = Manager.CurrentPlanetName,
-                    ["localProfile"] = local.ProfileName,
+                    ["localProfile"] = ActorProfileRegistry.GetProfileId(local),
                     ["preparedProfile"] = Manager.LocalPlayerName,
                     ["before"] = before,
                     ["after"] = afterSave != null && afterPlanet != null && hasClock
@@ -685,7 +685,7 @@ namespace FlatWorld.Networking.Gameplay
                 ["saveName"] = save.saveName, ["saveSeed"] = save.SaveSeed, ["seed"] = save.Seed,
                 ["saveTime"] = save.Time, ["saveTimeSpeed"] = save.TimeSpeed,
                 ["planetName"] = planet.Name, ["planetCount"] = save.PlanetData_Dict.Count,
-                ["profileCount"] = save.PlayerData_Dict.Count,
+                ["profileCount"] = save.ProfileActorData.Count,
                 ["currentTime"] = clock.CurrentTime, ["totalDays"] = clock.TotalDays,
                 ["rotationPeriod"] = clock.RotationPeriodSeconds, ["orbitalPeriod"] = clock.OrbitalPeriodSeconds,
                 ["clockTimeScale"] = clock.TimeScaleModifier,
@@ -716,7 +716,7 @@ namespace FlatWorld.Networking.Gameplay
             {
                 SeedProfile(profile);
                 if (!ownedProfiles.Contains(profile)) throw new InvalidOperationException("不能移动原有玩家档案。");
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict[profile].transform.position = logicalPosition;
+                SaveDataMgr.Instance.SaveData.ProfileActorData[profile].transform.position = logicalPosition;
             }
 
             public IEnumerator Join(int id, string requested, bool replayHandshake = false)
@@ -727,7 +727,7 @@ namespace FlatWorld.Networking.Gameplay
                 Transport.ConnectBot(id);
                 CanPauseDuringRemoteHandshake = GameNetwork.CanPauseLocalWorld;
                 Transport.Receive(id, Hello());
-                Transport.Receive(id, new NetworkJoinRequest { PlayerName = requested });
+                Transport.Receive(id, new NetworkJoinRequest { ProfileId = requested, PlayerName = requested });
                 yield return Wait(() => Transport.Count<NetworkWorldSnapshotBegin>(id) > 0 &&
                     Transport.Read<NetworkWorldSnapshotChunk>(id).Count == Transport.Read<NetworkWorldSnapshotBegin>(id).Last().ChunkCount,
                     "完整入世快照");
@@ -735,7 +735,7 @@ namespace FlatWorld.Networking.Gameplay
                 {
                     int before = Transport.Count<NetworkWorldSnapshotBegin>(id);
                     // 在出生前重发 Join 和错误版本 Hello，验证协议锁定且不重复压缩世界。
-                    Transport.Receive(id, new NetworkJoinRequest { PlayerName = requested + "_changed" });
+                    Transport.Receive(id, new NetworkJoinRequest { ProfileId = requested + "_changed", PlayerName = requested + "_changed" });
                     NetworkProtocolHello changed = Hello();
                     changed.Version--;
                     Transport.Receive(id, changed);
@@ -752,23 +752,23 @@ namespace FlatWorld.Networking.Gameplay
                 Transport.Receive(id, new NetworkWorldReady());
                 yield return Wait(() => Core(id)?.CorePlayer != null, "正式玩家出生");
                 if (replayHandshake)
-                    ReplayedHandshake["originalProfilePreserved"] = Core(id).DisplayName == requested;
+                    ReplayedHandshake["originalProfilePreserved"] = Core(id).ProfileId == requested;
                 // 假人通过明确消息拾取，关闭自有自动拾取触发器以免与测试请求竞争。
                 foreach (Mod_ItemPicker picker in Core(id).CorePlayer.GetComponentsInChildren<Mod_ItemPicker>(true))
                     foreach (Collider2D trigger in picker.GetComponentsInChildren<Collider2D>(true)) trigger.enabled = false;
-                string profile = Core(id).DisplayName;
+                string profile = Core(id).ProfileId;
                 if (!originalProfiles.ContainsKey(profile)) ownedProfiles.Add(profile);
             }
 
             private void SeedProfile(string profile)
             {
-                if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.ContainsKey(profile)) return;
-                Data_Player data = (Data_Player)GameRes.Instance.GetPrefab("Player").GetComponent<Player>().Get_NewItemData();
+                if (SaveDataMgr.Instance.SaveData.ProfileActorData.ContainsKey(profile)) return;
+                ItemData data = (ItemData)GameRes.Instance.GetPrefab("Human").GetComponent<Item>().Get_NewItemData();
                 data.Guid = ItemMgr.Instance.GenerateGuid();
-                data.Name_User = profile; data.CurrentSceneName = initialScene.name;
+                data.GetActorProfileMetadata().DisplayName = profile; data.GetActorProfileMetadata().WorldKey = initialScene.name;
                 data.transform.position = WorldTopologyRuntime.NormalizePosition(WorldLocalPresentation.ToLogical(local.transform.position));
                 data.transform.rotation = Quaternion.identity; data.transform.scale = Vector3.one;
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict.Add(profile, data);
+                SaveDataMgr.Instance.SaveData.ProfileActorData.Add(profile, data);
                 ownedProfiles.Add(profile);
             }
 
@@ -776,12 +776,12 @@ namespace FlatWorld.Networking.Gameplay
             {
                 ["serverActive"] = NetworkServer.active, ["clientActive"] = NetworkClient.active,
                 ["connections"] = NetworkServer.connections.Count, ["spawned"] = NetworkServer.spawned.Count,
-                ["localUnchanged"] = ReferenceEquals(ItemMgr.Instance.User_Player, local) && ReferenceEquals(local.Data, localData),
+                ["localUnchanged"] = ReferenceEquals(ItemMgr.Instance.LocalControlledActor, local) && ReferenceEquals(local.itemData, localData),
                 ["sceneUnchanged"] = SceneManager.GetActiveScene() == initialScene,
                 ["transportRestored"] = Mirror.Transport.active == originalActive && (ownsManager || Manager.transport == originalTransport),
-                ["profilesRestored"] = SaveDataMgr.Instance.SaveData.PlayerData_Dict.Count == originalProfiles.Count &&
-                    originalProfiles.All(value => SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(value.Key, out var data) && ReferenceEquals(value.Value, data)),
-                ["botRuntimeLeft"] = ownedProfiles.Count(value => ItemMgr.Instance.Player_DIC.ContainsKey(value)),
+                ["profilesRestored"] = SaveDataMgr.Instance.SaveData.ProfileActorData.Count == originalProfiles.Count &&
+                    originalProfiles.All(value => SaveDataMgr.Instance.SaveData.ProfileActorData.TryGetValue(value.Key, out ItemData data) && ReferenceEquals(value.Value, data)),
+                ["botRuntimeLeft"] = ownedProfiles.Count(value => ItemMgr.Instance.ProfileActors.ContainsKey(value)),
                 ["botPassengersLeft"] = Session.State.Passengers.Count(value => ownedProfiles.Contains(value.ProfileId))
             };
 
@@ -797,11 +797,11 @@ namespace FlatWorld.Networking.Gameplay
                 {
                     foreach (string profile in ownedProfiles)
                     {
-                        if (ItemMgr.Instance.Player_DIC.TryGetValue(profile, out Player bot) && bot != null)
+                        if (ItemMgr.Instance.ProfileActors.TryGetValue(profile, out Item bot) && bot != null)
                             ItemMgr.Instance.ReleaseNetworkPlayer(bot, persistData: false);
                         Session?.RemoveNetworkPassengerInput(profile);
                         Session?.State?.Passengers.RemoveAll(value => value.ProfileId == profile);
-                        SaveDataMgr.Instance.SaveData.PlayerData_Dict.Remove(profile);
+                        SaveDataMgr.Instance.SaveData.ProfileActorData.Remove(profile);
                     }
                     Manager.transport = originalTransport; Manager.onlineScene = originalOnline; Manager.offlineScene = originalOffline;
                     Manager.maxConnections = originalMax; Manager.sendRate = originalSendRate;

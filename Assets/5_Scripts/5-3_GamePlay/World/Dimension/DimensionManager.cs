@@ -133,19 +133,19 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         }
     }
 
-    public bool TryBeginTransition(Player player, string targetDimensionId)
+    public bool TryBeginTransition(Item player, string targetDimensionId)
     {
         return TryBeginTransition(player, targetDimensionId, null);
     }
 
-    public bool TryBeginTransition(Player player, string targetDimensionId, Item sourcePortalItem)
+    public bool TryBeginTransition(Item player, string targetDimensionId, Item sourcePortalItem)
     {
         return TryBeginTransitionInternal(player, targetDimensionId, sourcePortalItem,
             generatedWorldPortal: false);
     }
 
     /// <summary>从新版 ChunkView 生成的天然入口切换；目标维度使用同一世界格的确定性出口。</summary>
-    public bool TryBeginGeneratedPortalTransition(Player player, string targetDimensionId,
+    public bool TryBeginGeneratedPortalTransition(Item player, string targetDimensionId,
         Item sourcePortalItem)
     {
         return TryBeginTransitionInternal(player, targetDimensionId, sourcePortalItem,
@@ -157,20 +157,20 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     /// 该入口使用精确坐标，不读取维度最后位置，也不套用传送门偏移。
     /// </summary>
     public bool TryBeginRespawnTransition(
-        Player player,
+        Item player,
         WorldAddress targetAddress,
         Vector3 targetPosition,
         Action preparePlayerForSave)
     {
         if (IsTransitioning || localDimensionPresentation != null || player == null ||
-            player != ItemMgr.Instance?.User_Player || preparePlayerForSave == null) return false;
+            player != ItemMgr.Instance?.LocalControlledActor || preparePlayerForSave == null) return false;
         return NetworkDimensionBridge.RequestRespawn(player, targetAddress, targetPosition, preparePlayerForSave);
     }
 
     #region 星球落地事务
-    public bool TryBeginPlanetLanding(Player player, WorldAddress targetAddress, Vector2 position)
+    public bool TryBeginPlanetLanding(Item player, WorldAddress targetAddress, Vector2 position)
     {
-        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.User_Player ||
+        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.LocalControlledActor ||
             !targetAddress.IsValid || !IsFinitePosition(position)) return false;
         LoadCatalog();
         bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
@@ -210,11 +210,11 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
     #endregion
 
-    private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
+    private bool TryBeginTransitionInternal(Item player, string targetDimensionId,
         Item sourcePortalItem, bool generatedWorldPortal)
     {
         // 已提交但呈现失败的租约只供快照重试，不能被当成新的入口请求重复使用。
-        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.User_Player || sourcePortalItem?.itemData == null ||
+        if (IsTransitioning || localDimensionPresentation != null || player == null || player != ItemMgr.Instance?.LocalControlledActor || sourcePortalItem?.itemData == null ||
             !TryGetDefinition(targetDimensionId, out DimensionDefinition definition)) return false;
         WorldAddress source = WorldAddress.FromWorldKey(GameplayWorldRegistry.GetItemWorldKey(player));
         if (!source.IsValid || source.DimensionId == targetDimensionId) return false;
@@ -275,14 +275,14 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     private IEnumerator TransitionCoroutine(
-        Player sourcePlayer,
+        Item sourcePlayer,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
         Vector3 targetPosition)
     {
         isTransitioning = true;
-        Data_Player playerData = sourcePlayer.Data;
-        string playerProfileName = sourcePlayer.ProfileName;
+        ItemData playerData = sourcePlayer.itemData;
+        string playerProfileName = ActorProfileRegistry.GetProfileId(sourcePlayer);
         if (string.IsNullOrWhiteSpace(playerProfileName))
             throw new InvalidOperationException("维度切换缺少稳定玩家档案名。");
 
@@ -344,18 +344,18 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     private IEnumerator ExecuteTransitionCoroutine(
-        Player sourcePlayer,
+        Item sourcePlayer,
         WorldAddress sourceAddress,
         WorldAddress targetAddress,
         Vector3 targetPosition,
         TransitionState state)
     {
-        Data_Player playerData = sourcePlayer.Data;
+        ItemData playerData = sourcePlayer.itemData;
         // 加载页等待期间星区租约已可能回收，源场景必须使用迁移开始时冻结的句柄。
         Scene oldScene = state.SourcePresentationScene;
         bool toSpace = SpaceMgr.IsSpaceScene(targetAddress.WorldKey);
         state.TargetPresentationSceneName = toSpace ? "SpaceScene" : targetAddress.WorldKey;
-        string playerName = sourcePlayer.ProfileName;
+        string playerName = ActorProfileRegistry.GetProfileId(sourcePlayer);
         if (string.IsNullOrWhiteSpace(playerName))
             throw new InvalidOperationException("跨维度切换缺少稳定玩家档案名。");
         DimensionTravelProgressStore.SetLastPosition(playerData, sourceAddress, sourcePlayer.transform.position);
@@ -396,12 +396,12 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
                 yield return null;
         }
 
-        playerData.CurrentSceneName = targetAddress.WorldKey;
+        playerData.GetActorProfileMetadata().WorldKey = targetAddress.WorldKey;
         playerData.transform.position = targetPosition;
         playerData.transform.rotation = Quaternion.identity;
         if (playerData.transform.scale == Vector3.zero)
             playerData.transform.scale = Vector3.one;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
+        SaveDataMgr.Instance.SaveData.ProfileActorData[playerName] = playerData;
 
         GameManager.Instance.SetDimensionTransitionLoading("正在加载目标维度…", 0.68f);
         state.EnterNotified = true;
@@ -409,9 +409,9 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         // 离线切换也要重新注册已加载地表，让落地准备继续使用目标世界的运行时。
         if (!toSpace) GameplayWorldRegistry.SelectLocalWorld(targetAddress.WorldKey);
 
-        Player targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
+        Item targetPlayer = ItemMgr.Instance.LoadPlayer(playerName);
         targetPlayer.transform.position = WorldLocalPresentation.ProjectPosition(targetPosition);
-        targetPlayer.Data.transform.position = targetPosition;
+        targetPlayer.itemData.transform.position = targetPosition;
         // 地表间的离线迁移也要提交乘员归属，后续入口校验使用同一权威世界。
         if (!toSpace && !SpaceMgr.IsSpaceScene(sourceAddress.WorldKey) &&
             FlatWorld.Spaceflight.SpaceSession.Current is { } surfaceSession)
@@ -460,7 +460,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     private IEnumerator RecoverAfterTransitionFailureCoroutine(
-        Data_Player playerData,
+        ItemData playerData,
         string playerProfileName,
         WorldAddress sourceAddress,
         Vector3 sourcePosition,
@@ -469,7 +469,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
         if (playerData == null)
             yield break;
 
-        Player currentPlayer = ItemMgr.Instance?.User_Player;
+        Item currentPlayer = ItemMgr.Instance?.LocalControlledActor;
         if (!state.ExitNotified)
         {
             currentPlayer?.GetComponentInChildren<Mod_GameController>(true)?.SetGameplayInputLocked(false);
@@ -509,15 +509,15 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
                 yield return null;
         }
 
-        playerData.CurrentSceneName = sourceAddress.WorldKey;
+        playerData.GetActorProfileMetadata().WorldKey = sourceAddress.WorldKey;
         playerData.transform.position = sourcePosition;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerProfileName] = playerData;
+        SaveDataMgr.Instance.SaveData.ProfileActorData[playerProfileName] = playerData;
         GameManager.Instance.NotifyDimensionWorldEntered();
         if (!fromSpace) GameplayWorldRegistry.SelectLocalWorld(sourceAddress.WorldKey);
 
-        Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
+        Item recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
         recoveredPlayer.transform.position = WorldLocalPresentation.ProjectPosition(sourcePosition);
-        recoveredPlayer.Data.transform.position = sourcePosition;
+        recoveredPlayer.itemData.transform.position = sourcePosition;
         if (state.SurfaceRealmCommitted && FlatWorld.Spaceflight.SpaceSession.Current is { } surfaceSession &&
             !surfaceSession.CompleteNetworkWorldTransfer(recoveredPlayer, sourceAddress.WorldKey, sourcePosition))
             throw new InvalidOperationException("离线迁移失败后无法恢复乘员世界归属。");
@@ -534,15 +534,15 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     /// <summary>维度切换完成后恢复玩家的奔跑开关；恢复必须在输入解锁后执行。</summary>
-    private static void RestorePlayerRunState(Player player, bool shouldRun)
+    private static void RestorePlayerRunState(Item player, bool shouldRun)
     {
         Mod_Mover mover = player?.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         mover?.SetRunState(shouldRun);
     }
 
-    private void OnPlayerEnteredWorld(Player player)
+    private void OnPlayerEnteredWorld(Item player)
     {
-        if (player == null || player != ItemMgr.Instance?.User_Player)
+        if (player == null || player != ItemMgr.Instance?.LocalControlledActor)
             return;
 
         ActivateWorldFromScene(SceneManager.GetActiveScene().name);
@@ -629,7 +629,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     }
 
     private static Vector3 ResolveTargetPosition(
-        Data_Player playerData,
+        ItemData playerData,
         WorldAddress targetAddress,
         DimensionDefinition targetDefinition,
         PortalTransitionContext portalContext)
@@ -652,7 +652,7 @@ public sealed partial class DimensionManager : SingletonAutoMono<DimensionManage
     /// 不能用 1x1 的保底窗口覆盖 Mod_ChunkLoader 已经计算好的视野窗口。
     /// </summary>
     private static IEnumerator WaitForRuntimeChunkPresentation(WorldAddress targetAddress,
-        Vector3 targetPosition, Player targetPlayer)
+        Vector3 targetPosition, Item targetPlayer)
     {
         ChunkMgr chunkManager = ChunkMgr.Instance;
         if (chunkManager == null)

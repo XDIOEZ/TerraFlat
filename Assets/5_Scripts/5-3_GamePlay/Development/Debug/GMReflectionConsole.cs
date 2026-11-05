@@ -387,19 +387,19 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private static Mod_PlayerAdminController FindPreferencePlayerController()
     {
         ItemMgr itemManager = ItemMgr.GetInstance();
-        Player player = FindPreferencePlayer(itemManager != null ? itemManager.Player_DIC : null);
+        Item player = FindPreferencePlayer(itemManager != null ? itemManager.ProfileActors : null);
         return player != null ? player.GetComponentInChildren<Mod_PlayerAdminController>(true) : null;
     }
 
-    private static Player FindPreferencePlayer(Dictionary<string, Player> players)
+    private static Item FindPreferencePlayer(Dictionary<string, Item> players)
     {
         if (players == null)
             return null;
 
-        foreach (KeyValuePair<string, Player> entry in players)
+        foreach (KeyValuePair<string, Item> entry in players)
         {
-            Player player = entry.Value;
-            if (player != null && player.IsLocalProfile)
+            Item player = entry.Value;
+            if (player != null && ActorProfileRegistry.IsLocallyControlled(player))
                 return player;
         }
 
@@ -591,8 +591,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             playerTransform.position.z);
         float distance = Vector2.Distance(playerTransform.position, destination);
 
-        Player player = playerTransform.GetComponent<Player>() ??
-                        playerTransform.GetComponentInParent<Player>();
+        Item player = playerTransform.GetComponent<Item>() ??
+                        playerTransform.GetComponentInParent<Item>();
         if (!PlayerTeleportService.TryTeleportToSurface(player, destination, succeeded =>
         {
             if (!succeeded)

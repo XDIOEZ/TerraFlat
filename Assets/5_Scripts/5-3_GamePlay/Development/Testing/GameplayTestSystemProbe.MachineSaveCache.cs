@@ -86,7 +86,7 @@ public static partial class MachineWorld
 
         FrozenMachineSnapshot privateCapture = FreezeMachineSaveSnapshot(node);
         bool isolatedPublic;
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(value => value))
+        using (ItemSnapshotSerialization.BeginPublicPlayerState(value => value, ActorProfileRegistry.IsProfileActorData))
             isolatedPublic = !ReferenceEquals(privateCapture.Payload, FreezeMachineSaveSnapshot(node).Payload);
         logic.Dispose();
         return new JObject

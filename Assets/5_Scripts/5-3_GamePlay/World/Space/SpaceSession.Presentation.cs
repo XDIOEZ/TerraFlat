@@ -148,13 +148,13 @@ namespace FlatWorld.Spaceflight
                 : ProjectPosition(new SpaceSectorPosition(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters));
         }
 
-        private Vector2 GetPlayerAuthoritativeDisplayPosition(Player player)
+        private Vector2 GetPlayerAuthoritativeDisplayPosition(Item player)
         {
             if (!IsSpaceView)
-                return TryGetPassengerSurfacePosition(player.ProfileName, out Vector2 ground) ? ground
+                return TryGetPassengerSurfacePosition(ActorProfileRegistry.GetProfileId(player), out Vector2 ground) ? ground
                     : ShipSurfacePresentation.GroundPosition(player.gameObject, player.transform.position);
             if (State == null) return player.transform.position;
-            SpacePassengerState passenger = FindPassenger(player.ProfileName);
+            SpacePassengerState passenger = FindPassenger(ActorProfileRegistry.GetProfileId(player));
             return passenger == null ? (Vector2)player.transform.position : ProjectPosition(GetPassengerPosition(passenger));
         }
 
@@ -196,7 +196,7 @@ namespace FlatWorld.Spaceflight
             return true;
         }
 
-        private SpaceSectorPosition GetAuthoritativePassengerActionPoint(Player player, SpacePassengerState passenger, Vector2 display)
+        private SpaceSectorPosition GetAuthoritativePassengerActionPoint(Item player, SpacePassengerState passenger, Vector2 display)
         {
             if (IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
             {
@@ -215,7 +215,7 @@ namespace FlatWorld.Spaceflight
                 ShipState ship = GetShip(passenger.ShipId);
                 if (!(passenger.Supported && ship != null && GetFlight(ship.ShipId)?.Phase == ShipFlightPhase.Cruising) &&
                     !(passenger.IsInSpace && !passenger.SurfaceDescending && !passenger.LandingResolved)) continue;
-                if (!owner.PlayerData_Dict.TryGetValue(passenger.ProfileId, out Data_Player data)) continue;
+                if (!owner.ProfileActorData.TryGetValue(passenger.ProfileId, out ItemData data)) continue;
                 SpaceSectorPosition position = GetPassengerPosition(passenger);
                 data.transform.position = new Vector3((float)position.LocalMeters.X, (float)position.LocalMeters.Y, 0f);
                 data.transform.rotation = Quaternion.identity;

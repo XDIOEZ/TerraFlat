@@ -8,7 +8,7 @@ public partial class Mod_Mover
     private InputAction spaceTurnAction;
     private bool spaceMotionOwned;
     private WorldPhysicsItemBodyRepresentation2D beforeSpaceBodyRepresentation;
-    private bool IsSpaceRunningDisabled => item is Player player && SpaceSession.Current?.IsSpaceView == true &&
+    private bool IsSpaceRunningDisabled => (item is Item player && ActorIdentity.IsPlayer(player)) && SpaceSession.Current?.IsSpaceView == true &&
         SpaceSession.Current.IsPlayerInShipInteriorWorld(player) == false;
     private bool spaceUpright;
     private bool beforeSpaceSimulated;
@@ -37,14 +37,14 @@ public partial class Mod_Mover
     private bool UpdateSpaceMotion(float seconds)
     {
         if (IsSpaceRunningDisabled) ReleaseMobileMovementInput();
-        if (item is Player replica && !replica.IsLocalProfile && SpaceSession.Current != null &&
+        if ((item is Item replica && ActorIdentity.IsPlayer(replica)) && !ActorProfileRegistry.IsLocallyControlled(replica) && SpaceSession.Current != null &&
             !SpaceSession.Current.IsPlayerInShipInteriorWorld(replica) &&
-            SpaceSession.Current.TryGetNetworkObserver(replica.ProfileName, out SpaceNetworkObserver observer) && observer.InSpace)
+            SpaceSession.Current.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(replica), out SpaceNetworkObserver observer) && observer.InSpace)
         {
             SetSpaceUpright(true);
             return true;
         }
-        if (item is not Player player || !player.IsLocalProfile || SpaceSession.Current?.State == null || rb == null)
+        if (!(item is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player) || SpaceSession.Current?.State == null || rb == null)
         {
             SetSpaceUpright(false);
             return false;
@@ -125,7 +125,7 @@ public partial class Mod_Mover
     {
         double normalGravity = SpaceGameplaySettings.Current.EarthGravity;
         SpaceSession session = SpaceSession.Current;
-        if (item is Player interiorPlayer && session != null &&
+        if ((item is Item interiorPlayer && ActorIdentity.IsPlayer(interiorPlayer)) && session != null &&
             session.IsPlayerInShipInteriorWorld(interiorPlayer, out ShipState interiorShip, out _))
             return session.GetShipInteriorWalkingGravity(interiorShip, rb != null ? rb.position : (Vector2)item.transform.position);
         if (item == null || session?.State == null || SpaceMgr.IsSpaceScene(item.gameObject.scene.name))
@@ -138,7 +138,7 @@ public partial class Mod_Mover
     // 船内失重沿用自由漂浮速度响应，位置仍由本船刚体唯一积分。
     private bool IsShipInteriorZeroGravity(double gravity)
         => gravity < SpaceGameplaySettings.Current.MinimumGravityForWalking &&
-           item is Player player && SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
+           (item is Item player && ActorIdentity.IsPlayer(player)) && SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true;
 
     private void ReleaseSpaceInput()
     {

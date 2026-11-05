@@ -30,7 +30,7 @@ namespace FlatWorld.Guide
         #endregion
 
         #region 已加载教程与对话 Facts
-        private static NewPlayerGuideController RequireGuide(Player player)
+        private static NewPlayerGuideController RequireGuide(Item player)
         {
             NewPlayerGuideController guide = player.GetComponentInChildren<NewPlayerGuideController>(true);
             if (guide == null || !guide.isActiveAndEnabled || !guide.IsTutorialActive)
@@ -38,11 +38,11 @@ namespace FlatWorld.Guide
             return guide;
         }
 
-        private static JObject Sample(Player player, NewPlayerGuideController guide)
+        private static JObject Sample(Item player, NewPlayerGuideController guide)
         {
             var context = new CharacterSpeechContext(player.transform, CharacterSpeechTrigger.Debug, Time.unscaledTime);
             guide.Contribute(context);
-            QuestProgressSaveDocument document = QuestProgressStore.Load(player.Data);
+            QuestProgressSaveDocument document = QuestProgressStore.Load(player.itemData);
             if (!document.Quests.TryGetValue(NewPlayerGuideIds.QuestId, out QuestProgressSaveRecord record))
                 throw new InvalidOperationException("正式教程任务尚未接取。");
             var milestones = new JArray();
@@ -58,7 +58,7 @@ namespace FlatWorld.Guide
                 ["stage"] = guide.CurrentStage.ToString(), ["completed"] = guide.IsTutorialCompleted,
                 ["savedStage"] = record.Status == QuestStatus.Completed ? nameof(NewPlayerGuideStage.Completed) : record.CurrentStageId,
                 ["savedCompleted"] = record.Status == QuestStatus.Completed,
-                ["eligible"] = NewPlayerGuideProgressStore.HasEligibility(player.Data),
+                ["eligible"] = NewPlayerGuideProgressStore.HasEligibility(player.itemData),
                 ["inventoryOpened"] = milestones.Any(value => value.Value<string>() == NewPlayerGuideIds.InventoryOpened),
                 ["materialsGathered"] = milestones.Any(value => value.Value<string>() == NewPlayerGuideIds.SurvivalMaterialsGathered),
                 ["milestones"] = milestones,
@@ -66,7 +66,7 @@ namespace FlatWorld.Guide
             };
         }
 
-        private static JObject CaptureInventory(Player player, JObject args)
+        private static JObject CaptureInventory(Item player, JObject args)
         {
             NewPlayerGuideController guide = RequireGuide(player);
             JObject before = Sample(player, guide);
@@ -76,7 +76,7 @@ namespace FlatWorld.Guide
             return result;
         }
 
-        private static JObject CapturePickup(Player player, JObject args)
+        private static JObject CapturePickup(Item player, JObject args)
         {
             NewPlayerGuideController guide = RequireGuide(player);
             JObject before = Sample(player, guide);
@@ -87,16 +87,16 @@ namespace FlatWorld.Guide
         }
 
         // 在正式玩家任务运行时采样乱序、幂等、保存和普通任务默认规则。
-        private static JObject CaptureQuestProgress(Player player, JObject args)
+        private static JObject CaptureQuestProgress(Item player, JObject args)
         {
             NewPlayerGuideController guide = RequireGuide(player);
             PlayerQuestRuntime runtime = RequireQuestRuntime(player);
             const string ordinaryQuestId = "flatworld:debug_craft_and_build";
-            QuestProgressSaveDocument original = QuestProgressStore.Load(player.Data);
-            QuestProgressSaveDocument staged = QuestProgressStore.Load(player.Data);
+            QuestProgressSaveDocument original = QuestProgressStore.Load(player.itemData);
+            QuestProgressSaveDocument staged = QuestProgressStore.Load(player.itemData);
             staged.Quests.Remove(NewPlayerGuideIds.QuestId);
             staged.Quests.Remove(ordinaryQuestId);
-            QuestProgressStore.Save(player.Data, staged);
+            QuestProgressStore.Save(player.itemData, staged);
             int emittedSignals = 0;
             Action<GameplayProgressSignal> observe = signal => { if (signal.Actor == player) emittedSignals++; };
             GameplayProgressEvents.SignalPublished += observe;
@@ -116,18 +116,18 @@ namespace FlatWorld.Guide
                 SendMilestone(runtime, player, NewPlayerGuideIds.BonfireIgnited);
                 SendMilestone(runtime, player, "probe-unknown");
                 JObject early = Sample(player, guide);
-                QuestProgressSaveRecord earlyRecord = QuestProgressStore.Load(player.Data).Quests[NewPlayerGuideIds.QuestId];
+                QuestProgressSaveRecord earlyRecord = QuestProgressStore.Load(player.itemData).Quests[NewPlayerGuideIds.QuestId];
                 float earlyValue = earlyRecord.ObjectiveProgress[$"{NewPlayerGuideStage.IgniteBonfire}/{NewPlayerGuideIds.BonfireIgnited}"];
                 for (int index = 0; index < NewPlayerGuideIds.OrderedMilestones.Length - 1; index++)
                     SendMilestone(runtime, player, NewPlayerGuideIds.OrderedMilestones[index]);
                 SendMilestone(runtime, player, NewPlayerGuideIds.BonfireIgnited);
-                QuestProgressSaveRecord completed = QuestProgressStore.Load(player.Data).Quests[NewPlayerGuideIds.QuestId];
+                QuestProgressSaveRecord completed = QuestProgressStore.Load(player.itemData).Quests[NewPlayerGuideIds.QuestId];
                 int guideEmittedSignals = emittedSignals;
                 if (!runtime.Initialize(out reason)) throw new InvalidOperationException(reason);
                 JObject restored = Sample(player, guide);
-                QuestProgressSaveDocument orderedDocument = QuestProgressStore.Load(player.Data);
+                QuestProgressSaveDocument orderedDocument = QuestProgressStore.Load(player.itemData);
                 orderedDocument.Quests.Remove(NewPlayerGuideIds.QuestId);
-                QuestProgressStore.Save(player.Data, orderedDocument);
+                QuestProgressStore.Save(player.itemData, orderedDocument);
                 if (!runtime.Initialize(out reason) || !runtime.AcceptQuest(NewPlayerGuideIds.QuestId, out reason))
                     throw new InvalidOperationException(reason);
                 var orderedStages = new JArray();
@@ -158,18 +158,18 @@ namespace FlatWorld.Guide
             finally
             {
                 GameplayProgressEvents.SignalPublished -= observe;
-                QuestProgressStore.Save(player.Data, original);
+                QuestProgressStore.Save(player.itemData, original);
                 if (!runtime.Initialize(out string reason))
                     throw new InvalidOperationException("教程任务现场恢复失败：" + reason);
             }
         }
 
-        private static void SendMilestone(PlayerQuestRuntime runtime, Player player, string milestone)
+        private static void SendMilestone(PlayerQuestRuntime runtime, Item player, string milestone)
         {
             runtime.HandleSignal(new GameplayProgressSignal(player, NewPlayerGuideIds.MilestoneSignal, milestone, 1f));
         }
 
-        private static PlayerQuestRuntime RequireQuestRuntime(Player player)
+        private static PlayerQuestRuntime RequireQuestRuntime(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             QuestManager manager = UnityEngine.Object.FindObjectOfType<QuestManager>();
@@ -179,7 +179,7 @@ namespace FlatWorld.Guide
         }
 
         // 使用真实拾取和库存检查材料必须同时满足，达标后再消耗也不撤销。
-        private static JObject CaptureMaterialThreshold(Player player, JObject args)
+        private static JObject CaptureMaterialThreshold(Item player, JObject args)
         {
             NewPlayerGuideController guide = RequireGuide(player);
             PlayerQuestRuntime runtime = RequireQuestRuntime(player);
@@ -194,7 +194,7 @@ namespace FlatWorld.Guide
             Inventory[] inventories = candidates.Where(value => value?.Data?.itemSlots != null)
                 .GroupBy(value => value.Data).Select(group => group.First()).ToArray();
             var snapshots = inventories.ToDictionary(value => value, value => InventoryInstanceSnapshot.Capture(value.Data));
-            QuestProgressSaveDocument original = QuestProgressStore.Load(player.Data);
+            QuestProgressSaveDocument original = QuestProgressStore.Load(player.itemData);
             bool wasOpen = bag.basePanel != null && bag.basePanel.IsOpen();
             int multiplier = picker.PickupAmountMultiplier;
             try
@@ -202,9 +202,9 @@ namespace FlatWorld.Guide
                 if (wasOpen) bag.SwitchUI();
                 picker.PickupAmountMultiplier = 1;
                 ClearInventoryItems(inventories, null);
-                QuestProgressSaveDocument staged = QuestProgressStore.Load(player.Data);
+                QuestProgressSaveDocument staged = QuestProgressStore.Load(player.itemData);
                 staged.Quests.Remove(NewPlayerGuideIds.QuestId);
-                QuestProgressStore.Save(player.Data, staged);
+                QuestProgressStore.Save(player.itemData, staged);
                 if (!runtime.Initialize(out string reason) || !runtime.AcceptQuest(NewPlayerGuideIds.QuestId, out reason))
                     throw new InvalidOperationException("无法重建教程任务：" + reason);
 
@@ -237,7 +237,7 @@ namespace FlatWorld.Guide
                     entry.Key.RefreshUI();
                 }
                 if ((bag.basePanel != null && bag.basePanel.IsOpen()) != wasOpen) bag.SwitchUI();
-                QuestProgressStore.Save(player.Data, original);
+                QuestProgressStore.Save(player.itemData, original);
                 if (!runtime.Initialize(out string reason))
                     throw new InvalidOperationException("教程材料现场恢复失败：" + reason);
             }

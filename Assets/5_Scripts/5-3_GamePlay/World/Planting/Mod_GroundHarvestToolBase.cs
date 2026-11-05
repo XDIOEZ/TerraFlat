@@ -122,7 +122,7 @@ public abstract class Mod_GroundHarvestToolBase : Mod_ResourceToolBase, IItemMod
 
     protected void LateUpdate()
     {
-        if (!SupportsGroundHarvest || item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
+        if (!SupportsGroundHarvest || item == null || !item.InHand || !(item.Owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
         {
             ClearPendingOverlay();
             ownerController = null;

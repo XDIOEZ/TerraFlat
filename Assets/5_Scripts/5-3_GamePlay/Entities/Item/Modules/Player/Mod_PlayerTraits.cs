@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// 玩家特质与管理相关逻辑模块
 /// </summary>
-public class Mod_PlayerTraits : Module
+public class Mod_PlayerTraits : Module, IActorLocalControlModule
 {
     #region 模块身份
     public const string ModuleId = "PlayerTraits";
@@ -22,15 +22,15 @@ public class Mod_PlayerTraits : Module
         set => ModData = (Ex_ModData)value;
     }
 
-    private Player player;
+    private Item player;
     private Mod_GameController gameController;
 
     protected override void OnLoad()
     {
-        player = item as Player;
+        player = ActorProfileRegistry.GetProfileActorOrNull(item as Item);
         if (player == null)
         {
-            player = GetComponentInParent<Player>();
+            player = GetComponentInParent<Item>();
         }
 
         gameController = GetComponentInParent<Mod_GameController>();
@@ -43,7 +43,7 @@ public class Mod_PlayerTraits : Module
     [Button("克隆测试")]
     public void CloneTest()
     {
-        if (!TryGetPlayer(out var target))
+        if (!TryGetPlayer(out Item target))
         {
             return;
         }
@@ -93,7 +93,7 @@ public class Mod_PlayerTraits : Module
     {
         const float stackableAmountPerItem = 100f;
 
-        if (!TryGetPlayer(out var target))
+        if (!TryGetPlayer(out Item target))
         {
             return "创造背包失败：未找到玩家。";
         }
@@ -408,7 +408,7 @@ public class Mod_PlayerTraits : Module
     /// <summary>快捷键与触屏点选共用的传送入口，按当前场景更新权威位置。</summary>
     public bool TryTeleportToScreenPosition(Vector2 screenPosition)
     {
-        if (!TryGetPlayer(out Player target) || !target.IsLocalProfile || target.Data == null)
+        if (!TryGetPlayer(out Item target) || !ActorProfileRegistry.IsLocallyControlled(target) || target.itemData == null)
             return false;
 
         if (gameController == null)
@@ -450,7 +450,7 @@ public class Mod_PlayerTraits : Module
     /// <summary>坐标定位与指针传送共用地表入口，统一解除乘船并刷新区块。</summary>
     public bool TryTeleportToWorldPosition(Vector3 destination)
     {
-        if (!TryGetPlayer(out Player target) || !target.IsLocalProfile || target.Data == null ||
+        if (!TryGetPlayer(out Item target) || !ActorProfileRegistry.IsLocallyControlled(target) || target.itemData == null ||
             !ChunkMgr.IsSurfaceStreamingScene)
             return false;
         return PlayerTeleportService.TryTeleportToSurface(target, destination);
@@ -458,7 +458,7 @@ public class Mod_PlayerTraits : Module
 
     #endregion
 
-    private bool TryGetPlayer(out Player target)
+    private bool TryGetPlayer(out Item target)
     {
         target = player;
         if (target != null)
@@ -466,21 +466,21 @@ public class Mod_PlayerTraits : Module
             return true;
         }
 
-        target = item as Player;
+        target = ActorProfileRegistry.GetProfileActorOrNull(item as Item);
         if (target != null)
         {
             player = target;
             return true;
         }
 
-        target = GetComponentInParent<Player>();
+        target = GetComponentInParent<Item>();
         if (target != null)
         {
             player = target;
             return true;
         }
 
-        Debug.LogWarning("[Mod_PlayerTraits] 未找到 Player 组件");
+        Debug.LogWarning("[Mod_PlayerTraits] 未找到 Item 组件");
         return false;
     }
 

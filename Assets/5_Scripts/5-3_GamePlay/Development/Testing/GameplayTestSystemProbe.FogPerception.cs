@@ -13,7 +13,7 @@ public static partial class GameplayTestSystemProbe
         return WithEntityProbeItem(creature => EntityWithQuestPlayer(target =>
         {
             creature.BindData(EntityProbeData("test:fog_creature", 1));
-            target.BindData(new Data_Player { PerceptionRadiusMultiplier = 3f });
+            target.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null));
             GameplayWorldRegistry.AssignItemToWorld(creature, "probe:fog-perception");
             GameplayWorldRegistry.AssignItemToWorld(target, "probe:fog-perception");
             var detector = creature.gameObject.AddComponent<Mod_ItemDetector>();

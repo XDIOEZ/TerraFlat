@@ -123,8 +123,8 @@ public partial class SaveDataMgr
         TryRenameSave("probe_save", "new_save", out _, out string noSaveReason);
         results["saveNoSave"] = noSaveReason;
         SaveData = new GameSaveData { saveName = "probe_save" };
-        SaveData.PlayerData_Dict["player-a"] = new Data_Player { Name_User = "原角色" };
-        SaveData.PlayerData_Dict["player-b"] = new Data_Player { Name_User = "已占用" };
+        SaveData.ProfileActorData["player-a"] = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, "原角色", null);
+        SaveData.ProfileActorData["player-b"] = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, "已占用", null);
         CapturePlayer("missingPlayer", "missing", "新角色");
         CapturePlayer("empty", "player-a", " ");
         CapturePlayer("tooLong", "player-a", new string('字', 49));
@@ -138,7 +138,7 @@ public partial class SaveDataMgr
         results["saveUnchangedAccepted"] = TryRenameSave("probe_save", "probe_save", out string name, out string sameReason);
         results["saveName"] = name;
         results["saveUnchangedReason"] = sameReason;
-        results["playerPreserved"] = SaveData.PlayerData_Dict["player-a"].Name_User == "原角色";
+        results["playerPreserved"] = SaveData.ProfileActorData["player-a"].GetActorProfileMetadata().DisplayName == "原角色";
         return results;
 
         void CapturePlayer(string key, string id, string requested)

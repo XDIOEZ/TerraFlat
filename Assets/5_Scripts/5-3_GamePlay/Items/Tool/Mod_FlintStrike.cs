@@ -68,7 +68,7 @@ public class Mod_FlintStrike : FireMakingInventoryPanelModule, ILocalItemUsePres
     // 联机右键转发 Act 后，本机仍通过相同交互入口打开工具窗口。
     public void PresentLocalUse()
     {
-        if (item.Owner is Player { IsLocalProfile: true } player) OnInteractStart(player);
+        if ((item.Owner is Item player && ActorProfileRegistry.IsLocallyControlled(player))) OnInteractStart(player);
     }
 
     protected override void OnFireMakingPanelDestroyed() => _toolArtwork = null;

@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// HUD 仅在本地玩家手动选择 Mobile 控制方式时启用；正式模态面板、输入锁、暂停和失焦会立即隐藏玩法控件并清空全部触摸状态。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public sealed class PlayerMobileControlsHUD : MonoBehaviour
 {
     #region 节点契约与状态
@@ -43,7 +43,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private static readonly System.Func<object, bool> HeldItemDropLockFilter =
         owner => UIManager.ExistingInstance?.IsHeldItemDropCompatibleLockOwner(owner) == true;
 
-    private Player player;
+    private Item player;
     private Mod_GameController controller;
     private GameObject viewObject;
     private GameObject gameplayLayer;
@@ -114,7 +114,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void Awake()
     {
-        player = GetComponent<Player>();
+        player = GetComponent<Item>();
         controller = GetComponentInChildren<Mod_GameController>(true);
     }
 
@@ -122,7 +122,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void OnEnable()
     {
         if (player != null)
-            player.ProfileContextChanged += RefreshAvailability;
+            ActorProfileRegistry.GetBinding(player).Changed += RefreshAvailability;
         if (controller != null)
             controller.ActiveInputDeviceChanged += HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
@@ -144,7 +144,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void OnDisable()
     {
         if (player != null)
-            player.ProfileContextChanged -= RefreshAvailability;
+            ActorProfileRegistry.GetBinding(player).Changed -= RefreshAvailability;
         if (controller != null)
             controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
@@ -202,7 +202,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private bool ShouldShow()
     {
-        if (player == null || !player.IsLocalProfile)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
             return false;
 
         return controller != null &&

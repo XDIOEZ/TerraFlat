@@ -29,7 +29,7 @@ public class MachinePanelSession : IMachinePanelSession
     private bool disposed;
     protected MachineEntity Entity { get; }
     protected MachineLogic Logic { get; }
-    protected Player Actor { get; private set; }
+    protected Item Actor { get; private set; }
     public bool IsAlive => !disposed && panels.Count > 0 && panels[0] != null;
     public bool IsOpen => IsAlive && panels[0].IsOpen();
 
@@ -116,7 +116,7 @@ public class MachinePanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        Actor = player as Player ?? player?.GetComponentInParent<Player>();
+        Actor = ActorProfileRegistry.GetProfileActorOrNull(player as Item) ?? player?.GetComponentInParent<Item>();
         Inventory hand = player?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (Actor == null || hand == null) throw new InvalidOperationException("机器交互缺少玩家或手部库存。");
         MachineWorld.RequestOperation(Entity, "begin-interaction", "", Actor);

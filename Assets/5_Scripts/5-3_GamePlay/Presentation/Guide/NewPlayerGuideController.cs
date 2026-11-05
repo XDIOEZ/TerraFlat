@@ -17,8 +17,8 @@ namespace FlatWorld.Guide
     {
         #region 状态
 
-        private Player actor;
-        private Data_Player loadedPlayerData;
+        private Item actor;
+        private ItemData loadedPlayerData;
         private string loadedProfileId;
         private QuestManager questManager;
         private PlayerQuestRuntime questRuntime;
@@ -89,14 +89,14 @@ namespace FlatWorld.Guide
 
         private void Awake()
         {
-            actor = GetComponentInParent<Player>();
+            actor = GetComponentInParent<Item>();
         }
 
         private void OnEnable()
         {
             ResolveActor();
             if (actor != null)
-                actor.ProfileContextChanged += HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actor).Changed += HandleProfileContextChanged;
 
             questManager = QuestManager.Instance;
             if (questManager != null)
@@ -123,7 +123,7 @@ namespace FlatWorld.Guide
         {
             EndObserving();
             if (actor != null)
-                actor.ProfileContextChanged -= HandleProfileContextChanged;
+                ActorProfileRegistry.GetBinding(actor).Changed -= HandleProfileContextChanged;
 
             if (questManager != null)
             {
@@ -179,7 +179,7 @@ namespace FlatWorld.Guide
 
         #region 玩法事件
 
-        private void HandleInventoryOpened(Player eventActor)
+        private void HandleInventoryOpened(Item eventActor)
         {
             if (!CanHandle(eventActor))
                 return;
@@ -188,7 +188,7 @@ namespace FlatWorld.Guide
             RefreshMaterialMilestone();
         }
 
-        private void HandlePickupSucceeded(Player eventActor, string itemId)
+        private void HandlePickupSucceeded(Item eventActor, string itemId)
         {
             if (!CanHandle(eventActor))
                 return;
@@ -197,7 +197,7 @@ namespace FlatWorld.Guide
                 RefreshMaterialMilestone();
         }
 
-        private void HandleCraftSucceeded(Player eventActor, string outputItemId)
+        private void HandleCraftSucceeded(Item eventActor, string outputItemId)
         {
             if (!CanHandle(eventActor))
                 return;
@@ -208,7 +208,7 @@ namespace FlatWorld.Guide
                 MarkMilestone(NewPlayerGuideIds.BonfireCrafted);
         }
 
-        private void HandleBuildingPlaced(Player eventActor, string buildingId)
+        private void HandleBuildingPlaced(Item eventActor, string buildingId)
         {
             if (!CanHandle(eventActor))
                 return;
@@ -219,7 +219,7 @@ namespace FlatWorld.Guide
                 MarkMilestone(NewPlayerGuideIds.BonfirePlaced);
         }
 
-        private void HandleFireSeedCreated(Player eventActor, string itemId)
+        private void HandleFireSeedCreated(Item eventActor, string itemId)
         {
             if (CanHandle(eventActor) &&
                 string.Equals(itemId, NewPlayerGuideIds.FireSeed, StringComparison.Ordinal))
@@ -228,7 +228,7 @@ namespace FlatWorld.Guide
             }
         }
 
-        private void HandleFurnaceIgnited(Player eventActor, string furnaceId)
+        private void HandleFurnaceIgnited(Item eventActor, string furnaceId)
         {
             if (CanHandle(eventActor) &&
                 string.Equals(furnaceId, NewPlayerGuideIds.Bonfire, StringComparison.Ordinal))
@@ -247,7 +247,7 @@ namespace FlatWorld.Guide
             NotifyIfGuideFactsChanged();
         }
 
-        private void HandleQuestRuntimeReady(Player player, PlayerQuestRuntime runtime)
+        private void HandleQuestRuntimeReady(Item player, PlayerQuestRuntime runtime)
         {
             if (ReferenceEquals(actor, player))
             {
@@ -257,7 +257,7 @@ namespace FlatWorld.Guide
             }
         }
 
-        private void HandleQuestRuntimeRemoving(Player player)
+        private void HandleQuestRuntimeRemoving(Item player)
         {
             if (ReferenceEquals(actor, player))
             {
@@ -268,13 +268,13 @@ namespace FlatWorld.Guide
 
         private void ResolveActor()
         {
-            actor ??= GetComponentInParent<Player>();
+            actor ??= GetComponentInParent<Item>();
         }
 
         private void RefreshEligibility()
         {
             ResolveActor();
-            if (actor == null || !actor.IsLocalProfile || actor.Data == null)
+            if (actor == null || !ActorProfileRegistry.IsLocallyControlled(actor) || actor.itemData == null)
             {
                 isActiveForPlayer = false;
                 UnbindQuestRuntime();
@@ -285,13 +285,13 @@ namespace FlatWorld.Guide
                 return;
             }
 
-            bool profileChanged = !ReferenceEquals(loadedPlayerData, actor.Data) ||
-                                  !string.Equals(loadedProfileId, actor.ProfileId, StringComparison.Ordinal);
+            bool profileChanged = !ReferenceEquals(loadedPlayerData, actor.itemData) ||
+                                  !string.Equals(loadedProfileId, ActorProfileRegistry.GetProfileId(actor), StringComparison.Ordinal);
             if (profileChanged || !isActiveForPlayer)
             {
                 pendingMilestones.Clear();
                 UnbindQuestRuntime();
-                isActiveForPlayer = actor.IsNewProfile || NewPlayerGuideProgressStore.HasEligibility(actor.Data);
+                isActiveForPlayer = ActorProfileRegistry.IsNewLocalProfile(actor) || NewPlayerGuideProgressStore.HasEligibility(actor.itemData);
                 if (!isActiveForPlayer)
                 {
                     loadedPlayerData = null;
@@ -300,10 +300,10 @@ namespace FlatWorld.Guide
                     return;
                 }
 
-                loadedPlayerData = actor.Data;
-                loadedProfileId = actor.ProfileId;
-                if (actor.IsNewProfile)
-                    NewPlayerGuideProgressStore.EstablishEligibility(actor.Data);
+                loadedPlayerData = actor.itemData;
+                loadedProfileId = ActorProfileRegistry.GetProfileId(actor);
+                if (ActorProfileRegistry.IsNewLocalProfile(actor))
+                    NewPlayerGuideProgressStore.EstablishEligibility(actor.itemData);
                 BindQuestRuntimeWhenReady();
                 RefreshMaterialMilestone();
                 NotifyIfGuideFactsChanged();
@@ -347,7 +347,7 @@ namespace FlatWorld.Guide
             pendingMilestones.Clear();
         }
 
-        private bool CanHandle(Player eventActor)
+        private bool CanHandle(Item eventActor)
         {
             RefreshEligibility();
             return isActiveForPlayer && ReferenceEquals(actor, eventActor);

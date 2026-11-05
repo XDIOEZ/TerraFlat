@@ -52,22 +52,22 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
     #endregion
 
     #region 本机世界与音量推进
-    public void Advance(Player player, float deltaTime)
+    public void Advance(Item player, float deltaTime)
     {
-        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || !player.isActiveAndEnabled)
         { Dispose(); return; }
         AdvanceForWorld(player, deltaTime, GameplayWorldRegistry.GetItemWorldKey(player),
             WorldLocalPresentation.ToLogical(player.transform.position));
     }
 
-    public void AdvanceFromSurfacePortal(Player player, float deltaTime, string surfaceWorldKey, Vector2 entrance)
+    public void AdvanceFromSurfacePortal(Item player, float deltaTime, string surfaceWorldKey, Vector2 entrance)
     {
-        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || !player.isActiveAndEnabled)
         { Dispose(); return; }
         AdvanceForWorld(player, deltaTime, surfaceWorldKey, entrance);
     }
 
-    private void AdvanceForWorld(Player player, float deltaTime, string sourceWorldKey, Vector2 listener)
+    private void AdvanceForWorld(Item player, float deltaTime, string sourceWorldKey, Vector2 listener)
     {
         if (!GameplayWorldRegistry.TryGet(sourceWorldKey, out var context) ||
             context.Chunks == null || context.Chunks.IsWorldRuntimeShuttingDown || context.Chunks.WorldRuntime == null)
@@ -115,7 +115,7 @@ public sealed class NaturalAmbientAudioPresenter : IDisposable
     public static float ResolveFoliageVolume(int nearbySourceCount, float windStrength) =>
         Mathf.Sqrt(Mathf.InverseLerp(0.03f, 0.8f, windStrength)) * Mathf.Clamp01(nearbySourceCount / 4f);
 
-    private static void AdvanceLoop(AmbientLoop loop, Vector2 position, float target, Player player,
+    private static void AdvanceLoop(AmbientLoop loop, Vector2 position, float target, Item player,
         float deltaTime, string sourceWorldKey)
     {
         loop.Volume = Mathf.MoveTowards(loop.Volume, target, deltaTime / 1.2f);

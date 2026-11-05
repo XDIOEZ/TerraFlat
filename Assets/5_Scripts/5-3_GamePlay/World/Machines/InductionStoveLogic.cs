@@ -65,7 +65,7 @@ public sealed class InductionStoveLogic : MachineLogic
 
     public override void Capture() => MachinePersistence.Write(Entity.Snapshot, "induction-stove", State);
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation != SetTargetTemperatureOperation ||
             !float.TryParse(argument, NumberStyles.Float, CultureInfo.InvariantCulture, out float target) ||

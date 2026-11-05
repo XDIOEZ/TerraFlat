@@ -39,15 +39,15 @@ namespace FlatWorld.Gameplay.Presentation.Audio
             Play(cue);
         }
 
-        private static void OnEquipmentChanged(Player actor, bool equipped)
+        private static void OnEquipmentChanged(Item actor, bool equipped)
         {
-            if (actor != null && actor.IsLocalProfile)
+            if (actor != null && ActorProfileRegistry.IsLocallyControlled(actor))
                 Play(equipped ? AudioEventIds.UiEquipmentEquip : AudioEventIds.UiEquipmentUnequip);
         }
 
         private static bool HasLocalPlayer()
-            => Inventory_Hand.PlayerHand?.item is Player player &&
-               player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy;
+            => (Inventory_Hand.PlayerHand?.item is Item player && ActorIdentity.IsPlayer(player)) &&
+               player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.gameObject.activeInHierarchy;
 
         private static void Play(string cueId)
         {

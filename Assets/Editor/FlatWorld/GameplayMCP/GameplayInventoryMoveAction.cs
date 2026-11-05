@@ -25,7 +25,7 @@ namespace FlatWorld.GameplayMCP
                     false));
             }
 
-            Player player = context.Player;
+            Item player = context.Player;
             Mod_Inventory bagModule = player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
             Inventory bag = bagModule?.InventoryInstances?
                 .FirstOrDefault(candidate => candidate?.Data != null &&

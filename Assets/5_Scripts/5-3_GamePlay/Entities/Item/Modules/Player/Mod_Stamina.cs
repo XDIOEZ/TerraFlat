@@ -72,10 +72,28 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     private HotbarItemNameHUD hotbarItemNameHud;
     private readonly Vector3[] hotbarCorners = new Vector3[4];
     private const float StaminaHotbarGap = 12f;
+    private ActorProfileRegistry.Binding controlBinding;
     protected override void OnLoad()
     {
         modData.ReadData(ref Data);
+        controlBinding = ActorProfileRegistry.GetBinding(item);
+        controlBinding.Changed += RefreshControlBoundStaminaHud;
+        RefreshControlBoundStaminaHud();
+    }
 
+    // 控制权只决定 HUD 归属，体力数据与能力修正始终留在原身体上。
+    private void RefreshControlBoundStaminaHud()
+    {
+        if (!ActorProfileRegistry.IsLocallyControlled(item))
+        {
+            ReleaseStaminaHud();
+            return;
+        }
+        if (slider == null) CreateStaminaHud();
+    }
+
+    private void CreateStaminaHud()
+    {
         // 实例化体力 UI 预制体并获取 Slider 组件
         if (Prefab_UI != null)
         {
@@ -117,6 +135,14 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
     #region 体力面板生命周期
     protected override void OnUnload()
     {
+        if (controlBinding != null) controlBinding.Changed -= RefreshControlBoundStaminaHud;
+        controlBinding = null;
+        ReleaseStaminaHud();
+        capacityModifiers.Clear();
+    }
+
+    private void ReleaseStaminaHud()
+    {
         Canvas.willRenderCanvases -= PositionStaminaAboveHotbar;
         if (staminaPanel != null)
         {
@@ -134,7 +160,6 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder, IPlayerS
         staminaHudRect = null;
         hotbarHudRect = null;
         hotbarItemNameHud = null;
-        capacityModifiers.Clear();
     }
     #endregion
 

@@ -124,6 +124,7 @@ public partial class Inventory : IItemSlotHost
     {
         // 先解除之前的绑定，避免重复订阅
         UnbindController();
+        if (gameController != null && !ActorProfileRegistry.IsLocallyControlled(gameController.item)) return;
 
         // 常驻容器没有开关按键，不需要输入资产，也不应产生绑定警告。
         if (string.IsNullOrEmpty(ToggleActionName))
@@ -223,14 +224,14 @@ public partial class Inventory : IItemSlotHost
         if (DefaultTarget_Inventory == null)
             DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
 
-        Player player = item as Player;
+        Item player = ActorProfileRegistry.GetProfileActorOrNull(item as Item);
         bool isPlayerBag = player != null && string.Equals(Data.Name, ModText.Bag, StringComparison.Ordinal);
         if (isPlayerBag)
         {
             CreativeInventoryState.Restore(this);
             Data.ConfigurePlayerBagCapacity(
-                player.Data?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight,
-                player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
+                ActorModuleState.GetMaxCarryWeight(player.itemData),
+                ActorModuleState.GetMaxCarryVolume(player.itemData));
         }
         else if (StorageMaxWeightKg > 0f &&
                  StorageMaxVolumeCubicMeters > 0f &&
@@ -439,7 +440,7 @@ public partial class Inventory : IItemSlotHost
     private void BindPlayerCarryWeightEvents()
     {
         UnbindPlayerCarryWeightEvents();
-        if (item is not Player player || Data == null ||
+        if (!(item is Item player && ActorIdentity.IsPlayer(player)) || Data == null ||
             (!IsPlayerBagInventory() && this is not Mod_HotBar.HotBarRuntimeInventory))
             return;
 
@@ -463,7 +464,7 @@ public partial class Inventory : IItemSlotHost
     /// <summary>背包物品输入、输出或数量变化后，按玩家当前随身总重量更新超重状态。</summary>
     private void HandlePlayerCarryWeightDataChanged(Inventory_Data _)
     {
-        if (item is Player player)
+        if ((item is Item player && ActorIdentity.IsPlayer(player)))
             PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 
@@ -477,7 +478,7 @@ public partial class Inventory : IItemSlotHost
     /// </summary>
     private bool IsPlayerBagInventory()
     {
-        return item != null && item is Player && Data?.Name == ModText.Bag;
+        return item != null && ActorIdentity.IsPlayer(item as Item) && Data?.Name == ModText.Bag;
     }
 
     public virtual void OnShiftQuickTransfer(int index)

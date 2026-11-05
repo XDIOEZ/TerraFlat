@@ -60,7 +60,7 @@ namespace FlatWorld.AIECS.Gameplay
         private AiecsWorldRenderer _renderer;
         private WorldPresentationSortingDomain rendererSortingDomain;
         private WorldPresentationSortingDomain replicaSortingDomain;
-        private Player _player;
+        private Item _player;
         private Camera _camera;
         private bool _worldPrepared;
         private bool _startFailed;
@@ -190,7 +190,7 @@ namespace FlatWorld.AIECS.Gameplay
             { DrawNetworkActors(); return; }
             using var worldScope = UseOwnedWorld();
             bool hasProjection = SynchronizeEntityWorldPresentation(_renderer, false);
-            if (_renderer != null && IsReady && !hasProjection && ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName != ownedWorldKey)
+            if (_renderer != null && IsReady && !hasProjection && ItemMgr.Instance?.LocalControlledActor?.itemData?.GetActorProfileMetadata().WorldKey != ownedWorldKey)
             { _renderer.Draw(_bridge.Simulation, null, default); return; }
             if (!AiRuntimeBackendService.UseEntities || !IsReady || _renderer == null || (_player == null && !hasProjection))
                 return;
@@ -213,7 +213,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (renderer == null) return false;
             bool projected = WorldPresentationTransformRegistry.TryGet(ownedWorldKey, out Matrix4x4 matrix, out bool visible);
             WorldPresentationTransformRegistry.TryGetSortingDomain(ownedWorldKey, out WorldPresentationSortingDomain domain);
-            if (!projected) visible = ItemMgr.Instance?.User_Player?.Data?.CurrentSceneName == ownedWorldKey;
+            if (!projected) visible = ItemMgr.Instance?.LocalControlledActor?.itemData?.GetActorProfileMetadata().WorldKey == ownedWorldKey;
             if (replica)
             {
                 if (!ReferenceEquals(replicaSortingDomain, domain))
@@ -393,7 +393,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家离开当前运行实例时先撤销战斗代理；新玩家会在下一次 Update 重新绑定。</summary>
-        public void ReleasePlayer(Player player)
+        public void ReleasePlayer(Item player)
         {
             if (!ReferenceEquals(_player, player))
                 return;

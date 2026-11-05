@@ -753,7 +753,8 @@
         },
         "ItemSpecialData": "",
         "inHand": false
-      }
+      },
+      "parent": "ActorCommon"
     },
     {
       "id": "WildBoar",
@@ -1547,7 +1548,8 @@
         },
         "ItemSpecialData": "",
         "inHand": false
-      }
+      },
+      "parent": "ActorCommon"
     },
     {
       "id": "Wolf",
@@ -2308,7 +2310,8 @@
         },
         "ItemSpecialData": "",
         "inHand": false
-      }
+      },
+      "parent": "ActorCommon"
     },
     {
       "id": "Ghost",
@@ -2642,7 +2645,8 @@
         },
         "ItemSpecialData": "",
         "inHand": false
-      }
+      },
+      "parent": "ActorCommon"
     }
   ]
 }

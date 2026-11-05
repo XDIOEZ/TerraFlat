@@ -20,7 +20,7 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
         GameplayTestRuntimeProbe.RegisterAsync("industrial_fluids", "visible_surface_pump", CaptureVisibleSurfacePump);
     }
 
-    private static IEnumerator CaptureVisibleSurfacePump(Player player, JObject args, Action<JObject> complete)
+    private static IEnumerator CaptureVisibleSurfacePump(Item player, JObject args, Action<JObject> complete)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var fixture = new VisibleSurfacePumpFixture(player);
@@ -106,7 +106,7 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
 
     private sealed class VisibleSurfacePumpFixture : IDisposable
     {
-        private readonly Player player;
+        private readonly Item player;
         private readonly Vector3 playerPosition;
         private readonly Mod_Cam cameraModule;
         private readonly float originalCameraSize;
@@ -124,7 +124,7 @@ internal static class GameplayTestVisibleSurfacePumpRuntimeProbe
         private readonly bool[] powered = new bool[2];
         private readonly float[] minimumEnergy = { 60000f, 60000f };
 
-        public VisibleSurfacePumpFixture(Player player)
+        public VisibleSurfacePumpFixture(Item player)
         {
             this.player = player; playerPosition = player.transform.position; worldKey = player.gameObject.scene.name;
             cameraModule = player.GetComponentInChildren<Mod_Cam>(true) ??

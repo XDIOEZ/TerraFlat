@@ -24,6 +24,7 @@
         "combat"
       ],
       "ruleCaseIds": [
+        "ai_actor_control_rules",
         "ai_rules",
         "ai_behavior_tree_rules",
         "ai_spawn_countdown_rules",
@@ -36,6 +37,7 @@
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/AI/README.md",
       "integrationCaseIds": [
+        "ai_actor_control_gameplay",
         "ai_creature_creation_gameplay",
         "ai_navigation_gameplay"
       ],
@@ -79,7 +81,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Move/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Interaction/*",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/Testing/GameplayTestDialogueRules.cs",
-        "Assets/2_Prefabs/Gameplay/Player/Player.prefab",
+        "Assets/2_Prefabs/Gameplay/Player/Human.prefab",
         "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset",
         "Assets/StreamingAssets/GameplayTests/Systems/Player/*",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.Tent.cs",
@@ -207,7 +209,7 @@
         "Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Player/Mod_Temperature*",
         "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/EquipmentInstance_RadiationProtection.cs",
         "Assets/2_Prefabs/Gameplay/Modules/Equipment/Module_Radiation.prefab",
-        "Assets/2_Prefabs/Gameplay/Player/Player.prefab",
+        "Assets/2_Prefabs/Gameplay/Player/Human.prefab",
         "Assets/AddressableAssetsData/AssetGroups/Default.asset",
         "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/TemperatureWarningPresentationRules.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.TemperaturePresentation.cs",

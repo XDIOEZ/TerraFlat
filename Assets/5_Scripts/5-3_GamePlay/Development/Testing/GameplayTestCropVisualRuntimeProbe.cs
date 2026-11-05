@@ -21,7 +21,7 @@ public static class GameplayTestCropVisualRuntimeProbe
     }
 
     // 两种正式作物分别覆盖连续缩放和阶段图片，不替表现模块重算成长规则。
-    private static JObject Capture(Player player, JObject args)
+    private static JObject Capture(Item player, JObject args)
     {
         var samples = new JArray();
         foreach (string id in new[] { "RadishCrop", "RiceCrop" })
@@ -101,7 +101,7 @@ public static class GameplayTestCropVisualRuntimeProbe
 
     #region 培育仓冷节点只读表现回归
     // 独立定义和快照复现先显示后激活，不登记机器或触碰玩家现场。
-    private static JObject CaptureCultivatorColdPresentation(Player player, JObject args)
+    private static JObject CaptureCultivatorColdPresentation(Item player, JObject args)
     {
         const string id = "SpaceCultivator";
         GameRes resources = GameRes.ExistingInstance;

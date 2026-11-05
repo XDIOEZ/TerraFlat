@@ -103,7 +103,7 @@ public sealed class CarrierWheelPresentation : MonoBehaviour, ICarrierSeatOffset
     private void RefreshFacingFromRiderPointer()
     {
         if (carrier == null) carrier = GetComponentInChildren<Mod_Carrier>(true);
-        if (carrier == null || carrier.Rider?.item is not Player rider || !rider.IsLocalProfile) return;
+        if (carrier == null || !(carrier.Rider?.item is Item rider && ActorIdentity.IsPlayer(rider)) || !ActorProfileRegistry.IsLocallyControlled(rider)) return;
         Mod_GameController controller = rider.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (controller != null && controller.TryGetMouseWorldPosition(out Vector3 pointerWorld))
         {

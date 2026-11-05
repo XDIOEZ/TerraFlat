@@ -204,7 +204,7 @@ public partial class GameManager
         }
     }
 
-    private void OnWorldEntryPlayerReady(Player player)
+    private void OnWorldEntryPlayerReady(Item player)
     {
         if (!isWorldEntryInProgress)
             return;
@@ -222,7 +222,7 @@ public partial class GameManager
     /// 等待玩家脚下区块与完整可见窗口完成表现绑定后，再结束标准世界加载页。
     /// 后台数据生成结束不代表 Tilemap、碰撞和实体表现已经可以安全展示。
     /// </summary>
-    private IEnumerator CompleteWorldEntryCoroutine(Player player)
+    private IEnumerator CompleteWorldEntryCoroutine(Item player)
     {
         ReportWorldEntryProgress("正在进入世界", "正在加载玩家周围区域…", 0.78f);
 
@@ -381,7 +381,7 @@ public partial class GameManager
         SetGameplayReady(false);
         if (ItemMgr.Instance != null && SaveDataMgr.Instance != null)
         {
-            Player failedPlayer = ItemMgr.Instance.User_Player;
+            Item failedPlayer = ItemMgr.Instance.LocalControlledActor;
             if (failedPlayer != null)
             {
                 try

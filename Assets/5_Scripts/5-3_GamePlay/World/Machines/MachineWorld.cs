@@ -737,7 +737,7 @@ public static partial class MachineWorld
     {
         players.Clear();
         if (ItemMgr.Instance == null) return;
-        foreach (var player in ItemMgr.Instance.Player_DIC.Values)
+        foreach (Item player in ItemMgr.Instance.ProfileActors.Values)
             if (player != null && player.gameObject.scene.name == worldKey)
                 players.Add(graph.ChunkOf(CellOf(player.transform.position)));
     }

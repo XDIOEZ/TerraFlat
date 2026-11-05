@@ -44,7 +44,7 @@ public class ManualProcessingLogic : MachineLogic
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual bool PerformWork(Player actor)
+    public virtual bool PerformWork(Item actor)
     {
         if (!GameNetwork.HasStateAuthority) return false;
         bool completed = !runtime.Exhausted && Processor.AdvanceManually(WorkPerClick, actor);
@@ -56,7 +56,7 @@ public class ManualProcessingLogic : MachineLogic
         return completed;
     }
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation == "select" && GameNetwork.HasStateAuthority && runtime.SelectRecipe(argument))
         { NotifyChanged(); return true; }
@@ -114,7 +114,7 @@ public class HandDrillLogic : MachineLogic
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool Drill(Player actor)
+    public bool Drill(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || !CanAct) return false;
         bool completed = Processor.AdvanceManually(WorkPerClick, actor, out bool worked);
@@ -127,7 +127,7 @@ public class HandDrillLogic : MachineLogic
         return completed;
     }
 
-    public override bool Execute(string operation, string argument, Player actor)
+    public override bool Execute(string operation, string argument, Item actor)
     {
         if (operation != "work" || !CanAct) return false;
         Drill(actor); return true;

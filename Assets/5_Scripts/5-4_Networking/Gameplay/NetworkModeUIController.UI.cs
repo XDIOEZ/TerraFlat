@@ -1,4 +1,4 @@
-﻿// AI-Context: NetworkModeUIController 的 UI 状态与生命周期分部；直接持有 BasePanel 并绑定联机控件。
+// AI-Context: NetworkModeUIController 的 UI 状态与生命周期分部；直接持有 BasePanel 并绑定联机控件。
 
 using System.Collections;
 using System;
@@ -298,9 +298,9 @@ namespace FlatWorld.Networking.Gameplay
             lastStartupReady = IsStartupReady;
             lastJoinPending = pendingClientJoinCoroutine != null;
             lastInWorld = IsInWorld;
-            Player localPlayer = ItemMgr.Instance?.User_Player;
+            Item localPlayer = ItemMgr.Instance?.LocalControlledActor;
             if (lastInWorld && playerNameInput != null && localPlayer != null)
-                playerNameInput.SetTextWithoutNotify(localPlayer.Data?.Name_User ?? localPlayer.ProfileName);
+                playerNameInput.SetTextWithoutNotify(localPlayer.itemData?.GetActorProfileMetadata().DisplayName ?? ActorProfileRegistry.GetProfileId(localPlayer));
             panel?.SetButtonVisible(HostButtonKey, lastInWorld);
             panel?.SetButtonVisible(JoinButtonKey, !lastInWorld);
             SetHostButtonLabel("公开到局域网");

@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// 管理玩家模块的可选 UI 入口。当前版本不在游戏内自动创建右上角统一管理按钮，
 /// 但保留手动重建和清理逻辑，避免后续恢复功能时改变模块数据结构。
 /// </summary>
-public class Mod_PlayerModuleUIController : Module
+public class Mod_PlayerModuleUIController : Module, IActorLocalControlModule
 {
 #region 基础参数
 

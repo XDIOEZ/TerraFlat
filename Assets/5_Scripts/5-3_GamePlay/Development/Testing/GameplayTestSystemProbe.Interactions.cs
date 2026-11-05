@@ -44,12 +44,12 @@ public static partial class GameplayTestSystemProbe
         Mod_Administrator administrator = null;
         try
         {
-            var namedPlayer = playerRoot.AddComponent<Player>();
-            namedPlayer.BindData(new Data_Player { IDName = "test:player", Name_User = "管理员" });
+            Item namedPlayer = ActorProfileRegistry.CreateProfileActorForFixture(playerRoot);
+            namedPlayer.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "test:player" }, "管理员", null));
             var result = new JObject
             {
                 ["nameGrantsPermission"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) != null,
-                ["nonPlayer"] = actor is not Player,
+                ["nonPlayer"] = !ActorIdentity.IsPlayer(actor),
                 ["initialPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null
             };
             var stamina = actor.gameObject.AddComponent<Mod_Stamina>();
@@ -94,7 +94,7 @@ public static partial class GameplayTestSystemProbe
             result["unloadedPermission"] = Mod_Administrator.GetLoadedAdministratorModule(actor) != null;
             result["unloadedInvulnerability"] = fixture.Health.IsTemporarilyInvulnerable;
             result["normalStaminaConsumed"] = stamina.ConsumeStamina("test:normal", 5f);
-            namedPlayer.Data.Name_User = "改名玩家";
+            namedPlayer.itemData.GetActorProfileMetadata().DisplayName = "改名玩家";
             result["unrelatedPlayerPermission"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) != null;
             var playerAdministratorRoot = new GameObject("PlayerAdministrator");
             playerAdministratorRoot.transform.SetParent(adminRoot.transform, false);
@@ -103,8 +103,8 @@ public static partial class GameplayTestSystemProbe
                 { ModuleId = Mod_Administrator.ModuleId, StableName = "administrator" });
             namedPlayer.itemMods.AddMod(playerAdministrator);
             playerAdministrator.Load();
-            result["nameAfterEnable"] = namedPlayer.Data.Name_User;
-            namedPlayer.Data.Name_User = "再次改名";
+            result["nameAfterEnable"] = namedPlayer.itemData.GetActorProfileMetadata().DisplayName;
+            namedPlayer.itemData.GetActorProfileMetadata().DisplayName = "再次改名";
             result["permissionAfterRename"] = Mod_Administrator.GetLoadedAdministratorModule(namedPlayer) == playerAdministrator;
             playerAdministrator.Unload();
             return result;

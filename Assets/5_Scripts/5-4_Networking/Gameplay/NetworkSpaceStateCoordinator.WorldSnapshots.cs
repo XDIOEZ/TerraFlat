@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Compression;
 using Mirror;
@@ -128,9 +128,9 @@ namespace FlatWorld.Networking.Gameplay
                 if (worldKey != incomingWorld.Header.WorldKey) throw new InvalidDataException("目标世界载荷身份不匹配。");
                 lastWorldSnapshotSequence = incomingWorld.Header.Sequence; worldSnapshotInvalid = false;
                 lastMetadataWorld = worldKey; lastMetadataRealm = incomingWorld.Header.RealmRevision; hasMetadataIdentity = true;
-                Player actor = ItemMgr.Instance?.User_Player;
-                if (actor?.Data?.CurrentSceneName == worldKey && DimensionManager.ExistingInstance?.IsTransitioning != true)
-                    StartCoroutine(DimensionManager.Instance.ApplyNetworkPresentation(actor, WorldAddress.FromWorldKey(worldKey), actor.Data.transform.position));
+                Item actor = ItemMgr.Instance?.LocalControlledActor;
+                if (actor?.itemData?.GetActorProfileMetadata().WorldKey == worldKey && DimensionManager.ExistingInstance?.IsTransitioning != true)
+                    StartCoroutine(DimensionManager.Instance.ApplyNetworkPresentation(actor, WorldAddress.FromWorldKey(worldKey), actor.itemData.transform.position));
             }
             catch (Exception error) { RejectWorldSnapshot(error.Message); }
         }

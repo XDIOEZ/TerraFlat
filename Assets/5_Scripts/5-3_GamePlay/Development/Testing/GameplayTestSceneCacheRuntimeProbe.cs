@@ -23,7 +23,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
     private static void Register() => GameplayTestRuntimeProbe.RegisterAsync(
         "space", "presentation_cache_roundtrip", CaptureRoundtrip);
 
-    private static IEnumerator CaptureRoundtrip(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureRoundtrip(Item player, JObject args, Action<JObject> completed)
     {
         if (args == null || args.Count != 1 ||
             !args.TryGetValue("cacheEnabled", out JToken enabled) || enabled.Type != JTokenType.Boolean)
@@ -43,7 +43,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
     private sealed class RoundtripFixture : IDisposable
     {
         private readonly string profile;
-        private readonly Data_Player playerData;
+        private readonly ItemData playerData;
         private readonly GameSaveData saveData;
         private readonly global::WorldAddress home;
         private readonly Vector2 homePosition;
@@ -64,15 +64,15 @@ public static class GameplayTestSceneCacheRuntimeProbe
         private bool changedWorld;
         private bool protectionChanged;
 
-        public RoundtripFixture(Player player, bool cacheEnabled)
+        public RoundtripFixture(Item player, bool cacheEnabled)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             if (SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name) ||
                 GameManager.Instance?.IsGameplayReady != true ||
                 DimensionManager.ExistingInstance?.IsTransitioning == true)
                 throw new InvalidOperationException("缓存往返必须从已经就绪的隔离地表开始。");
-            profile = player.ProfileName;
-            playerData = player.Data;
+            profile = ActorProfileRegistry.GetProfileId(player);
+            playerData = player.itemData;
             saveData = SaveDataMgr.Instance.SaveData;
             initialInvincibility = player.GetComponentInChildren<Mod_PlayerAdminController>(true)?
                 .IsAdminInvincibilityEnabled == true;
@@ -163,8 +163,8 @@ public static class GameplayTestSceneCacheRuntimeProbe
         public void Dispose()
         {
             RestoreCacheMode();
-            if (!protectionChanged || ItemMgr.Instance?.User_Player?.ProfileName != profile) return;
-            Mod_PlayerAdminController admin = ItemMgr.Instance.User_Player
+            if (!protectionChanged || ActorProfileRegistry.GetProfileId(ItemMgr.Instance?.LocalControlledActor) != profile) return;
+            Mod_PlayerAdminController admin = ItemMgr.Instance.LocalControlledActor
                 .GetComponentInChildren<Mod_PlayerAdminController>(true);
             if (admin?.IsAdministrator == true) admin.TrySetAdminInvincibilityEnabled(initialInvincibility);
         }
@@ -198,7 +198,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
 
         private IEnumerator EnterSpace()
         {
-            Player player = CurrentPlayer();
+            Item player = CurrentPlayer();
             bool finished = false, succeeded = false;
             changedWorld = true;
             var motion = new SpaceMotionState
@@ -224,7 +224,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
             if (SceneManager.GetActiveScene().name != home.WorldKey)
             {
                 // 活着的测试玩家通过正式落地事务回程，不能借用死亡重生入口。
-                Player traveller = CurrentPlayer();
+                Item traveller = CurrentPlayer();
                 SpacePassengerState passenger = session.GetPassenger(traveller);
                 bool wasInSpace = passenger.IsInSpace;
                 passenger.IsInSpace = false;
@@ -250,19 +250,19 @@ public static class GameplayTestSceneCacheRuntimeProbe
             changedWorld = false;
         }
 
-        private Player CurrentPlayer()
+        private Item CurrentPlayer()
         {
-            Player player = ItemMgr.Instance?.User_Player;
-            if (player == null || player.ProfileName != profile || !ReferenceEquals(player.Data, playerData) ||
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            if (player == null || ActorProfileRegistry.GetProfileId(player) != profile || !ReferenceEquals(player.itemData, playerData) ||
                 !ReferenceEquals(SaveDataMgr.Instance?.SaveData, saveData))
-                throw new InvalidOperationException("迁移没有重绑同一隔离档案与 Data_Player。");
+                throw new InvalidOperationException("迁移没有重绑同一隔离档案与 ItemData。");
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             return player;
         }
 
         private bool Ready() => GameManager.Instance?.IsGameplayReady == true &&
             DimensionManager.ExistingInstance?.IsTransitioning != true &&
-            ItemMgr.Instance?.User_Player?.ProfileName == profile;
+            ActorProfileRegistry.GetProfileId(ItemMgr.Instance?.LocalControlledActor) == profile;
 
         private IEnumerator WaitSimulation(double seconds)
         {
@@ -304,7 +304,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
     #region 只读表现采样
         private JObject SurfaceSnapshot(ChunkMgr chunks, SpaceMgr space)
         {
-            Player player = CurrentPlayer();
+            Item player = CurrentPlayer();
             var world = chunks.WorldRuntime;
             if (world == null) throw new InvalidOperationException("回地表后没有当前 WorldRuntime。");
             var views = new JArray();
@@ -344,13 +344,13 @@ public static class GameplayTestSceneCacheRuntimeProbe
                 ReferenceEquals(ownedWorld, world);
             bool registeredCurrentManager = GameplayWorldRegistry.TryGet(home.WorldKey, out GameplayWorldRuntime registered) &&
                 ReferenceEquals(registered.Chunks, chunks);
-            bool observerFound = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
+            bool observerFound = session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer);
             Vector2 logicalPosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             return new JObject
             {
                 ["scene"] = SceneManager.GetActiveScene().name,
-                ["profile"] = player.ProfileName,
-                ["samePlayerData"] = ReferenceEquals(player.Data, playerData),
+                ["profile"] = ActorProfileRegistry.GetProfileId(player),
+                ["samePlayerData"] = ReferenceEquals(player.itemData, playerData),
                 ["sameSaveData"] = ReferenceEquals(SaveDataMgr.Instance.SaveData, saveData),
                 ["sameSessionState"] = ReferenceEquals(session.State, sessionState),
                 ["gameplayReady"] = GameManager.Instance.IsGameplayReady,
@@ -384,7 +384,7 @@ public static class GameplayTestSceneCacheRuntimeProbe
 
         private JObject SpaceSnapshot(ChunkMgr chunks, SpaceMgr space)
         {
-            Player player = CurrentPlayer();
+            Item player = CurrentPlayer();
             Planet planet = space.FindPlanetByBodyId(bodyId);
             bool sectorFound = space.TryGetSectorPresentationDebugState(sector,
                 out int sectorRootId, out bool retained, out bool active);
@@ -417,8 +417,8 @@ public static class GameplayTestSceneCacheRuntimeProbe
             return new JObject
             {
                 ["scene"] = SceneManager.GetActiveScene().name,
-                ["profile"] = player.ProfileName,
-                ["samePlayerData"] = ReferenceEquals(player.Data, playerData),
+                ["profile"] = ActorProfileRegistry.GetProfileId(player),
+                ["samePlayerData"] = ReferenceEquals(player.itemData, playerData),
                 ["sameSaveData"] = ReferenceEquals(SaveDataMgr.Instance.SaveData, saveData),
                 ["sameSessionState"] = ReferenceEquals(session.State, sessionState),
                 ["gameplayReady"] = GameManager.Instance.IsGameplayReady,

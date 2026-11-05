@@ -64,10 +64,10 @@ public static partial class MachineWorld
     public static event Action<MachineOperationReceipt> OperationCompleted;
 
     /// <summary>客户端仅发送操作意图，不能通过面板直接改写机器状态。</summary>
-    public static bool RequestOperation(MachineEntity entity, string operation, string argument, Player actor)
+    public static bool RequestOperation(MachineEntity entity, string operation, string argument, Item actor)
         => RequestOperation(entity, operation, argument, actor, out _);
 
-    public static bool RequestOperation(MachineEntity entity, string operation, string argument, Player actor, out uint token)
+    public static bool RequestOperation(MachineEntity entity, string operation, string argument, Item actor, out uint token)
     {
         token = 0;
         using var nodeScope = UseNodeScope(entity);
@@ -154,7 +154,7 @@ public static partial class MachineWorld
 
     /// <summary>命令入口同时供面板、服务端和 MOD 使用；拒绝越权与已过期实体。</summary>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static bool Execute(MachineEntity entity, string operation, string argument, Player actor)
+    public static bool Execute(MachineEntity entity, string operation, string argument, Item actor)
     {
         if (!GameNetwork.HasStateAuthority || !Contains(entity)) return false;
         if (entity.Definition.Electrical?.Hidden == true && !EngineeringVision.CanSee(actor)) return false;

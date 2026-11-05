@@ -90,7 +90,7 @@ namespace FlatWorld.GameplayMCP
         private static object ExecuteCommand(JObject parameters)
         {
             if (!GameplayMcpRuntime.TryGetPlayerContext(
-                    out Player player,
+                    out Item player,
                     out _,
                     out _,
                     out string error))
@@ -307,7 +307,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按可选玩家半径取得运行时物品；半径查询复用 ItemMgr 的空间索引，避免扫描全场景。</summary>
-        internal static Item[] GetRuntimeCandidates(ItemMgr itemMgr, Player player, float radius)
+        internal static Item[] GetRuntimeCandidates(ItemMgr itemMgr, Item player, float radius)
         {
             if (radius <= 0f)
             {
@@ -338,7 +338,7 @@ namespace FlatWorld.GameplayMCP
         /// 查询已加载 ChunkRuntime 的确定性自然物放置结果。
         /// 这里只暴露生成事实，真正交互仍必须等待正常 ChunkView 绑定并通过真实玩法 API 完成。
         /// </summary>
-        private static object QueryEcology(Player player, string itemId, string query, bool includeRemoved, int limit)
+        private static object QueryEcology(Item player, string itemId, string query, bool includeRemoved, int limit)
         {
             ChunkMgr chunkMgr = ChunkMgr.Instance;
             if (chunkMgr == null)
@@ -408,7 +408,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>查询已加载 ChunkRuntime 中符合环境层阈值的最近地形格。</summary>
         private static object QueryTerrain(
-            Player player,
+            Item player,
             string layerId,
             float minValue,
             float? maxValue,
@@ -469,7 +469,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>按地块身份查询已加载世界中距离玩家最近的地表格。</summary>
         private static object QueryTile(
-            Player player,
+            Item player,
             string query,
             bool walkableOnly,
             int limit)
@@ -590,7 +590,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>查询玩家附近轻量 GameObject 掉落物，并保留飞行中掉落的实时世界位置。</summary>
         private static object QueryDrops(
-            Player player,
+            Item player,
             string itemId,
             string query,
             string tag,
@@ -782,7 +782,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>过滤不可用于场景查询的玩家、已销毁对象和未激活对象。</summary>
-        private static bool IsQueryableRuntimeItem(Item item, Player player)
+        private static bool IsQueryableRuntimeItem(Item item, Item player)
         {
             if (item == null || item == player || item.itemData == null || item.DestructionHandled ||
                 item.InHand || !item.gameObject.activeInHierarchy)

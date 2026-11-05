@@ -20,7 +20,7 @@ public class Mod_FireDrill : FireMakingInventoryPanelModule
 
     public MaterialHeatingProcessor Heater { get; private set; }
     TMPro.TMP_Text _temperatureLabel;
-    Player _currentInteractingPlayer;
+    Item _currentInteractingPlayer;
 
 #endregion
 
@@ -161,9 +161,9 @@ public class Mod_FireDrill : FireMakingInventoryPanelModule
         return temperature;
     }
 
-    private static Player ResolvePlayer(Item actorItem)
+    private static Item ResolvePlayer(Item actorItem)
     {
-        return actorItem as Player ?? actorItem?.GetComponentInParent<Player>();
+        return ActorProfileRegistry.GetProfileActorOrNull(actorItem as Item) ?? actorItem?.GetComponentInParent<Item>();
     }
 
     protected override void RefreshOutputPreview()

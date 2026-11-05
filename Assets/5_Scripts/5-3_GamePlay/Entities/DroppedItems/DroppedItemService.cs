@@ -210,7 +210,7 @@ public static partial class DroppedItemService
         manager.QueryItemsInCircleNonAlloc(center, .72f, ~0, null, transportCandidates, transportDedupe);
         foreach (Item item in transportCandidates)
         {
-            if (!IsLoosePickable(item) || item is Player || RuntimeAiEntityUtility.IsAiEntity(item) ||
+            if (!IsLoosePickable(item) || ActorIdentity.IsPlayer(item as Item) || RuntimeAiEntityUtility.IsAiEntity(item) ||
                 Mod_Droping.IsDropInProgress(item) || item.GetComponent<WorldItemWaterRuntime>()?.IsActive == true ||
                 Mod_Building.TryReadBuildingData(item.itemData, out _, out var building) && building.Role == BuildingRole.PlacedBuilding ||
                 MachineWorld.GetTransportAt(item.transform.position) != belt || !transportedItems.Add(item.itemData.Guid)) continue;

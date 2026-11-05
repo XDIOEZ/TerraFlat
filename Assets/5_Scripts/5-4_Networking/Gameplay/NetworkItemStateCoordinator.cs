@@ -658,8 +658,8 @@ namespace FlatWorld.Networking.Gameplay
 
         private static bool AcceptLocalWorld(string worldKey)
         {
-            Player player = ItemMgr.Instance?.User_Player;
-            string ownedWorld = GameplayWorldRegistry.GetItemWorldKey(player) ?? player?.Data?.CurrentSceneName;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            string ownedWorld = GameplayWorldRegistry.GetItemWorldKey(player) ?? player?.itemData?.GetActorProfileMetadata().WorldKey;
             return !string.IsNullOrWhiteSpace(worldKey) && worldKey == ownedWorld;
         }
 
@@ -931,7 +931,7 @@ namespace FlatWorld.Networking.Gameplay
                 return default;
 
             NetworkWorldPlayer networkPlayer = connection.identity.GetComponent<NetworkWorldPlayer>();
-            Player player = networkPlayer?.CorePlayer;
+            Item player = networkPlayer?.CorePlayer;
             if (player != null && GameplayWorldRegistry.UsesLocalCoordinates(GameplayWorldRegistry.GetItemWorldKey(player)))
                 return player.transform.position;
             return networkPlayer != null
@@ -1050,14 +1050,14 @@ namespace FlatWorld.Networking.Gameplay
                 !clientStates.TryGetValue(item.itemData.Guid, out StateRecord state) || !state.Applied ||
                 state.ItemId != item.itemData.IDName || requestedItemRealm != NetworkGameplayWorldScope.LocalRevision) return false;
             string world = GameplayWorldRegistry.GetItemWorldKey(item);
-            Player player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             return !string.IsNullOrEmpty(world) && state.WorldKey == world && requestedItemWorld == world &&
                 GameplayWorldRegistry.GetItemWorldKey(player) == world;
         }
 
         private static bool CanSynchronizeWorldItem(Item item)
             => item != null && item.itemData != null && item.IsInitialized &&
-               item is not Player && item is not Map && !item.InHand;
+               !ActorProfileRegistry.IsProfileBound(item) && item is not Map && !item.InHand;
 
         private static byte[] CaptureSafely(Item item)
             => CaptureSafely(item, out _, out _);

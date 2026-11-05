@@ -26,7 +26,7 @@ namespace FlatWorld.Guide
 
         private static JObject CaptureEligibility(JObject args)
         {
-            var player = new Data_Player { ItemSpecialData = "{\"other\":{\"keep\":42},\"flatworld.tutorial\":{\"custom\":7}}" };
+            ItemData player = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { ItemSpecialData = "{\"other\":{\"keep\":42},\"flatworld.tutorial\":{\"custom\":7}}" }, null, null);
             bool before = NewPlayerGuideProgressStore.HasEligibility(player);
             if (GameplayTestSystemProbe.Flag(args, "eligible", true))
                 NewPlayerGuideProgressStore.EstablishEligibility(player);

@@ -12,7 +12,7 @@ namespace FlatWorld.Networking.Gameplay
     {
         #region 假人通过正式消息请求拾取与提交租约
         // 夹具通过正式消息观察服务器库存，不冒充独立客户端或 Host 已验收。
-        private static IEnumerator CapturePickup(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CapturePickup(Item local, JObject args, Action<JObject> completed)
         {
             BotWorld world = null;
             var ownedItems = new List<Item>();
@@ -179,7 +179,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 原始回复与权威物品采样
         private static JObject PickupBotSample(NetworkWorldPlayer player) => new()
         {
-            ["profileName"] = player.DisplayName, ["coreProfileName"] = player.CorePlayer?.ProfileName,
+            ["profileName"] = player.ProfileId, ["coreProfileName"] = ActorProfileRegistry.GetProfileId(player.CorePlayer),
             ["netId"] = player.netId
         };
 
@@ -208,7 +208,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static uint nextBotPickupRequest;
 
-        private static float PickupInventoryAmount(Player player, string itemId)
+        private static float PickupInventoryAmount(Item player, string itemId)
         {
             float amount = 0f;
             var visited = new HashSet<Inventory_Data>();
@@ -223,7 +223,7 @@ namespace FlatWorld.Networking.Gameplay
             return amount;
         }
 
-        private static JObject PickupReceiptSample(NetworkItemPickupReceipt receipt, Player player, string itemId, float before)
+        private static JObject PickupReceiptSample(NetworkItemPickupReceipt receipt, Item player, string itemId, float before)
         {
             bool decoded = ItemNetworkStateSerialization.TryDeserializeItemData(receipt.InventoryPayload, out ItemData payload);
             return new JObject

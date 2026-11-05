@@ -533,7 +533,7 @@ private void TimeRun(string sceneName, float deltaTime)
             return 1f;
         }
 
-        Transform player = ItemMgr.Instance?.UserPlayerTransform;
+        Transform player = ItemMgr.Instance?.LocalControlledActorTransform;
         GameSaveData save = SaveDataMgr.Instance?.SaveData;
         if (player == null || save == null)
             return 1f;

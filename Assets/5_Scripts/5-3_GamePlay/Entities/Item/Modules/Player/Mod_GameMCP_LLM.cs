@@ -84,7 +84,7 @@ public sealed class Mod_GameMCP_LLM : Module
         set => ModData = value as Ex_ModData;
     }
 
-    private Player player;
+    private Item player;
     private Mod_GameController gameController;
     private Mod_Mover mover;
     private WorldNavigationManager navigation;
@@ -131,7 +131,7 @@ public sealed class Mod_GameMCP_LLM : Module
 
     protected override void OnLoad()
     {
-        player = item as Player ?? GetComponentInParent<Player>();
+        player = ActorProfileRegistry.GetProfileActorOrNull(item as Item) ?? GetComponentInParent<Item>();
         gameController = player != null ? player.GetComponentInChildren<Mod_GameController>(true) : null;
         mover = player != null ? player.GetComponentInChildren<Mod_Mover>(true) : null;
         navigation = WorldNavigationManager.ExistingInstance ?? WorldNavigationManager.Instance;

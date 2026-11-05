@@ -686,7 +686,7 @@ public partial class WeatherMgr
             Debug.LogWarning("[WeatherMgr] 正在冻结存档天气，雷击操作请稍后重试。");
             return;
         }
-        Player player = ItemMgr.GetInstance()?.User_Player;
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
         if (player != null && player.gameObject.activeInHierarchy)
             StrikeLightningAt(WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + Vector2.up * 3f);
     }

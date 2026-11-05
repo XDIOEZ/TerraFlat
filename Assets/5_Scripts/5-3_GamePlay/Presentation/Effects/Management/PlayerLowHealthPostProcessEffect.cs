@@ -20,7 +20,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
 
     #region 运行时状态
 
-    private Player player;
+    private Item player;
     private Mod_DamageReceiver damageReceiver;
     private float cachedHealth01 = 1f;
     private bool isRegistered;
@@ -29,7 +29,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     public int Priority => 100;
     public bool IsValid => this != null && isActiveAndEnabled &&
                            player != null && damageReceiver != null &&
-                           player.IsLocalProfile;
+                           ActorProfileRegistry.IsLocallyControlled(player);
 
     #endregion
 
@@ -51,14 +51,14 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     }
 
     /// <summary>绑定玩家与生命模块；重复加载时先解除旧事件，避免同一血量重复提交。</summary>
-    public void Bind(Player owner, Mod_DamageReceiver receiver)
+    public void Bind(Item owner, Mod_DamageReceiver receiver)
     {
         Unbind();
         player = owner;
         damageReceiver = receiver;
 
         if (player != null)
-            player.ProfileContextChanged += HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
         if (damageReceiver != null)
             damageReceiver.OnAction += HandleHealthChanged;
 
@@ -71,7 +71,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
         Unregister();
 
         if (player != null)
-            player.ProfileContextChanged -= HandleProfileContextChanged;
+            ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
         if (damageReceiver != null)
             damageReceiver.OnAction -= HandleHealthChanged;
 
@@ -138,7 +138,7 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
     private void HandleProfileContextChanged()
     {
         RefreshHealthCache();
-        if (player != null && player.IsLocalProfile)
+        if (player != null && ActorProfileRegistry.IsLocallyControlled(player))
             TryRegister();
         else
             Unregister();

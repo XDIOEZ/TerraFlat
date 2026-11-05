@@ -5,6 +5,10 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 
 # AI
 
+- Human 与动物同为通用 Item + Mod_AnimalBehaviorTree，没有 Player/Data_Player 类型。ActorCommon 组合 Mod_ActorControl；接管暂停树决策，能力通过 TickWhileManuallyControlled 继续冷却/记忆/环境，禁止选目标和群体决策。释放沿用原 Context 重新评估。
+- 陆地人工/自主输入共用 Mover_AI 与 FocusPoint_AI；鱼/飞行复用原运动模块。空中通过 IActorManualMotionOverride 让地面 Mover 让出，防止双重位移。档案角色仍是 AI，生态保存/人口/掉落/池化按档案归属排除，不能靠非 AI 判断。
+- 控制回归见 AI/actor-control*.lua；离线 AnimalBehaviorTree/SaveArchiveContracts/ShipMass 仅覆盖规则与数据，不能替代 Human/Wolf 接管、镜头/HUD 和真实联机现场。
+
 ## 入口
 
 代码根目录 `Assets/5_Scripts/5-3_GamePlay/Entities/`：

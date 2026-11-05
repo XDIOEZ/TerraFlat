@@ -26,7 +26,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
     }
 
     #region 真实绘制帧与权威位姿隔离
-    private static IEnumerator CaptureIndependentPresentationFrames(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureIndependentPresentationFrames(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var fixture = new IndependentPresentationFixture(player);
@@ -41,7 +41,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
     private sealed class IndependentPresentationFixture : IDisposable
     {
         private const string RateKey = "FlatWorld.Simulation.TickRate";
-        private readonly Player player;
+        private readonly Item player;
         private readonly Mod_Cam camera;
         private readonly Mod_Mover mover;
         private readonly Rigidbody2D body;
@@ -62,7 +62,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
         public int Frames { get; private set; }
         public int IntermediateFrames { get; private set; }
 
-        public IndependentPresentationFixture(Player player)
+        public IndependentPresentationFixture(Item player)
         {
             this.player = player;
             original = WorldTopologyRuntime.NormalizePosition(player.transform.position);
@@ -210,7 +210,7 @@ public static class GameplayTestFixedStepClockRuntimeProbe
     }
 
     // 记录真实游戏 Tick、手动原生物理、Unity 固定时钟和渲染帧，不在测试里自行推进游戏世界。
-    private static IEnumerator CaptureFixedStepClock(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureFixedStepClock(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var fixture = new FixedStepClockFixture();

@@ -47,10 +47,10 @@ namespace FlatWorld.Networking.Gameplay
             object sequence = typeof(NetworkWorldPlayer).GetField(serverSequenceField,
                 BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(actor);
             var handler = Mirror.RemoteCalls.RemoteProcedureCalls.GetDelegate(command.GetStableHashCode16());
-            string worldKey = actor.CorePlayer?.Data?.CurrentSceneName;
+            string worldKey = actor.CorePlayer?.itemData?.GetActorProfileMetadata().WorldKey;
             string transferReason = null;
             bool transferable = world.Session != null && world.Session.CanTransferToNetworkSurface(worldKey, out transferReason);
-            SpacePassengerState passenger = world.Session?.State?.Passengers.Find(value => value.ProfileId == actor.DisplayName);
+            SpacePassengerState passenger = world.Session?.State?.Passengers.Find(value => value.ProfileId == actor.ProfileId);
             string passengerState = passenger == null ? "不存在" :
                 $"支撑={passenger.Supported}，已落地={passenger.LandingResolved}，自由坐标={passenger.FreeMotion.PositionMeters.X},{passenger.FreeMotion.PositionMeters.Y}";
             return $"连接={botId}，已连接={world.Transport.IsBotConnected(botId)}，就绪={connection?.isReady}，" +
@@ -61,7 +61,7 @@ namespace FlatWorld.Networking.Gameplay
                 $"角色太空={actor.IsInSpace}，角色代际={actor.RealmRevision}，迁移中={actor.IsWorldTransferPending}，" +
                 $"地表可用={transferable}，地表原因={transferReason}，已处理序号={sequence}，" +
                 $"权威位置={actor.AuthoritativeLogicalPosition}，观察坐标={observer.Position.LocalMeters.X},{observer.Position.LocalMeters.Y}，" +
-                $"角色物理坐标={actor.CorePlayer?.transform.position}，存档坐标={actor.CorePlayer?.Data?.transform.position}，" +
+                $"角色物理坐标={actor.CorePlayer?.transform.position}，存档坐标={actor.CorePlayer?.itemData?.transform.position}，" +
                 $"乘员={passengerState}，会话一致={ReferenceEquals(world.Session, SpaceSession.Current)}，" +
                 $"网络在线={FlatWorld.Networking.GameNetwork.IsOnline}，角色={FlatWorld.Networking.GameNetwork.Session.Role}，" +
                 $"游戏就绪={GameManager.ExistingInstance?.IsGameplayReady}";
@@ -73,8 +73,8 @@ namespace FlatWorld.Networking.Gameplay
             Vector3 body = WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position);
             Rigidbody2D rigidbody = WorldPhysicsService2D.GetItemRigidbody(actor.CorePlayer);
             Vector2 physics = WorldLocalPresentation.ToLogical(rigidbody.position);
-            Vector3 saved = actor.CorePlayer.Data.transform.position;
-            SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver observer);
+            Vector3 saved = actor.CorePlayer.itemData.transform.position;
+            SpaceSession.Current.TryGetNetworkObserver(actor.ProfileId, out SpaceNetworkObserver observer);
             return new JObject
             {
                 ["x"] = position.x, ["y"] = position.y, ["bodyX"] = body.x, ["bodyY"] = body.y,
@@ -87,7 +87,7 @@ namespace FlatWorld.Networking.Gameplay
             };
         }
 
-        private static IEnumerator CaptureTeleport(Player local, JObject args, Action<JObject> completed)
+        private static IEnumerator CaptureTeleport(Item local, JObject args, Action<JObject> completed)
         {
             JObject localTransfer = CaptureLocalSameWorldRespawnPosition(local);
             using var world = new BotWorld(local);
@@ -141,7 +141,7 @@ namespace FlatWorld.Networking.Gameplay
             string movementImmediately = TeleportSample(actor).ToString(Newtonsoft.Json.Formatting.None);
             // 真正的物理同步完成后再比较角色位置，避免把同帧 Transform 延迟误判为移动失败。
             yield return Wait(() => WorldTopologyRuntime.ShortestDelta(actor.AuthoritativeLogicalPosition, next).sqrMagnitude < .00001f &&
-                SpaceSession.Current.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver moved) &&
+                SpaceSession.Current.TryGetNetworkObserver(actor.ProfileId, out SpaceNetworkObserver moved) &&
                 WorldTopologyRuntime.ShortestDelta(moved.Position.LocalMeters.ToVector2(), next).sqrMagnitude < .00001f &&
                 WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(actor.CorePlayer.transform.position), next).sqrMagnitude < .00001f &&
                 WorldTopologyRuntime.ShortestDelta(WorldLocalPresentation.ToLogical(WorldPhysicsService2D.GetItemRigidbody(actor.CorePlayer).position), next).sqrMagnitude < .00001f,
@@ -173,21 +173,21 @@ namespace FlatWorld.Networking.Gameplay
         #region 重生就绪与动画归属采样
 
         // 离线隔离现场复用权威迁移入口，覆盖 Host 本机从 Transform 查询观察者的分支。
-        private static JObject CaptureLocalSameWorldRespawnPosition(Player player)
+        private static JObject CaptureLocalSameWorldRespawnPosition(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             if (GameNetwork.IsOnline || NetworkServer.active || NetworkClient.active)
                 throw new InvalidOperationException("本机重生坐标夹具需要离线隔离世界。");
             SpaceSession session = SpaceSession.EnsureLoaded();
-            SpacePassengerState previous = session.State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState previous = session.State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
             Vector3 original = WorldLocalPresentation.ToLogical(player.transform.position);
-            Vector3 saved = player.Data.transform.position;
+            Vector3 saved = player.itemData.transform.position;
             Vector3 target = WorldTopologyRuntime.NormalizePosition(original + Vector3.right * 64f);
             session.State.Passengers.Remove(previous);
             try
             {
-                bool committed = session.CompleteNetworkWorldTransfer(player, player.Data.CurrentSceneName, target);
-                bool observed = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
+                bool committed = session.CompleteNetworkWorldTransfer(player, player.itemData.GetActorProfileMetadata().WorldKey, target);
+                bool observed = session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer);
                 Vector3 body = WorldLocalPresentation.ToLogical(player.transform.position);
                 Vector3 physics = WorldLocalPresentation.ToLogical(WorldPhysicsService2D.GetItemRigidbody(player).position);
                 return new JObject
@@ -196,16 +196,16 @@ namespace FlatWorld.Networking.Gameplay
                     ["targetX"] = target.x, ["targetY"] = target.y,
                     ["bodyX"] = body.x, ["bodyY"] = body.y,
                     ["physicsX"] = physics.x, ["physicsY"] = physics.y,
-                    ["savedX"] = player.Data.transform.position.x, ["savedY"] = player.Data.transform.position.y,
+                    ["savedX"] = player.itemData.transform.position.x, ["savedY"] = player.itemData.transform.position.y,
                     ["observerX"] = observer.Position.LocalMeters.X, ["observerY"] = observer.Position.LocalMeters.Y
                 };
             }
             finally
             {
-                session.State.Passengers.RemoveAll(value => value.ProfileId == player.ProfileName);
+                session.State.Passengers.RemoveAll(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
                 if (previous != null) session.State.Passengers.Add(previous);
                 PlayerTeleportService.ApplySurfacePose(player, original);
-                player.Data.transform.position = saved;
+                player.itemData.transform.position = saved;
             }
         }
 
@@ -250,7 +250,7 @@ namespace FlatWorld.Networking.Gameplay
 
         private static JObject CaptureRespawnReady(BotWorld world, NetworkWorldPlayer actor, Vector3 position)
         {
-            Player player = actor.CorePlayer;
+            Item player = actor.CorePlayer;
             Mod_PlayerDeathState death = player.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
@@ -266,11 +266,11 @@ namespace FlatWorld.Networking.Gameplay
                 ["began"] = actor.TryBeginWorldTransfer()
             };
             uint previousRealm = actor.RealmRevision;
-            string worldKey = player.Data.CurrentSceneName;
+            string worldKey = player.itemData.GetActorProfileMetadata().WorldKey;
             world.Session.ResetPassengerForRespawn(player);
             death.CompleteNetworkRespawn();
             result["committed"] = world.Session.CompleteNetworkWorldTransfer(player, worldKey, position);
-            world.Session.TryGetNetworkObserver(actor.DisplayName, out SpaceNetworkObserver observer);
+            world.Session.TryGetNetworkObserver(actor.ProfileId, out SpaceNetworkObserver observer);
             result["authorityWasStale"] = actor.RealmRevision != observer.RealmRevision;
             // 重放主机同帧就绪早于下一轮 Update 的正式调用顺序。
             actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
@@ -283,10 +283,10 @@ namespace FlatWorld.Networking.Gameplay
             actor.AcknowledgeWorldTransfer(worldKey, observer.RealmRevision);
             result["beganAgain"] = actor.TryBeginWorldTransfer();
             result["committedAgain"] = world.Session.CompleteNetworkWorldTransfer(player, worldKey, position);
-            world.Session.TryGetNetworkObserver(actor.DisplayName, out observer);
+            world.Session.TryGetNetworkObserver(actor.ProfileId, out observer);
             actor.AcknowledgeWorldTransfer(worldKey + ":wrong", observer.RealmRevision);
             result["wrongWorldHeld"] = actor.IsWorldTransferPending;
-            SpacePassengerState passenger = world.Session.State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            SpacePassengerState passenger = world.Session.State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
             world.Session.State.Passengers.Remove(passenger);
             try
             {

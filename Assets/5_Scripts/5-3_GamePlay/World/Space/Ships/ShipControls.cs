@@ -12,7 +12,7 @@ namespace FlatWorld.Spaceflight
         public const float ConsoleInteractionDistance = Mod_InteractSender.DefaultMaxInteractDistance;
 
         // 只有靠近本船实际控制台才能操作整船面板，船体地板不作为控制台。
-        public bool TryGetNearbyConsole(Player player, string shipId, out string consoleId, string requiredConsoleId = null)
+        public bool TryGetNearbyConsole(Item player, string shipId, out string consoleId, string requiredConsoleId = null)
         {
             consoleId = null;
             if (player == null || State == null) return false;
@@ -36,7 +36,7 @@ namespace FlatWorld.Spaceflight
         }
 
         // 面板绑定实际操作部件，导航模块不能借附近控制台冒充船控入口。
-        public bool CanOpenShipPanel(Player player, string shipId, string pieceId)
+        public bool CanOpenShipPanel(Item player, string shipId, string pieceId)
         {
             if (!FindPiece(pieceId, out ShipState ship, out ShipPieceState piece) || ship.ShipId != shipId ||
                 piece.Kind is not (ShipPieceKind.Console or ShipPieceKind.DockingPort or ShipPieceKind.Engine or
@@ -150,18 +150,18 @@ namespace FlatWorld.Spaceflight
         }
 
         // 面板只显示权威操作回执，成功提交请求本身不代表业务已经完成。
-        public void RequestShipOperation(Player player, SpaceNetworkIntent intent, Action<bool, string> completed)
+        public void RequestShipOperation(Item player, SpaceNetworkIntent intent, Action<bool, string> completed)
         {
             if (player == null || State == null)
             { completed?.Invoke(false, FlatWorldLocalizationService.GetUiText("玩家或太空会话尚未就绪。")); return; }
             if (!GameNetwork.HasStateAuthority)
             {
-                string previousShip = FindPassenger(player.ProfileName)?.ShipId;
-                if (!SpaceNetworkBridge.SendIntent(player.ProfileName, intent, (accepted, responseReason) =>
+                string previousShip = FindPassenger(ActorProfileRegistry.GetProfileId(player))?.ShipId;
+                if (!SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(player), intent, (accepted, responseReason) =>
                 {
                     if (accepted && intent.Kind == SpaceNetworkIntentKind.EnterConsole)
                         NotifyLocalManualConsoleEntry(player, intent.PieceId);
-                    else if (accepted && intent.Kind == SpaceNetworkIntentKind.ExitConsole && player.IsLocalProfile)
+                    else if (accepted && intent.Kind == SpaceNetworkIntentKind.ExitConsole && ActorProfileRegistry.IsLocallyControlled(player))
                         LocalManualConsoleExitRequested?.Invoke(previousShip);
                     completed?.Invoke(accepted, responseReason);
                 }))
@@ -178,10 +178,10 @@ namespace FlatWorld.Spaceflight
                 success = RequestConsoleExit(player);
                 reason = success ? null : FlatWorldLocalizationService.GetUiText("当前未处于驾驶状态。");
             }
-            else success = ExecuteNetworkIntent(player.ProfileName, intent, out reason);
+            else success = ExecuteNetworkIntent(ActorProfileRegistry.GetProfileId(player), intent, out reason);
             completed?.Invoke(success, reason);
         }
-        public bool TryHandleSpacePointer(Player player)
+        public bool TryHandleSpacePointer(Item player)
         {
             if (player == null || string.IsNullOrWhiteSpace(pickingNavigationConsole)) return false;
             Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -193,7 +193,7 @@ namespace FlatWorld.Spaceflight
                 (success, reason) => ShipPanelSession.ReportNavigationSelection(this, player, console, success, reason));
             return true;
         }
-        public bool TryCancelNavigationPicking(Player player)
+        public bool TryCancelNavigationPicking(Item player)
         {
             // 返回动作取消导航选点，手持物使用不受导航状态影响。
             if (player == null || State == null || pickingNavigationConsole == null) return false;
@@ -205,7 +205,7 @@ namespace FlatWorld.Spaceflight
             if (!FlatWorld.Networking.GameNetwork.HasStateAuthority) return SubmitLocalIntent(SpaceNetworkIntentKind.ConfirmDock, ResolveConsole(shipId), shipId);
             ShipState ship = GetShip(shipId);
             string consoleId = ResolveConsole(shipId);
-            Player actor = ItemMgr.Instance?.User_Player;
+            Item actor = ItemMgr.Instance?.LocalControlledActor;
             if (ship == null || actor == null || !FindPiece(consoleId, out _, out ShipPieceState console) ||
                 Vector2.Distance(GetPlayerAuthoritativeDisplayPosition(actor), DisplayPoint(ship, console.CellX + .5d, console.CellY + .5d)) > 3f) return false;
             ShipFlightState ownFlight = GetFlight(shipId);

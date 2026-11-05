@@ -20,7 +20,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     private static void RegisterCombatAudioSettlement() => GameplayTestRuntimeProbe.RegisterAsync(
         "audio", "combat_settlement", CaptureCombatAudioSettlement);
 
-    private static IEnumerator CaptureCombatAudioSettlement(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureCombatAudioSettlement(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         string world = GameplayWorldRegistry.GetItemWorldKey(player);

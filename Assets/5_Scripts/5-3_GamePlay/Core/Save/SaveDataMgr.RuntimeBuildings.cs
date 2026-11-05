@@ -154,7 +154,7 @@ public partial class SaveDataMgr
         building = null;
         if (RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item)) return false;
         if (item?.PersistenceOwner != null || MachineWorld.OwnsWorldItem(item?.itemData)) return false;
-        if (item == null || item is Player || item is Map || item.itemData == null)
+        if (item == null || ActorIdentity.IsPlayer(item as Item) || item is Map || item.itemData == null)
             return false;
 
         building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
@@ -222,7 +222,7 @@ public partial class SaveDataMgr
     /// <summary>建筑被安装、拆除或状态保存时都要记录所在区块，确保空区块也能清掉旧建筑差量。</summary>
     private static bool IsRuntimeBuildingChangeSource(Item item)
     {
-        if (item == null || item.PersistenceOwner != null || item.itemData == null || item is Player || item is Map)
+        if (item == null || item.PersistenceOwner != null || item.itemData == null || ActorIdentity.IsPlayer(item as Item) || item is Map)
             return false;
 
         Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);

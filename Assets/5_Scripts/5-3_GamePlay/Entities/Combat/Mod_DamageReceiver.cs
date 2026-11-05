@@ -1251,7 +1251,7 @@ public partial class Mod_DamageReceiver : Module, IRemoteNetworkModule, IItemMod
 
     private bool ShouldUseBodyPartHealthByDefault()
     {
-        if (item is Player)
+        if (ActorIdentity.IsPlayer(item as Item))
             return true;
 
         if (item?.itemMods == null)

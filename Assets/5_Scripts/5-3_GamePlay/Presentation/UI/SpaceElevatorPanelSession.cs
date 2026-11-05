@@ -13,7 +13,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
     #region 终端会话与生命周期
     private static SpaceElevatorPanelSession current;
     private readonly SpaceSession session;
-    private readonly Player actor;
+    private readonly Item actor;
     private readonly string terminalId, elevatorId;
     private readonly SpaceElevatorEndpoint endpoint;
     private readonly BasePanel panel;
@@ -25,7 +25,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
     private PhysicalDeviceArtworkView.OperatingState artworkState;
     private string feedbackSource = "把物品放入仓库，点击打包发送，到站后自动存入另一端仓库。";
 
-    private SpaceElevatorPanelSession(SpaceSession session, Player actor, string terminalId,
+    private SpaceElevatorPanelSession(SpaceSession session, Item actor, string terminalId,
         SpaceElevatorState elevator, SpaceElevatorEndpoint endpoint)
     {
         this.session = session; this.actor = actor; this.terminalId = terminalId;
@@ -68,7 +68,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
         catch { Dispose(); throw; }
     }
 
-    public static void Open(SpaceSession session, Player actor, Item terminal)
+    public static void Open(SpaceSession session, Item actor, Item terminal)
     {
         if (session == null || actor == null || terminal?.itemData == null) return;
         string terminalId = terminal.itemData.Guid.ToString(CultureInfo.InvariantCulture);
@@ -78,7 +78,7 @@ public sealed class SpaceElevatorPanelSession : IDisposable
         Open(session, actor, terminalId);
     }
 
-    public static void Open(SpaceSession session, Player actor, string terminalId)
+    public static void Open(SpaceSession session, Item actor, string terminalId)
     {
         if (session == null || actor == null) return;
         if (!session.TryGetSpaceElevatorEndpoint(actor, terminalId, out SpaceElevatorState elevator,

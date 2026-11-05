@@ -229,16 +229,9 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         hungerActionInstance = hungerAction.CreateInstance(item);
 
         // 动物不含玩家输入与体力模块，按可选依赖安静解析。
-        Mod_GameController controller = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
-        inputController = controller;
-        moveAction = null;
-        if (controller != null)
-        {
-            moveAction = controller._inputActions.Win10.Move_Player;
-            BindRunActions(
-                controller._inputActions.Win10.Shift,
-                controller._inputActions.Win10.ToggleRun);
-        }
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshManualControlInputBindings;
+        ActorProfileRegistry.GetBinding(item).Changed += RefreshManualControlInputBindings;
+        RefreshManualControlInputBindings();
 
         // 加载体力模块
         stamina = item.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
@@ -264,6 +257,16 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
 
 
 
+    private void RefreshManualControlInputBindings()
+    {
+        UnbindRunActions();
+        inputController = ActorProfileRegistry.IsLocallyControlled(item)
+            ? item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller) : null;
+        moveAction = inputController?._inputActions?.Win10.Move_Player;
+        if (inputController?._inputActions != null)
+            BindRunActions(inputController._inputActions.Win10.Shift, inputController._inputActions.Win10.ToggleRun);
+    }
+
     private bool _wasMoving = false;
 
     /// <summary>物理步刷新玩家脚下推动速度，并按刚体实际到达位置发布世界格变化。</summary>
@@ -279,7 +282,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         if (rb == null)
             return;
 
-        if (item is Player player && player.IsLocalProfile && Enabled && !item.DestructionHandled &&
+        if ((item is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player) && Enabled && !item.DestructionHandled &&
             !spaceMotionOwned && CarrierSource == null && rb.simulated && rb.bodyType == RigidbodyType2D.Dynamic)
         {
             ExternalVelocity = ResolveExternalVelocity();
@@ -333,7 +336,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
     }
 
     private Vector2 ResolveWorldUnitPosition(Vector2 position)
-        => item is Player player && FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true
+        => (item is Item player && ActorIdentity.IsPlayer(player)) && FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) == true
             ? position : WorldTopologyRuntime.NormalizePosition(position);
 
     public override void ModUpdate(float deltaTime)
@@ -376,9 +379,9 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             ? inputController.ReadMoveInput(moveAction, out isMobileMoveInput)
             : moveAction.ReadValue<Vector2>();
         input = ResolveMobileMoveInput(input, isMobileMoveInput);
-        if (item is Player && inputController?._mainCamera != null)
+        if (ActorIdentity.IsPlayer(item as Item) && inputController?._mainCamera != null)
             input = inputController._mainCamera.transform.TransformDirection(input);
-        if (item is Player passenger && FlatWorld.Spaceflight.SpaceSession.Current is SpaceSession session)
+        if ((item is Item passenger && ActorIdentity.IsPlayer(passenger)) && FlatWorld.Spaceflight.SpaceSession.Current is SpaceSession session)
             input = session.TransformPassengerInputToShipLocal(passenger, input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
         if (!FiniteVelocity(input))
@@ -619,7 +622,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         if (item == null || rb == null) return 1f;
         Vector2Int cell = new(Mathf.FloorToInt(rb.position.x), Mathf.FloorToInt(rb.position.y));
         float multiplier = NaturalEntityEcsService.GetTraversalSpeedMultiplierAtCell(cell);
-        return item is Player
+        return ActorIdentity.IsPlayer(item as Item)
             ? Mathf.Min(multiplier, BuildingOccupancyRegistry.GetPlayerMoveSpeedMultiplier(rb.position))
             : multiplier;
     }
@@ -650,7 +653,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
             ? surfaceDecelerationMultiplier
             : surfaceAccelerationMultiplier;
         float gravityMultiplier = (float)SpaceGameplaySettings.Current.WalkingResponseMultiplier(gravity);
-        float actorAccelerationMultiplier = item is Player
+        float actorAccelerationMultiplier = ActorIdentity.IsPlayer(item as Item)
             ? PlayerAccelerationMultiplier
             : 1f;
         Vector2 nextVelocity = Vector2.MoveTowards(
@@ -737,7 +740,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
         Vector2 velocity = inputController?.IsGameplayInputLocked == true
             ? Vector2.zero : ResolveWaterCurrentVelocity();
         if (item?.itemData?.Stack != null && !item.itemData.inHand && !item.DestructionHandled &&
-            (item is Player windPlayer ? windPlayer.IsLocalProfile : FlatWorld.Networking.GameNetwork.HasStateAuthority) &&
+            ((item is Item windPlayer && ActorIdentity.IsPlayer(windPlayer)) ? ActorProfileRegistry.IsLocallyControlled(windPlayer) : FlatWorld.Networking.GameNetwork.HasStateAuthority) &&
             rb != null && rb.simulated && CarrierSource == null && !spaceMotionOwned)
         {
             // 风力叠加到被动速度，站立或输入锁定时仍由刚体碰撞处理推动。
@@ -746,7 +749,7 @@ public partial class Mod_Mover : Module, IItemIndependentWorldMotionCapability2D
                 windOwned |= owner.OwnsWindMotion;
             if (!windOwned && windSuppressionLeases == 0)
                 velocity += WorldMotionSystem.SampleWindVelocity(rb.position, item.itemData.Stack.CurrentWeight);
-            if (item is Player player && player.IsLocalProfile && item.gameObject.scene.name == MachineWorld.WorldKey)
+            if ((item is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player) && item.gameObject.scene.name == MachineWorld.WorldKey)
                 velocity += MachineWorld.SampleConveyorVelocity(rb.position, GameplayFixedStepSimulation.TickDeltaTime);
         }
         return velocity;

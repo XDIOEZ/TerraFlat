@@ -17,6 +17,30 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: ce9a2769be644acd8c65fc229e01604d
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_ActorControl.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 33f6c9dd423646bda69e15560940dc6c
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_ActorInput.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ec8e1d3340994062a8ba22e1ce9db279
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_ActorProfileDeath.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2b631907cb1f4fe388ea8103cdce6e62
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_ActorHUD.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab
     m_ReadOnly: 0
@@ -698,9 +722,10 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 46220fac86a489c48ab7f0d514bc3e40
-    m_Address: Assets/2_Prefabs/Gameplay/Player/Player.prefab
+    m_Address: flatworld.actor.shell.human
     m_ReadOnly: 0
     m_SerializedLabels:
+    - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 46a33aa3e8964a70b68a5d10e925263a

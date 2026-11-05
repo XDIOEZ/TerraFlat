@@ -5,6 +5,8 @@ description: "FlatWorld 启动、世界进入退出、资源加载/原位更新�
 
 # 核心生命周期
 
+- 档案通过 ActorProfileRegistry 绑定普通 Item；默认 Human 也走 Actor 定义与通用工厂。控制来自 Mod_ActorControl 租约，不再有 Player/Data_Player。F5/重生/维度迁移重建当前角色定义，按原 ProfileId 重绑；退出先保存，再终止控制、卸载本地表现与身体。
+
 ## 代码入口
 
 根目录：`Assets/5_Scripts/5-3_GamePlay/Core/`。

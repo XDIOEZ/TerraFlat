@@ -166,7 +166,7 @@ public static class BuffEffectDispatcher
         }
 
         Item receiver = GetReceiver(runtime);
-        Transform localPlayer = ItemMgr.Instance?.UserPlayerTransform;
+        Transform localPlayer = ItemMgr.Instance?.LocalControlledActorTransform;
         if (timeSystem == null || receiver == null || localPlayer == null || receiver.transform != localPlayer)
             return;
 

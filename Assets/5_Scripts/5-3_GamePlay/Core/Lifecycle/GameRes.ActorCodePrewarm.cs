@@ -118,7 +118,7 @@ public partial class GameRes
         yield return typeof(Item);
         yield return typeof(ItemMods);
         yield return typeof(Module);
-        yield return typeof(Player);
+        yield return typeof(Item);
         yield return typeof(ItemMgr);
         yield return typeof(ItemTickScheduler);
         yield return typeof(WorldPresentationProjection);

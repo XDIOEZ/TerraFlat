@@ -34,7 +34,7 @@ public static class CraftingService
         Inventory inputInventory,
         Inventory outputInventory,
         CraftingCapabilities capabilities,
-        Player actor = null)
+        Item actor = null)
     {
         return CraftInternal(inputInventory, outputInventory, capabilities, null, actor);
     }
@@ -45,7 +45,7 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities,
         RuntimeRecipe recipe,
-        Player actor = null,
+        Item actor = null,
         CraftingRecipeMatch workingToolMatch = null)
     {
         return CraftInternal(inputInventory, outputInventory, capabilities, recipe, actor, workingToolMatch: workingToolMatch);
@@ -177,7 +177,7 @@ public static class CraftingService
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static CraftingResult CraftRecipeOutputs(Inventory input, Inventory output,
         CraftingCapabilities capabilities, RuntimeRecipe recipe, IReadOnlyList<ItemData> results,
-        bool executeRecipeActions, Player actor = null, bool publishCrafting = true)
+        bool executeRecipeActions, Item actor = null, bool publishCrafting = true)
         => CraftInternal(input, output, capabilities, recipe, actor, results, executeRecipeActions, publishCrafting);
     #endregion
 
@@ -186,7 +186,7 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities,
         RuntimeRecipe recipe,
-        Player actor,
+        Item actor,
         IReadOnlyList<ItemData> suppliedOutputs = null,
         bool executeRecipeActions = true,
         bool publishCrafting = true,
@@ -431,7 +431,7 @@ public static class CraftingService
         return true;
     }
 
-    private static void PublishSuccess(Player actor, IReadOnlyList<ItemData> outputs)
+    private static void PublishSuccess(Item actor, IReadOnlyList<ItemData> outputs)
     {
         for (int i = 0; i < outputs.Count; i++)
         {

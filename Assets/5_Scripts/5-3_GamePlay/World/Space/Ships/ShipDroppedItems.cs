@@ -34,8 +34,8 @@ namespace FlatWorld.Spaceflight
                     if (ReferenceEquals(view.Value, source))
                         return State.LooseItems.Find(value => value.Id == view.Key) is { InSpace: true } or { SurfaceHeight: > 0d };
             }
-            Player player = FindDroppedItemSourcePlayer(source, context.Start);
-            SpacePassengerState passenger = player == null ? null : State.Passengers.Find(value => value.ProfileId == player.ProfileName);
+            Item player = FindDroppedItemSourcePlayer(source, context.Start);
+            SpacePassengerState passenger = player == null ? null : State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(player));
             if (passenger?.SurfaceDescending == true && passenger.SurfaceHeight > 0d) return true;
             if (!TryGetSupport(context.Start, out ShipState ship, out _, out _)) return false;
             ShipFlightState flight = GetFlight(ship.ShipId);
@@ -137,7 +137,7 @@ namespace FlatWorld.Spaceflight
                         state.SurfaceHeight = original.SurfaceHeight; state.SurfaceVerticalSpeed = original.SurfaceVerticalSpeed;
                         inherited = true; break;
                     }
-            Player player = FindDroppedItemSourcePlayer(source, context.Start);
+            Item player = FindDroppedItemSourcePlayer(source, context.Start);
             SpacePassengerState passenger = player == null ? null : GetPassenger(player);
             ShipState carrier = passenger?.Supported == true ? GetShip(passenger.ShipId) : null;
             if (!IsSpaceView && passenger != null && !inherited && (passenger.Supported || passenger.SurfaceDescending))
@@ -212,16 +212,16 @@ namespace FlatWorld.Spaceflight
             }
             return state;
         }
-        private Player FindDroppedItemSourcePlayer(Item source, Vector2 start)
+        private Item FindDroppedItemSourcePlayer(Item source, Vector2 start)
         {
             Item candidate = source;
             for (int i = 0; candidate != null && i < 16; i++)
             {
-                if (candidate is Player player) return player;
+                if ((candidate is Item player && ActorIdentity.IsPlayer(player))) return player;
                 if (ReferenceEquals(candidate.Owner, candidate)) break;
                 candidate = candidate.Owner;
             }
-            Player local = ItemMgr.Instance?.User_Player;
+            Item local = ItemMgr.Instance?.LocalControlledActor;
             bool legacyDrop = source == null || source.Owner == null && source.PersistenceOwner == null &&
                 GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetItemDefinition(source.itemData.IDName, out RuntimeItemDefinition definition) && !definition.IsActor;
             return legacyDrop && local != null && Vector2.Distance(local.transform.position, start) <= .5f ? local : null;

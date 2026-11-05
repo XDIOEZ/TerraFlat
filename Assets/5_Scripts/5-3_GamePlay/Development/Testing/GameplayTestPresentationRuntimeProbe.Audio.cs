@@ -18,7 +18,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         public readonly List<AudioCue> Cues = new();
         private bool disposed;
 
-        public AudioFixture(Player player)
+        public AudioFixture(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             Service = UnityEngine.Object.FindObjectOfType<AudioService>() ??
@@ -100,7 +100,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     }
 
     // 使用真实共享入口检查幂等、熄灭淡出与重新点燃，不复算燃烧或音频规则。
-    private static IEnumerator CaptureSharedCombustionAudio(Player player, AudioService service, JObject result)
+    private static IEnumerator CaptureSharedCombustionAudio(Item player, AudioService service, JObject result)
     {
         var root = new GameObject("Lua共享燃烧音效");
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
@@ -246,7 +246,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
     #endregion
 
-    private static IEnumerator CaptureAudio(Player player, JObject args, Action<JObject> complete)
+    private static IEnumerator CaptureAudio(Item player, JObject args, Action<JObject> complete)
     {
         var fixture = new AudioFixture(player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);

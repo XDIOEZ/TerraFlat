@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
 using FlatWorld.Networking;
@@ -117,7 +117,7 @@ public sealed partial class Mod_WaterVessel : Module, IInteractable, ILiquidVess
     {
         TickWorldHeat();
         TickRainwaterCollection();
-        if (item?.Owner is not Player ownerPlayer || !ownerPlayer.IsLocalProfile)
+        if (!(item?.Owner is Item ownerPlayer && ActorIdentity.IsPlayer(ownerPlayer)) || !ActorProfileRegistry.IsLocallyControlled(ownerPlayer))
         {
             targetOutline?.Hide();
             return;

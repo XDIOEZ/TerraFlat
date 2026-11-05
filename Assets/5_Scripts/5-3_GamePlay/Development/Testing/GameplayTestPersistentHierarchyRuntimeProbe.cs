@@ -36,7 +36,7 @@ public static class GameplayTestPersistentHierarchyRuntimeProbe
         }
     }
 
-    private static IEnumerator Capture(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator Capture(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var fixture = new Fixture();

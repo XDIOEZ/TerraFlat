@@ -21,18 +21,44 @@ public static partial class GameplayTestSystemProbe
         Register("networking", "hotbar_save_cache", ProbeNetworkHotbarSaveCache);
     }
 
-    private static Data_Player NetworkCapturePlayerData() => new()
+    public static Dictionary<string, Inventory_Data> GetTestActorInventories(ItemData data)
     {
-        IDName = "probe:player", Guid = 91001,
-        Stack = new ItemStack { Amount = 1 },
-        CurrentSceneName = "probe:world", Name_User = "probe:profile"
-    };
+        if (!data.ModuleDataDic.TryGetValue("test:inventory", out var module))
+        {
+            module = new Inventory_ModuleData { StableName = "test:inventory", ModuleId = "Inventory" };
+            data.ModuleDataDic.Add(module.StableName, module);
+        }
+        return ((Inventory_ModuleData)module).Data;
+    }
+
+    private static ItemData NetworkCapturePlayerData()
+    {
+        var data = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem
+        { IDName = "probe:actor", Guid = 91001, Stack = new ItemStack { Amount = 1 }, MaxDurability = 10, Durability = 10 },
+            "probe:profile", "probe:world");
+        foreach (string id in new[] { "health", "movement", "stamina", ModText.Camera, Mod_TargetPerceptionSignature.ModuleId })
+        {
+            var module = new Ex_ModData { StableName = id, ModuleId = id };
+            module.BitData = new JObject { ["value"] = 10f }.ToString();
+            data.ModuleDataDic.Add(id, module);
+        }
+        ActorModuleState.SetCameraPov(data, 10f);
+        ActorModuleState.SetTargetPerceptionMultiplier(data, 1f);
+        return data;
+    }
+    private static void ChangeCaptureModule(ItemData data, string id, string field)
+    {
+        var module = (Ex_ModData)data.ModuleDataDic[id];
+        var payload = JObject.Parse(module.BitData);
+        payload[field] = (payload.Value<float?>(field) ?? 0f) + 1f;
+        module.BitData = payload.ToString();
+    }
 
     private static JObject ProbeNetworkPlayerCaptureCache(JObject args)
     {
         var root = new GameObject("network-player-capture-probe") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
-        Player player = root.AddComponent<Player>();
+        Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
         var visiting = new HashSet<ItemData>();
         ulong Signature(ItemData value, bool publicState)
         {
@@ -45,32 +71,32 @@ public static partial class GameplayTestSystemProbe
             => ItemNetworkStateSerialization.SerializeSnapshot(ItemInstanceSnapshot.Capture(value, false));
         try
         {
-            var cases = new (string Name, Action<Data_Player> Change)[]
+            var cases = new (string Name, Action<ItemData> Change)[]
             {
-                ("scene", value => value.CurrentSceneName += "2"),
-                ("hp", value => value.hp.Value -= 1),
-                ("max_hp", value => value.hp.maxValue += 1),
-                ("weakness", value => value.hp.Weaknesses.Add("probe")),
-                ("speed_base", value => value.Speed.BaseValue += 1),
-                ("speed_base_add", value => value.Speed.BaseAdditive += 1),
-                ("speed_add", value => value.Speed.AdditiveModifier += 1),
-                ("speed_multiply", value => value.Speed.MultiplicativeModifier += 1),
-                ("speed_final_add", value => value.Speed.FinalAdditive += 1),
-                ("stamina", value => value.stamina -= 1),
-                ("stamina_max", value => value.staminaMax += 1),
-                ("stamina_recovery", value => value.staminaRecoverySpeed += 1),
-                ("user_name", value => value.Name_User += "2"),
-                ("pov", value => value.PlayerPov += 1),
-                ("carry_weight", value => value.MaxCarryWeight += 1),
-                ("carry_volume", value => value.MaxCarryVolume += 1),
-                ("perception", value => value.PerceptionRadiusMultiplier += 1),
-                ("null_hp", value => value.hp = null),
-                ("null_speed", value => value.Speed = null)
+                ("hp", value => ChangeCaptureModule(value, "health", "Hp")),
+                ("max_hp", value => ChangeCaptureModule(value, "health", "MaxHp")),
+                ("body_health", value => ChangeCaptureModule(value, "health", "BodyPartHp")),
+                ("speed_base", value => ChangeCaptureModule(value, "movement", "BaseValue")),
+                ("speed_base_add", value => ChangeCaptureModule(value, "movement", "BaseAdditive")),
+                ("speed_add", value => ChangeCaptureModule(value, "movement", "AdditiveModifier")),
+                ("speed_multiply", value => ChangeCaptureModule(value, "movement", "MultiplicativeModifier")),
+                ("speed_final_add", value => ChangeCaptureModule(value, "movement", "FinalAdditive")),
+                ("run", value => ChangeCaptureModule(value, "movement", "Run")),
+                ("stamina", value => ChangeCaptureModule(value, "stamina", "CurrentStamina")),
+                ("stamina_max", value => ChangeCaptureModule(value, "stamina", "MaxStamina")),
+                ("pov", value => ActorModuleState.SetCameraPov(value, 11f)),
+                ("perception", value => ActorModuleState.SetTargetPerceptionMultiplier(value, 2f)),
+                ("special", value => value.ItemSpecialData = "changed"),
+                ("durability", value => value.Durability -= 1),
+                ("faction", value => value.FactionId = "changed"),
+                ("tags", value => value.Tags.Add("changed")),
+                ("amount", value => value.Stack.Amount += 1),
+                ("matter", value => value.MatterState.TemperatureCelsius += 1)
             };
             var samples = new JArray();
             foreach (var change in cases)
             {
-                Data_Player data = NetworkCapturePlayerData();
+                ItemData data = NetworkCapturePlayerData();
                 player.BindData(data);
                 ulong before = Signature(data, true);
                 var first = ItemNetworkStateSerialization.CaptureVersioned(player, true);
@@ -78,7 +104,7 @@ public static partial class GameplayTestSystemProbe
                 var repeated = ItemNetworkStateSerialization.CaptureVersioned(player, true);
                 change.Change(data);
                 var changed = ItemNetworkStateSerialization.CaptureVersioned(player, true);
-                data.stamina -= 1;
+                ChangeCaptureModule(data, "stamina", "CurrentStamina");
                 var changedAgain = ItemNetworkStateSerialization.CaptureVersioned(player, true);
                 samples.Add(new JObject
                 {
@@ -92,14 +118,12 @@ public static partial class GameplayTestSystemProbe
                 });
             }
 
-            Data_Player privateData = NetworkCapturePlayerData();
+            ItemData privateData = NetworkCapturePlayerData();
             var inventory = new Inventory_Data(new List<ItemSlot>
             {
                 new(0) { itemData = new Data_GeneralItem { IDName = "probe:private", Guid = 91002, Stack = new ItemStack { Amount = 5 } } }
             }, "private");
-            privateData._inventoryData["private"] = inventory;
-            privateData.ModuleDataDic["inventory"] = new Inventory_ModuleData
-            { StableName = "inventory", ModuleId = "Inventory", Data = privateData._inventoryData };
+            GetTestActorInventories(privateData)["private"] = inventory;
             player.BindData(privateData);
             ulong publicBefore = Signature(privateData, true), privateBefore = Signature(privateData, false);
             byte[] privateBytes = PrivatePayload(privateData);
@@ -115,19 +139,17 @@ public static partial class GameplayTestSystemProbe
                     !PrivatePayload(privateData).SequenceEqual(privateBytes)
             };
 
-            Data_Player normalized = NetworkCapturePlayerData();
-            normalized._inventoryData = null;
+            ItemData normalized = NetworkCapturePlayerData();
+            GetTestActorInventories(normalized);
+            var normalizedInventory = (Inventory_ModuleData)normalized.ModuleDataDic["test:inventory"];
+            normalizedInventory.Data = null;
             ulong nullSignature = Signature(normalized, false);
             byte[] nullPayload = PrivatePayload(normalized);
-            normalized._inventoryData = new Dictionary<string, Inventory_Data>();
+            normalizedInventory.Data = new Dictionary<string, Inventory_Data>();
             result["nullInventoryNormalized"] = Signature(normalized, false) == nullSignature &&
                 PrivatePayload(normalized).SequenceEqual(nullPayload);
             visiting.Clear();
             bool derivedPlayer = ItemRuntimeStateFingerprint.TryCalculate(new GameplayTestCaptureExtendedPlayer(), false, true, visiting, out _);
-            normalized.Speed = new GameplayTestCaptureExtendedSpeed();
-            visiting.Clear();
-            bool derivedSpeed = ItemRuntimeStateFingerprint.TryCalculate(normalized, false, true, visiting, out _);
-            normalized.Speed = new GameValue_float();
             normalized.ModuleDataDic["unknown"] = new GameplayTestCaptureUnknownModuleData
             { StableName = "unknown", ModuleId = "probe:unknown" };
             using (ModuleInstanceStateCodecs.Register(new GameplayTestCaptureUnknownCodec()))
@@ -135,7 +157,7 @@ public static partial class GameplayTestSystemProbe
                 visiting.Clear();
                 bool unknownCodec = ItemRuntimeStateFingerprint.TryCalculate(normalized, false, true, visiting, out _);
                 player.BindData(normalized);
-                result["unsupportedFallsBack"] = !derivedPlayer && !derivedSpeed && !unknownCodec &&
+                result["unsupportedFallsBack"] = !derivedPlayer && !unknownCodec &&
                     !ItemNetworkStateSerialization.CaptureVersioned(player, true).Reusable;
             }
             return result;
@@ -152,7 +174,7 @@ public static partial class GameplayTestSystemProbe
     {
         var root = new GameObject("network-public-save-probe") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
-        Player player = root.AddComponent<Player>();
+        Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
         player.BindData(NetworkCapturePlayerData());
         var optimized = root.AddComponent<GameplayTestNetworkPublicSaveCounter>();
         optimized.ModuleInit(player, new Ex_ModData_MemoryPackable
@@ -318,7 +340,7 @@ public static partial class GameplayTestSystemProbe
 
 #region 快照缓存测试替身
 
-internal sealed class GameplayTestCaptureExtendedPlayer : Data_Player { }
+internal sealed class GameplayTestCaptureExtendedPlayer : Data_GeneralItem { }
 internal sealed class GameplayTestCaptureExtendedSpeed : GameValue_float { }
 internal sealed class GameplayTestCaptureExtendedInventory : Inventory_Data
 {

@@ -105,8 +105,8 @@ public class SaveMenuRightMenuUI : SingletonAutoMono<SaveMenuRightMenuUI>
         }
         else
         {
-            if (manager.SaveData?.PlayerData_Dict == null ||
-                !manager.SaveData.PlayerData_Dict.Remove(SelectInfo.Name))
+            if (manager.SaveData?.ProfileActorData == null ||
+                !manager.SaveData.ProfileActorData.Remove(SelectInfo.Name))
                 return;
             if (string.Equals(manager.CurrentContrrolPlayerName, SelectInfo.Name,
                     System.StringComparison.Ordinal))

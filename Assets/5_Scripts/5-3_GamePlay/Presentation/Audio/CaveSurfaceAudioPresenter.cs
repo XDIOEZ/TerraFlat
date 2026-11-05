@@ -27,7 +27,7 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
     private GameSaveData cachedSave;
     private string listenerWorldKey, surfaceWorldKey;
     private long cachedRevision = -1;
-    private Player localPlayer;
+    private Item localPlayer;
     private float sampleElapsed;
     private float sampledRain, sampledWind;
     private bool hasRainSample;
@@ -54,9 +54,9 @@ public sealed class CaveSurfaceAudioPresenter : IDisposable
 
     #region 本机听者与地表声场
 
-    public void Advance(Player player, float deltaTime)
+    public void Advance(Item player, float deltaTime)
     {
-        if (player == null || !player.IsLocalProfile || !player.isActiveAndEnabled)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || !player.isActiveAndEnabled)
         {
             if (listenerWorldKey != null) Dispose();
             return;

@@ -135,7 +135,7 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
 
             // 根据保存的面板状态决定是否提前初始化UI
             // 如果面板之前是打开的，则在Load阶段预先创建，否则延迟到需要时再创建
-            if (currentInventory.Data != null && currentInventory.Data.PanelIsOpen && (item is not Player player || player.IsLocalProfile))
+            if (currentInventory.Data != null && currentInventory.Data.PanelIsOpen && (!RuntimeAiEntityUtility.IsAiEntity(item) || ActorProfileRegistry.IsLocallyControlled(item)))
             {
                 EnsurePanelCreated(currentInventory);
                 NewMethod(currentInventory);
@@ -143,6 +143,8 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
         }
         Data.NotifyInventoryMapStructureChanged();
         // 所有容器初始化完成后统一绑定，避免每个容器重复重绑整组输入。
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundInventoryPanels;
+        ActorProfileRegistry.GetBinding(item).Changed += RefreshControlBoundInventoryPanels;
         BindController();
 
         // 获取交互模块引用
@@ -170,9 +172,10 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
     /// <summary>卸载容器时解除旧交互桥接并清理临时转移目标。</summary>
     protected override void OnUnload()
     {
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundInventoryPanels;
         UnbindInteractionReceiver();
 
-        if (item is Player player)
+        if ((item is Item player && ActorIdentity.IsPlayer(player)))
             PlayerCarryCapacityUtility.ClearOverweightSlowdown(player);
 
         // 所有 Inventory 都持有所属 Item 与输入监听；卸载开始后立即解除，
@@ -229,9 +232,17 @@ public partial class Mod_Inventory : Module, IInventory, IInstanceUI, IInteracta
         return currentInventory.EnsurePanelCreated();
     }
 
+    private void RefreshControlBoundInventoryPanels()
+    {
+        BindController();
+        if (!ActorProfileRegistry.IsLocallyControlled(item))
+            foreach (var inventory in inventoryRefDic.Values) inventory?.ReleaseRuntimePanel();
+        PlayerCarryCapacityUtility.RefreshOverweightSlowdown(item);
+    }
+
     public virtual void BindController()
     {
-        if (item is Player networkPlayer && !networkPlayer.IsLocalProfile)
+        if (RuntimeAiEntityUtility.IsAiEntity(item) && !ActorProfileRegistry.IsLocallyControlled(item))
         { foreach (Inventory container in inventoryRefDic.Values) container?.UnbindController(); return; }
         Mod_GameController gameController = null;
         if (item?.itemMods?.ContainsKey_ID(ModText.Controller) == true)

@@ -229,7 +229,7 @@ public sealed class MonsterManager : MonoBehaviour
     /// <summary>注册一个已进入 ItemMgr 生命周期的怪物；重复注册不产生副作用。</summary>
     public void Register(Item item)
     {
-        if (item == null || item.DestructionHandled || _registrations.ContainsKey(item) ||
+        if (item == null || item.DestructionHandled || ActorProfileRegistry.IsProfileBound(item) || _registrations.ContainsKey(item) ||
             string.IsNullOrEmpty(_ownedWorld) || item.gameObject.scene.name != _ownedWorld)
             return;
 

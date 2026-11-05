@@ -101,11 +101,11 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
     }
 
     // 同坐标使用真实地面工厂、自然实体入口和独立 PhysicsScene，不重算各系统规则。
-    private static IEnumerator Capture(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator Capture(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         Scene initialScene = SceneManager.GetActiveScene();
-        string first = player.Data.CurrentSceneName;
+        string first = player.itemData.GetActorProfileMetadata().WorldKey;
         global::WorldAddress address = global::WorldAddress.FromWorldKey(first);
         string second = address.WithDimension(address.IsSurface ? global::WorldAddress.CaveDimensionId : global::WorldAddress.SurfaceDimensionId).WorldKey;
         Vector2 point = WorldLocalPresentation.ToLogical((Vector2)player.transform.position) + Vector2.right * 24f;
@@ -223,7 +223,7 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
             result["weatherOwnersUnchanged"] = ReferenceEquals(a, WeatherMgr.GetForWorld(first, false)) &&
                 ReferenceEquals(b, WeatherMgr.GetForWorld(second, false));
             result["sceneUnchanged"] = SceneManager.GetActiveScene() == initialScene;
-            result["localPlayerUnchanged"] = ReferenceEquals(player, ItemMgr.Instance.User_Player);
+            result["localPlayerUnchanged"] = ReferenceEquals(player, ItemMgr.Instance.LocalControlledActor);
             completed(result);
         }
     }

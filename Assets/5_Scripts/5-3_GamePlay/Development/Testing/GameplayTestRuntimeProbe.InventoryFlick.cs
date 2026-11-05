@@ -13,7 +13,7 @@ public static partial class GameplayTestRuntimeProbe
 {
     #region 装备窗口快捷转移现场
     // 使用正式装备窗口生命周期，不由夹具手动登记目标，防止漏接打开入口却让测试通过。
-    private static JObject CaptureInventoryEquipmentQuickTransfer(Player player, JObject args)
+    private static JObject CaptureInventoryEquipmentQuickTransfer(Item player, JObject args)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "shift");
         Inventory previousLast = Inventory.LastOpenedContainer;
@@ -65,7 +65,7 @@ public static partial class GameplayTestRuntimeProbe
 
     #region 方向甩动独立库存现场
     // 临时正式面板只提供真实屏幕坐标，选择和提交均调用生产接口，业务期望由 Lua 持有。
-    private static JObject CaptureInventoryDirectionalFlick(Player player, JObject args)
+    private static JObject CaptureInventoryDirectionalFlick(Item player, JObject args)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "right");
         if (mode.StartsWith("window_", StringComparison.Ordinal)) return CaptureInventoryFlickWindow(mode);
@@ -308,7 +308,7 @@ public static partial class GameplayTestRuntimeProbe
     private static void RegisterFlickPointer() => RegisterAsync("inventory", "flick_pointer", CaptureFlickPointer);
 
     // 派发正式指针与拖拽事件，仅使用自有槽位和手部库存，Lua 检查结果。
-    private static IEnumerator CaptureFlickPointer(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureFlickPointer(Item player, JObject args, Action<JObject> completed)
     {
         string mode = GameplayTestSystemProbe.Text(args, "mode", "mouse_fast");
         var scope = new FlickPointerScope();

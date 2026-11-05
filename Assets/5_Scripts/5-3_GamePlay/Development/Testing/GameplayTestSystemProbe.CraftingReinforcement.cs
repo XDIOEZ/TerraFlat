@@ -116,7 +116,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject EntityPlacementDistance(JObject args) => EntityWithQuestPlayer(player =>
     {
-        player.BindData(new Data_Player { IDName = "probe:placement-distance" });
+        player.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "probe:placement-distance" }, null, null));
         var interaction = player.gameObject.AddComponent<Mod_InteractSender>();
         interaction.maxInteractDistance = 7.5f;
         var bag = player.gameObject.AddComponent<Mod_Inventory>();

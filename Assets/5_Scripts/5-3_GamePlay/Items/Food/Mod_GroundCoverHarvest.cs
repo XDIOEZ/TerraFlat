@@ -191,7 +191,7 @@ public sealed class Mod_GroundCoverHarvest : Module, IItemModuleDependencyBinder
         grass = default;
         cuttingGrass = false;
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.DestructionHandled ||
-            item.Owner is not Player actor || !actor.IsLocalProfile || actor.DestructionHandled ||
+            !(item.Owner is Item actor && ActorIdentity.IsPlayer(actor)) || !ActorProfileRegistry.IsLocallyControlled(actor) || actor.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
             return false;
 

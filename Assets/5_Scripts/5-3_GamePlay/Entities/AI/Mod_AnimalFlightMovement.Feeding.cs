@@ -178,7 +178,7 @@ public sealed partial class Mod_AnimalFlightMovement
         ItemMgr itemManager = ItemMgr.Instance;
         if (itemManager != null)
         {
-            foreach (Player player in itemManager.Player_DIC.Values)
+            foreach (Item player in itemManager.ProfileActors.Values)
             {
                 if (player == null || player == item || !player.gameObject.activeInHierarchy ||
                     !AIFleeUtility.IsWithinEscapeRange(body.position, player, threatDetector, baseRadius))
@@ -216,7 +216,7 @@ public sealed partial class Mod_AnimalFlightMovement
     private bool IsBirdThreat(Item candidate)
     {
         // Player 身份统一走项目数据 Tag，不依赖 Unity Tag。
-        if (candidate is Player || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true)
+        if (ActorIdentity.IsPlayer(candidate as Item) || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true)
             return true;
         if (candidate.itemData?.Tags == null)
             return false;

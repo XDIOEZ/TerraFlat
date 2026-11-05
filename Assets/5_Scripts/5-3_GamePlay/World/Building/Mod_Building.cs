@@ -113,7 +113,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
     private bool _dismantlePending;
     private bool _ghostCreationFailed;
     private Mod_GameController _ownerController;
-    private Player _placementActor;
+    private Item _placementActor;
     private bool _placementMirrorX;
     private bool _rotationInputBound;
     private bool _ghostBaseFlipX;
@@ -473,10 +473,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             colliders[i].enabled = enable;
     }
 
-    private Player ResolvePlacementActor()
+    private Item ResolvePlacementActor()
     {
         Item owner = item?.Owner;
-        return owner as Player ?? owner?.GetComponentInParent<Player>();
+        return ActorProfileRegistry.GetProfileActorOrNull(owner as Item) ?? owner?.GetComponentInParent<Item>();
     }
 
     private void ApplySourceAmount(float amount)
@@ -757,7 +757,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule, IIncomingDamage
             Mathf.FloorToInt(position.x),
             Mathf.FloorToInt(position.y)));
 
-    private Vector3 NormalizeRequestedPlacement(Vector3 position, Player actor = null)
+    private Vector3 NormalizeRequestedPlacement(Vector3 position, Item actor = null)
         => FlatWorld.Spaceflight.SpaceSession.Current?.TrySnapPlacement(item?.itemData, position, PlacementQuarterTurns,
                 out Vector2 snapped, out _, actor != null ? actor : ResolvePlacementActor()) == true
             ? new Vector3(snapped.x, snapped.y, 0f) : NormalizePlacement(position);

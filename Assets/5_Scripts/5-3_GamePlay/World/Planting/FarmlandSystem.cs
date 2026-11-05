@@ -79,7 +79,7 @@ public static partial class FarmlandSystem
         {
             foreach (Item candidate in occupancyBuffer)
             {
-                if (candidate == null || candidate is Player || candidate is Map || candidate.InHand ||
+                if (candidate == null || ActorIdentity.IsPlayer(candidate as Item) || candidate is Map || candidate.InHand ||
                     candidate.Owner != null || candidate.DestructionHandled || candidate.itemData?.Stack == null ||
                     candidate.itemData.Stack.CanBePickedUp ||
                     candidate.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building)?.IsGroundFacility == true)

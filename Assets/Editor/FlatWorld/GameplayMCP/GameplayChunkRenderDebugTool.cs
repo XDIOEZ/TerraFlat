@@ -54,7 +54,7 @@ namespace FlatWorld.GameplayMCP
         internal static object ReadStatus()
         {
             if (!GameplayMcpRuntime.TryGetPlayerContext(
-                    out Player player,
+                    out Item player,
                     out _,
                     out _,
                     out string error))

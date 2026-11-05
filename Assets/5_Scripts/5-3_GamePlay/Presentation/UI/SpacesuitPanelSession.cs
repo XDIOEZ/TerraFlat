@@ -27,7 +27,7 @@ public sealed class SpacesuitPanelSession : IDisposable
         // 玩家宇航服界面跨场景保留，其他实体的界面沿用场景生命周期。
         UIManager uiManager = UIManager.Instance;
         GameObject panelPrefab = GameRes.Instance.GetPrefab("UI_Spacesuit");
-        panel = actor is Player
+        panel = ActorIdentity.IsPlayer(actor as Item)
             ? uiManager.CreatePersistentPanelFromGameObject(panelPrefab)
             : uiManager.CreatePanelFromGameObject(panelPrefab);
         view = panel.GetComponent<MechanicalPanelView>() ?? throw new InvalidOperationException("宇航服面板缺少正式视图。");
@@ -106,7 +106,7 @@ public sealed class SpacesuitPanelSession : IDisposable
     private bool StillOwned()
     {
         if (actor == null) return false;
-        if (actor is Player player)
+        if ((actor is Item player && ActorIdentity.IsPlayer(player)))
             foreach (ItemData data in MachineInventoryCommands.OwnedSpacesuits(player)) if (ReferenceEquals(data, suit)) return true;
         return false;
     }
@@ -178,10 +178,10 @@ public sealed class SpacesuitPanelSession : IDisposable
 public static class SpacesuitCommands
 {
     #region 头盔权威意图
-    public static event Func<Player, int, bool, bool> RemoteHelmetRequested;
+    public static event Func<Item, int, bool, bool> RemoteHelmetRequested;
     public static bool SetHelmet(Item actor, int suitGuid, bool on)
     {
-        if (actor is not Player player) return false;
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player))) return false;
         if (!GameNetwork.HasStateAuthority) return RemoteHelmetRequested?.Invoke(player, suitGuid, on) == true;
         foreach (ItemData suit in MachineInventoryCommands.OwnedSpacesuits(player))
             if (suit.Guid == suitGuid)

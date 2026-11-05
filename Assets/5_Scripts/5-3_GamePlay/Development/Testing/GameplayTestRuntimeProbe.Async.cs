@@ -6,11 +6,11 @@ using Newtonsoft.Json.Linq;
 public static partial class GameplayTestRuntimeProbe
 {
     #region 跨帧采样登记
-    private static readonly Dictionary<string, Func<Player, JObject, Action<JObject>, IEnumerator>> asyncOperations = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Func<Item, JObject, Action<JObject>, IEnumerator>> asyncOperations = new(StringComparer.Ordinal);
     private static CaseScope currentCase;
 
     public static void RegisterAsync(string systemId, string operationId,
-        Func<Player, JObject, Action<JObject>, IEnumerator> handler)
+        Func<Item, JObject, Action<JObject>, IEnumerator> handler)
     {
         if (handler == null) throw new ArgumentNullException(nameof(handler));
         string key = Key(systemId, operationId);
@@ -23,7 +23,7 @@ public static partial class GameplayTestRuntimeProbe
         asyncOperations.Add(key, handler);
     }
 
-    public static IEnumerator CaptureAsync(Player player, string systemId, string operationId,
+    public static IEnumerator CaptureAsync(Item player, string systemId, string operationId,
         JObject arguments, Action<JObject> completed)
     {
         if (completed == null) throw new ArgumentNullException(nameof(completed));

@@ -12,13 +12,13 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
     #region 分帧世界归属现场
 
     // 活动场景保留地表，实际洞穴窗口与自有实体共同经过正式管理器的跨帧队列。
-    private static IEnumerator CaptureIncrementalWorldScope(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureIncrementalWorldScope(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         Scene initialScene = SceneManager.GetActiveScene();
         string initialWorld = GameplayWorldRegistry.ExecutionWorldKey;
         bool initialContext = GameplayWorldRegistry.HasExecutionContext;
-        global::WorldAddress sourceAddress = global::WorldAddress.FromWorldKey(player.Data.CurrentSceneName);
+        global::WorldAddress sourceAddress = global::WorldAddress.FromWorldKey(player.itemData.GetActorProfileMetadata().WorldKey);
         if (!sourceAddress.IsSurface || initialWorld != sourceAddress.WorldKey)
             throw new InvalidOperationException("分帧世界归属回归必须从本轮隔离地表启动。");
         string targetWorld = sourceAddress.WithDimension(global::WorldAddress.CaveDimensionId).WorldKey;
@@ -94,7 +94,7 @@ public static partial class GameplayTestWorldScopeRuntimeProbe
             }
             result["contextRestored"] = contextRestored;
             result["scenePreserved"] = scenePreserved && SceneManager.GetActiveScene() == initialScene;
-            result["localPlayerPreserved"] = ReferenceEquals(player, ItemMgr.Instance.User_Player);
+            result["localPlayerPreserved"] = ReferenceEquals(player, ItemMgr.Instance.LocalControlledActor);
             own.Dispose();
             result["resourcesRemoved"] = own.Resources.TrueForAll(handle => !NaturalEntityEcsService.Contains(handle));
             completed(result);
@@ -155,7 +155,7 @@ public partial class ChunkMgr
     #region 隔离回归的自有续步租约
 
     // 只向正式队列放入自有枚举器，世界选择、逐帧恢复及取消仍由生产管理器执行。
-    internal TestWorldBindingContinuation CreateTestWorldBindingContinuation(Player player, IEnumerator routine)
+    internal TestWorldBindingContinuation CreateTestWorldBindingContinuation(Item player, IEnumerator routine)
         => new(this, player, routine);
 
     internal sealed class TestWorldBindingContinuation : IDisposable
@@ -165,7 +165,7 @@ public partial class ChunkMgr
         private readonly RuntimeChunkBinding binding;
         private readonly ChunkView view;
         private bool disposed;
-        internal TestWorldBindingContinuation(ChunkMgr owner, Player player, IEnumerator routine)
+        internal TestWorldBindingContinuation(ChunkMgr owner, Item player, IEnumerator routine)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             this.owner = owner;

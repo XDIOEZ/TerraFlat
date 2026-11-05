@@ -46,10 +46,10 @@ namespace FlatWorld.Networking.Gameplay
         public override void OnStopServer()
         {
             RestoreSinglePlayerStreaming();
-            SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(displayName);
+            SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(profileId);
             UnbindNetworkRoll(endSession: true);
-            SpaceSessionForNetwork?.RemoveNetworkPassengerInput(displayName);
-            SpaceSessionForNetwork?.EndNetworkAttack(displayName);
+            SpaceSessionForNetwork?.RemoveNetworkPassengerInput(profileId);
+            SpaceSessionForNetwork?.EndNetworkAttack(profileId);
             if (!reusedLocalWorldPlayer && corePlayer != null && ItemMgr.Instance != null)
                 ItemMgr.Instance.ReleaseNetworkPlayer(corePlayer, persistData: true);
             corePlayer = null;
@@ -58,12 +58,12 @@ namespace FlatWorld.Networking.Gameplay
         [Server]
         public void RefreshSpaceAuthority()
         {
-            if (SpaceSessionForNetwork == null || !SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer)) return;
+            if (SpaceSessionForNetwork == null || !SpaceSessionForNetwork.TryGetNetworkObserver(profileId, out SpaceNetworkObserver observer)) return;
             if (!string.IsNullOrEmpty(authoritativeWorldKey) &&
                 (authoritativeWorldKey != observer.WorldKey || authoritativeInSpace != observer.InSpace))
             {
                 authoritativeWorldTransferPending = true;
-                SpaceSessionForNetwork.RemoveNetworkPassengerInput(displayName);
+                SpaceSessionForNetwork.RemoveNetworkPassengerInput(profileId);
             }
             if (observer.RealmRevision != authoritativeRealmRevision && !observer.InSpace)
             {
@@ -97,12 +97,12 @@ namespace FlatWorld.Networking.Gameplay
             if (observer.InSpace)
             {
                 key = SpaceSectorCoordinates.SceneKey(observer.Position.Sector);
-                target = SpaceMgr.Instance.BindAuthoritySector(displayName, observer.Position.Sector);
+                target = SpaceMgr.Instance.BindAuthoritySector(profileId, observer.Position.Sector);
             }
             else
             {
                 key = observer.WorldKey;
-                SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(displayName);
+                SpaceMgr.ExistingInstance?.ReleaseAuthoritySector(profileId);
                 target = GameplayWorldRegistry.GetOrCreate(key).Scene;
             }
             // 船内玩家保持本地物理世界，外部观察者仍管理地表和星区流送。
@@ -133,12 +133,12 @@ namespace FlatWorld.Networking.Gameplay
             }
             if (!target.IsValid() || !target.isLoaded) return;
             bool sceneChanged = corePlayer.gameObject.scene != target;
-            bool worldChanged = !string.Equals(corePlayer.Data.CurrentSceneName, key, StringComparison.Ordinal);
+            bool worldChanged = !string.Equals(corePlayer.itemData.GetActorProfileMetadata().WorldKey, key, StringComparison.Ordinal);
             ItemMgr manager = ItemMgr.GetExistingInstance();
             bool registeredWorldChanged = manager != null && corePlayer.itemData != null &&
                 manager.WorldRunTimeItems.TryGetValue(corePlayer.itemData.Guid, out Item registered) && registered == corePlayer &&
                 !string.Equals(GameplayWorldRegistry.GetItemWorldKey(corePlayer), key, StringComparison.Ordinal);
-            corePlayer.Data.CurrentSceneName = key;
+            corePlayer.itemData.GetActorProfileMetadata().WorldKey = key;
             if (sceneChanged)
             {
                 corePlayer.transform.SetParent(null, true);
@@ -159,7 +159,7 @@ namespace FlatWorld.Networking.Gameplay
                 for (int i = 0; i < passengers.Count; i++)
                 {
                     SpacePassengerState candidate = passengers[i];
-                    if (candidate != null && candidate.ProfileId == displayName)
+                    if (candidate != null && candidate.ProfileId == profileId)
                     {
                         passenger = candidate;
                         break;
@@ -168,7 +168,7 @@ namespace FlatWorld.Networking.Gameplay
             if (passenger == null || passenger.IsInSpace || passenger.Supported || passenger.SurfaceDescending) return;
             if (passenger.RealmRevision != authoritativeRealmRevision) return;
             Vector2 logical = (Vector2)WorldTopologyRuntime.NormalizePosition(authoritativePosition);
-            session.SetNetworkPlayerRealm(displayName, false, new SpaceSectorPosition(default, SpaceVector2.FromVector2(logical)), corePlayer?.Data?.CurrentSceneName ?? authoritativeWorldKey);
+            session.SetNetworkPlayerRealm(profileId, false, new SpaceSectorPosition(default, SpaceVector2.FromVector2(logical)), corePlayer?.itemData?.GetActorProfileMetadata().WorldKey ?? authoritativeWorldKey);
         }
         [Server]
         private void PublishServerPlayerState(bool force = false)
@@ -229,7 +229,7 @@ namespace FlatWorld.Networking.Gameplay
         public bool PrepareGroundCombat(SpaceNetworkIntentKind kind)
         {
             if (!isServer || IsInSpace || corePlayer == null || SpaceSessionForNetwork == null) return false;
-            if (!SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) ||
+            if (!SpaceSessionForNetwork.TryGetNetworkObserver(profileId, out SpaceNetworkObserver observer) ||
                 string.IsNullOrWhiteSpace(observer.WorldKey)) return false;
             if (!authoritativeGroundCombatPending || groundCombatFrozen)
             {
@@ -251,7 +251,7 @@ namespace FlatWorld.Networking.Gameplay
         public void CancelRejectedGroundCombat()
         {
             if (!isServer || !authoritativeGroundCombatPending) return;
-            SpaceSessionForNetwork?.EndNetworkAttack(displayName);
+            SpaceSessionForNetwork?.EndNetworkAttack(profileId);
             PublishServerPlayerState(force: true);
             authoritativeGroundCombatPending = false; serverGroundAttackHeld = false; groundCombatFrozen = false;
             if (!IsInSpace && !HasServerPickupTransaction) MaintainPlayerAuthority();
@@ -261,10 +261,10 @@ namespace FlatWorld.Networking.Gameplay
             if (isServer && authoritativeGroundCombatPending)
             {
                 using var worldScope = NetworkGameplayWorldScope.Use(this);
-                bool validWorld = SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out SpaceNetworkObserver observer) &&
+                bool validWorld = SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(profileId, out SpaceNetworkObserver observer) &&
                     !observer.InSpace && !string.IsNullOrWhiteSpace(observer.WorldKey);
                 if ((!validWorld || Time.unscaledTime - lastGroundCombatInput > 1f) && serverGroundAttackHeld)
-                { SpaceSessionForNetwork?.EndNetworkAttack(displayName); serverGroundAttackHeld = false; groundCombatReleaseAfter = Time.unscaledTime + 1f; }
+                { SpaceSessionForNetwork?.EndNetworkAttack(profileId); serverGroundAttackHeld = false; groundCombatReleaseAfter = Time.unscaledTime + 1f; }
                 if (!serverGroundAttackHeld && !groundCombatFrozen && Time.unscaledTime >= groundCombatReleaseAfter)
                 {
                     Item held = corePlayer?.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar)?.CurentSelectItem;
@@ -273,7 +273,7 @@ namespace FlatWorld.Networking.Gameplay
                     if ((cold == null || cold.CurrentState == AttackState.Idle) && (damage == null || !damage.IsDamageEnabled()) &&
                         corePlayer?.itemMods.GetMod_ByID<Mod_ShieldCombat>(Mod_ShieldCombat.ModuleId)?.HasActiveAction != true)
                     {
-                        SpaceSessionForNetwork?.EndNetworkAttack(displayName);
+                        SpaceSessionForNetwork?.EndNetworkAttack(profileId);
                         groundCombatSentHashes.Clear();
                         PublishServerPlayerState(force: true);
                         if (!IsInSpace && !HasServerPickupTransaction) MaintainPlayerAuthority();
@@ -296,7 +296,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (hash == lastAppliedCombatStateHash && hash != lastClientCombatAck)
                 {
                     lastClientCombatAck = hash;
-                    SpaceNetworkBridge.SendIntent(displayName, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.CombatStateApplied, Action = unchecked((int)hash) });
+                    SpaceNetworkBridge.SendIntent(profileId, new SpaceNetworkIntent { Kind = SpaceNetworkIntentKind.CombatStateApplied, Action = unchecked((int)hash) });
                 }
             }
         }
@@ -345,7 +345,7 @@ namespace FlatWorld.Networking.Gameplay
             // 服务端观察者丢失必须拒绝请求，不能退回旧 SyncVar 假装仍在原世界。
             if (isServer)
             {
-                if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(displayName, out observer))
+                if (SpaceSessionForNetwork != null && SpaceSessionForNetwork.TryGetNetworkObserver(profileId, out observer))
                     return true;
                 observer = default;
                 return false;
@@ -353,7 +353,7 @@ namespace FlatWorld.Networking.Gameplay
             observer = new SpaceNetworkObserver { InSpace = IsInSpace, Position = AuthoritativeSpacePosition,
                 Velocity = new SpaceVector2(authoritativeSpaceVelocityX, authoritativeSpaceVelocityY),
                 ShipId = authoritativeShipId, WorldKey = authoritativeWorldKey, RealmRevision = authoritativeRealmRevision };
-            return !string.IsNullOrWhiteSpace(displayName);
+            return !string.IsNullOrWhiteSpace(profileId);
         }
         public bool SharesLocalRealm()
         {
@@ -377,7 +377,7 @@ namespace FlatWorld.Networking.Gameplay
             SetNetworkVisibility(visible);
             if (!visible || !IsInSpace || SpaceSessionForNetwork == null) return;
             Vector2 projected = SpaceSessionForNetwork.ProjectPosition(AuthoritativeSpacePosition);
-            if (!isOwned && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(displayName, out Vector2 presentation))
+            if (!isOwned && SpaceSessionForNetwork.TryGetPassengerPresentationPosition(profileId, out Vector2 presentation))
                 projected = presentation;
             if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;
             if (!isOwned)
@@ -421,7 +421,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
             Vector2 projected;
-            if (spacePresentationSession.TryGetPassengerPresentationPosition(displayName, out Vector2 presentation)) projected = presentation;
+            if (spacePresentationSession.TryGetPassengerPresentationPosition(profileId, out Vector2 presentation)) projected = presentation;
             else if (IsInSpace) projected = spacePresentationSession.ProjectPosition(AuthoritativeSpacePosition);
             else return;
             if (!float.IsFinite(projected.x) || !float.IsFinite(projected.y)) return;

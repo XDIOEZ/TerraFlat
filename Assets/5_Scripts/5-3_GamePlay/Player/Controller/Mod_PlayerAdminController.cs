@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 玩家管理员输入、时间和快捷栏适配；权限由独立通用模块提供。
 /// </summary>
-public class Mod_PlayerAdminController : Module
+public class Mod_PlayerAdminController : Module, IActorLocalControlModule
 {
     #region 常量与字段
 
@@ -17,7 +17,7 @@ public class Mod_PlayerAdminController : Module
 
     [Header("核心引用")]
     [Tooltip("要控制的玩家组件")]
-    public Player player;
+    public Item player;
 
     [Tooltip("玩家特质模块")]
     public Mod_PlayerTraits playerTraits;
@@ -76,10 +76,10 @@ public class Mod_PlayerAdminController : Module
     protected override void OnLoad()
     {
         // 尝试自动获取 Player 引用
-        if (player == null) player = GetComponentInParent<Player>();
+        if (player == null) player = GetComponentInParent<Item>();
         if (player == null)
         {
-            Debug.LogError($"[Mod_PlayerAdminController] 初始化失败：未找到 Player 组件！GameObject: {name}");
+            Debug.LogError($"[Mod_PlayerAdminController] 初始化失败：未找到 Item 组件！GameObject: {name}");
             return;
         }
 
@@ -105,13 +105,13 @@ public class Mod_PlayerAdminController : Module
 
     private void OnDestroy()
     {
-        Time.timeScale = initialUnityTimeScale;
+        if (IsRuntimeLoaded) Time.timeScale = initialUnityTimeScale;
     }
 
     private void Update()
     {
         // 基础检查：确保 Player 数据存在
-        if (player?.Data == null) return;
+        if (!IsRuntimeLoaded || !ActorProfileRegistry.IsLocallyControlled(item)) return;
 
         UpdateTimeScaleHint();
 
@@ -191,7 +191,7 @@ public class Mod_PlayerAdminController : Module
     /// <summary>F2 一次完成创造背包初始化，并确保玩家主背包面板处于打开状态。</summary>
     private void OpenCreativeInventoryShortcut()
     {
-        if (player == null || !player.IsLocalProfile)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player))
             return;
 
         if (playerTraits == null && player.itemMods != null)
@@ -226,7 +226,7 @@ public class Mod_PlayerAdminController : Module
     private void ResolveAdminRuntimeReferences()
     {
         if (player == null)
-            player = GetComponentInParent<Player>();
+            player = GetComponentInParent<Item>();
 
         if (playerMover == null)
         {

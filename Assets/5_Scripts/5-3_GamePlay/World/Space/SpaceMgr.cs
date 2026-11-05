@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -208,7 +208,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     private void SynchronizeLocalPlayerOwnershipAndActivateSectorScene(SpaceSession session, SectorView view)
     {
         EnsureSpaceSceneTime(view.Scene.name);
-        Player player = ItemMgr.Instance?.User_Player;
+        Item player = ItemMgr.Instance?.LocalControlledActor;
         // 激活通知前同步自由玩家及子物品，船内玩家仍保留自己的局部世界。
         if (player != null && !session.IsPlayerInShipInteriorWorld(player))
         {
@@ -223,14 +223,14 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     {
         PruneRetainedSectors(session);
         foreach (SectorView view in sectors.Values) view.Wanted = false;
-        Player player = ItemMgr.Instance?.User_Player;
-        bool localInSpace = player != null && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver localObserver) && localObserver.InSpace;
+        Item player = ItemMgr.Instance?.LocalControlledActor;
+        bool localInSpace = player != null && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver localObserver) && localObserver.InSpace;
         localSectorStreaming.BeginFrame();
-        if (localInSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver local))
-            localSectorStreaming.Observe(player.ProfileName, local.Position, local.Velocity);
+        if (localInSpace && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver local))
+            localSectorStreaming.Observe(ActorProfileRegistry.GetProfileId(player), local.Position, local.Velocity);
         localSectorStreaming.EndFrame();
         foreach (SpaceSectorId sector in localSectorStreaming.Required) EnsureSectorScene(session, sector);
-        if (localInSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer))
+        if (localInSpace && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer))
         {
             SectorView current = EnsureSectorScene(session, observer.Position.Sector);
             if (!current.Unloading && current.Scene.IsValid() && current.Scene.isLoaded)
@@ -247,7 +247,7 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
         view.Unloading = true;
         // 高速跳过多个区时先保护真实玩家，资源卸载不能顺带销毁角色。
         if (ItemMgr.Instance != null)
-            foreach (Player player in ItemMgr.Instance.Player_DIC.Values)
+            foreach (Item player in ItemMgr.Instance.ProfileActors.Values)
                 if (player != null && player.gameObject.scene == view.Scene)
                 { player.transform.SetParent(null, true); PersistentRuntimeObjectHierarchy.MoveToPersistentCategory(player.gameObject, PersistentRuntimeObjectCategory.Players); }
         if (view.Loading != null) StopCoroutine(view.Loading);
@@ -300,8 +300,8 @@ public partial class SpaceMgr : SingletonAutoMono<SpaceMgr>
     public IEnumerator LoadPresentation()
     {
         SpaceSession session = SpaceSession.EnsureLoaded();
-        Player player = ItemMgr.Instance?.User_Player;
-        SpaceSectorId sector = player != null && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer)
+        Item player = ItemMgr.Instance?.LocalControlledActor;
+        SpaceSectorId sector = player != null && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer)
             ? observer.Position.Sector : session.ViewSector;
         if (player == null && session.TryGetNetworkObserver(SaveDataMgr.Instance.CurrentContrrolPlayerName, out SpaceNetworkObserver saved))
             sector = saved.Position.Sector;

@@ -56,7 +56,7 @@ public class MortarLogic : MachineLogic
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual bool Strike(Player actor)
+    public virtual bool Strike(Item actor)
     {
         if (!EnableStrikeGesture || MachineInventory.IsBeingDragged(Bowl)) return false;
         RefreshRecipe();
@@ -77,7 +77,7 @@ public class MortarLogic : MachineLogic
         return true;
     }
 
-    public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Strike(actor);
+    public override bool Execute(string operation, string argument, Item actor) => operation == "work" && Strike(actor);
     protected override void OnInventoryChanged(ItemSlot slot)
     {
         if (processing) return;

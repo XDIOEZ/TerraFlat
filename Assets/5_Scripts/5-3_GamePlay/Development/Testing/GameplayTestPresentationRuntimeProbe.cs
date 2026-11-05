@@ -36,7 +36,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     #endregion
 
     #region 生存状态条现场采样
-    private static JObject CaptureStatusHudReadability(Player player, JObject args)
+    private static JObject CaptureStatusHudReadability(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
@@ -171,7 +171,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
     #region 本地浮点偏好写入采样
     // 通过正式Provider采样缓存、持久值和分域通知，每项结束恢复原键及缓存。
-    private static JObject CaptureLocalFloatPreferencePersistence(Player player, JObject args)
+    private static JObject CaptureLocalFloatPreferencePersistence(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var specifications = new[]
@@ -258,7 +258,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         public BasePanel Panel;
         private bool disposed;
 
-        public SettingsFixture(Player player)
+        public SettingsFixture(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             Ui = UIManager.ExistingInstance ?? throw new InvalidOperationException("正式 UIManager 尚未就绪。");
@@ -307,7 +307,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         }
     }
 
-    private static IEnumerator CaptureSettings(Player player, JObject args, Action<JObject> complete)
+    private static IEnumerator CaptureSettings(Item player, JObject args, Action<JObject> complete)
     {
         if (activeSettings != null) throw new InvalidOperationException("前一设置现场还未释放。");
         var fixture = new SettingsFixture(player);
@@ -554,7 +554,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         }));
     }
 
-    private static JObject CloseSettings(Player player, JObject args)
+    private static JObject CloseSettings(Item player, JObject args)
     {
         SettingsFixture fixture = activeSettings ?? throw new InvalidOperationException("没有可关闭的自有设置现场。");
         fixture.Dispose();
@@ -574,7 +574,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     #region 新世界窗口关闭流程回归
 
     /// <summary>通过正式新世界窗口验证世界页右上关闭只回到名称页，名称页右上仍关闭窗口。</summary>
-    private static JObject CaptureNewGameWindowClose(Player player, JObject args)
+    private static JObject CaptureNewGameWindowClose(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         UIManager ui = UIManager.ExistingInstance ?? throw new InvalidOperationException("正式 UIManager 尚未就绪。");

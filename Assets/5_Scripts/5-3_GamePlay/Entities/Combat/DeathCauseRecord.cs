@@ -52,10 +52,10 @@ public partial class DeathCauseRecord
     public static DeathCauseRecord CaptureAttack(Item weapon, Item attacker, DeathCauseRecord result = null)
     {
         result ??= new DeathCauseRecord { CauseId = "combat" };
-        if (attacker is Player player)
+        if ((attacker is Item player && ActorIdentity.IsPlayer(player)))
         {
             result.AttackerItemId = null;
-            result.AttackerName = player.ProfileName;
+            result.AttackerName = ActorProfileRegistry.GetProfileId(player);
         }
         else
         {

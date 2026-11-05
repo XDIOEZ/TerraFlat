@@ -40,7 +40,7 @@ public partial class Mod_ItemPicker
     private void SynchronizePickupCapacitySources()
     {
         using var lease = ListPool<Inventory_Data>.Get(out var sources);
-        if (item is Player player) PlayerCarryCapacityUtility.CollectCarriedInventories(player, sources);
+        if ((item is Item player && ActorIdentity.IsPlayer(player))) PlayerCarryCapacityUtility.CollectCarriedInventories(player, sources);
         foreach (IInventory provider in AddTargetInventories)
         {
             Inventory_Data data = provider?.GetDefaultTargetInventory()?.Data;

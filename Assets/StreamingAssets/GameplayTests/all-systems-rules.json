@@ -5,6 +5,12 @@
   "continueAfterFailure": true,
   "cases": [
     {
+      "id": "ai_actor_control_rules",
+      "name": "角色独占控制与旧库存迁移",
+      "luaPath": "GameplayTests/Systems/AI/actor-control.lua",
+      "enabled": true
+    },
+    {
       "id": "ai_rules",
       "name": "AI生物规则与边界",
       "luaPath": "GameplayTests/Systems/AI/rules.lua",

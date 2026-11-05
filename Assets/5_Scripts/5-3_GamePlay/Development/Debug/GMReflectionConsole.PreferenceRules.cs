@@ -19,37 +19,37 @@ public sealed partial class GMReflectionConsole
     private static JObject CapturePreferencePlayerRules(JObject arguments)
     {
         var roots = new List<GameObject>(3);
-        var fixtures = new List<Player>(3);
-        Player CreatePlayer(string profile, bool local)
+        var fixtures = new List<Item>(3);
+        Item CreatePlayer(string profile, bool local)
         {
             var root = new GameObject("GM preference rules " + profile);
             root.SetActive(false);
             roots.Add(root);
-            Player player = root.AddComponent<Player>();
+            Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
             fixtures.Add(player);
-            player.SetProfileContext(local, false, profile);
+            ActorProfileRegistry.BindProfile(player, local, false, profile);
             return player;
         }
 
         try
         {
-            Player remote = CreatePlayer("gm_remote", false);
-            Player local = CreatePlayer("gm_local", true);
-            Player destroyed = CreatePlayer("gm_destroyed", true);
-            var players = new Dictionary<string, Player>();
+            Item remote = CreatePlayer("gm_remote", false);
+            Item local = CreatePlayer("gm_local", true);
+            Item destroyed = CreatePlayer("gm_destroyed", true);
+            var players = new Dictionary<string, Item>();
             bool emptyHasPlayer = FindPreferencePlayer(players) != null;
-            players.Add(remote.ProfileId, remote);
+            players.Add(ActorProfileRegistry.GetProfileId(remote), remote);
             bool remoteOnlyHasPlayer = FindPreferencePlayer(players) != null;
-            players.Add(local.ProfileId, local);
-            string remoteFirstProfile = FindPreferencePlayer(players)?.ProfileId;
+            players.Add(ActorProfileRegistry.GetProfileId(local), local);
+            string remoteFirstProfile = ActorProfileRegistry.GetProfileId(FindPreferencePlayer(players));
             players.Clear();
-            players.Add(local.ProfileId, local);
-            players.Add(remote.ProfileId, remote);
-            string localFirstProfile = FindPreferencePlayer(players)?.ProfileId;
+            players.Add(ActorProfileRegistry.GetProfileId(local), local);
+            players.Add(ActorProfileRegistry.GetProfileId(remote), remote);
+            string localFirstProfile = ActorProfileRegistry.GetProfileId(FindPreferencePlayer(players));
             players.Clear();
             players.Add("missing", null);
             players.Add("destroyed", destroyed);
-            players.Add(local.ProfileId, local);
+            players.Add(ActorProfileRegistry.GetProfileId(local), local);
             destroyed.PrepareForDespawn(false);
             Object.DestroyImmediate(destroyed.gameObject);
 
@@ -60,14 +60,14 @@ public sealed partial class GMReflectionConsole
                 ["remoteOnlyHasPlayer"] = remoteOnlyHasPlayer,
                 ["remoteFirstProfile"] = remoteFirstProfile,
                 ["localFirstProfile"] = localFirstProfile,
-                ["staleEntriesProfile"] = FindPreferencePlayer(players)?.ProfileId,
+                ["staleEntriesProfile"] = ActorProfileRegistry.GetProfileId(FindPreferencePlayer(players)),
                 ["selectedInactive"] = !local.gameObject.activeSelf,
                 ["selectedInitialized"] = local.IsInitialized
             };
         }
         finally
         {
-            foreach (Player player in fixtures)
+            foreach (Item player in fixtures)
             {
                 if (player != null)
                     player.PrepareForDespawn(false);

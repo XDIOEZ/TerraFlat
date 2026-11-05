@@ -86,10 +86,10 @@ public sealed partial class GMReflectionConsole
                             definition.Id)))));
             return;
         }
-        Player player = ItemMgr.GetInstance()?.User_Player;
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         Mod_PlayerTraits traits = player?.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
-        if (player == null || !player.IsLocalProfile || player.Data == null || traits == null ||
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null || traits == null ||
             manager == null || !ChunkMgr.IsSurfaceStreamingScene || !manager.IsWorldModelRuntimeActive ||
             !manager.IsAuthoritativeSimulation)
         {
@@ -105,7 +105,7 @@ public sealed partial class GMReflectionConsole
 
     #region 可取消地块搜索
 
-    private IEnumerator LocateTileAndTeleport(Player player, Mod_PlayerTraits traits, ChunkMgr manager,
+    private IEnumerator LocateTileAndTeleport(Item player, Mod_PlayerTraits traits, ChunkMgr manager,
         RuntimeTileDefinition definition, CancellationTokenSource cancellation)
     {
         bool teleported = false;
@@ -213,7 +213,7 @@ public sealed partial class GMReflectionConsole
             if (teleported) Debug.Log($"[GM] 已传送到地块 {definition.Id}，逻辑落点={destination}");
 
             bool IsSameWorld() => this != null && player != null && traits != null && manager != null &&
-                ItemMgr.GetInstance()?.User_Player == player && player.Data != null &&
+                ItemMgr.GetInstance()?.LocalControlledActor == player && player.itemData != null &&
                 ReferenceEquals(manager.WorldRuntime, world) && world.Epoch == epoch &&
                 manager.IsWorldModelRuntimeActive && manager.IsAuthoritativeSimulation &&
                 manager.ResolveWorldAddress(player.transform.position).DimensionId == dimension;

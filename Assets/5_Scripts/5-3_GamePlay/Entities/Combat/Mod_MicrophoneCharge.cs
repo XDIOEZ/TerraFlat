@@ -99,7 +99,7 @@ public sealed class Mod_MicrophoneCharge : Module, IProjectileChargeModifier, II
     public void StartCharge()
     {
         CancelCharge();
-        if (item?.Owner is not Player player || !player.IsLocalProfile)
+        if (!(item?.Owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
             return;
 
         _charging = true;
@@ -115,7 +115,7 @@ public sealed class Mod_MicrophoneCharge : Module, IProjectileChargeModifier, II
     {
         if (!_charging)
             return;
-        if (!Application.isFocused || item?.Owner is not Player player || !player.IsLocalProfile)
+        if (!Application.isFocused || !(item?.Owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player))
         {
             CancelCharge();
             return;

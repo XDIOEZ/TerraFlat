@@ -10,7 +10,7 @@ public static class ActorIdentity
 
         Item owner = candidate.Owner != null ? candidate.Owner : candidate;
         // 手持物通过真实拥有者继承玩家身份，普通物品直接返回查询结果。
-        return owner is Player || owner.TryGetComponent<Player>(out _);
+        return ActorProfileRegistry.IsProfileBound(owner);
     }
 
     #endregion

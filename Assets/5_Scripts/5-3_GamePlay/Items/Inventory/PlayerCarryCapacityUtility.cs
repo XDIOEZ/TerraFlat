@@ -73,7 +73,7 @@ public static class PlayerCarryCapacityUtility
     private const string OverweightBuffSource = "inventory.overweight";
 
     /// <summary>读取玩家当前随身重量、体积和主背包上限。</summary>
-    public static bool TryGetSnapshot(Player player, out PlayerCarryCapacitySnapshot snapshot)
+    public static bool TryGetSnapshot(Item player, out PlayerCarryCapacitySnapshot snapshot)
     {
         snapshot = default;
         if (player == null || player.itemMods == null)
@@ -101,7 +101,7 @@ public static class PlayerCarryCapacityUtility
     }
 
     /// <summary>收集实际随身库存并按数据引用去重，不把配方预览或世界工作台计入。</summary>
-    public static void CollectCarriedInventories(Player player, List<Inventory_Data> inventories)
+    public static void CollectCarriedInventories(Item player, List<Inventory_Data> inventories)
     {
         inventories.Clear();
         if (player == null || player.itemMods == null)
@@ -127,15 +127,15 @@ public static class PlayerCarryCapacityUtility
     #region 本地携带容量上限调整
 
     /// <summary>仅为本地权威玩家更新实际负重策略，保留体积、槽位和创造状态。</summary>
-    public static bool TrySetMaxWeight(Player player, float maxWeight, out string failureReason)
+    public static bool TrySetMaxWeight(Item player, float maxWeight, out string failureReason)
         => TrySetCarryCapacity(player, maxWeight, setWeight: true, out failureReason);
 
     /// <summary>仅为本地权威玩家更新实际体积上限，保留重量、槽位和创造状态。</summary>
-    public static bool TrySetMaxVolume(Player player, float maxVolume, out string failureReason)
+    public static bool TrySetMaxVolume(Item player, float maxVolume, out string failureReason)
         => TrySetCarryCapacity(player, maxVolume, setWeight: false, out failureReason);
 
     /// <summary>重量与体积共用资格检查，每次仅替换指定容量并按真实重量刷新超重状态。</summary>
-    private static bool TrySetCarryCapacity(Player player, float capacity, bool setWeight, out string failureReason)
+    private static bool TrySetCarryCapacity(Item player, float capacity, bool setWeight, out string failureReason)
     {
         string label = setWeight ? "负重" : "体积";
         if (float.IsNaN(capacity) || float.IsInfinity(capacity) || capacity <= 0f)
@@ -144,7 +144,7 @@ public static class PlayerCarryCapacityUtility
             return false;
         }
 
-        if (player == null || !player.IsLocalProfile || player.Data == null)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null)
         {
             failureReason = "当前本地玩家尚未就绪。";
             return false;
@@ -170,9 +170,9 @@ public static class PlayerCarryCapacityUtility
         }
 
         if (setWeight)
-            player.Data.MaxCarryWeight = capacity;
+            ActorModuleState.SetMaxCarryWeight(player.itemData, capacity);
         else
-            player.Data.MaxCarryVolume = capacity;
+            ActorModuleState.SetMaxCarryVolume(player.itemData, capacity);
         bag.Data.SetCarryCapacity(
             setWeight ? capacity : bag.Data.MaxCarryWeight,
             setWeight ? bag.Data.MaxCarryVolume : capacity);
@@ -187,7 +187,7 @@ public static class PlayerCarryCapacityUtility
     #region 超重状态
 
     /// <summary>依据玩家全部随身库存总重量维护来源型超重 Buff；体积超限不触发减速。</summary>
-    public static void RefreshOverweightSlowdown(Player player)
+    public static void RefreshOverweightSlowdown(Item player)
     {
         if (player == null || player.itemMods == null)
             return;
@@ -215,7 +215,7 @@ public static class PlayerCarryCapacityUtility
     }
 
     /// <summary>玩家背包模块卸载时清除本库存来源的超重减速。</summary>
-    public static void ClearOverweightSlowdown(Player player)
+    public static void ClearOverweightSlowdown(Item player)
     {
         if (player == null || player.itemMods == null)
             return;

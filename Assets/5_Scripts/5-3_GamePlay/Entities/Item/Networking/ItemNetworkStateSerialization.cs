@@ -71,7 +71,7 @@ public static class ItemNetworkStateSerialization
         uint generation = item.RuntimeGeneration;
         ulong worldRevision = GameplayWorldRegistry.GetItemWorldRevision(item);
         // 玩家公开快照不需要重存私有背包，其他模块仍按正式保存入口执行。
-        if (item is Player) item.ModuleSavePublicNetworkState();
+        if (ActorIdentity.IsPlayer(item as Item)) item.ModuleSavePublicNetworkState();
         else item.ModuleSave();
         if (!IsCurrentItem(item, data, generation) || GameplayWorldRegistry.GetItemWorldRevision(item) != worldRevision) return default;
         // OnSave 仍刷新模块内部状态，未变化的纯数据直接复用冻结负载。
@@ -119,13 +119,7 @@ public static class ItemNetworkStateSerialization
             ItemData coldData = snapshot.CreateColdData();
             GameRes resources = GameRes.ExistingInstance;
             if (resources == null) return false;
-            if (coldData is Data_Player)
-                ItemInstanceDataFactory.ApplyCurrentDefinition(coldData,
-                    resources.GetPrefab("Player").GetComponent<Player>().Get_NewItemData());
-            else
-            {
-                ItemDefinitionRuntime.RebasePersistedData(resources, coldData);
-            }
+            coldData = ItemDefinitionRuntime.RebasePersistedData(resources, coldData);
             if (coldData.SharedConfiguration == null) return false;
             ItemDefinitionRuntime.RebaseNestedPersistedItems(resources, coldData, onlyColdData: true);
             itemData = coldData;
@@ -315,13 +309,13 @@ public static class ItemNetworkStateSerialization
             uint itemGeneration = target.RuntimeGeneration;
             baseline = CaptureRuntimeStateBaseline(target);
             ItemNetworkCaptureCache.Invalidate(target);
-            string privateState = target is Player ? current.ItemSpecialData : null;
+            string privateState = ActorIdentity.IsPlayer(target as Item) ? current.ItemSpecialData : null;
             // 活跃实例已在生成时挂接本地定义，状态包不能重建其当前模块布局。
             incoming.RestoreTo(current, preserveTransform: true, preserveGuid: true);
             if (!IsCurrentItem(target, current, itemGeneration)) return false;
             ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.ExistingInstance, current, onlyColdData: true);
             if (!IsCurrentItem(target, current, itemGeneration)) return false;
-            if (target is Player)
+            if (ActorIdentity.IsPlayer(target as Item))
                 current.ItemSpecialData = MachineInventoryCommands.MergePrivateSpecialData(privateState, current.ItemSpecialData);
             target.MarkModuleScheduleDirty();
             return true;

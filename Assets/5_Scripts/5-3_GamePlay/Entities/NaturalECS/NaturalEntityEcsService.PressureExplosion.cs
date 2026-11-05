@@ -26,7 +26,7 @@ namespace FlatWorld.NaturalEntities
             {
                 float distance = Mathf.Sqrt(SqrDistanceToBounds(center, record.HitBounds));
                 if (!record.IsValid || distance > radius || record.DimensionId != WorldEntityRuntime.DimensionId) continue;
-                CombatIdentity target = ItemMgr.Instance?.User_Player != null ? GameplayCombatBridge.Identity(ItemMgr.Instance.User_Player) : default;
+                CombatIdentity target = ItemMgr.Instance?.LocalControlledActor != null ? GameplayCombatBridge.Identity(ItemMgr.Instance.LocalControlledActor) : default;
                 var source = new CombatIdentity { Backend = CombatBackend.Environment, Value = eventId,
                     World = target.World, Dimension = target.Dimension };
                 var context = new CombatDamageContext

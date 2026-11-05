@@ -25,7 +25,7 @@ public sealed class RawMeatInfectionMechanic : IFoodMechanic, IFoodConsumptionOb
     /// <summary>玩家完整吃完生肉后判定感染，时长和续期统一由 Buff 定义决定。</summary>
     public void OnFoodConsumed(FoodConsumeResult result)
     {
-        if (!(result.Consumer is Player) ||
+        if (!(ActorIdentity.IsPlayer(result.Consumer as Item)) ||
             !string.Equals(
                 result.ConsumedItem?.itemData?.IDName,
                 ItemId,

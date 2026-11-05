@@ -405,7 +405,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
             shadowVisual = definition.Visual?.Shadows;
         if (shadowVisual?.Enabled == false) return;
         Mod_Building building = item.GetComponentInChildren<Mod_Building>(true);
-        bool actor = item is Player || RuntimeAiEntityUtility.IsAiEntity(item);
+        bool actor = ActorIdentity.IsPlayer(item as Item) || RuntimeAiEntityUtility.IsAiEntity(item);
         if (authoring == null && !actor && building == null &&
             (item.itemData.Stack == null || item.itemData.Stack.CanBePickedUp)) return;
         if (building != null && building.IsSummoner) return;
@@ -648,7 +648,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     {
         Item owner = binding.Owner;
         // 场景切换只隐藏太空玩家的投影，回到地表后沿现有绑定恢复。
-        if (owner is Player && SpaceMgr.IsSpaceScene(activeSceneName))
+        if (ActorIdentity.IsPlayer(owner as Item) && SpaceMgr.IsSpaceScene(activeSceneName))
         {
             ReleaseProxy(binding);
             binding.NextCheck = 0f;

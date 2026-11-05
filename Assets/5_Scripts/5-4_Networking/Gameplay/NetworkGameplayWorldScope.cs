@@ -26,7 +26,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkWorldPlayer player = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>();
             if (player == null || !player.TryGetSpaceObserver(out SpaceNetworkObserver observer)) return false;
             bool playerReady = player.CorePlayer?.IsInitialized == true && !player.IsInSpace && !observer.InSpace &&
-                player.CorePlayer.Data?.CurrentSceneName == observer.WorldKey &&
+                player.CorePlayer.itemData?.GetActorProfileMetadata().WorldKey == observer.WorldKey &&
                 player.RealmRevision == observer.RealmRevision;
             if (!CanRequestInitialSurfaceState(NetworkClient.ready, playerReady, player.IsWorldTransferPending,
                     observer.WorldKey, GameplayWorldRegistry.LocalPresentationWorldKey)) return false;

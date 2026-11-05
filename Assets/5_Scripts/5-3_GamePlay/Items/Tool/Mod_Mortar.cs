@@ -34,7 +34,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
     private MortarInteractionView view;
     private RuntimeRecipe batch;
     private bool processing; // 库存事务通知期间合并视图刷新，避免中断持续捣击手势。
-    private Player actor;
+    private Item actor;
     private bool loaded;
     private CraftingCapabilities capabilities;
     public bool IsCrucible => string.Equals(StationId, CrucibleStationId, StringComparison.OrdinalIgnoreCase);
@@ -123,7 +123,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
         if (panel != null && panel.IsOpen()) { panel.Close(); return; }
         if (TryUseLiquidVessel(playerItem))
             return;
-        actor = playerItem as Player;
+        actor = ActorProfileRegistry.GetProfileActorOrNull(playerItem as Item);
         Inventory hand = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (hand == null) throw new InvalidOperationException($"{ContainerLabel}交互缺少玩家手部库存。");
         if (panel == null)

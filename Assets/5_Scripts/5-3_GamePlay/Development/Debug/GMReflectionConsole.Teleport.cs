@@ -49,10 +49,10 @@ public sealed partial class GMReflectionConsole
     /// <summary>只从当前本地玩家解析模块，不扫描任意场景中的玩家副本。</summary>
     private static bool TryGetTeleportPlayer(out Mod_GameController controller, out Mod_PlayerTraits traits)
     {
-        Player player = ItemMgr.Instance?.User_Player;
+        Item player = ItemMgr.Instance?.LocalControlledActor;
         controller = null;
         traits = null;
-        if (player == null || !player.IsLocalProfile || player.Data == null)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null)
             return false;
 
         controller = player.GetComponent<Mod_GameController>();
@@ -229,9 +229,9 @@ public sealed partial class GMReflectionConsole
             SetStatus("正在搜索，请等待或取消当前搜索。", Color.yellow);
             return;
         }
-        Player player = ItemMgr.GetInstance()?.User_Player;
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (player == null || !player.IsLocalProfile || player.Data == null ||
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null ||
             manager == null || !manager.IsWorldModelRuntimeActive || !manager.IsAuthoritativeSimulation)
         {
             SetStatus("请先进入单机或主机世界，再执行群系传送。", Color.yellow);
@@ -249,7 +249,7 @@ public sealed partial class GMReflectionConsole
     }
 
     // 等待后台任务时只在主线程更新 UI，并在落点应用前核对世界和玩家身份。
-    private IEnumerator LocateBiomeAndTeleport(Player player, ChunkMgr manager,
+    private IEnumerator LocateBiomeAndTeleport(Item player, ChunkMgr manager,
         SurfaceBiomeKind biome, CancellationTokenSource cancellation)
     {
         bool teleported = false;
@@ -375,7 +375,7 @@ public sealed partial class GMReflectionConsole
             teleported = true;
 
             bool IsSameWorld() => player != null && manager != null &&
-                ItemMgr.GetInstance()?.User_Player == player && player.Data != null &&
+                ItemMgr.GetInstance()?.LocalControlledActor == player && player.itemData != null &&
                 manager.WorldRuntime?.Epoch == epoch && manager.IsWorldModelRuntimeActive &&
                 manager.ResolveWorldAddress(player.transform.position).DimensionId == dimension;
         }

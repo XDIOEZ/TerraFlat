@@ -174,7 +174,7 @@ public partial class WeatherMgr
         // 雨声和风声都读取玩家脚下的逻辑位置，不让镜头越过加载边缘改变听音。
         float wind = 0f, rain = 0f;
         bool hasPrecipitation = false;
-        if (TryGetWeatherAudioPlayer(out Player player))
+        if (TryGetWeatherAudioPlayer(out Item player))
         {
             Vector2 position = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
             hasPrecipitation = TryGetPrecipitationAt(position, out rain, out _);
@@ -228,18 +228,18 @@ public partial class WeatherMgr
             ? 1f - Mathf.InverseLerp(cue.MinDistance, cue.MaxDistance, distance) : 0f;
     }
 
-    private bool TryGetWeatherAudioPlayer(out Player player)
+    private bool TryGetWeatherAudioPlayer(out Item player)
     {
-        player = ItemMgr.GetInstance()?.User_Player;
+        player = ItemMgr.GetInstance()?.LocalControlledActor;
         return IsLocalWeatherWorld && _weatherRuntimeAllowed && isActiveAndEnabled &&
-               player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy;
+               player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.gameObject.activeInHierarchy;
     }
 
     private void HandleWeatherLightningAudio(RegionalLightningEvent lightning)
     {
         if (!weatherAudioBaselineReady || pendingWeatherThunder.Count >= MaximumPendingThunder ||
             !string.Equals(lightning.WorldKey, ownedWorld, StringComparison.Ordinal) ||
-            !TryGetWeatherAudioPlayer(out Player player))
+            !TryGetWeatherAudioPlayer(out Item player))
             return;
 
         Vector2 logicalPlayer = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
@@ -260,7 +260,7 @@ public partial class WeatherMgr
                 continue;
             pendingWeatherThunder.RemoveAt(i);
             if (!string.Equals(pending.Lightning.WorldKey, ownedWorld, StringComparison.Ordinal) ||
-                !TryGetWeatherAudioPlayer(out Player player))
+                !TryGetWeatherAudioPlayer(out Item player))
                 continue;
 
             // 雷声和雷光共用事件落点，距离选音色，空间声源负责方位与衰减。
@@ -279,7 +279,7 @@ public partial class WeatherMgr
 
     private void LateUpdate()
     {
-        bool hasPlayer = TryGetWeatherAudioPlayer(out Player player);
+        bool hasPlayer = TryGetWeatherAudioPlayer(out Item player);
         for (int i = weatherThunderHandles.Count - 1; i >= 0; i--)
         {
             ActiveWeatherThunder thunder = weatherThunderHandles[i];

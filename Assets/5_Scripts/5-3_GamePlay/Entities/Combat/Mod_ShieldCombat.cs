@@ -181,7 +181,7 @@ public sealed class Mod_ShieldCombat : Module, IItemModuleDependencyBinder
         item != null && !item.DestructionHandled && health != null && health.Hp > 0f && !health.IsRuntimeTransitioning &&
         controller?.IsGameplayInputLocked != true && !ActorActionConstraints.IsAttackBlocked(item) &&
         roll?.IsRolling != true &&
-        (!(item is Player player) || !player.IsLocalProfile || !EventSystemGuard.IsTextInputFocused);
+        (!((item is Item player && ActorIdentity.IsPlayer(player))) || !ActorProfileRegistry.IsLocallyControlled(player) || !EventSystemGuard.IsTextInputFocused);
     private bool ValidShield(Mod_Shield shield) => shield != null && shield.IsRuntimeLoaded && shield.Enabled &&
         shield.item != null && shield.item.InHand && shield.item.Owner == item &&
         shield == CurrentHandShield() && !EquipmentDurabilityRules.RejectBrokenAttack(shield.item);

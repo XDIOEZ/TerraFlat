@@ -16,7 +16,7 @@ public static class GameplayTestFrameworkRuntimeProbe
         public int Samples;
         public bool SyncCleaned;
         public bool AsyncCleaned;
-        public Lease(Player player) { Profile = player.ProfileName; }
+        public Lease(Item player) { Profile = ActorProfileRegistry.GetProfileId(player); }
         public void Dispose() { SyncCleaned = true; }
     }
 
@@ -40,7 +40,7 @@ public static class GameplayTestFrameworkRuntimeProbe
     #endregion
 
     #region 实际命令队列与跨用例清理采样
-    private static JObject Begin(Player player, JObject args)
+    private static JObject Begin(Item player, JObject args)
     {
         if (pending != null && (!pending.SyncCleaned || !pending.AsyncCleaned))
             throw new InvalidOperationException("上轮测试租约尚未清理。");
@@ -50,21 +50,21 @@ public static class GameplayTestFrameworkRuntimeProbe
         return new JObject { ["token"] = lease.Token, ["profile"] = lease.Profile,
             ["cleaned"] = lease.SyncCleaned, ["asyncCleaned"] = lease.AsyncCleaned, ["controlOwner"] = ControlOwner(player) };
     }
-    private static string ControlOwner(Player player) => player.GetComponentInChildren<Mod_GameController>(true)?.ExternalGameplayControlOwnerName;
-    private static JObject Sample(Player player, JObject args)
+    private static string ControlOwner(Item player) => player.GetComponentInChildren<Mod_GameController>(true)?.ExternalGameplayControlOwnerName;
+    private static JObject Sample(Item player, JObject args)
     {
         Lease lease = pending ?? throw new InvalidOperationException("没有准备队列测试租约。");
         return new JObject { ["token"] = lease.Token, ["sample"] = ++lease.Samples,
             ["elapsed"] = Time.realtimeSinceStartupAsDouble - lease.Started,
-            ["frames"] = Time.frameCount - lease.StartedFrame, ["profilePreserved"] = player.ProfileName == lease.Profile,
+            ["frames"] = Time.frameCount - lease.StartedFrame, ["profilePreserved"] = ActorProfileRegistry.GetProfileId(player) == lease.Profile,
             ["cleaned"] = lease.SyncCleaned, ["asyncCleaned"] = lease.AsyncCleaned, ["controlOwner"] = ControlOwner(player) };
     }
-    private static JObject PreviousCleanup(Player player, JObject args)
+    private static JObject PreviousCleanup(Item player, JObject args)
     {
         Lease lease = pending ?? throw new InvalidOperationException("必须先执行队列租约前置 Lua。");
         var result = new JObject { ["token"] = lease.Token, ["samples"] = lease.Samples,
             ["cleaned"] = lease.SyncCleaned, ["asyncCleaned"] = lease.AsyncCleaned,
-            ["profilePreserved"] = player.ProfileName == lease.Profile, ["controlOwner"] = ControlOwner(player) };
+            ["profilePreserved"] = ActorProfileRegistry.GetProfileId(player) == lease.Profile, ["controlOwner"] = ControlOwner(player) };
         if (lease.SyncCleaned && lease.AsyncCleaned) pending = null;
         return result;
     }

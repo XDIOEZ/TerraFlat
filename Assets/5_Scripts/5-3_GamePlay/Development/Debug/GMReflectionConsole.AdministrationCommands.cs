@@ -562,11 +562,11 @@ public sealed partial class GMReflectionConsole
 
     private Transform GetLocalPlayerTransform()
     {
-        Transform localPlayer = ItemMgr.GetInstance()?.UserPlayerTransform;
+        Transform localPlayer = ItemMgr.GetInstance()?.LocalControlledActorTransform;
         if (localPlayer != null)
             return localPlayer;
 
-        Component player = FindLocalPlayer() ?? FindObjectOfType<Player>(true);
+        Component player = FindLocalPlayer() ?? ActorProfileRegistry.FindProfileActor();
         return player != null ? player.transform : null;
     }
 

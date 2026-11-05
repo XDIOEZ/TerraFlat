@@ -8,10 +8,10 @@ public static class ReadableBookGrantService
 {
     #region 本地权威玩家发书
 
-    public static bool TryGive(Player player, string itemDefinitionId,
+    public static bool TryGive(Item player, string itemDefinitionId,
         IReadOnlyList<ReadableBookPageContent> pages, out string failureReason, string writingMaterialDefinitionId = null)
     {
-        if (player == null || !player.IsLocalProfile || player.Data == null || player.DestructionHandled)
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || player.itemData == null || player.DestructionHandled)
         {
             failureReason = "当前本地玩家尚未就绪。";
             return false;

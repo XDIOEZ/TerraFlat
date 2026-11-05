@@ -58,7 +58,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private const float FurnaceNeighborHeatRadius = 1.75f;
     private const float FurnaceCoreHeatRadius = 0.7f;
     private TemperatureMgr temperatureManager;
-    private Player productionActor;
+    private Item productionActor;
     private float combustionHeatBonus;
     #endregion
 
@@ -325,7 +325,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private bool IsFuelInSameCell(Vector2 position) => MachineWorld.CellOf(position) == Entity.Cell;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public virtual bool Ignite(Player actor)
+    public virtual bool Ignite(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || Data.IsSmelting) return false;
         if (!MachineWorld.CanSustainCombustion(Entity))
@@ -377,7 +377,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     private bool IsIgnitionFuel(ItemData item)
         => FurnaceFuelRules.IsTinder(item, ignitionIds, ignitionTags);
 
-    private static bool HasHeldIgnition(Player actor)
+    private static bool HasHeldIgnition(Item actor)
         => FurnaceFuelRules.HasHeldIgnition(actor);
 
     private void PublishTemperature()
@@ -453,7 +453,7 @@ public class FurnaceLogic : MachineLogic, ICombustionSupportReceiver
     public string GetHeatingHint()
         => FlatWorldLocalizationService.GetUiText(IsBurning ? "正在加热" : "补充燃料并点火");
 
-    public override bool Execute(string operation, string argument, Player actor) => operation == "work" && Ignite(actor);
+    public override bool Execute(string operation, string argument, Item actor) => operation == "work" && Ignite(actor);
     protected override void OnInventoryChanged(ItemSlot slot)
     {
         if (State.Absorption.SlotIndex >= 0 && CurrentAbsorptionSlot() == null)
@@ -477,7 +477,7 @@ public static class FurnaceMaterialHeating
     }
 
     public static bool Process(Inventory input, Inventory output, float sourceTemperature, float seconds,
-        float heatingRateMultiplier = 1f, Player actor = null,
+        float heatingRateMultiplier = 1f, Item actor = null,
         float initialMaterialTemperature = TemperatureMgr.DefaultAmbientTemperature, bool combustionSupported = true)
     {
         if (input?.Data?.itemSlots == null || output?.Data?.itemSlots == null ||

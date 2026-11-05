@@ -92,15 +92,17 @@ public sealed partial class AnimalBehaviorTreeContext
     }
 
     /// <summary>推进行为树共享计时器和受击记忆。</summary>
-    public void Tick(float deltaTime)
+    public void Tick(float deltaTime, bool manualControl = false)
     {
         StateElapsed += Mathf.Max(0f, deltaTime);
         float step = Mathf.Max(0f, deltaTime);
         _blackboard.Tick(step, null);
-        if (_usesSharedPerceptionUpdates) _perception.Tick(step);
+        if (!manualControl && _usesSharedPerceptionUpdates) _perception.Tick(step);
 
 
-        for (int i = 0; i < _capabilityList.Count; i++) _capabilityList[i].Tick(step);
+        for (int i = 0; i < _capabilityList.Count; i++)
+            if (manualControl) _capabilityList[i].TickWhileManuallyControlled(step);
+            else _capabilityList[i].Tick(step);
     }
 
     public void DisableSharedPerceptionUpdates() => _usesSharedPerceptionUpdates = false;

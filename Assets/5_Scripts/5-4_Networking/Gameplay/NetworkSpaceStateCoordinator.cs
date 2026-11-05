@@ -160,11 +160,11 @@ namespace FlatWorld.Networking.Gameplay
         {
             state = null; player = connection?.identity?.GetComponent<NetworkWorldPlayer>();
             if (connection == null || !connection.isAuthenticated || !connection.isReady || player == null ||
-                string.IsNullOrWhiteSpace(player.DisplayName) || player.CorePlayer == null) return false;
+                string.IsNullOrWhiteSpace(player.ProfileId) || player.CorePlayer == null) return false;
             // 请求身份只取服务器绑定，客户端无法指定另一个玩家的存档档案。
             if (!connections.TryGetValue(connection.connectionId, out state) || !ReferenceEquals(state.Connection, connection))
-                connections[connection.connectionId] = state = new ConnectionState { Connection = connection, Profile = player.DisplayName };
-            return string.Equals(state.Profile, player.DisplayName, StringComparison.Ordinal);
+                connections[connection.connectionId] = state = new ConnectionState { Connection = connection, Profile = player.ProfileId };
+            return string.Equals(state.Profile, player.ProfileId, StringComparison.Ordinal);
         }
         private void OnDestroy() { StopClientSide(); StopServerSide(); }
         #endregion
@@ -172,7 +172,7 @@ namespace FlatWorld.Networking.Gameplay
         #region 客户端输入与服务端操作
         private bool OwnsProfile(string profile)
             => NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>() is NetworkWorldPlayer player &&
-               string.Equals(profile, player.DisplayName, StringComparison.Ordinal);
+               string.Equals(profile, player.ProfileId, StringComparison.Ordinal);
         private bool SendInput(string profile, SpacePassengerInput input)
         {
             if (NetworkServer.active || !NetworkClient.ready || !OwnsProfile(profile)) return false;

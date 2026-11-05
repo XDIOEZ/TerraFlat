@@ -117,9 +117,6 @@ public sealed partial class ItemInstanceSnapshot
             case Data_GeneralItem general:
                 snapshot.kindPayload = ItemSnapshotSerialization.SerializePayload(general.code);
                 break;
-            case Data_Player player:
-                snapshot.kindPayload = PlayerInstanceSnapshot.Capture(player, publicPlayerState);
-                break;
             case Data_TileMap map:
                 snapshot.kindPayload = map.CaptureMapInstanceState();
                 break;
@@ -131,7 +128,7 @@ public sealed partial class ItemInstanceSnapshot
     public void RestoreTo(ItemData current, bool preserveTransform = false, bool preserveGuid = false)
     {
         Validate();
-        if (current == null || GetKind(current) != kind)
+        if (current == null || (GetKind(current) != kind && !(kind == ItemInstanceKind.Player && current is Data_GeneralItem)))
             throw new InvalidDataException("物品实例快照与目标数据类别不一致。");
 
         float oldMultiplier = NormalizeMultiplier(current.CraftedDurabilityMultiplier);
@@ -186,8 +183,8 @@ public sealed partial class ItemInstanceSnapshot
     internal void RestoreColdTo(ItemData data)
     {
         Validate();
-        if (GetKind(data) != kind) throw new InvalidDataException("持久化物品类别与快照不一致。");
-        data.IDName = definitionId;
+        if (GetKind(data) != kind && !(kind == ItemInstanceKind.Player && data is Data_GeneralItem)) throw new InvalidDataException("持久化物品类别与快照不一致。");
+        data.IDName = kind == ItemInstanceKind.Player && definitionId == "Player" ? "Human" : definitionId;
         data.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
         data.Stack = new ItemStack();
         data.CraftedDurabilityMultiplier = 1f;
@@ -205,10 +202,8 @@ public sealed partial class ItemInstanceSnapshot
         switch (data)
         {
             case Data_GeneralItem general:
-                general.code = kindPayload == null ? null : MemoryPackSerializer.Deserialize<string>(kindPayload);
-                break;
-            case Data_Player player:
-                PlayerInstanceSnapshot.Restore(kindPayload, player);
+                if (kind == ItemInstanceKind.Player) LegacyPlayerInstanceSnapshot.Migrate(kindPayload, general);
+                else general.code = kindPayload == null ? null : MemoryPackSerializer.Deserialize<string>(kindPayload);
                 break;
             case Data_TileMap map:
                 map.RestoreMapInstanceState(kindPayload);
@@ -273,7 +268,6 @@ public sealed partial class ItemInstanceSnapshot
     public static ItemInstanceKind GetKind(ItemData data) => data switch
     {
         Data_GeneralItem => ItemInstanceKind.General,
-        Data_Player => ItemInstanceKind.Player,
         Data_TileMap => ItemInstanceKind.TileMap,
         BlockData => ItemInstanceKind.Block,
         _ => throw new InvalidDataException($"物品数据类别尚未注册：{data?.GetType().FullName}")
@@ -282,7 +276,7 @@ public sealed partial class ItemInstanceSnapshot
     internal static ItemData CreateData(ItemInstanceKind kind) => kind switch
     {
         ItemInstanceKind.General => new Data_GeneralItem(),
-        ItemInstanceKind.Player => new Data_Player(),
+        ItemInstanceKind.Player => new Data_GeneralItem(),
         ItemInstanceKind.TileMap => new Data_TileMap(),
         ItemInstanceKind.Block => new BlockData(),
         _ => throw new InvalidDataException("物品快照类别尚未注册。")
@@ -339,38 +333,43 @@ public static class ItemSnapshotSerialization
     #region 序列化捕获策略
 
     [ThreadStatic] private static Func<string, string> publicSpecialDataFilter;
+    [ThreadStatic] private static Func<ItemData, bool> publicActorSelector;
 
     public static bool IsPublicPlayerStateCapture => publicSpecialDataFilter != null;
 
     public static IDisposable BeginPrivatePlayerState()
     {
-        var scope = new CaptureScope(publicSpecialDataFilter);
+        var scope = new CaptureScope(publicSpecialDataFilter, publicActorSelector);
         publicSpecialDataFilter = null;
+        publicActorSelector = null;
         return scope;
     }
 
-    public static IDisposable BeginPublicPlayerState(Func<string, string> specialDataFilter)
+    public static IDisposable BeginPublicPlayerState(Func<string, string> specialDataFilter, Func<ItemData, bool> actorSelector)
     {
         if (specialDataFilter == null) throw new ArgumentNullException(nameof(specialDataFilter));
-        var scope = new CaptureScope(publicSpecialDataFilter);
+        var scope = new CaptureScope(publicSpecialDataFilter, publicActorSelector);
         publicSpecialDataFilter = specialDataFilter;
+        publicActorSelector = actorSelector;
         return scope;
     }
 
     public static ItemInstanceSnapshot Capture(ItemData data, bool includeTransform = true,
         Func<ModuleData, bool, ModuleInstanceSnapshot> captureModule = null) => ItemInstanceSnapshot.Capture(data, includeTransform,
-        publicPlayerState: data is Data_Player && publicSpecialDataFilter != null,
+        publicPlayerState: publicSpecialDataFilter != null && publicActorSelector?.Invoke(data) == true,
         publicSpecialData: publicSpecialDataFilter, captureModule: captureModule);
 
     private sealed class CaptureScope : IDisposable
     {
         private readonly Func<string, string> previous;
+        private readonly Func<ItemData, bool> previousSelector;
         private bool disposed;
-        public CaptureScope(Func<string, string> previous) => this.previous = previous;
+        public CaptureScope(Func<string, string> previous, Func<ItemData, bool> selector) { this.previous = previous; previousSelector = selector; }
         public void Dispose()
         {
             if (disposed) return;
             publicSpecialDataFilter = previous;
+            publicActorSelector = previousSelector;
             disposed = true;
         }
     }
@@ -380,7 +379,7 @@ public static class ItemSnapshotSerialization
 
 /// <summary>角色属性属于角色进度；私有库存由公开网络快照排除。</summary>
 [MemoryPackable(GenerateType.VersionTolerant)]
-internal sealed partial class PlayerInstanceSnapshot
+internal sealed partial class LegacyPlayerInstanceSnapshot
 {
     [MemoryPackOrder(0)] public string SceneName;
     [MemoryPackOrder(1)] public bool HasHp;
@@ -409,55 +408,26 @@ internal sealed partial class PlayerInstanceSnapshot
     [MemoryPackOrder(23)] public float? PerceptionRadiusMultiplier;
     [MemoryPackOrder(24)] public Dictionary<string, InventoryInstanceSnapshot> Inventories;
 
-    public static byte[] Capture(Data_Player data, bool publicState)
-    {
-        return ItemSnapshotSerialization.SerializePayload(new PlayerInstanceSnapshot
-        {
-            SceneName = data.CurrentSceneName,
-            HasHp = data.hp != null, HpValue = data.hp?.Value ?? 0f, HpMaximum = data.hp?.maxValue ?? 0f,
-            HpWeaknesses = data.hp?.Weaknesses == null ? null : new List<string>(data.hp.Weaknesses),
-            HasSpeed = data.Speed != null, SpeedBase = data.Speed?.BaseValue ?? 0f,
-            SpeedBaseAdditive = data.Speed?.BaseAdditive ?? 0f, SpeedAdditiveModifier = data.Speed?.AdditiveModifier ?? 0f,
-            SpeedMultiplicativeModifier = data.Speed?.MultiplicativeModifier ?? 1f,
-            SpeedFinalAdditive = data.Speed?.FinalAdditive ?? 0f,
-            Stamina = data.stamina, StaminaMax = data.staminaMax, StaminaRecoverySpeed = data.staminaRecoverySpeed,
-            UserName = data.Name_User, PlayerPov = data.PlayerPov, MaxCarryWeight = data.MaxCarryWeight,
-            MaxCarryVolume = data.MaxCarryVolume, PerceptionRadiusMultiplier = data.PerceptionRadiusMultiplier,
-            Inventories = publicState ? null : InventoryInstanceSnapshot.CaptureDictionary(data._inventoryData)
-        });
-    }
-
-    public static void Restore(byte[] payload, Data_Player target)
+    public static void Migrate(byte[] payload, Data_GeneralItem target)
     {
         if (payload == null) return;
-        PlayerInstanceSnapshot state = MemoryPackSerializer.Deserialize<PlayerInstanceSnapshot>(payload);
-        if (state == null) throw new InvalidDataException("角色实例状态为空。");
-        target.CurrentSceneName = state.SceneName;
-        target.hp ??= new Hp(30f);
-        if (state.HasHp)
+        var state = MemoryPackSerializer.Deserialize<LegacyPlayerInstanceSnapshot>(payload);
+        var profile = target.GetActorProfileMetadata();
+        profile.DisplayName = state.UserName ?? string.Empty;
+        profile.WorldKey = state.SceneName ?? "地球";
+        var legacy = new Ex_ModData { StableName = LegacyActorModuleState.AttributesKey, ModuleId = LegacyActorModuleState.AttributesKey };
+        legacy.WriteData(new LegacyActorModuleState
         {
-            target.hp.maxValue = state.HpMaximum;
-            target.hp.Weaknesses = state.HpWeaknesses ?? new List<string>();
-        }
-        target.Speed ??= new GameValue_float();
-        if (state.HasSpeed)
+            CameraPov = state.PlayerPov, MaxCarryWeight = state.MaxCarryWeight,
+            MaxCarryVolume = state.MaxCarryVolume, TargetPerceptionMultiplier = state.PerceptionRadiusMultiplier ?? 1f
+        });
+        target.ModuleDataDic[legacy.StableName] = legacy;
+        if (state.Inventories != null && state.Inventories.Count > 0)
         {
-            target.Speed.BaseValue = state.SpeedBase;
-            target.Speed.BaseAdditive = state.SpeedBaseAdditive;
-            target.Speed.AdditiveModifier = state.SpeedAdditiveModifier;
-            target.Speed.MultiplicativeModifier = state.SpeedMultiplicativeModifier ?? 1f;
-            target.Speed.FinalAdditive = state.SpeedFinalAdditive;
+            var storage = new Inventory_ModuleData
+            { StableName = LegacyActorModuleState.InventoriesKey, ModuleId = LegacyActorModuleState.InventoriesKey };
+            InventoryInstanceSnapshot.RestoreDictionary(state.Inventories, storage.Data);
+            target.ModuleDataDic[storage.StableName] = storage;
         }
-        target.stamina = state.Stamina;
-        target.staminaMax = state.StaminaMax;
-        target.staminaRecoverySpeed = state.StaminaRecoverySpeed;
-        target.Name_User = state.UserName;
-        target.PlayerPov = state.PlayerPov;
-        target.MaxCarryWeight = state.MaxCarryWeight;
-        target.MaxCarryVolume = state.MaxCarryVolume;
-        target.PerceptionRadiusMultiplier = state.PerceptionRadiusMultiplier ?? 1f;
-        if (state.Inventories != null)
-            InventoryInstanceSnapshot.RestoreDictionary(state.Inventories, target._inventoryData ??= new());
-        if (state.HasHp) target.hp.Value = state.HpValue;
     }
 }

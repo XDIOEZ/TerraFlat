@@ -26,7 +26,7 @@ public sealed class Mod_SteamEngine : Module
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData)value; }
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
     public SteamEngineState State => SteamEnginePowerProvider.ReadState(Data);
-    public static event Action<Mod_SteamEngine, Player> OpenRequested;
+    public static event Action<Mod_SteamEngine, Item> OpenRequested;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetEvents() => OpenRequested = null;
     protected override void OnLoad()
@@ -41,12 +41,12 @@ public sealed class Mod_SteamEngine : Module
     private void OnDestroy() => Unload();
     public override void Act()
     {
-        if (item?.InHand == true && item.Owner is Player player && player.IsLocalProfile)
+        if (item?.InHand == true && (item.Owner is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player))
             OpenRequested?.Invoke(this, player);
     }
     public bool Configure(bool enabled, int outputLevel)
     {
-        if (!GameNetwork.HasStateAuthority || item?.InHand != true || item.Owner is not Player player || !player.IsLocalProfile || outputLevel < 1 || outputLevel > 3) return false;
+        if (!GameNetwork.HasStateAuthority || item?.InHand != true || !(item.Owner is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player) || outputLevel < 1 || outputLevel > 3) return false;
         SteamEngineState state = State; state.Enabled = enabled; state.OutputLevel = outputLevel;
         SteamEnginePowerProvider.WriteState(Data, state);
         if (InventoryContextResolver.TryResolveContainingInventory(player, item.itemData, out Inventory inventory))

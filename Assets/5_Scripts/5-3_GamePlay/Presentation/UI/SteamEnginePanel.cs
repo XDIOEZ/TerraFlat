@@ -10,7 +10,7 @@ public sealed class SteamEnginePanel : MonoBehaviour
     private static SteamEnginePanel current;
     private BasePanel panel;
     private Mod_SteamEngine engine;
-    private Player actor;
+    private Item actor;
     private TMP_Text status, hint;
     private float nextRefresh;
 
@@ -18,7 +18,7 @@ public sealed class SteamEnginePanel : MonoBehaviour
     private static void Register()
     { Mod_SteamEngine.OpenRequested -= Open; Mod_SteamEngine.OpenRequested += Open; }
 
-    public static void Open(Mod_SteamEngine target, Player player)
+    public static void Open(Mod_SteamEngine target, Item player)
     {
         if (target == null || player == null) return;
         if (current == null)
@@ -45,7 +45,7 @@ public sealed class SteamEnginePanel : MonoBehaviour
         return text;
     }
     private bool CanUse() => engine != null && actor != null && engine.item != null &&
-        engine.item.InHand && engine.item.Owner == actor && actor.IsLocalProfile;
+        engine.item.InHand && engine.item.Owner == actor && ActorProfileRegistry.IsLocallyControlled(actor);
     private void Configure(bool enabled, int level)
     { if (CanUse()) { engine.Configure(enabled, level); Refresh(); } }
     private void Update()

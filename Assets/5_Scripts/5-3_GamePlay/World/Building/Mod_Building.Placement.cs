@@ -52,7 +52,7 @@ public partial class Mod_Building
         }
 
         _placementPending = false;
-        Player actor = _placementActor;
+        Item actor = _placementActor;
         _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
         Save();
@@ -128,7 +128,7 @@ public partial class Mod_Building
 
     /// <summary>服务端在候选建筑生成后调用，不依赖客户端预览。</summary>
     public bool ValidateAuthoritativePlacement(Vector3 authorityPosition, out string reason,
-        Player placementActor = null)
+        Item placementActor = null)
     {
         Vector3 position = item != null ? item.transform.position : transform.position;
         return ValidatePlacement(position, authorityPosition, out reason, out _, placementActor);
@@ -139,7 +139,7 @@ public partial class Mod_Building
         if (!_placementPending)
             return;
 
-        Player actor = _placementActor;
+        Item actor = _placementActor;
         string buildingId = ResolveBuildingPrefabId(item?.itemData?.IDName, Data);
         _placementPending = false;
         _placementActor = null;
@@ -162,7 +162,7 @@ public partial class Mod_Building
         if (!_placementPending)
             return;
 
-        Player actor = _placementActor ?? ResolvePlacementActor();
+        Item actor = _placementActor ?? ResolvePlacementActor();
         _placementPending = false;
         _placementActor = null;
         CurrentState = BuildingState.NotInstalled;
@@ -326,7 +326,7 @@ public partial class Mod_Building
         => ValidatePlacement(position, authorityPosition, out reason, out _);
 
     private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition,
-        out string reason, out BuildingPlacementFailureReason failureReason, Player placementActor = null)
+        out string reason, out BuildingPlacementFailureReason failureReason, Item placementActor = null)
     {
         reason = null;
         failureReason = BuildingPlacementFailureReason.InvalidPosition;

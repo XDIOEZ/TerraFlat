@@ -54,10 +54,10 @@ public static partial class GameplayTestSystemProbe
         Mod_Roll roll = null;
         try
         {
-            Player player = root.AddComponent<Player>();
-            player.BindData(new Data_Player { IDName = "test:roll", Stack = new ItemStack { Amount = 1f, Weight = 1f, Volume = 1f } });
+            Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
+            player.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "test:roll", Stack = new ItemStack { Amount = 1f, Weight = 1f, Volume = 1f } }, null, null));
             bool serverRemote = Flag(args, "serverRemote", false);
-            player.SetProfileContext(!serverRemote, false, "test-roll");
+            ActorProfileRegistry.BindProfile(player, !serverRemote, false, "test-roll");
             Rigidbody2D body = root.AddComponent<Rigidbody2D>();
             body.simulated = false;
             BoxCollider2D collider = root.AddComponent<BoxCollider2D>();

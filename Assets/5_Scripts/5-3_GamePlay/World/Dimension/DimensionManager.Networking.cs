@@ -12,16 +12,16 @@ public sealed partial class DimensionManager
     private readonly Dictionary<string, PortalTransitionContext> networkPortalContexts = new(StringComparer.Ordinal);
 
     // 网络只提交入口身份，目标和落点都由服务器复用正式入口规则决定。
-    public bool TryResolveNetworkTransition(Player actor, WorldAddress source, string targetDimension,
+    public bool TryResolveNetworkTransition(Item actor, WorldAddress source, string targetDimension,
         int portalGuid, bool generated, out WorldAddress target, out Vector3 position, out string reason)
     {
         target = default;
         position = default;
         reason = "维度入口、玩家归属或交互距离无效。";
-        if (!GameNetwork.HasStateAuthority || actor?.Data == null || !source.IsValid ||
-            string.IsNullOrWhiteSpace(actor.ProfileName) || string.IsNullOrWhiteSpace(targetDimension) ||
+        if (!GameNetwork.HasStateAuthority || actor?.itemData== null || !source.IsValid ||
+            string.IsNullOrWhiteSpace(ActorProfileRegistry.GetProfileId(actor)) || string.IsNullOrWhiteSpace(targetDimension) ||
             portalGuid == 0 || SpaceMgr.IsSpaceScene(source.WorldKey)) return false;
-        if (SpaceSession.Current?.TryGetNetworkObserver(actor.ProfileName, out SpaceNetworkObserver observer) != true ||
+        if (SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(actor), out SpaceNetworkObserver observer) != true ||
             observer.InSpace || observer.WorldKey != source.WorldKey)
         { reason = "玩家的权威世界归属与维度入口不一致。"; return false; }
         Item portal = ItemMgr.Instance?.GetItemByGuid(portalGuid);
@@ -43,9 +43,9 @@ public sealed partial class DimensionManager
             ResolvePortalTransition(source, target, definition, portal, commitAnchor: false);
         if (context == null && (generated || IsMinePortalTransition(source, target)))
         { reason = "矿洞入口锚点无效，无法切换维度。"; return false; }
-        position = ResolveTargetPosition(actor.Data, target, definition, context);
+        position = ResolveTargetPosition(actor.itemData, target, definition, context);
         if (!IsFinitePosition(position)) { reason = "目标维度落点无效。"; return false; }
-        networkPortalContexts[actor.ProfileName] = context;
+        networkPortalContexts[ActorProfileRegistry.GetProfileId(actor)] = context;
         reason = null;
         return true;
     }
@@ -56,11 +56,11 @@ public sealed partial class DimensionManager
     }
 
     // 调用方先准备目标区块，再在同步目标世界作用域内固定手工矿洞出口。
-    public bool PrepareNetworkArrival(Player actor, WorldAddress target, out string reason)
+    public bool PrepareNetworkArrival(Item actor, WorldAddress target, out string reason)
     {
         reason = null;
-        if (!GameNetwork.HasStateAuthority || actor?.Data == null ||
-            !networkPortalContexts.Remove(actor.ProfileName, out PortalTransitionContext context))
+        if (!GameNetwork.HasStateAuthority || actor?.itemData== null ||
+            !networkPortalContexts.Remove(ActorProfileRegistry.GetProfileId(actor), out PortalTransitionContext context))
         { reason = "维度旅行没有有效的入口事务。"; return false; }
         if (context?.EnsureCaveExit != true) return true;
         try
@@ -78,10 +78,10 @@ public sealed partial class DimensionManager
 
     #region 本机维度呈现事务
     // 维度切换只锁定本机角色，不触发全服世界退出或暂停玩法时钟。
-    public IEnumerator ApplyNetworkPresentation(Player actor, WorldAddress target, Vector3 position,
+    public IEnumerator ApplyNetworkPresentation(Item actor, WorldAddress target, Vector3 position,
         bool showLoadingPresentation = true)
     {
-        if (actor == null || actor != ItemMgr.Instance?.User_Player ||
+        if (actor == null || actor != ItemMgr.Instance?.LocalControlledActor ||
             !target.IsValid || !IsFinitePosition(position) || isTransitioning)
             throw new InvalidOperationException("本机维度呈现请求无效或已有切换正在执行。");
         if (!TryGetDefinition(target.DimensionId, out DimensionDefinition definition) ||
@@ -141,7 +141,7 @@ public sealed partial class DimensionManager
         }
     }
 
-    private IEnumerator ApplyNetworkPresentationSteps(Player actor, WorldAddress target, Vector3 position,
+    private IEnumerator ApplyNetworkPresentationSteps(Item actor, WorldAddress target, Vector3 position,
         Func<bool> stillValid, bool showLoadingPresentation)
     {
         if (showLoadingPresentation)
@@ -170,7 +170,7 @@ public sealed partial class DimensionManager
         ActivateWorld(target);
         actor.transform.SetParent(null, true);
         SceneManager.MoveGameObjectToScene(actor.gameObject, world.Scene);
-        actor.Data.CurrentSceneName = target.WorldKey;
+        actor.itemData.GetActorProfileMetadata().WorldKey = target.WorldKey;
         SpaceSession.Current?.RestorePassengerPose(actor);
         actor.itemMods?.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(false);
         PlayerTeleportService.ApplySurfacePose(actor, position);

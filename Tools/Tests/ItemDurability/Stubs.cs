@@ -92,7 +92,6 @@ public static class ItemSnapshotSerialization
     public static ItemInstanceSnapshot Capture(ItemData data) => throw new NotSupportedException("存档由正式 Lua 回归。");
 }
 public class Data_GeneralItem : ItemData { }
-public class Data_Player : ItemData { }
 public class Data_TileMap : ItemData { }
 public class BlockData : ItemData { }
 public abstract partial class ItemData

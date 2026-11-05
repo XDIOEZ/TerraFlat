@@ -16,7 +16,7 @@ public static class ItemActionFeedbackPresenter
     /// <summary>复用角色气泡和紧急台词优先级，不添加输入锁。</summary>
     private static void Show(Item actor, string message)
     {
-        if (actor is not Player player || !player.IsLocalProfile) return;
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player)) return;
         actor.GetComponentInChildren<CharacterSoliloquyController>(true)?.Say(
             FlatWorldLocalizationService.GetUiText(message), CharacterSpeechPriority.Need, 3f, "item.action");
     }

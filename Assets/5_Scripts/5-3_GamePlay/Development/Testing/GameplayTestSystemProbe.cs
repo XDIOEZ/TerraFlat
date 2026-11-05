@@ -14,6 +14,7 @@ public static partial class GameplayTestSystemProbe
         var result = new Dictionary<string, Func<JObject, JObject>>(StringComparer.Ordinal);
         RegisterShieldOperations(result);
         RegisterEntityOperations(result);
+        RegisterActorControlOperations(result);
         RegisterWorldMatterOperations(result);
         RegisterTimedDespawnOperations(result);
         RegisterBirdFlightQueryOperations(result);

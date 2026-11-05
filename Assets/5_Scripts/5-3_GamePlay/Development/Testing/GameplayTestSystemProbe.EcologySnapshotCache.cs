@@ -167,13 +167,11 @@ public static partial class GameplayTestSystemProbe
         var source = new GameSaveData();
         var world = new PlanetData();
         source.PlanetData_Dict.Add("probe:player-world", world);
-        world.Ecology.GetOrCreateChunk(0, 0).ChangedItems.Add(new Data_Player
-        {
-            IDName = "probe:player", Guid = 42, Stack = new ItemStack { Amount = 1 }, ItemSpecialData = "private"
-        });
+        ItemData actor = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "probe:player", Guid = 42, Stack = new ItemStack { Amount = 1 }, ItemSpecialData = "private" }, null, null);
+        world.Ecology.GetOrCreateChunk(0, 0).ChangedItems.Add(actor);
         List<FrozenEcologyChunkSaveRecord> local = FreezeEcologyForCacheProbe(source, out _);
         List<FrozenEcologyChunkSaveRecord> network;
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public"))
+        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public", data => ReferenceEquals(data, actor)))
             network = FreezeEcologyForCacheProbe(source, out _);
         List<FrozenEcologyChunkSaveRecord> localAgain = FreezeEcologyForCacheProbe(source, out _);
         return MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(local[0].ChangedItems[0]).CreateColdData().ItemSpecialData == "private" &&
@@ -187,13 +185,10 @@ public static partial class GameplayTestSystemProbe
         var source = new GameSaveData();
         var world = new PlanetData();
         source.PlanetData_Dict.Add("probe:nested-player", world);
-        var player = new Data_Player
-        {
-            IDName = "probe:nested-player", Guid = 51, Stack = new ItemStack { Amount = 1 }, ItemSpecialData = "private"
-        };
+        ItemData player = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "probe:nested-player", Guid = 51, Stack = new ItemStack { Amount = 1 }, ItemSpecialData = "private" }, null, null);
         Data_GeneralItem secret = ServiceItem(args);
         secret.Guid = 52;
-        player._inventoryData.Add("private", new Inventory_Data(new List<ItemSlot> { new(0) { itemData = secret } }, "private"));
+        GameplayTestSystemProbe.GetTestActorInventories(player).Add("private", new Inventory_Data(new List<ItemSlot> { new(0) { itemData = secret } }, "private"));
         Data_GeneralItem carrier = ServiceItem(args);
         carrier.ModuleDataDic.Add("cargo", new Inventory_ModuleData
         {
@@ -209,30 +204,30 @@ public static partial class GameplayTestSystemProbe
         bool localDictionaryUsed = sessionItems.Count == 1;
         List<FrozenEcologyChunkSaveRecord> firstPublic, secondPublic;
         bool publicDictionaryEmpty;
-        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-one"))
+        using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-one", data => ReferenceEquals(data, player)))
         {
             firstPublic = FreezeEcologyForCacheProbe(source, out _, sessionItems);
-            using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-two"))
+            using (ItemSnapshotSerialization.BeginPublicPlayerState(_ => "public-two", data => ReferenceEquals(data, player)))
                 secondPublic = FreezeEcologyForCacheProbe(source, out _, sessionItems);
             publicDictionaryEmpty = sessionItems.Count == 0;
         }
         List<FrozenEcologyChunkSaveRecord> localAgain = FreezeEcologyForCacheProbe(source, out _, sessionItems);
-        Data_Player savedLocal = ReadNestedEcologyPlayer(local[0]);
-        Data_Player savedPublicOne = ReadNestedEcologyPlayer(firstPublic[0]);
-        Data_Player savedPublicTwo = ReadNestedEcologyPlayer(secondPublic[0]);
-        Data_Player savedLocalAgain = ReadNestedEcologyPlayer(localAgain[0]);
+        ItemData savedLocal = ReadNestedEcologyPlayer(local[0]);
+        ItemData savedPublicOne = ReadNestedEcologyPlayer(firstPublic[0]);
+        ItemData savedPublicTwo = ReadNestedEcologyPlayer(secondPublic[0]);
+        ItemData savedLocalAgain = ReadNestedEcologyPlayer(localAgain[0]);
         return localDictionaryUsed && publicDictionaryEmpty &&
-            savedLocal.ItemSpecialData == "private" && savedLocal._inventoryData.Count == 1 &&
-            savedPublicOne.ItemSpecialData == "public-one" && savedPublicOne._inventoryData.Count == 0 &&
-            savedPublicTwo.ItemSpecialData == "public-two" && savedPublicTwo._inventoryData.Count == 0 &&
-            savedLocalAgain.ItemSpecialData == "private" && savedLocalAgain._inventoryData.Count == 1 &&
+            savedLocal.ItemSpecialData == "private" && GameplayTestSystemProbe.GetTestActorInventories(savedLocal).Count == 1 &&
+            savedPublicOne.ItemSpecialData == "public-one" && GameplayTestSystemProbe.GetTestActorInventories(savedPublicOne).Count == 0 &&
+            savedPublicTwo.ItemSpecialData == "public-two" && GameplayTestSystemProbe.GetTestActorInventories(savedPublicTwo).Count == 0 &&
+            savedLocalAgain.ItemSpecialData == "private" && GameplayTestSystemProbe.GetTestActorInventories(savedLocalAgain).Count == 1 &&
             !ReferenceEquals(firstPublic[0], secondPublic[0]) && ReferenceEquals(local[0], localAgain[0]);
     }
 
-    private static Data_Player ReadNestedEcologyPlayer(FrozenEcologyChunkSaveRecord record)
+    private static ItemData ReadNestedEcologyPlayer(FrozenEcologyChunkSaveRecord record)
     {
         ItemData carrier = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(record.ChangedItems[0]).CreateColdData();
-        return (Data_Player)((Inventory_ModuleData)carrier.ModuleDataDic["cargo"]).Data["cargo"].itemSlots[0].itemData;
+        return (ItemData)((Inventory_ModuleData)carrier.ModuleDataDic["cargo"]).Data["cargo"].itemSlots[0].itemData;
     }
 
     private static bool ProbeEcologyFrozenCodecRevision(JObject args)

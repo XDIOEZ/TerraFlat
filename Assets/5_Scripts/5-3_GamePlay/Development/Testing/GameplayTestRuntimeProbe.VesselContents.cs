@@ -16,7 +16,7 @@ public static partial class GameplayTestRuntimeProbe
         => Register("containers", "contents_spill", CaptureVesselContentsSpill);
 
     // 独立坩埚绑定正式模块，出料和失败撤销均走生产事务，不在夹具里扣量。
-    private static JObject CaptureVesselContentsSpill(Player player, JObject args)
+    private static JObject CaptureVesselContentsSpill(Item player, JObject args)
     {
         using var scope = GameplayWorldRegistry.UseWorld(player.gameObject.scene.name);
         var root = new GameObject("Lua Contents Crucible") { hideFlags = HideFlags.HideAndDontSave };
@@ -91,7 +91,7 @@ public static partial class GameplayTestRuntimeProbe
 
     private sealed class GameplayVesselDropCapture : IDroppedItemSpawnProvider
     {
-        private readonly Player actor;
+        private readonly Item actor;
         private bool spawning;
         public readonly List<DroppedItemHandle> Handles = new();
         public Action AfterSpawn;
@@ -99,7 +99,7 @@ public static partial class GameplayTestRuntimeProbe
         public DroppedItemSpawnReason FirstReason;
         public Item FirstSource;
         public string FirstWorld;
-        public GameplayVesselDropCapture(Player actor) { this.actor = actor; }
+        public GameplayVesselDropCapture(Item actor) { this.actor = actor; }
         public bool CanHandle(in DroppedItemSpawnContext context) => !spawning && context.SourceItem == actor;
         public DroppedItemHandle SpawnDrop(ItemData source, in DroppedItemSpawnContext context, float rotation, Vector3 scale)
         {

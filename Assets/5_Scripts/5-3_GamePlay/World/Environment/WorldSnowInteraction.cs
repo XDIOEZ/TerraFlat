@@ -89,7 +89,7 @@ public static class WorldSnowInteraction
         sample = default;
         reason = null;
         if (!GameNetwork.HasStateAuthority || held == null || !held.InHand || held.DestructionHandled ||
-            held.Owner is not Player actor || !actor.IsLocalProfile || actor.DestructionHandled ||
+            !(held.Owner is Item actor && ActorIdentity.IsPlayer(actor)) || !ActorProfileRegistry.IsLocallyControlled(actor) || actor.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp)?.Hp > 0f))
         {
             reason = "当前无法操作积雪。";

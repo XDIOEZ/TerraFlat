@@ -149,7 +149,7 @@ namespace FlatWorld.Spaceflight
             foreach (Item item in items)
             {
                 if (item == null || item.DestructionHandled) continue;
-                if (item is Player)
+                if (ActorIdentity.IsPlayer(item as Item))
                     throw new InvalidOperationException("乘员尚未离开待卸载的船内世界：" + worldKey);
                 if (!capture || !FlatWorld.Networking.GameNetwork.HasStateAuthority || item.PersistenceOwner != null ||
                     item.Owner != null || item.InHand || item.itemData?.Stack?.CanBePickedUp != true ||

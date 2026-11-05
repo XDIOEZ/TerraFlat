@@ -62,7 +62,7 @@ public static class GameplayTestGm
 
     #region GM 执行
 
-    public static bool TryExecute(Player player, string command, string argument, out string message)
+    public static bool TryExecute(Item player, string command, string argument, out string message)
     {
         if (!TryValidate(command, argument, out message)) return false;
         if (command == "mechanical_build")
@@ -154,7 +154,7 @@ public static class GameplayTestGm
 
     #region 真实状态断言
 
-    public static bool TryCheck(Player player, string name, out bool passed)
+    public static bool TryCheck(Item player, string name, out bool passed)
     {
         if (name.StartsWith("mechanical_", StringComparison.Ordinal))
             return GameplayTestMechanicalPlant.TryCheck(name, out passed);

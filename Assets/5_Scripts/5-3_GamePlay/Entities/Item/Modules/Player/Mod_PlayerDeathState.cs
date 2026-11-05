@@ -13,7 +13,7 @@ using FlatWorld.Spaceflight;
 /// 玩家死亡状态模块：监听 Mod_DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
 /// 进入世界时从已加载的权威血量恢复濒死控制与界面，不重放死亡结算或掉落。
 /// </summary>
-public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule, IClientPlayerPresentationTick
+public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule, IClientPlayerPresentationTick, IActorProfileModule
 {
 #region 基础参数
 
@@ -63,7 +63,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     public SaveData Data = new SaveData(); // 运行时数据
 
-    private Player _player; // 玩家引用
+    private Item _player; // 玩家引用
+    private ActorProfileRegistry.Binding _controlBinding;
     private Mod_DamageReceiver _damageReceiver; // 血量模块
     private Mod_BuffManager _buffManager; // Buff 状态模块
     private Mod_Food _food; // 食物模块
@@ -105,7 +106,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         RestoreSavedDeathState();
         ApplyWorldRules(GameRuleConfiguration.Current);
 
-        _player = item as Player;
+        _player = ActorProfileRegistry.GetProfileActorOrNull(item as Item);
         if (_player == null)
         {
             throw new MissingComponentException("[Mod_PlayerDeathState] 当前 item 不是 Player，无法启用玩家死亡状态模块");
@@ -142,6 +143,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         GameManager.Event_LocalPlayerRuntimeReloaded += RestoreDyingStateOnWorldEnter;
         GameRuleConfiguration.Changed -= ApplyWorldRules;
         GameRuleConfiguration.Changed += ApplyWorldRules;
+        _controlBinding = ActorProfileRegistry.GetBinding(item);
+        _controlBinding.Changed += RefreshControlBoundDyingPanel;
     }
 
     protected override void OnSave()
@@ -152,6 +155,9 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     protected override void OnUnload()
     {
+        if (_controlBinding != null) _controlBinding.Changed -= RefreshControlBoundDyingPanel;
+        _controlBinding = null;
+        CloseAndDestroyDyingPanel();
         GameRuleConfiguration.Changed -= ApplyWorldRules;
         UnsubscribeDeathMessageLocalization();
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
@@ -393,7 +399,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
     public override void ModUpdate(float deltaTime)
     {
-        if (!GameNetwork.IsOnline || _player?.IsLocalProfile != true || _damageReceiver == null) return;
+        if (!GameNetwork.IsOnline || ActorProfileRegistry.IsLocallyControlled(_player) != true || _damageReceiver == null) return;
         // 客户端从服务器生命状态恢复濒死界面，死亡掉落与生命重置只由权威端执行。
         if (_damageReceiver.Hp <= 0f)
         {
@@ -424,10 +430,10 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
             // 太空死亡固定回地球，宇宙投影坐标不能当作地表出生点。
             targetAddress = SpaceSession.Current?.Universe?.GetSurfaceAddress("earth")
                 ?? WorldAddress.FromWorldKey("地球");
-            if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out respawnPosition,
+            if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.itemData, out respawnPosition,
                     out string earthSpawnWorld) && WorldAddress.FromWorldKey(earthSpawnWorld) == targetAddress)
                 return;
-            if (DimensionTravelProgressStore.TryGetLastPosition(_player.Data, targetAddress, out respawnPosition))
+            if (DimensionTravelProgressStore.TryGetLastPosition(_player.itemData, targetAddress, out respawnPosition))
                 return;
             respawnPosition = DimensionManager.Instance.TryGetDefinition(targetAddress.DimensionId,
                 out DimensionDefinition earthDefinition) ? earthDefinition.DefaultSpawnPosition : Vector3.zero;
@@ -435,7 +441,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         }
 
         if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
-                _player.Data,
+                _player.itemData,
                 out respawnPosition,
                 out string mainWorldKey))
         {
@@ -447,12 +453,12 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
         // 旧存档若在矿洞缺少主出生点，优先回到进入矿洞前记录的地表位置。
         if (!activeAddress.IsSurface &&
             DimensionTravelProgressStore.TryGetLastPosition(
-                _player.Data,
+                _player.itemData,
                 targetAddress,
                 out respawnPosition))
         {
             PlayerMainWorldSpawnStore.SetMainWorldSpawn(
-                _player.Data,
+                _player.itemData,
                 targetAddress.WorldKey,
                 respawnPosition);
             Debug.LogWarning(
@@ -465,7 +471,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
             GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out respawnPosition))
         {
             PlayerMainWorldSpawnStore.SetMainWorldSpawn(
-                _player.Data,
+                _player.itemData,
                 targetAddress.WorldKey,
                 respawnPosition);
             return;
@@ -558,8 +564,8 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     /// <summary>优先读取维度管理器的权威地址，Scene 名作为启动兼容兜底。</summary>
     private WorldAddress ResolveActiveWorldAddress()
     {
-        if (GameNetwork.IsOnline && !string.IsNullOrWhiteSpace(_player?.Data?.CurrentSceneName))
-            return WorldAddress.FromWorldKey(_player.Data.CurrentSceneName);
+        if (GameNetwork.IsOnline && !string.IsNullOrWhiteSpace(_player?.itemData?.GetActorProfileMetadata().WorldKey))
+            return WorldAddress.FromWorldKey(_player.itemData.GetActorProfileMetadata().WorldKey);
         if (SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
             return WorldAddress.FromWorldKey("SpaceScene");
         if (DimensionManager.Instance != null && DimensionManager.Instance.ActiveAddress.IsValid)
@@ -573,12 +579,12 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
     {
         WorldAddress activeAddress = ResolveActiveWorldAddress();
         GameManager gameManager = GameManager.Instance;
-        if (_player?.Data == null ||
+        if (_player?.itemData== null ||
             SpaceMgr.IsSpaceScene(activeAddress.WorldKey) ||
             !activeAddress.IsSurface ||
-            PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
+            PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.itemData, out _, out _) ||
             gameManager == null ||
-            (_player.IsNewProfile && gameManager.ShouldDeferInitialSpawnPlacement))
+            (ActorProfileRegistry.IsNewLocalProfile(_player) && gameManager.ShouldDeferInitialSpawnPlacement))
         {
             return;
         }
@@ -587,7 +593,7 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
             return;
 
         if (PlayerMainWorldSpawnStore.SetMainWorldSpawn(
-                _player.Data,
+                _player.itemData,
                 activeAddress.WorldKey,
                 defaultSpawnPos))
         {
@@ -614,9 +620,9 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 #region 死亡监听
 
     /// <summary>读档恢复零血量玩家的待重生状态，只恢复界面和操作限制。</summary>
-    private void RestoreDyingStateOnWorldEnter(Player enteredPlayer)
+    private void RestoreDyingStateOnWorldEnter(Item enteredPlayer)
     {
-        if (enteredPlayer != _player || !enteredPlayer.IsLocalProfile)
+        if (enteredPlayer != _player || !ActorProfileRegistry.IsLocallyControlled(enteredPlayer))
             return;
 
         GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
@@ -710,10 +716,21 @@ public partial class Mod_PlayerDeathState : Module, IPlayerStateAuthorityModule,
 
 #region UI逻辑
 
+    // 濒死状态属于身体，交互面板只属于当前本地控制者。
+    private void RefreshControlBoundDyingPanel()
+    {
+        if (!ActorProfileRegistry.IsLocallyControlled(_player)) CloseAndDestroyDyingPanel();
+        else if (_isInDyingState)
+        {
+            _gameController.SetGameplayInputLocked(true);
+            ShowDyingPanel();
+        }
+    }
+
     private void ShowDyingPanel()
     {
         using var marker = DeathPanelMarker.Auto();
-        if (!_isInDyingState || _player?.IsLocalProfile != true)
+        if (!_isInDyingState || ActorProfileRegistry.IsLocallyControlled(_player) != true)
         {
             return;
         }

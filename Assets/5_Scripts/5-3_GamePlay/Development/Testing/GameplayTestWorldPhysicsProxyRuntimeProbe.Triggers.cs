@@ -16,7 +16,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     }
 
     // 用自有数据能力接收真实原生事件，回调不补造碰撞或重算进入离开规则。
-    private static JObject CaptureResourceProxyNativeTriggers(Player player, JObject args)
+    private static JObject CaptureResourceProxyNativeTriggers(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();

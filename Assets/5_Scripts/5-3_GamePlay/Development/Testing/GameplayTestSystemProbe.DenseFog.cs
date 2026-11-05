@@ -62,7 +62,7 @@ public static partial class GameplayTestSystemProbe
         var cameraObject = new GameObject("probe:weather-screen-camera") { hideFlags = HideFlags.HideAndDontSave };
         var overlayObject = new GameObject("probe:weather-screen-overlay") { hideFlags = HideFlags.HideAndDontSave };
         playerObject.SetActive(false);
-        Player player = playerObject.AddComponent<Player>();
+        Item player = ActorProfileRegistry.CreateProfileActorForFixture(playerObject);
         player.enabled = false;
         var moduleObject = new GameObject("probe:weather-camera-module") { hideFlags = HideFlags.HideAndDontSave };
         moduleObject.SetActive(false);
@@ -77,11 +77,11 @@ public static partial class GameplayTestSystemProbe
         try
         {
             result["missingPlayer"] = WeatherScreenRenderingContext.IsLocalPlayer(null);
-            player.SetProfileContext(true, false);
+            ActorProfileRegistry.BindProfile(player, true, false);
             result["inactivePlayer"] = WeatherScreenRenderingContext.IsLocalPlayer(player);
             playerObject.SetActive(true);
             result["localPlayer"] = WeatherScreenRenderingContext.IsLocalPlayer(player);
-            player.SetProfileContext(false, false);
+            ActorProfileRegistry.BindProfile(player, false, false);
             result["remotePlayer"] = WeatherScreenRenderingContext.IsLocalPlayer(player);
 
             Mod_Cam resolved = null;

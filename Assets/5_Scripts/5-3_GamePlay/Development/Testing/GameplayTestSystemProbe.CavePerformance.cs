@@ -33,7 +33,7 @@ public static partial class GameplayTestSystemProbe
     private static GameSaveData CavePerformanceSave()
     {
         var save = new GameSaveData();
-        save.PlayerData_Dict.Add("first", new Data_Player());
+        save.ProfileActorData.Add("first", ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null));
         return save;
     }
 
@@ -145,7 +145,7 @@ public static partial class GameplayTestSystemProbe
     private static JObject CaveExitCacheManual(JObject args)
     {
         var save = CavePerformanceSave();
-        Data_Player player = save.PlayerData_Dict["first"];
+        ItemData player = save.ProfileActorData["first"];
         Vector3 entrancePosition = new(30.5f, 0.5f, 0f);
         DimensionPortalAnchor anchor = CreateCavePerformanceAnchor(save, 412, entrancePosition);
         return WithEntityProbeItem(exit =>
@@ -174,7 +174,7 @@ public static partial class GameplayTestSystemProbe
     private static JObject CaveExitCachePlayers(JObject args)
     {
         var save = CavePerformanceSave();
-        save.PlayerData_Dict.Add("second", new Data_Player());
+        save.ProfileActorData.Add("second", ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null));
         Vector2 naturalPosition = new(60.5f, 60.5f);
         DimensionTravelProgressStore.SetSurfaceEntranceState(save, CavePerformanceSurface, naturalPosition, false, true);
         var cache = new CaveExitAmbientLightCache();
@@ -208,7 +208,7 @@ public static partial class GameplayTestSystemProbe
     private static JObject CaveExitCacheSources(JObject args)
     {
         var save = CavePerformanceSave();
-        Data_Player player = save.PlayerData_Dict["first"];
+        ItemData player = save.ProfileActorData["first"];
         Vector2 position = new(0.5f, 0.5f);
         DimensionTravelProgressStore.SetSurfaceEntranceState(save, CavePerformanceSurface, position, false, true);
         var cache = new CaveExitAmbientLightCache();
@@ -244,15 +244,15 @@ public static partial class GameplayTestSystemProbe
         var samples = new JObject { ["firstSave"] = CaptureCavePerformanceLight(cache, firstSave, position) };
         samples["otherSave"] = CaptureCavePerformanceLight(cache, otherSave, position);
         samples["returnSave"] = CaptureCavePerformanceLight(cache, firstSave, position);
-        string original = firstSave.PlayerData_Dict["first"].ItemSpecialData;
-        firstSave.PlayerData_Dict["first"] = new Data_Player();
+        string original = firstSave.ProfileActorData["first"].ItemSpecialData;
+        firstSave.ProfileActorData["first"] = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null);
         samples["replaced"] = CaptureCavePerformanceLight(cache, firstSave, position);
-        samples["playerCount"] = firstSave.PlayerData_Dict.Count;
-        firstSave.PlayerData_Dict["first"] = new Data_Player { ItemSpecialData = original };
+        samples["playerCount"] = firstSave.ProfileActorData.Count;
+        firstSave.ProfileActorData["first"] = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { ItemSpecialData = original }, null, null);
         samples["replacementRestored"] = CaptureCavePerformanceLight(cache, firstSave, position);
-        firstSave.PlayerData_Dict.Add("second", new Data_Player());
+        firstSave.ProfileActorData.Add("second", ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null));
         samples["addedPlayer"] = CaptureCavePerformanceLight(cache, firstSave, position);
-        firstSave.PlayerData_Dict.Remove("first");
+        firstSave.ProfileActorData.Remove("first");
         samples["removedOwner"] = CaptureCavePerformanceLight(cache, firstSave, position);
         return samples;
     }
@@ -468,8 +468,8 @@ public static partial class GameplayTestSystemProbe
     private static JObject PortalWorldOwnership(JObject args)
     {
         var save = CavePerformanceSave();
-        var first = save.PlayerData_Dict["first"];
-        var second = new Data_Player();
+        ItemData first = save.ProfileActorData["first"];
+        ItemData second = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null);
         DimensionTravelProgressStore.SetLastPosition(first, CavePerformanceAddress, new Vector3(4, 5));
         DimensionTravelProgressStore.SetLastPosition(second, CavePerformanceAddress, new Vector3(9, 8));
         string before = save.DimensionStateJson;
@@ -484,7 +484,7 @@ public static partial class GameplayTestSystemProbe
         });
         bool previewReadOnly = save.DimensionStateJson == before;
         DimensionPortalAnchor anchor = CreateCavePerformanceAnchor(save, 713, new Vector3(30.5f, .5f));
-        save.PlayerData_Dict.Clear();
+        save.ProfileActorData.Clear();
         return WithEntityProbeItem(exit =>
         {
             exit.BindData(new Data_GeneralItem { Guid = anchor.CaveExitGuid });
@@ -500,7 +500,7 @@ public static partial class GameplayTestSystemProbe
                 ["previewReadOnly"] = previewReadOnly,
                 ["previewIdentityStable"] = preview.CaveExitGuid == anchor.CaveExitGuid,
                 ["sharedFound"] = shared, ["sharedIdentity"] = shared && paired.SurfaceEntranceGuid == 713,
-                ["playersEmpty"] = save.PlayerData_Dict.Count == 0,
+                ["playersEmpty"] = save.ProfileActorData.Count == 0,
                 ["roundtripFound"] = roundtrip,
                 ["roundtripIdentity"] = roundtrip && saved.CaveExitGuid == anchor.CaveExitGuid,
                 ["firstLastX"] = firstLast.x, ["secondLastX"] = secondLast.x

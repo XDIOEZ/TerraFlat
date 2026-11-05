@@ -10,7 +10,7 @@ public sealed partial class DimensionManager
     // 从请求发出前到加载幕退场，共用同一份输入与运动租约，重试不重复捕获冻结后的状态。
     private sealed class LocalDimensionPresentation : IDisposable
     {
-        public readonly Player Actor;
+        public readonly Item Actor;
         public readonly WorldAddress Target;
         public readonly GameSaveData Save;
         public readonly GameManager Game;
@@ -25,7 +25,7 @@ public sealed partial class DimensionManager
         public bool Committed;
         private bool disposed;
 
-        public LocalDimensionPresentation(Player actor, WorldAddress target, bool showsLoadingPresentation)
+        public LocalDimensionPresentation(Item actor, WorldAddress target, bool showsLoadingPresentation)
         {
             Actor = actor;
             Target = target;
@@ -76,7 +76,7 @@ public sealed partial class DimensionManager
         }
     }
 
-    private bool TryBeginLocalDimensionPresentation(Player actor, WorldAddress target, DimensionDefinition definition,
+    private bool TryBeginLocalDimensionPresentation(Item actor, WorldAddress target, DimensionDefinition definition,
         bool showLoadingPresentation)
     {
         if (localDimensionPresentation != null)
@@ -84,7 +84,7 @@ public sealed partial class DimensionManager
                 IsLocalDimensionPresentationValid(localDimensionPresentation) &&
                 (!localDimensionPresentation.ShowsLoadingPresentation ||
                  localDimensionPresentation.Game.BeginNetworkDimensionLoading(definition));
-        if (actor == null || actor != ItemMgr.Instance?.User_Player ||
+        if (actor == null || actor != ItemMgr.Instance?.LocalControlledActor ||
             showLoadingPresentation && !GameManager.Instance.BeginNetworkDimensionLoading(definition)) return false;
         try
         {
@@ -106,7 +106,7 @@ public sealed partial class DimensionManager
     private bool IsLocalDimensionPresentationValid(LocalDimensionPresentation presentation) =>
         presentation != null && ReferenceEquals(localDimensionPresentation, presentation) && presentation.Actor != null &&
         presentation.Game != null && presentation.Game.IsInGameWorld &&
-        presentation.Actor == ItemMgr.Instance?.User_Player &&
+        presentation.Actor == ItemMgr.Instance?.LocalControlledActor &&
         ReferenceEquals(presentation.Save, SaveDataMgr.Instance?.SaveData) &&
         (!presentation.RequiresConnection || ReferenceEquals(presentation.Session, GameNetwork.Session) && GameNetwork.IsOnline);
 

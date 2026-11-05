@@ -28,7 +28,7 @@ public sealed partial class WorldRenderingManager
         }
         ReleaseNaturalItemView(item);
 
-        bool actor = item is not Player && GameRes.ExistingInstance != null &&
+        bool actor = GameRes.ExistingInstance != null &&
             GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) &&
             definition.IsActor;
         if (actor)
@@ -43,7 +43,7 @@ public sealed partial class WorldRenderingManager
 
         if (!IsItemRenderingRegistered(item)) return;
 
-        if (item is not Player &&
+        if (!ActorIdentity.IsPlayer(item) &&
             (item.InHand || item.transform.parent != null &&
                 item.transform.parent.GetComponentInParent<Item>(true) != null))
         {
@@ -101,7 +101,7 @@ public sealed partial class WorldRenderingManager
             Item item = view.Item;
             if (item == null || item.DestructionHandled || item.IsInPool || item.NaturalRuntimeOwner != null ||
                 item.RuntimeGeneration != view.Generation || view.Projection == null || view.Projection.IsReleased ||
-                item is not Player && (item.InHand || item.transform.parent != null &&
+                !ActorIdentity.IsPlayer(item) && (item.InHand || item.transform.parent != null &&
                     item.transform.parent.GetComponentInParent<Item>(true) != null))
             {
                 ReleaseItemView(item);

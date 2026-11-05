@@ -276,7 +276,7 @@ namespace FlatWorld.Spaceflight
         {
             if (radius <= 0f || peak <= 0f || ItemMgr.Instance == null) return;
             var targets = new HashSet<Item>(ItemMgr.Instance.WorldRunTimeItems.Values);
-            foreach (Player player in ItemMgr.Instance.Player_DIC.Values) if (player != null) targets.Add(player);
+            foreach (Item player in ItemMgr.Instance.ProfileActors.Values) if (player != null) targets.Add(player);
             foreach (Item target in targets)
             {
                 if (target == null || target.Owner != null || target.InHand || Owns(target.itemData.Guid) ||
@@ -293,7 +293,7 @@ namespace FlatWorld.Spaceflight
                     SpaceSectorPosition absolute = UnprojectSectorPosition(target.transform.position);
                     sector = absolute.Sector; x = absolute.LocalMeters.X; y = absolute.LocalMeters.Y;
                 }
-                SpacePassengerState passenger = target is Player actor ? State.Passengers.Find(value => value.ProfileId == actor.ProfileName) : null;
+                SpacePassengerState passenger = (target is Item actor && ActorIdentity.IsPlayer(actor)) ? State.Passengers.Find(value => value.ProfileId == ActorProfileRegistry.GetProfileId(actor)) : null;
                 ShipState carrier = passenger != null && passenger.Supported ? GetShip(passenger.ShipId) : null;
                 if (carrier != null)
                 {

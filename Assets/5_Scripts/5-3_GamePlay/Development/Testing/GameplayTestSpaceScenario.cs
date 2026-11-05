@@ -25,7 +25,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         private set => scenarioMigrationExpected = value;
     }
 
-    public static IDisposable BeginExpectedMigration(Player player)
+    public static IDisposable BeginExpectedMigration(Item player)
     {
         // 独立隔离探针共用迁移租约，正常维度退出不会被误判为测试世界关闭。
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
@@ -78,8 +78,8 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         if (!TryValidate(operation, argument, out string error)) throw new ArgumentException(error);
         if (disposed || GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || Time.timeScale <= 0f)
             throw new InvalidOperationException("太空集成测试需要未暂停的单机权威测试世界。");
-        Player player = CurrentPlayer();
-        profile = player.ProfileName;
+        Item player = CurrentPlayer();
+        profile = ActorProfileRegistry.GetProfileId(player);
         home = global::WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
         homePosition = WorldLocalPresentation.ToLogical((Vector2)player.transform.position);
         session = SpaceSession.EnsureLoaded();
@@ -131,7 +131,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     private IEnumerator ProbeGroundCombatProjection(Action<JObject> completed)
     {
         if (session.IsSpaceView) throw new InvalidOperationException("地表飞船攻击投影必须在地表测试世界验证。");
-        Player player = CurrentPlayer();
+        Item player = CurrentPlayer();
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         SpacePassengerState passenger = session.GetPassenger(player);
         if (passenger.Supported) throw new InvalidOperationException("投影测试玩家必须在船外自由移动。");
@@ -369,7 +369,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             yield return Teleport(new SpaceMotionState { Sector = sector, PositionMeters = point, RadiusMeters = .3d });
             double deadline = Time.realtimeSinceStartupAsDouble + 30d;
             while (!HasAllPlanetViews(universe) && Time.realtimeSinceStartupAsDouble < deadline) yield return null;
-            Player player = CurrentPlayer();
+            Item player = CurrentPlayer();
             Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
             string previousWorld = GameplayWorldRegistry.ExecutionWorldKey;
             bool missingInteractionRejected = sender != null && !sender.CanInteractTarget(null);
@@ -516,7 +516,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             }
             if (consoleEntry?.Machine == null) throw new InvalidOperationException("普通地面船型缺少机器控制台。");
             string console = consoleEntry.Guid.ToString(CultureInfo.InvariantCulture);
-            Player player = CurrentPlayer();
+            Item player = CurrentPlayer();
             Camera camera = Camera.main ?? throw new InvalidOperationException("测试玩家没有镜头。");
             Vector2 position = WorldLocalPresentation.ProjectPosition(consoleEntry.Machine.Snapshot.transform.position);
             Mod_PlayerTraits traits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
@@ -803,7 +803,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
             IsMigrationExpected = true;
             try
             {
-                Player traveller = CurrentPlayer();
+                Item traveller = CurrentPlayer();
                 SpacePassengerState passenger = session.GetPassenger(traveller);
                 // 夹具返航先走正式离船，避免落地重建后又被巡航船的乘员状态带回太空。
                 if (!string.IsNullOrEmpty(passenger.ShipId) &&
@@ -856,9 +856,9 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
     }
 
     private bool Ready() => GameManager.Instance?.IsGameplayReady == true &&
-        DimensionManager.ExistingInstance?.IsTransitioning != true && ItemMgr.Instance?.User_Player != null &&
-        ItemMgr.Instance.User_Player.ProfileName == profile;
-    private Player CurrentPlayer() => ItemMgr.Instance?.User_Player ?? throw new InvalidOperationException("当前测试玩家缺失。");
+        DimensionManager.ExistingInstance?.IsTransitioning != true && ItemMgr.Instance?.LocalControlledActor != null &&
+        ActorProfileRegistry.GetProfileId(ItemMgr.Instance.LocalControlledActor) == profile;
+    private Item CurrentPlayer() => ItemMgr.Instance?.LocalControlledActor ?? throw new InvalidOperationException("当前测试玩家缺失。");
     private void ProtectPlayer()
     {
         Mod_PlayerAdminController admin = CurrentPlayer().GetComponentInChildren<Mod_PlayerAdminController>(true);
@@ -874,10 +874,10 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
 
     private JObject SessionSnapshot()
     {
-        Player player = CurrentPlayer();
+        Item player = CurrentPlayer();
         SpacePassengerState passenger = session.GetPassenger(player);
         // 采样正式网络观察者，确保跨区后的世界身份与版本已同步。
-        bool observerReady = session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer);
+        bool observerReady = session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer);
         Camera camera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera)?.ControllerCamera;
         GameObject uiRoot = GameObject.Find("PanelRoot");
         UIManager ui = UIManager.ExistingInstance;
@@ -897,7 +897,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         }
         return new JObject { ["version"] = session.State.Version, ["seconds"] = session.State.SimulationSeconds,
             ["sectorCount"] = session.State.Sectors.Count, ["scene"] = SceneManager.GetActiveScene().name,
-            ["spaceView"] = session.IsSpaceView, ["playerProfile"] = player.ProfileName,
+            ["spaceView"] = session.IsSpaceView, ["playerProfile"] = ActorProfileRegistry.GetProfileId(player),
             ["playerInstance"] = player.GetInstanceID(), ["sector"] = Sector(position.Sector),
             ["playerScene"] = player.gameObject.scene.name, ["playerWorld"] = GameplayWorldRegistry.GetItemWorldKey(player),
             ["supported"] = passenger.Supported,
@@ -1011,7 +1011,7 @@ public sealed partial class GameplayTestSpaceScenario : IDisposable
         contactFixtures.Clear();
         foreach (ChunkLease lease in leases) lease.Dispose();
         leases.Clear();
-        if (protectionChanged && ItemMgr.Instance?.User_Player != null)
+        if (protectionChanged && ItemMgr.Instance?.LocalControlledActor != null)
         {
             Mod_PlayerAdminController admin = CurrentPlayer().GetComponentInChildren<Mod_PlayerAdminController>(true);
             if (admin?.IsAdministrator == true) admin.TrySetAdminInvincibilityEnabled(initialInvincibility);

@@ -24,10 +24,10 @@ namespace FlatWorld.Spaceflight
             public bool IsFloor;
         }
 
-        public static Func<Player, string, bool, Action<bool, string>, bool> RemoteRequest;
+        public static Func<Item, string, bool, Action<bool, string>, bool> RemoteRequest;
 
         // 单人与多人都调用相同权威事务，客户端只提交模板身份。
-        public static bool RequestBuild(Player player, FixedStructureDefinition template, Action<bool, string> completed)
+        public static bool RequestBuild(Item player, FixedStructureDefinition template, Action<bool, string> completed)
         {
             if (!GameNetwork.HasStateAuthority)
                 return RequestRemote(player, template?.Id, false, completed);
@@ -38,7 +38,7 @@ namespace FlatWorld.Spaceflight
             return accepted;
         }
 
-        public static bool RequestRefill(Player player, IReadOnlyList<FixedStructureDefinition> templates, Action<bool, string> completed)
+        public static bool RequestRefill(Item player, IReadOnlyList<FixedStructureDefinition> templates, Action<bool, string> completed)
         {
             if (!GameNetwork.HasStateAuthority) return RequestRemote(player, null, true, completed);
             bool accepted; string reason;
@@ -48,14 +48,14 @@ namespace FlatWorld.Spaceflight
             return accepted;
         }
 
-        private static bool RequestRemote(Player player, string template, bool refill, Action<bool, string> completed)
+        private static bool RequestRemote(Item player, string template, bool refill, Action<bool, string> completed)
         {
             if (GameNetwork.IsOnline && RemoteRequest?.Invoke(player, template, refill, completed) == true) return true;
             completed?.Invoke(false, "联机连接尚未就绪，请稍后重试。");
             return false;
         }
 
-        public static bool TryBuild(Player player, FixedStructureDefinition template,
+        public static bool TryBuild(Item player, FixedStructureDefinition template,
             out IReadOnlyList<ShipGroundBuildingStore.Entry> buildings, out string reason)
         {
             buildings = null;
@@ -291,7 +291,7 @@ namespace FlatWorld.Spaceflight
         #endregion
 
         #region 模板资源补充
-        public static bool TryRefill(Player player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
+        public static bool TryRefill(Item player, IReadOnlyList<FixedStructureDefinition> templates, out string reason)
         {
             reason = null;
             SpaceSession session = SpaceSession.Current;
@@ -413,15 +413,15 @@ namespace FlatWorld.Spaceflight
             catch (Exception error) { reason = "补充未完成：" + error.Message; return false; }
         }
 
-        private static bool TryGetActorFrame(Player player, SpaceSession session, out SpaceNetworkObserver actor)
+        private static bool TryGetActorFrame(Item player, SpaceSession session, out SpaceNetworkObserver actor)
         {
             actor = default;
-            if (player?.Data == null || session == null) return false;
-            if (GameNetwork.IsOnline) return session.TryGetNetworkObserver(player.ProfileName, out actor) &&
+            if (player?.itemData== null || session == null) return false;
+            if (GameNetwork.IsOnline) return session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out actor) &&
                 (actor.InSpace || !string.IsNullOrWhiteSpace(actor.WorldKey));
-            actor.WorldKey = player.Data.CurrentSceneName;
+            actor.WorldKey = player.itemData.GetActorProfileMetadata().WorldKey;
             actor.InSpace = SpaceMgr.IsSpaceScene(actor.WorldKey);
-            actor.Position = actor.InSpace && session.TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver space)
+            actor.Position = actor.InSpace && session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver space)
                 ? space.Position : new SpaceSectorPosition(default,
                     SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical((Vector2)player.transform.position)));
             return true;

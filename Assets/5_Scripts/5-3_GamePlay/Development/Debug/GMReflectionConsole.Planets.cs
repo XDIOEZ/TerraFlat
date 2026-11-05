@@ -89,7 +89,7 @@ public sealed partial class GMReflectionConsole
         if (planetTeleportRunning) return;
         RefreshPlanetTeleportOptions();
         SpaceSession session = SpaceSession.Current;
-        Player player = ItemMgr.Instance?.User_Player;
+        Item player = ItemMgr.Instance?.LocalControlledActor;
         if (GameNetwork.IsOnline || GameManager.Instance?.IsGameplayReady != true || player == null ||
             session?.Universe == null || !session.Universe.TryGetBody(selectedTeleportBodyId, out BodyState body))
         {

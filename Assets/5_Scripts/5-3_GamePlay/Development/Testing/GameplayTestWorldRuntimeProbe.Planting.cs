@@ -8,7 +8,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     #region 播种资格与食用优先级
 
     // 使用真实种子、土壤和作物占格采样资格，不接管玩家输入或重算种植规则。
-    private static JObject CapturePlantingTarget(Player player, JObject args)
+    private static JObject CapturePlantingTarget(Item player, JObject args)
     {
         Site site = FindSite(player, sample =>
             FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil");
@@ -75,7 +75,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     #endregion
 
     #region 磷肥真实手持补给与拒绝
-    private static JObject CapturePhosphateFertilizerHeldUseAndRejection(Player player, JObject args)
+    private static JObject CapturePhosphateFertilizerHeldUseAndRejection(Item player, JObject args)
     {
         static bool SourceGround(RuntimeTerrainTileSample sample) =>
             FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil";

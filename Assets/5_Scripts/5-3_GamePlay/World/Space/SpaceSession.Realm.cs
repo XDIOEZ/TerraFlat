@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -20,15 +20,15 @@ namespace FlatWorld.Spaceflight
             reason = null; return true;
         }
 
-        public bool CompleteNetworkWorldTransfer(Player player, string world, Vector3 position)
+        public bool CompleteNetworkWorldTransfer(Item player, string world, Vector3 position)
         {
-            if (!GameNetwork.HasStateAuthority || player?.Data == null || State == null ||
+            if (!GameNetwork.HasStateAuthority || player?.itemData== null || State == null ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y) ||
                 !GameplayWorldRegistry.TryGet(world, out GameplayWorldRuntime runtime)) return false;
             SpacePassengerState passenger = GetPassenger(player);
             if (passenger.ConsolePieceId != null) ClearControl(passenger.ConsolePieceId);
-            RemoveNetworkPassengerInput(player.ProfileName);
-            EndNetworkAttack(player.ProfileName);
+            RemoveNetworkPassengerInput(ActorProfileRegistry.GetProfileId(player));
+            EndNetworkAttack(ActorProfileRegistry.GetProfileId(player));
             passenger.ShipId = passenger.ConsolePieceId = null;
             passenger.Supported = passenger.IsInSpace = passenger.SurfaceDescending = passenger.LandingResolved = false;
             passenger.DescentDriving = passenger.DescentControlEntered = passenger.LandingSelected = false;
@@ -36,8 +36,8 @@ namespace FlatWorld.Spaceflight
             passenger.FreeWalkVelocity = default;
             passenger.LandingWorldKey = world; passenger.LandingX = position.x; passenger.LandingY = position.y;
             unchecked { ++passenger.RealmRevision; }
-            player.Data.CurrentSceneName = world; player.Data.transform.position = position;
-            if (player != ItemMgr.Instance?.User_Player)
+            player.itemData.GetActorProfileMetadata().WorldKey = world; player.itemData.transform.position = position;
+            if (player != ItemMgr.Instance?.LocalControlledActor)
             {
                 player.transform.SetParent(null, true);
                 SceneManager.MoveGameObjectToScene(player.gameObject, runtime.Scene);
@@ -46,18 +46,18 @@ namespace FlatWorld.Spaceflight
             // 同世界本机先提交实体落点，避免观察者从旧 Transform 读回死亡位置。
             if (player.gameObject.scene == runtime.Scene)
                 using (GameplayWorldRegistry.UseWorld(world)) PlayerTeleportService.ApplySurfacePose(player, position);
-            if (player != ItemMgr.Instance?.User_Player)
+            if (player != ItemMgr.Instance?.LocalControlledActor)
                 foreach (Item child in player.GetComponentsInChildren<Item>(true)) ItemMgr.Instance.NotifyRuntimeItemMoved(child);
-            if (owner?.PlayerData_Dict != null) owner.PlayerData_Dict[player.ProfileName] = player.Data;
-            if (player == ItemMgr.Instance?.User_Player && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer))
+            if (owner?.ProfileActorData != null) owner.ProfileActorData[ActorProfileRegistry.GetProfileId(player)] = player.itemData;
+            if (player == ItemMgr.Instance?.LocalControlledActor && TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             return true;
         }
 
-        public bool TryBeginNetworkSurfaceTransfer(Player player, string world, Vector2 position,
+        public bool TryBeginNetworkSurfaceTransfer(Item player, string world, Vector2 position,
             bool isDirectTeleport = false)
         {
-            if (!GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || State == null || player?.Data == null ||
+            if (!GameNetwork.IsOnline || !GameNetwork.HasStateAuthority || State == null || player?.itemData== null ||
                 !float.IsFinite(position.x) || !float.IsFinite(position.y)) return false;
             if (!CanTransferToNetworkSurface(world, out string reason))
             { Debug.LogWarning("[太空联机] " + reason, this); return false; }
@@ -71,9 +71,9 @@ namespace FlatWorld.Spaceflight
                 passenger.LandingX = position.x; passenger.LandingY = position.y;
                 passenger.FreeMotion.PositionMeters = SpaceVector2.FromVector2(position);
             }
-            player.Data.CurrentSceneName = world;
-            player.Data.transform.position = position;
-            if (player == ItemMgr.Instance?.User_Player && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer))
+            player.itemData.GetActorProfileMetadata().WorldKey = world;
+            player.itemData.transform.position = position;
+            if (player == ItemMgr.Instance?.LocalControlledActor && TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             return true;
         }
@@ -81,7 +81,7 @@ namespace FlatWorld.Spaceflight
         public bool ExecuteNetworkRespawn(string profile, out string reason)
         {
             reason = "重生请求无法开始。";
-            Player actor = FindNetworkPlayer(profile);
+            Item actor = FindNetworkPlayer(profile);
             bool accepted = NetworkDimensionBridge.RequestRespawn(actor, default, default, null);
             if (accepted) reason = null;
             return accepted;

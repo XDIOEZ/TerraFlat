@@ -14,7 +14,7 @@ public sealed class TemperatureScreenRendererFeature : ScriptableRendererFeature
 
     private Material material;
     private TemperaturePass pass;
-    private Player playerOwner;
+    private Item playerOwner;
     private Mod_Temperature temperatureModule;
     private Mod_DamageReceiver healthModule;
     private Mod_Cam cameraModule;
@@ -139,8 +139,8 @@ public sealed class TemperatureScreenRendererFeature : ScriptableRendererFeature
             return;
         }
 
-        Player player = ItemMgr.GetInstance()?.User_Player;
-        if (player == null || !player.IsLocalProfile || !player.IsInitialized ||
+        Item player = ItemMgr.GetInstance()?.LocalControlledActor;
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || !player.IsInitialized ||
             !player.gameObject.activeInHierarchy)
         {
             ClearPresentation();

@@ -32,7 +32,7 @@ public partial class SaveDataMgr
         }
         CaptureRuntimeBuildingStates();
         if (!CaptureRuntimeAiEntityStates()) throw new InvalidOperationException("网络区块实体采集失败。");
-        using var policy = ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData);
+        using var policy = ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData, ActorProfileRegistry.IsProfileActorData);
         Vector2Int region = WeatherMgr.ResolveRegionalWeatherStorageOrigin(worldKey, origin);
         var weather = SaveData.PlanetData_Dict[worldKey].RegionalWeatherStates.Find(value => value.RegionX == region.x && value.RegionY == region.y);
         return MemoryPackSerializer.Serialize(new NetworkArchiveChunkSnapshot
@@ -79,11 +79,11 @@ public partial class SaveDataMgr
 
     public byte[] CaptureNetworkBootstrapSnapshot(string profileId = null, string worldKey = null)
     {
-        using var policy = ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData);
+        using var policy = ItemSnapshotSerialization.BeginPublicPlayerState(MachineInventoryCommands.PublicSpecialData, ActorProfileRegistry.IsProfileActorData);
         profileId ??= CurrentContrrolPlayerName;
         worldKey ??= GameplayWorldRegistry.ExecutionWorldKey;
         string privateSpace = SaveData.SpaceStateJson;
-        var players = SaveData.PlayerData_Dict;
+        var players = SaveData.ProfileActorData;
         var worlds = SaveData.PlanetData_Dict;
         var spawners = SaveData.MonsterSpawnerWorlds;
         try
@@ -92,8 +92,8 @@ public partial class SaveDataMgr
             var observerSpace = FlatWorld.Spaceflight.SpaceSession.Current?.CaptureBootstrapObserverState(profileId);
             SaveData.SpaceStateJson = observerSpace == null ? CaptureBootstrapSpaceMetadata(SaveData.SpaceStateJson, worldKey)
                 : Newtonsoft.Json.JsonConvert.SerializeObject(observerSpace);
-            SaveData.PlayerData_Dict = players.TryGetValue(profileId ?? "", out var player)
-                ? new Dictionary<string, Data_Player> { [profileId] = player } : new();
+            SaveData.ProfileActorData = players.TryGetValue(profileId ?? "", out ItemData player)
+                ? new Dictionary<string, ItemData> { [profileId] = player } : new();
             SaveData.PlanetData_Dict = worlds.TryGetValue(worldKey ?? "", out var world)
                 ? new Dictionary<string, PlanetData> { [worldKey] = world } : new();
             SaveData.MonsterSpawnerWorlds = new();
@@ -102,7 +102,7 @@ public partial class SaveDataMgr
         finally
         {
             SaveData.SpaceStateJson = privateSpace;
-            SaveData.PlayerData_Dict = players; SaveData.PlanetData_Dict = worlds; SaveData.MonsterSpawnerWorlds = spawners;
+            SaveData.ProfileActorData = players; SaveData.PlanetData_Dict = worlds; SaveData.MonsterSpawnerWorlds = spawners;
         }
     }
 

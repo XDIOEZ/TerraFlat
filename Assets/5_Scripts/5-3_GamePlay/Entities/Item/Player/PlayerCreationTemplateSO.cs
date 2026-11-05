@@ -10,12 +10,8 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
     [Serializable]
     public sealed class CoreSettings
     {
-        [Min(0f)] public float dataSpeed = 8f;
         [Min(0f)] public float playerPov = 10f;
         [Min(0f)] public float perceptionRadiusMultiplier = 1f;
-        [Min(0f)] public float initialStamina = 100f;
-        [Min(0f)] public float maxStamina = 100f;
-        [Min(0f)] public float staminaRecoverySpeed = 10f;
         [Min(0.01f)] public float maxCarryWeight = 100f;
         [Min(0.01f)] public float maxCarryVolume = 100f;
     }
@@ -96,38 +92,34 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
 
     #region 公共方法
 
-    public void ApplyTo(Player player)
+    public void ApplyTo(Item player)
     {
         if (player == null)
             throw new ArgumentNullException(nameof(player));
-        if (player.Data == null)
+        if (player.itemData == null)
             throw new InvalidOperationException("玩家创建模板无法应用：Player.Data 为空。");
         if (core == null || movement == null || food == null || stamina == null)
             throw new InvalidOperationException("玩家创建模板配置不完整。");
 
-        ApplyCore(player.Data);
         ApplyMovement(player.GetComponentInChildren<Mod_Mover>(true));
         ApplyFood(player.GetComponentInChildren<Mod_Food>(true));
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
 
         ItemData templateData = player.Get_NewItemData();
-        player.Data.ModuleDataDic = templateData.DetachModuleData();
+        player.itemData.ModuleDataDic = templateData.DetachModuleData();
+        ApplyCore(player.itemData);
     }
 
     #endregion
 
     #region 私有方法
 
-    private void ApplyCore(Data_Player data)
+    private void ApplyCore(ItemData data)
     {
-        data.Speed = new GameValue_float(core.dataSpeed);
-        data.PlayerPov = core.playerPov;
-        data.PerceptionRadiusMultiplier = core.perceptionRadiusMultiplier;
-        data.stamina = core.initialStamina;
-        data.staminaMax = core.maxStamina;
-        data.staminaRecoverySpeed = core.staminaRecoverySpeed;
-        data.MaxCarryWeight = core.maxCarryWeight;
-        data.MaxCarryVolume = core.maxCarryVolume;
+        ActorModuleState.SetCameraPov(data, core.playerPov);
+        ActorModuleState.SetTargetPerceptionMultiplier(data, core.perceptionRadiusMultiplier);
+        ActorModuleState.SetMaxCarryWeight(data, core.maxCarryWeight);
+        ActorModuleState.SetMaxCarryVolume(data, core.maxCarryVolume);
     }
 
     private void ApplyMovement(Mod_Mover mover)

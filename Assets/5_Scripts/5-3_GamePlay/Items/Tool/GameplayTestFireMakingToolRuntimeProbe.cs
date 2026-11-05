@@ -69,7 +69,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
 
     #region 真实面板与按钮
 
-    private static JObject CapturePanel(Player player, JObject args)
+    private static JObject CapturePanel(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         bool drill = (string)args["kind"] == "drill";
@@ -203,7 +203,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
     }
 
     // 用真实面板叠加模态和租约锁，采样窗口开关与玩法锁的独立边界。
-    private static JObject CapturePanelShortcutAdmission(Player player, BasePanel panel)
+    private static JObject CapturePanelShortcutAdmission(Item player, BasePanel panel)
     {
         Mod_GameController controller = player.GetComponent<Mod_GameController>();
         bool previousExplicitLock = controller.IsGameplayInputExplicitlyLocked;
@@ -256,7 +256,7 @@ public static class GameplayTestFireMakingToolRuntimeProbe
         public bool EventsBound => Host.OnAct.HasCalls && Receiver.OnAction_Start.HasCalls && Receiver.OnAction_Stop.HasCalls;
         public bool EventsUnbound => !Host.OnAct.HasCalls && !Receiver.OnAction_Start.HasCalls && !Receiver.OnAction_Stop.HasCalls;
 
-        public Fixture(bool drill, int inputSlots, bool configure, Scene scene = default, Player player = null)
+        public Fixture(bool drill, int inputSlots, bool configure, Scene scene = default, Item player = null)
         {
             if (!drill && !configure)
             {

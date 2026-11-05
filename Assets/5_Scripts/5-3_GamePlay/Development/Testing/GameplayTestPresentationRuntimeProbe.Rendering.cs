@@ -20,7 +20,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         public GameObject Effect;
         private bool disposed;
 
-        public RenderingFixture(Player player)
+        public RenderingFixture(Item player)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             Items = ItemMgr.Instance ?? throw new InvalidOperationException("正式物品管理器未就绪。");
@@ -65,7 +65,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
     private static int ActiveWetEffects(VisualEffectManager effects) =>
         effects.activeEffects.TryGetValue("WetStatusEffect", out var values) ? values.Count(value => value != null) : 0;
 
-    private static IEnumerator CaptureRendering(Player player, JObject args, Action<JObject> complete)
+    private static IEnumerator CaptureRendering(Item player, JObject args, Action<JObject> complete)
     {
         var fixture = new RenderingFixture(player);
         GameplayTestRuntimeProbe.RegisterCleanup(fixture);

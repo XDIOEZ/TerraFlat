@@ -25,7 +25,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     public float CooldownRemaining { get; private set; }
     public uint Sequence { get; private set; }
     public Func<Vector2, bool> NetworkRollRequest;
-    private Player player;
+    private Item player;
     private Mod_Mover mover;
     private Mod_Stamina stamina;
     private Mod_DamageReceiver health;
@@ -42,14 +42,14 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     private float activeCooldown;
     private bool starting;
     private bool startCancelled;
-    private bool IsServerRemoteAuthority => networkAuthority && player != null && !player.IsLocalProfile;
+    private bool IsServerRemoteAuthority => networkAuthority && player != null && !ActorProfileRegistry.IsLocallyControlled(player);
     #endregion
 
     #region 依赖与生命周期
     public void BindModuleDependencies(ItemMods modules)
     {
         UnbindCallbacks();
-        player = item as Player;
+        player = item;
         mover = modules.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
         stamina = modules.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         health = modules.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -61,11 +61,14 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     {
         BindModuleDependencies(item.itemMods);
         BindCallbacks();
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundRollInput;
+        ActorProfileRegistry.GetBinding(item).Changed += RefreshControlBoundRollInput;
         CooldownRemaining = 0f;
     }
     protected override void OnSave() { }
     protected override void OnUnload()
     {
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundRollInput;
         CancelRoll();
         UnbindCallbacks();
         networkAuthority = false;
@@ -78,7 +81,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     private void BindCallbacks()
     {
         if (mover != null) mover.MotionReset += CancelRoll;
-        if (controller != null && player != null && player.IsLocalProfile) controller.RollRequested += HandleRollRequested;
+        if (controller != null && player != null && ActorProfileRegistry.IsLocallyControlled(player)) controller.RollRequested += HandleRollRequested;
         if (health != null) health.DeathStarted += HandleDeath;
     }
     private void UnbindCallbacks()
@@ -86,6 +89,12 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
         if (mover != null) mover.MotionReset -= CancelRoll;
         if (controller != null) controller.RollRequested -= HandleRollRequested;
         if (health != null) health.DeathStarted -= HandleDeath;
+    }
+    private void RefreshControlBoundRollInput()
+    {
+        if (!ActorProfileRegistry.IsManuallyControlled(item)) CancelRoll();
+        UnbindCallbacks();
+        BindCallbacks();
     }
     private void HandleRollRequested() => RequestRoll();
     private void HandleDeath(Mod_DamageReceiver _) => CancelRoll();
@@ -105,7 +114,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     #region 正式发动与推进
     public bool RequestRoll()
     {
-        if (player == null || !player.IsLocalProfile || !CanStartRoll()) return false;
+        if (player == null || !ActorProfileRegistry.IsLocallyControlled(player) || !CanStartRoll()) return false;
         Vector2 input = controller != null ? controller.ReadMoveInput(controller._inputActions.Win10.Move_Player) : Vector2.zero;
         if (controller?._mainCamera != null) input = controller._mainCamera.transform.TransformDirection(input);
         input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
@@ -144,7 +153,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
         (IsServerRemoteAuthority || !mover.HasDrivenMotion) && CanUsePresentation();
     private bool CanContinueRoll() => isActiveAndEnabled && Enabled && player != null &&
         !player.DestructionHandled && health != null && !health.IsRuntimeTransitioning && health.Hp > 0f && mover != null &&
-        (IsServerRemoteAuthority ? mover.IsSurfaceMotionContextAvailable : mover.IsSurfaceMotionAvailable) && (player.IsLocalProfile
+        (IsServerRemoteAuthority ? mover.IsSurfaceMotionContextAvailable : mover.IsSurfaceMotionAvailable) && (ActorProfileRegistry.IsLocallyControlled(player)
             ? controller?.IsGameplayInputLocked != true && !EventSystemGuard.IsTextInputFocused
             : networkAuthority);
 
@@ -216,7 +225,7 @@ public sealed partial class Mod_Roll : Module, IItemModuleDependencyBinder
     #region 网络许可与远端表现
     public void ApplyNetworkOwnedRoll(Vector2 direction, float elapsed, uint sequence)
     {
-        if (item is not Player local || !local.IsLocalProfile || !isActiveAndEnabled || !Enabled) return;
+        if (!(item is Item local && ActorIdentity.IsPlayer(local)) || !ActorProfileRegistry.IsLocallyControlled(local) || !isActiveAndEnabled || !Enabled) return;
         if (sequence == lastNetworkSequence)
         {
             if (IsRolling && networkOwned)

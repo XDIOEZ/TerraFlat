@@ -106,7 +106,7 @@ public sealed partial class Mod_FishingRod : Module
     private static readonly Vector2 RodTipSpriteAnchor = new(29.5f / 32f, 29.5f / 32f);
     private static readonly HashSet<Mod_FishingRod> activeRods = new();
     public static event Action<Item, string> FeedbackRequested;
-    public static event Action<Player, FishingSoundAction> SoundRequested;
+    public static event Action<Item, FishingSoundAction> SoundRequested;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeLines()
@@ -936,11 +936,11 @@ public sealed partial class Mod_FishingRod : Module
     // 音效订阅方失败不影响已经完成的鱼饵、鱼钩和收线状态。
     private void RaiseSound(FishingSoundAction action)
     {
-        if (item?.Owner is not Player player || SoundRequested == null)
+        if (!(item?.Owner is Item player && ActorIdentity.IsPlayer(player)) || SoundRequested == null)
             return;
         foreach (Delegate callback in SoundRequested.GetInvocationList())
         {
-            try { ((Action<Player, FishingSoundAction>)callback)(player, action); }
+            try { ((Action<Item, FishingSoundAction>)callback)(player, action); }
             catch (Exception exception) { Debug.LogException(exception); }
         }
     }

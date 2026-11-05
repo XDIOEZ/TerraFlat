@@ -6,7 +6,7 @@ public partial class Mod_GameController
     #region 船内指针坐标
     private Vector3 ConvertDisplayedPointerToItemWorld(Vector3 displayedPosition)
     {
-        if (item is Player player && SpaceSession.Current != null &&
+        if ((item is Item player && ActorIdentity.IsPlayer(player)) && SpaceSession.Current != null &&
             SpaceSession.Current.IsPlayerInShipInteriorWorld(player, out ShipState ship, out _))
         {
             Vector2 local = SpaceSession.Current.UnprojectShipInteriorPosition(ship, displayedPosition);

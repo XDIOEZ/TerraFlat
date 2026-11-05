@@ -760,7 +760,7 @@ namespace FlatWorld.NaturalEntities
             return match;
         }
 
-        public static bool TryHarvestNetwork(Player actor, string worldKey, int guid, Vector2 position,
+        public static bool TryHarvestNetwork(Item actor, string worldKey, int guid, Vector2 position,
             string sourceWorldKey = null, int sourceChunkX = 0, int sourceChunkY = 0)
         {
             if (!GameNetwork.HasStateAuthority || actor == null || guid == 0 ||
@@ -793,7 +793,7 @@ namespace FlatWorld.NaturalEntities
             if (actor == null || !Contains(handle)) return false;
             Record record = records[handle.Id];
             if (!GameNetwork.HasStateAuthority)
-                return actor is Player player && NaturalInteractionNetworkBridge.RequestHarvest(player,
+                return (actor is Item player && ActorIdentity.IsPlayer(player)) && NaturalInteractionNetworkBridge.RequestHarvest(player,
                     record.WorldKey, record.Snapshot.Guid, record.Snapshot.transform.position,
                     record.HasGeneratedNaturalSource ? record.PhysicsSourceWorldKey : null,
                     record.PhysicsSourceChunkX, record.PhysicsSourceChunkY);

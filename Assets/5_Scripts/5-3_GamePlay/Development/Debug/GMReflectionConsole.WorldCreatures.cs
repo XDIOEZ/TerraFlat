@@ -35,8 +35,8 @@ public sealed partial class GMReflectionConsole
         if (worldCreatureSummary == null || !IsPageSectionInView(GmPageId.WorldCreatures) ||
             Time.unscaledTime < nextWorldCreatureRefreshAt) return;
         nextWorldCreatureRefreshAt = Time.unscaledTime + 0.25f;
-        Player player = ItemMgr.GetExistingInstance()?.User_Player;
-        string world = player?.Data?.CurrentSceneName;
+        Item player = ItemMgr.GetExistingInstance()?.LocalControlledActor;
+        string world = player?.itemData?.GetActorProfileMetadata().WorldKey;
         MonsterSpawnerManager manager = MonsterSpawnerManager.GetForWorld(world, create: false);
         if (player == null || manager == null)
         {

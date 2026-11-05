@@ -12,11 +12,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     private static void RegisterCreatureCreation()
     {
         GameplayTestRuntimeProbe.Register("ai", "creature_creation", CaptureCreatureCreation);
+        GameplayTestRuntimeProbe.Register("ai", "actor_control", CaptureActorControl);
         GameplayTestRuntimeProbe.RegisterAsync("ai", "incremental_creature_creation", CaptureIncrementalCreatureCreation);
     }
 
     // 在隔离世界调用正式管理器，采样身份、回滚、池复用和休眠恢复，业务断言交给 Lua。
-    private static JObject CaptureCreatureCreation(Player player, JObject args)
+    private static JObject CaptureCreatureCreation(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         MonsterSpawnerManager manager = MonsterSpawnerManager.ExistingInstance;
@@ -115,7 +116,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     #region 分帧出生现场
 
     // 每次只推进一个正式创建步骤，采样跨帧交付、半途取消和光源惰性创建。
-    private static IEnumerator CaptureIncrementalCreatureCreation(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureIncrementalCreatureCreation(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         MonsterSpawnerManager manager = MonsterSpawnerManager.ExistingInstance;

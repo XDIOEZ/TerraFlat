@@ -171,13 +171,13 @@ public partial class SaveDataMgr
             if (currentPublicPlayerState != publicPlayerState) stablePolicy = false;
             UpdateEcologyFrozenItemsCapturePolicy(frozenItems, currentRevision, currentPublicPlayerState);
             byte[] bytes;
-            if (currentPublicPlayerState || item == null || item is Data_Player ||
+            if (currentPublicPlayerState || item == null || ActorProfileRegistry.IsProfileActorData(item) ||
                 !(currentRevision == codecRevision && oldItems != null && oldItems.TryGetValue(item, out bytes) ||
                   frozenItems != null && frozenItems.TryGetValue(item, out bytes)))
             {
                 using (SaveEcologyItemPoint.Measure()) bytes = ItemSnapshotSerialization.SerializePayload(item == null ? null : ItemSnapshotSerialization.Capture(item));
             }
-            if (!currentPublicPlayerState && item != null && item is not Data_Player && frozenItems != null) frozenItems[item] = bytes;
+            if (!currentPublicPlayerState && item != null && !ActorProfileRegistry.IsProfileActorData(item) && frozenItems != null) frozenItems[item] = bytes;
             record.ChangedItems.Add(bytes);
             yield return 1;
         }
@@ -208,7 +208,7 @@ public partial class SaveDataMgr
         for (int i = 0; i < count; i++)
         {
             ItemData item = items[i];
-            if (item is Data_Player) cacheable = false;
+            if (ActorProfileRegistry.IsProfileActorData(item)) cacheable = false;
             if (same && !ReferenceEquals(item, previous[i])) same = false;
         }
         return same;

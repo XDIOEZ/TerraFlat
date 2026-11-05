@@ -17,20 +17,20 @@ namespace FlatWorld.Spaceflight
 
         #region 连接身份与权威输入
         private readonly Dictionary<string, SpacePassengerInput> passengerInputs = new(StringComparer.Ordinal);
-        private static Player FindNetworkPlayer(string profile)
+        private static Item FindNetworkPlayer(string profile)
         {
             ItemMgr manager = ItemMgr.GetInstance();
-            return manager != null && manager.Player_DIC.TryGetValue(profile, out Player player) ? player : null;
+            return manager != null && manager.ProfileActors.TryGetValue(profile, out Item player) ? player : null;
         }
         private void StepRemotePassengerInput(double seconds)
         {
-            Player local = ItemMgr.Instance?.User_Player;
+            Item local = ItemMgr.Instance?.LocalControlledActor;
             foreach (SpacePassengerState passenger in State.Passengers)
             {
-                if (local?.ProfileName == passenger.ProfileId || !passenger.Supported || passenger.ConsolePieceId != null) continue;
+                if (ActorProfileRegistry.GetProfileId(local) == passenger.ProfileId || !passenger.Supported || passenger.ConsolePieceId != null) continue;
                 ShipState ship = GetShip(passenger.ShipId);
                 if (ship == null) continue;
-                Player player = FindNetworkPlayer(passenger.ProfileId);
+                Item player = FindNetworkPlayer(passenger.ProfileId);
                 if (player == null || !TryEnterShipInteriorWorld(player, passenger, ship,
                         new Vector2((float)passenger.LocalX, (float)passenger.LocalY))) continue;
                 Mod_Mover mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover);
@@ -52,13 +52,13 @@ namespace FlatWorld.Spaceflight
                 if (!hasFloor) ReleasePassenger(passenger, ship);
             }
         }
-        public void EnsureNetworkPassenger(Player player)
+        public void EnsureNetworkPassenger(Item player)
         {
-            if (player == null || State == null || FindPassenger(player.ProfileName) != null) return;
+            if (player == null || State == null || FindPassenger(ActorProfileRegistry.GetProfileId(player)) != null) return;
             SpacePassengerState passenger = GetPassenger(player);
-            passenger.IsInSpace = SpaceMgr.IsSpaceScene(player.Data.CurrentSceneName);
-            passenger.LandingWorldKey = passenger.IsInSpace ? null : player.Data.CurrentSceneName;
-            if (SpaceSectorCoordinates.TryParseSceneKey(player.Data.CurrentSceneName, out SpaceSectorId sector))
+            passenger.IsInSpace = SpaceMgr.IsSpaceScene(player.itemData.GetActorProfileMetadata().WorldKey);
+            passenger.LandingWorldKey = passenger.IsInSpace ? null : player.itemData.GetActorProfileMetadata().WorldKey;
+            if (SpaceSectorCoordinates.TryParseSceneKey(player.itemData.GetActorProfileMetadata().WorldKey, out SpaceSectorId sector))
                 passenger.FreeMotion.Sector = sector;
         }
         public void SetNetworkPlayerRealm(string profile, bool inSpace, SpaceSectorPosition position, string worldKey)
@@ -110,7 +110,7 @@ namespace FlatWorld.Spaceflight
                     !int.TryParse(intent.PieceId, System.Globalization.NumberStyles.Integer,
                         System.Globalization.CultureInfo.InvariantCulture, out int consoleGuid))
                     return RejectShipOperation("地面点火请求的控制台身份或操作参数无效。", out reason);
-                Player actor = FindNetworkPlayer(profile);
+                Item actor = FindNetworkPlayer(profile);
                 if (!ShipGroundAssembly.TryLaunch(actor, consoleGuid, out ShipState launched, out reason)) return false;
                 if (intent.Action == 1 && FindPiece(intent.PieceId, out _, out ShipPieceState console))
                     BindConsoleControl(passenger, launched, console, observer.Position, false);
@@ -119,7 +119,7 @@ namespace FlatWorld.Spaceflight
 
             if (intent.Kind is SpaceNetworkIntentKind.Attack or SpaceNetworkIntentKind.AttackEnd or SpaceNetworkIntentKind.UseSkill or SpaceNetworkIntentKind.UsePlayerItem or SpaceNetworkIntentKind.OffhandParry)
             {
-                Player actor = FindNetworkPlayer(profile);
+                Item actor = FindNetworkPlayer(profile);
                 string physicalWorld = GameplayWorldRegistry.GetItemWorldKey(actor);
                 bool localWorld = GameplayWorldRegistry.UsesLocalCoordinates(physicalWorld);
                 if (intent.Kind != SpaceNetworkIntentKind.AttackEnd &&
@@ -137,7 +137,7 @@ namespace FlatWorld.Spaceflight
             }
             if (intent.Kind == SpaceNetworkIntentKind.HarvestNatural)
             {
-                Player actor = FindNetworkPlayer(profile);
+                Item actor = FindNetworkPlayer(profile);
                 string physicalWorld = GameplayWorldRegistry.GetItemWorldKey(actor);
                 if (intent.TargetId != physicalWorld || !GameplayWorldRegistry.TryGet(physicalWorld, out _))
                     return RejectShipOperation("采集目标不在玩家当前实体世界。", out reason);
@@ -239,8 +239,8 @@ namespace FlatWorld.Spaceflight
         }
         private bool SubmitLocalIntent(SpaceNetworkIntentKind kind, string piece = null, string ship = null, string target = null, SpaceSectorPosition position = default)
         {
-            Player player = ItemMgr.Instance?.User_Player;
-            return player != null && SpaceNetworkBridge.SendIntent(player.ProfileName, new SpaceNetworkIntent
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            return player != null && SpaceNetworkBridge.SendIntent(ActorProfileRegistry.GetProfileId(player), new SpaceNetworkIntent
             { Kind = kind, PieceId = piece, ShipId = ship, TargetId = target, Sector = position.Sector, X = position.LocalMeters.X, Y = position.LocalMeters.Y });
         }
         #endregion
@@ -401,8 +401,8 @@ namespace FlatWorld.Spaceflight
             RebuildPieceIndex(); viewBindingsDirty = true;
             ApplyInteriorNetworkSnapshot(interior);
             queryAssemblies.Clear(); simulationAssemblies.Clear(); freeContactAssemblies.Clear();
-            Player player = ItemMgr.Instance?.User_Player;
-            if (player != null && TryGetNetworkObserver(player.ProfileName, out SpaceNetworkObserver observer) && !string.IsNullOrEmpty(observer.WorldKey))
+            Item player = ItemMgr.Instance?.LocalControlledActor;
+            if (player != null && TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player), out SpaceNetworkObserver observer) && !string.IsNullOrEmpty(observer.WorldKey))
                 GameManager.Instance.ApplyNetworkLocalSpaceObserver(player, observer);
             running = true;
             PrimeInitialNetworkFlightAudio();

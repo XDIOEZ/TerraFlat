@@ -71,7 +71,7 @@ namespace FlatWorld.GameplayMCP
             }
 
             if (!GameplayMcpRuntime.TryEnsureControl(
-                    out Player player,
+                    out Item player,
                     out _,
                     out _,
                     out string controlError))
@@ -119,7 +119,7 @@ namespace FlatWorld.GameplayMCP
     internal interface IGameplayMcpGmCommand
     {
         /// <summary>执行命令并返回结构化结果。</summary>
-        bool TryExecute(Player player, JObject parameters, out JObject result, out string error);
+        bool TryExecute(Item player, JObject parameters, out JObject result, out string error);
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>执行指定 GM 命令并保留生产 API 返回的失败原因。</summary>
         public static bool TryExecute(
             string name,
-            Player player,
+            Item player,
             JObject parameters,
             out JObject result,
             out string error)
@@ -241,7 +241,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>解析当前本地玩家的管理员控制器。</summary>
         internal static bool TryGetAdminController(
-            Player player,
+            Item player,
             out Mod_PlayerAdminController controller,
             out string error)
         {
@@ -265,13 +265,13 @@ namespace FlatWorld.GameplayMCP
         /// <summary>构造管理员与无敌状态，便于命令执行后立即验证。</summary>
         internal static JObject BuildStatus(
             string command,
-            Player player,
+            Item player,
             Mod_PlayerAdminController controller)
         {
             return new JObject
             {
                 ["command"] = command,
-                ["player_name"] = player?.Data?.Name_User ?? string.Empty,
+                ["player_name"] = player?.itemData?.GetActorProfileMetadata().DisplayName ?? string.Empty,
                 ["administrator"] = controller?.IsAdministrator ?? false,
                 ["invincibility_enabled"] = controller?.IsAdminInvincibilityEnabled ?? false,
                 ["runtime_only"] = true,
@@ -293,7 +293,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmStatusCommand : IGameplayMcpGmCommand
     {
         /// <summary>返回当前管理员状态。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -316,7 +316,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmEnableAdminCommand : IGameplayMcpGmCommand
     {
         /// <summary>调用正式管理员入口。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -346,7 +346,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmEnableInvincibilityCommand : IGameplayMcpGmCommand
     {
         /// <summary>先满足管理员权限，再调用正式无敌入口。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -386,7 +386,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmDisableInvincibilityCommand : IGameplayMcpGmCommand
     {
         /// <summary>调用正式无敌关闭入口。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -426,7 +426,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmToggleInvincibilityCommand : IGameplayMcpGmCommand
     {
         /// <summary>调用正式无敌切换入口。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -466,7 +466,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmInitializeCreativeInventoryCommand : IGameplayMcpGmCommand
     {
         /// <summary>启用管理员后调用玩家模块已有的创造背包入口，不直接写库存槽位。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             if (!GameplayMcpGmCommandRegistry.TryGetAdminController(
                     player,
@@ -510,7 +510,7 @@ namespace FlatWorld.GameplayMCP
     internal sealed class GameplayMcpGmApplySelfBuffCommand : IGameplayMcpGmCommand
     {
         /// <summary>校验目录与玩家模块后，通过正式 Mod_BuffManager 施加状态。</summary>
-        public bool TryExecute(Player player, JObject parameters, out JObject result, out string error)
+        public bool TryExecute(Item player, JObject parameters, out JObject result, out string error)
         {
             string buffId = parameters?["buffId"]?.ToString()?.Trim();
             if (string.IsNullOrWhiteSpace(buffId))

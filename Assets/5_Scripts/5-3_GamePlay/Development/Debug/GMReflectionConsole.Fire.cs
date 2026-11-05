@@ -5,7 +5,7 @@ public sealed partial class GMReflectionConsole
     #region 批量火场调试
     public int IgniteWorldFireAroundPlayer(int sideLength = 10)
     {
-        Player player = ItemMgr.GetExistingInstance()?.User_Player;
+        Item player = ItemMgr.GetExistingInstance()?.LocalControlledActor;
         if (player == null) return 0;
         Vector2Int center = Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(player.transform.position));
         return WorldFireSystem.IgniteWorldFireArea(GameplayWorldRegistry.GetItemWorldKey(player),
@@ -14,7 +14,7 @@ public sealed partial class GMReflectionConsole
 
     public int ExtinguishWorldFireAroundPlayer(int sideLength = 100)
     {
-        Player player = ItemMgr.GetExistingInstance()?.User_Player;
+        Item player = ItemMgr.GetExistingInstance()?.LocalControlledActor;
         if (player == null) return 0;
         string key = GameplayWorldRegistry.GetItemWorldKey(player);
         Vector2Int center = Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(player.transform.position));

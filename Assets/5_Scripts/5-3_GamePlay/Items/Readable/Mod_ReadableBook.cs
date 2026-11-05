@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MemoryPack;
 using UnityEngine;
@@ -200,8 +200,8 @@ public sealed class Mod_ReadableBook : Module, ILocalItemUsePresentation
                !item.DestructionHandled &&
                item.InHand &&
                item.Owner == actor &&
-               actor is Player player &&
-               player.IsLocalProfile &&
+               (actor is Item player && ActorIdentity.IsPlayer(player)) &&
+               ActorProfileRegistry.IsLocallyControlled(player) &&
                !actor.DestructionHandled;
     }
 

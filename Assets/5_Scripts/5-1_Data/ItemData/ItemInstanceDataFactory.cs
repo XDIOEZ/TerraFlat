@@ -120,32 +120,7 @@ public static class ItemInstanceDataFactory
             Func<Data_TileMap> createMap = ((Data_TileMap)source).CompileRuntimeMapFactory();
             return () => createMap();
         }
-        if (source.GetType() != typeof(Data_Player))
-            throw new InvalidDataException($"物品运行态类别尚未注册：{source.GetType().FullName}");
-
-        var player = (Data_Player)source;
-        var defaults = new Data_Player
-        {
-            CurrentSceneName = player.CurrentSceneName,
-            hp = CloneHp(player.hp),
-            Speed = CloneGameValue(player.Speed) ?? new GameValue_float(), stamina = player.stamina,
-            staminaMax = player.staminaMax, staminaRecoverySpeed = player.staminaRecoverySpeed,
-            Name_User = player.Name_User, PlayerPov = player.PlayerPov,
-            MaxCarryWeight = player.MaxCarryWeight, MaxCarryVolume = player.MaxCarryVolume,
-            PerceptionRadiusMultiplier = player.PerceptionRadiusMultiplier
-        };
-        Func<Dictionary<string, Inventory_Data>> inventories = InventoryRuntimeDataFactory.CompileDictionary(player._inventoryData);
-        return () => new Data_Player
-        {
-            CurrentSceneName = defaults.CurrentSceneName,
-            hp = CloneHp(defaults.hp),
-            Speed = CloneGameValue(defaults.Speed), stamina = defaults.stamina,
-            staminaMax = defaults.staminaMax, staminaRecoverySpeed = defaults.staminaRecoverySpeed,
-            Name_User = defaults.Name_User, PlayerPov = defaults.PlayerPov,
-            MaxCarryWeight = defaults.MaxCarryWeight, MaxCarryVolume = defaults.MaxCarryVolume,
-            PerceptionRadiusMultiplier = defaults.PerceptionRadiusMultiplier,
-            _inventoryData = inventories()
-        };
+        throw new InvalidDataException($"物品运行态类别尚未注册：{source.GetType().FullName}");
     }
 
     internal static GameValue_float CloneGameValue(GameValue_float value) => value == null ? null : new GameValue_float
@@ -153,12 +128,6 @@ public static class ItemInstanceDataFactory
         BaseValue = value.BaseValue, BaseAdditive = value.BaseAdditive,
         AdditiveModifier = value.AdditiveModifier, MultiplicativeModifier = value.MultiplicativeModifier,
         FinalAdditive = value.FinalAdditive
-    };
-
-    private static Hp CloneHp(Hp value) => value == null ? new Hp(30f) : new Hp(value.Value)
-    {
-        maxValue = value.maxValue,
-        Weaknesses = value.Weaknesses == null ? new List<string>() : new List<string>(value.Weaknesses)
     };
 
     /// <summary>原位恢复当前定义，库存槽位与手持实例继续共享同一数据引用。</summary>

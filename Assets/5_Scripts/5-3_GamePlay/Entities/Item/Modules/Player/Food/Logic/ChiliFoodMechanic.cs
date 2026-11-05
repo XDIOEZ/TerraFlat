@@ -21,7 +21,7 @@ public sealed class ChiliFoodMechanic : IFoodMechanic, IFoodConsumptionObserver
     /// <summary>只在玩家完整吃完一颗辣椒后添加状态，由 Mod_BuffManager 统一处理续期。</summary>
     public void OnFoodConsumed(FoodConsumeResult result)
     {
-        if (!GameNetwork.HasStateAuthority || !(result.Consumer is Player) ||
+        if (!GameNetwork.HasStateAuthority || !(ActorIdentity.IsPlayer(result.Consumer as Item)) ||
             !string.Equals(result.ConsumedItem?.itemData?.IDName, ItemId, StringComparison.OrdinalIgnoreCase))
             return;
 

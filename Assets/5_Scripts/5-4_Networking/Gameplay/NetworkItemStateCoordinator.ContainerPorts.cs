@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using MemoryPack;
 using Mirror;
 using Newtonsoft.Json;
@@ -39,7 +39,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkClient.UnregisterHandler<NetworkContainerIntentResponse>();
             pendingContainerIntent = 0; containerIntentDeadline = 0f;
         }
-        private bool SendContainerIntent(ContainerTransferIntent intent, Player actor)
+        private bool SendContainerIntent(ContainerTransferIntent intent, Item actor)
         {
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
             if (!NetworkClient.ready || NetworkServer.active || actor == null || actor != NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer ||
@@ -49,7 +49,7 @@ namespace FlatWorld.Networking.Gameplay
             pendingContainerIntent = NextMachineToken(); containerIntentDeadline = Time.unscaledTime + 8f;
             NetworkClient.Send(new NetworkContainerIntentRequest { RealmRevision = NetworkGameplayWorldScope.LocalRevision, Token = pendingContainerIntent, IntentJson = json, ShipId = CurrentRequestShipId() }); return true;
         }
-        private bool CanUseContainerAddress(NetworkConnectionToClient connection, Player actor, ContainerPortAddress address)
+        private bool CanUseContainerAddress(NetworkConnectionToClient connection, Item actor, ContainerPortAddress address)
         {
             if (address == null) return true;
             if ((address.ItemId?.Length ?? 0) > 128 || (address.PortId?.Length ?? 0) > 64 || (address.Inventory.PlayerInventory?.Length ?? 0) > 128) return false;
@@ -69,7 +69,7 @@ namespace FlatWorld.Networking.Gameplay
             ContainerTransferIntent intent;
             try { intent = JsonConvert.DeserializeObject<ContainerTransferIntent>(request.IntentJson, new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }); }
             catch (JsonException) { connection.Send(new NetworkContainerIntentResponse { Token = request.Token, Failure = (int)ContainerTransferFailure.InvalidRequest }); return; }
-            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (intent == null || actor == null || connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
                 (intent.Operation?.Length ?? 0) > 32 || (intent.ContentId?.Length ?? 0) > 128 || (intent.Tag?.Length ?? 0) > 128 ||
                 !CanUseContainerAddress(connection, actor, intent.Source) || !CanUseContainerAddress(connection, actor, intent.Target))
@@ -81,7 +81,7 @@ namespace FlatWorld.Networking.Gameplay
             SyncContainerEndpoint(connection, actor, intent.Target, out response.Target, out response.TargetInventory);
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor); connection.Send(response);
         }
-        private void SyncContainerEndpoint(NetworkConnectionToClient connection, Player actor, ContainerPortAddress address, out MachineInventoryAddress inventoryAddress, out byte[] payload)
+        private void SyncContainerEndpoint(NetworkConnectionToClient connection, Item actor, ContainerPortAddress address, out MachineInventoryAddress inventoryAddress, out byte[] payload)
         {
             inventoryAddress = default; payload = null;
             if (address == null) return;
@@ -107,7 +107,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (NetworkServer.active || response.Token != pendingContainerIntent) return;
             pendingContainerIntent = 0;
-            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             ApplyPlayerInventory(actor, response.Source, response.SourceInventory);
             ApplyPlayerInventory(actor, response.Target, response.TargetInventory);
             ContainerTransferCommands.CompleteRemote(new ContainerTransferResult((ContainerTransferFailure)response.Failure, response.ContentId, response.Items, response.Servings, response.Unit));

@@ -663,7 +663,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             cached_ItemDatas[index] = null;
             item?.MarkModuleScheduleDirty();
             EquipmentChanged?.Invoke();
-            if (equipmentIdentityChanged && previousItemData != null && item is Player removingPlayer)
+            if (equipmentIdentityChanged && previousItemData != null && (item is Item removingPlayer && ActorIdentity.IsPlayer(removingPlayer)))
                 EquipmentAudioFeedbackEvents.Publish(removingPlayer, false);
             return;
         }
@@ -689,7 +689,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         item?.MarkModuleScheduleDirty();
         EquipmentChanged?.Invoke();
-        if (equipmentIdentityChanged && item is Player equippingPlayer)
+        if (equipmentIdentityChanged && (item is Item equippingPlayer && ActorIdentity.IsPlayer(equippingPlayer)))
             EquipmentAudioFeedbackEvents.Publish(equippingPlayer, true);
     }
 

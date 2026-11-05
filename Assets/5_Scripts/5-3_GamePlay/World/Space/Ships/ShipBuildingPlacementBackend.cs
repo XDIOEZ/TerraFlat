@@ -484,14 +484,14 @@ namespace FlatWorld.Spaceflight
                     if (!string.IsNullOrWhiteSpace(passenger.ConsolePieceId) &&
                         (support == null || !support.Pieces.Exists(piece => piece.PieceId == passenger.ConsolePieceId && piece.IsOperational)))
                     {
-                        if (ItemMgr.Instance != null && ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player)) ExitConsole(player);
+                        if (ItemMgr.Instance != null && ItemMgr.Instance.ProfileActors.TryGetValue(passenger.ProfileId, out Item player)) ExitConsole(player);
                         else { ClearControl(passenger.ConsolePieceId); passenger.ConsolePieceId = null; }
                     }
                     if (support == null) ReleasePassenger(passenger, oldPose);
                     else
                     {
                         passenger.ShipId = support.ShipId;
-                        if (ItemMgr.Instance != null && ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player))
+                        if (ItemMgr.Instance != null && ItemMgr.Instance.ProfileActors.TryGetValue(passenger.ProfileId, out Item player))
                             TryTransferPassengerToShipInteriorWorld(player, passenger, support);
                     }
                 }
@@ -635,10 +635,10 @@ namespace FlatWorld.Spaceflight
                     foreach (SpacePassengerState passenger in State.Passengers)
                     {
                         if (assignedMassPassengers.Contains(passenger.ProfileId) && !cache.AssignedPassengers.Contains(passenger.ProfileId)) continue;
-                        Player player = null;
-                        if (ItemMgr.Instance != null) ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out player);
-                        Data_Player playerData = player?.Data;
-                        if (playerData == null) owner.PlayerData_Dict.TryGetValue(passenger.ProfileId, out playerData);
+                        Item player = null;
+                        if (ItemMgr.Instance != null) ItemMgr.Instance.ProfileActors.TryGetValue(passenger.ProfileId, out player);
+                        ItemData playerData = player?.itemData;
+                        if (playerData == null) owner.ProfileActorData.TryGetValue(passenger.ProfileId, out playerData);
                         if (playerData == null || !TryGetPassengerMassPosition(passenger, ship, player, playerData, out double x, out double y)) continue;
                         assignedMassPassengers.Add(passenger.ProfileId); cache.AssignedPassengers.Add(passenger.ProfileId);
                         double mass = reader.ReadCachedItem(passenger, playerData, player);
@@ -682,8 +682,8 @@ namespace FlatWorld.Spaceflight
             value.IntrinsicInertiaKgM2 = mass * (w * w + h * h) / 12d;
             CommitMassContribution(ship, value);
         }
-        private bool TryGetPassengerMassPosition(SpacePassengerState passenger, ShipState ship, Player player,
-            Data_Player data, out double localX, out double localY)
+        private bool TryGetPassengerMassPosition(SpacePassengerState passenger, ShipState ship, Item player,
+            ItemData data, out double localX, out double localY)
         {
             localX = passenger.LocalX; localY = passenger.LocalY;
             if (passenger.IsInSpace && !passenger.Supported) return false;
@@ -693,7 +693,7 @@ namespace FlatWorld.Spaceflight
             if (passenger.IsInSpace) position = SpaceSectorCoordinates.Relative(passenger.FreeMotion.Sector, passenger.FreeMotion.PositionMeters, ship.Sector);
             else
             {
-                string world = player != null ? player.gameObject.scene.name : data.CurrentSceneName;
+                string world = player != null ? player.gameObject.scene.name : data.GetActorProfileMetadata().WorldKey;
                 if (world != ship.WorldAddress) return false;
                 Vector3 savedPosition = player != null ? player.transform.position : data.transform.position;
                 position = new SpaceVector2(savedPosition.x, savedPosition.y);

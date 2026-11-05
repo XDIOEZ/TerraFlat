@@ -56,7 +56,7 @@ namespace FlatWorld.Spaceflight
             SpaceSession session = SpaceSession.Current;
             if (!GameNetwork.HasStateAuthority || session?.State == null || weapon == null || weapon.RemainingAttackTargets == 0) return;
             bool spaceCombat = SpaceSession.TryGetCombatFrame(weapon.item, out SpaceSectorPosition canonicalOrigin, out Vector2 presentationOrigin);
-            Player attacker = SpaceSession.CombatPlayer(weapon.item);
+            Item attacker = SpaceSession.CombatPlayer(weapon.item);
             SpaceCombatFrame frame = weapon.item != null ? weapon.item.GetComponent<SpaceCombatFrame>() : null;
             bool externalProjectile = frame != null && frame.Active;
             string attackerWorld = GameplayWorldRegistry.GetItemWorldKey(
@@ -157,7 +157,7 @@ namespace FlatWorld.Spaceflight
                     foreach (SpacePassengerState passenger in session.State.Passengers)
                     {
                         if (!session.TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver observer) || !observer.InSpace ||
-                            !ItemMgr.Instance.Player_DIC.TryGetValue(passenger.ProfileId, out Player player) || player == null) continue;
+                            !ItemMgr.Instance.ProfileActors.TryGetValue(passenger.ProfileId, out Item player) || player == null) continue;
                         string targetWorld = GameplayWorldRegistry.GetItemWorldKey(player);
                         if (attackerShip != null && targetWorld == attackerWorld || externalProjectile &&
                             frame.DepartingShipId != null && targetWorld == MachineWorld.GetShipScopeKey(frame.DepartingShipId)) continue;
@@ -266,8 +266,8 @@ namespace FlatWorld.Spaceflight
                             out double hx, out double hy);
                         playerHit.HitPoint = new float2((float)hx, (float)hy);
                     }
-                    else if (target.Receiver.item is Player targetPlayer &&
-                        session.TryGetNetworkObserver(targetPlayer.ProfileName, out SpaceNetworkObserver targetObserver))
+                    else if ((target.Receiver.item is Item targetPlayer && ActorIdentity.IsPlayer(targetPlayer)) &&
+                        session.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(targetPlayer), out SpaceNetworkObserver targetObserver))
                         playerHit.HitPoint = (float2)((Vector2)targetPlayer.transform.position +
                             SpaceSectorCoordinates.Difference(hitPosition, targetObserver.Position).ToVector2());
                     else playerHit.HitPoint = contact.Point;

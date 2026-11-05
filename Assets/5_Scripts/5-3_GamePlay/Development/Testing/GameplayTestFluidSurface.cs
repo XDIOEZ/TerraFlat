@@ -98,7 +98,7 @@ internal static class GameplayTestFluidSurface
 
     #region 简单工业真实地表采样
     // 双泵使用真实地表、电池和管罐跑完整Tick，覆盖十升首批回调读图及下一批预算。
-    internal static JObject CaptureCombinedTankPumpTickContract(Player player, JObject args)
+    internal static JObject CaptureCombinedTankPumpTickContract(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var fixture = new GameplayFluidScope(surface: true, surfaceWidth: 7, surfaceHeight: 4,
@@ -163,14 +163,14 @@ internal static class GameplayTestFluidSurface
         };
     }
 
-    internal static JObject CaptureSharedPumpSearchContract(Player player, JObject args)
+    internal static JObject CaptureSharedPumpSearchContract(Item player, JObject args)
     {
         args = (JObject)args.DeepClone();
         args["sharedCacheContract"] = true;
         return CaptureConnectedPumpFlow(player, args);
     }
 
-    internal static JObject CaptureConnectedPumpFlow(Player player, JObject args)
+    internal static JObject CaptureConnectedPumpFlow(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope(surface: true);
@@ -285,7 +285,7 @@ internal static class GameplayTestFluidSurface
         };
     }
 
-    internal static JObject CapturePumpFlow(Player player, JObject args)
+    internal static JObject CapturePumpFlow(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope(surface: true); using var cell = new LiquidCell(f.SurfacePoint());
@@ -337,7 +337,7 @@ internal static class GameplayTestFluidSurface
             ["rate"]=pump.Definition.Fluid.ThroughputLitersPerSecond,["servingLiters"]=LiquidCellValue.LitersPerUnit,
             ["dirtyWaterMoles"]=(double)target.GetLiquidMoles("core:dirty_water"),["pureWaterMoles"]=(double)target.GetLiquidMoles(FluidIds.PureWater) };
     }
-    internal static JObject CaptureOutletFlow(Player player,JObject args)
+    internal static JObject CaptureOutletFlow(Item player,JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f=new GameplayFluidScope(surface:true);using var cell=new LiquidCell(f.SurfacePoint(2));

@@ -30,22 +30,20 @@ public class ItemData
     public readonly TestStack Stack = new();
     public double TestMassKg = 2d;
 }
-public sealed class Data_Player : ItemData { }
 public class Item
 {
     public object Owner;
     public bool InHand;
     public ItemData itemData;
 }
-public sealed class Player : Item { public Data_Player Data; }
 public sealed class ItemMgr
 {
     public static ItemMgr Instance;
-    public readonly Dictionary<string, Player> Player_DIC = new(StringComparer.Ordinal);
+    public readonly Dictionary<string, Item> ProfileActors = new(StringComparer.Ordinal);
 }
 public partial class GameSaveData
 {
-    public readonly Dictionary<string, Data_Player> PlayerData_Dict = new(StringComparer.Ordinal);
+    public readonly Dictionary<string, ItemData> ProfileActorData = new(StringComparer.Ordinal);
 }
 namespace FlatWorld.Networking
 {

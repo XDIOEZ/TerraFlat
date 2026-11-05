@@ -46,7 +46,7 @@ internal sealed class AnimalBehaviorTreePerception
             Item candidate = candidates[i];
             if (candidate == null || candidate == _actor || candidate.DestructionHandled)
                 continue;
-            bool isPlayer = candidate is Player || HasTag(candidate, "Player");
+            bool isPlayer = ActorIdentity.IsPlayer(candidate as Item) || HasTag(candidate, "Player");
             if ((!includePlayers || !isPlayer) && !HasAnyTag(candidate, tags))
                 continue;
             if (!AIFleeUtility.IsWithinEscapeRange(_actor.transform.position, candidate, _detector, distance))
@@ -98,7 +98,7 @@ internal sealed class AnimalBehaviorTreePerception
             Item candidate = candidates[i];
             if (!IsLivingAttackTarget(candidate))
                 continue;
-            bool isPlayer = candidate is Player || HasTag(candidate, "Player");
+            bool isPlayer = ActorIdentity.IsPlayer(candidate as Item) || HasTag(candidate, "Player");
             if ((!includePlayers || !isPlayer) && !HasAnyTag(candidate, tags))
                 continue;
             if (!AIFleeUtility.IsWithinEscapeRange(_actor.transform.position, candidate, _detector, distance))

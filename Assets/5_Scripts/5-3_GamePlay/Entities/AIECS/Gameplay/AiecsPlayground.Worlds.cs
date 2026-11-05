@@ -10,7 +10,7 @@ namespace FlatWorld.AIECS.Gameplay
         #region 开发居民的世界归属
         private ChunkMgr scenarioChunks;
         private string suspendedWorldKey;
-        private readonly List<Player> scenarioPlayers = new();
+        private readonly List<Item> scenarioPlayers = new();
         private float2[] scenarioObservers = Array.Empty<float2>();
 
         // 居民始终留在出生世界，只同步仍实际归属这个世界的玩家代理。
@@ -19,9 +19,9 @@ namespace FlatWorld.AIECS.Gameplay
             scenarioPlayers.Clear();
             ItemMgr items = ItemMgr.Instance;
             if (items != null)
-                foreach (Player candidate in items.Player_DIC.Values)
+                foreach (Item candidate in items.ProfileActors.Values)
                     if (candidate != null && candidate.IsInitialized && candidate.gameObject.activeInHierarchy &&
-                        candidate.gameObject.scene.name == bridge.WorldKey && candidate.Data?.CurrentSceneName == bridge.WorldKey)
+                        candidate.gameObject.scene.name == bridge.WorldKey && candidate.itemData?.GetActorProfileMetadata().WorldKey == bridge.WorldKey)
                         scenarioPlayers.Add(candidate);
             bridge.SynchronizePlayers(scenarioPlayers);
             if (scenarioObservers.Length < scenarioPlayers.Count)

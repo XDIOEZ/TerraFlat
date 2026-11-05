@@ -8,7 +8,7 @@ public static class PlayerModuleAssemblyDiagnostics
 {
     #region 玩家能力契约
 
-    private const string PlayerPrefabPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
+    private const string PlayerPrefabPath = "Assets/2_Prefabs/Gameplay/Player/Human.prefab";
     private static readonly Dictionary<Type, string> FixedIdentities = new()
     {
         [typeof(Mod_Temperature)] = ModText.Temperature,
@@ -46,7 +46,7 @@ public static class PlayerModuleAssemblyDiagnostics
         GameObject root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
         try
         {
-            Player player = root.GetComponent<Player>();
+            Item player = root.GetComponent<Item>();
             Check(player != null, "Player Prefab 缺少 Player 组件。");
             var modules = new List<Module>();
             foreach (Module module in root.GetComponentsInChildren<Module>(true))
@@ -57,8 +57,8 @@ public static class PlayerModuleAssemblyDiagnostics
                 modules.Add(module);
             }
 
-            Data_Player first = player.Get_NewItemData() as Data_Player;
-            Data_Player second = player.Get_NewItemData() as Data_Player;
+            ItemData first = player.Get_NewItemData() as ItemData;
+            ItemData second = player.Get_NewItemData() as ItemData;
             Check(first != null && second != null, "玩家模板未生成 Data_Player。");
             Check(first.ModuleDataDic.Count == modules.Count, "模板模块集合与玩家层级不一致。");
             foreach (var pair in first.ModuleDataDic)

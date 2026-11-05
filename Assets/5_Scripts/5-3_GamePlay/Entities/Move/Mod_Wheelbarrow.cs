@@ -25,7 +25,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     private Rigidbody2D body;
     private RigidbodyConstraints2D originalConstraints;
     private bool hasOriginalConstraints;
-    private Player viewingPlayer;
+    private Item viewingPlayer;
     private bool loaded;
     private Vector2 forwardDirection = Vector2.down;
     private readonly RaycastHit2D[] obstructionHits = new RaycastHit2D[24];
@@ -79,9 +79,9 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     #endregion
 
     #region 货仓交互
-    public bool CanAccess(Player player)
+    public bool CanAccess(Item player)
     {
-        if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !player.IsLocalProfile ||
+        if (!IsAvailable || !GameNetwork.HasStateAuthority || player == null || !ActorProfileRegistry.IsLocallyControlled(player) ||
             player.DestructionHandled || player.gameObject.scene != item.gameObject.scene) return false;
         Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
         if (health == null || health.Hp <= 0f) return false;
@@ -90,12 +90,12 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
         return WorldTopologyRuntime.Distance(player.transform.position, item.transform.position) <= distance;
     }
 
-    public bool CanInteractWithCarrier(Player player, Mod_Mover mover)
+    public bool CanInteractWithCarrier(Item player, Mod_Mover mover)
         => mover != null && (mover.CarrierSource == null && Carrier.Rider == null ||
                             ReferenceEquals(mover.CarrierSource, Carrier) && Carrier.Rider == mover) &&
            CargoInventory != null && CanAccess(player);
 
-    public void InteractWithCarrier(Player player, Mod_Mover mover)
+    public void InteractWithCarrier(Item player, Mod_Mover mover)
     {
         if (!CanInteractWithCarrier(player, mover)) return;
         CloseCargoPanel();
@@ -111,7 +111,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
         Carrier.ApplyDrivenVelocity(Vector2.zero, -forwardDirection);
     }
 
-    public void InteractWithCarrierOnTap(Player player, Mod_Mover mover)
+    public void InteractWithCarrierOnTap(Item player, Mod_Mover mover)
     {
         if (!CanInteractWithCarrier(player, mover) || Carrier.Rider != null) return;
         Inventory cargo = CargoInventory;
@@ -195,7 +195,7 @@ public sealed class Mod_Wheelbarrow : Module, ICarrierMotionDriver, ICarrierPush
     public bool CanReceiveCarrierPush(Mod_Mover source)
     {
         if (!IsAvailable || Carrier.Rider != null || source == null || !source.isActiveAndEnabled || source.IsLock || source.rb == null ||
-            !source.rb.simulated || source.item is not Player player || !player.IsLocalProfile || player.DestructionHandled ||
+            !source.rb.simulated || !(source.item is Item player && ActorIdentity.IsPlayer(player)) || !ActorProfileRegistry.IsLocallyControlled(player) || player.DestructionHandled ||
             source.gameObject.scene != item.gameObject.scene || body == null) return false;
         Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);

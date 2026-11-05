@@ -700,7 +700,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     {
         if (candidate == null)
             return false;
-        if (candidate is Player)
+        if (ActorIdentity.IsPlayer(candidate as Item))
             return true;
 
         List<string> tags = candidate.itemData?.Tags;

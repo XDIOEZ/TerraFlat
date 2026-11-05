@@ -46,7 +46,7 @@ namespace FlatWorld.Dialogue
         private static JObject PlayerColliderVisualAlignment(JObject args)
         {
             GameObject prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Gameplay/Player/Player.prefab");
+                "Assets/2_Prefabs/Gameplay/Player/Human.prefab");
             Transform visual = prefab != null ? prefab.transform.Find("RollVisual/Module_Animator") : null;
             Transform receiver = prefab != null ? prefab.transform.Find("Module_DamageReciver") : null;
             Transform heldAnchor = prefab != null ? prefab.transform.Find("Module_Hotbar") : null;
@@ -350,11 +350,11 @@ namespace FlatWorld.Dialogue
             bool parsed = PlayerCarryWeightChatCommand.TryParseCapacity(arguments, out float capacity);
             GameObject root = new("携带容量命令规则采样") { hideFlags = HideFlags.HideAndDontSave };
             root.SetActive(false);
-            Player player = root.AddComponent<Player>();
+            Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
             try
             {
-                player.BindData(new Data_Player());
-                player.SetProfileContext(true, false, "carry_weight_rule");
+                player.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem {  }, null, null));
+                ActorProfileRegistry.BindProfile(player, true, false, "carry_weight_rule");
                 PlayerCarryWeightChatCommand command = root.AddComponent<PlayerCarryWeightChatCommand>();
                 PlayerChatCommandResult result = command.Execute(new PlayerChatCommandContext(
                     GameplayTestSystemProbe.Flag(args, "withPlayer", false) ? player : null,
@@ -365,8 +365,8 @@ namespace FlatWorld.Dialogue
                     ["capacity"] = parsed ? capacity : 0f,
                     ["handled"] = result.Handled,
                     ["feedback"] = result.Feedback,
-                    ["playerWeight"] = player.Data.MaxCarryWeight,
-                    ["playerVolume"] = player.Data.MaxCarryVolume
+                    ["playerWeight"] = ActorModuleState.GetMaxCarryWeight(player.itemData),
+                    ["playerVolume"] = ActorModuleState.GetMaxCarryVolume(player.itemData)
                 };
             }
             finally

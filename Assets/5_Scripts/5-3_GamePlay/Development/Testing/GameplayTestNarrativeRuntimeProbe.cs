@@ -30,7 +30,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #endregion
 
     #region 正式主时钟与场景引用
-    private static IEnumerator CaptureFixedClockSteps(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureFixedClockSteps(Item player, JObject args, Action<JObject> completed)
     {
         DayTimeSystem service = DayTimeSystem.Instance ?? throw new InvalidOperationException("真实时钟未启动。");
         string key = "[LuaFixedTimeSource]" + Guid.NewGuid().ToString("N");
@@ -74,7 +74,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             service.SceneLightingRateDict.Remove(key);
         }
     }
-    private static JObject CaptureClock(Player player, JObject args)
+    private static JObject CaptureClock(Item player, JObject args)
     {
         DayTimeSystem service = DayTimeSystem.Instance ?? throw new InvalidOperationException("真实时钟未启动。");
         string scene = SceneManager.GetActiveScene().name;
@@ -148,7 +148,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #endregion
 
     #region 已启动任务运行时与真实背包事务
-    public static Inventory RequireBag(Player player)
+    public static Inventory RequireBag(Item player)
     {
         Mod_Inventory bag = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
         return bag?.InventoryInstances?.FirstOrDefault(value => value?.Data != null) ??
@@ -157,13 +157,13 @@ public static partial class GameplayTestNarrativeRuntimeProbe
 
     private sealed class QuestScope : IDisposable
     {
-        private readonly Player player;
+        private readonly Item player;
         private readonly string questId;
         private readonly QuestProgressSaveRecord original;
         private readonly bool hadOriginal;
         public readonly PlayerQuestRuntime Runtime;
         private bool disposed;
-        public QuestScope(Player player, string questId)
+        public QuestScope(Item player, string questId)
         {
             this.player = player;
             this.questId = questId;
@@ -172,10 +172,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             if (manager == null || !manager.TryGetRuntime(player, out PlayerQuestRuntime runtime) || !runtime.IsEnabled)
                 throw new InvalidOperationException("主角没有在正式任务管理器中登记已启动运行时。");
             Runtime = runtime;
-            QuestProgressSaveDocument staged = QuestProgressStore.Load(player.Data);
+            QuestProgressSaveDocument staged = QuestProgressStore.Load(player.itemData);
             hadOriginal = staged.Quests.TryGetValue(questId, out original);
             staged.Quests.Remove(questId);
-            QuestProgressStore.Save(player.Data, staged);
+            QuestProgressStore.Save(player.itemData, staged);
             try
             {
                 if (!Runtime.Initialize(out string reason)) throw new InvalidOperationException(reason);
@@ -186,10 +186,10 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         {
             if (disposed) return;
             disposed = true;
-            QuestProgressSaveDocument current = QuestProgressStore.Load(player.Data);
+            QuestProgressSaveDocument current = QuestProgressStore.Load(player.itemData);
             if (hadOriginal) current.Quests[questId] = original;
             else current.Quests.Remove(questId);
-            QuestProgressStore.Save(player.Data, current);
+            QuestProgressStore.Save(player.itemData, current);
             if (!Runtime.Initialize(out string reason))
                 throw new InvalidOperationException("任务自有前置条件无法恢复：" + reason);
         }
@@ -205,7 +205,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         };
     }
 
-    public static JObject CaptureInventoryQuest(Player player)
+    public static JObject CaptureInventoryQuest(Item player)
     {
         const string id = "flatworld:debug_open_inventory";
         Inventory bag = RequireBag(player);
@@ -230,7 +230,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             result["afterClaim"] = QuestSample(scope.Runtime, id);
             result["duplicateClaim"] = scope.Runtime.ClaimQuest(id, out _);
             result["duplicateAccept"] = scope.Runtime.AcceptQuest(id, out _);
-            QuestProgressSaveRecord stored = QuestProgressStore.Load(player.Data).Quests[id];
+            QuestProgressSaveRecord stored = QuestProgressStore.Load(player.itemData).Quests[id];
             result["savedStatus"] = stored.Status.ToString();
             result["savedRewardsClaimed"] = stored.RewardsClaimed;
             result["savedCompletionCount"] = stored.CompletionCount;
@@ -244,7 +244,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         }
     }
 
-    public static JObject CapturePickupQuest(Player player)
+    public static JObject CapturePickupQuest(Item player)
     {
         const string id = "flatworld:debug_pickup_items";
         Mod_ItemPicker picker = player.itemMods?.GetMod_ByID<Mod_ItemPicker>(ModText.Picker) ??
@@ -273,7 +273,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
             ItemData second = resources.CreateItemData("Stick_Wood"); second.Stack.Amount = 1f;
             result["secondPickup"] = picker.TryAcceptNetworkPickup(second, false);
             result["afterSecond"] = QuestSample(scope.Runtime, id);
-            result["savedCompletionCount"] = QuestProgressStore.Load(player.Data).Quests[id].CompletionCount;
+            result["savedCompletionCount"] = QuestProgressStore.Load(player.itemData).Quests[id].CompletionCount;
             result["signals"] = signals;
             result["inventoryCountAfter"] = CountItem(inventories, "Stick_Wood");
             result["inventoryCountBefore"] = snapshots.Values.Sum(value => CountItem(new[] { new Inventory { Data = value.CreateColdData() } }, "Stick_Wood"));
@@ -298,7 +298,7 @@ public static partial class GameplayTestNarrativeRuntimeProbe
     #endregion
 
     #region 正式事件调度行动与取消
-    private static JObject CaptureEvent(Player player, JObject args)
+    private static JObject CaptureEvent(Item player, JObject args)
     {
         const string id = "survival_day_10_long_rain";
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);

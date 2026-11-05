@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Spaceflight;
@@ -16,7 +16,7 @@ public partial class GameManager
     private bool localSpacePresentationActive;
     private readonly Dictionary<Renderer, bool> hiddenNetworkSurfaceRenderers = new();
     private SpaceNetworkObserver pendingLocalSpaceObserver;
-    private Player pendingLocalSpacePlayer;
+    private Item pendingLocalSpacePlayer;
     private string networkLocalWorldKey;
     private uint networkLocalRealmRevision;
     private Coroutine networkLocalRealmRoutine;
@@ -24,9 +24,9 @@ public partial class GameManager
     private float nextSurfaceTransferWarning;
     private bool networkRealmLifecycleBound;
 
-    public void ApplyNetworkLocalSpaceObserver(Player player, SpaceNetworkObserver observer)
+    public void ApplyNetworkLocalSpaceObserver(Item player, SpaceNetworkObserver observer)
     {
-        if (!GameNetwork.IsOnline || player == null || player != ItemMgr.Instance?.User_Player) return;
+        if (!GameNetwork.IsOnline || player == null || player != ItemMgr.Instance?.LocalControlledActor) return;
         if (!networkRealmLifecycleBound)
         {
             Event_GameWorldExit += ResetNetworkLocalRealm;
@@ -66,7 +66,7 @@ public partial class GameManager
         {
             while (pendingLocalSpacePlayer != null && GameNetwork.IsOnline)
             {
-                Player player = pendingLocalSpacePlayer;
+                Item player = pendingLocalSpacePlayer;
                 SpaceNetworkObserver observer = pendingLocalSpaceObserver;
                 string key = observer.InSpace ? SpaceSectorCoordinates.SceneKey(observer.Position.Sector) : observer.WorldKey;
                 if (string.IsNullOrWhiteSpace(key) || key == networkLocalWorldKey && observer.RealmRevision == networkLocalRealmRevision) break;
@@ -107,7 +107,7 @@ public partial class GameManager
                 {
                     player.transform.SetParent(null, true);
                     SceneManager.MoveGameObjectToScene(player.gameObject, target);
-                    player.Data.CurrentSceneName = key;
+                    player.itemData.GetActorProfileMetadata().WorldKey = key;
                     if (observer.InSpace)
                     {
                         player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover)?.SetSpaceUpright(true);
@@ -124,7 +124,7 @@ public partial class GameManager
         finally { networkLocalRealmRoutine = null; }
     }
 
-    private IEnumerator ApplyShipInteriorNetworkObserver(Player player, SpaceNetworkObserver observer, string key)
+    private IEnumerator ApplyShipInteriorNetworkObserver(Item player, SpaceNetworkObserver observer, string key)
     {
         if (observer.InSpace)
         {
@@ -146,7 +146,7 @@ public partial class GameManager
         }
 
         if (player == null || SpaceSession.Current?.IsPlayerInShipInteriorWorld(player) != true) yield break;
-        player.Data.CurrentSceneName = key;
+        player.itemData.GetActorProfileMetadata().WorldKey = key;
         networkLocalWorldKey = key;
         networkLocalRealmRevision = observer.RealmRevision;
         NetworkDimensionBridge.NotifyPresentationReady(player, key);
@@ -161,7 +161,7 @@ public partial class GameManager
     }
 
     // 玩家及已登记的手持物一起交给目标世界，位置变化仍刷新现有空间索引。
-    public static void AssignRegisteredPlayerAndChildItemsToWorld(Player player, string worldKey)
+    public static void AssignRegisteredPlayerAndChildItemsToWorld(Item player, string worldKey)
     {
         ItemMgr manager = ItemMgr.GetExistingInstance();
         if (player == null || manager == null || string.IsNullOrWhiteSpace(worldKey)) return;
@@ -207,7 +207,7 @@ public partial class GameManager
             foreach (GameObject root in scene.GetRootGameObjects())
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
             {
-                if (renderer.GetComponentInParent<Player>() != null || renderer.GetComponentInParent<WorldPresentationProjection>() != null) continue;
+                if (renderer.GetComponentInParent<Item>() != null || renderer.GetComponentInParent<WorldPresentationProjection>() != null) continue;
                 if (!hiddenNetworkSurfaceRenderers.ContainsKey(renderer)) hiddenNetworkSurfaceRenderers.Add(renderer, renderer.forceRenderingOff);
                 renderer.forceRenderingOff = true;
             }
@@ -215,7 +215,7 @@ public partial class GameManager
     }
     #endregion
 
-    internal void PrepareShipTakeoffPresentation(SpaceSession session, Player player)
+    internal void PrepareShipTakeoffPresentation(SpaceSession session, Item player)
     {
         ClearShipTakeoffPresentation();
         if (player == null) return;
@@ -243,11 +243,11 @@ public partial class GameManager
         shipTakeoffPresentation?.Dispose();
         shipTakeoffPresentation = null;
     }
-    private static string ResolveSavedSpacePlayerWorld(GameSaveData save, Data_Player playerData)
+    private static string ResolveSavedSpacePlayerWorld(GameSaveData save, ItemData playerData)
     {
         if (playerData == null || string.IsNullOrWhiteSpace(save?.SpaceStateJson)) return null;
         string profileId = null;
-        foreach (var pair in save.PlayerData_Dict)
+        foreach (var pair in save.ProfileActorData)
             if (ReferenceEquals(pair.Value, playerData)) { profileId = pair.Key; break; }
         SpaceSessionState state = SaveDataMgr.DeserializeSpaceState(save.SpaceStateJson);
         SpacePassengerState passenger = state.Passengers.Find(value => value.ProfileId == profileId);
@@ -278,7 +278,7 @@ public partial class GameManager
                 (float)passenger.FreeMotion.PositionMeters.Y);
         }
         // 场景迁移中保存时以权威飞行阶段为准，避免旧场景标签覆盖已经发生的升空或下落。
-        if (!string.IsNullOrWhiteSpace(world)) playerData.CurrentSceneName = world;
+        if (!string.IsNullOrWhiteSpace(world)) playerData.GetActorProfileMetadata().WorldKey = world;
         return world;
     }
 

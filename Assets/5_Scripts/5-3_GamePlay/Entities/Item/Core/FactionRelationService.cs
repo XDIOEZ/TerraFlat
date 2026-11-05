@@ -110,7 +110,7 @@ public static class FactionRelationService
         if (!string.IsNullOrEmpty(configuredFaction))
             return configuredFaction;
 
-        if (item is Player || HasTag(item, "Player"))
+        if (ActorIdentity.IsPlayer(item as Item) || HasTag(item, "Player"))
             return PlayerFactionId;
 
         // 旧存档和旧 Prefab 可能没有 FactionId，但正式狼仍带有 Wolf 标签。

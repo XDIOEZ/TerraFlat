@@ -82,7 +82,7 @@ public sealed class Mod_ManualProcessor : Module, IInteractable, IInventory
     public void OnInteractCancel(Item actor) => panel?.Close();
 
     /// <summary>手动锻打返回本次是否有效推进，供共享面板判断是否播放敲击声。</summary>
-    private bool PerformWork(Player actor)
+    private bool PerformWork(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || Processor == null || !CanUsePlacedStation())
             return false;

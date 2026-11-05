@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
@@ -109,7 +109,7 @@ namespace FlatWorld.Spaceflight
             }
             // 本机普通地表由角色移动组件推进，权威距离读取当前位置而非上次登船缓存。
             if (GameNetwork.HasStateAuthority && !passenger.IsInSpace && !passenger.SurfaceDescending &&
-                ItemMgr.Instance?.User_Player is Player actor && actor.ProfileName == passenger.ProfileId &&
+                (ItemMgr.Instance?.LocalControlledActor is Item actor && ActorIdentity.IsPlayer(actor)) && ActorProfileRegistry.GetProfileId(actor) == passenger.ProfileId &&
                 actor.gameObject.scene.name == passenger.LandingWorldKey)
                 return new SpaceSectorPosition(passenger.FreeMotion.Sector,
                     SpaceVector2.FromVector2(WorldLocalPresentation.ToLogical(actor.transform.position)));
@@ -128,7 +128,7 @@ namespace FlatWorld.Spaceflight
             if (delta.SqrMagnitude < 4096d * 4096d) return;
             ViewOrigin = position.LocalMeters;
             Vector2 shift = -delta.ToVector2();
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (player != null)
             {
                 if (!IsPlayerInShipInteriorWorld(player))
@@ -146,13 +146,13 @@ namespace FlatWorld.Spaceflight
         private void UpdateSectorStreaming()
         {
             sectorStreaming.BeginFrame();
-            Player local = ItemMgr.Instance?.User_Player;
+            Item local = ItemMgr.Instance?.LocalControlledActor;
             foreach (SpacePassengerState passenger in State.Passengers)
             {
-                if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority && ItemMgr.Instance?.Player_DIC.ContainsKey(passenger.ProfileId) != true) continue;
+                if (GameNetwork.IsOnline && GameNetwork.HasStateAuthority && ItemMgr.Instance?.ProfileActors.ContainsKey(passenger.ProfileId) != true) continue;
                 if (!TryGetNetworkObserver(passenger.ProfileId, out SpaceNetworkObserver observer) || !observer.InSpace) continue;
-                if (!GameNetwork.HasStateAuthority && local?.ProfileName != passenger.ProfileId) continue;
-                if (!GameNetwork.IsOnline && local?.ProfileName != passenger.ProfileId) continue;
+                if (!GameNetwork.HasStateAuthority && ActorProfileRegistry.GetProfileId(local) != passenger.ProfileId) continue;
+                if (!GameNetwork.IsOnline && ActorProfileRegistry.GetProfileId(local) != passenger.ProfileId) continue;
                 sectorStreaming.Observe(passenger.ProfileId, observer.Position, observer.Velocity);
             }
             sectorStreaming.EndFrame();

@@ -92,8 +92,8 @@ namespace FlatWorld.NaturalEntities
         {
             position = default;
             if (actor == null) return false;
-            if (actor is Player player && FlatWorld.Networking.GameNetwork.IsOnline &&
-                FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName,
+            if ((actor is Item player && ActorIdentity.IsPlayer(player)) && FlatWorld.Networking.GameNetwork.IsOnline &&
+                FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player),
                     out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true)
             {
                 position = observer.Position.LocalMeters.ToVector2();

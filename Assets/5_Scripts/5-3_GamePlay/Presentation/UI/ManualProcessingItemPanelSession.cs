@@ -12,12 +12,12 @@ public sealed class ManualProcessingItemPanelSession : IMachinePanelSession
     private readonly ManualProcessingRuntime runtime;
     private readonly CraftingStationController controller;
     private readonly TMP_Text status;
-    private Player actor;
+    private Item actor;
     private bool disposed;
     public bool IsAlive => !disposed && panel != null;
     public bool IsOpen => IsAlive && panel.IsOpen();
 
-    public ManualProcessingItemPanelSession(Item owner, ManualProcessingRuntime runtime, float workPerClick, Func<Player, bool> work)
+    public ManualProcessingItemPanelSession(Item owner, ManualProcessingRuntime runtime, float workPerClick, Func<Item, bool> work)
     {
         this.owner = owner;
         this.runtime = runtime;
@@ -66,7 +66,7 @@ public sealed class ManualProcessingItemPanelSession : IMachinePanelSession
     {
         if (!IsAlive) return;
         if (IsOpen) { Close(); return; }
-        actor = player as Player;
+        actor = ActorProfileRegistry.GetProfileActorOrNull(player as Item);
         Inventory hand = player?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (actor == null || hand == null) throw new InvalidOperationException("锻造面板缺少玩家或手部库存。");
         panel.GetComponent<BuildingPanelActions>()?.Bind(owner);

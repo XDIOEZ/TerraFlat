@@ -20,13 +20,13 @@ public static partial class GameplayTestSystemProbe
     {
         var host = new GameObject("probe:inactive-building-feedback");
         host.SetActive(false);
-        Player actor = host.AddComponent<Player>();
+        Item actor = ActorProfileRegistry.CreateProfileActorForFixture(host);
         var details = new JArray();
         int semanticCount = 0;
         bool actorPreserved = true;
-        void Detailed(Player value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason, string detail)
+        void Detailed(Item value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason, string detail)
         { actorPreserved &= ReferenceEquals(value, actor); details.Add(detail); }
-        void Semantic(Player value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason) => semanticCount++;
+        void Semantic(Item value, FlatWorld.Gameplay.Building.BuildingPlacementFailureReason reason) => semanticCount++;
         FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejectedDetailed += Detailed;
         FlatWorld.Gameplay.Building.BuildingPlacementFeedbackEvents.PlacementRejected += Semantic;
         try

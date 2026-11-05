@@ -24,7 +24,7 @@ namespace FlatWorld.Spaceflight
                     using var scope = GameplayWorldRegistry.UseWorld(source);
                     foreach (Item item in items)
                     {
-                        if (item == null || item is Player || item.DestructionHandled || item.InHand || item.Owner != null ||
+                        if (item == null || ActorIdentity.IsPlayer(item as Item) || item.DestructionHandled || item.InHand || item.Owner != null ||
                             item.PersistenceOwner != null || item.itemData == null ||
                             !RuntimeWorldResidentEntityUtility.IsPersistentWorldEntity(item) && item.itemData.Stack?.CanBePickedUp != true ||
                             !select(item.transform.position)) continue;

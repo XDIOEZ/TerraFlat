@@ -26,21 +26,40 @@ public partial class GameSaveData
 
     // ===== 玩家相关 =====
     [ShowInInspector]
-    [MemoryPackIgnore] public Dictionary<string, Data_Player> PlayerData_Dict = new();
+    [MemoryPackIgnore] public Dictionary<string, ItemData> ProfileActorData = new();
     [MemoryPackInclude, MemoryPackOrder(22)]
     private Dictionary<string, ItemInstanceSnapshot> SavedPlayers
     {
         get
         {
-            var players = new Dictionary<string, ItemInstanceSnapshot>(PlayerData_Dict.Count);
-            foreach (var pair in PlayerData_Dict) players.Add(pair.Key, ItemSnapshotSerialization.Capture(pair.Value));
+            var players = new Dictionary<string, ItemInstanceSnapshot>(ProfileActorData.Count);
+            foreach (var pair in ProfileActorData) players.Add(pair.Key, ItemSnapshotSerialization.Capture(pair.Value));
             return players;
         }
         set
         {
-            PlayerData_Dict = new();
+            ProfileActorData = new();
             if (value != null)
-                foreach (var pair in value) PlayerData_Dict.Add(pair.Key, (Data_Player)pair.Value.CreateColdData());
+                foreach (var pair in value) ProfileActorData.Add(pair.Key, (ItemData)pair.Value.CreateColdData());
+        }
+    }
+
+    // 档案元数据与角色快照分别保存，既有字段22的二进制类型保持不变。
+    [MemoryPackInclude, MemoryPackOrder(29)]
+    private Dictionary<string, ActorProfileMetadata> SavedProfileMetadata
+    {
+        get
+        {
+            var result = new Dictionary<string, ActorProfileMetadata>();
+            foreach (var pair in ProfileActorData) result.Add(pair.Key, pair.Value.GetActorProfileMetadata());
+            return result;
+        }
+        set
+        {
+            if (value == null) return;
+            foreach (var pair in value)
+                if (ProfileActorData.TryGetValue(pair.Key, out var actorData))
+                    ActorProfileMetadataStore.BindActorProfileMetadata(actorData, pair.Value);
         }
     }
 
@@ -57,6 +76,6 @@ public partial class GameSaveData
     // ===== 构造函数 =====
     public GameSaveData()
     {
-        PlayerData_Dict = new Dictionary<string, Data_Player>();
+        ProfileActorData = new Dictionary<string, ItemData>();
     }
 }

@@ -17,7 +17,7 @@ public partial class ItemMgr
         {
             Item item = RuntimeItems[i];
             if (item == null || item.itemData == null || item.InHand || item is Map ||
-                item is Player player && player.IsLocalProfile ||
+                (item is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player) ||
                 item.GetComponentInParent<ChunkView>(true) != null)
             {
                 continue;

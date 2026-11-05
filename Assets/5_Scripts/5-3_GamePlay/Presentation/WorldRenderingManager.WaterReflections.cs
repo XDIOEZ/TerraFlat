@@ -56,7 +56,7 @@ public sealed partial class WorldRenderingManager
     {
         if (item == null || item.Sprite == null || item.IsInPool || item.InHand || item.DestructionHandled)
             return false;
-        if (item is Player) return true;
+        if (ActorIdentity.IsPlayer(item as Item)) return true;
         if (item.itemData == null || GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
             return false;

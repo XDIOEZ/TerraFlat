@@ -237,10 +237,15 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     #region 游动、觅食与干燥
     public override void ModUpdate(float deltaTime)
     {
+        if (IsAlive && ActorProfileRegistry.IsLocallyControlled(item) && !IsHooked && predatorCarrier == null && !IsStranded)
+        {
+            Vector2 input = item.itemMods.GetMod_ByID<Mod_ActorControl>(Mod_ActorControl.ModuleId).ReadManualMovementInput();
+            if (input.sqrMagnitude > 0f) SwimTowards((Vector2)item.transform.position + input * swimSpeed * deltaTime, deltaTime);
+        }
         if (IsAlive && deltaTime > 0f && float.IsFinite(deltaTime)) UpdatePresentation(deltaTime);
     }
 
-    public void TickAquaticEnvironmentAndThreats(float deltaTime)
+    public void TickAquaticEnvironmentAndThreats(float deltaTime, bool autonomous = true)
     {
         if (!IsAlive || !GameNetwork.HasStateAuthority || deltaTime <= 0f || !float.IsFinite(deltaTime)) return;
         if (predatorCarrier != null)
@@ -269,7 +274,8 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         if (waterDepth >= AquaticHabitat.MinimumDepth && !temperatureSafetyRetreat)
         {
             damageFleeRemaining = Mathf.Max(0f, damageFleeRemaining - deltaTime);
-            TickVigilance(deltaTime);
+            if (autonomous) TickVigilance(deltaTime);
+            else vigilanceRemaining -= deltaTime;
             scanRemaining -= deltaTime;
         }
     }
@@ -622,7 +628,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         ItemMgr itemManager = ItemMgr.Instance;
         if (itemManager != null)
         {
-            foreach (Player player in itemManager.Player_DIC.Values)
+            foreach (Item player in itemManager.ProfileActors.Values)
                 ConsiderPredator(player, radius, ref closest, ref closestDistanceSqr);
         }
 
@@ -649,7 +655,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
 
     private bool IsFishPredator(Item candidate)
     {
-        if (candidate is Player || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true) return true;
+        if (ActorIdentity.IsPlayer(candidate as Item) || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true) return true;
         if (candidate.itemData?.Tags?.ContainsTag(Tag.Carnivore) == true) return true;
         if (candidate.itemMods?.Mods == null) return false;
 

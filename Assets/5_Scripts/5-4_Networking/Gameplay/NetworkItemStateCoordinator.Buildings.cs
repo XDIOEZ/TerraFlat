@@ -91,7 +91,7 @@ namespace FlatWorld.Networking.Gameplay
             try
             {
                 if (!TryValidateBuildingRequest(connection, request, out ItemData sourceData,
-                        out ItemSlot sourceSlot, out Player actor, out string reason))
+                        out ItemSlot sourceSlot, out Item actor, out string reason))
                     throw new InvalidOperationException(reason);
 
                 Mod_HotBar hotBar = actor.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
@@ -351,7 +351,7 @@ namespace FlatWorld.Networking.Gameplay
             NetworkBuildingPlaceRequest request,
             out ItemData sourceData,
             out ItemSlot authoritativeSlot,
-            out Player authoritativePlayer,
+            out Item authoritativePlayer,
             out string reason)
         {
             sourceData = null;

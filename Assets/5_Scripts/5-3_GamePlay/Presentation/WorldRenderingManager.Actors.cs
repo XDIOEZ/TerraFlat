@@ -32,7 +32,7 @@ public sealed partial class WorldRenderingManager
     /// <summary>角色模块只提供动作状态，真正的 Sprite/Animator 节点交给世界渲染根持有。</summary>
     internal void RequestActorView(Item item)
     {
-        if (item == null || item is Player || item is Map || item.itemData == null ||
+        if (item == null || ActorIdentity.IsPlayer(item as Item) || item is Map || item.itemData == null ||
             GameRes.ExistingInstance == null ||
             !GameRes.ExistingInstance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
             !definition.IsActor)
@@ -53,7 +53,7 @@ public sealed partial class WorldRenderingManager
     // 普通世界物品也借用纯视觉子树，避免保留一套隐藏的 Render 再复制一套。
     internal bool CanBorrowItemVisual(Item item)
     {
-        if (item == null || item is Player || !item.IsInitialized || item.Sprite == null) return false;
+        if (item == null || ActorIdentity.IsPlayer(item as Item) || !item.IsInitialized || item.Sprite == null) return false;
         if (actorViews.TryGetValue(item, out ActorView owned) && owned.Visual != null &&
             owned.Sprite == item.Sprite && owned.Generation == item.RuntimeGeneration)
             return true;

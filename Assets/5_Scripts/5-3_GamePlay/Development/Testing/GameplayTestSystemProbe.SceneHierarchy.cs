@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 public static partial class GameplayTestSystemProbe
 {
     #region 场景分类层级规则采样
-    internal static JObject CaptureRuntimeSceneHierarchy(Player player, ChunkView foot)
+    internal static JObject CaptureRuntimeSceneHierarchy(Item player, ChunkView foot)
     {
         RuntimeSceneObjectHierarchy playerRoot = player.GetComponentInParent<RuntimeSceneObjectHierarchy>();
         RuntimeSceneObjectHierarchy chunkRoot = foot != null ? foot.GetComponentInParent<RuntimeSceneObjectHierarchy>() : null;

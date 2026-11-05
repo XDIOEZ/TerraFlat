@@ -42,11 +42,11 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         GameplayTestRuntimeProbe.Register("player", "wheelbarrow_cleanup_check", CleanupCheck);
     }
 
-    private static Fixture Require(Player player)
+    private static Fixture Require(Item player)
         => current != null && ReferenceEquals(current.Player, player) && !current.Disposed
             ? current : throw new InvalidOperationException("独轮车现场未准备或玩家已更换。");
 
-    private static JObject Setup(Player player, JObject args)
+    private static JObject Setup(Item player, JObject args)
     {
         if (current != null) throw new InvalidOperationException("独轮车现场尚未清理。");
         var fixture = new Fixture(player);
@@ -79,7 +79,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     }
 
     /// <summary>通过正式交互发送器验证短按开仓、长按接管与松键不误下车。</summary>
-    private static IEnumerator HoldBoard(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator HoldBoard(Item player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
         Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
@@ -126,7 +126,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     }
 
     /// <summary>人力推行后再次长按下车，取消中的长按不能残留驾驶命令。</summary>
-    private static IEnumerator HoldLeave(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator HoldLeave(Item player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
         Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true)
@@ -154,7 +154,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         });
     }
 
-    private static JObject Prepare(Player player, JObject args)
+    private static JObject Prepare(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         string side = args.Value<string>("side") ?? "rear";
@@ -186,14 +186,14 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["rider"] = fixture.Carrier.Rider != null, ["carrierSource"] = fixture.Mover.CarrierSource != null };
     }
 
-    private static IEnumerator Sample(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator Sample(Item player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
         for (int i = 0; i < 3; i++) yield return GameplayFixedStepSimulation.WaitForNextTick();
         completed(fixture.Recorder.Capture());
     }
 
-    private static IEnumerator CarrierOccupancyLifecycle(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CarrierOccupancyLifecycle(Item player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
         Mod_Building building = fixture.Car.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
@@ -212,12 +212,12 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["traversableAfterReload"] = fixture.Carrier.CanTraversePosition(fixture.Carrier.Body.position) });
     }
 
-    private static JObject CleanupCheck(Player player, JObject args)
+    private static JObject CleanupCheck(Item player, JObject args)
         => lastCleanup == null ? throw new InvalidOperationException("前一个独轮车现场尚未完成自动收尾。") : (JObject)lastCleanup.DeepClone();
     #endregion
 
     #region 正式 F 键和库存事务
-    private static JObject OpenCargo(Player player, JObject args)
+    private static JObject OpenCargo(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         Mod_GameController controller = player.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
@@ -274,7 +274,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         };
     }
 
-    private static JObject OpenPlayerBag(Player player, JObject args)
+    private static JObject OpenPlayerBag(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         fixture.Driver.CargoInventory.basePanel?.Close();
@@ -285,7 +285,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     #endregion
 
     #region 拆装、保存、传送和卸载
-    private static JObject Roundtrip(Player player, JObject args)
+    private static JObject Roundtrip(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         fixture.Bag.basePanel?.Close();
@@ -315,7 +315,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         finally { if (summoner != null) ItemMgr.Instance.DespawnItem(summoner, false); }
     }
 
-    private static IEnumerator Teleport(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator Teleport(Item player, JObject args, Action<JObject> completed)
     {
         Fixture fixture = Require(player);
         bool pushed = fixture.Recorder.EverPushed;
@@ -327,7 +327,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["pushAfterRelease"] = fixture.Carrier.PushSource != null });
     }
 
-    private static JObject Unload(Player player, JObject args)
+    private static JObject Unload(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         bool pushed = fixture.Recorder.EverPushed;
@@ -337,7 +337,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["pushAfterRelease"] = fixture.Carrier.PushSource != null };
     }
 
-    private static JObject Display(Player player, JObject args)
+    private static JObject Display(Item player, JObject args)
     {
         Fixture fixture = Require(player);
         fixture.Driver.Load();
@@ -353,7 +353,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
     #region 独立场地、真实放置与收尾
     private sealed class Fixture : IDisposable
     {
-        public readonly Player Player;
+        public readonly Item Player;
         public readonly Mod_Mover Mover;
         public readonly Inventory Bag;
         public readonly Vector2 Site;
@@ -373,7 +373,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         public bool PlayerRestored { get; private set; }
         public bool BagRestored { get; private set; }
 
-        public Fixture(Player player)
+        public Fixture(Item player)
         {
             Player = player;
             Mover = player.itemMods.GetMod_ByID<Mod_Mover>(ModText.Mod_Mover) ?? throw new InvalidOperationException("缺少玩家移动模块。");
@@ -387,7 +387,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             Site = FindClearSite(player);
         }
 
-        private static Vector2 FindClearSite(Player player)
+        private static Vector2 FindClearSite(Item player)
         {
             ChunkMgr chunks = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("区块管理器未就绪。");
             WorldNavigationManager navigation = WorldNavigationManager.ExistingInstance;

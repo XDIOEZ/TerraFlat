@@ -6,21 +6,21 @@ internal static class WeatherScreenRenderingContext
 {
     #region 即时天气与相机查询
 
-    internal static bool TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Player player)
+    internal static bool TryGetExecutionWorldWeatherAndLocalPlayer(out WeatherMgr weather, out Item player)
     {
         weather = WeatherMgr.ExistingInstance;
         player = null;
         if (weather == null || !weather.isActiveAndEnabled ||
             WeatherMgr.IsWeatherSuppressedInDimension(DimensionManager.Instance.ActiveDefinition))
             return false;
-        player = ItemMgr.GetInstance()?.User_Player;
+        player = ItemMgr.GetInstance()?.LocalControlledActor;
         return IsLocalPlayer(player);
     }
 
-    internal static bool IsLocalPlayer(Player player) =>
-        player != null && player.IsLocalProfile && player.gameObject.activeInHierarchy;
+    internal static bool IsLocalPlayer(Item player) =>
+        player != null && ActorProfileRegistry.IsLocallyControlled(player) && player.gameObject.activeInHierarchy;
 
-    internal static Camera GetPlayerCamera(Player player, ref Mod_Cam cameraModule)
+    internal static Camera GetPlayerCamera(Item player, ref Mod_Cam cameraModule)
     {
         if (cameraModule == null)
             cameraModule = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);

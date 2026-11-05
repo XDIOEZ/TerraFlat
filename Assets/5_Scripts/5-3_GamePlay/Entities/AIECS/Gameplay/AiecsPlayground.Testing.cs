@@ -84,7 +84,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         // 隔离现场创建一批无玩家敌意的真实开发居民，Lua在洞穴和回程检查同一实体身份。
-        private static JObject BeginDimensionResidentProbe(Player player, JObject args)
+        private static JObject BeginDimensionResidentProbe(Item player, JObject args)
         {
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
             if (dimensionResidentScope != null || Active?.HasActiveScenario == true)
@@ -108,7 +108,7 @@ namespace FlatWorld.AIECS.Gameplay
             return SampleDimensionResidents(player, args);
         }
 
-        private static JObject SampleDimensionResidents(Player player, JObject args)
+        private static JObject SampleDimensionResidents(Item player, JObject args)
         {
             DimensionResidentScope scope = dimensionResidentScope ??
                 throw new InvalidOperationException("维度居民测试缺少本轮现场。");

@@ -238,7 +238,7 @@ public static partial class GameplayTestSystemProbe
             result["timeScale"] = Warm<TimeSystemConfigCatalog>("time").Profiles[0].TimeScale;
             Load("player", new PlayerCreationTemplateCatalogConfig
             { Profiles = new List<PlayerCreationTemplateConfig> { new() { Id = "test" } } });
-            result["playerStamina"] = Warm<PlayerCreationTemplateCatalogConfig>("player").Profiles[0].Core.InitialStamina;
+            result["playerStamina"] = Warm<PlayerCreationTemplateCatalogConfig>("player").Profiles[0].Stamina.CurrentStamina;
             Load("theme", new FlatWorldUIThemeConfig
             { schemaVersion = 1, colors = new[] { new FlatWorldUIThemeSwatch { id = "test", hex = "#FFFFFF" } } });
             result["themeHex"] = Warm<FlatWorldUIThemeConfig>("theme").colors[0].hex;

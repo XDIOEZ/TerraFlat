@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MemoryPack;
 using FlatWorld.Spaceflight;
@@ -149,7 +149,7 @@ namespace FlatWorld.Networking.Gameplay
             return true;
         }
 
-        private bool CanOperateInventoryMachine(NetworkConnectionToClient connection, Player actor, int id)
+        private bool CanOperateInventoryMachine(NetworkConnectionToClient connection, Item actor, int id)
         {
             if (CanOperateMachine(connection, actor, id)) return true;
             // 共享槽按当前真正连接的工作台校验距离，仍只操作工具柜自身库存。
@@ -158,7 +158,7 @@ namespace FlatWorld.Networking.Gameplay
                 workbench => CanOperateMachine(connection, actor, workbench.Id));
         }
 
-        private bool CanOperateMachine(NetworkConnectionToClient connection, Player actor, int id)
+        private bool CanOperateMachine(NetworkConnectionToClient connection, Item actor, int id)
         {
             MachineEntity entity = MachineWorld.GetById(id);
             if (entity == null || actor == null || actor.DestructionHandled) return false;
@@ -180,7 +180,7 @@ namespace FlatWorld.Networking.Gameplay
                     ? SpaceSectorCoordinates.Difference(new SpaceSectorPosition(ship.Sector, new SpaceVector2(x, y)), observer.Position).Magnitude <= range + .05f
                     : WorldTopologyRuntime.Distance(observer.Position.LocalMeters.ToVector2(), new Vector2((float)x, (float)y)) <= range + .05f;
             }
-            if (player?.IsInSpace == true || actor.Data.CurrentSceneName != MachineWorld.WorldKey) return false;
+            if (player?.IsInSpace == true || actor.itemData.GetActorProfileMetadata().WorldKey != MachineWorld.WorldKey) return false;
             return WorldTopologyRuntime.Distance(GetConnectionLogicalPosition(connection), entity.Position) <= range + .05f;
         }
 
@@ -239,7 +239,7 @@ namespace FlatWorld.Networking.Gameplay
         private bool ExecuteMachineOperation(NetworkConnectionToClient connection, NetworkMachineOperationRequest request, out string reason)
         {
             reason = "设备不可操作或距离过远";
-            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (!CanOperateMachine(connection, actor, request.EntityId)) return false;
             MachineEntity entity = MachineWorld.GetById(request.EntityId);
             bool accepted = MachineWorld.Execute(entity, request.Operation, request.Argument, actor);
@@ -280,7 +280,7 @@ namespace FlatWorld.Networking.Gameplay
         {
             if (ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
             if (!NetworkClient.ready || NetworkServer.active || pendingMachineTransfer != 0 && Time.unscaledTime < machineTransferDeadline) return false;
-            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (!MachineInventoryCommands.TryAddress(actor, source, out var from) || !MachineInventoryCommands.TryAddress(actor, target, out var to) ||
                 (uint)sourceIndex >= (uint)source.Data.itemSlots.Count) return false;
             ItemData item = source.Data.itemSlots[sourceIndex].itemData;
@@ -310,7 +310,7 @@ namespace FlatWorld.Networking.Gameplay
         private void ExecuteMachineTransfer(NetworkConnectionToClient connection, NetworkMachineTransferRequest request)
         {
             var response = new NetworkMachineTransferResponse { Token = request.Token, Source = request.Source, Target = request.Target };
-            Player actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
                 request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
                 !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) || actor == null ||
@@ -394,7 +394,7 @@ namespace FlatWorld.Networking.Gameplay
                 pendingQuickTransfer = null;
                 pendingMachineTransfer = 0;
             }
-            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             bool allowMachine = quick.HasValue && response.Accepted;
             bool sourceApplied = ApplyPlayerInventory(actor, response.Source, response.SourceInventory, allowMachine);
             bool targetApplied = ApplyPlayerInventory(actor, response.Target, response.TargetInventory, allowMachine);
@@ -436,7 +436,7 @@ namespace FlatWorld.Networking.Gameplay
         // 船上机器依旧使用原命令和库存事务，只显式选中所属船的数据作用域。
         private static string CurrentRequestShipId()
         {
-            Player actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
+            Item actor = NetworkClient.localPlayer?.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             string world = GameplayWorldRegistry.GetItemWorldKey(actor);
             if (world?.StartsWith("ship:", StringComparison.Ordinal) == true) return world.Substring(5);
             return MachineWorld.IsShipScope ? MachineWorld.WorldKey.Substring(5) : string.Empty;
@@ -456,7 +456,7 @@ namespace FlatWorld.Networking.Gameplay
             if (string.IsNullOrEmpty(shipId))
             {
                 if (player.IsInSpace) return false;
-                scope = MachineWorld.UseScope(actorWorld ?? player.CorePlayer.Data.CurrentSceneName);
+                scope = MachineWorld.UseScope(actorWorld ?? player.CorePlayer.itemData.GetActorProfileMetadata().WorldKey);
                 return true;
             }
             if (!player.TryGetSpaceObserver(out SpaceNetworkObserver observer) || !observer.InSpace || SpaceSession.Current?.GetShip(shipId) == null) return false;
@@ -464,7 +464,7 @@ namespace FlatWorld.Networking.Gameplay
             return true;
         }
 
-        private static bool ApplyPlayerInventory(Player actor, MachineInventoryAddress address, byte[] payload, bool allowMachine = false)
+        private static bool ApplyPlayerInventory(Item actor, MachineInventoryAddress address, byte[] payload, bool allowMachine = false)
         {
             if (!allowMachine && address.MachineId != 0 && !MachineInventoryCommands.IsPrivateInventoryAddress(address) ||
                 payload == null || payload.Length == 0 || payload.Length > 8 * 1024 * 1024) return false;

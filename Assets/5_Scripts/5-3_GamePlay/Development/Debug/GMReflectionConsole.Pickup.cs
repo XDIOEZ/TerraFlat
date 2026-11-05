@@ -112,14 +112,14 @@ public sealed partial class GMReflectionConsole
     /// <summary>本地角色原地重建时也恢复倍率，不依赖切换场景或重新打开 GM。</summary>
     private static void HandlePickupPickerLoaded(Mod_ItemPicker picker)
     {
-        if (picker.item is Player player && player.IsLocalProfile)
+        if ((picker.item is Item player && ActorIdentity.IsPlayer(player)) && ActorProfileRegistry.IsLocallyControlled(player))
             ApplyPickupMultiplierPreference(picker);
     }
 
     private static Mod_ItemPicker FindPreferenceItemPicker()
     {
         ItemMgr manager = ItemMgr.GetInstance();
-        Player player = FindPreferencePlayer(manager != null ? manager.Player_DIC : null);
+        Item player = FindPreferencePlayer(manager != null ? manager.ProfileActors : null);
         return player != null ? player.itemMods?.GetMod_ByID<Mod_ItemPicker>(ModText.Picker) : null;
     }
 

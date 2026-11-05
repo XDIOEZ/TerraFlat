@@ -20,7 +20,7 @@ using InputSystem;
 using FlatWorld.Mobile;
 
 [RequireComponent(typeof(Item))]
-public partial class Mod_GameController : Module
+public partial class Mod_GameController : Module, IActorLocalControlModule
 {
     #region 模块身份
     /// <summary>玩家根对象上的控制器必须使用稳定模块 ID，供所有地块交互统一定位。</summary>
@@ -284,6 +284,11 @@ public partial class Mod_GameController : Module
             _Data.ID = ModText.Controller;
         }
 
+    }
+
+    private void InitializeLocalInputActions()
+    {
+        if (_inputActions != null) return;
         _inputActions = new PlayerInputActions();
         _aimCursor.DeadZone = AimDeadZone;
         LoadPreferredInputDevice();
@@ -294,8 +299,11 @@ public partial class Mod_GameController : Module
         InitializeVirtualCursor();
     }
 
+    public bool IsAttackHeld => _keyboardMouseAttackHeld || _gamepadAttackHeld || _mobileAttackInputHeld || _externalAttackHeld;
+
     public void OnEnable()
     {
+        if (!IsRuntimeLoaded || !ActorProfileRegistry.IsLocallyControlled(item)) return;
         _cachedMouseDevice = null;
         _inputActions.Enable();
         RegisterInputCallbacks();
@@ -334,7 +342,7 @@ public partial class Mod_GameController : Module
     {
         CancelActiveAttackAndMobileInput();
         ResetExternalGameplayControl();
-        EventSystemGuard.SetGamepadModeEntryAllowed(true);
+        if (_inputActions != null) EventSystemGuard.SetGamepadModeEntryAllowed(true);
         InputBindings?.Dispose();
         if (InputBindings != null)
             InputBindings.BindingsChanged -= HandleBindingsChanged;
@@ -380,7 +388,7 @@ public partial class Mod_GameController : Module
             return;
         }
 
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryHandleSpacePointer(item as Player) == true)
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.TryHandleSpacePointer(ActorProfileRegistry.GetProfileActorOrNull(item as Item)) == true)
         { _suppressLeftClickUntilRelease = true; return; }
         _suppressLeftClickUntilRelease = false;
         LeftClick.Invoke();
@@ -651,7 +659,7 @@ public partial class Mod_GameController : Module
             Debug.LogWarning("[Mod_GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
         }
 
-        return FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(item as Player) == true
+        return FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(ActorProfileRegistry.GetProfileActorOrNull(item as Item)) == true
             ? new Vector3(transform.position.x, transform.position.y, 0f)
             : WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
     }
@@ -665,7 +673,7 @@ public partial class Mod_GameController : Module
             Vector2 delta = (Vector2)(target - transform.position);
             return transform.position + (Vector3)(maxWorldDistance > 0f ? Vector2.ClampMagnitude(delta, maxWorldDistance) : delta);
         }
-        if (FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(item as Player) == true)
+        if (FlatWorld.Spaceflight.SpaceSession.Current?.IsPlayerInShipInteriorWorld(ActorProfileRegistry.GetProfileActorOrNull(item as Item)) == true)
         {
             Vector3 target = GetMouseWorldPosition();
             Vector2 delta = (Vector2)(target - transform.position);
@@ -1122,7 +1130,7 @@ public partial class Mod_GameController : Module
         // 每帧以玩家当前显示位置重新投影，避免准线停留在旧位置。
         Vector3 cursorOrigin = transform.position;
         FlatWorld.Spaceflight.SpaceSession spaceSession = FlatWorld.Spaceflight.SpaceSession.Current;
-        if (spaceSession != null && spaceSession.TryGetShipInteriorPresentationPosition(item as Player, out Vector2 projectedPlayer))
+        if (spaceSession != null && spaceSession.TryGetShipInteriorPresentationPosition(ActorProfileRegistry.GetProfileActorOrNull(item as Item), out Vector2 projectedPlayer))
             cursorOrigin = projectedPlayer;
         Vector3 mobileCursorWorldPosition = _aimCursor.CalculateRadialWorldPosition(
             cursorOrigin,
@@ -1415,7 +1423,13 @@ public partial class Mod_GameController : Module
     protected override void OnLoad()
     {
         // 输入绑定由 InputBindingService 构造时独立加载，不进入物品模块存档。
+        InitializeLocalInputActions();
+        _cachedMouseDevice = null;
+        _inputActions.Enable();
+        RegisterInputCallbacks();
     }
+
+    protected override void OnUnload() => OnDisable();
 
     protected override void OnSave()
     {

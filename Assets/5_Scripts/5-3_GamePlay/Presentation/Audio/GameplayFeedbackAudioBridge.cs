@@ -23,7 +23,7 @@ namespace FlatWorld.Gameplay.Presentation.Audio
 
         private static void OnProgress(GameplayProgressSignal signal)
         {
-            if (signal.Actor == null || !signal.Actor.IsLocalProfile)
+            if (signal.Actor == null || !ActorProfileRegistry.IsLocallyControlled(signal.Actor))
                 return;
 
             string cueId = signal.Type switch
@@ -41,15 +41,15 @@ namespace FlatWorld.Gameplay.Presentation.Audio
                 AudioService.Instance.PlayAt(cueId, signal.Actor.transform.position);
         }
 
-        private static void OnPlacementRejected(Player actor, BuildingPlacementFailureReason reason)
+        private static void OnPlacementRejected(Item actor, BuildingPlacementFailureReason reason)
         {
-            if (actor != null && actor.IsLocalProfile)
+            if (actor != null && ActorProfileRegistry.IsLocallyControlled(actor))
                 AudioService.Instance.PlayAt(AudioEventIds.BuildingReject, actor.transform.position);
         }
 
-        private static void OnFishingSound(Player actor, FishingSoundAction action)
+        private static void OnFishingSound(Item actor, FishingSoundAction action)
         {
-            if (actor == null || !actor.IsLocalProfile)
+            if (actor == null || !ActorProfileRegistry.IsLocallyControlled(actor))
                 return;
 
             string cueId = action switch

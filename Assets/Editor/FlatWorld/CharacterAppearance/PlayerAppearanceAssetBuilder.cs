@@ -13,7 +13,7 @@ public static class PlayerAppearanceAssetBuilder
     #region 路径与统一规格
     public const string OutputRoot = "Assets/6_Art/Generated/Characters/PlayerTemplate";
     public const string ProfilePath = "Assets/Resources/Characters/PlayerAppearance_Default.asset";
-    public const string PlayerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
+    public const string PlayerPath = "Assets/2_Prefabs/Gameplay/Player/Human.prefab";
     public const string SourcePath = OutputRoot + "/Source/LayeredOutfits.png";
     private const int Width = PlayerAppearanceLayerRaster.Width;
     private const int Height = PlayerAppearanceLayerRaster.Height;
@@ -182,7 +182,7 @@ public static class PlayerAppearanceAssetBuilder
         GameObject root = PrefabUtility.LoadPrefabContents(PlayerPath);
         try
         {
-            Player player = root.GetComponent<Player>();
+            Item player = root.GetComponent<Item>();
             if (player == null)
                 throw new InvalidDataException("Player Prefab 缺少玩家组件。");
             Mod_AnimatorController animator = root.GetComponentInChildren<Mod_AnimatorController>(true);

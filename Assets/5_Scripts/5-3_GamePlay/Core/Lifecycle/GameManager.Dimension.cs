@@ -32,7 +32,7 @@ public partial class GameManager
         Event_GameWorldEnter?.Invoke();
     }
 
-    internal void NotifyDimensionPlayerEntered(Player player)
+    internal void NotifyDimensionPlayerEntered(Item player)
     {
         Event_PlayerEnterWorld?.Invoke(player);
     }

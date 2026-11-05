@@ -215,6 +215,7 @@ public partial class ItemMgr
 
     public void DespawnItem(Item item, bool saveData = true, bool detachFromChunk = true)
     {
+        bool profileOwned = ActorProfileRegistry.IsProfileBound(item);
         if (item == null)
         {
             throw new ArgumentNullException(nameof(item));
@@ -248,7 +249,7 @@ public partial class ItemMgr
             bool returnedToPool = false;
             try
             {
-                if (failure == null && item != null)
+                if (failure == null && item != null && !profileOwned)
                     returnedToPool = TryReturnItemToPool(item);
             }
             catch (Exception exception) { CaptureDespawnFailure(ref failure, exception); }

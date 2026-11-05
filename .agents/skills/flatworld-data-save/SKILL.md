@@ -5,6 +5,9 @@ description: "FlatWorld 实例快照、核心存档、区块差量、资源配�
 
 # 数据与存档
 
+- 档案是 ProfileId + ActorProfileMetadata + 通用 ItemData；根快照22仍写角色快照，29写对应档案元数据。SQLite 容器保留 v1，core/player 载荷升 v2并登记1→2迁移；独立 player 记录为 ActorProfileSnapshot，core 排除独立档案内容。旧编号不复用，旧 Player 快照只读迁移到 Human，开发期 .bytes 不迁移。
+- 旧库存按键合并、模块内容优先；包括快捷栏二进制在内按非零 GUID 去重，剩余库存保留在库存模块 legacy: 兼容键，质量读取覆盖这些隐藏键。公开快照必须显式按角色数据引用裁剪，Bootstrap 同步裁剪角色和元数据。
+
 - `BuiltInContentBinaryCatalog.ReadResourceAsync` 主线程取得 Resources 文本、后台解码私有 DTO；死亡文案在完整会话 `combat-prewarm` 预载与校验，主线程发布，原位更新候选不替换活跃目录，保留同步烘焙与失败语义。
 - 自动保存的太空会话仍在玩家/机器/掉落联合点冻结为字符串；`EncodeFrozenSqliteSpaceRecords` 只对该字符串在工作线程拆分独立记录，禁止读取活跃 `SpaceSession`。等待期间换档/新保存版本须丢弃旧结果，异常不提交半份记录；格式不变，回归 `save/frozen_space_encoding`。
 
@@ -37,9 +40,9 @@ Item/Module 数据在 `Assets/5_Scripts/5-1_Data/{ItemData,ModData}/`；内容�
 - 外层 MemoryPack 写入期间的嵌套负载使用 ItemSnapshotSerialization.SerializePayload 独占缓冲；IModuleInstanceStateCodec 同样隔离收发缓冲。FastClonerIgnore 的可写属性会被 setter 写默认值，InstanceSnapshot 计算属性不使用该标记。
 - CraftedDurabilityMultiplier 保存实例品质；恢复按当前基础耐久重算，再保持损伤比例。IRuntimeDataLifecycle.Save 只捕获，Unload 才清事件/资源。
 - 自动保存共用 AutoSaveWorkBudget（0.5ms/16 单元/让两帧）；地形先分帧冻结并记 `chunkDifferenceRevisions`，最终点补冻变化块。玩家时钟、库存、机器、船体、掉落及生态最终成员同帧捕获；之后只封装冻结字节，不再读 live Item。新写入口必须标记差量版本，捕获器不得在后台调用 Item codec/Lua/Unity。新保存意图和最终快照均登记修订，旧任务不能覆盖新提交。
-- `PlayerData_Dict` 用不可变角色 ID，`Name_User` 和存档名称仅显示；名称不参与磁盘路径。改名、复制、删除和时间读取统一用存档服务；UI 一次取得目录元数据，逐行不重扫整个目录。
+- `ProfileActorData` 用不可变 ProfileId，`ActorProfileMetadata.DisplayName` 和存档名称仅显示；名称不参与磁盘路径。改名、复制、删除和时间读取统一用存档服务；UI 一次取得目录元数据，逐行不重扫整个目录。
 - 生态存档 ItemData 是生产者移交的独立快照，入世前复制；弱引用缓存按存档根/区块跨次复用记录。最终联合点仍重读成员、删除 GUID/恢复年份，仅补冻新增/替换快照和变化元数据；新增生态持久字段须同步 `EcologyFrozenChunkMetadata`。缓存不得用于活跃可变 ItemData；编解码器变更失效，公开角色策略单独捕获。
-- 已有角色实例化前必须从 `Data_Player.transform` 取得保存位置，并同步刚体初始位置；不能先以世界原点创建玩家再期望异步物理/模块加载纠正。
+- 已有角色实例化前从 `ItemData.transform` 取得保存位置，并同步刚体初始位置；不能先在原点创建再依赖异步加载纠正。
 - 保存退出在停止联机、世界退出事件和场景解绑之前采集完整世界快照并成功写盘；失败保留当前游戏和重试入口。`SaveDataMgr.Save_And_WriteToDiskAndRecordExitTime` 的真实成功状态是退出门禁，回到菜单不能代替写盘成功。
 - 退出写盘只借用已有 `ChunkMgr`；不得通过自动单例捡回待销毁或其他世界的管理器。运行时 AI 采集失败必须终止写盘。
 

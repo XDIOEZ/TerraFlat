@@ -2567,7 +2567,7 @@ public static partial class GameplayTestSystemProbe
 
     private static JObject EntityQuestProgressStore(JObject args)
     {
-        var playerData = new Data_Player { ItemSpecialData = "{\"other\":{\"value\":42}}" };
+        ItemData playerData = ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { ItemSpecialData = "{\"other\":{\"value\":42}}" }, null, null);
         var document = new QuestProgressSaveDocument();
         var record = new QuestProgressSaveRecord
         {
@@ -2653,11 +2653,11 @@ public static partial class GameplayTestSystemProbe
         }
     }
 
-    private static JObject EntityWithQuestPlayer(Func<Player, JObject> action)
+    private static JObject EntityWithQuestPlayer(Func<Item, JObject> action)
     {
         var root = new GameObject("GameplayTest Independent Quest Player") { hideFlags = HideFlags.HideAndDontSave };
         root.SetActive(false);
-        Player player = root.AddComponent<Player>();
+        Item player = ActorProfileRegistry.CreateProfileActorForFixture(root);
         try { return action(player); }
         finally
         {

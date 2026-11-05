@@ -126,7 +126,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 
     #region 生物预制体物理登记回归
-    private static JObject CapturePrefabCreaturePhysics(Player player, JObject args)
+    private static JObject CapturePrefabCreaturePhysics(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var fixture = new Fixture();
@@ -173,7 +173,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 
     #region 玩家、生物与普通物品独立绘制回归
-    private static JObject CaptureItemVisualOwnership(Player player, JObject args)
+    private static JObject CaptureItemVisualOwnership(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var fixture = new Fixture();
@@ -291,7 +291,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 
     #region 正式生成与原生模拟回写
-    private static IEnumerator CaptureConfiguredEntityProxies(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator CaptureConfiguredEntityProxies(Item player, JObject args, Action<JObject> completed)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();
@@ -553,7 +553,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     }
 
     private static void CaptureMovingItemBuildingOccupancy(Fixture own, WorldPhysicsService2D service,
-        Player player, Vector2 point, JObject result)
+        Item player, Vector2 point, JObject result)
     {
         JObject physics = PhysicsJson("IndependentDynamic");
         physics["freezeRotation"] = false;
@@ -644,7 +644,7 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
     #endregion
 
     #region 资源多区域与用途精筛
-    private static JObject CaptureResourceProxyRegions(Player player, JObject args)
+    private static JObject CaptureResourceProxyRegions(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         var own = new Fixture();

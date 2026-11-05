@@ -17,7 +17,7 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
     private static void Register() => GameplayTestRuntimeProbe.RegisterAsync("player", "surface_arrival", Capture);
 
     // 在隔离世界走真实落点、窗口恢复和同世界呈现入口，断言交给 Lua。
-    private static IEnumerator Capture(Player player, JObject args, Action<JObject> completed)
+    private static IEnumerator Capture(Item player, JObject args, Action<JObject> completed)
     {
         if (GameNetwork.IsOnline) throw new InvalidOperationException("地表到达回归需要隔离离线世界。");
         ChunkMgr chunks = ChunkMgr.ExistingInstance;
@@ -52,7 +52,7 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
         {
             ["poseMatches"] = Vector2.Distance(body.position, expected) < .001f &&
                 Vector3.Distance(player.transform.position, expected) < .001f &&
-                Vector3.Distance(player.Data.transform.position, destination) < .001f,
+                Vector3.Distance(player.itemData.transform.position, destination) < .001f,
             ["cameraShiftError"] = ((camera.ControllerCamera.transform.position - cameraBefore) -
                 (player.transform.position - before)).magnitude,
             ["velocity"] = body.velocity.magnitude, ["angularVelocity"] = body.angularVelocity,
@@ -97,16 +97,16 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
         controller.ReleaseGameplayInputLock(scope);
         int readySignals = 0;
         bool readyAtSignal = true;
-        void OnReady(Player actor, string world)
+        void OnReady(Item actor, string world)
         {
             if (actor != player) return;
             readySignals++;
-            readyAtSignal &= world == player.Data.CurrentSceneName &&
+            readyAtSignal &= world == player.itemData.GetActorProfileMetadata().WorldKey &&
                 PlayerTeleportService.IsSurfaceArrivalReady(player, scope.Original);
         }
         NetworkDimensionBridge.PresentationReady += OnReady;
         IEnumerator presentation = DimensionManager.Instance.ApplyNetworkPresentation(player,
-            WorldAddress.FromWorldKey(player.Data.CurrentSceneName), scope.Original);
+            WorldAddress.FromWorldKey(player.itemData.GetActorProfileMetadata().WorldKey), scope.Original);
         try
         {
             bool running = presentation.MoveNext();
@@ -135,7 +135,7 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
 
     private sealed class ArrivalScope : IDisposable
     {
-        private readonly Player player;
+        private readonly Item player;
         private readonly Mod_Mover mover;
         private readonly Rigidbody2D body;
         private readonly Mod_GameController controller;
@@ -143,7 +143,7 @@ public static class GameplayTestPlayerArrivalRuntimeProbe
         public readonly Vector3 Original;
         public readonly bool WasSimulated, WasEnabled;
 
-        public ArrivalScope(Player player, Mod_Mover mover, Rigidbody2D body, Mod_GameController controller)
+        public ArrivalScope(Item player, Mod_Mover mover, Rigidbody2D body, Mod_GameController controller)
         {
             this.player = player; this.mover = mover; this.body = body; this.controller = controller;
             Original = WorldTopologyRuntime.NormalizePosition(player.transform.position);

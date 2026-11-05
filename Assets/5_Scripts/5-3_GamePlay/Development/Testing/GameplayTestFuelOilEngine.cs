@@ -15,7 +15,7 @@ internal static class GameplayTestFuelOilEngine
     private static void RegisterFuelOilEngineOperation()
         => GameplayTestRuntimeProbe.Register("industrial_fluids", "fuel_oil_engine", CaptureFuelOilEngine);
 
-    private static JObject CaptureFuelOilEngine(Player player, JObject args)
+    private static JObject CaptureFuelOilEngine(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var fixture = new GameplayFluidScope();

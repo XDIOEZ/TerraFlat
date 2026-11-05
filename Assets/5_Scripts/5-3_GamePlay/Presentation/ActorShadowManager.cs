@@ -261,7 +261,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         WorldPresentationSortingDomain sortingDomain)
     {
         // 太空玩家不画地面阴影，舱内人工重力也不改变这条表现规则。
-        if (item is Player && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
+        if (ActorIdentity.IsPlayer(item as Item) && SpaceMgr.IsSpaceScene(SceneManager.GetActiveScene().name))
             return;
 
         SpriteRenderer sourceRenderer = binding.SourceRenderer;
@@ -454,7 +454,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         if (shadowVisual?.Enabled == false)
             return false;
 
-        if (item is Player || RuntimeAiEntityUtility.IsAiEntity(item))
+        if (ActorIdentity.IsPlayer(item as Item) || RuntimeAiEntityUtility.IsAiEntity(item))
             return true;
 
         if ((shadowVisual?.ContactWidth ?? 0f) > 0f && item.Owner == null && !item.InHand)

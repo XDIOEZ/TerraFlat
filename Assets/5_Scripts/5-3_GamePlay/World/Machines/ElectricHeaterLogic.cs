@@ -50,7 +50,7 @@ public sealed class ElectricHeaterLogic : MachineLogic
             Heating.TargetTemperature, strength: PowerFraction);
     }
 
-    public override bool Execute(string operation, string argument, Player actor) => operation == "begin-interaction";
+    public override bool Execute(string operation, string argument, Item actor) => operation == "begin-interaction";
     public override void Capture() => MachinePersistence.Write(Entity.Snapshot, "electric-heater", state);
     public override bool ApplyRemoteSnapshot(ItemData snapshot)
     {

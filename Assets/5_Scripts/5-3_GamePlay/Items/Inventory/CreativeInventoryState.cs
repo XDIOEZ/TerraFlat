@@ -10,7 +10,7 @@ public static class CreativeInventoryState
     #region 运行时状态
 
     /// <summary>读取主背包已启用或恢复的创造状态，避免放置预览逐帧解析存档 JSON。</summary>
-    public static bool IsEnabled(Player player)
+    public static bool IsEnabled(Item player)
         => player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.GetDefaultTargetInventory()
             ?.Data?.HasUnlimitedCarryCapacity == true;
 
@@ -23,11 +23,11 @@ public static class CreativeInventoryState
     private const string CreativeCapacityKey = "unlimitedSlots";
 
     /// <summary>管理员启用创造背包时立即保存状态，并开启动态槽位及容量豁免。</summary>
-    public static void Enable(Player player, Inventory inventory)
+    public static void Enable(Item player, Inventory inventory)
     {
-        JObject state = ItemSpecialDataJsonStore.ReadNamespace(player.Data, NamespaceKey);
+        JObject state = ItemSpecialDataJsonStore.ReadNamespace(player.itemData, NamespaceKey);
         state[CreativeCapacityKey] = true;
-        ItemSpecialDataJsonStore.WriteNamespace(player.Data, NamespaceKey, state);
+        ItemSpecialDataJsonStore.WriteNamespace(player.itemData, NamespaceKey, state);
         inventory.Data.SetUnlimitedCarryCapacity(true);
         inventory.Data.SetUnlimitedSlots(true);
     }
@@ -35,8 +35,8 @@ public static class CreativeInventoryState
     /// <summary>库存加载后恢复创造状态，主背包初始化据此选择固定或动态格数。</summary>
     public static void Restore(Inventory inventory)
     {
-        bool enabled = inventory.item is Player player && inventory.Data.Name == ModText.Bag &&
-                       ItemSpecialDataJsonStore.ReadNamespace(player.Data, NamespaceKey)
+        bool enabled = (inventory.item is Item player && ActorIdentity.IsPlayer(player)) && inventory.Data.Name == ModText.Bag &&
+                       ItemSpecialDataJsonStore.ReadNamespace(player.itemData, NamespaceKey)
                            .Value<bool?>(CreativeCapacityKey) == true;
         inventory.Data.SetUnlimitedCarryCapacity(enabled);
     }

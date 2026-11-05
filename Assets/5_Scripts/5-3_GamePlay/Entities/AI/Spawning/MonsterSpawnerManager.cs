@@ -819,7 +819,7 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
         if (_itemManager == null)
             return;
 
-        foreach (Player player in _itemManager.Player_DIC.Values)
+        foreach (Item player in _itemManager.ProfileActors.Values)
         {
             if (player == null) continue;
             if (string.Equals(GameplayWorldRegistry.GetItemWorldKey(player), sceneName, StringComparison.Ordinal))
@@ -828,16 +828,16 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
                 continue;
             }
             if (player != null && GameNetwork.IsOnline && FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(
-                player.ProfileName, out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true)
+                ActorProfileRegistry.GetProfileId(player), out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true)
             {
                 if (!observer.InSpace && observer.WorldKey == sceneName)
                     AddPlayerPosition(observer.Position.LocalMeters.ToVector2());
                 continue;
             }
             if (player == null ||
-                (player.Data != null &&
-                 !string.IsNullOrWhiteSpace(player.Data.CurrentSceneName) &&
-                 player.Data.CurrentSceneName != sceneName))
+                (player.itemData != null &&
+                 !string.IsNullOrWhiteSpace(player.itemData.GetActorProfileMetadata().WorldKey) &&
+                 player.itemData.GetActorProfileMetadata().WorldKey != sceneName))
             {
                 continue;
             }
@@ -845,10 +845,10 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
             AddPlayerPosition(player.transform.position);
         }
 
-        if (_playerPositions.Count == 0 && _itemManager.UserPlayerTransform != null &&
-            (string.Equals(GameplayWorldRegistry.GetItemWorldKey(_itemManager.User_Player), sceneName, StringComparison.Ordinal) ||
-             _itemManager.User_Player?.Data?.CurrentSceneName == sceneName))
-            AddPlayerPosition(_itemManager.UserPlayerTransform.position);
+        if (_playerPositions.Count == 0 && _itemManager.LocalControlledActorTransform != null &&
+            (string.Equals(GameplayWorldRegistry.GetItemWorldKey(_itemManager.LocalControlledActor), sceneName, StringComparison.Ordinal) ||
+             _itemManager.LocalControlledActor?.itemData?.GetActorProfileMetadata().WorldKey == sceneName))
+            AddPlayerPosition(_itemManager.LocalControlledActorTransform.position);
     }
 
     private void AddPlayerPosition(Vector3 position)

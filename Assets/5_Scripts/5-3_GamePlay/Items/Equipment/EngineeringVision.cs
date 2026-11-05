@@ -22,7 +22,7 @@ public static class EngineeringVision
             if (sampledFrame != Time.frameCount)
             {
                 sampledFrame = Time.frameCount;
-                localCanSee = CanSee(ItemMgr.GetInstance()?.User_Player);
+                localCanSee = CanSee(ItemMgr.GetInstance()?.LocalControlledActor);
             }
             return localCanSee;
         }

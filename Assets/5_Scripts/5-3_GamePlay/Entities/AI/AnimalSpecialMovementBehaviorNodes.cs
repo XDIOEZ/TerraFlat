@@ -25,6 +25,7 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             Movement = context.Actor.itemMods.RequireSingleModById<Mod_AquaticMovement>(Mod_AquaticMovement.ModuleId);
         }
         public override void Tick(float deltaTime) => Movement.TickAquaticEnvironmentAndThreats(deltaTime);
+        public override void TickWhileManuallyControlled(float deltaTime) => Movement.TickAquaticEnvironmentAndThreats(deltaTime, false);
     }
 
     private static Mod_LightSensitiveNavigation LightNavigation(AnimalBehaviorTreeContext context)

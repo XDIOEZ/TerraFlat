@@ -37,12 +37,12 @@ public static partial class GameplayTestWorldRuntimeProbe
         public readonly TerrainCell Original;
         public readonly Vector3 Center;
         public readonly Vector3 Authority;
-        private readonly Player player;
+        private readonly Item player;
         private readonly GrassCellState? originalGrassDelta;
         private readonly bool originalLiquidChanged;
         private readonly Dictionary<string, float> environment = new(StringComparer.Ordinal);
 
-        public Site(Player player, RuntimeTerrainTileSample sample, ChunkRuntime chunk, Vector3 authority)
+        public Site(Item player, RuntimeTerrainTileSample sample, ChunkRuntime chunk, Vector3 authority)
         {
             this.player = player;
             Sample = sample; Chunk = chunk; Authority = authority;
@@ -100,7 +100,7 @@ public static partial class GameplayTestWorldRuntimeProbe
         return value;
     }
 
-    private static Site FindSite(Player player, Func<RuntimeTerrainTileSample, bool> accepts, int minimumRadius = 2)
+    private static Site FindSite(Item player, Func<RuntimeTerrainTileSample, bool> accepts, int minimumRadius = 2)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         ChunkMgr manager = ChunkMgr.ExistingInstance ?? throw new InvalidOperationException("真实区块管理器未就绪。");
@@ -134,7 +134,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     #endregion
 
     #region 正式耕作与灌溉
-    private static JObject CaptureTillage(Player player, JObject args)
+    private static JObject CaptureTillage(Item player, JObject args)
     {
         Site site = FindSite(player, sample =>
         {
@@ -198,7 +198,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     }
 
     // 两格各自保留独立现场，倒水时只让目标格吸收，其余有水耕地保持不变。
-    private static JObject CapturePourAbsorption(Player player, JObject args)
+    private static JObject CapturePourAbsorption(Item player, JObject args)
     {
         static bool TillingSource(RuntimeTerrainTileSample sample) =>
             FarmlandSystem.GetBlockId(sample.Cell.GroundTileId) is "Tile_Grass" or "Tile_Soil";
@@ -261,7 +261,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     #endregion
 
     #region 正式放置扣料与失败回滚
-    private static JObject CapturePlacement(Player player, JObject args)
+    private static JObject CapturePlacement(Item player, JObject args)
     {
         GameRes resources = GameRes.ExistingInstance ?? throw new InvalidOperationException("正式资源目录未就绪。");
         string id = GameplayTestSystemProbe.Text(args, "summonerId", "Wall_Wood_Summoner");
@@ -351,7 +351,7 @@ public static partial class GameplayTestWorldRuntimeProbe
 
     #region 落地设施主体与阴影尺寸
     // 实走材料扣除和机器落地，从正式绘制提交采样，避免只检查预览配置。
-    private static JObject CaptureFacilityVisualScale(Player player, JObject args)
+    private static JObject CaptureFacilityVisualScale(Item player, JObject args)
     {
         GameRes resources = GameRes.ExistingInstance ?? throw new InvalidOperationException("正式资源目录未就绪。");
         string id = GameplayTestSystemProbe.Text(args, "buildingId", "BlastFurnace");
@@ -418,7 +418,7 @@ public static partial class GameplayTestWorldRuntimeProbe
 
     #region Host 共享库存建造回执
     // 独立载体走正式安装入口和放置事务，只替换传输桥来控制成功回执到达时机。
-    private static JObject CaptureHostPlacementReceipt(Player player, JObject args)
+    private static JObject CaptureHostPlacementReceipt(Item player, JObject args)
     {
         if (!FlatWorld.Networking.GameNetwork.HasStateAuthority)
             throw new InvalidOperationException("Host 建造回执采样需要世界权威。");
@@ -499,7 +499,7 @@ public static partial class GameplayTestWorldRuntimeProbe
     #endregion
 
     #region 正式钓具加载保存与恢复
-    private static JObject CaptureFishingRig(Player player, JObject args)
+    private static JObject CaptureFishingRig(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         GameRes resources = GameRes.ExistingInstance ?? throw new InvalidOperationException("正式资源目录未就绪。");

@@ -10,7 +10,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 {
     #region 自然环境音现场与树木索引
     // 播放正式自然循环并短暂注册原生树木，采样完成后立即释放所有自有资源。
-    private static JObject CaptureNatureAmbience(AudioFixture fixture, Player player)
+    private static JObject CaptureNatureAmbience(AudioFixture fixture, Item player)
     {
         AudioService service = fixture.Service;
         var cues = new JArray
@@ -28,7 +28,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         };
     }
 
-    private static JObject CaptureNatureAmbientCue(AudioFixture fixture, Player player, string cueId)
+    private static JObject CaptureNatureAmbientCue(AudioFixture fixture, Item player, string cueId)
     {
         AudioService service = fixture.Service;
         AudioCue cue = fixture.CloneCue(cueId);
@@ -93,7 +93,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
         return (true, Math.Sqrt(total / samples.Length), minimum);
     }
 
-    private static JObject CaptureNatureFoliageSources(Player player, float radius)
+    private static JObject CaptureNatureFoliageSources(Item player, float radius)
     {
         GameRes resources = GameRes.ExistingInstance ??
             throw new InvalidOperationException("树叶来源采样需要正式 GameRes。");

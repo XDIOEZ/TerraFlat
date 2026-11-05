@@ -58,7 +58,7 @@ public sealed partial class Mod_AnimalFlightMovement
             food.Data.nutrition.GetFoodRate() >= backpackSeedHungerRate || ItemMgr.Instance == null) return;
         EnsureCarriedSeedPort();
         if (carriedSeedInventory.Data.itemSlots[0].itemData != null) return;
-        foreach (Player player in ItemMgr.Instance.Player_DIC.Values)
+        foreach (Item player in ItemMgr.Instance.ProfileActors.Values)
         {
             if (player == null || player.DestructionHandled || player.gameObject.scene != item.gameObject.scene ||
                 WorldTopologyRuntime.Distance(body.position, player.transform.position) > backpackSeedReach) continue;

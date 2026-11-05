@@ -42,7 +42,7 @@ public sealed class Mod_ShipPart : Module, IBuildingPlacementExtension, IBuildin
             item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture), out _, out _) == true;
     public void OnInteractStart(Item actor)
     {
-        if (actor is not Player player || !CanInteract(actor)) return;
+        if (!(actor is Item player && ActorIdentity.IsPlayer(player)) || !CanInteract(actor)) return;
         string pieceId = item.itemData.Guid.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (SpaceSession.Current.FindPiece(pieceId, out ShipState ship, out _))
             ShipPanelSession.Open(SpaceSession.Current, player, ship.ShipId, pieceId);

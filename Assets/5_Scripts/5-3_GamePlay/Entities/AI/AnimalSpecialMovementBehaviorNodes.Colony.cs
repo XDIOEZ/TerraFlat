@@ -15,6 +15,7 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             Resident = context.Actor.itemMods.RequireSingleModById<Mod_ColonyResident>(Mod_ColonyResident.ModuleId);
         }
         public override void Tick(float deltaTime) => Resident.TickColonyEnvironmentAndThreats(deltaTime);
+        public override void TickWhileManuallyControlled(float deltaTime) => Resident.TickColonyEnvironmentAndThreats(deltaTime, false);
     }
 
     private static void RegisterColonyNodes()

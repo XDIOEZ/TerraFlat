@@ -12,7 +12,7 @@ public sealed class MinecartPanel : MonoBehaviour
     private static MinecartPanel current;
     private BasePanel panel;
     private Mod_Minecart cart;
-    private Player actor;
+    private Item actor;
     private Inventory engines, cargo;
     private TMP_Text title, status, capacity, feedback;
     private Button connect, disconnect, ride;
@@ -26,7 +26,7 @@ public sealed class MinecartPanel : MonoBehaviour
         Mod_Minecart.MenuRequested += Open;
     }
 
-    public static void Open(Mod_Minecart target, Player player)
+    public static void Open(Mod_Minecart target, Item player)
     {
         if (target == null || !target.CanAccess(player)) return;
         if (current == null)
@@ -57,7 +57,7 @@ public sealed class MinecartPanel : MonoBehaviour
         return text;
     }
 
-    private void Bind(Mod_Minecart target, Player player)
+    private void Bind(Mod_Minecart target, Item player)
     {
         ClearTarget(); cart = target; actor = player;
         panel.BindPhysicalDeviceArtwork(target.item.itemData.IDName, () =>

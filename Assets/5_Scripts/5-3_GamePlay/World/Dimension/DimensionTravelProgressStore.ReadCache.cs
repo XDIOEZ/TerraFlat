@@ -10,7 +10,7 @@ public static partial class DimensionTravelProgressStore
     #region 玩家最后位置的只读缓存
     [Flags]
     private enum EntranceReadFlags : byte { None = 0, Blocked = 1, Generated = 2, OpenGenerated = 4 }
-    private static readonly ConditionalWeakTable<Data_Player, PlayerReadCache> playerReadCaches = new();
+    private static readonly ConditionalWeakTable<ItemData, PlayerReadCache> playerReadCaches = new();
     private static readonly ConditionalWeakTable<GameSaveData, SaveReadCache> saveReadCaches = new();
 
     private sealed class PlayerReadCache
@@ -19,7 +19,7 @@ public static partial class DimensionTravelProgressStore
         private bool current;
         public readonly Dictionary<string, Vector3> LastPositions = new(StringComparer.Ordinal);
         public void Invalidate() => current = false;
-        public void Refresh(Data_Player player)
+        public void Refresh(ItemData player)
         {
             if (current && ReferenceEquals(source, player.ItemSpecialData)) return;
             LastPositions.Clear();
@@ -32,14 +32,14 @@ public static partial class DimensionTravelProgressStore
         }
     }
 
-    private static PlayerReadCache GetPlayerReadCache(Data_Player player)
+    private static PlayerReadCache GetPlayerReadCache(ItemData player)
     {
         PlayerReadCache cache = playerReadCaches.GetValue(player, _ => new PlayerReadCache());
         cache.Refresh(player);
         return cache;
     }
 
-    private static void InvalidatePlayerReadCache(Data_Player player)
+    private static void InvalidatePlayerReadCache(ItemData player)
     {
         if (player != null && playerReadCaches.TryGetValue(player, out PlayerReadCache cache)) cache.Invalidate();
     }

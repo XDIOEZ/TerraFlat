@@ -32,7 +32,7 @@ public sealed class GameplayTestProfilerEvidenceBehaviour : MonoBehaviour
         using (marker.Auto()) { }
     }
 
-    internal static JObject Create(Player player, JObject args)
+    internal static JObject Create(Item player, JObject args)
     {
         var root = new GameObject("Lua性能导出标记");
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
@@ -63,7 +63,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private const int MaximumSourceCharacters = 1024 * 1024;
     private const float MaximumStepSeconds = 30f;
     private const float MaximumTotalSeconds = 180f;
-    private Player player;
+    private Item player;
     private readonly Func<string, bool> check;
     private readonly Action<string, string, bool, string> record;
     private GameplayTestSpaceScenario activeSpaceScenario;
@@ -108,7 +108,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
 
     public bool Succeeded { get; private set; }
 
-    public GameplayTestLuaRunner(Player player, Func<string, bool> check,
+    public GameplayTestLuaRunner(Item player, Func<string, bool> check,
         Action<string, string, bool, string> record)
     {
         this.player = player;
@@ -823,13 +823,13 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private IEnumerator RunRuntimeCommand(Command command)
     {
         JObject sample = null;
-        string profile = player.ProfileName;
-        Data_Player originalData = player.Data;
+        string profile = ActorProfileRegistry.GetProfileId(player);
+        ItemData originalData = player.itemData;
         yield return GameplayTestRuntimeProbe.CaptureAsync(player, command.Text, command.Argument, command.Arguments, value => sample = value);
-        Player current = ItemMgr.Instance?.User_Player;
+        Item current = ItemMgr.Instance?.LocalControlledActor;
         if (!ReferenceEquals(current, player))
         {
-            if (current == null || current.ProfileName != profile || !ReferenceEquals(current.Data, originalData))
+            if (current == null || ActorProfileRegistry.GetProfileId(current) != profile || !ReferenceEquals(current.itemData, originalData))
                 throw new InvalidOperationException("迁移后的角色不属于本轮测试档案。");
             GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(current);
             ReleaseControl();
@@ -876,7 +876,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
             ReleaseControl();
             activeSpaceScenario = new GameplayTestSpaceScenario();
             yield return activeSpaceScenario.Execute(command.Text, command.Argument, value => sample = value);
-            player = ItemMgr.Instance?.User_Player;
+            player = ItemMgr.Instance?.LocalControlledActor;
             if (!TryAcquireControl(out string error)) throw new InvalidOperationException(error);
         }
         if (sample == null) throw new InvalidOperationException("太空操作没有返回真实结果。");
@@ -909,7 +909,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         ReleaseControl();
         Exception failure = null;
         yield return Advance(scenario.Cleanup(), exception => failure = exception);
-        player = ItemMgr.Instance?.User_Player;
+        player = ItemMgr.Instance?.LocalControlledActor;
         string error = null;
         bool restored = failure == null && TryAcquireControl(out error);
         if (!restored) record("space_cleanup", "恢复太空测试现场", false, failure?.ToString() ?? error);
@@ -1047,7 +1047,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
     private bool TryAcquireControl(out string error)
     {
         error = string.Empty;
-        if (player == null || ItemMgr.Instance?.User_Player != player)
+        if (player == null || ItemMgr.Instance?.LocalControlledActor != player)
         {
             error = "测试玩家不存在，或已经不是当前本地玩家。";
             return false;
@@ -1079,7 +1079,7 @@ public sealed class GameplayTestLuaRunner : IDisposable
         error = string.Empty;
         if (disposed || !Application.isPlaying)
             error = "测试已停止，或播放模式已结束。";
-        else if (player == null || ItemMgr.Instance?.User_Player != player ||
+        else if (player == null || ItemMgr.Instance?.LocalControlledActor != player ||
                  GameManager.Instance == null || !GameManager.Instance.IsGameplayReady)
             error = "测试期间玩家或游戏世界不再就绪。";
         else if (controller == null || !controller.IsExternalGameplayControlOwner(this))

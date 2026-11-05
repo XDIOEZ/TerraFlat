@@ -13,11 +13,11 @@ public sealed class Mod_SpaceElevatorTerminal : Module, IInteractable, IBuilding
     protected override void OnLoad() { }
     protected override void OnSave() { }
     protected override void OnUnload() => SpaceElevatorPanelSession.CloseForTerminal(item?.itemData?.Guid.ToString(CultureInfo.InvariantCulture));
-    public bool CanInteract(Item actor) => actor is Player && item != null && item.Owner == null;
+    public bool CanInteract(Item actor) => ActorIdentity.IsPlayer(actor as Item) && item != null && item.Owner == null;
     public void OnInteractStart(Item actor)
     {
         // 地面和站台共用入口，运输与库存规则只由电梯会话执行。
-        if (CanInteract(actor)) SpaceElevatorPanelSession.Open(SpaceSession.EnsureLoaded(), (Player)actor, item);
+        if (CanInteract(actor)) SpaceElevatorPanelSession.Open(SpaceSession.EnsureLoaded(), (Item)actor, item);
     }
     public void OnInteractCancel(Item actor) { }
     public bool CanDismantle(out string reason)

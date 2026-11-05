@@ -38,7 +38,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>尝试解析当前真实本地玩家及核心控制模块。</summary>
         public static bool TryGetPlayerContext(
-            out Player player,
+            out Item player,
             out Mod_GameController controller,
             out Mod_Mover mover,
             out string error)
@@ -61,7 +61,7 @@ namespace FlatWorld.GameplayMCP
                 return false;
             }
 
-            player = ItemMgr.Instance?.User_Player;
+            player = ItemMgr.Instance?.LocalControlledActor;
             if (player == null || player.itemMods == null)
             {
                 error = "player_not_ready: 当前本地玩家尚未创建或模块未加载。";
@@ -81,7 +81,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>确保 GamePlayMCP 持有玩家的唯一外部控制租约。</summary>
         public static bool TryEnsureControl(
-            out Player player,
+            out Item player,
             out Mod_GameController controller,
             out Mod_Mover mover,
             out string error)
@@ -236,7 +236,7 @@ namespace FlatWorld.GameplayMCP
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
-                      ItemMgr.Instance?.User_Player != null,
+                      ItemMgr.Instance?.LocalControlledActor != null,
                 Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
 
             if (ready && !TryInitializeSessionPlayerHealth())
@@ -353,7 +353,7 @@ namespace FlatWorld.GameplayMCP
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
-                      ItemMgr.Instance?.User_Player != null,
+                      ItemMgr.Instance?.LocalControlledActor != null,
                 Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
 
             if (ready && !TryInitializeSessionPlayerHealth())
@@ -376,7 +376,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>只在 GamePlayMCP 成功启动世界后初始化一次生命，后续伤害照常结算。</summary>
         private static bool TryInitializeSessionPlayerHealth()
         {
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             Mod_DamageReceiver health = player?.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             if (health == null)
                 return false;
@@ -393,7 +393,7 @@ namespace FlatWorld.GameplayMCP
                 return BuildActionError("not_playing", "Unity 当前不在 Play Mode。", false);
 
             GameManager gameManager = GameManager.Instance;
-            Player player = ItemMgr.Instance?.User_Player;
+            Item player = ItemMgr.Instance?.LocalControlledActor;
             if (gameManager == null || player == null || !gameManager.IsInGameWorld)
                 return BuildActionError("world_not_ready", "当前没有可保存退出的游戏世界。", false);
 
@@ -449,13 +449,13 @@ namespace FlatWorld.GameplayMCP
         /// <summary>优先使用调用方指定玩家，否则选择存档中的第一个稳定档案键。</summary>
         private static string ResolvePlayerName(GameSaveData saveData, string playerName)
         {
-            if (saveData?.PlayerData_Dict == null || saveData.PlayerData_Dict.Count == 0)
+            if (saveData?.ProfileActorData == null || saveData.ProfileActorData.Count == 0)
                 return null;
 
-            if (!string.IsNullOrWhiteSpace(playerName) && saveData.PlayerData_Dict.ContainsKey(playerName))
+            if (!string.IsNullOrWhiteSpace(playerName) && saveData.ProfileActorData.ContainsKey(playerName))
                 return playerName;
 
-            return saveData.PlayerData_Dict.Keys.OrderBy(name => name, StringComparer.Ordinal).FirstOrDefault();
+            return saveData.ProfileActorData.Keys.OrderBy(name => name, StringComparer.Ordinal).FirstOrDefault();
         }
 
         #endregion
@@ -492,7 +492,7 @@ namespace FlatWorld.GameplayMCP
                 ["scene"] = SceneManager.GetActiveScene().name
             };
 
-            if (!TryGetPlayerContext(out Player player, out Mod_GameController controller, out Mod_Mover mover, out string error))
+            if (!TryGetPlayerContext(out Item player, out Mod_GameController controller, out Mod_Mover mover, out string error))
             {
                 root["ready"] = false;
                 root["reason"] = error;
@@ -515,7 +515,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>高频移动只读取位置、生存与输入状态，需要详细信息时再取完整观察。</summary>
-        private static JObject BuildCompactPlayerObservation(Player player, Mod_GameController controller,
+        private static JObject BuildCompactPlayerObservation(Item player, Mod_GameController controller,
             Mod_Mover mover, bool includeInventory)
         {
             Mod_DamageReceiver health = player.itemMods.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
@@ -540,7 +540,7 @@ namespace FlatWorld.GameplayMCP
 
         /// <summary>构造玩家核心状态、快捷栏和可选库存摘要。</summary>
         private static JObject BuildPlayerObservation(
-            Player player,
+            Item player,
             Mod_GameController controller,
             Mod_Mover mover,
             bool includeInventory)
@@ -666,7 +666,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>暴露玩家当前可感知的天气与环境温度，避免 Agent 只能从画面猜测生存环境。</summary>
-        private static JObject BuildEnvironmentObservation(Player player)
+        private static JObject BuildEnvironmentObservation(Item player)
         {
             WeatherMgr weather = WeatherMgr.Instance;
             bool hasAmbient = TemperatureMgr.Instance.TryGetAmbientTemperature(
@@ -689,7 +689,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>通过 ItemMgr 既有空间索引构造玩家半径内的实体摘要。</summary>
-        private static JArray BuildNearbyObservation(Player player, float radius, int maxEntities)
+        private static JArray BuildNearbyObservation(Item player, float radius, int maxEntities)
         {
             ItemMgr itemMgr = ItemMgr.Instance;
             if (itemMgr == null)
@@ -725,7 +725,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>构造一个附近实体的紧凑摘要。</summary>
-        private static JObject BuildEntityObservation(Player player, Item item, float distance)
+        private static JObject BuildEntityObservation(Item player, Item item, float distance)
         {
             Mod_DamageReceiver health = item.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp);
             bool interactable = CanPlayerInteract(item, player);
@@ -778,7 +778,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按生产交互契约判断目标当前是否接受玩家交互，避免仅凭接口存在误报。</summary>
-        internal static bool CanPlayerInteract(Item targetItem, Player player)
+        internal static bool CanPlayerInteract(Item targetItem, Item player)
         {
             if (targetItem == null || player == null || targetItem == player || !targetItem.gameObject.activeInHierarchy)
                 return false;
@@ -802,7 +802,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>聚合玩家普通库存与快捷栏，减少 Agent 为查询资源重复翻槽位。</summary>
-        private static JArray BuildInventorySummary(Player player, Mod_HotBar hotbar)
+        private static JArray BuildInventorySummary(Item player, Mod_HotBar hotbar)
         {
             var totals = new Dictionary<string, float>(StringComparer.Ordinal);
 
@@ -930,7 +930,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>读取附近轻量掉落物当前位置，与完整 ItemMgr nearby 分开返回。</summary>
-        private static JArray BuildNearbyDroppedItemObservation(Player player, float radius, int maxDrops)
+        private static JArray BuildNearbyDroppedItemObservation(Item player, float radius, int maxDrops)
         {
             var candidates = new List<DroppedItemObservation>(Mathf.Max(4, maxDrops));
             DroppedItemService.QueryNearbyLightweightDrops(player.transform.position, radius, candidates);
@@ -1115,7 +1115,7 @@ namespace FlatWorld.GameplayMCP
             if (string.IsNullOrEmpty(action))
                 return BuildActionError("missing_action", "缺少 action。", false);
 
-            if (!TryEnsureControl(out Player player, out Mod_GameController controller, out Mod_Mover mover, out string error))
+            if (!TryEnsureControl(out Item player, out Mod_GameController controller, out Mod_Mover mover, out string error))
                 return BuildActionError("control_unavailable", error, false);
 
             return await GameplayMcpActionRegistry.ExecuteAsync(
@@ -1127,7 +1127,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>按方向移动一段真实 Editor 时间，到期后停止输入并恢复原奔跑状态。</summary>
         internal static async Task<JObject> MoveForAsync(
             JObject parameters,
-            Player player,
+            Item player,
             Mod_GameController controller,
             Mod_Mover mover)
         {
@@ -1164,7 +1164,7 @@ namespace FlatWorld.GameplayMCP
         /// <summary>通过玩家智能体模块按导航路点移动到目标点，并返回实际路径与停止状态。</summary>
         internal static async Task<JObject> MoveToAsync(
             JObject parameters,
-            Player player,
+            Item player,
             Mod_GameController controller,
             Mod_Mover mover)
         {
@@ -1310,7 +1310,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>设置 Agent 世界瞄准点，可直接使用坐标或附近实体 Guid。</summary>
-        internal static JObject LookAt(JObject parameters, Player player, Mod_GameController controller)
+        internal static JObject LookAt(JObject parameters, Item player, Mod_GameController controller)
         {
             if (!TryResolveTargetPosition(parameters, player, out Vector2 target, out string error))
                 return BuildActionError("target_not_found", error, false);
@@ -1322,7 +1322,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按正式交互距离与目标有效性规则执行一次交互。</summary>
-        internal static JObject Interact(JObject parameters, Player player)
+        internal static JObject Interact(JObject parameters, Item player)
         {
             Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
             if (sender == null)
@@ -1366,7 +1366,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>按真实交互链持续按住一个目标，供手摇轮等持续交互玩法复用。</summary>
-        internal static async Task<JObject> InteractHoldAsync(JObject parameters, Player player)
+        internal static async Task<JObject> InteractHoldAsync(JObject parameters, Item player)
         {
             Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
             if (sender == null)
@@ -1433,7 +1433,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>向现有攻击事件链提交一次有时长的攻击按压。</summary>
-        internal static async Task<JObject> AttackAsync(JObject parameters, Player player, Mod_GameController controller)
+        internal static async Task<JObject> AttackAsync(JObject parameters, Item player, Mod_GameController controller)
         {
             int targetGuid = GetInt(parameters, "targetGuid", 0);
             Vector3? aimedPosition = null;
@@ -1505,7 +1505,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>调用当前真实手持物的 Act 入口。</summary>
-        internal static JObject UseHeldItem(Player player)
+        internal static JObject UseHeldItem(Item player)
         {
             Mod_HotBar hotbar = ResolveHotbar(player);
             Item heldItem = hotbar?.CurentSelectItem;
@@ -1520,7 +1520,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>通过快捷栏公开控制入口选择槽位。</summary>
-        internal static JObject SelectHotbar(JObject parameters, Player player)
+        internal static JObject SelectHotbar(JObject parameters, Item player)
         {
             Mod_HotBar hotbar = ResolveHotbar(player);
             if (hotbar == null)
@@ -1537,7 +1537,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>让真实游戏继续运行一小段时间，不注入额外输入。</summary>
-        internal static async Task<JObject> WaitActionAsync(JObject parameters, Player player)
+        internal static async Task<JObject> WaitActionAsync(JObject parameters, Item player)
         {
             float seconds = Mathf.Clamp(GetFloat(parameters, "seconds", 0.5f), 0.02f, 20f);
             bool completed = await WaitEditorSecondsAsync(seconds);
@@ -1547,7 +1547,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>停止外部持续输入并退出奔跑模式。</summary>
-        internal static JObject Stop(Player player, Mod_GameController controller, Mod_Mover mover)
+        internal static JObject Stop(Item player, Mod_GameController controller, Mod_Mover mover)
         {
             controller.TrySetExternalMoveInput(ControlOwner, Vector2.zero);
             controller.TrySetExternalAttackHeld(ControlOwner, false);
@@ -1657,7 +1657,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>根据 targetGuid 或 x/y 解析世界目标位置。</summary>
-        private static bool TryResolveTargetPosition(JObject parameters, Player player, out Vector2 target, out string error)
+        private static bool TryResolveTargetPosition(JObject parameters, Item player, out Vector2 target, out string error)
         {
             if (parameters?["target"] != null)
             {
@@ -1696,7 +1696,7 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>统一目标只解析已观察对象，避免混用坐标或旧 Guid 时静默操作另一目标。</summary>
-        private static bool TryResolveWorldTarget(JObject parameters, Player player,
+        private static bool TryResolveWorldTarget(JObject parameters, Item player,
             out GameplayWorldTargets.Target target, out string error)
         {
             target = null;
@@ -1714,14 +1714,14 @@ namespace FlatWorld.GameplayMCP
         }
 
         /// <summary>解析玩家快捷栏模块。</summary>
-        private static Mod_HotBar ResolveHotbar(Player player)
+        private static Mod_HotBar ResolveHotbar(Item player)
         {
             return player?.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar) ??
                    player?.GetComponentInChildren<Mod_HotBar>(true);
         }
 
         /// <summary>构造成功动作响应并附带最终玩家位置，减少额外 observe 调用。</summary>
-        internal static JObject BuildActionSuccess(string action, Player player, JObject data)
+        internal static JObject BuildActionSuccess(string action, Item player, JObject data)
         {
             return new JObject
             {
@@ -2116,14 +2116,14 @@ namespace FlatWorld.GameplayMCP
     /// <summary>GamePlayMCP 动作上下文，统一提供当前真实玩家与控制模块。</summary>
     internal readonly struct GameplayMcpActionContext
     {
-        public GameplayMcpActionContext(Player player, Mod_GameController controller, Mod_Mover mover)
+        public GameplayMcpActionContext(Item player, Mod_GameController controller, Mod_Mover mover)
         {
             Player = player;
             Controller = controller;
             Mod_Mover = mover;
         }
 
-        public Player Player { get; }
+        public Item Player { get; }
         public Mod_GameController Controller { get; }
         public Mod_Mover Mod_Mover { get; }
     }

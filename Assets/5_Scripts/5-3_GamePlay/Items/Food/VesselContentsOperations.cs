@@ -16,7 +16,7 @@ public static class VesselContentsOperations
         if (slot?.itemData?.Guid != expectedGuid || slot.Amount <= 0) return false;
         if (!GameNetwork.HasStateAuthority)
             return ContainerTransferCommands.RequestContentsSpill(vessel, actor, slotIndex, expectedGuid, direction);
-        if (actor is Player { IsLocalProfile: true } &&
+        if (ActorProfileRegistry.IsLocallyControlled(actor) &&
             ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()) return false;
 
         Vector2 origin = vessel.Machine != null ? vessel.Machine.Position

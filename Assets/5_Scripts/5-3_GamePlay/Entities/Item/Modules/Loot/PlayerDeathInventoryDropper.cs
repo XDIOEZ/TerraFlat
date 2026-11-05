@@ -14,7 +14,7 @@ public static class PlayerDeathInventoryDropper
     private static readonly Vector2 GoldenAngleDirection =
         new Vector2(-0.7373689f, 0.6754903f);
 
-    public static int DropAll(Player player)
+    public static int DropAll(Item player)
     {
         if (player == null)
             throw new ArgumentNullException(nameof(player));
@@ -62,7 +62,7 @@ public static class PlayerDeathInventoryDropper
         return droppedStackCount;
     }
 
-    private static List<Inventory> CollectPlayerInventories(Player player)
+    private static List<Inventory> CollectPlayerInventories(Item player)
     {
         List<Inventory> result = new List<Inventory>();
         HashSet<Inventory_Data> seenData = new HashSet<Inventory_Data>();
@@ -155,7 +155,7 @@ public static class PlayerDeathInventoryDropper
     }
 
     private static bool TryDropSlot(
-        Player player,
+        Item player,
         Inventory_Data inventoryData,
         ItemSlot slot,
         int slotIndex,

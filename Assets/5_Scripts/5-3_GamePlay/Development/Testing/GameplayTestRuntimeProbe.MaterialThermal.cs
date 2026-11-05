@@ -51,7 +51,7 @@ public static partial class GameplayTestRuntimeProbe
         return slots;
     }
 
-    private static JObject CaptureMaterialTransition(Player _, JObject args)
+    private static JObject CaptureMaterialTransition(Item _, JObject args)
     {
         string id = GameplayTestSystemProbe.Text(args, "id", "Plank");
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 500d);
@@ -65,7 +65,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 同一材料分别走炉内供热和世界环境入口，燃尽产物沿正式事务提交。
-    private static JObject CaptureMaterialFuelBurnout(Player player, JObject args)
+    private static JObject CaptureMaterialFuelBurnout(Item player, JObject args)
     {
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 500d);
         float seconds = (float)GameplayTestSystemProbe.Number(args, "seconds", 50d);
@@ -125,7 +125,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 完整物品调用正式替换入口，轻量后端在明确干燥有氧输入下推进物态事务。
-    private static JObject CaptureWorldFuelBurnoutBackends(Player player, JObject args)
+    private static JObject CaptureWorldFuelBurnoutBackends(Item player, JObject args)
     {
         string worldKey = GameplayWorldRegistry.GetItemWorldKey(player);
         using var worldScope = GameplayWorldRegistry.UseWorld(worldKey);
@@ -185,7 +185,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 加工能力从正式物品定义解析，预览和产出共用生产制作事务。
-    private static JObject CaptureMaterialCuttingThroughDeclaredProcessing(Player _, JObject args)
+    private static JObject CaptureMaterialCuttingThroughDeclaredProcessing(Item _, JObject args)
     {
         string id = GameplayTestSystemProbe.Text(args, "id", "Ore_Mica");
         float amount = (float)GameplayTestSystemProbe.Number(args, "amount", 1);
@@ -215,7 +215,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 同一正式供热入口分别接受长步和小步，并在满槽后从真实快照恢复材料重试。
-    private static JObject CaptureMaterialHeatingWindow(Player _, JObject args)
+    private static JObject CaptureMaterialHeatingWindow(Item _, JObject args)
     {
         var materials = args["materials"] as JArray ?? new JArray(new JObject
             { ["id"] = "Ore_Tungsten", ["amount"] = 2, ["temperature"] = 20 });
@@ -247,7 +247,7 @@ public static partial class GameplayTestRuntimeProbe
         return result;
     }
 
-    private static JObject CaptureMaterialTransitionAtomic(Player _, JObject args)
+    private static JObject CaptureMaterialTransitionAtomic(Item _, JObject args)
     {
         ItemData source = ThermalMaterial("Plank", 4f, 500f);
         Inventory input = CreateDragInventory("lua.thermal.atomic.source", source);
@@ -266,7 +266,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 验证地面散物的热转化与晾架的蒸发走同一份生肉物质定义。
-    private static JObject CaptureMeatHeatAndDry(Player player, JObject args)
+    private static JObject CaptureMeatHeatAndDry(Item player, JObject args)
     {
         ItemData heated = CreateDragItem("Meat", 2f);
         ItemMatterRuntime.EnsureInitialized(heated, 20f);
@@ -327,7 +327,7 @@ public static partial class GameplayTestRuntimeProbe
         };
     }
 
-    private static JObject CaptureMaterialReaction(Player _, JObject args)
+    private static JObject CaptureMaterialReaction(Item _, JObject args)
     {
         float temperature = (float)GameplayTestSystemProbe.Number(args, "temperature", 1000d);
         float amount = (float)GameplayTestSystemProbe.Number(args, "amount", 2d);
@@ -349,7 +349,7 @@ public static partial class GameplayTestRuntimeProbe
         return new JObject { ["input"] = ThermalSlots(input), ["output"] = ThermalSlots(output) };
     }
 
-    private static JObject CaptureMaterialAlloyAtomic(Player _, JObject args)
+    private static JObject CaptureMaterialAlloyAtomic(Item _, JObject args)
     {
         Inventory input = CreateDragInventory("lua.thermal.alloy.source",
             ThermalMaterial("Ore_Copper", 9f, 1000f), ThermalMaterial("Ore_Tin", 1f, 1000f));
@@ -364,7 +364,7 @@ public static partial class GameplayTestRuntimeProbe
     }
 
     // 温度倍率通过共享供热服务传递，蒸发和液体加工计时保留真实的一秒。
-    private static JObject CaptureMaterialHeatingCoefficient(Player player, JObject args)
+    private static JObject CaptureMaterialHeatingCoefficient(Item player, JObject args)
     {
         float multiplier = (float)GameplayTestSystemProbe.Number(args, "multiplier", 1d);
         Inventory source = CreateDragInventory("lua.coefficient.input", ThermalMaterial("Log", 3f, 100f));

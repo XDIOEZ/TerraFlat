@@ -36,7 +36,7 @@ public static partial class GameplayTestSystemProbe
         => GameplayTestRuntimeProbe.RegisterAsync("rendering", "world_fire_render_benchmark",
             CaptureWorldFireRenderBenchmark);
 
-    private static IEnumerator CaptureWorldFireRenderBenchmark(Player player, JObject args,
+    private static IEnumerator CaptureWorldFireRenderBenchmark(Item player, JObject args,
         Action<JObject> completed)
     {
         const string chunkViewPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";

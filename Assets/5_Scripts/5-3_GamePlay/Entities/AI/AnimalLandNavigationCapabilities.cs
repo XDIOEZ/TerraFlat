@@ -81,10 +81,13 @@ public sealed class AnimalPerceivedThreatCapability : AnimalBehaviorTreeCapabili
         radius = AnimalLandTargetRules.Number(config, "radius", 36f);
         context.RequireMinimumDetectionRadius(radius);
     }
-    public override void Tick(float deltaTime)
+    public override void Tick(float deltaTime) => TickControlState(deltaTime, true);
+    public override void TickWhileManuallyControlled(float deltaTime) => TickControlState(deltaTime, false);
+
+    private void TickControlState(float deltaTime, bool autonomous)
     {
         refreshRemaining -= deltaTime;
-        if (refreshRemaining > 0f) return;
+        if (!autonomous || refreshRemaining > 0f) return;
         refreshRemaining = .15f;
         Target = context.FindClosestThreat(radius, tags, includePlayers);
     }

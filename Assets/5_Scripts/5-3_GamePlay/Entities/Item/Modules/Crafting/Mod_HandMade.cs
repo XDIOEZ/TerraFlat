@@ -131,7 +131,7 @@ public class Mod_HandMade : Module,IInventory
     /// </summary>
     public bool Craft(Inventory inputInv, Inventory outputInv)
     {
-        Player actor = item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
+        Item actor = ActorProfileRegistry.GetProfileActorOrNull(item as Item) ?? ActorProfileRegistry.GetProfileActorOrNull(item?.Owner as Item) ?? item?.GetComponentInParent<Item>();
         CraftingResult result = CraftingService.Craft(inputInv, outputInv, Capabilities, actor);
         if (!result.Success)
             Debug.LogWarning($"[Mod_HandMade] 合成失败：{result.Message}");

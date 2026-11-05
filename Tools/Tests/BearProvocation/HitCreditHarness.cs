@@ -19,8 +19,8 @@ internal static class BearHitCreditHarness
         ItemMgr.Instance.Clear();
         var context = CreateContext();
         var bear = CreateCapability(context);
-        Player first = Target(11, 4f);
-        Player second = Target(12, 1f);
+        Item first = Target(11, 4f);
+        Item second = Target(12, 1f);
         var weapon = new Item { itemData = new ItemData { Guid = 21 }, Identity = Identity(21), Owner = first };
         DamageReceiverDamageInfo firstHit = Hit(weapon, first, 0f);
         Check(AnimalTerritorialHatredCapability.ResolveRetaliationCreditActor(firstHit) == first, "武器命中归属实际角色");
@@ -86,7 +86,7 @@ internal static class BearHitCreditHarness
         bear = CreateCapability(context);
         first = Target(31, 4f);
         first.Visible = false;
-        ItemMgr.Instance.Player_DIC.Add(31, first);
+        ItemMgr.Instance.ProfileActors.Add("31", first);
         bear.Tick(60);
         Check(bear.Ledger.GetContinuousPresenceSeconds(first.Identity) == 60 && bear.Ledger.GetHatred(first.Identity) == 0,
             "真实范围观察在恰好 60 秒保持和平");
@@ -128,9 +128,9 @@ internal static class BearHitCreditHarness
     private static CombatIdentity Identity(int guid) => new()
     { Value = unchecked((uint)guid), Generation = 1, Backend = CombatBackend.External };
 
-    private static Player Target(int guid, float x)
+    private static Item Target(int guid, float x)
     {
-        var target = new Player { itemData = new ItemData { Guid = guid }, Identity = Identity(guid) };
+        var target = new Item { itemData = new ItemData { Guid = guid }, Identity = Identity(guid) };
         target.itemMods.Health = new Mod_DamageReceiver();
         target.transform.position = new Vector3(x, 0);
         ItemMgr.Instance.Items[guid] = target;
@@ -150,6 +150,7 @@ internal static class BearHitCreditHarness
 public abstract class AnimalBehaviorTreeCapability
 {
     public virtual void Tick(float deltaTime) { }
+    public virtual void TickWhileManuallyControlled(float deltaTime) => Tick(deltaTime);
     public virtual void Dispose() { }
 }
 public class AnimalBehaviorTreeContext
@@ -181,7 +182,6 @@ public class Item
     public bool Visible = true, FactionAllows = true;
     public float MaximumPerceptionRadius = float.PositiveInfinity;
 }
-public class Player : Item { }
 public class ItemData { public int Guid; public List<string> Tags = new(); }
 public class ItemMods
 {
@@ -202,6 +202,8 @@ public class Mod_ItemDetector
 public class ProbeGameObject { public bool activeInHierarchy = true; public int scene; }
 public class Transform { public Vector3 position; }
 public static class Tag { public const string Player = "Player"; }
+public static class ActorProfileRegistry { public static bool IsManuallyControlled(Item actor) => false; }
+public static class ActorIdentity { public static bool IsPlayer(Item actor) => ItemMgr.Instance.ProfileActors.Values.Contains(actor); }
 public static class ProbeTagExtensions { public static bool ContainsTag(this List<string> list, string value) => list.Contains(value); }
 public static class ModText { public const string Hp = "Hp"; }
 public static class FactionRelationService { public static bool CanAttack(Item source, Item target) => source != target && target.FactionAllows; }
@@ -215,12 +217,12 @@ public sealed class ItemMgr
 {
     public static readonly ItemMgr Instance = new();
     public readonly Dictionary<int, Item> Items = new();
-    public readonly Dictionary<int, Player> Player_DIC = new();
+    public readonly Dictionary<string, Item> ProfileActors = new();
     public static ItemMgr GetInstance() => Instance;
     public Item GetItemByGuid(int guid) => Items.GetValueOrDefault(guid);
     public bool TryIsWithinDataPerceptionRange(Vector3 position, Item target, float radius, out bool within)
     { within = false; return false; }
-    public void Clear() { Items.Clear(); Player_DIC.Clear(); }
+    public void Clear() { Items.Clear(); ProfileActors.Clear(); }
 }
 public static class GameplayCombatBridge { public static CombatIdentity Identity(Item item) => item?.Identity ?? default; }
 public class DamageReceiverDamageInfo { public Item Attacker; public float DamageValue; public CombatDamageContext Context; }

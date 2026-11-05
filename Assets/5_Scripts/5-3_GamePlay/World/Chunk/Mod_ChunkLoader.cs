@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
@@ -15,7 +15,7 @@ public sealed partial class ChunkDistanceSaveState
     #endregion
 }
 
-public class Mod_ChunkLoader : Module
+public class Mod_ChunkLoader : Module, IActorLocalControlModule
 {
     #region 数据结构
     /// <summary>
@@ -121,6 +121,7 @@ public class Mod_ChunkLoader : Module
 
     private void OnEnable()
     {
+        if (!IsRuntimeLoaded) return;
         GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
         BindMovementEvent();
     }
@@ -132,10 +133,10 @@ public class Mod_ChunkLoader : Module
         _hasStreamedChunkOrigin = false;
     }
 
-    private void OnPlayerEnterWorld(Player player)
+    private void OnPlayerEnterWorld(Item player)
     {
         if (!CanStreamSurface) return;
-        if (player != GetComponentInParent<Player>())
+        if (player != GetComponentInParent<Item>())
             return;
         if (_externalStreamingManaged)
             return;
@@ -151,6 +152,8 @@ public class Mod_ChunkLoader : Module
 
     protected override void OnLoad()
     {
+        GameManager.Event_PlayerEnterWorld -= OnPlayerEnterWorld;
+        GameManager.Event_PlayerEnterWorld += OnPlayerEnterWorld;
         ChunkDistanceSaveState saved = ModData.GetData<ChunkDistanceSaveState>();
         if (saved != null)
             distanceConfig = new ChunkDistanceConfig(saved.UnActiveDistance, saved.DestroyChunkDistance, saved.LoadChunkDistance);
@@ -159,6 +162,8 @@ public class Mod_ChunkLoader : Module
         _hasStreamedChunkOrigin = false;
         BindMovementEvent();
     }
+
+    protected override void OnUnload() => OnDisable();
 
     protected override void OnSave() => ModData.WriteData(new ChunkDistanceSaveState
     {

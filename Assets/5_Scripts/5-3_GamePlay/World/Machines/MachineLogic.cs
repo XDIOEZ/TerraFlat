@@ -38,7 +38,7 @@ public abstract class MachineLogic : IDisposable
 
     public virtual void Tick(float seconds) { }
     public abstract void Capture();
-    public virtual bool Execute(string operation, string argument, Player actor) => false;
+    public virtual bool Execute(string operation, string argument, Item actor) => false;
     public virtual bool ApplyRemoteSnapshot(ItemData snapshot) => false;
     protected void NotifyRemoteChanged() => Changed?.Invoke();
 
@@ -162,7 +162,7 @@ public static class MachineInventory
         if (layoutChanged) inventory.Data.NotifySlotsChanged();
         inventory.RefreshUI();
         if (layoutChanged && inventory.itemSlot_UI.Count > 0) inventory.SyncData();
-        if (inventory.item is Player player) PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
+        if ((inventory.item is Item player && ActorIdentity.IsPlayer(player))) PlayerCarryCapacityUtility.RefreshOverweightSlowdown(player);
     }
 
     public static void Rebase(Inventory_Data data)

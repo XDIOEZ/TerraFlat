@@ -30,7 +30,7 @@ public static partial class GameplayTestSystemProbe
         try
         {
             Item actor = Flag(args, "player", true)
-                ? root.AddComponent<Player>() : root.AddComponent<GameItem>();
+                ? ActorProfileRegistry.CreateProfileActorForFixture(root) : root.AddComponent<GameItem>();
             Mod_Mover mover = root.AddComponent<Mod_Mover>();
             mover.ModuleInit(actor, new Ex_ModData_MemoryPackable { ID = ModText.Mod_Mover, Enabled = true });
             mover.Speed = new GameValue_float(10f);

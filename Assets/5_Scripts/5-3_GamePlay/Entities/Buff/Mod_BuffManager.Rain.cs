@@ -58,7 +58,7 @@ public partial class Mod_BuffManager
 
     private static bool IsRainWetnessActor(Item receiver, GameRes resources)
     {
-        return receiver is Player ||
+        return ActorIdentity.IsPlayer(receiver as Item) ||
             (receiver.itemData != null && resources.TryGetItemDefinition(receiver.itemData.IDName,
                 out RuntimeItemDefinition definition) && definition.IsActor);
     }

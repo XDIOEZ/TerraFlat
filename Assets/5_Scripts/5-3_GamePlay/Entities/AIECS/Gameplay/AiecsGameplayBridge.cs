@@ -86,7 +86,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         #region 世界接入
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
-        public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
+        public AiecsGameplayBridge(Item player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
             bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null,
             bool removeSpawnedStaticDropsOnDispose = false, World sharedWorld = null)
         {
@@ -144,7 +144,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>为少量真实玩家维护受击/感知代理；引用只存在 Bridge 中。</summary>
-        private void AddPlayer(Player player, int group)
+        private void AddPlayer(Item player, int group)
         {
             if (group >= goals.Length)
             {
@@ -166,7 +166,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家复活或对象池代际改变后重新建立代理，旧实体版本和旧命中保持失效。</summary>
-        public void EnsurePlayer(Player player)
+        public void EnsurePlayer(Item player)
         {
             if (!BelongsToWorld(player)) return;
             CombatIdentity key = IdentityOf(player);
@@ -176,21 +176,21 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         // 跨维度只撤销离开的玩家代理，其他玩家与本世界居民继续保留。
-        public void SynchronizePlayers(IReadOnlyList<Player> players)
+        public void SynchronizePlayers(IReadOnlyList<Item> players)
         {
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
-                if (proxies[i].Item is Player current && BelongsToWorld(current)) continue;
+                if ((proxies[i].Item is Item current && ActorIdentity.IsPlayer(current)) && BelongsToWorld(current)) continue;
                 if (Simulation?.IsCreated == true) Simulation.Despawn(proxies[i].Entity);
                 proxyLookup.Remove(proxies[i].Key);
                 freePlayerGroups.Push(proxies[i].Group);
                 proxies.RemoveAt(i);
             }
-            foreach (Player player in players) EnsurePlayer(player);
+            foreach (Item player in players) EnsurePlayer(player);
         }
 
         /// <summary>玩家实体卸载前仅撤销外部代理，保留本世界的 ECS 居民与模拟状态。</summary>
-        public void ReleasePlayer(Player player)
+        public void ReleasePlayer(Item player)
         {
             for (int i = proxies.Count - 1; i >= 0; i--)
             {
@@ -229,11 +229,11 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>玩家离开只撤外部代理，固定世界的居民与导航仍归原世界。</summary>
-        public bool IsCurrentWorld(Player player) => HasWorldNavigation && BelongsToWorld(player);
+        public bool IsCurrentWorld(Item player) => HasWorldNavigation && BelongsToWorld(player);
 
         private bool BelongsToWorld(Item item) => item != null && item.IsInitialized &&
             item.gameObject.activeInHierarchy && item.gameObject.scene.name == worldKey &&
-            (item is not Player player || player.Data?.CurrentSceneName == worldKey);
+            (!(item is Item player && ActorIdentity.IsPlayer(player)) || player.itemData?.GetActorProfileMetadata().WorldKey == worldKey);
 
         /// <summary>无观察者时只暂停一次，恢复时同时顺延尸体保留期限。</summary>
         public void Suspend()
@@ -245,7 +245,7 @@ namespace FlatWorld.AIECS.Gameplay
         }
 
         /// <summary>只暴露真实外部玩家代理的共享目标，复活代际、死亡和世界切换后旧目标不可观察。</summary>
-        public bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal)
+        public bool TryGetPlayerFlow(Item player, out FlowNavigationCache cache, out FlowGoalHandle goal)
         {
             cache = null;
             goal = default;

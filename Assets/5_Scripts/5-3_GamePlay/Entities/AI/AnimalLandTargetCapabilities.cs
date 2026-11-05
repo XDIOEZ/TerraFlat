@@ -9,7 +9,7 @@ using UnityEngine;
 
 internal static class AnimalLandTargetRules
 {
-    public static bool IsPlayer(Item target) => target is Player || target?.itemData?.Tags?.ContainsTag(Tag.Player) == true;
+    public static bool IsPlayer(Item target) => ActorIdentity.IsPlayer(target as Item) || target?.itemData?.Tags?.ContainsTag(Tag.Player) == true;
 
     public static bool IsUsableOpponent(AnimalBehaviorTreeContext context, Item target)
     {
@@ -179,10 +179,12 @@ public sealed class AnimalTerritorialHatredCapability : AnimalBehaviorTreeCapabi
         if (context.Health != null) context.Health.OnHitReceived += HandleConfirmedHit;
     }
 
+    public override void TickWhileManuallyControlled(float deltaTime) => Tick(deltaTime, null);
+
     public override void Tick(float deltaTime)
     {
         ItemMgr manager = ItemMgr.GetInstance();
-        Tick(deltaTime, manager?.Player_DIC.Values);
+        Tick(deltaTime, manager?.ProfileActors.Values);
     }
 
     public void Tick(float deltaTime, IEnumerable<Item> nearbyPlayers)
@@ -200,7 +202,7 @@ public sealed class AnimalTerritorialHatredCapability : AnimalBehaviorTreeCapabi
         foreach (CombatIdentity identity in targets.Keys)
             if (!ledger.Contains(identity)) invalidTargets.Add(identity);
         foreach (CombatIdentity identity in invalidTargets) targets.Remove(identity);
-        SelectHighestEligibleTarget();
+        if (!ActorProfileRegistry.IsManuallyControlled(context.Actor)) SelectHighestEligibleTarget();
     }
 
     public bool ObserveNearbyPlayer(Item target)
@@ -224,7 +226,7 @@ public sealed class AnimalTerritorialHatredCapability : AnimalBehaviorTreeCapabi
         if (!identity.IsValid) return;
         targets[identity] = attacker;
         ledger.RecordHit(identity);
-        SelectHighestEligibleTarget();
+        if (!ActorProfileRegistry.IsManuallyControlled(context.Actor)) SelectHighestEligibleTarget();
     }
 
     private void SelectHighestEligibleTarget()

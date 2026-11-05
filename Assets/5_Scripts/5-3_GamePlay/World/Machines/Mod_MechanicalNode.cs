@@ -1163,7 +1163,7 @@ public sealed partial class Mod_MechanicalNode : Module, IInteractable, IBuildin
     /// <summary>手推按钮是否可用由机械世界的输入动力状态决定。</summary>
     private bool CanPerformOperation()
         => Definition.ManualDriveTorque <= 0 || MachineWorld.CanManualDrive(Node);
-    private void PerformOperation(Player actor)
+    private void PerformOperation(Item actor)
     {
         if (!GameNetwork.HasStateAuthority || Node?.State == null) return;
         if (Definition.Kind == "clutch") { LocalState.Engaged = !LocalState.Engaged; MachineWorld.TopologyChanged(Node); }

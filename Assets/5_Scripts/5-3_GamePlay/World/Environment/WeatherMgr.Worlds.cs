@@ -66,13 +66,13 @@ public partial class WeatherMgr
         if (IsLocalWeatherWorld && Camera.main != null)
             return WorldLocalPresentation.ToLogical((Vector2)Camera.main.transform.position);
         if (ItemMgr.Instance != null)
-            foreach (Player player in ItemMgr.Instance.Player_DIC.Values)
+            foreach (Item player in ItemMgr.Instance.ProfileActors.Values)
             {
                 if (player == null) continue;
-                if (FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(player.ProfileName,
+                if (FlatWorld.Spaceflight.SpaceSession.Current?.TryGetNetworkObserver(ActorProfileRegistry.GetProfileId(player),
                     out FlatWorld.Spaceflight.SpaceNetworkObserver observer) == true && !observer.InSpace && observer.WorldKey == ownedWorld)
                     return observer.Position.LocalMeters.ToVector2();
-                if (player.Data?.CurrentSceneName == ownedWorld) return player.Data.transform.position;
+                if (player.itemData?.GetActorProfileMetadata().WorldKey == ownedWorld) return player.itemData.transform.position;
             }
         return Vector2.zero;
     }

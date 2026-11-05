@@ -68,7 +68,7 @@ public static partial class GameplayTestPresentationRuntimeProbe
 
     #region 动物声音传播边界现场采样
 
-    private static JArray CaptureAnimalPropagationRanges(AudioFixture fixture, Player player)
+    private static JArray CaptureAnimalPropagationRanges(AudioFixture fixture, Item player)
     {
         var result = new JArray();
         foreach (string id in new[] { "animal.wolf.idle", "animal.bird.idle", "animal.bee.idle", "animal.wildboar.idle" })

@@ -20,7 +20,7 @@ public partial class Mod_HotBar
     private void BeginHeldItemDrawAnimation(Item heldItem)
     {
         StopHeldItemDrawAnimation();
-        if (item is not Player { IsLocalProfile: true } || heldItem == null)
+        if (!ActorProfileRegistry.IsLocallyControlled(item) || heldItem == null)
             return;
 
         // 只缩放 SpriteRenderer 表现节点，避免修改物品根节点、物理代理和存档尺寸。

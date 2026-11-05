@@ -110,7 +110,7 @@ public sealed partial class GMReflectionConsole
         fixedStructureRequestPending = true;
         SetStatus("正在生成测试飞船…", Color.yellow);
         RefreshFixedStructureOptions();
-        ShipFixedStructureBuilder.RequestBuild(ItemMgr.Instance?.User_Player, template, (success, reason) =>
+        ShipFixedStructureBuilder.RequestBuild(ItemMgr.Instance?.LocalControlledActor, template, (success, reason) =>
         {
             if (this == null) return;
             fixedStructureRequestPending = false;
@@ -128,7 +128,7 @@ public sealed partial class GMReflectionConsole
         fixedStructureRequestPending = true;
         SetStatus("正在补给附近测试飞船…", Color.yellow);
         RefreshFixedStructureOptions();
-        ShipFixedStructureBuilder.RequestRefill(ItemMgr.Instance?.User_Player, fixedStructures, (success, reason) =>
+        ShipFixedStructureBuilder.RequestRefill(ItemMgr.Instance?.LocalControlledActor, fixedStructures, (success, reason) =>
         {
             if (this == null) return;
             fixedStructureRequestPending = false;

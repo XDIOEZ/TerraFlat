@@ -12,7 +12,7 @@ public sealed class WrappedRigidbody2DAdapter : MonoBehaviour, IGameplayFixedSte
 
     public static void Ensure(Item target)
     {
-        if (target == null || target is Player || target is Map)
+        if (target == null || ActorIdentity.IsPlayer(target as Item) || target is Map)
             return;
         WrappedRigidbody2DAdapter topologyBody = target.GetComponent<WrappedRigidbody2DAdapter>();
         Rigidbody2D rigidbody = WorldPhysicsService2D.GetItemRigidbody(target);

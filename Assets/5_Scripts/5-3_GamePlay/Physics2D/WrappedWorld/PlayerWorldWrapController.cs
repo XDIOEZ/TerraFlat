@@ -5,10 +5,10 @@ using UnityEngine;
 /// 保留 Prefab 脚本身份；不是数学核心，不能复制到 Jobs。
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Player))]
+[RequireComponent(typeof(Item))]
 public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedStepSimulationSystem
 {
-    private Player player;
+    private Item player;
     private Rigidbody2D body;
     private Mod_ChunkLoader chunkLoader;
     private bool hasPresentationImage;
@@ -16,7 +16,7 @@ public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedSte
 
     private void Awake()
     {
-        player = GetComponent<Player>();
+        player = GetComponent<Item>();
         chunkLoader = GetComponentInChildren<Mod_ChunkLoader>(true);
     }
 
@@ -43,7 +43,7 @@ public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedSte
     public bool TryWrapNow()
     {
         body = WorldPhysicsService2D.GetItemRigidbody(player);
-        if (player == null || body == null || !player.IsLocalProfile ||
+        if (player == null || body == null || !ActorProfileRegistry.IsLocallyControlled(player) ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {
             hasPresentationImage = false;
@@ -58,8 +58,8 @@ public sealed class PlayerWorldWrapController : MonoBehaviour, IGameplayFixedSte
         WorldLocalPresentation.SetAnchor(transform);
         Vector2 logical = bounds.NormalizePosition(current);
 
-        if (player.Data?.transform != null)
-            player.Data.transform.position = new Vector3(logical.x, logical.y, transform.position.z);
+        if (player.itemData?.transform != null)
+            player.itemData.transform.position = new Vector3(logical.x, logical.y, transform.position.z);
 
         Vector2Int currentImage = ResolvePresentationImage(bounds, current);
         if (!hasPresentationImage)

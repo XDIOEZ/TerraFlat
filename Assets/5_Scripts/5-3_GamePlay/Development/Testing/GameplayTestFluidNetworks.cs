@@ -17,7 +17,7 @@ internal static class GameplayTestFluidNetworks
             throw new InvalidOperationException("测试气体装料失败。");
     }
     internal static double Gas(MachineEntity node) => (double)FluidUnits.MolToStandardLiters(GetFluidInventory(node).GasMoles);
-    internal static JObject CaptureRoutes(Player player, JObject args)
+    internal static JObject CaptureRoutes(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope();
@@ -83,7 +83,7 @@ internal static class GameplayTestFluidNetworks
             ["infiniteRemaining"] = remaining, ["infiniteFilterRejectsHydrogen"] = rejectedHydrogen,
             ["infiniteValveClosed"] = unlimitedClosed };
     }
-    internal static JObject CaptureOwnership(Player player, JObject args)
+    internal static JObject CaptureOwnership(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope(); var a = f.Add("GasTankBlock_Iron"); var b = f.Add("GasTankBlock_Iron", 1);
@@ -158,7 +158,7 @@ internal static class GameplayTestFluidNetworks
             ["emptyTankJoined"] = emptyTankJoined,
             ["restoredShared"] = ReferenceEquals(GetFluidInventory(restoredA),GetFluidInventory(restoredB)) };
     }
-    internal static JObject CaptureNaturalFill(Player player, JObject args)
+    internal static JObject CaptureNaturalFill(Item player, JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f = new GameplayFluidScope();var tank=f.Add("GasTankBlock_Iron");f.Rebuild();
@@ -170,7 +170,7 @@ internal static class GameplayTestFluidNetworks
             ["sourceTakenLiters"]=(double)FluidUnits.MolToStandardLiters(initial-after),["highFill"]=highFill,
             ["higherBefore"]=higher,["higherAfter"]=Gas(tank),["sourceStable"]=f.Atmosphere.CurrentMoles==after };
     }
-    internal static JObject CaptureOutlet(Player player,JObject args)
+    internal static JObject CaptureOutlet(Item player,JObject args)
     {
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
         using var f=new GameplayFluidScope();var tank=f.Add("GasTankBlock_Iron");var outlet=f.Add("FluidOutlet",1);

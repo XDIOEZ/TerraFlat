@@ -293,6 +293,8 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
     protected override void OnLoad()
     {
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundHotbarPresentation;
+        ActorProfileRegistry.GetBinding(item).Changed += RefreshControlBoundHotbarPresentation;
         StopHeldItemDrawAnimation();
         ResetSavedInventoryCache();
         runtimeUnloading = false;
@@ -314,7 +316,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
 
         RuntimeInventory.item = item;
         RuntimeInventory.InitData();
-        if (item is Player networkPlayer && !networkPlayer.IsLocalProfile)
+        if (!ActorProfileRegistry.IsLocallyControlled(item))
         {
             // 服务端远端玩家只恢复库存和真实手持物，不创建本机快捷栏。
             GetRequiredComponents();
@@ -343,6 +345,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     /// <summary>卸载和对象回池共用完整清理，不能等到 OnDestroy 才解除手持物与输入。</summary>
     protected override void OnUnload()
     {
+        ActorProfileRegistry.GetBinding(item).Changed -= RefreshControlBoundHotbarPresentation;
         ResetSavedInventoryCache();
         if (runtimeUnloading) return;
         runtimeUnloading = true;
@@ -746,6 +749,19 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
         return manager == null || !manager.HasOpenGameplayInputBlockingPanel();
     }
 
+    private void RefreshControlBoundHotbarPresentation()
+    {
+        UnbindHotbarInput();
+        RuntimeInventory?.UnbindController();
+        if (ActorProfileRegistry.IsLocallyControlled(item))
+        {
+            EnsureHotBarUIOnLoad();
+            BindInventoryController();
+            BindHotbarInput();
+        }
+        else RuntimeInventory?.ReleaseRuntimePanel();
+    }
+
     private void BindInventoryController()
     {
         if (item == null)
@@ -766,7 +782,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         UnbindHotbarInput();
 
-        if (item is Player player && !player.IsLocalProfile) return;
+        if (!ActorProfileRegistry.IsLocallyControlled(item)) return;
 
         if (item == null)
         {
@@ -844,7 +860,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         ClearContinuousUse();
         // 本机库存尚未确认时先保留当前物品，避免使用消耗被旧快照覆盖。
-        if (item is Player { IsLocalProfile: true } && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
+        if (ActorProfileRegistry.IsLocallyControlled(item) && ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction())
             return;
         if (IsGameplayInputLocked() || IsDrawingHeldItem)
         {
@@ -926,7 +942,7 @@ public partial class Mod_HotBar : Module, IInventory, IRemoteNetworkModule
             continuousUseItem.DestructionHandled ||
             continuousUseModule is not Module module || module == null || !module.IsRuntimeLoaded ||
             !module.isActiveAndEnabled || module.item != continuousUseItem ||
-            (item is Player { IsLocalProfile: true } &&
+            (ActorProfileRegistry.IsLocallyControlled(item) &&
              ItemNetworkStateSerialization.HasPendingLocalInventoryTransaction()))
         {
             ClearContinuousUse();

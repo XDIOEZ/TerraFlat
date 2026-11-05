@@ -29,9 +29,9 @@ namespace FlatWorld.Dialogue
         private sealed class SpeechLease : IDisposable
         {
             public readonly ScreenSpaceSpeechBubblePresenter Presenter;
-            public readonly Player Player;
+            public readonly Item Player;
             private bool disposed;
-            public SpeechLease(Player player, ScreenSpaceSpeechBubblePresenter presenter)
+            public SpeechLease(Item player, ScreenSpaceSpeechBubblePresenter presenter)
             { Player = player; Presenter = presenter; }
             public void Dispose()
             {
@@ -54,7 +54,7 @@ namespace FlatWorld.Dialogue
                 .FirstOrDefault(value => value.name == RuntimeUIPrefabKeys.CharacterSpeechBubble && value.gameObject.activeInHierarchy);
         }
 
-        private static IEnumerator Capture(Player player, JObject args, Action<JObject> completed)
+        private static IEnumerator Capture(Item player, JObject args, Action<JObject> completed)
         {
             var controller = player.GetComponentInChildren<CharacterSoliloquyController>(true);
             var presenter = player.GetComponentInChildren<ScreenSpaceSpeechBubblePresenter>(true);
@@ -101,7 +101,7 @@ namespace FlatWorld.Dialogue
             }
         }
 
-        private static JObject Hide(Player player, JObject args)
+        private static JObject Hide(Item player, JObject args)
         {
             SpeechLease lease = current ?? throw new InvalidOperationException("没有本 Lua 持有的自有发言。");
             if (lease.Player != player) throw new InvalidOperationException("气泡租约属于另一位角色。");
