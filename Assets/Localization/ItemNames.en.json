@@ -578,6 +578,8 @@
     "Eagle": "Eagle",
     "Rat": "Rat",
     "SpiderSilk": "Spider Silk",
-    "Chitin": "Chitin Shell"
+    "Chitin": "Chitin Shell",
+    "SignalOscillator": "Signal Oscillator Building",
+    "SignalOscillator_Summoner": "Signal Oscillator"
   }
 }

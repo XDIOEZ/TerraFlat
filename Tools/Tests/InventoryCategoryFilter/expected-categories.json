@@ -231,7 +231,9 @@
     "Wire_Hidden",
     "Wire_Hidden_Summoner",
     "WorkBench",
-    "WorkBench_Summoner"
+    "WorkBench_Summoner",
+    "SignalOscillator",
+    "SignalOscillator_Summoner"
   ],
   "tool": [
     "AtmosphereAnalyzer",

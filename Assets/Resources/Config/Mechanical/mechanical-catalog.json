@@ -1785,6 +1785,23 @@
         "NominalVoltage": 120,
         "PowerWatts": 20
       }
+    },
+    {
+      "Id": "SignalOscillator",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "signal-oscillator",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "source",
+        "InputA": "",
+        "InputB": "",
+        "Output": "right",
+        "SourceProvider": "logic"
+      }
     }
   ],
   "Processes": [

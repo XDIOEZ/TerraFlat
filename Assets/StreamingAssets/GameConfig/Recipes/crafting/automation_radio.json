@@ -360,6 +360,44 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:automation_radio_signal_oscillator",
+      "displayName": "信号振荡器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Quartz",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SignalOscillator_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

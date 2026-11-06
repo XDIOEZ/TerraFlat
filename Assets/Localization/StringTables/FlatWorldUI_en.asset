@@ -9396,6 +9396,30 @@ MonoBehaviour:
     m_Localized: "Not listening"
     m_Metadata:
       m_Items: []
+  - m_Id: 3966207626503645108
+    m_Localized: "Frequency {0:0.###} Hz · Duty cycle 50%\nOutput {1} · {2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2330933747715185205
+    m_Localized: "Frequency range {0:0.###}–{1:0.###} Hz"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2777695729452989271
+    m_Localized: "Set Frequency"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2224870811393689294
+    m_Localized: "Stop Oscillator"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 853721474978595165
+    m_Localized: "Start Oscillator"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3626875015429143688
+    m_Localized: "Setting result was not confirmed. Please retry."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

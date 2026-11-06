@@ -703,7 +703,14 @@
     "接线会形成同网同频道无线收发回环": "This connection would create a radio feedback loop on the same circuit and channel.",
     "继电器主体格不能穿过电线": "Electrical wires cannot cross the relay body cell.",
     "收听中": "Listening",
-    "未收听": "Not listening"
+    "未收听": "Not listening",
+    "频率 {0:0.###} Hz · 占空比 50%\n输出 {1} · {2}": "Frequency {0:0.###} Hz · Duty cycle 50%\nOutput {1} · {2}",
+    "频率范围 {0:0.###}～{1:0.###} Hz": "Frequency range {0:0.###}–{1:0.###} Hz",
+    "设置频率": "Set Frequency",
+    "停止振荡": "Stop Oscillator",
+    "启动振荡": "Start Oscillator",
+    "请求未发出，请重试": "Request could not be sent. Please retry.",
+    "设置结果未确认，请重试": "Setting result was not confirmed. Please retry."
   },
   "itemDescriptions": {
     "SoybeanMeal": "A protein-rich solid byproduct left after extracting soybean oil; reserved for future feed recipes.",
@@ -1110,6 +1117,8 @@
     "Eagle": "A flying predator of rocky highlands that dives at rabbits, rats, frogs and lizards and can also catch fish.",
     "Rat": "A small omnivore found in forests and grassland. Eats natural and dropped food and does not steal from inventories.",
     "SpiderSilk": "Wild spider silk that can be spun into sewing thread. It is distinct from silkworm silk and cocoons.",
-    "Chitin": "Hard shell fragments from scorpions and crabs. Crush and mix with humus to produce fertilizer."
+    "Chitin": "Hard shell fragments from scorpions and crabs. Crush and mix with humus to produce fertilizer.",
+    "SignalOscillator": "Produces a 50% duty-cycle signal at an adjustable frequency (default 1 Hz). Output is on the right and rotates with placement. Frequency settings snap to supported values.",
+    "SignalOscillator_Summoner": "Produces a 50% duty-cycle signal at an adjustable frequency (default 1 Hz). Output is on the right and rotates with placement. Frequency settings snap to supported values."
   }
 }

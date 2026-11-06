@@ -15,6 +15,7 @@ public static partial class GameplayTestSystemProbe
         Register("circuit_signals", "gate_table", CaptureCircuitGateTruthTable);
         Register("circuit_signals", "topology", CaptureCircuitTopologyAndFeedback);
         Register("circuit_signals", "relay", CaptureCircuitRelayElectricalContacts);
+        Register("circuit_signals", "oscillator", CaptureCircuitSignalOscillator);
         Register("radio", "propagation", CaptureRadioPropagationAndLifecycle);
     }
     private static MachineEntity CircuitProbeNode(int id, int x, int y, string kind = "wire")
@@ -24,6 +25,39 @@ public static partial class GameplayTestSystemProbe
             Definition = new MachineDefinition { Id = "probe:" + id, Ports = "none",
                 Signal = new CircuitSignalDefinition { Kind = kind, Output = "right" } }
         };
+    private static JObject CaptureCircuitSignalOscillator(JObject args)
+    {
+        var clock = new MachineSignalOscillatorState();
+        var source = CircuitProbeNode(1, 0, 0, "source");
+        var wire = CircuitProbeNode(2, 1, 0);
+        var graph = new CircuitSignalNetworkGraph(default); graph.Rebuild(new[] { source, wire });
+        var sequence = new JArray();
+        foreach (float seconds in new[] { .2f, .3f, .5f, 1.25f, .25f })
+        {
+            clock.AdvanceSimulationSeconds(seconds, .05f);
+            graph.Advance(_ => clock.Output, null);
+            sequence.Add(wire.SignalOutput);
+        }
+        clock.AdvanceSimulationSeconds(0f, .05f); bool pausedHigh = clock.Output;
+        bool invalidRejected = !clock.TrySetFrequencyHz(0f, .05f) && !clock.TrySetFrequencyHz(11f, .05f) &&
+            !clock.TrySetFrequencyHz(float.NaN, .05f) && clock.HalfPeriodSteps == 10 && clock.Output;
+        clock.Enabled = false; clock.AdvanceSimulationSeconds(.05f, .05f); bool disabled = clock.Output;
+        clock.Enabled = true; clock.AdvanceSimulationSeconds(.45f, .05f); bool restartedLow = clock.Output;
+        clock.AdvanceSimulationSeconds(.05f, .05f); bool restartedHigh = clock.Output;
+        clock.TrySetFrequencyHz(2f, .05f); bool changedLow = clock.Output;
+        clock.AdvanceSimulationSeconds(.25f, .05f);
+        var snapshot = new Data_GeneralItem(); MachinePersistence.Write(snapshot, MachineSignalOscillatorLogic.PersistenceKey, clock);
+        var restored = MachinePersistence.Read<MachineSignalOscillatorState>(snapshot, MachineSignalOscillatorLogic.PersistenceKey);
+        bool restoredLow = restored.Output;
+        restored.AdvanceSimulationSeconds(.24f, .05f); bool beforeRestoredBoundary = restored.Output;
+        restored.AdvanceSimulationSeconds(.01f, .05f); bool afterRestoredBoundary = restored.Output;
+        restored.TrySetFrequencyHz(3f, .05f);
+        return new JObject { ["sequence"] = sequence, ["pausedHigh"] = pausedHigh, ["invalidRejected"] = invalidRejected,
+            ["disabled"] = disabled, ["restartedLow"] = restartedLow, ["restartedHigh"] = restartedHigh,
+            ["changedLow"] = changedLow, ["restoredLow"] = restoredLow, ["beforeRestoredBoundary"] = beforeRestoredBoundary,
+            ["afterRestoredBoundary"] = afterRestoredBoundary, ["restoredEnabled"] = restored.Enabled,
+            ["quantizedFrequency"] = restored.GetFrequencyHz(.05f) };
+    }
     private static JObject CaptureCircuitGateTruthTable(JObject args)
     {
         string kind = args.Value<string>("kind") ?? "and";

@@ -5001,6 +5001,22 @@ MonoBehaviour:
     m_Localized: "Hard shell fragments from scorpions and crabs. Crush and mix with humus to produce fertilizer."
     m_Metadata:
       m_Items: []
+  - m_Id: 2677187531242260433
+    m_Localized: "Signal Oscillator Building"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3672111136154636184
+    m_Localized: "Produces a 50% duty-cycle signal at an adjustable frequency (default 1 Hz). Output is on the right and rotates with placement. Frequency settings snap to supported values."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1610708352128905626
+    m_Localized: "Signal Oscillator"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2763793734009516828
+    m_Localized: "Produces a 50% duty-cycle signal at an adjustable frequency (default 1 Hz). Output is on the right and rotates with placement. Frequency settings snap to supported values."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

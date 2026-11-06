@@ -4906,6 +4906,22 @@ MonoBehaviour:
     m_Localized: "蝎子和螃蟹的坚硬外壳，捣碎后与腐殖质混合制成肥料。"
     m_Metadata:
       m_Items: []
+  - m_Id: 2677187531242260433
+    m_Localized: "信号振荡器-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3672111136154636184
+    m_Localized: "按设定频率输出占空比50%的周期信号，默认1Hz。右侧为输出口，放置时可旋转；频率设置取最近可用档位。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1610708352128905626
+    m_Localized: "信号振荡器"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2763793734009516828
+    m_Localized: "按设定频率输出占空比50%的周期信号，默认1Hz。右侧为输出口，放置时可旋转；频率设置取最近可用档位。"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

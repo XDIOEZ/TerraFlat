@@ -6,6 +6,27 @@ public static class CircuitSignalTests
     #region 生产图行为回归
     public static void Run(Action<bool, string> check)
     {
+        var clock = new MachineSignalOscillatorState();
+        var clockPattern = new[] { false, true, false, false, true };
+        float[] clockSteps = { .2f, .3f, .5f, 1.25f, .25f };
+        for (int index = 0; index < clockSteps.Length; index++)
+        {
+            clock.AdvanceSimulationSeconds(clockSteps[index], .05f);
+            check(clock.Output == clockPattern[index], "振荡器变步长没有保持周期相位");
+        }
+        clock.AdvanceSimulationSeconds(0, .05f); check(clock.Output, "暂停改变了振荡器输出");
+        foreach (float invalid in new[] { 0f, -.1f, 11f, float.NaN, float.PositiveInfinity })
+            check(!clock.TrySetFrequencyHz(invalid, .05f) && clock.HalfPeriodSteps == 10 && clock.Output,
+                "拒绝的频率改变了有效时钟");
+        clock.Enabled = false; clock.AdvanceSimulationSeconds(.05f, .05f); check(!clock.Output, "关机没有撤去时钟输出");
+        clock.Enabled = true; clock.AdvanceSimulationSeconds(.45f, .05f); check(!clock.Output, "重启提前跳过低半周期");
+        clock.AdvanceSimulationSeconds(.05f, .05f); check(clock.Output, "重启后不再振荡");
+        check(clock.TrySetFrequencyHz(2f, .05f) && !clock.Output && clock.HalfPeriodSteps == 5, "改频没有重新起振");
+        clock.AdvanceSimulationSeconds(.25f, .05f); check(clock.Output, "2Hz半周期错误");
+        check(clock.TrySetFrequencyHz(3f, .05f) && Math.Abs(clock.GetFrequencyHz(.05f) - 10f / 3f) < .0001f,
+            "频率设置没有显示实际档位");
+        check(clock.TrySetFrequencyHz(.1f, .05f) && clock.HalfPeriodSteps == 100 &&
+            clock.TrySetFrequencyHz(10f, .05f) && clock.HalfPeriodSteps == 1, "频率上下边界被错误拒绝");
         // 使用正式目录验证禁用端口，防止配置在启动阶段被拒绝。
         using (JsonDocument catalog = JsonDocument.Parse(File.ReadAllText(
             "Assets/Resources/Config/Mechanical/mechanical-catalog.json")))

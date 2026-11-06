@@ -28,6 +28,7 @@ internal static class MachinePanelBuiltIns
             new MechanicalPanelSession("UI_Mechanical", entity, null, null,
                 () => entity.Logic.Status, () => string.Empty, refreshStatusPeriodically: true));
         MachinePanelFactoryRegistry.AddBuiltIn("radio-converter", RadioMachinePanelSession.CreateForMachine);
+        MachinePanelFactoryRegistry.AddBuiltIn("signal-oscillator", entity => new SignalOscillatorPanelSession(entity));
         MachinePanelFactoryRegistry.AddBuiltIn("radio-station", RadioMachinePanelSession.CreateForMachine);
         MachinePanelFactoryRegistry.AddBuiltIn("electric-light", entity =>
             new MechanicalPanelSession("UI_Mechanical", entity, null, null,

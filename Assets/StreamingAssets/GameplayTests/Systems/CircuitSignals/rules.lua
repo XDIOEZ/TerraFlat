@@ -29,3 +29,16 @@ test.system("circuit_signals", "relay", {}, function(data)
     end
     assert(not data.rotatedConnected, "旋转触点仍错误接通原方向")
 end, "继电器串联开断与真实功率")
+
+test.system("circuit_signals", "oscillator", {}, function(data)
+    local expected = {false, true, false, false, true}
+    for index, value in ipairs(expected) do
+        assert(data.sequence[index] == value, "振荡器变步长时序或线路输出错误：" .. index)
+    end
+    assert(data.pausedHigh and data.invalidRejected, "暂停或无效配置改变了相位")
+    assert(not data.disabled and not data.restartedLow and data.restartedHigh, "关机或重启没有完整低半周期")
+    assert(not data.changedLow and data.restoredEnabled and not data.restoredLow,
+        "改频或读档没有从低电平重新起振")
+    assert(not data.beforeRestoredBoundary and data.afterRestoredBoundary, "存档错误保留了运行相位")
+    assert(math.abs(data.quantizedFrequency - 10 / 3) < 0.0001, "可用频率档位读数错误")
+end, "振荡器模拟时钟、开关、量化频率与配置恢复")

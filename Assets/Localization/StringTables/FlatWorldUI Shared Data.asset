@@ -9015,6 +9015,30 @@ MonoBehaviour:
     m_Key: ui.text.1163DEC7
     m_Metadata:
       m_Items: []
+  - m_Id: 3966207626503645108
+    m_Key: "ui.text.91282468"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2330933747715185205
+    m_Key: "ui.text.519F04B9"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2777695729452989271
+    m_Key: "ui.text.147BF219"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2224870811393689294
+    m_Key: "ui.text.4C2885A7"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 853721474978595165
+    m_Key: "ui.text.FDD13642"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3626875015429143688
+    m_Key: "ui.text.039FC0C1"
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -12,7 +12,11 @@ public static class GameplayTestAutomationRadioRuntimeProbe
 #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadMethod]
 #endif
-    private static void Register() => GameplayTestRuntimeProbe.RegisterAsync("circuit_signals", "wireless_automation", CaptureWorkflow);
+    private static void Register()
+    {
+        GameplayTestRuntimeProbe.RegisterAsync("circuit_signals", "wireless_automation", CaptureWorkflow);
+        GameplayTestRuntimeProbe.RegisterAsync("circuit_signals", "oscillator_automation", CaptureOscillatorWorkflow);
+    }
 
     private sealed class Fixture : IDisposable
     {
@@ -98,6 +102,41 @@ public static class GameplayTestAutomationRadioRuntimeProbe
         result["receiverInitiallyZero"] = !fixture.Receiver.SignalOutput;
         yield return WaitFor(() => fixture.Lamp.ElectricalSuppliedWatts > 0f);
         result["snapshotRebuilt"] = Sample(fixture);
+        completed(result);
+    }
+    private static IEnumerator CaptureOscillatorWorkflow(Item player, JObject args, Action<JObject> completed)
+    {
+        var fixture = new Fixture(player); GameplayTestRuntimeProbe.RegisterCleanup(fixture);
+        MachineEntity oscillator = fixture.Place("SignalOscillator", 0, -2);
+        foreach (Vector2Int cell in new[] { new Vector2Int(1, -2), new(2, -2), new(3, -2), new(3, -1) })
+            fixture.Place("SignalWire", cell.x, cell.y);
+        fixture.Place("Creative_Power_Source", 2, 0); fixture.Place("Wire_Copper", 2, 0);
+        fixture.Relay = fixture.Place("SignalRelay", 3, 0);
+        fixture.Place("Wire_Copper", 4, 0); fixture.Lamp = fixture.Place("ElectricLightBulb", 4, 0);
+        var result = new JObject { ["initiallyLow"] = !oscillator.SignalOutput };
+        yield return WaitFor(() => fixture.Lamp.ElectricalSuppliedWatts > 0f);
+        result["onWatts"] = fixture.Lamp.ElectricalSuppliedWatts; result["onSignal"] = oscillator.SignalOutput;
+        yield return WaitFor(() => fixture.Lamp.ElectricalSuppliedWatts == 0f && !fixture.Relay.ElectricalContactsClosed);
+        result["offWatts"] = fixture.Lamp.ElectricalSuppliedWatts; result["offSignal"] = oscillator.SignalOutput;
+        result["configured"] = MachineWorld.RequestOperation(oscillator, "oscillator.frequency", "2", player);
+        result["stopped"] = MachineWorld.RequestOperation(oscillator, "work", "", player);
+        uint step = MachineWorld.TransportStep;
+        bool leaked = false;
+        float deadline = Time.realtimeSinceStartup + 8f;
+        while (MachineWorld.TransportStep - step < 20 && Time.realtimeSinceStartup < deadline)
+        {
+            leaked |= oscillator.SignalOutput || fixture.Lamp.ElectricalSuppliedWatts > 0f;
+            yield return null;
+        }
+        result["stayedLow"] = !leaked && MachineWorld.TransportStep - step >= 20;
+        ItemData snapshot = MachineWorld.Remove(oscillator.Id);
+        oscillator = MachineWorld.Place(snapshot);
+        var logic = (MachineSignalOscillatorLogic)oscillator.Logic;
+        result["restoredFrequency"] = logic.FrequencyHz; result["restoredEnabled"] = logic.State.Enabled;
+        result["restoredLow"] = !oscillator.SignalOutput;
+        result["restarted"] = MachineWorld.RequestOperation(oscillator, "work", "", player);
+        yield return WaitFor(() => fixture.Lamp.ElectricalSuppliedWatts > 0f);
+        result["restoredWatts"] = fixture.Lamp.ElectricalSuppliedWatts;
         completed(result);
     }
     private static IEnumerator WaitFor(Func<bool> ready)

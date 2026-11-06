@@ -1,6 +1,6 @@
 # 机械、电力与耦合调度离线回归
 
-电路新增直接编译正式 `CircuitSignalNetworkGraph`：四门全部真值组合、旧步读取、反相环确定性振荡、候选图不污染现有线路、有效零/反馈阻断设备通知，以及连续双触点继电器控制真实功率；不代替Unity现场与双端验收。
+电路直接编译正式信号图和振荡时钟：四门真值组合、旧步读取、反相环、候选图隔离、反馈通知、串联继电器真实功率，以及振荡器变步长、暂停、启停与频率档位；不代替Unity现场与双端验收。
 
 运行：`dotnet run --project Tools/Tests/MachineNetworks/MachineNetworks.Tests.csproj`
 

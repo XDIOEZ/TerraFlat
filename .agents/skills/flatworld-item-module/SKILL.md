@@ -30,6 +30,8 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 
 ## 身份与模块边界
 
+- 独立模块Prefab必须在Addressables标记 `Prefab`；`GameRes.LoadPrefabCatalog` 只预载 `ItemPrefab/Prefab` 标签，仅登记主地址无法供JSON物品装配。
+
 - 对讲机 `Mod_RadioTransceiver` 在手持或副手装备且开机有电时登记；退出资格立即注销。单电池槽通过 `RadioBatteryStorage` 读写电池自身冷模块状态，空电池保留、半电拆装不回满；模块与装备路径不得重复扣电。联机嵌套状态按真实持有GUID保留权威值，不重载整套库存来刷新电量。
 
 - 运行时物品归属由 `GameplayWorldRegistry` 的世界物品账本和反向索引统一维护，Item 不缓存世界身份；注册入口按拥有者或明确世界上下文登记。Item 的 Load/Save/Unload/Tick 借用自身世界，每步回调核对归属修订，作用域不跨 yield。船内起降沿正式事务迁原实例、机器和库存，不能通过重建外壳绕过账本。

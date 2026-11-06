@@ -9193,6 +9193,30 @@ MonoBehaviour:
     m_Localized: "未收听"
     m_Metadata:
       m_Items: []
+  - m_Id: 3966207626503645108
+    m_Localized: "频率 {0:0.###} Hz · 占空比 50%\n输出 {1} · {2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2330933747715185205
+    m_Localized: "频率范围 {0:0.###}～{1:0.###} Hz"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2777695729452989271
+    m_Localized: "设置频率"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2224870811393689294
+    m_Localized: "停止振荡"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 853721474978595165
+    m_Localized: "启动振荡"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3626875015429143688
+    m_Localized: "设置结果未确认，请重试"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

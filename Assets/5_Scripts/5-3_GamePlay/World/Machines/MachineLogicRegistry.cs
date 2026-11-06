@@ -69,6 +69,7 @@ public static partial class MachineLogicRegistry
         Add("induction-stove", null, entity => new InductionStoveLogic(entity), CollectInductionStoveItemSlotBindings);
         Add("electric-light", null, entity => new ElectricLightLogic(entity));
         Add("circuit-signal", null, entity => new MachineCircuitSignalLogic(entity));
+        Add("signal-oscillator", null, entity => new MachineSignalOscillatorLogic(entity));
         Add("radio-converter", null, entity => new MachineRadioSignalConverterLogic(entity));
         Add("radio-station", null, entity => new MachineRadioStationLogic(entity));
         Add("cultivator", typeof(Mod_Cultivator), entity => new CultivatorLogic(entity), CollectCultivatorItemSlotBindings);

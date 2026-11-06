@@ -4859,6 +4859,22 @@ MonoBehaviour:
     m_Key: "item.Chitin.description"
     m_Metadata:
       m_Items: []
+  - m_Id: 2677187531242260433
+    m_Key: "item.SignalOscillator.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3672111136154636184
+    m_Key: "item.SignalOscillator.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1610708352128905626
+    m_Key: "item.SignalOscillator_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2763793734009516828
+    m_Key: "item.SignalOscillator_Summoner.description"
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

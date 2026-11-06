@@ -1591,6 +1591,187 @@
           }
         }
       }
+    },
+    {
+      "id": "SignalOscillator",
+      "parent": "BuildingBody_Base",
+      "gameName": "信号振荡器-建筑",
+      "description": "按设定频率输出占空比50%的周期信号，默认1Hz。右侧为输出口，放置时可旋转；频率设置取最近可用档位。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalOscillator/SignalOscillator_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalOscillator\",\"SummonerPrefabId\":\"SignalOscillator_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalOscillator"
+          }
+        }
+      }
+    },
+    {
+      "id": "SignalOscillator_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "信号振荡器",
+      "description": "按设定频率输出占空比50%的周期信号，默认1Hz。右侧为输出口，放置时可旋转；频率设置取最近可用档位。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalOscillator/SignalOscillator_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalOscillator\",\"SummonerPrefabId\":\"SignalOscillator_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"Transistor\":2,\"CopperPlate\":1,\"Quartz\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalOscillator"
+          }
+        }
+      }
     }
   ]
 }
