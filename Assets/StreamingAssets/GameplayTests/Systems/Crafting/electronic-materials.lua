@@ -89,3 +89,62 @@ test.system("crafting", "handmade_catalog", {package = "crafting/electronic_mate
     end
     assert(next(expected) == nil, "电子材料指定配方未全部登记")
 end, "电子时代九条配方：正式目录、精确扣料、逐种缺料和满输出")
+
+-- 以正式目录和交易验证核工业材料与建筑配方。
+test.system("crafting", "electronic_material_catalog", {ids = {
+    "Ore_Uranium", "Ingot_Uranium", "ZirconSand", "Ingot_Zirconium", "UraniumFuelRod", "ControlRod", "Concrete"
+}}, function(data)
+    assert(#data.items == 7, "核工业材料目录不完整")
+    for _, item in ipairs(data.items) do
+        assert(item.stackable and item.canBePickedUp and item.weight > 0 and item.volume > 0 and item.spriteExists,
+            "核工业材料缺少贴图或库存配置：" .. item.id)
+        assert(item.state.savedId == item.id and item.state.networkId == item.id and item.state.amount == 5,
+            "核工业材料堆叠、存档或网络身份错误：" .. item.id)
+    end
+end, "核工业材料的目录、贴图、堆叠和身份")
+
+test.system("crafting", "handmade_catalog", {package = "crafting/nuclear_industry.json"}, function(data)
+    local expected = {
+        ["core:nuclear_concrete"] = {output = "Concrete", amount = 2, materials = {OrePowder_Stone = 1, Sand = 2, Clay = 1}},
+        ["core:nuclear_control_rod"] = {output = "ControlRod", amount = 1, materials = {Ingot_Tungsten = 1, Ingot_Steel = 1}},
+        ["core:nuclear_uranium_fuel_rod"] = {output = "UraniumFuelRod", amount = 1, materials = {Ingot_Uranium = 1, Ingot_Zirconium = 1}},
+        ["core:nuclear_reinforced_concrete_wall"] = {output = "Wall_ReinforcedConcrete_Summoner", amount = 1, materials = {Concrete = 2, SteelPlate = 1}},
+        ["core:nuclear_zirconium_chest"] = {output = "Chest_Zirconium_Summoner", amount = 1, materials = {Ingot_Zirconium = 4, Ingot_Steel = 2}}
+    }
+    local function same(before, after)
+        assert(#before == #after, "制作拒绝改变槽数")
+        for i, slot in ipairs(before) do
+            local other = after[i]
+            assert(slot.id == other.id and slot.guid == other.guid and slot.amount == other.amount
+                and slot.durability == other.durability and slot.maxDurability == other.maxDurability,
+                "核工业配方拒绝后改变库存")
+        end
+    end
+    for _, recipe in ipairs(data.recipes) do
+        local wanted = expected[recipe.id]
+        assert(wanted and #recipe.warnings == 0 and recipe.station == "workbench", "核工业配方未登记或引用错误")
+        assert(#recipe.expectedOutputs == 1 and recipe.expectedOutputs[1].id == wanted.output
+            and recipe.expectedOutputs[1].amount == wanted.amount, "核工业配方产物错误")
+        local count = 0
+        for _, ingredient in ipairs(recipe.ingredients) do
+            assert(wanted.materials[ingredient.id] == ingredient.amount, "核工业配方用料错误")
+            count = count + 1
+        end
+        local expectedCount = 0
+        for _ in pairs(wanted.materials) do expectedCount = expectedCount + 1 end
+        assert(count == expectedCount and #recipe.missingMaterials == expectedCount, "配方材料种类不完整")
+        assert(recipe.normal.matched and recipe.normal.prepared and recipe.normal.committed, "核工业配方无法正常制作")
+        for _, slot in ipairs(recipe.normal.inputAfter) do assert(slot.amount == 0, "核工业配方未精确扣料") end
+        assert(recipe.normal.outputAfter[1].id == wanted.output and recipe.normal.outputAfter[1].amount == wanted.amount,
+            "核工业配方实际产物错误")
+        for _, attempt in ipairs(recipe.missingMaterials) do
+            assert(attempt.removedOne and not attempt.matched and not attempt.prepared and not attempt.committed,
+                "核工业配方缺料仍能制作")
+            same(attempt.inputBefore, attempt.inputAfter); same(attempt.outputBefore, attempt.outputAfter)
+        end
+        assert(recipe.full.matched and not recipe.full.prepared and not recipe.full.committed, "核工业配方满输出仍提交")
+        same(recipe.full.inputBefore, recipe.full.inputAfter); same(recipe.full.outputBefore, recipe.full.outputAfter)
+        expected[recipe.id] = nil
+    end
+    assert(next(expected) == nil, "核工业配方不完整")
+end, "核工业五条配方的实际扣料、缺料和满输出拒绝")

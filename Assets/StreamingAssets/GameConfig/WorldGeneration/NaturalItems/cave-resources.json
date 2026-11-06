@@ -17,6 +17,13 @@
       "noiseOffset": 9923
     },
     {
+      "ruleId": "cave.resource.uranium",
+      "itemId": "Mine_Uranium",
+      "veinThreshold": 0.94,
+      "veinScale": 0.03,
+      "noiseOffset": 11587
+    },
+    {
       "ruleId": "cave.resource.gold",
       "itemId": "Mine_Gold",
       "veinThreshold": 0.92,

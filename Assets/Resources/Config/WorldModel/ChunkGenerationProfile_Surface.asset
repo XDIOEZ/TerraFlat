@@ -412,6 +412,8 @@ MonoBehaviour:
     Value: Tile_Peat
   - Id: tile.block.29
     Value: Tile_Dirt
+  - Id: tile.block.36
+    Value: Tile_Wall_ReinforcedConcrete
   ecologyGlobalMultiplier: 1
   ecologyRuleIds:
   - surface.forest.appleTree
@@ -449,6 +451,7 @@ MonoBehaviour:
   - surface.stone.obsidian
   - surface.beach.coconut
   - surface.beach.oreStone
+  - surface.beach.zirconSand
   - surface.desert.cactus
   - surface.snow.iceberg
   - surface.ancient.herb

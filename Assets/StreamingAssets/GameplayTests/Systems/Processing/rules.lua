@@ -335,3 +335,47 @@ for _, sample in ipairs({
         end
     end, string.format("正式化工反应事务：%s，%g℃", sample.source, sample.temperature))
 end
+
+-- 铀矿按正式矿物目录、掉落表和洞穴优先级接入。
+test.system("processing", "mineral_content", {mine = "Mine_Uranium", ore = "Ore_Uranium", ingot = "Ingot_Uranium"}, function(data)
+    assert(data.mine.modules.harvestRequirement.parameters.requiredTool == 1 and not data.mine.canBePickedUp,
+        "铀矿未复用可开采矿脉")
+    local oreDrop = false
+    for _, loot in ipairs(data.loot) do
+        if loot.LootPrefabName == "Ore_Uranium" and loot.DropChance == 1 and loot.MinAmount > 0 then oreDrop = true end
+    end
+    assert(oreDrop, "铀矿没有必掉铀矿石")
+    local order, uranium = {}, nil
+    for index, rule in ipairs(data.caveRules) do
+        order[rule.itemId] = index
+        if rule.itemId == "Mine_Uranium" then uranium = rule end
+    end
+    assert(uranium and uranium.threshold == .94 and order.Mine_Tungsten < order.Mine_Uranium
+        and order.Mine_Uranium < order.Mine_Gold and order.Mine_Uranium < order.Mine_Stone,
+        "铀矿未接入洞穴稀有矿优先级")
+    assert(data.surfaceCount == 0 and data.oreState.savedId == "Ore_Uranium"
+        and data.ingotState.networkId == "Ingot_Uranium", "铀矿生成范围或材料身份错误")
+end, "铀矿的采集、掉落、洞穴优先级和材料身份")
+
+for _, sample in ipairs({
+    {ore = "Ore_Uranium", reaction = "core:uranium_ore_refining", temperature = 1299.99, matched = false},
+    {ore = "Ore_Uranium", reaction = "core:uranium_ore_refining", temperature = 1300, matched = true, output = "Ingot_Uranium"},
+    {ore = "Ore_Uranium", reaction = "core:uranium_ore_refining", temperature = 1300, amounts = {Ore_Uranium = 1}, matched = false},
+    {ore = "Ore_Uranium", reaction = "core:uranium_ore_refining", temperature = 1300, full = true, matched = true},
+    {ore = "ZirconSand", reaction = "core:zircon_sand_refining", temperature = 1854.99, matched = false},
+    {ore = "ZirconSand", reaction = "core:zircon_sand_refining", temperature = 1855, matched = true, output = "Ingot_Zirconium"},
+    {ore = "ZirconSand", reaction = "core:zircon_sand_refining", temperature = 1855, amounts = {Ore_Coal = 0}, matched = false},
+    {ore = "ZirconSand", reaction = "core:zircon_sand_refining", temperature = 1855, full = true, matched = true}
+}) do
+    test.system("processing", "mineral_reaction", sample, function(data)
+        local committed = sample.output ~= nil
+        assert(data.matched == sample.matched and data.committed == committed, "核材料精炼边界或提交错误")
+        if committed then
+            assert(data.output[1].id == sample.output and data.output[1].amount == 1,
+                "核材料精炼产物错误")
+            for _, slot in ipairs(data.input) do assert(slot.amount == 0, "核材料精炼未扣清材料") end
+        else
+            assert(data.unchanged, "核材料精炼拒绝时修改了库存")
+        end
+    end, "核材料精炼：" .. sample.ore .. " " .. sample.temperature .. "℃")
+end

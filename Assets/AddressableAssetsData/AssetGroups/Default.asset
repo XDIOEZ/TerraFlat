@@ -2501,6 +2501,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0a36b3f1f9eb469fabc929e62e7211c4
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Wall_ReinforcedConcrete.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

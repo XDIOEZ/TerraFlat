@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:nuclear_concrete",
+      "displayName": "混凝土",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "OrePowder_Stone",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Sand",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Clay",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Concrete",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:nuclear_control_rod",
+      "displayName": "控制棒",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Tungsten",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Steel",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "ControlRod",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:nuclear_uranium_fuel_rod",
+      "displayName": "铀燃料棒",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Uranium",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Zirconium",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "UraniumFuelRod",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:nuclear_reinforced_concrete_wall",
+      "displayName": "钢筋混凝土墙",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Concrete",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "SteelPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Wall_ReinforcedConcrete_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:nuclear_zirconium_chest",
+      "displayName": "锆金属箱子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Zirconium",
+          "amount": 4
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Steel",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Chest_Zirconium_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

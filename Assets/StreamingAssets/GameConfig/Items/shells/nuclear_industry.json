@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Ore_Uranium",
+      "parent": "BasicItem_Base",
+      "gameName": "铀矿石",
+      "description": "从地下铀矿脉开采的矿石；两份矿石与一份煤在1300℃以上可精炼一份铀。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3,
+      "volume": 0.75,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Ore",
+        "Mineral",
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Ore_Uranium.png"
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:uranium_ore_refining",
+          "minTemperature": 1300,
+          "maxTemperature": 9999,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Ore_Uranium",
+              "amount": 2
+            },
+            {
+              "match": "exact_item",
+              "itemId": "Ore_Coal",
+              "amount": 1
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Uranium",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Ingot_Uranium",
+      "parent": "BasicItem_Base",
+      "gameName": "铀",
+      "description": "由铀矿石精炼得到的铀，可用于制作铀燃料棒。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 5.8,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "Metal",
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Ingot_Uranium.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "ZirconSand",
+      "parent": "BasicItem_Base",
+      "gameName": "锆英砂",
+      "description": "海滩上富集锆英石的重矿砂；两份矿砂与一份煤在1855℃以上可精炼锆金属。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.5,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Mineral",
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/ZirconSand.png"
+      },
+      "modules": {},
+      "reactions": [
+        {
+          "id": "core:zircon_sand_refining",
+          "minTemperature": 1855,
+          "maxTemperature": 9999,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "ZirconSand",
+              "amount": 2
+            },
+            {
+              "match": "exact_item",
+              "itemId": "Ore_Coal",
+              "amount": 1
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "Ingot_Zirconium",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Ingot_Zirconium",
+      "parent": "BasicItem_Base",
+      "gameName": "锆金属",
+      "description": "由锆英砂精炼而成的锆金属，可制作燃料棒包壳与金属箱。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 2,
+      "volume": 0.3,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Ingot",
+        "Metal",
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Ingot_Zirconium.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "UraniumFuelRod",
+      "parent": "BasicItem_Base",
+      "gameName": "铀燃料棒",
+      "description": "用铀与锆金属制作的铀燃料棒。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "NuclearFuelRod",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/UraniumFuelRod.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "ControlRod",
+      "parent": "BasicItem_Base",
+      "gameName": "控制棒",
+      "description": "用钢与钨制作的核工业控制棒。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 3,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "NuclearControlRod",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/ControlRod.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Concrete",
+      "parent": "BasicItem_Base",
+      "gameName": "混凝土",
+      "description": "由石粉、沙子和黏土制成的建筑材料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 4,
+      "volume": 2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "BuildingMaterial",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Concrete.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Mine_Uranium",
+      "parent": "Mine_Iron",
+      "gameName": "铀矿脉",
+      "description": "地下洞穴中的稀有铀矿脉，使用镐开采可获得铀矿石。",
+      "stackable": false,
+      "canBePickedUp": false,
+      "lootTableId": "Mine_Uranium_Default",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Mine_Uranium.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "Data": {
+              "Hp": 80,
+              "MaxHp": 80,
+              "DefenseValues": {
+                "Physical": 24
+              },
+              "CombatBalanceVersion": 1
+            },
+            "weakTool": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Wall_ReinforcedConcrete_Summoner",
+      "parent": "Wall_Stone_Summoner",
+      "gameName": "钢筋混凝土墙",
+      "description": "以钢材加固的混凝土墙体，可放置为阻挡通行的墙壁方块。",
+      "weight": 30,
+      "volume": 30,
+      "tags": [
+        "35",
+        "InventoryCategory.Building"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Wall_ReinforcedConcrete.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_ReinforcedConcrete\",\"SummonerPrefabId\":\"Wall_ReinforcedConcrete_Summoner\",\"TileBlockId\":\"Tile_Wall_ReinforcedConcrete\",\"CraftingMaterials\":{\"Concrete\":2,\"SteelPlate\":1}}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Chest_Zirconium",
+      "parent": "BuildingBody_Base",
+      "gameName": "锆金属箱子",
+      "description": "由锆金属制成的箱子，可放置并存取物品。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 30,
+      "volume": 120.0,
+      "stackable": true,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Chest_Zirconium.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 150,
+        "maxHp": 150,
+        "defense": {
+          "physical": 8
+        },
+        "moduleLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Zirconium\",\"SummonerPrefabId\":\"Chest_Zirconium_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "UI_背包": {
+          "prefab": "BuildingFeature_Chest_Wood_Mod_Inventory",
+          "id": "UI_背包",
+          "enabled": true,
+          "data": {
+            "Data": {},
+            "PanleRectPosition": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "InventoryInitName": "",
+            "BasePanelIsOpen": true,
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Chest_Zirconium_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "锆金属箱子",
+      "description": "由锆金属制成的箱子，可放置并存取物品。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 30,
+      "volume": 30.0,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/NuclearIndustry/Chest_Zirconium.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 150,
+        "maxHp": 150,
+        "defense": {
+          "physical": 8
+        },
+        "moduleLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Zirconium\",\"SummonerPrefabId\":\"Chest_Zirconium_Summoner\",\"CraftingMaterials\":{\"Ingot_Zirconium\":4,\"Ingot_Steel\":2}}",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    }
+  ]
+}

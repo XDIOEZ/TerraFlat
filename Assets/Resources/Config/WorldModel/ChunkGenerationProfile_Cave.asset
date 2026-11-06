@@ -140,6 +140,8 @@ MonoBehaviour:
     Value: Tile_Floor_Iron
   - Id: tile.block.27
     Value: Tile_Floor_Bronze
+  - Id: tile.block.36
+    Value: Tile_Wall_ReinforcedConcrete
   ecologyGlobalMultiplier: 1
   ecologyRuleIds:
   - cave.flora.mushroom
@@ -155,6 +157,7 @@ MonoBehaviour:
   caveResourceRuleIds:
   - cave.resource.diamond
   - cave.resource.tungsten
+  - cave.resource.uranium
   - cave.resource.gold
   - cave.resource.niter
   - cave.resource.tin

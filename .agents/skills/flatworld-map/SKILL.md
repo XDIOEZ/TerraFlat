@@ -69,6 +69,7 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 
 ## 生态与采挖
 
+- 铀矿沿洞穴矿脉规则生成并掉落铀矿石，海滩 `surface.beach.zirconSand` 生成可拾取锆英砂；两者仅进入启用对应规则的新冻结 Profile。
 - Profile 首次使用时默认冻结；关闭冻结只丢 Profile，保留删除 GUID、覆盖与 `RenewalYears`，重开后下次进入世界冻结当前配置。快照/生态指纹包含数量、环境边界与依赖标签。
 - 洞穴散矿读取基础生态阶段实际矿山：距离任意矿山至少 5 格、来源最多 12 格（固定地图格数）；`cave.resource.looseDensity/looseStoneDensity` 默认互斥 2% 对应矿石、5% 石头，石头矿山不贡献额外矿石概率。邻块基础生态通过有界缓存共享，来源坐标保存在散矿 RuleId，不能用只支持同块宿主显示的 `HostGuid`。
 - 洞穴河湖岸泥土由 `cave.dirtGround.enabled/tileId/chance` 控制，只替换开放干格的 Ground（默认 Profile 为 `Tile_Dirt` 29），不写 Blocking、不提高导航代价；普通岩壁仍独立生成。

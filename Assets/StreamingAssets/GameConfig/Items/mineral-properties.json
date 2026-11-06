@@ -109,6 +109,16 @@
       "hardness": 7,
       "toughness": 2,
       "itemIds": ["Quartz"]
+    },
+    {
+      "id": "uranium_ore",
+      "referenceMaterial": "铀矿石以沥青铀矿为代表，按矿物而非纯金属估算，韧性为游戏参考值。",
+      "hardness": 6,
+      "toughness": 2,
+      "itemIds": [
+        "Ore_Uranium",
+        "Mine_Uranium"
+      ]
     }
   ]
 }

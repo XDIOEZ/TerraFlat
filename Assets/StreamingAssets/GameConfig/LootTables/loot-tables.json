@@ -660,6 +660,17 @@
           "maxAmount": 12
         }
       ]
+    },
+    {
+      "id": "Mine_Uranium_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Uranium",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
     }
   ]
 }

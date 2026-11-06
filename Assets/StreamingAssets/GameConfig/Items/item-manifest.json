@@ -350,6 +350,11 @@
       "id": "petroleum_utilities",
       "path": "shells/petroleum_utilities.json",
       "enabled": true
+    },
+    {
+      "id": "nuclear_industry",
+      "path": "shells/nuclear_industry.json",
+      "enabled": true
     }
   ]
 }

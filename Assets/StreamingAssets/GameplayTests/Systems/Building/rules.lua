@@ -177,6 +177,8 @@ local expected_material_defaults = {
     HandDrill_Summoner = { DrilledLog = 1, Ore_Flint = 1, Rope = 2, Stick_Wood = 1 },
     BlastFurnace_Summoner = { Clay = 6, Ingot_WroughtIron = 2, Ore_Stone = 12 },
     Chest_Wood_Summoner = { Plank = 6, Rope = 4 },
+    Chest_Zirconium_Summoner = { Ingot_Zirconium = 4, Ingot_Steel = 2 },
+    Wall_ReinforcedConcrete_Summoner = { Concrete = 2, SteelPlate = 1 },
     Door_Stone_Summoner = { Ore_Stone = 6 },
     Door_Wood_Summoner = { Plank = 4, Rope = 1 },
     Meatrack_Summoner = { Rope = 2, Stick_Wood = 6 },
@@ -204,7 +206,7 @@ local expected_material_defaults = {
 }
 
 test.system("building", "material_defaults", {}, function(data)
-    assert(#data.items == 109, "可放置物品目录数量变化，请重新审计材料来源")
+    assert(#data.items == 111, "可放置物品目录数量变化，请重新审计材料来源")
     local configured = 0
     for _, item in ipairs(data.items) do
         local expected = expected_material_defaults[item.id]
@@ -221,8 +223,8 @@ test.system("building", "material_defaults", {}, function(data)
             assert(not item.hasDefault and #item.exactRecipes == 1, item.id .. " 没有唯一精确材料来源")
         end
     end
-    assert(configured == 45, "未覆盖全部45种缺少或错误的标准材料来源")
+    assert(configured == 47, "未覆盖全部47种缺少或错误的标准材料来源")
     assert(data.coproductPrepared and data.coproductError == nil and
         data.shellMaterials.Fiber == 1 and data.shellMaterials.Coconut_Half == nil,
         "椰壳副产物错误分摊整批投入，拆除后可重复取出椰肉")
-end, "全109种可放置物品材料覆盖、批量单件成本与椰壳副产物隔离")
+end, "全111种可放置物品材料覆盖、批量单件成本与椰壳副产物隔离")

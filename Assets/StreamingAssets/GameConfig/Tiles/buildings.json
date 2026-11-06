@@ -385,6 +385,35 @@
         "liquidRequirement": "Absent",
         "refundItemId": "Floor_Bitumen_Summoner"
       }
+    },
+    {
+      "id": "Tile_Wall_ReinforcedConcrete",
+      "runtimeTileId": 36,
+      "loadCapacity": 10,
+      "displayName": "钢筋混凝土墙",
+      "tileAsset": "Tile_Wall_ReinforcedConcrete",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": {
+          "tileTag": "Blocking",
+          "demolitionTime": 250,
+          "penalty": 0,
+          "isWalkable": false,
+          "currentHp": 250
+        }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true,
+        "maxHealth": 250,
+        "defenseValues": {
+          "physical": 12
+        },
+        "requiredTool": 0,
+        "impactMaterial": 4,
+        "dropItemId": "Wall_ReinforcedConcrete_Summoner",
+        "dropAmount": 1
+      }
     }
   ]
 }

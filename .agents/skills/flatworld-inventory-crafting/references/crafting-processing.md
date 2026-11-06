@@ -25,3 +25,5 @@
 - 便携罐按不可变模块声明缓存配置，对外仍独立副本；真实Contents/二进制载荷/目录换代才重建流体包装，稳定Tick不重复序列化/刷新。保存比较StateRevision/超压时钟/破裂，UI比较内容/生命。
 
 - 金属砧使用 `ManualProcessingState` 分开保存金属锤、单槽材料和产物；工具不进入配方匹配。`RequiredToolKind/RequiredToolTag/ToolDurabilityPerClick` 组合工具条件，正式有效工作入口每击扣1耐久，未完成批次同样扣、最后一点完成当前击，缺料/满产物/拖拽拒绝不扣。铜/铁/钢锤定义与配方分别在 `shells/metal_hammers.json`、`crafting/metal_hammers.json`，耐久100/200/400。
+
+- 核工业材料配置在 `Items/shells/nuclear_industry.json`；铀矿石与锆英砂按温度反应精炼，控制棒、铀燃料棒、混凝土、钢筋混凝土墙和锆箱的配方在 `Recipes/crafting/nuclear_industry.json`。

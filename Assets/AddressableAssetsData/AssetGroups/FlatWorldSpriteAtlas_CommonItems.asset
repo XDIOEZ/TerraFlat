@@ -2123,6 +2123,66 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: efe40ebff9ae4eba8cf396b6ae3f7eba
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Mine_Uranium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 04c2b00fe1b64ef082bbb906bccccbce
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Ore_Uranium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2f9f6e946ac94ea3a7cbb5b5d1ed79ec
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Ingot_Uranium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6a4ef6eda82d416a9c0e0f6a210fd8ac
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Ingot_Zirconium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 743462158667462c970e2790c71f5238
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/UraniumFuelRod.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c767098354544431872406d24b36f925
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/ControlRod.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bbeaf5dce6d044c8a6bfae1d5ce5a80e
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Concrete.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e0f6f30aa16a4b07ac9e3f366aab2ae6
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Chest_Zirconium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bdf397fc55344947be069914b7e33c82
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/Wall_ReinforcedConcrete.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ada68449105b4b018a4a44fbf063d317
+    m_Address: Assets/6_Art/Generated/NuclearIndustry/ZirconSand.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

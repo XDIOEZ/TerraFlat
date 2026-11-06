@@ -11,12 +11,13 @@ local expected = {
     obsidian = {5, 2, "Obsidian", "Mine_Obsidian", "Mine_Obsidian_Large"},
     sulfur = {2, 1, "Ore_Sulfur", "Mine_Sulfur", "Mine_Sulfur_Large"},
     tungsten_ore = {5, 2, "Ore_Tungsten", "Mine_Tungsten", "Mine_Tungsten_Large"},
+    uranium_ore = {6, 2, "Ore_Uranium", "Mine_Uranium"},
     mica = {3, 1, "Ore_Mica", "MicaSheet"},
     quartz = {7, 2, "Quartz"}
 }
 
 test.system("item_runtime", "mineral_properties", {}, function(data)
-    assert(data.accepted and #data.minerals == 14, "正式矿物参考目录未完整加载")
+    assert(data.accepted and #data.minerals == 15, "正式矿物参考目录未完整加载")
     local found = {}
     for _, mineral in ipairs(data.minerals) do
         local row = expected[mineral.Id]
@@ -31,7 +32,7 @@ test.system("item_runtime", "mineral_properties", {}, function(data)
     end
     assert(data.sharedReferences and data.caseInsensitive, "参考项没有共享，或物品ID查询不支持大小写一致性")
     assert(not data.unknownFound and not data.nullFound, "未知或空物品错误获得了默认矿物值")
-end, "14类矿物初值、云母矿片与石英映射、大小写与未知ID")
+end, "15类矿物初值、云母矿片与石英映射、大小写与未知ID")
 
 local function equal(a, b)
     if type(a) ~= type(b) then return false end
