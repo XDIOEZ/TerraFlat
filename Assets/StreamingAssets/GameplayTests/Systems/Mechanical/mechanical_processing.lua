@@ -9,13 +9,14 @@ end
 
 local function checkFireTool(data, kind, fault)
     assert(data.fault == fault, "取火故障注入与请求不一致")
+    local expectedDurability = kind == "drill" and 300 or 200
     local checks = {
         panel = (data.prefabFields and data.opened and data.slotBindings and data.transferTargets and data.preview and data.previewEvents) == true,
         toggling = (data.closedByCancel and data.reopened and data.closedByToggle and data.closedByPanel) == true,
         cleanup = (data.closedTargetsCleared and data.eventDetached and data.panelReleased) == true,
         window = data.gameplayWindow == true,
-        setup = data.initialInputAmount == (kind == "drill" and 1 or 2) and data.initialDurability == 300,
-        durability = data.durability == 299
+        setup = data.initialInputAmount == (kind == "drill" and 1 or 2) and data.initialDurability == expectedDurability,
+        durability = data.durability == expectedDurability - 1
     }
     local shortcuts = data.shortcuts
     checks.shortcuts = (shortcuts.gameplayLocked and shortcuts.openOtherAllowed and shortcuts.closeAllowed and shortcuts.reopenAllowed
@@ -37,7 +38,7 @@ local function checkFireTool(data, kind, fault)
         checks.assembly = (data.formalFlintModules and data.ownPanelPrefab and data.localUseToggled) == true
         checks.animation = (data.artworkBound and data.successAnimated and data.failedStrikeAnimated and data.blockedAnimationUnchanged) == true
         checks.output = data.inputAmount == 1 and data.outputId == "FireSeed" and data.outputAmount == 1
-        checks.full = data.blockedInputAmount == 1 and data.blockedOutputId == "Log" and data.blockedDurability == 299
+        checks.full = data.blockedInputAmount == 1 and data.blockedOutputId == "Log" and data.blockedDurability == expectedDurability - 1
     end
     local rejected = fault == "drop_action" and { durability = true, heating = true, animation = true } or {}
     for name, passed in pairs(checks) do

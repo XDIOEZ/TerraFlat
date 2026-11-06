@@ -40,6 +40,8 @@ test.runtime("world_streaming", "configured_entity_proxies", {}, function(data)
         and data.ordinaryFixedRestoredPositionError < 0.001 and data.ordinaryFixedIdentityUnique,
         "普通动态Item保存后改为固定模式没有按原GUID唯一恢复到保存位置")
     assert(data.clientProxyBodyType == "Kinematic" and data.clientProxyParticipation
+        and data.clientProxySyncPositionError < 0.001 and data.clientProxySyncRotationError < 0.001
+        and data.clientProxyRootPositionError < 0.001 and data.clientProxyRootRotationError < 0.001
         and data.clientProxyNativePositionError < 0.001 and data.clientProxyNativeRotationError < 0.001
         and data.clientProxyNativeVelocity < 0.001 and data.clientProxyNativeAngularVelocity < 0.001
         and data.clientProxyAuthorityVelocityPreserved < 0.001

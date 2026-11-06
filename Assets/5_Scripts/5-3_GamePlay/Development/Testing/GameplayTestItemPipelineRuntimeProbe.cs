@@ -504,9 +504,9 @@ public static class GameplayTestItemPipelineRuntimeProbe
             targetReceiver.Data.UseBodyPartHealth = false;
             targetReceiver.MaxHp = 1000f;
             targetReceiver.Hp = 1000f;
-            Rigidbody2D body = target.GetComponent<Rigidbody2D>();
+            Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(target);
             if (body != null) { body.velocity = Vector2.zero; body.constraints = RigidbodyConstraints2D.FreezeAll; }
-            BoxCollider2D receiverShape = target.GetComponentsInChildren<BoxCollider2D>(true)
+            BoxCollider2D receiverShape = WorldPhysicsService2D.GetItemColliders(target).OfType<BoxCollider2D>()
                 .FirstOrDefault(shape => shape.isActiveAndEnabled && CombatPhysicsChannels.IsDamageReceiverCollider(shape) &&
                     ReferenceEquals(GameplayCombatBridge.ResolvePhysicsDamageReceiver(shape), targetReceiver));
             if (receiverShape == null) throw new InvalidOperationException("固定步武器采样缺少启用的受击盒。");
@@ -775,8 +775,8 @@ public static class GameplayTestItemPipelineRuntimeProbe
                     {
                         stage = "reactivate";
                         weapon.gameObject.SetActive(true);
-                        for (int frame = 0; frame < 2 && hotbarScope.IsCurrent(weapon) && weaponAnimator != null; frame++)
-                            yield return null;
+                        for (int tick = 0; tick < 2 && hotbarScope.IsCurrent(weapon) && weaponAnimator != null; tick++)
+                            yield return GameplayFixedStepSimulation.WaitForNextTick();
                     }
                     bool stillHeld = hotbarScope.IsCurrent(weapon) && animation != null && weaponAnimator != null &&
                         ReferenceEquals(animation.animator, weaponAnimator);

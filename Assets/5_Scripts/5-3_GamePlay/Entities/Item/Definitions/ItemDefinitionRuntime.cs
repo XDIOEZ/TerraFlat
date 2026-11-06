@@ -304,7 +304,10 @@ public static class ItemDefinitionRuntime
         {
             Module candidate = available[index];
             if (candidate == null || string.IsNullOrWhiteSpace(candidate.StableName) ||
-                !definition.TryGetModuleAssembly(candidate.StableName, out _))
+                !definition.TryGetModuleAssembly(candidate.StableName, out var candidateAssembly))
+                continue;
+            // 未绑定的旧外壳变体不占用新定义槽位，已绑定实例仍严格检查身份。
+            if (string.IsNullOrWhiteSpace(candidate.PrefabId) && !candidateAssembly.MatchesImplementation(candidate))
                 continue;
             if (!boundByName.TryAdd(candidate.StableName, candidate))
                 throw new InvalidDataException($"物品 {itemData.IDName} 存在重复模块稳定名：{candidate.StableName}。");
@@ -327,7 +330,9 @@ public static class ItemDefinitionRuntime
             if (boundByName.TryGetValue(assembly.StableName, out module))
             {
                 if (!assembly.MatchesBoundModule(module) && !assembly.TryRestoreRuntimeIdentity(module, item.transform))
-                    throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 复用实例实现不符合当前定义。");
+                    throw new InvalidDataException($"物品 {itemData.IDName} 的模块 {assembly.StableName} 复用实例实现不符合当前定义：" +
+                        $"期望 {assembly.ModuleType?.Name}/{assembly.ModuleId}/{assembly.PrefabId}，" +
+                        $"实际 {module.GetType().Name}/{module.ResolvedModuleId}/{module.PrefabId}。");
                 ReusedModulesDebug.AddWork(1);
             }
             else

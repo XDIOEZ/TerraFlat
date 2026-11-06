@@ -21,6 +21,7 @@ description: "FlatWorld 玩家身份、输入仲裁、指针交互、移动/承�
 - 档案归属、独占控制租约与 Mirror 权威分离：`GetProfileId/IsProfileBound` 查身份，`IsLocallyControlled` 查本地输入；显示名/世界地址在 `ActorProfileMetadata`，不能用名字授权。
 - 来源无关的玩家身份共用 `ActorIdentity.IsPlayer`，角色数值修正共用 `ActorRuleModifiers` 与 `GameRuleConfiguration`；业务不引用难度服务或借难度工具识别玩家。
 - `Mod_ActorControl` 接管时中止 AI 动作、导航与攻击窗口；空闲/UI/输入锁只停输入，显式释放才恢复同一树上下文。冷却、受击记忆及生理继续。输入/相机/HUD 按本地租约加载并逆序卸载，身体模块监听 Binding.Changed 重绑。体力/营养 HUD 与濒死面板也随控制权创建、清理，不能卸载身体能力来隐藏 HUD。
+- 丢弃、装备及手工能力保留在身体上，其输入随本地控制权解绑和恢复；控制释放触发的按键取消不得当作主动丢弃。`ai_actor_control_gameplay` 使用真实键盘事件覆盖切换。
 - 创建模板在新档案 `Item.Load()` 前直接注入能力模块；MOD 使用 `playerCreationTemplates` 或 `playerTemplate:ID` Patch。接管不补装背包、装备、制作、翻滚；ActorCommon 只组合控制及本地表现，Human 自带人形能力。
 - 管理员权限来自通用 `Mod_Administrator`，任意 Item/动物加载模块即获权；`Mod_PlayerAdminController` 仅适配玩家输入，Ctrl+F1/GM 临时装配模块，不读写名字。角色定义通过 `modules` 的 `prefab/id: Module_Administrator` 固定组合；临时模块不改变定义，重建后需重新装配。回归 `player/administrator_identity`。
 - 单机 F5 保存通用 ItemData、卸载旧角色，再从其当前 Actor 定义重建同一档案；世界/存档会话保留，重绑事件为 `Event_LocalPlayerRuntimeReloaded`。控制回归：AI 的 actor-control.lua 与 actor-control-gameplay.lua。

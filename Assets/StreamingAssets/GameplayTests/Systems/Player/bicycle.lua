@@ -7,7 +7,7 @@ end
 
 test.check("world_ready", "自行车隔离世界已进入")
 test.runtime("player", "bicycle_lifecycle", {action = "begin"}, function(data)
-    assert(data.available and data.mountedAfterAction and data.bodySimulated and not data.riderBodySimulated and
+    assert(data.initialPositionError < .01 and data.available and data.mountedAfterAction and data.bodySimulated and not data.riderBodySimulated and
         data.riderTerrainContact and data.wakeReady,
         "正式车体或上车租约未建立")
     assert(data.contactShadowBound, "自行车生成后未注册正式接触阴影")

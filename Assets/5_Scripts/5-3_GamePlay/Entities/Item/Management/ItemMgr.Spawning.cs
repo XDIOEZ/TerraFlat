@@ -206,6 +206,9 @@ public partial class ItemMgr
             catch (Exception exception) { Debug.LogException(exception, item); }
             try { UnregisterRuntimeItem(item); }
             catch (Exception exception) { Debug.LogException(exception, item); }
+            // 未登记的分帧候选也可能已取得物理代理，回滚时同步释放。
+            try { WorldPhysicsService2D.ReleaseItem(item); }
+            catch (Exception exception) { Debug.LogException(exception, item); }
             try { item.PrepareForDespawn(saveData: false); }
             catch (Exception exception) { Debug.LogException(exception, item); }
             if (itemObject != null) Destroy(itemObject);

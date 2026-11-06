@@ -23,4 +23,8 @@ public partial class Inventory_ModuleData : ModuleData
     public Vector3 PanleRectPosition = Vector3.zero;
     public string InventoryInitName = "";
     public bool BasePanelIsOpen = true;
+
+    // 玩家背包的实例容量由模块保存，空值使用当前默认值。
+    [MemoryPackIgnore, JsonIgnore] public float? MaxCarryWeight;
+    [MemoryPackIgnore, JsonIgnore] public float? MaxCarryVolume;
 }

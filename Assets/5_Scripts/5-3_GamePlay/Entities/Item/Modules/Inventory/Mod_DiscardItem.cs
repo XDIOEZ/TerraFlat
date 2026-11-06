@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using InputSystem;
 
 public class Mod_DiscardItem : Mod_BaseDroper
 {
@@ -49,6 +50,8 @@ public class Mod_DiscardItem : Mod_BaseDroper
     private Coroutine heldDropAnimation;
     private Transform heldDropTransform;
     private Vector3 heldDropBaseScale = Vector3.one;
+    private ActorProfileRegistry.Binding controlBinding;
+    private PlayerInputActions boundInputActions;
 
     #region 悬停查询缓存
     private readonly List<RaycastResult> hoveredRaycastResults = new List<RaycastResult>(8);
@@ -74,14 +77,50 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
         hand = item.GetComponentInChildren<Mod_Hand>();
 
-        Mod_GameController = item.GetComponent<Mod_GameController>();
+        Mod_GameController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
+        controlBinding = ActorProfileRegistry.GetBinding(item);
+        controlBinding.Changed += RefreshControlBoundDiscardInput;
+        RefreshControlBoundDiscardInput();
+    }
 
-        // 绑定按键事件
-        var inputActions = Mod_GameController._inputActions.Win10;
-        inputActions.F.started += OnDropButtonPressed;
-        inputActions.F.canceled += OnDropButtonReleased;
-        inputActions.Ctrl.started += OnCtrlPressed;
-        inputActions.Ctrl.canceled += OnCtrlReleased;
+    // 身体丢弃能力始终运行，按键仅随本地控制权绑定。
+    private void RefreshControlBoundDiscardInput()
+    {
+        PlayerInputActions actions = ActorProfileRegistry.IsLocallyControlled(item) ? Mod_GameController?._inputActions : null;
+        if (ReferenceEquals(actions, boundInputActions)) return;
+        UnbindDiscardInput();
+        if (actions == null) return;
+        boundInputActions = actions;
+        actions.Win10.F.started += OnDropButtonPressed;
+        actions.Win10.F.canceled += OnDropButtonReleased;
+        actions.Win10.Ctrl.started += OnCtrlPressed;
+        actions.Win10.Ctrl.canceled += OnCtrlReleased;
+    }
+
+    private void UnbindDiscardInput()
+    {
+        if (boundInputActions != null)
+        {
+            boundInputActions.Win10.F.started -= OnDropButtonPressed;
+            boundInputActions.Win10.F.canceled -= OnDropButtonReleased;
+            boundInputActions.Win10.Ctrl.started -= OnCtrlPressed;
+            boundInputActions.Win10.Ctrl.canceled -= OnCtrlReleased;
+            boundInputActions = null;
+        }
+        isDropButtonPressed = false;
+        isDropRepeatActive = false;
+        isCtrlPressed = false;
+        dropButtonPressTime = 0f;
+        lastDropTime = 0f;
+        hoveredSlot = null;
+    }
+
+    protected override void OnUnload()
+    {
+        if (controlBinding != null) controlBinding.Changed -= RefreshControlBoundDiscardInput;
+        controlBinding = null;
+        UnbindDiscardInput();
+        StopHeldDropAnimation(true);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -324,7 +363,10 @@ public class Mod_DiscardItem : Mod_BaseDroper
     /// <summary>手机方案下不让手柄快捷键进入丢弃状态。</summary>
     private bool IsInputSourceAllowed(InputAction.CallbackContext context)
     {
-        return Mod_GameController == null || Mod_GameController.IsGameplayInputAllowed(context);
+        return IsRuntimeLoaded && isActiveAndEnabled && item != null && !item.IsUnloadingModules &&
+            ActorProfileRegistry.IsLocallyControlled(item) && Mod_GameController != null &&
+            Mod_GameController.IsRuntimeLoaded && Mod_GameController.isActiveAndEnabled &&
+            Mod_GameController.IsGameplayInputAllowed(context);
     }
 
     /// <summary>安全获取当前手部槽位，库存结构变化时不让输入回调访问越界索引。</summary>
@@ -339,15 +381,8 @@ public class Mod_DiscardItem : Mod_BaseDroper
 
     public void OnDestroy()
     {
+        Unload();
         StopHeldDropAnimation(true);
-        if (Mod_GameController != null && Mod_GameController._inputActions != null)
-        {
-            var inputActions = Mod_GameController._inputActions.Win10;
-            inputActions.F.started -= OnDropButtonPressed;
-            inputActions.F.canceled -= OnDropButtonReleased;
-            inputActions.Ctrl.started -= OnCtrlPressed;
-            inputActions.Ctrl.canceled -= OnCtrlReleased;
-        }
     }
     #endregion
 

@@ -91,7 +91,7 @@ description: "FlatWorld 纯世界模型、异步区块生成、租约、流送�
 - `TerrainSupportLayer` 分开标记结构所有权与外部显示：`ExternalOwnershipLayer` 防止结构地板随普通土层事务再移交，`ExternalVisualLayer` 只防重画；普通 Tile 地板仍由 ChunkView 显示。支撑上的玩家填土通过 `GetExposedTileId/GetSurfaceCell` 进入普通农业与采挖，迁移作物使用 `IPlantableCrop` 的活体/冷状态坐标接口，不按具体作物 ID 分支。
 - `ChunkView` 不持有 Blocking、Grid、Collider 或 Rigidbody。`WorldTerrainPhysicsSource2D` 只订阅 Ready + Active 地形并提交矩形数据，`WorldMachinePhysicsSource2D` 只提交实际模拟机器；二者不创建组件或私有物理池，原生形状统一进入 `WorldPhysicsService2D` 的实体代理、空间批次和回收链。空地形不创建原生组件；规则 `world_streaming/terrain_physics_source`。
 - 地形与机器通过 `WorldPhysicsFixedRectangleSource2D` 复用通用固定代理；自然实体的所有区域直接由普通代理装配，不再跳过固定阻挡或广播另一套区块碰撞快照。`FlushPendingGeometry` 在原生模拟前合并实际形状变化，取消同时撤销已取出的本轮批次与下一轮排队，嵌套刷新延后，失败只重试仍有效的来源；规则 `world_streaming/physics_geometry_queue`。固定镜像同样借实体壳池并保留 `ColliderSource2D` 来源。
-- 自有代理与障碍盒沿用 `usedByComposite=false` 默认值，停用重绑不重复写此原生开关；池化实体先激活节点再提交初始位姿和速度，`world_physics_proxy_gameplay` 检查恢复数据与刚体一致。`world_physics_ownership` 覆盖回池、销毁旧宿主和 Composite 下复用。
+- 自有代理与障碍盒沿用 `usedByComposite=false` 默认值，停用重绑不重复写此原生开关；池化实体先激活节点，再同步 Transform、刚体初始位姿和速度，避免物理同步还原池中旧位置。`world_physics_proxy_gameplay` 检查物理同步及恢复数据，`player_bicycle` 检查真实落点；`world_physics_ownership` 覆盖回池和旧宿主销毁。
 - `CombineAdjacent` 且有储存能力的机器按通用物理批次和同模板分组；与地形共用 `WorldPhysicsRectangleMerger2D` 精确矩形拼接，保留空洞/间距，不再按数据区块裁断跨界形状。库存、交互、战斗和导航身份不合并；回归 `industrial_fluids/combined_tank_collision_*`，离线 `Tools/Tests/CombinedTankColliders/verify.py`。
 - `SharedSpriteMeshCache` 属于资源会话；Ready 前预热最终目录，普通流送不清 Mesh，Backend 重建重新注册 BatchMeshID。清理先 BRG 解绑再毁 Mesh，会话结束先禁止 Owner 重登记，逐项释放异常不阻断其余资源。
 - BRG Shader 全 Pass 使用一致 `UnityPerMaterial` 布局；AoS 寻址在 `UNITY_SETUP_INSTANCE_ID` 后用 `GetDOTSInstanceIndex()`。Owner 丢失先全量重建，单格 SetVisual 不隐式登记；卸载交换删除后修正句柄并合并上传。

@@ -60,6 +60,9 @@
       "tags": [
         "Blood"
       ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Characters/PlayerTemplate/Bodies/Base_Female.png"
+      },
       "modules": {
         "Controller模块": {
           "prefab": "Controller模块",
@@ -224,7 +227,7 @@
           "enabled": true
         },
         "装备模块": {
-          "prefab": "Mod_EquipmentRuntime",
+          "prefab": "Mod_Equipment_Player",
           "id": "装备模块",
           "enabled": true
         },

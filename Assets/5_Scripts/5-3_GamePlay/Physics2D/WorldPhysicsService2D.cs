@@ -185,6 +185,8 @@ public sealed partial class WorldPhysicsService2D : IDisposable
         if (item == null || disposed) return;
         if (!rebuildTemplateProxy && TryGetItemProxy(item, out var currentProxy) && currentProxy.TemplateRegions.Count > 0)
         {
+            // 模块装配或变更后更新接触接收方，不重建已有物理壳。
+            currentProxy.Shell.Root.GetComponent<WorldPhysicsItemContactRelay2D>()?.Bind(item);
             SynchronizeDetachedItemProxy(item);
             return;
         }

@@ -45,7 +45,7 @@ test.runtime("networking", "bots_session", { count = 4 }, function(data)
         assert(player.netId > 0 and not net_ids[player.netId] and player.guid ~= 0 and not guids[player.guid],
             "假人重复使用了网络身份或真实物品 GUID")
         profiles[player.profile], net_ids[player.netId], guids[player.guid] = true, true, true
-        assert(player.profileBound and player.indexed and not player.isLocalProfile and not player.sameAsLocal,
+        assert(player.moduleBindingsExact and player.profileBound and player.indexed and not player.isLocalProfile and not player.sameAsLocal,
             "远端假人的正式档案、角色索引或本地主角归属错误")
         assert(player.ready and player.authenticated, "未经正式就绪或认证的假人进入了游戏")
         assert(player.sameAfterReady, "重复 WorldReady 又生成了一份网络角色")

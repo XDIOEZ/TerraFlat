@@ -122,7 +122,14 @@ public static class ItemRuntimeStateFingerprint
             hash.Add(state.PanleRectPosition);
             hash.Add(state.BasePanelIsOpen);
             hash.Add(publicState);
-            if (!publicState && !AppendInventories(ref hash, state.Data, visiting)) return false;
+            if (!publicState)
+            {
+                hash.Add(state.MaxCarryWeight.HasValue);
+                if (state.MaxCarryWeight.HasValue) hash.Add(state.MaxCarryWeight.Value);
+                hash.Add(state.MaxCarryVolume.HasValue);
+                if (state.MaxCarryVolume.HasValue) hash.Add(state.MaxCarryVolume.Value);
+                if (!AppendInventories(ref hash, state.Data, visiting)) return false;
+            }
         }
         else if (type == typeof(ModData_FoodData))
         {

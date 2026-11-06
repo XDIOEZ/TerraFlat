@@ -261,6 +261,18 @@ public static class GameplayTestWheelbarrowRuntimeProbe
         twine.Stack.Amount = 2f;
         bag.Data.SetOne_ItemData(slot, twine);
         bool deposited = bag.TryTransferQuantityTo(slot, cargo, 0, 2);
+        ItemSlot cargoSlot = cargo.Data.itemSlots[0];
+        ItemSlot bagSlot = bag.Data.itemSlots[slot];
+        var withdrawal = new JObject
+        {
+            ["cargoAccess"] = cargo.CanAccessRuntime, ["bagAccess"] = bag.CanAccessRuntime,
+            ["depositBlocked"] = bag.Data.IsDepositBlocked, ["accepted"] = bag.CanAcceptQuickTransfer(cargoSlot, bagSlot),
+            ["transferable"] = cargo.Data.GetTransferableQuantityTo(cargoSlot, bag.Data, bagSlot, 1),
+            ["capacity"] = bag.Data.GetCapacityLimitedAmount(cargoSlot.itemData, 1),
+            ["weight"] = bag.Data.CurrentCarryWeight, ["maxWeight"] = bag.Data.MaxAllowedCarryWeight,
+            ["volume"] = bag.Data.CurrentCarryVolume, ["maxVolume"] = bag.Data.MaxCarryVolume,
+            ["slotLimit"] = bagSlot.SlotMaxVolume, ["slotEmpty"] = bagSlot.itemData == null
+        };
         bool withdrew = cargo.TryTransferQuantityTo(0, bag, slot, 1);
         bool depositedAgain = bag.TryTransferQuantityTo(slot, cargo, 0, 1);
         // 留一件真实货物用于拆装与存档测试，玩家背包由快照在收尾归还。
@@ -270,6 +282,7 @@ public static class GameplayTestWheelbarrowRuntimeProbe
             ["fOpened"] = opened && sender.CurrentInteractionTargetGuid == fixture.Car.itemData.Guid,
             ["cargoOpen"] = opened, ["rider"] = fixture.Carrier.Rider != null,
             ["deposited"] = deposited, ["withdrew"] = withdrew, ["restoredDeposit"] = depositedAgain,
+            ["withdrawal"] = withdrawal,
             ["remaining"] = cargo.Data.GetItemSlot(0).itemData?.Stack.Amount ?? 0f
         };
     }
@@ -567,7 +580,9 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour, IGame
         Vector2Int cell = WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(carrier.Body.position)));
         Vector2Int startCell = WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(start)));
         Mod_Building building = carrier.item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building);
-        BoxCollider2D buildingCollider = buildingObstacle != null ? buildingObstacle.GetComponent<BoxCollider2D>() : null;
+        BoxCollider2D cartCollider = WorldPhysicsService2D.GetItemRootCollider<BoxCollider2D>(carrier.item);
+        BoxCollider2D buildingCollider = buildingObstacle != null
+            ? WorldPhysicsService2D.GetItemRootCollider<BoxCollider2D>(buildingObstacle) : null;
         Vector2Int buildingCell = buildingObstacle != null
             ? WorldTopologyRuntime.NormalizeCell(Vector2Int.FloorToInt(WorldLocalPresentation.ToLogical(buildingObstacle.transform.position))) : default;
         return new JObject
@@ -579,13 +594,13 @@ public sealed class GameplayTestWheelbarrowMotionRecorder : MonoBehaviour, IGame
             ["positionTraversable"] = carrier.CanTraversePosition(carrier.Body.position),
             ["cartCellOccupied"] = BuildingOccupancyRegistry.IsOccupied(cell),
             ["cartCellOccupiedIgnoringSelf"] = BuildingOccupancyRegistry.IsOccupied(cell, building),
-            ["wallBlocked"] = obstacle != null && carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= obstacle.bounds.max.y - .02f,
+            ["wallBlocked"] = obstacle != null && cartCollider != null && cartCollider.bounds.min.y >= obstacle.bounds.max.y - .02f,
             ["buildingPlaced"] = buildingObstacle != null && buildingObstacle.itemData.IDName == "Tent",
             ["buildingOccupied"] = buildingObstacle != null && BuildingOccupancyRegistry.IsOccupied(buildingCell),
             ["buildingBlocksTraversal"] = buildingObstacle != null && !BuildingOccupancyRegistry.GetEffectiveWalkable(buildingCell, true),
             ["buildingBlockedWhilePushing"] = buildingBlockedWhilePushing,
-            ["buildingNotCrossed"] = buildingCollider != null &&
-                carrier.Body.GetComponent<BoxCollider2D>().bounds.min.y >= buildingCollider.bounds.max.y - .02f,
+            ["buildingNotCrossed"] = buildingCollider != null && cartCollider != null &&
+                cartCollider.bounds.min.y >= buildingCollider.bounds.max.y - .02f,
             ["stopped"] = carrier.Body.velocity.sqrMagnitude < .0001f, ["pushAfterRelease"] = carrier.PushSource != null,
             ["rider"] = carrier.Rider != null, ["carrierSource"] = mover.CarrierSource != null
         };

@@ -50,6 +50,7 @@ public static class GameplayTestBicycleRuntimeProbe
         private GameObject wall;
         private Vector2 startPosition, pushStart, coastStart;
         private float coastStartSpeed;
+        private float initialPositionError;
         private Vector2 blockedPosition;
         private float blockedWheelAngle;
         private float blockedPedalAngle;
@@ -79,6 +80,8 @@ public static class GameplayTestBicycleRuntimeProbe
             bicycle.Load();
             Carrier = bicycle.GetComponentInChildren<Mod_Carrier>(true);
             if (Carrier == null || !Carrier.IsAvailable) throw new InvalidOperationException("自行车正式载具未就绪。");
+            Physics2D.SyncTransforms();
+            initialPositionError = Vector2.Distance(Carrier.Body.position, site);
             startPosition = Carrier.Body.position;
             Carrier.ToggleRider(player, Mover);
             BeginRideSampling();
@@ -139,6 +142,7 @@ public static class GameplayTestBicycleRuntimeProbe
             return new JObject
             {
                 ["available"] = Carrier.IsAvailable, ["mounted"] = Carrier.Rider == Mover,
+                ["initialPositionError"] = initialPositionError,
                 ["riderBodySimulated"] = Mover.rb.simulated, ["bodySimulated"] = Carrier.Body.simulated,
                 ["distance"] = WorldTopologyRuntime.Distance(startPosition, Carrier.Body.position),
                 ["pushDistance"] = WorldTopologyRuntime.Distance(pushStart, Carrier.Body.position),

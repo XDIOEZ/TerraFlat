@@ -773,8 +773,11 @@ public static partial class GameplayTestNarrativeRuntimeProbe
         }
         finally { ItemMgr.RuntimeItemUnregistered -= CapturePlayerUnregisteredAfterWorldExitSave; }
         if (recoveryFailure != null)
-            throw failure == null ? recoveryFailure : new AggregateException("火星现场及原世界恢复都失败。", failure, recoveryFailure);
-        if (failure != null) throw failure;
+        {
+            if (failure != null) throw new AggregateException("火星现场及原世界恢复都失败。", failure, recoveryFailure);
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(recoveryFailure).Throw();
+        }
+        if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         result["restoredHome"] = DimensionManager.ExistingInstance.ActiveAddress == home.Surface;
         result["home"] = DimensionSample(ItemMgr.Instance.LocalControlledActor, home.Surface, home);
         result["homeSavedPassenger"] = CaptureSavedSurfacePassenger(home.Profile);

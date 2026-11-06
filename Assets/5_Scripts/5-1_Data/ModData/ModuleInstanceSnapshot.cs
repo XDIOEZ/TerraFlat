@@ -209,7 +209,9 @@ public static class ModuleInstanceStateCodecs
             {
                 Inventories = publicState ? null : InventoryInstanceSnapshot.CaptureDictionary(state.Data),
                 PanelPositionX = state.PanleRectPosition.x, PanelPositionY = state.PanleRectPosition.y,
-                PanelPositionZ = state.PanleRectPosition.z, PanelIsOpen = state.BasePanelIsOpen
+                PanelPositionZ = state.PanleRectPosition.z, PanelIsOpen = state.BasePanelIsOpen,
+                MaxCarryWeight = publicState ? null : state.MaxCarryWeight,
+                MaxCarryVolume = publicState ? null : state.MaxCarryVolume
             });
         }
         public void Restore(ModuleData data, byte[] payload)
@@ -223,6 +225,8 @@ public static class ModuleInstanceStateCodecs
             }
             target.PanleRectPosition = new Vector3(state.PanelPositionX, state.PanelPositionY, state.PanelPositionZ);
             target.BasePanelIsOpen = state.PanelIsOpen;
+            if (state.MaxCarryWeight.HasValue) target.MaxCarryWeight = state.MaxCarryWeight;
+            if (state.MaxCarryVolume.HasValue) target.MaxCarryVolume = state.MaxCarryVolume;
         }
     }
 
@@ -271,6 +275,8 @@ internal sealed partial class InventoryModuleInstanceState
     [MemoryPackOrder(2)] public float PanelPositionY;
     [MemoryPackOrder(3)] public float PanelPositionZ;
     [MemoryPackOrder(4)] public bool PanelIsOpen;
+    [MemoryPackOrder(5)] public float? MaxCarryWeight = null;
+    [MemoryPackOrder(6)] public float? MaxCarryVolume = null;
 }
 
 [MemoryPackable(GenerateType.VersionTolerant)]
@@ -324,12 +330,15 @@ public sealed partial class InventoryModulePayloadSnapshot
     [MemoryPackOrder(3)] public float PanelZ;
     [MemoryPackOrder(4)] public string InventoryInitName;
     [MemoryPackOrder(5)] public bool PanelIsOpen;
+    [MemoryPackOrder(6)] public float? MaxCarryWeight = null;
+    [MemoryPackOrder(7)] public float? MaxCarryVolume = null;
 
     public static InventoryModulePayloadSnapshot Capture(Inventory_ModuleData data) => new InventoryModulePayloadSnapshot
     {
         Inventories = InventoryInstanceSnapshot.CaptureDictionary(data.Data),
         PanelX = data.PanleRectPosition.x, PanelY = data.PanleRectPosition.y, PanelZ = data.PanleRectPosition.z,
-        InventoryInitName = data.InventoryInitName, PanelIsOpen = data.BasePanelIsOpen
+        InventoryInitName = data.InventoryInitName, PanelIsOpen = data.BasePanelIsOpen,
+        MaxCarryWeight = data.MaxCarryWeight, MaxCarryVolume = data.MaxCarryVolume
     };
 
     public Inventory_ModuleData Restore()
@@ -337,7 +346,8 @@ public sealed partial class InventoryModulePayloadSnapshot
         var result = new Inventory_ModuleData
         {
             PanleRectPosition = new Vector3(PanelX, PanelY, PanelZ),
-            InventoryInitName = InventoryInitName, BasePanelIsOpen = PanelIsOpen
+            InventoryInitName = InventoryInitName, BasePanelIsOpen = PanelIsOpen,
+            MaxCarryWeight = MaxCarryWeight, MaxCarryVolume = MaxCarryVolume
         };
         if (Inventories != null) InventoryInstanceSnapshot.RestoreDictionary(Inventories, result.Data);
         return result;

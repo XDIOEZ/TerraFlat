@@ -163,9 +163,11 @@ public static class ModuleRuntimeDataFactories
             var position = state.PanleRectPosition;
             string initName = state.InventoryInitName;
             bool open = state.BasePanelIsOpen;
+            float? maxWeight = state.MaxCarryWeight, maxVolume = state.MaxCarryVolume;
             return () => new Inventory_ModuleData
             {
-                Data = inventories(), PanleRectPosition = position, InventoryInitName = initName, BasePanelIsOpen = open
+                Data = inventories(), PanleRectPosition = position, InventoryInitName = initName, BasePanelIsOpen = open,
+                MaxCarryWeight = maxWeight, MaxCarryVolume = maxVolume
             };
         }
         if (type == typeof(ModData_FoodData))

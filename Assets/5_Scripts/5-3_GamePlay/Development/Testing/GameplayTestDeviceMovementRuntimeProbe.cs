@@ -21,8 +21,12 @@ public static class GameplayTestDeviceMovementRuntimeProbe
 #if UNITY_EDITOR
     [UnityEditor.InitializeOnLoadMethod]
 #endif
-    private static void Register() => GameplayTestRuntimeProbe.RegisterAsync(
-        "player", "device_movement_roll", Capture, requiresDeviceInput: true);
+    private static void Register()
+    {
+        GameplayTestRuntimeProbe.RegisterAsync("player", "device_movement_roll", Capture, requiresDeviceInput: true);
+        GameplayTestRuntimeProbe.RegisterAsync("ai", "control_bound_inventory_input", CaptureControlBoundInventoryInput,
+            requiresDeviceInput: true);
+    }
 
     private static IEnumerator AdvanceSimulation(float seconds)
     {
@@ -118,6 +122,48 @@ public static class GameplayTestDeviceMovementRuntimeProbe
             ["charged"] = charged, ["charges"] = charges, ["expectedCost"] = scope.Roll.StaminaCost
         });
     }
+
+    // 使用原输入绑定验证控制权切换前后的面板、丢弃和取消行为。
+    private static IEnumerator CaptureControlBoundInventoryInput(Item player, JObject args, Action<JObject> completed)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        using var devices = new DeviceScope(player, false);
+        using var scope = new ControlBoundInventoryScope(player, devices);
+        Key drop = devices.KeyboardKeyFor(scope.Controller._inputActions.Win10.F);
+        Key equipment = devices.KeyboardKeyFor(scope.Controller._inputActions.FindAction(scope.Equipment.OpenPanelActionName));
+        Key crafting = devices.KeyboardKeyFor(scope.Controller._inputActions.FindAction(scope.Crafting.ToggleActionName));
+        scope.ClosePanels();
+        devices.PressKey(equipment);
+        bool equipmentBefore = scope.Equipment.EquipmentInventory.basePanel?.IsOpen() == true;
+        devices.PressKey(equipment);
+        devices.PressKey(crafting);
+        bool craftingBefore = scope.Crafting.IsPanelOpen;
+        devices.PressKey(crafting);
+        float start = scope.Amount;
+        devices.PressKey(drop);
+        float afterDrop = scope.Amount;
+        devices.SendKey(drop, true);
+        scope.Control.ReleaseManualControl();
+        float afterControlLoss = scope.Amount;
+        devices.SendKey(drop, false);
+        scope.RestoreControl();
+        devices.PressKey(equipment);
+        bool equipmentAfter = scope.Equipment.EquipmentInventory.basePanel?.IsOpen() == true;
+        devices.PressKey(equipment);
+        devices.PressKey(crafting);
+        bool craftingAfter = scope.Crafting.IsPanelOpen;
+        devices.PressKey(crafting);
+        devices.PressKey(drop);
+        float afterReacquire = scope.Amount;
+        completed(new JObject
+        {
+            ["start"] = start, ["afterDrop"] = afterDrop, ["afterControlLoss"] = afterControlLoss,
+            ["afterReacquire"] = afterReacquire, ["spawnCalls"] = scope.DropCalls,
+            ["equipmentBefore"] = equipmentBefore, ["equipmentAfter"] = equipmentAfter,
+            ["craftingBefore"] = craftingBefore, ["craftingAfter"] = craftingAfter
+        });
+        yield break;
+    }
     #endregion
 
     #region 隔离设备与状态恢复
@@ -196,6 +242,19 @@ public static class GameplayTestDeviceMovementRuntimeProbe
             UnityInputSystem.QueueStateEvent(keyboard, pressed ? new KeyboardState(rollKey) : default);
             UnityInputSystem.Update();
         }
+        public Key KeyboardKeyFor(InputAction action)
+        {
+            if (action != null)
+                foreach (var control in action.controls)
+                    if (control.device == keyboard && control is KeyControl key) return key.keyCode;
+            throw new InvalidOperationException("当前正式输入配置缺少对应键盘绑定。");
+        }
+        public void SendKey(Key key, bool pressed)
+        {
+            UnityInputSystem.QueueStateEvent(keyboard, pressed ? new KeyboardState(key) : default);
+            UnityInputSystem.Update();
+        }
+        public void PressKey(Key key) { SendKey(key, true); SendKey(key, false); }
         public void FocusText()
         {
             textRoot = new GameObject("Input focus fixture", typeof(Canvas));
@@ -241,6 +300,81 @@ public static class GameplayTestDeviceMovementRuntimeProbe
             Restore(() => { Mover.Speed = OriginalSpeed; Mover.SetRunState(running); Stamina.CurrentValue = staminaValue; Mover.ResetMotion(); });
             Restore(() => PlayerTeleportService.ApplySurfacePose(player, position));
             if (errors.Count > 0) throw new AggregateException("设备输入夹具恢复失败。", errors);
+        }
+    }
+
+    private sealed class ControlBoundInventoryScope : IDisposable
+    {
+        private readonly Item player;
+        private readonly DeviceScope devices;
+        private readonly Mod_Hand hand;
+        private readonly int slotIndex;
+        private readonly ItemData previousItem;
+        private readonly string profileId;
+        private readonly bool wasCreated;
+        private readonly bool equipmentWasOpen;
+        private readonly bool equipmentPanelSavedOpen;
+        private readonly bool craftingWasOpen;
+        private readonly GameplayTestDiscardThrowStaminaProbe.DiscardThrowStaminaDropCapture drops;
+        private readonly IDisposable dropLease;
+        private bool disposed;
+        public readonly Mod_ActorControl Control;
+        public readonly Mod_GameController Controller;
+        public readonly Mod_Equipment_Player Equipment;
+        public readonly Mod_HandCraftTable Crafting;
+        public int DropCalls => drops?.Calls ?? 0;
+        public float Amount => hand.HandInventory.Data.itemSlots[slotIndex].Amount;
+
+        public ControlBoundInventoryScope(Item player, DeviceScope devices)
+        {
+            this.player = player;
+            this.devices = devices;
+            Control = player.GetComponentInChildren<Mod_ActorControl>(true);
+            Controller = devices.Controller;
+            Equipment = player.GetComponentInChildren<Mod_Equipment_Player>(true);
+            Crafting = player.GetComponentInChildren<Mod_HandCraftTable>(true);
+            hand = player.GetComponentInChildren<Mod_Hand>(true);
+            if (Control == null || Equipment == null || Crafting == null || hand?.HandInventory?.Data?.itemSlots == null)
+                throw new InvalidOperationException("控制输入现场缺少角色模块或手部库存。");
+            var binding = ActorProfileRegistry.GetBinding(player);
+            profileId = binding.ProfileId;
+            wasCreated = binding.WasCreated;
+            slotIndex = hand.HandInventory.Data.Index;
+            previousItem = hand.HandInventory.Data.itemSlots[slotIndex].itemData;
+            equipmentWasOpen = Equipment.EquipmentInventory.basePanel?.IsOpen() == true;
+            equipmentPanelSavedOpen = Equipment.EquipmentInventory.Data.PanelIsOpen;
+            craftingWasOpen = Crafting.IsPanelOpen;
+            GameplayTestRuntimeProbe.RegisterCleanup(this);
+            ItemData item = GameRes.Instance.CreateItemData("Log");
+            item.Stack.Amount = 4;
+            hand.HandInventory.Data.itemSlots[slotIndex].itemData = item;
+            drops = new GameplayTestDiscardThrowStaminaProbe.DiscardThrowStaminaDropCapture(player);
+            dropLease = DroppedItemService.RegisterSpawnProvider(drops);
+        }
+
+        public void RestoreControl() => ActorProfileRegistry.BindProfile(player, true, wasCreated, profileId);
+        public void ClosePanels()
+        {
+            if (Equipment.EquipmentInventory.basePanel?.IsOpen() == true) Equipment.EquipmentInventory.basePanel.Close();
+            if (Crafting.IsPanelOpen) Crafting.I_ClosePanel();
+        }
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            var errors = new List<Exception>();
+            void Restore(Action action) { try { action(); } catch (Exception error) { errors.Add(error); } }
+            Restore(Control.ReleaseManualControl);
+            Restore(() => devices.SendKey(Key.None, false));
+            Restore(RestoreControl);
+            Restore(() => { var slot = hand.HandInventory.Data.itemSlots[slotIndex]; slot.itemData = previousItem; slot.RefreshUI(); });
+            Restore(ClosePanels);
+            if (equipmentWasOpen) Restore(() => { Equipment.EquipmentInventory.EnsurePanelCreated(); Equipment.EquipmentInventory.basePanel.Open(); });
+            Restore(() => Equipment.EquipmentInventory.Data.PanelIsOpen = equipmentPanelSavedOpen);
+            if (craftingWasOpen) Restore(Crafting.I_ShowPanel);
+            if (drops != null) foreach (var handle in drops.Handles) Restore(() => DroppedItemService.Remove(handle));
+            Restore(() => dropLease?.Dispose());
+            if (errors.Count > 0) throw new AggregateException("控制输入现场恢复失败。", errors);
         }
     }
     #endregion

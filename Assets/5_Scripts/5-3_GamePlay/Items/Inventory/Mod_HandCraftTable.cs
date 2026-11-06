@@ -51,6 +51,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private Mod_GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
+    private ActorProfileRegistry.Binding _controlBinding;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -83,12 +84,26 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         RestoreInventoryState();
         InitData();
-        BindToggleInput();
+        _controlBinding = ActorProfileRegistry.GetBinding(item);
+        _controlBinding.Changed += RefreshControlBoundHandCraftInput;
+        RefreshControlBoundHandCraftInput();
     }
 
     protected override void OnSave()
     {
         SaveInventoryState();
+    }
+
+    // 手工台保留身体库存，只在本地控制时绑定面板快捷键。
+    private void RefreshControlBoundHandCraftInput()
+    {
+        UnbindToggleInput();
+        if (!ActorProfileRegistry.IsLocallyControlled(item))
+        {
+            if (basePanel != null && basePanel.IsOpen()) basePanel.Close();
+            return;
+        }
+        BindToggleInput();
     }
 
     private void BindToggleInput()
@@ -107,7 +122,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         _toggleCallback = context =>
         {
-            if (!_inputController.IsGameplayInputAllowed(context))
+            if (!ActorProfileRegistry.IsLocallyControlled(item) || !_inputController.IsGameplayInputAllowed(context))
                 return;
 
             if (!_inputController.CanToggleGameplayWindow(basePanel))
@@ -116,6 +131,15 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             TogglePanelByKey();
         };
         _toggleAction.performed += _toggleCallback;
+    }
+
+    private void UnbindToggleInput()
+    {
+        if (_toggleAction != null && _toggleCallback != null)
+            _toggleAction.performed -= _toggleCallback;
+        _toggleAction = null;
+        _toggleCallback = null;
+        _inputController = null;
     }
 
 #endregion
@@ -230,14 +254,14 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     protected override void OnUnload()
     {
+        if (_controlBinding != null) _controlBinding.Changed -= RefreshControlBoundHandCraftInput;
+        _controlBinding = null;
+        UnbindToggleInput();
         UnbindCarryWeightEvents();
         _craftingController?.Dispose();
         _craftingController = null;
         inputInventory?.UnbindRuntimeDataEvents();
         outputInventory?.UnbindRuntimeDataEvents();
-
-        if (_toggleAction != null && _toggleCallback != null)
-            _toggleAction.performed -= _toggleCallback;
 
         if (basePanel != null)
         {
@@ -257,9 +281,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         outputInventory?.ReleaseRuntimePanel();
         if (inputInventory != null) inputInventory.DefaultTarget_Inventory = null;
         if (outputInventory != null) outputInventory.DefaultTarget_Inventory = null;
-        _toggleAction = null;
-        _toggleCallback = null;
-        _inputController = null;
         workButton = null;
     }
 

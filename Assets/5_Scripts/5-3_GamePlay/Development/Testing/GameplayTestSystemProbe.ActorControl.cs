@@ -95,6 +95,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(original);
         string id = args.Value<string>("actor") ?? "Wolf";
         GameRes.Instance.TryGetItemDefinition(id, out RuntimeItemDefinition definition);
+        bool rawShellAssembled = id != "Human" || CanAssembleRawHumanShell(definition);
         Item actor = ItemMgr.Instance.InstantiateItem(definition.CreateItemData(), original.transform.position + Vector3.right * 4f,
             Quaternion.identity, Vector3.one);
         string fixtureProfile = "fixture:control:" + actor.itemData.Guid;
@@ -104,6 +105,15 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         try
         {
             actor.Load();
+            // 记录正式首帧和角色外观合成后的身体图片。
+            var animation = actor.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+            var appearance = actor.itemMods.GetMod_ByID<Mod_CharacterAppearance>("CharacterAppearance");
+            var discard = actor.itemMods.GetMod_ByID<Mod_DiscardItem>(ModText.ItemDorper);
+            var equipment = actor.itemMods.GetMod_ByID<Mod_Equipment>(ModText.Equipment_Module);
+            var crafting = actor.GetComponentInChildren<Mod_HandCraftTable>(true);
+            bool bodyAbilitiesLoaded = discard != null && discard.IsRuntimeLoaded &&
+                equipment != null && equipment.IsRuntimeLoaded && crafting != null && crafting.IsRuntimeLoaded;
+            Sprite bodySprite = actor.Sprite != null ? actor.Sprite.sprite : null;
             var population = MonsterManager.GetForWorld(actor.gameObject.scene.name, false);
             int residentsBefore = population?.GetResidentSpeciesCount(id) ?? 0;
             ActorProfileRegistry.BindProfile(actor, false, false, fixtureProfile);
@@ -136,6 +146,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             lease.Dispose();
             lease = null;
             brain.ModUpdate(.1f);
+            bool bodyAbilitiesAfterRelease = discard != null && discard.IsRuntimeLoaded &&
+                equipment != null && equipment.IsRuntimeLoaded && crafting != null && crafting.IsRuntimeLoaded;
             bool bodyHudsReleased = (stamina == null || stamina.slider == null) && (food == null || food.PanleInstance == null) &&
                 (staminaHud == null || !staminaHud.gameObject.activeInHierarchy) && (nutritionHud == null || !nutritionHud.activeInHierarchy);
             control.TryAcquireManualControl(new object(), true, out lease);
@@ -146,6 +158,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             brain.ModUpdate(.1f);
             return new JObject
             {
+                ["rawShellAssembled"] = rawShellAssembled,
                 ["idleRemainsManual"] = idleRemainsManual, ["nativeAttack"] = nativeAttack,
                 ["coolingDown"] = coolingDown, ["resumed"] = brain.CurrentAction != null && !control.HasManualControl,
                 ["sameBodyAndContext"] = ReferenceEquals(data, actor.itemData) && ReferenceEquals(context, brain.Context),
@@ -156,6 +169,14 @@ public static partial class GameplayTestActorWorldRuntimeProbe
                 ["profileRetained"] = ActorProfileRegistry.GetProfileId(actor) == fixtureProfile,
                 ["localModulesLoaded"] = localModules,
                 ["localModulesAfterRelease"] = actor.Mods.Values.Count(module => module is IActorLocalControlModule && module.IsRuntimeLoaded),
+                ["singleSpriteMode"] = animation != null && animation.IsSingleSpriteMode,
+                ["hasDefinitionSprite"] = definition.Sprite != null,
+                ["hasBodySprite"] = bodySprite != null,
+                ["bodyUsesDefinitionSprite"] = bodySprite != null && ReferenceEquals(bodySprite, definition.Sprite),
+                ["appearanceLoaded"] = appearance != null && appearance.IsRuntimeLoaded,
+                ["hasEquip"] = equipment is Mod_Equipment_Player,
+                ["bodyAbilitiesLoaded"] = bodyAbilitiesLoaded,
+                ["bodyAbilitiesAfterRelease"] = bodyAbilitiesAfterRelease,
                 ["hasBag"] = actor.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag) != null,
                 ["hasRoll"] = actor.itemMods.GetMod_ByID<Mod_Roll>(Mod_Roll.ModuleId) != null
             };
@@ -166,6 +187,25 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             ItemMgr.Instance.DespawnItem(actor, saveData: false);
             ActorProfileRegistry.BindProfile(original, true, originalBinding.WasCreated, originalProfile);
         }
+    }
+
+    // 对原始外壳预先生成模块名，再按当前定义装配，覆盖旧变体与正式能力并存。
+    private static bool CanAssembleRawHumanShell(RuntimeItemDefinition definition)
+    {
+        var root = new GameObject("[LuaRawHumanAssembly]");
+        root.SetActive(false);
+        try
+        {
+            GameObject template = UnityEngine.Object.Instantiate(GameRes.Instance.GetPrefab("Human"), root.transform, false);
+            foreach (Module module in template.GetComponentsInChildren<Module>(true)) module.EnsureRuntimeIdentity();
+            GameObject shell = UnityEngine.Object.Instantiate(template, root.transform, false);
+            Item item = shell.GetComponent<Item>();
+            ItemDefinitionRuntime.ConfigureInstance(GameRes.Instance, definition, item, definition.CreateItemData());
+            return shell.GetComponentsInChildren<Module>(true).Count(module =>
+                definition.TryGetModuleAssembly(module.StableName, out var plan) && plan.MatchesBoundModule(module)) ==
+                definition.ModuleAssemblies.Count(plan => !plan.IsDataOnly);
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
     #endregion
 }

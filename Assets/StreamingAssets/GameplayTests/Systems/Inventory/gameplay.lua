@@ -1,5 +1,14 @@
 -- 复用正式创造背包填充与快捷栏切换；容量和扣料细节在独立规则用例检查。
 test.check("player_ready", "真实玩家就绪")
+test.runtime("inventory", "player_carry_capacity_persistence", {}, function(data)
+    assert(data.initialWeight > 0 and data.initialVolume > 0
+        and data.initialWeight == data.configuredWeight and data.initialVolume == data.configuredVolume,
+        "真实玩家背包没有应用创建容量")
+    assert(data.cloneWeight == 0 and data.cloneVolume == 137
+        and data.restoredWeight == 0 and data.restoredVolume == 137,
+        "背包容量复制或存档恢复丢失，零值必须保持有效")
+    assert(data.fingerprintChanged and data.publicPreserved, "容量变化未更新快照指纹或公开快照覆盖私有容量")
+end, "玩家容量初始化、复制与存档恢复")
 test.runtime("inventory", "pending_pickup_guards", {}, function(data)
     assert(not data.pendingFoodAccepted and data.pendingFoodAmount == 3 and data.pendingFoodProgress == 0
         and data.pendingFoodUses == 0 and data.pendingNutrition == 0 and data.pendingFoodCompletedEvents == 0,

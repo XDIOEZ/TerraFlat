@@ -130,7 +130,7 @@ public static class GameplayTestDiscardThrowStaminaProbe
         }
     }
 
-    private sealed class DiscardThrowStaminaDropCapture : IDroppedItemSpawnProvider
+    internal sealed class DiscardThrowStaminaDropCapture : IDroppedItemSpawnProvider
     {
         private readonly Item owner;
         public readonly List<DroppedItemHandle> Handles = new();

@@ -74,6 +74,10 @@ namespace FlatWorld.Networking.Gameplay
                 world.Transport.Receive(id, new NetworkWorldReady());
                 yield return null;
                 JObject sample = BotSample(bot, local);
+                GameRes.Instance.TryGetItemDefinition(bot.CorePlayer.itemData.IDName, out RuntimeItemDefinition actorDefinition);
+                sample["moduleBindingsExact"] = actorDefinition != null && bot.CorePlayer.Mods.Count > 0 &&
+                    bot.CorePlayer.Mods.Values.All(module => module != null &&
+                        actorDefinition.TryGetModuleAssembly(module.StableName, out var plan) && plan.MatchesBoundModule(module));
                 sample["connectionId"] = id;
                 sample["sameAfterReady"] = world.Core(id) == bot && world.Core(id).netId == netId;
                 sample["spawnedBeforeReady"] = world.SpawnedBeforeReady(id);
@@ -763,7 +767,7 @@ namespace FlatWorld.Networking.Gameplay
             private void SeedProfile(string profile)
             {
                 if (SaveDataMgr.Instance.SaveData.ProfileActorData.ContainsKey(profile)) return;
-                ItemData data = (ItemData)GameRes.Instance.GetPrefab("Human").GetComponent<Item>().Get_NewItemData();
+                ItemData data = GameRes.Instance.CreateItemData("Human");
                 data.Guid = ItemMgr.Instance.GenerateGuid();
                 data.GetActorProfileMetadata().DisplayName = profile; data.GetActorProfileMetadata().WorldKey = initialScene.name;
                 data.transform.position = WorldTopologyRuntime.NormalizePosition(WorldLocalPresentation.ToLogical(local.transform.position));

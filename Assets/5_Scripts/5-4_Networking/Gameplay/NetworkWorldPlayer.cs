@@ -878,11 +878,16 @@ namespace FlatWorld.Networking.Gameplay
             if (player == null || player.itemData == null || player.itemMods == null || player.itemMods.Mods.Count > 0)
                 return;
 
+            GameRes.Instance.TryGetItemDefinition(player.itemData.IDName, out RuntimeItemDefinition definition);
             Module[] modules = player.GetComponentsInChildren<Module>(true);
             for (int i = 0; i < modules.Length; i++)
             {
                 Module module = modules[i];
                 if (module == null || module._Data == null)
+                    continue;
+                // 延迟销毁的旧外壳组件不能按能力 ID 重新绑定到当前定义。
+                if (definition != null && (!definition.TryGetModuleAssembly(module.StableName, out var assembly) ||
+                    !assembly.MatchesBoundModule(module)))
                     continue;
 
                 ModuleData networkData = FindRemoteModuleData(

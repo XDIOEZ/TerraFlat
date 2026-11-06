@@ -468,6 +468,11 @@ public static partial class GameplayTestWorldPhysicsProxyRuntimeProbe
             proxy = service.AllocateEntityProxy(entity, snapshot, definition, new[] { region }, null, stateAuthority: false);
             Vector2 setPosition = point + new Vector2(.25f, .4f);
             proxy.SetPose(new WorldPhysicsEntityPose2D(setPosition, 38f, new Vector2(-6f, 5f), -73f));
+            Physics2D.SyncTransforms();
+            result["clientProxySyncPositionError"] = Vector2.Distance(proxy.Body.position, setPosition);
+            result["clientProxySyncRotationError"] = Mathf.Abs(Mathf.DeltaAngle(proxy.Body.rotation, 38f));
+            result["clientProxyRootPositionError"] = Vector2.Distance(proxy.Shell.Root.position, setPosition);
+            result["clientProxyRootRotationError"] = Mathf.Abs(Mathf.DeltaAngle(proxy.Shell.Root.eulerAngles.z, 38f));
             service.Simulate(.2f);
             WorldPhysicsEntityPose2D pose = proxy.CapturePose();
             result["clientProxyBodyType"] = proxy.Body.bodyType.ToString();

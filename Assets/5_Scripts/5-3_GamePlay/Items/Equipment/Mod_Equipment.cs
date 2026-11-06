@@ -111,7 +111,8 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
         BindOpenPanelTrigger();
 
         // 恢复面板状态
-        if (EquipmentInventory.Data.PanelIsOpen)
+        if (EquipmentInventory.Data.PanelIsOpen &&
+            (!RuntimeAiEntityUtility.IsAiEntity(item) || ActorProfileRegistry.IsLocallyControlled(item)))
         {
             EquipmentInventory.EnsurePanelCreated();
             EquipmentInventory.basePanel.Open();

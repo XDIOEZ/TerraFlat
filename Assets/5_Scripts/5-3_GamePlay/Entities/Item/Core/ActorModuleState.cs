@@ -12,8 +12,8 @@ public static class ActorModuleState
     private static JObject Read(Ex_ModData data)
         => string.IsNullOrEmpty(data?.BitData) ? new JObject() : JObject.Parse(data.BitData);
     private static Ex_ModData FindJson(ItemData data, string id) => Find(data, id) as Ex_ModData;
-    private static Inventory_Data Bag(ItemData data)
-        => (Find(data, ModText.Bag) as Inventory_ModuleData)?.Data?.Values.FirstOrDefault();
+    private static Inventory_ModuleData BagModule(ItemData data) => Find(data, ModText.Bag) as Inventory_ModuleData;
+    private static Inventory_Data Bag(ItemData data) => BagModule(data)?.Data?.Values.FirstOrDefault();
 
     public static float GetCameraPov(ItemData data) => Read(FindJson(data, ModText.Camera)).Value<float?>("PovValue") ?? 10f;
     public static void SetCameraPov(ItemData data, float value)
@@ -30,10 +30,16 @@ public static class ActorModuleState
         if (module == null) return;
         module.BitData = new JObject { ["Multiplier"] = value }.ToString(Newtonsoft.Json.Formatting.None);
     }
-    public static float GetMaxCarryWeight(ItemData data) => Bag(data)?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight;
-    public static float GetMaxCarryVolume(ItemData data) => Bag(data)?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume;
-    public static void SetMaxCarryWeight(ItemData data, float value) => Bag(data)?.SetCarryCapacity(value, GetMaxCarryVolume(data));
-    public static void SetMaxCarryVolume(ItemData data, float value) => Bag(data)?.SetCarryCapacity(GetMaxCarryWeight(data), value);
+    public static float GetMaxCarryWeight(ItemData data) => BagModule(data)?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight;
+    public static float GetMaxCarryVolume(ItemData data) => BagModule(data)?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume;
+    public static void SetMaxCarryWeight(ItemData data, float value)
+    {
+        if (BagModule(data) is { } bag) bag.MaxCarryWeight = UnityEngine.Mathf.Max(0f, value);
+    }
+    public static void SetMaxCarryVolume(ItemData data, float value)
+    {
+        if (BagModule(data) is { } bag) bag.MaxCarryVolume = UnityEngine.Mathf.Max(0f, value);
+    }
 
     public static void ApplyLegacyModuleState(ItemData data)
     {
@@ -45,8 +51,11 @@ public static class ActorModuleState
             if (FindJson(data, ModText.Camera) is { } camera && string.IsNullOrEmpty(camera.BitData)) SetCameraPov(data, state.CameraPov);
             if (FindJson(data, Mod_TargetPerceptionSignature.ModuleId) is { } perception && string.IsNullOrEmpty(perception.BitData))
                 SetTargetPerceptionMultiplier(data, state.TargetPerceptionMultiplier);
-            if (Bag(data) is { } bag && !bag.HasCarryCapacity)
-                bag.ConfigurePlayerBagCapacity(state.MaxCarryWeight, state.MaxCarryVolume);
+            if (BagModule(data) is { } bag)
+            {
+                bag.MaxCarryWeight ??= state.MaxCarryWeight;
+                bag.MaxCarryVolume ??= state.MaxCarryVolume;
+            }
             if (FindJson(data, Mod_TargetPerceptionSignature.ModuleId) != null && Bag(data) != null)
                 LegacyActorModuleState.RemovePendingModule(data, LegacyActorModuleState.AttributesKey);
         }

@@ -112,6 +112,10 @@ public sealed class WorldPhysicsEntityProxy2D : IDisposable
             Owner.RefreshFixedProxyBoundaryImages(this);
             return;
         }
+        // 池化代理的 Transform 与刚体同时定位，防止后续物理同步回写旧位置。
+        if (Shell.OwnsRoot)
+            Shell.Root.SetPositionAndRotation(new Vector3(pose.Position.x, pose.Position.y, Shell.Root.position.z),
+                Quaternion.Euler(0f, 0f, pose.RotationDegrees));
         Shell.Body.position = pose.Position;
         Shell.Body.rotation = pose.RotationDegrees;
         Shell.Body.velocity = StateAuthority && Mode == WorldPhysicsProxyMode2D.IndependentDynamic ? pose.Velocity : Vector2.zero;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MemoryPack;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -12,7 +13,42 @@ public static partial class GameplayTestRuntimeProbe
     [UnityEditor.InitializeOnLoadMethod]
 #endif
     private static void RegisterPendingInventoryRuntime()
-        => Register("inventory", "pending_pickup_guards", CapturePendingPickupGuards);
+    {
+        Register("inventory", "pending_pickup_guards", CapturePendingPickupGuards);
+        Register("inventory", "player_carry_capacity_persistence", CapturePlayerCarryCapacityPersistence);
+    }
+
+    // 采样真实玩家初始化容量与独立实例的复制、存档和公开快照。
+    private static JObject CapturePlayerCarryCapacityPersistence(Item player, JObject args)
+    {
+        Inventory_Data liveBag = player.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Bag)?.inventory?.Data;
+        ItemData copy = ItemInstanceDataFactory.CloneRuntime(player.itemData);
+        ActorModuleState.SetMaxCarryWeight(copy, 0f);
+        ActorModuleState.SetMaxCarryVolume(copy, 137f);
+        var bag = (Inventory_ModuleData)System.Linq.Enumerable.First(copy.ModuleDataDic.Values,
+            module => module.ModuleId == ModText.Bag);
+        ItemData cloned = ItemInstanceDataFactory.CloneRuntime(copy);
+        byte[] bytes = ItemSnapshotSerialization.SerializePayload(ItemSnapshotSerialization.Capture(copy));
+        ItemData restored = MemoryPackSerializer.Deserialize<ItemInstanceSnapshot>(bytes).CreateColdData();
+        bool beforeValid = ItemRuntimeStateFingerprint.TryCalculateModule(bag, false, new HashSet<ItemData>(), out ulong before);
+        ActorModuleState.SetMaxCarryVolume(copy, 138f);
+        bool afterValid = ItemRuntimeStateFingerprint.TryCalculateModule(bag, false, new HashSet<ItemData>(), out ulong after);
+        var publicTarget = new Inventory_ModuleData
+        { StableName = bag.StableName, ModuleId = bag.ModuleId, MaxCarryWeight = 9f, MaxCarryVolume = 11f };
+        ModuleInstanceSnapshot.Capture(bag, true).RestoreTo(publicTarget);
+        return new JObject
+        {
+            ["initialWeight"] = liveBag?.MaxCarryWeight, ["initialVolume"] = liveBag?.MaxCarryVolume,
+            ["configuredWeight"] = ActorModuleState.GetMaxCarryWeight(player.itemData),
+            ["configuredVolume"] = ActorModuleState.GetMaxCarryVolume(player.itemData),
+            ["cloneWeight"] = ActorModuleState.GetMaxCarryWeight(cloned),
+            ["cloneVolume"] = ActorModuleState.GetMaxCarryVolume(cloned),
+            ["restoredWeight"] = ActorModuleState.GetMaxCarryWeight(restored),
+            ["restoredVolume"] = ActorModuleState.GetMaxCarryVolume(restored),
+            ["fingerprintChanged"] = beforeValid && afterValid && before != after,
+            ["publicPreserved"] = publicTarget.MaxCarryWeight == 9f && publicTarget.MaxCarryVolume == 11f
+        };
+    }
 
     private sealed class PendingPickupUseCounter : IFoodMechanic, IFoodUseRule
     {
@@ -45,9 +81,11 @@ public static partial class GameplayTestRuntimeProbe
         }
     }
 
-    // 桥与生成接管仅在自有对象的同步调用期间替换，finally 恢复，不驱动当前测试玩家。
+    // 借用当前玩家身份，临时库存、生成接管和网络桥在同步调用后恢复。
     private static JObject CapturePendingPickupGuards(Item player, JObject args)
     {
+        if (!ActorProfileRegistry.IsLocallyControlled(player))
+            throw new InvalidOperationException("待确认库存回归需要本地受控玩家。");
         var root = new GameObject("[LuaPendingPickupGuards]");
         // 模拟丢弃的回滚句柄需要归属于隔离玩家的真实世界场景。
         UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
@@ -56,7 +94,7 @@ public static partial class GameplayTestRuntimeProbe
         IDisposable spawnLease = null;
         int completedFoodEvents = 0;
         string completedFoodId = string.Empty;
-        Item owner = null;
+        Item owner = player;
         void HandleFoodCompleted(FoodConsumeResult result)
         {
             if (!ReferenceEquals(result.Consumer, owner)) return;
@@ -67,9 +105,6 @@ public static partial class GameplayTestRuntimeProbe
         FoodConsumptionService.ConsumptionCompleted += HandleFoodCompleted;
         try
         {
-            owner = ActorProfileRegistry.CreateProfileActorForFixture(root);
-            owner.BindData(ActorProfileMetadataStore.CreateActorData(new Data_GeneralItem { IDName = "test:pending_pickup_player", Stack = new ItemStack { CanBePickedUp = false } }, null, null));
-            ActorProfileRegistry.BindProfile(owner, GameplayTestSystemProbe.Flag(args, "localProfile", true), false, "LuaPendingPickupGuards");
             bool pending = true;
             ItemNetworkStateSerialization.IsLocalInventoryTransactionPending = () => pending;
 

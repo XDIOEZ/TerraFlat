@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,8 +13,8 @@ public class Mod_Equipment_Player : Mod_Equipment
     public string OpenPanelActionName = "H";
 
     private InputAction openPanelAction;
-    private Action<InputAction.CallbackContext> openPanelCallback;
     private Mod_GameController inputController;
+    private ActorProfileRegistry.Binding controlBinding;
 
     #endregion
 
@@ -23,6 +22,21 @@ public class Mod_Equipment_Player : Mod_Equipment
 
     protected override void BindOpenPanelTrigger()
     {
+        controlBinding = ActorProfileRegistry.GetBinding(item);
+        controlBinding.Changed += RefreshControlBoundEquipmentInput;
+        RefreshControlBoundEquipmentInput();
+    }
+
+    // 装备状态留在身体上，只有本地接管时才绑定面板输入。
+    private void RefreshControlBoundEquipmentInput()
+    {
+        UnbindEquipmentInput();
+        if (!ActorProfileRegistry.IsLocallyControlled(item))
+        {
+            EquipmentInventory?.UnbindController();
+            ReleaseControlBoundEquipmentPanel();
+            return;
+        }
         inputController = item.itemMods.GetMod_ByID<Mod_GameController>(ModText.Controller);
         if (inputController == null || inputController._inputActions == null)
         {
@@ -43,22 +57,41 @@ public class Mod_Equipment_Player : Mod_Equipment
             return;
         }
 
-        openPanelCallback = context =>
+        EquipmentInventory?.BindController(inputController);
+        openPanelAction.performed += OnOpenEquipmentPanelInput;
+        if (IsRuntimeLoaded && EquipmentInventory?.Data?.PanelIsOpen == true && EquipmentInventory.basePanel == null)
         {
-            if (inputController.IsGameplayInputAllowed(context))
-                ToggleEquipmentPanelFromInput();
-        };
-        openPanelAction.performed += openPanelCallback;
+            if (EquipmentInventory.EnsurePanelCreated()) EquipmentInventory.basePanel.Open();
+        }
     }
 
     protected override void UnbindOpenPanelTrigger()
     {
-        if (openPanelAction != null && openPanelCallback != null)
-            openPanelAction.performed -= openPanelCallback;
+        if (controlBinding != null) controlBinding.Changed -= RefreshControlBoundEquipmentInput;
+        controlBinding = null;
+        UnbindEquipmentInput();
+        EquipmentInventory?.UnbindController();
+        ReleaseControlBoundEquipmentPanel();
+    }
 
+    private void ReleaseControlBoundEquipmentPanel()
+    {
+        if (EquipmentInventory?.basePanel != null)
+            EquipmentInventory.Data.PanelIsOpen = EquipmentInventory.basePanel.IsOpen();
+        EquipmentInventory?.ReleaseRuntimePanel();
+    }
+
+    private void UnbindEquipmentInput()
+    {
+        if (openPanelAction != null) openPanelAction.performed -= OnOpenEquipmentPanelInput;
         openPanelAction = null;
-        openPanelCallback = null;
         inputController = null;
+    }
+
+    private void OnOpenEquipmentPanelInput(InputAction.CallbackContext context)
+    {
+        if (ActorProfileRegistry.IsLocallyControlled(item) && inputController.IsGameplayInputAllowed(context))
+            ToggleEquipmentPanelFromInput();
     }
 
     #endregion
