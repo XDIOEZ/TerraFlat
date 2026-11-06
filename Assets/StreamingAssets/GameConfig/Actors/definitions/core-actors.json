@@ -311,7 +311,7 @@
           "enabled": true,
           "parameters": {
             "Data": {
-              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMin": 5,
               "SafeTemperatureMax": 50.0
             }
           }
@@ -2122,7 +2122,7 @@
           "enabled": true,
           "parameters": {
             "Data": {
-              "SafeTemperatureMin": 5.0,
+              "SafeTemperatureMin": -30,
               "SafeTemperatureMax": 50.0
             }
           }
@@ -2228,7 +2228,14 @@
                     "Wolf"
                   ],
                   "threatTags": [
-                    "Player"
+                    "Player",
+                    "Deer",
+                    "Cow",
+                    "Goat",
+                    "Horse",
+                    "Reindeer",
+                    "Sheep",
+                    "Rabbit"
                   ],
                   "chaseDistance": 28,
                   "lossDistance": 44,

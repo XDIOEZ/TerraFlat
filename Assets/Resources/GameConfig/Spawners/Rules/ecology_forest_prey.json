@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "id": "ecology_forest_prey",
+    "ecologyGroup": "animals",
+    "requireGlobalDarkness": false,
+    "minSpawnDistance": 15.0,
+    "maxSpawnDistance": 50.0,
+    "playerVisibilityExclusionDistance": 18.0,
+    "playerPopulationRadius": 65.0,
+    "perPlayerAliveLimit": 12,
+    "spawnSearchRetryCount": 24,
+    "spawnCount": 3,
+    "spawnChance": 1.0,
+    "groupAliveLimit": 12,
+    "maxEcologyBudget": 16,
+    "dailyBudgetRecovery": 8,
+    "asyncSpawnInterval": 0.25,
+    "ignorePopulationLimits": false,
+    "requireCompletelyDarkTile": false,
+    "maxAllowedTileLight": 1.0,
+    "allowedBiomeNames": [
+      "森林"
+    ],
+    "recycleDistance": 110.0,
+    "recycleGraceSeconds": 20.0,
+    "treeHabitat": {
+      "enabled": false,
+      "treesPerActor": 4,
+      "spawnRadius": 3.0
+    },
+    "spawnEntries": [
+      {
+        "prefabName": "Deer",
+        "runtimeBackend": "gameObject",
+        "probability": 2,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 10,
+        "initialization": {
+          "nutrition": {
+            "enabled": true,
+            "minFoodRate": 0.65,
+            "maxFoodRate": 0.95
+          }
+        }
+      },
+      {
+        "prefabName": "Rat",
+        "runtimeBackend": "gameObject",
+        "probability": 1,
+        "ecologyCost": 1,
+        "speciesAliveLimit": 10,
+        "initialization": {
+          "nutrition": {
+            "enabled": true,
+            "minFoodRate": 0.65,
+            "maxFoodRate": 0.95
+          }
+        }
+      }
+    ],
+    "waterOnly": false,
+    "ignoreEcologyBudget": false,
+    "batchSpawnRadius": 2,
+    "allowedDimensionIds": [
+      "surface"
+    ]
+  }
+}

@@ -42,6 +42,7 @@ public static partial class GameplayTestSystemProbe
         operations.Add("ai/detector_apply_batch", EntityDetectorApplyBatch);
         operations.Add("ai/stale_perception_batch", EntityStalePerceptionBatch);
         operations.Add("ai/ecology_config", EntityEcologyConfig);
+        operations.Add("ai/animal_ecology_catalog", EntityAnimalEcologyCatalog);
         operations.Add("ai/fish_current", EntityFishCurrent);
         operations.Add("ai/spawn_chance", EntitySpawnChance);
         operations.Add("ai/spawn_attempt", EntitySpawnAttempt);

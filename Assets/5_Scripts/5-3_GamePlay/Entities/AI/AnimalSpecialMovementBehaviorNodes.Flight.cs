@@ -44,6 +44,10 @@ public static partial class AnimalSpecialMovementBehaviorNodes
         {
             var flight = Flight(context); return () => flight.IsEscaping;
         });
+        AnimalBehaviorTreeRegistry.RegisterCondition("flight.lightDanger", (context, _) =>
+        {
+            var flight = Flight(context); return () => flight.IsCurrentFlightPositionTooBright;
+        });
         AnimalBehaviorTreeRegistry.RegisterCondition("flight.canHunt", (context, _) =>
         {
             var flight = Flight(context); return () => flight.CanStartAquaticHunt;
@@ -90,6 +94,14 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             return new SpecialMovementActionNode(dt => flight.TickEscapeAction(dt)
                 ? AnimalBehaviorTreeStatus.Running : AnimalBehaviorTreeStatus.Success,
                 flight.BeginEscapeAction, flight.StopFlightAction);
+        });
+        AnimalBehaviorTreeRegistry.RegisterAction("flight.seekDark", (context, _) =>
+        {
+            var flight = Flight(context);
+            return new SpecialMovementActionNode(dt => flight.TickFlightLightAvoidance(dt)
+                ? AnimalBehaviorTreeStatus.Running : AnimalBehaviorTreeStatus.Failure,
+                flight.BeginFlightLightAvoidance, flight.EndFlightLightAvoidance,
+                () => flight.CanSeekDarkerFlightPosition);
         });
         AnimalBehaviorTreeRegistry.RegisterAction("flight.forage", (context, _) =>
         {

@@ -67,6 +67,14 @@ public sealed partial class SpawnerConfigDefinition
 {
     [JsonProperty(Required = Required.Default)]
     public bool WaterOnly;
+    [JsonProperty(Required = Required.Default)]
+    public List<string> AllowedDimensionIds = new() { WorldAddress.SurfaceDimensionId };
+    [JsonProperty(Required = Required.Default)]
+    public float MinimumWaterDepth;
+    [JsonProperty(Required = Required.Default)]
+    public float MaximumWaterDepth = 1f;
+    [JsonProperty(Required = Required.Default)]
+    public int ShoreRadius;
     public SpawnerTreeHabitat TreeHabitat = new();
     public string Id;
     public string EcologyGroup = "animals";
@@ -104,6 +112,10 @@ public sealed partial class SpawnerConfigDefinition
         config.name = Id;
         config.PersistentId = Id;
         config.WaterOnly = WaterOnly;
+        config.AllowedDimensionIds = new List<string>(AllowedDimensionIds);
+        config.MinimumWaterDepth = MinimumWaterDepth;
+        config.MaximumWaterDepth = MaximumWaterDepth;
+        config.ShoreRadius = ShoreRadius;
         config.TreeHabitat = new SpawnerTreeHabitat
         {
             Enabled = TreeHabitat.Enabled,

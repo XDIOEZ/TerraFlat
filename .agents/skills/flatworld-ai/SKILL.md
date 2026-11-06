@@ -27,6 +27,10 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 
 Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则：`Assets/Resources/GameConfig/Spawners/Rules/`；ECS 图集：`Assets/6_Art/Generated/Actors/AIECS/`，Shader：`Assets/9_Shaders/Shader/AiecsSpriteLit.shader`。
 
+- P0/P1 的20种动物在 `definitions/ecology-actors.json`，共用已有外壳和独立单图；飞行变体清空 `animator.singleSpriteStates`，避免父物种状态图覆盖。原料在 Items/Recipes 的 `animal_ecology.json`；未验收的捕捉、骑乘、挤奶、繁殖与毒性不计作已实现。
+- 生成规则 `allowedDimensionIds` 默认仅 `surface`，空列表才不限制；洞穴启用自然生成后只接显式 `cave` 规则。正式草原名为“温带草原”，河湖共用“河流”；`shoreRadius` 要求同轮已加载的可走陆地和真实水格，深度范围约束出生水格与邻水格，岸上不套最低水深。
+- 两栖复用 `Mod_AquaticMovement.landMovementEnabled/landSpeed`，不叠地面 Mover；真实水体须 `WorldWater.WaterContact`。`swimAndHunt/aquatic.combat` 用通用 hunting/combat 与连通水路，逐次复核身份/视线/攻击范围；`flightMovement.landPreyIds` 让陆猎与可选携鱼分离，`avoidLight` 启用飞行避光。草食群聚只用 `wander.herdTags/herdRadius/herdCohesion`，不创建群猎能力。覆盖入口为 `ai/animal_ecology_catalog`、`ai/aquatic_traversal` 和现场 `ai/aquatic_habitat`。
+
 ## JSON 行为树
 
 - 行为树、飞行、水生模块通过 Detector 的来源半径接口声明/撤销最小范围，不覆盖基础值；重载降低范围或来源释放时使旧异步查询失效。构建期只保存展开树，运行时重绑当前工厂、隔离节点与能力实例。
@@ -95,7 +99,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 
 ## 行为能力与表现
 
-- 熊 `AnimalTerritorialHatredCapability` 组合独立驻留/仇恨表：枚举同世界注册玩家，8米内连续停留超过60秒初始120（遮挡不断计时，仍受通用感知半径上限）；真实命中含零伤按冻结 Credit/Owner 向生物+30。每目标每秒-1，最高有效可见仇恨优先，归零脱战，同次驻留不补120，离开再进重计；完整身份失效清表，前摇开窗前复核仇恨/视野。Bear 为森林单只 GO、单图摇摆，不继承狼咬/叫声/食物链；规则 `ai/bear_provocation_sequence`。
+- 熊 `AnimalTerritorialHatredCapability` 组合独立驻留/仇恨表：枚举同世界注册玩家，8米内连续停留超过60秒初始120（遮挡不断计时，仍受通用感知半径上限）；真实命中含零伤按冻结 Credit/Owner 向生物+30。每目标每秒-1，最高有效可见仇恨优先，归零脱战，同次驻留不补120，离开再进重计；完整身份失效清表，前摇开窗前复核仇恨/视野。Bear 为森林单只 GO、单图摇摆，不继承狼咬/叫声；树按温度→领地战斗→猎物战斗→游荡排序，独立 `hunting.includePlayers=false` 只接鹿等猎物，不改变玩家激怒规则。规则 `ai/bear_provocation_sequence`。
 
 - ECS 生物由 `AiecsSwayAnimation` 在共享首图上合成摇摆、呼吸、定向攻击和死亡翻转，原生主体批次与太阳阴影共用结果；动作按完整身份保存，联机副本用 GUID 建立本地身份。目录每状态只留首图与定义基础姿态，参数沿用正式动画模块；鸟类保留外壳状态贴图与真实高度。导出器不再读取 Animator 时间轴；规则 `ai/ecs_sway_animation`，PlayMode 中不重导或刷新。
 
@@ -115,6 +119,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - 鸡与野猪共用 `AIAnimalForaging` 的草格/掉落食物目标、接近、摄食和清理；饥饿阈值、食物 Tag、草食时长及营养策略仍由物种配置和 AI 保持。
 - 温度避险不记录/回退安全点；记最多 8 个危险锚点 30 秒，以危险点指向角色的向量引导分段随机离开。陆地普通目标保留距离衰减偏置，线路接近危险记录则保持强偏置并走局部随机段；同一段目标缓存。安全环境持续 2 秒且距危险记录至少 3 格后才解除强制避险，体温未恢复则等待。
 - 雪地专属白兔/雪豹在 `snow-actors.json` 配置初始体表 -10℃，安全范围分别 -30～20℃/-30～25℃。新增物种按栖息地与玩法定位配安全范围与初始体温，不在通用温度模块堆物种特例。
+- 狼扩展到草原/雪地后，安全低温在 Wolf 定义设为 -30℃；Zombie 显式保留 5℃，不继承这一物种适应变化，规则 `ai/animal_ecology_catalog`。
 - 小鱼在 `fish-actors.json` 单独配置安全体表 -26.5～63.5℃，以初始 36.5℃ 为基准将冷热容差都翻倍；不改变其他动物的通用温度规则。
 - `AI_DebugOverlayRenderer` 集中绘头顶信息；统一宿主读 `Context.CurrentAction`，拥有 `IActorDebugOverlayOwner` 的群落详细诊断独占自身标签。受伤禁睡、逃离记忆与睡眠警戒分别由能力持有。
 - GM 动物、蜜蜂和蜂巢头顶诊断共用 `AI_DebugOverlay.CanDrawWorldLabels`，正式背包/制作/设置等交互面板或手机抽屉打开时暂时让位，关闭后仍保留 GM 开关状态。

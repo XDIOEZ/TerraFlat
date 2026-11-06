@@ -1,3 +1,56 @@
+-- 正式加载20种新增动物及自然规则，检查维度隔离、水深边界和实际产出引用。
+test.system("ai", "animal_ecology_catalog", {}, function(data)
+    local ids = {"Deer", "Cow", "Goat", "Horse", "Fox", "Lizard", "Scorpion", "Reindeer",
+        "Carp", "Sardine", "Crab", "Bat", "Spider", "Frog", "WildDuck", "Snake", "Camel", "Shark", "Eagle", "Rat"}
+    local actors, rules, spawned = {}, {}, {}
+    for _, actor in ipairs(data.actors) do actors[actor.id] = actor end
+    for _, rule in ipairs(data.rules) do
+        rules[rule.id] = rule
+        assert(rule.limit > 0 and rule.budget > 0, "动物刷新绕开生态预算：" .. rule.id)
+        if rule.id == "ecology_cave_animals" then
+            assert(rule.cave and not rule.surface, "洞穴动物没有独立维度")
+        else
+            assert(rule.surface and not rule.cave, "地表规则泄漏到洞穴：" .. rule.id)
+        end
+        for _, id in ipairs(rule.species) do spawned[id] = true end
+    end
+    for _, id in ipairs(ids) do
+        local actor = actors[id]
+        assert(actor and spawned[id], "新增动物未进入正式目录或自然生成：" .. id)
+        assert(actor.sprite == "Assets/6_Art/Generated/Actors/" .. id .. "/" .. id .. "_Idle_Right.png",
+            "新增动物仍使用父物种外观：" .. id)
+        assert(actor.faction == "ecology." .. string.lower(id), "新增物种继承了父物种阵营：" .. id)
+        local drops = data.loot[actor.loot]
+        assert(drops and #drops > 0, "新增动物没有实际产出：" .. id)
+        for _, drop in ipairs(drops) do assert(drop.min > 0 and drop.max >= drop.min, "掉落数量无效：" .. id) end
+    end
+    assert(spawned.Sheep, "已有绵羊仍没有自然生成入口")
+    assert(actors.Wolf.modules.temperature.parameters.Data.SafeTemperatureMin == -30 and
+        actors.Zombie.modules.temperature.parameters.Data.SafeTemperatureMin == 5,
+        "雪地狼没有耐寒能力，或改动错误传播到继承狼的丧尸")
+    local shark = rules.ecology_marine_predators
+    assert(shark.waterOnly and not shark.depths[1] and not shark.depths[6] and shark.depths[7] and shark.depths[8],
+        "深水捕食者出生深度边界错误")
+    assert(rules.ecology_coastal_shore.shoreRadius == 3 and not rules.ecology_coastal_shore.depths[5] and
+        rules.ecology_freshwater_shore.shoreRadius == 3, "岸边动物缺少水岸及浅水约束")
+    assert(rules.ecology_marine_school.count == 5 and rules.ecology_marine_predators.count == 1,
+        "鱼群与大型捕食者的群体规模没有区分")
+    local fox = actors.Fox.modules.ai.parameters.behaviorTree.capabilities.hunting
+    local bear = actors.Bear.modules.ai.parameters.behaviorTree.capabilities.hunting
+    assert(not fox.includePlayers and not bear.includePlayers, "小型捕食或熊觅食误把玩家当普通猎物")
+    local horse = actors.Horse.modules.ai.parameters.behaviorTree.capabilities
+    assert(horse.wander.herdTags[1] == "Horse" and horse.pack == nil, "草食群居依赖了群猎战斗状态")
+    for _, id in ipairs({"Crab", "Frog", "WildDuck"}) do
+        assert(actors[id].modules.aquaticMovement.parameters.landMovementEnabled,
+            "两栖动物未启用水陆通行：" .. id)
+    end
+    assert(actors.Bat.modules.flightMovement.parameters.avoidLight and
+        not actors.Bat.modules.flightMovement.parameters.enableEggLaying,
+        "蝙蝠缺少光照避险或误产鸟蛋")
+    assert(actors.Eagle.modules.flightMovement.parameters.landPreyIds[1] == "Rabbit",
+        "飞行捕食者未接入陆生猎物")
+end, "P0/P1动物生态目录、产出、群体与维度水岸约束")
+
 -- 原生居民按当前位置归块；卸载休眠保留身份，恢复不补算离线期限。
 for _, wrapped in ipairs({false, true}) do
     test.system("ai", "ecs_resident_ownership", {wrapped = wrapped}, function(data)
@@ -483,6 +536,20 @@ for _, case in ipairs({
         end
         assert(not data.acceptedAfterChange and data.queriesAfterChange > 0, "水域变化后仍复用上一次线路缓存：" .. case.name)
     end, "水生线路查询去重：" .. case.name)
+end
+
+-- 两栖和受导航约束的水路不能从相邻阻挡格的对角穿过。
+for _, case in ipairs({
+    {name = "斜向水陆相连", blocked = {}, accepted = true},
+    {name = "水平侧格阻挡", blocked = {{x=1,y=0}}, accepted = false},
+    {name = "垂直侧格未知", blocked = {{x=0,y=1}}, accepted = false}
+}) do
+    test.system("ai", "aquatic_traversal", {
+        targetX=1.9, targetY=1.9, blockedCells=case.blocked, preventCornerCutting=true
+    }, function(data)
+        assert(data.accepted == case.accepted, "两栖斜向路径错误：" .. case.name)
+        assert(not data.acceptedAfterChange, "目标格改变后仍使用旧的两栖通行结果：" .. case.name)
+    end, "两栖路径与阻挡斜角：" .. case.name)
 end
 
 -- 同一条同步前视弧线保留原采样点，仅跨分段合并连续相同规范格。

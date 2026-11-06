@@ -40,7 +40,9 @@
     "maxAllowedTileLight": 0.35,
     "allowedBiomeNames": [
       "森林",
-      "石地"
+      "石地",
+      "温带草原",
+      "雪地"
     ],
     "recycleDistance": 120.0,
     "recycleGraceSeconds": 25.0,

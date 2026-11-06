@@ -1,5 +1,6 @@
 using System;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 /// <summary>为特殊移动能力注册树条件与可中断动作。</summary>
 public static partial class AnimalSpecialMovementBehaviorNodes
@@ -24,8 +25,17 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             context.DisableSharedPerceptionUpdates();
             Movement = context.Actor.itemMods.RequireSingleModById<Mod_AquaticMovement>(Mod_AquaticMovement.ModuleId);
         }
-        public override void Tick(float deltaTime) => Movement.TickAquaticEnvironmentAndThreats(deltaTime);
-        public override void TickWhileManuallyControlled(float deltaTime) => Movement.TickAquaticEnvironmentAndThreats(deltaTime, false);
+        public override void Tick(float deltaTime)
+        {
+            Movement.BeginAquaticAnimationMotionFrame();
+            Movement.TickAquaticEnvironmentAndThreats(deltaTime);
+        }
+        public override void TickWhileManuallyControlled(float deltaTime)
+        {
+            Movement.BeginAquaticAnimationMotionFrame();
+            Movement.TickAquaticEnvironmentAndThreats(deltaTime, false);
+        }
+        public override void Dispose() => Movement.SetWaterCombatTargetRestriction(false);
     }
 
     private static Mod_LightSensitiveNavigation LightNavigation(AnimalBehaviorTreeContext context)
@@ -86,6 +96,8 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             return new SpecialMovementActionNode(dt => { movement.TickSwimAction(dt); return AnimalBehaviorTreeStatus.Running; },
                 null, movement.StopAquaticAction);
         });
+        AnimalBehaviorTreeRegistry.RegisterAction("aquatic.combat", (context, parameters) =>
+            new AquaticCombatActionNode(context, parameters, Aquatic(context)));
     }
 
     private static void RegisterLightNavigationNodes()
@@ -136,6 +148,67 @@ public static partial class AnimalSpecialMovementBehaviorNodes
             var movement = LightNavigation(context);
             return new SpecialMovementActionNode(_ => { movement.StopNavigation(); return AnimalBehaviorTreeStatus.Running; });
         });
+    }
+    #endregion
+
+    #region 水域追击与攻击
+    private sealed class AquaticCombatActionNode : AnimalBehaviorTreeNode
+    {
+        private readonly AnimalBehaviorTreeContext context;
+        private readonly Mod_AquaticMovement movement;
+        private readonly AnimalHuntingCapability hunting;
+        private readonly AnimalCombatCapability combat;
+
+        public AquaticCombatActionNode(AnimalBehaviorTreeContext context, JObject parameters, Mod_AquaticMovement movement)
+        {
+            this.context = context;
+            this.movement = movement;
+            hunting = AnimalLandActionSupport.Capability(context, AnimalLandTargetRules.Text(parameters, "sourceKey", "hunting"),
+                (actor, config, saved) => new AnimalHuntingCapability(actor, config, saved));
+            combat = AnimalLandActionSupport.Combat(context, parameters);
+            hunting.AdditionalEligibility = movement.CanPursueTargetInWater;
+            combat.AttackWindowGuard = CanContinueAttackWindow;
+        }
+
+        private bool HasUsableTarget() => hunting.Target != null && hunting.TargetVisible &&
+            AnimalLandTargetRules.IsLivingOpponent(context, hunting.Target) && movement.CanPursueTargetInWater(hunting.Target);
+
+        private bool CanContinueAttackWindow() => HasUsableTarget() &&
+            WorldTopologyRuntime.SqrDistance(context.Position, hunting.Target.transform.position) <= combat.AttackRange * combat.AttackRange;
+
+        public override bool CanRun => hunting.Target != null && hunting.TargetVisible &&
+            AnimalLandTargetRules.IsLivingOpponent(context, hunting.Target);
+        protected override void OnEnter()
+        {
+            movement.SetWaterCombatTargetRestriction(true);
+            combat.EnterAttack();
+        }
+        protected override AnimalBehaviorTreeStatus OnTick(float deltaTime)
+        {
+            if (!HasUsableTarget()) return AnimalBehaviorTreeStatus.Failure;
+            Vector2 position = hunting.Target.transform.position;
+            context.FaceTarget(position, true);
+            if (combat.IsAttackLocked)
+            {
+                context.BeginAction("attack", "Attack", AIStateAnimationRole.Action);
+                return AnimalBehaviorTreeStatus.Running;
+            }
+            if (combat.IsCooldownDone && WorldTopologyRuntime.SqrDistance(context.Position, position) <= combat.AttackRange * combat.AttackRange)
+            {
+                context.BeginAction("attack", "Attack", AIStateAnimationRole.Action);
+                combat.StartAttack(position);
+                return AnimalBehaviorTreeStatus.Running;
+            }
+            context.BeginAction("chase", "Move", AIStateAnimationRole.Moving);
+            return movement.TrySwimTowardCombatTarget(position, deltaTime, combat.AttackRange)
+                ? AnimalBehaviorTreeStatus.Running : AnimalBehaviorTreeStatus.Failure;
+        }
+        protected override void OnExit()
+        {
+            combat.StopAttack(true);
+            movement.StopAquaticAction();
+            movement.SetWaterCombatTargetRestriction(false);
+        }
     }
     #endregion
 

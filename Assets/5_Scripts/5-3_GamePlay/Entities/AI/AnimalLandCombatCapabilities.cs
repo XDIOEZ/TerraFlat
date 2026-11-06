@@ -18,6 +18,7 @@ public sealed class AnimalCombatCapability : AnimalBehaviorTreeCapability
     public bool IsCooldownDone => attack.IsCooldownDone;
     public float CooldownRemaining => attack.CooldownRemaining;
     public bool HasActiveSkill => skills.IsAnyActive;
+    public Func<bool> AttackWindowGuard { get; set; }
     public bool HasUsableSkill(Item target) => target != null && skills.HasUsableSkill(target);
 
     public AnimalCombatCapability(AnimalBehaviorTreeContext context, JObject config, JObject saved)
@@ -37,7 +38,11 @@ public sealed class AnimalCombatCapability : AnimalBehaviorTreeCapability
         skills.Bind(context.Actor);
         skills.ResetRuntime();
     }
-    public override void Tick(float deltaTime) => attack.Tick(deltaTime);
+    public override void Tick(float deltaTime)
+    {
+        if (attack.IsAttackLocked && AttackWindowGuard != null && !AttackWindowGuard()) StopAttack(true);
+        attack.Tick(deltaTime);
+    }
     public bool TryStartSkill(Item target) => skills.TryStart(target);
     public void CancelSkills() => skills.CancelAll();
     public void StartAttack(Vector3 targetPosition)
@@ -130,6 +135,7 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
     #region 捕食目标与饥饿
     private readonly AnimalBehaviorTreeContext context;
     private readonly string[] preyIds;
+    private readonly bool includePlayers;
     private readonly float satiatedRange;
     private readonly float hungryRange;
     private readonly float lossRange;
@@ -138,25 +144,30 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
     private readonly string chaseAction;
     private Item target;
     private bool targetIsPrey;
+    private int targetGuid;
+    private uint targetGeneration;
     private float hungerRemaining;
     private float pursueElapsed;
     private float reacquireRemaining;
     private float targetRefreshRemaining;
     public bool IsHungry => hungerRemaining <= 0f;
     public Item Target => target;
+    public Func<Item, bool> AdditionalEligibility { get; set; }
     public bool TargetVisible => target != null && AnimalLandTargetRules.IsVisible(context, target, lossRange);
 
     public AnimalHuntingCapability(AnimalBehaviorTreeContext context, JObject config, JObject saved)
     {
         this.context = context;
         preyIds = AnimalLandTargetRules.Strings(config, "preyIds");
+        includePlayers = AnimalLandTargetRules.Flag(config, "includePlayers", true);
         satiatedRange = AnimalLandTargetRules.Number(config, "satiatedRange", 8f);
         hungryRange = AnimalLandTargetRules.Number(config, "hungryRange", 24f);
         lossRange = AnimalLandTargetRules.Number(config, "lossRange", 30f);
         pursuitLimit = AnimalLandTargetRules.Number(config, "pursuitLimit", 30f);
         reacquireDelay = AnimalLandTargetRules.Number(config, "reacquireDelay", 10f);
         chaseAction = AnimalLandTargetRules.Text(config, "chaseAction", "chase");
-        hungerRemaining = saved?["hungerRemaining"]?.Value<float>() ?? GetDayLength();
+        hungerRemaining = saved?["hungerRemaining"]?.Value<float>() ??
+            AnimalLandTargetRules.Number(config, "initialHungerSeconds", GetDayLength());
         context.RequireMinimumDetectionRadius(Mathf.Max(hungryRange, lossRange));
     }
 
@@ -168,6 +179,8 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
         hungerRemaining = Mathf.Max(0f, hungerRemaining - Mathf.Max(0f, deltaTime));
         reacquireRemaining = Mathf.Max(0f, reacquireRemaining - Mathf.Max(0f, deltaTime));
         targetRefreshRemaining = Mathf.Max(0f, targetRefreshRemaining - Mathf.Max(0f, deltaTime));
+        if (target != null && (target.itemData?.Guid != targetGuid || target.RuntimeGeneration != targetGeneration ||
+            AdditionalEligibility != null && !AdditionalEligibility(target))) Clear();
         if (target == null && targetIsPrey)
         {
             hungerRemaining = GetDayLength();
@@ -198,12 +211,16 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
         {
             if (!AnimalLandTargetRules.IsLivingOpponent(context, candidate)) continue;
             bool prey = IsPrey(candidate);
-            if (!AnimalLandTargetRules.IsPlayer(candidate) && (!prey || !IsHungry)) continue;
+            bool player = AnimalLandTargetRules.IsPlayer(candidate);
+            if (player ? !includePlayers : !prey || !IsHungry) continue;
             if (!AnimalLandTargetRules.IsVisible(context, candidate, range)) continue;
             float distance = WorldTopologyRuntime.SqrDistance(context.Position, candidate.transform.position);
             if (distance >= nearest) continue;
+            if (AdditionalEligibility != null && !AdditionalEligibility(candidate)) continue;
             nearest = distance;
             target = candidate;
+            targetGuid = candidate.itemData.Guid;
+            targetGeneration = candidate.RuntimeGeneration;
             targetIsPrey = prey;
             pursueElapsed = 0f;
         }
@@ -214,7 +231,7 @@ public sealed class AnimalHuntingCapability : AnimalBehaviorTreeCapability
             if (string.Equals(candidate.itemData?.IDName, id, StringComparison.OrdinalIgnoreCase)) return true;
         return false;
     }
-    private void Clear() { target = null; targetIsPrey = false; pursueElapsed = 0f; }
+    private void Clear() { target = null; targetGuid = 0; targetGeneration = 0; targetIsPrey = false; pursueElapsed = 0f; }
     private float GetDayLength()
     {
         DayTimeSystem time = DayTimeSystem.Instance;

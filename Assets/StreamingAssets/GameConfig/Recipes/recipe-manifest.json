@@ -205,6 +205,11 @@
       "id": "crafting/automation_radio",
       "path": "crafting/automation_radio.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/animal_ecology",
+      "path": "crafting/animal_ecology.json",
+      "enabled": true
     }
   ]
 }

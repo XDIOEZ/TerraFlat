@@ -161,6 +161,13 @@
             }
           },
           "inherit": false
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "SafeTemperatureMin": 5
+            }
+          }
         }
       },
       "itemData": {

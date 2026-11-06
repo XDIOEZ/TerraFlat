@@ -4,15 +4,35 @@
     {
       "id": "Bear_Default",
       "entries": [
-        { "itemId": "Meat", "probability": 1.0, "minAmount": 5, "maxAmount": 8 },
-        { "itemId": "Bone", "probability": 1.0, "minAmount": 3, "maxAmount": 5 },
-        { "itemId": "Fat", "probability": 1.0, "minAmount": 3, "maxAmount": 6 }
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 5,
+          "maxAmount": 8
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 5
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 6
+        }
       ]
     },
     {
       "id": "SmallFish_Default",
       "entries": [
-        { "itemId": "Meat", "probability": 1.0, "minAmount": 1, "maxAmount": 1 }
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
       ]
     },
     {
@@ -669,6 +689,292 @@
           "probability": 1,
           "minAmount": 1,
           "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Deer_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 3,
+          "maxAmount": 5
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Cow_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 6,
+          "maxAmount": 9
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 4,
+          "maxAmount": 4
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Goat_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 4
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Horse_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 4,
+          "maxAmount": 6
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 3,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Fox_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Lizard_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Scorpion_Default",
+      "entries": [
+        {
+          "itemId": "Chitin",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Reindeer_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 3,
+          "maxAmount": 6
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Carp_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Sardine_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Crab_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Chitin",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Bat_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Spider_Default",
+      "entries": [
+        {
+          "itemId": "SpiderSilk",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Frog_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "WildDuck_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Snake_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Camel_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 6,
+          "maxAmount": 10
+        },
+        {
+          "itemId": "RawHide",
+          "probability": 1,
+          "minAmount": 4,
+          "maxAmount": 4
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Shark_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 5,
+          "maxAmount": 8
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Eagle_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
+      "id": "Rat_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
         }
       ]
     }

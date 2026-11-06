@@ -22,6 +22,7 @@
     "huntAndWander": "behavior-trees/composites/捕猎与游荡.json",
     "damageRetreat": "behavior-trees/composites/受伤撤退.json",
     "aquaticPredation": "behavior-trees/composites/水域捕猎.json",
-    "packLowHealthFlee": "behavior-trees/composites/群体残血撤退.json"
+    "packLowHealthFlee": "behavior-trees/composites/群体残血撤退.json",
+    "swimAndHunt": "behavior-trees/profiles/水中捕猎.json"
   }
 }

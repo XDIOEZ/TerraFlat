@@ -652,6 +652,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
     private bool IsValidSpawnPosition(SpawnerConfig config, Vector3 candidate,
         SpawnerCountdownProgress batch = null, int requiredRoom = 1)
     {
+        if (!config.AllowsDimension(_chunkManager.ResolveWorldAddress(candidate).DimensionId))
+            return ObserveSpawn(config, "候选维度不符合规则");
         if (!IsNearAnyPlayer(candidate, config.MaxSpawnDistance + 0.0001f))
             return ObserveSpawn(config, "候选超出玩家周围的生成距离");
         // 顺序沿用原短路校验，只记录这次候选最先被哪条规则拒绝。
@@ -669,6 +671,8 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
             return ObserveSpawn(config, "候选地形尚未就绪");
         if (!(config.WaterOnly ? AquaticHabitat.CanSwimAt(candidate) : IsWalkableSpawnPosition(candidate)))
             return ObserveSpawn(config, "候选不满足水域或可行走地面要求");
+        if (!IsSpawnWaterDepthAndShoreAllowed(config, candidate))
+            return ObserveSpawn(config, "候选不满足水深或水陆岸线要求");
         if (!IsBiomeAllowed(config, candidate))
             return ObserveSpawn(config, "候选群系不符合规则");
         if (!IsGroundTileAllowed(config, candidate))
@@ -677,6 +681,33 @@ public partial class MonsterSpawnerManager : MonoBehaviour, IGameplayFixedStepSi
             return ObserveSpawn(config, "候选光照不符合规则");
 
         return true;
+    }
+
+    // 岸边物种共用真实水层与可走陆地，不把群系名或未加载格当作岸线。
+    private bool IsSpawnWaterDepthAndShoreAllowed(SpawnerConfig config, Vector2 position)
+    {
+        if (config.MinimumWaterDepth == 0f && config.MaximumWaterDepth == 1f && config.ShoreRadius == 0)
+            return true;
+        if (!AquaticHabitat.TryGetDepth(position, out float depth)) return false;
+        bool water = depth >= AquaticHabitat.MinimumDepth;
+        if ((water || config.WaterOnly || config.ShoreRadius == 0) && !config.AllowsWaterDepth(depth)) return false;
+        if (config.ShoreRadius == 0) return true;
+        bool land = !water && IsWalkableSpawnPosition(position);
+        int radius = config.ShoreRadius;
+        for (int y = -radius; y <= radius; y++)
+            for (int x = -radius; x <= radius; x++)
+            {
+                if (x * x + y * y > radius * radius) continue;
+                Vector2 sample = WorldTopologyRuntime.NormalizePosition(position + new Vector2(x, y));
+                if (!AquaticHabitat.TryGetDepth(sample, out float sampledDepth)) continue;
+                if (sampledDepth >= AquaticHabitat.MinimumDepth)
+                {
+                    if (config.AllowsWaterDepth(sampledDepth)) water = true;
+                }
+                else if (!land && IsWalkableSpawnPosition(sample)) land = true;
+                if (water && land) return true;
+            }
+        return false;
     }
 
     private bool IsWalkableSpawnPosition(Vector3 worldPos)

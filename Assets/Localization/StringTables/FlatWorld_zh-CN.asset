@@ -23,7 +23,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 28102600000120001
-    m_Localized: "平静时不会主动攻击。玩家在周围8米内连续停留超过60秒会激怒熊；初始仇恨120，每秒衰减1，每次被攻击对攻击者增加30点仇恨。"
+    m_Localized: "会捕猎鹿等草食动物，但平静时不会主动攻击玩家。玩家在周围8米内连续停留超过60秒会激怒熊；初始仇恨120，每秒衰减1，每次被攻击对攻击者增加30点仇恨。"
     m_Metadata:
       m_Items: []
   - m_Id: 27615045296885764
@@ -4728,6 +4728,182 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 1554840542220725617
     m_Localized: "一次性无线电电池，内含3600焦耳电量；不可充电，耗尽后需要更换。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2322082582236255653
+    m_Localized: "鹿"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3708406163192318980
+    m_Localized: "森林与草原的警觉猎物，产肉和生皮；狼与熊会捕猎。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1198421108236220230
+    m_Localized: "牛"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2159739029561127949
+    m_Localized: "草原成群活动的大型草食动物，产肉、生皮和脂肪；挤奶与驯养后续接入。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1327212114868466579
+    m_Localized: "山羊"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3424651328926790980
+    m_Localized: "在石地边缘觅食的草食动物，提供肉和生皮，也是狼的猎物。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2859146091651380899
+    m_Localized: "马"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 670086975001772148
+    m_Localized: "草原中快速而警觉的群居动物；首版为野生生态，捕捉与骑乘后续接入。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 194561869011248505
+    m_Localized: "狐狸"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2741866414873643266
+    m_Localized: "猎食鼠、蜥蜴、蛙和小型鸟兽，通常避开玩家。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2249835369971148311
+    m_Localized: "蜥蜴"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4294964131267065716
+    m_Localized: "沙漠和石地的小型动物，觅食昆虫与散落食物，遇到危险快速逃跑。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1564218939801067457
+    m_Localized: "蝎子"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 758958723494629788
+    m_Localized: "沙漠近身威胁；以钳击和尾刺攻击，掉落可加工的甲壳，不附带毒性。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3093288179156320843
+    m_Localized: "驯鹿"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3770396374352472113
+    m_Localized: "耐寒的雪地草食猎物，为狼和雪豹提供食物，产肉与生皮。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4363228543723669994
+    m_Localized: "鲤鱼"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2220072557062705792
+    m_Localized: "河流和湖泊中的淡水渔获，食物价值高于通用小鱼。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3565241969755836579
+    m_Localized: "沙丁鱼"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2439813525510546130
+    m_Localized: "成群出现的海鱼，是海洋基础渔获与大型捕食者的食物。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3437360567987695910
+    m_Localized: "螃蟹"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3473219282479450658
+    m_Localized: "在海滩与浅水岸边横行觅食，可在水陆交界自由换位，提供肉与甲壳。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1714799053833382248
+    m_Localized: "蝙蝠"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2726785391508423933
+    m_Localized: "栖居洞穴的飞行动物，趋向暗处并回避强光，不产鸟蛋。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2705239256979969001
+    m_Localized: "蜘蛛"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3145339027174282849
+    m_Localized: "森林与洞穴的小型危险生物，掉落蜘蛛丝，可捻为缝纫线。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2555817938131096283
+    m_Localized: "青蛙"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1594334628476028283
+    m_Localized: "淡水岸边的两栖小猎物，觅食昆虫，可连续上岸与下水。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2072873773824848734
+    m_Localized: "野鸭"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2370110840586548918
+    m_Localized: "河流与湖岸的水鸟，可在岸上和水里觅食，提供肉；首版不支持飞行与产蛋。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3926760148418039404
+    m_Localized: "蛇"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 309283773501673237
+    m_Localized: "森林、石地和沙漠的伏击者，原地守候近处小猎物，近身咬击，不附带毒性。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2406979905977160908
+    m_Localized: "骆驼"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1636832349788017880
+    m_Localized: "耐热的大型沙漠草食动物，提供肉、生皮与脂肪；负重和骑乘后续接入。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 534999927661982899
+    m_Localized: "鲨鱼"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1206067192629208578
+    m_Localized: "海洋深水捕食者，在连通水域追击海鱼和入水玩家，无法越过陆地攻击。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 287050384321527425
+    m_Localized: "鹰"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1397387096193004787
+    m_Localized: "石地高地的飞行捕食者，俯冲捕猎兔、鼠、蛙与蜥蜴，也可捕鱼。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3388001265645299718
+    m_Localized: "老鼠"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3718194480260950150
+    m_Localized: "草原和森林的小型杂食动物，只吃自然食物与掉落物，不偷取库存。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1219118623541394840
+    m_Localized: "蜘蛛丝"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4590887245811513167
+    m_Localized: "野生蜘蛛留下的丝束，可捻成缝纫线；不是蚕茧或蚕丝。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2663737559635307045
+    m_Localized: "甲壳"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1063067998475956560
+    m_Localized: "蝎子和螃蟹的坚硬外壳，捣碎后与腐殖质混合制成肥料。"
     m_Metadata:
       m_Items: []
   references:

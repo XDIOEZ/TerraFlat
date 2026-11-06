@@ -218,6 +218,7 @@ public sealed partial class Mod_AnimalFlightMovement
         // Player 身份统一走项目数据 Tag，不依赖 Unity Tag。
         if (ActorIdentity.IsPlayer(candidate as Item) || candidate.itemData?.Tags?.ContainsTag(Tag.Player) == true)
             return true;
+        if (MatchesLandPreyId(candidate) && IsWithinPredationWeight(candidate)) return false;
         if (candidate.itemData?.Tags == null)
             return false;
 

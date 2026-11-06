@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "SpiderSilk",
+      "parent": "BasicItem_Base",
+      "gameName": "蜘蛛丝",
+      "description": "野生蜘蛛留下的丝束，可捻成缝纫线；不是蚕茧或蚕丝。",
+      "labelKey": "item.SpiderSilk.name",
+      "descriptionKey": "item.SpiderSilk.description",
+      "weight": 0.02,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/AnimalEcology/SpiderSilk.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Chitin",
+      "parent": "BasicItem_Base",
+      "gameName": "甲壳",
+      "description": "蝎子和螃蟹的坚硬外壳，捣碎后与腐殖质混合制成肥料。",
+      "labelKey": "item.Chitin.name",
+      "descriptionKey": "item.Chitin.description",
+      "weight": 0.1,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "Material",
+        "InventoryCategory.Material"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Items/AnimalEcology/Chitin.png"
+      },
+      "modules": {}
+    }
+  ]
+}

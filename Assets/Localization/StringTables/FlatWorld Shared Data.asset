@@ -4683,6 +4683,182 @@ MonoBehaviour:
     m_Key: "item.Radio_Battery.description"
     m_Metadata:
       m_Items: []
+  - m_Id: 2322082582236255653
+    m_Key: "item.Deer.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3708406163192318980
+    m_Key: "item.Deer.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1198421108236220230
+    m_Key: "item.Cow.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2159739029561127949
+    m_Key: "item.Cow.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1327212114868466579
+    m_Key: "item.Goat.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3424651328926790980
+    m_Key: "item.Goat.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2859146091651380899
+    m_Key: "item.Horse.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 670086975001772148
+    m_Key: "item.Horse.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 194561869011248505
+    m_Key: "item.Fox.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2741866414873643266
+    m_Key: "item.Fox.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2249835369971148311
+    m_Key: "item.Lizard.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4294964131267065716
+    m_Key: "item.Lizard.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1564218939801067457
+    m_Key: "item.Scorpion.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 758958723494629788
+    m_Key: "item.Scorpion.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3093288179156320843
+    m_Key: "item.Reindeer.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3770396374352472113
+    m_Key: "item.Reindeer.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4363228543723669994
+    m_Key: "item.Carp.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2220072557062705792
+    m_Key: "item.Carp.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3565241969755836579
+    m_Key: "item.Sardine.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2439813525510546130
+    m_Key: "item.Sardine.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3437360567987695910
+    m_Key: "item.Crab.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3473219282479450658
+    m_Key: "item.Crab.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1714799053833382248
+    m_Key: "item.Bat.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2726785391508423933
+    m_Key: "item.Bat.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2705239256979969001
+    m_Key: "item.Spider.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3145339027174282849
+    m_Key: "item.Spider.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2555817938131096283
+    m_Key: "item.Frog.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1594334628476028283
+    m_Key: "item.Frog.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2072873773824848734
+    m_Key: "item.WildDuck.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2370110840586548918
+    m_Key: "item.WildDuck.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3926760148418039404
+    m_Key: "item.Snake.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 309283773501673237
+    m_Key: "item.Snake.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2406979905977160908
+    m_Key: "item.Camel.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1636832349788017880
+    m_Key: "item.Camel.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 534999927661982899
+    m_Key: "item.Shark.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1206067192629208578
+    m_Key: "item.Shark.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 287050384321527425
+    m_Key: "item.Eagle.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1397387096193004787
+    m_Key: "item.Eagle.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3388001265645299718
+    m_Key: "item.Rat.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3718194480260950150
+    m_Key: "item.Rat.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1219118623541394840
+    m_Key: "item.SpiderSilk.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4590887245811513167
+    m_Key: "item.SpiderSilk.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2663737559635307045
+    m_Key: "item.Chitin.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1063067998475956560
+    m_Key: "item.Chitin.description"
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

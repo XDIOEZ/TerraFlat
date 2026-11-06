@@ -169,6 +169,7 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
     private readonly AnimalBehaviorTreeContext context;
     private readonly JObject config;
     private readonly AnimalPackCapability pack;
+    private readonly string[] herdTags;
     private Vector3 target;
     private bool hasTarget;
     private bool returningToLand;
@@ -179,6 +180,9 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
         this.context = context;
         config = context.GetCapabilityConfiguration(AnimalLandTargetRules.Text(p, "wanderKey", "wander")) ?? new JObject();
         if (p["packKey"] != null) pack = AnimalLandActionSupport.Pack(context, p);
+        herdTags = AnimalLandTargetRules.Strings(config, "herdTags");
+        if (herdTags.Length > 0)
+            context.RequireMinimumDetectionRadius(AnimalLandTargetRules.Number(config, "herdRadius", 8f));
     }
     protected override void OnEnter()
     {
@@ -232,6 +236,7 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
             float stop = AnimalLandTargetRules.Number(config, "stopDistance", .4f);
             Vector2 offset = UnityEngine.Random.insideUnitCircle * radius;
             if (pack != null) offset = pack.ApplyWanderCohesion(offset, radius);
+            offset = ApplyHerbivoreHerdCohesion(offset);
             offset = Vector2.ClampMagnitude(offset, radius);
             offset = AI_WanderUtility.PickSaferOffset(context.Position, offset, radius,
                 AnimalLandTargetRules.Flag(config, "avoidHighPenalty", true), AnimalLandTargetRules.Integer(config, "sampleCount", 8),
@@ -247,6 +252,30 @@ internal sealed class AnimalWanderAction : AnimalBehaviorTreeNode
             context.Mod_Mover.SetDestination(target);
         return AnimalBehaviorTreeStatus.Running;
     }
+    // 草食群聚只改变游荡方向，不创建群猎、仇恨或攻击状态。
+    private Vector2 ApplyHerbivoreHerdCohesion(Vector2 offset)
+    {
+        if (herdTags.Length == 0 || context.Detector == null) return offset;
+        float radius = AnimalLandTargetRules.Number(config, "herdRadius", 8f);
+        Vector2 sum = Vector2.zero;
+        int count = 0;
+        foreach (Item candidate in context.Detector.CurrentItemsInArea)
+        {
+            if (candidate == null || candidate == context.Actor || candidate.DestructionHandled ||
+                FactionRelationService.GetRelation(context.Actor, candidate) != FactionRelation.Friendly ||
+                candidate.itemMods?.GetMod_ByID<Mod_DamageReceiver>(ModText.Hp) is not { Hp: > 0f }) continue;
+            bool member = false;
+            foreach (string tag in herdTags)
+                if (candidate.itemData.Tags.ContainsTag(tag)) { member = true; break; }
+            if (!member) continue;
+            Vector2 delta = WorldTopologyRuntime.ShortestDelta(context.Position, candidate.transform.position);
+            if (delta.sqrMagnitude > radius * radius) continue;
+            sum += delta;
+            count++;
+        }
+        return count == 0 ? offset : offset + sum / count * AnimalLandTargetRules.Number(config, "herdCohesion", .7f);
+    }
+
     protected override void OnExit() { hasTarget = false; returningToLand = false; context.Mod_Mover.StopMovement(); }
     #endregion
 }

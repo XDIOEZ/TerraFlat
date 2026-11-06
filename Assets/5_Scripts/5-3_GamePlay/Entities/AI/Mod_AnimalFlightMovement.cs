@@ -199,6 +199,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         ResetForaging();
         ResetFishHunting(releaseCaptured: false);
         fishHuntScanRemaining = 0f;
+        ResetFlightLightAvoidance();
         ResetFatigueLanding();
         ClearTemperatureSafetyDestination();
         health.OnDamageReceived -= HandleBirdDamage;
@@ -236,6 +237,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         RestoreFlightSolidColliders();
         ClearTemperatureSafetyDestination();
         ResetFishHunting(releaseCaptured: true);
+        ResetFlightLightAvoidance();
         ResetForaging();
         ResetFatigueLanding();
         if (liftRoot != null)
@@ -318,6 +320,7 @@ public sealed partial class Mod_AnimalFlightMovement : Module, IItemModuleDepend
         if (!loaded || !IsAlive || fishingRod != null || !GameNetwork.HasStateAuthority) return;
         float step = Mathf.Max(0f, deltaTime);
         state.Elapsed += step;
+        flightLightSearchRemaining = Mathf.Max(0f, flightLightSearchRemaining - step);
         if (!permanentFlight)
         {
             AdvanceFlightStamina(state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:spider_silk_thread",
+      "displayName": "蜘蛛丝捻线",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "SpiderSilk",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Thread",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:chitin_fertilizer",
+      "displayName": "甲壳混合肥料",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "manualWorkSteps": 2,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Chitin",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Humus",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "ChippedTool",
+          "amount": 0
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Fertilizer",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -51,7 +51,7 @@ MonoBehaviour:
     FadeLightingFromPortals: 1
     SuppressTerrainWallShadows: 1
     SuppressWeather: 1
-    EnableMonsterSpawning: 0
+    EnableMonsterSpawning: 1
     LoadingTheme:
       BackgroundTexture: {fileID: 21300000, guid: 42e0b4fd5a43d9148916d0617fa9de68, type: 3}
       BackgroundTextureOpacity: 0.16

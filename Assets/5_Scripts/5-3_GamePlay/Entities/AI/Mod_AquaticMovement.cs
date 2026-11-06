@@ -27,7 +27,7 @@ public interface IAquaticPredatorThreat
 
 /// <summary>水生移动、潮湿状态和接管能力由行为树动作组合。</summary>
 public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyBinder, IAnimalTemperatureSafetyExecutor, IItemIndependentWorldMotionCapability2D,
-    IAquaticPredatorCarryTarget, IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D
+    IAquaticPredatorCarryTarget, IFishingLineCatchTarget, IItemPhysicsComponentsReceiver2D, IOutgoingDamageTargetRule
 {
     #region 配置与持久化
     public const string ModuleId = "Mod_AquaticMovement";
@@ -35,6 +35,10 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     private static readonly ProfilerMarker FindFoodMarker = new("FlatWorld.Fish.FindFood");
     private static readonly ProfilerMarker PlanFleeMarker = new("FlatWorld.Fish.PlanFlee");
     [Min(0.01f)] public float swimSpeed = 1.1f;
+    public bool landMovementEnabled;
+    [Min(0.01f)] public float landSpeed = 1.1f;
+    public bool respectNavigationBlockers;
+    public bool avoidDetectedThreats = true;
     [Min(0.1f)] public float wanderRadius = 3f;
     [Min(0.1f)] public float forageRadius = 8f;
     // 动作距离不再兼作游动停止距离。
@@ -88,6 +92,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     private Rigidbody2D body;
     private WorldPhysicsItemBodyRepresentation2D originalBodyRepresentation;
     private bool canUseIndependentMotion;
+    private bool restrictCombatTargetsToWater;
     public bool RequiresIndependentWorldMotion => true;
     private Collider2D[] colliders;
     private bool[] originalColliderEnabled;
@@ -108,6 +113,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     private Item predatorCarrier;
     private float carriedVisualHeight;
     private AquaticActorPresentation presentation;
+    private bool presentationMoving;
     private bool temperatureSafetyRetreat;
     private bool temperatureSafetyReached;
     private Vector2 temperatureSafetyDestination;
@@ -147,7 +153,8 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         originalBodyRepresentation = WorldPhysicsService2D.CaptureItemBodyRepresentation(body);
         canUseIndependentMotion = WorldPhysicsService2D.ConfigureItemBodyForExternallyPositionedMotion(item, body);
         BindAquaticPhysicsColliders();
-        presentation = new AquaticActorPresentation(item, fishRenderer);
+        presentation = new AquaticActorPresentation(item, fishRenderer, !landMovementEnabled);
+        presentationMoving = false;
         target = default;
         targetTag = null;
         fishingRod = null;
@@ -198,6 +205,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     protected override void OnUnload()
     {
         loaded = false;
+        restrictCombatTargetsToWater = false;
         if (threatDetector != null) threatDetector.RemoveMinimumDetectionRadiusForSource(this);
         if (health != null) health.OnDamageReceived -= HandleFishDamage;
         fishingRod = null;
@@ -240,7 +248,8 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         if (IsAlive && ActorProfileRegistry.IsLocallyControlled(item) && !IsHooked && predatorCarrier == null && !IsStranded)
         {
             Vector2 input = item.itemMods.GetMod_ByID<Mod_ActorControl>(Mod_ActorControl.ModuleId).ReadManualMovementInput();
-            if (input.sqrMagnitude > 0f) SwimTowards((Vector2)item.transform.position + input * swimSpeed * deltaTime, deltaTime);
+            if (input.sqrMagnitude > 0f) SwimTowards((Vector2)item.transform.position +
+                input * Mathf.Max(swimSpeed, landMovementEnabled ? landSpeed : swimSpeed) * deltaTime, deltaTime);
         }
         if (IsAlive && deltaTime > 0f && float.IsFinite(deltaTime)) UpdatePresentation(deltaTime);
     }
@@ -259,7 +268,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         if (!habitatKnown) return;
         buffs.SetWaterStackExposure(waterDepth > 0f);
         buffs.AdvanceWaterWetness(waterDepth, deltaTime);
-        if (buffs.GetBuffStacks(WetBuffIds.Wet) >= minimumWetStacks) state.DryElapsed = 0f;
+        if (landMovementEnabled || buffs.GetBuffStacks(WetBuffIds.Wet) >= minimumWetStacks) state.DryElapsed = 0f;
         else
         {
             state.DryElapsed += deltaTime;
@@ -271,7 +280,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
             }
         }
         if (!IsAlive) return;
-        if (waterDepth >= AquaticHabitat.MinimumDepth && !temperatureSafetyRetreat)
+        if ((landMovementEnabled || waterDepth >= AquaticHabitat.MinimumDepth) && !temperatureSafetyRetreat)
         {
             damageFleeRemaining = Mathf.Max(0f, damageFleeRemaining - deltaTime);
             if (autonomous) TickVigilance(deltaTime);
@@ -280,8 +289,10 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         }
     }
 
+    public void BeginAquaticAnimationMotionFrame() => presentationMoving = false;
+
     public bool IsBehaviorExternallyControlled => predatorCarrier != null || !habitatKnown;
-    public bool IsStranded => habitatKnown && !IsHooked && waterDepth < AquaticHabitat.MinimumDepth;
+    public bool IsStranded => !landMovementEnabled && habitatKnown && !IsHooked && waterDepth < AquaticHabitat.MinimumDepth;
     public bool HasAquaticThreat => HasActiveThreat;
     public bool CanForage
     {
@@ -346,6 +357,19 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
         TickSwim(deltaTime);
     }
 
+    // 水生追击只接受整条水路都可通行的目标。
+    public bool CanPursueTargetInWater(Item candidate) => candidate != null &&
+        AquaticHabitat.CanTraverse(item.transform.position, candidate.transform.position, false, respectNavigationBlockers);
+
+    public bool RestrictsOutgoingDamageTargets => restrictCombatTargetsToWater;
+    public bool AllowsOutgoingDamageTarget(Item target) => target != null &&
+        target.gameObject.scene == item.gameObject.scene && threatDetector.IsTargetInDetectorLogicalWorld(target) &&
+        CanPursueTargetInWater(target);
+    public void SetWaterCombatTargetRestriction(bool enabled) => restrictCombatTargetsToWater = enabled;
+
+    public bool TrySwimTowardCombatTarget(Vector2 position, float deltaTime, float attackRange) =>
+        SwimTowards(position, deltaTime, stopDistance: Mathf.Max(0f, attackRange) * 0.5f);
+
     private bool WillEatAvailableFood => food.Data?.nutrition != null &&
                                           food.Data.nutrition.GetFoodRate() < Mathf.Clamp01(eatAvailableFoodThreshold);
 
@@ -354,7 +378,10 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
                                          Mathf.Min(Mathf.Clamp01(eatAvailableFoodThreshold),
                                              Mathf.Clamp01(activeForageThreshold));
 
-    private bool IsReachableFood(Vector2 position) => AquaticHabitat.CanTraverse(item.transform.position, position);
+    private bool CanTraverseMovementHabitat(Vector2 origin, Vector2 position) =>
+        AquaticHabitat.CanTraverse(origin, position, landMovementEnabled, respectNavigationBlockers);
+
+    private bool IsReachableFood(Vector2 position) => CanTraverseMovementHabitat(item.transform.position, position);
 
     private void FindFood(float searchRadius)
     {
@@ -382,7 +409,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     {
         float allowedRadius = ShouldActivelyForage ? forageRadius : eatRange;
         if (!DroppedItemService.TryGetPickablePosition(target, out Vector2 position) ||
-            !AquaticHabitat.CanSwimAt(position) ||
+            !IsReachableFood(position) ||
             WorldTopologyRuntime.SqrDistance(item.transform.position, position) > allowedRadius * allowedRadius)
         { target = default; eatElapsed = 0f; return; }
         float distanceSqr = WorldTopologyRuntime.SqrDistance(item.transform.position, position);
@@ -420,7 +447,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
             for (int attempt = 0; attempt < 8; attempt++)
             {
                 Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin + UnityEngine.Random.insideUnitCircle * wanderRadius);
-                if (WorldTopologyRuntime.SqrDistance(origin, candidate) < 0.1f || !AquaticHabitat.CanTraverse(origin, candidate)) continue;
+                if (WorldTopologyRuntime.SqrDistance(origin, candidate) < 0.1f || !CanTraverseMovementHabitat(origin, candidate)) continue;
                 destination = candidate;
                 hasDestination = true;
                 break;
@@ -438,19 +465,20 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
     {
         Vector2 origin = item.transform.position;
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, position);
+        float speed = landMovementEnabled && !AquaticHabitat.CanSwimAt(origin) ? landSpeed : swimSpeed;
         float stepLength = AIApproachRange.ClampMovementStep(delta.magnitude,
-            swimSpeed * Mathf.Max(0f, speedMultiplier) * deltaTime, stopDistance);
+            speed * Mathf.Max(0f, speedMultiplier) * deltaTime, stopDistance);
         Vector2 step = Vector2.ClampMagnitude(delta, stepLength);
         Vector2 next = WorldTopologyRuntime.NormalizePosition(origin + step);
-        if (!AquaticHabitat.CanTraverse(origin, next)) return false;
-        MovePosition(next);
+        if (!CanTraverseMovementHabitat(origin, next)) return false;
+        if (!MovePosition(next)) return false;
+        if (step.sqrMagnitude > 0.000001f) presentationMoving = true;
         return true;
     }
 
-    private void MovePosition(Vector2 position)
+    private bool MovePosition(Vector2 position)
     {
-        if (!canUseIndependentMotion) return;
-        WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, body, position);
+        return canUseIndependentMotion && WorldPhysicsService2D.RequestItemMovementTowardsLogicalPosition(item, body, position);
     }
 
     #region 离水蹦跳与回水
@@ -608,6 +636,12 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
             threatDetector.RequestDetectorUpdate();
         }
 
+        if (!avoidDetectedThreats)
+        {
+            sensedPredator = null;
+            return;
+        }
+
         long appliedVersion = threatDetector.AppliedVersion;
         if (appliedVersion <= lastVigilanceVersion) return;
         lastVigilanceVersion = appliedVersion;
@@ -691,7 +725,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
 
         Vector2 current = item.transform.position;
         if (!hasFleeDestination || WorldTopologyRuntime.SqrDistance(current, fleeDestination) <= 0.09f ||
-            !AquaticHabitat.CanTraverse(current, fleeDestination))
+            !CanTraverseMovementHabitat(current, fleeDestination))
         {
             if (!TryPlanFleeDestination(threatPosition, out fleeDestination))
             {
@@ -749,7 +783,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
                 Vector2 direction = new(preferred.x * cos - preferred.y * sin,
                     preferred.x * sin + preferred.y * cos);
                 Vector2 candidate = WorldTopologyRuntime.NormalizePosition(origin + direction * distance);
-                if (!AquaticHabitat.CanTraverse(origin, candidate)) continue;
+                if (!CanTraverseMovementHabitat(origin, candidate)) continue;
 
                 float score = WorldTopologyRuntime.SqrDistance(threatPosition, candidate) +
                               Vector2.Dot(direction, preferred) * 0.25f;
@@ -792,7 +826,7 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
             return;
         }
 
-        if (!AquaticHabitat.CanTraverse(item.transform.position, temperatureSafetyDestination))
+        if (!CanTraverseMovementHabitat(item.transform.position, temperatureSafetyDestination))
         {
             temperatureSafetyReached = true;
             return;
@@ -805,10 +839,11 @@ public sealed partial class Mod_AquaticMovement : Module, IItemModuleDependencyB
 
     private void UpdatePresentation(float deltaTime)
     {
+        Vector2 position = item.transform.position;
         bool carried = predatorCarrier != null;
         presentation?.SetCarried(carried, carriedVisualHeight);
-        bool underwater = !carried && AquaticHabitat.CanSwimAt(item.transform.position);
-        bool stranded = !underwater && !carried && !IsHooked;
+        bool underwater = !landMovementEnabled && !carried && AquaticHabitat.CanSwimAt(position);
+        bool stranded = IsStranded && !carried;
         presentation?.SetStrandedHop(stranded ? hopVisualHeight : 0f, stranded ? hopVisualTilt : 0f);
         presentation?.Tick(underwater, deltaTime);
     }

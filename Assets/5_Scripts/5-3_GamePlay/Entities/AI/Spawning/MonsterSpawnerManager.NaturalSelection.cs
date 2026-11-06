@@ -55,11 +55,13 @@ public partial class MonsterSpawnerManager
     private void CollectNaturalSpawnCandidates(string sceneName)
     {
         _naturalSpawnCandidates.Clear();
+        if (_playerPositions.Count == 0) return;
+        string dimension = _chunkManager.ResolveWorldAddress(_playerPositions[0]).DimensionId;
         int globalLimit = GameRuleMath.ScaleCount(_settings.GlobalAliveLimit,
             GameRuleConfiguration.Current.World.SpawnPopulationMultiplier, 1);
         foreach (SpawnerConfig config in _spawnerConfigs)
         {
-            if (config == null || config.SpawnChance <= 0f ||
+            if (config == null || !config.AllowsDimension(dimension) || config.SpawnChance <= 0f ||
                 (config.RequireGlobalDarkness && !IsGlobalDark(sceneName))) continue;
             if (!config.IgnorePopulationLimits &&
                 (CountPopulationLimitedAlive() >= globalLimit || CountGroupAlive(config) >= GetEffectiveGroupLimit(config)))

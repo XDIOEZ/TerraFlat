@@ -370,6 +370,11 @@
       "id": "automation_radio",
       "path": "shells/automation_radio.json",
       "enabled": true
+    },
+    {
+      "id": "animal_ecology",
+      "path": "shells/animal_ecology.json",
+      "enabled": true
     }
   ]
 }

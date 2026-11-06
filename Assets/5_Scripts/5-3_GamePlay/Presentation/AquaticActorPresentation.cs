@@ -18,7 +18,7 @@ public sealed class AquaticActorPresentation : IDisposable
     private readonly Quaternion originalLocalRotation;
     private readonly bool originalFlipX;
     private readonly Material originalMaterial;
-    private readonly Material underwaterMaterial;
+    private Material underwaterMaterial;
     private readonly WorldSortingMember sorting;
     private readonly Mod_AnimatorController animationBody;
     private bool? isUnderwater;
@@ -38,7 +38,7 @@ public sealed class AquaticActorPresentation : IDisposable
     #endregion
 
     #region 初始化
-    public AquaticActorPresentation(Item owner, SpriteRenderer renderer)
+    public AquaticActorPresentation(Item owner, SpriteRenderer renderer, bool prepareUnderwaterMaterial = true)
     {
         this.owner = owner;
         this.renderer = renderer;
@@ -50,19 +50,26 @@ public sealed class AquaticActorPresentation : IDisposable
         lastPosition = owner.transform.position;
         originalMaterial = renderer.sharedMaterial;
         if (originalMaterial == null) throw new InvalidOperationException("水生动物缺少主体材质。");
+        if (prepareUnderwaterMaterial) underwaterMaterial = CreateUnderwaterMaterial();
+        sorting = owner.GetComponent<WorldSortingMember>() ?? owner.gameObject.AddComponent<WorldSortingMember>();
+    }
+
+    // 两栖动物通常不沉入水下，只有真正需要水下显示时才创建材质。
+    private Material CreateUnderwaterMaterial()
+    {
         var config = WorldRenderingConfigCatalog.Default.sorting;
         int waterQueue = -1;
         foreach (var profile in config.batchProfiles)
             if (profile.visualLayer == "Water") waterQueue = config.batchRenderQueueBase + profile.renderQueueOffset;
         if (waterQueue < 0) throw new InvalidOperationException("世界渲染配置缺少 Water 批次。");
-        underwaterMaterial = new Material(originalMaterial)
+        var material = new Material(originalMaterial)
         {
             name = "AquaticActor_Submerged",
             hideFlags = HideFlags.HideAndDontSave,
             renderQueue = waterQueue - 1
         };
-        ConfigureFullySubmergedMaterial(underwaterMaterial);
-        sorting = owner.GetComponent<WorldSortingMember>() ?? owner.gameObject.AddComponent<WorldSortingMember>();
+        ConfigureFullySubmergedMaterial(material);
+        return material;
     }
 
     /// <summary>鱼整身处于水下，额外用全身水下染色避免视觉上贴在水面。</summary>
@@ -110,6 +117,7 @@ public sealed class AquaticActorPresentation : IDisposable
     {
         if (isUnderwater == value || renderer == null) return;
         isUnderwater = value;
+        if (value && underwaterMaterial == null) underwaterMaterial = CreateUnderwaterMaterial();
         renderer.sharedMaterial = value ? underwaterMaterial : originalMaterial;
         sorting.Bind(WorldSortingManager.CreatureCategory, renderer, owner);
         sorting.SetEnvironmentSortingOverride(value ? SortingCategory : null);

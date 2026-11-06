@@ -43,6 +43,19 @@ public partial class SpawnerConfig : ScriptableObject
 {
     public SpawnerTreeHabitat TreeHabitat = new();
     public bool WaterOnly;
+    public List<string> AllowedDimensionIds = new() { WorldAddress.SurfaceDimensionId };
+    public float MinimumWaterDepth;
+    public float MaximumWaterDepth = 1f;
+    public int ShoreRadius;
+
+    #region 维度与水岸栖息地
+    // 旧规则默认只生在地表，洞穴物种显式声明自己的维度。
+    public bool AllowsDimension(string dimensionId) => AllowedDimensionIds.Count == 0 ||
+        AllowedDimensionIds.Contains(dimensionId);
+
+    public bool AllowsWaterDepth(float depth) => depth >= MinimumWaterDepth && depth <= MaximumWaterDepth &&
+        (!WaterOnly || depth >= AquaticHabitat.MinimumDepth);
+    #endregion
 #region 嵌套类型
 
     /// <summary>

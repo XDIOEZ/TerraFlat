@@ -46,6 +46,11 @@
       "id": "fish-actors",
       "path": "definitions/fish-actors.json",
       "enabled": true
+    },
+    {
+      "id": "ecology-actors",
+      "path": "definitions/ecology-actors.json",
+      "enabled": true
     }
   ]
 }

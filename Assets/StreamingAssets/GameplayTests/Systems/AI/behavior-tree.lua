@@ -114,10 +114,14 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
     local expected = {
         Bear = true, Bird = true, Seagull = true, Bee = true, Chicken = true,
         WildBoar = true, Wolf = true, Ghost = true, Zombie = true, SmallFish = true,
-        Sheep = true, Rabbit = true, SnowLeopard = true, Servitor = true
+        Sheep = true, Rabbit = true, SnowLeopard = true, Servitor = true, Human = true,
+        Deer = true, Cow = true, Goat = true, Horse = true, Fox = true,
+        Lizard = true, Scorpion = true, Reindeer = true, Carp = true, Sardine = true,
+        Crab = true, Bat = true, Spider = true, Frog = true, WildDuck = true,
+        Snake = true, Camel = true, Shark = true, Eagle = true, Rat = true
     }
     local seen, references, loadedSubtrees, sharedUsed = {}, {}, {}, false
-    assert(#data.actors == 14, "正式生物目录数量不符")
+    assert(#data.actors == 35, "正式生物目录数量不符")
     for _, actor in ipairs(data.actors) do
         assert(expected[actor.id] and not seen[actor.id], "生物目录缺失或重复：" .. actor.id)
         seen[actor.id] = true
@@ -138,11 +142,14 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
         if actor.id == "Rabbit" then
             assert(not actor.hasProduction and not actor.hasProductionModule, "兔子继承了产蛋能力或生产模块")
         end
-        if actor.id == "Bird" or actor.id == "Seagull" or actor.id == "Bee" then
+        if actor.id == "Bird" or actor.id == "Seagull" or actor.id == "Bee" or actor.id == "Bat" or actor.id == "Eagle" then
             assert(actor.hasFlight, "飞行生物缺少飞行能力：" .. actor.id)
         end
         if actor.id == "Bee" then assert(actor.hasColony, "蜜蜂缺少群落能力") end
-        if actor.id == "SmallFish" then assert(actor.hasAquatic, "小鱼缺少水生能力") end
+        if actor.id == "SmallFish" or actor.id == "Carp" or actor.id == "Sardine" or actor.id == "Shark" or
+            actor.id == "Crab" or actor.id == "Frog" or actor.id == "WildDuck" then
+            assert(actor.hasAquatic, "水生或两栖生物缺少统一运动能力：" .. actor.id)
+        end
         if actor.id == "Ghost" then assert(actor.hasLight, "幽灵缺少光照导航能力") end
         if actor.id == "Servitor" then
             assert(actor.hasServitor and not actor.hasPack and not actor.hasBiologicalNeeds,

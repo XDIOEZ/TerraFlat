@@ -204,7 +204,8 @@
             "flightNavigation": {
               "crossGroundObstacles": true,
               "sampleSpacing": 0.25
-            }
+            },
+            "maximumPreyWeight": 1
           }
         }
       },
@@ -265,7 +266,8 @@
         },
         "flightMovement": {
           "parameters": {
-            "canBeCaughtByFishingRod": false
+            "canBeCaughtByFishingRod": false,
+            "maximumPreyWeight": 2
           },
           "prefab": "Mod_AnimalFlightMovement",
           "id": "Mod_AnimalFlightMovement",
@@ -443,7 +445,8 @@
             "fleeSafeDistance": 6.0,
             "fleeRunDistance": 5.0,
             "hurtEscapeSeconds": 2.0,
-            "canBeCaughtByFishingRod": false
+            "canBeCaughtByFishingRod": false,
+            "maximumPreyWeight": 2
           },
           "prefab": "Mod_AnimalFlightMovement",
           "id": "Mod_AnimalFlightMovement",

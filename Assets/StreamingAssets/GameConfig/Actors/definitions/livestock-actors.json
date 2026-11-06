@@ -28,7 +28,8 @@
         "Sheep",
         "Animal",
         "Blood",
-        "Prey"
+        "Prey",
+        "Herbivore"
       ],
       "visual": {
         "animationState": "Stand",

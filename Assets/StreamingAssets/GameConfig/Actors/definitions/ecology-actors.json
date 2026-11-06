@@ -1,0 +1,2797 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Deer",
+      "parent": "Sheep",
+      "gameName": "鹿",
+      "description": "森林与草原的警觉猎物，产肉和生皮；狼与熊会捕猎。",
+      "labelKey": "item.Deer.name",
+      "descriptionKey": "item.Deer.description",
+      "weight": 90,
+      "tags": [
+        "Deer",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Deer_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Deer/Deer_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.6155,
+            "y": 0.3
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.deer"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 90,
+              "MaxHp": 90,
+              "SizeLevel": 6,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.65
+              },
+              "size": {
+                "x": 0.9232,
+                "y": 1.17
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -10,
+              "SafeTemperatureMax": 40
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 6
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [
+                    "Deer"
+                  ],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Cow",
+      "parent": "Sheep",
+      "gameName": "牛",
+      "description": "草原成群活动的大型草食动物，产肉、生皮和脂肪；挤奶与驯养后续接入。",
+      "labelKey": "item.Cow.name",
+      "descriptionKey": "item.Cow.description",
+      "weight": 550,
+      "tags": [
+        "Cow",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Cow_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Cow/Cow_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 1.4322,
+            "y": 0.3
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.cow"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 180,
+              "MaxHp": 180,
+              "SizeLevel": 7,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.75
+              },
+              "size": {
+                "x": 2.1484,
+                "y": 1.35
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -10,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 2.8
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [
+                    "Cow"
+                  ],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Goat",
+      "parent": "Sheep",
+      "gameName": "山羊",
+      "description": "在石地边缘觅食的草食动物，提供肉和生皮，也是狼的猎物。",
+      "labelKey": "item.Goat.name",
+      "descriptionKey": "item.Goat.description",
+      "weight": 55,
+      "tags": [
+        "Goat",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Goat_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Goat/Goat_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.5571,
+            "y": 0.27
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.goat"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 65,
+              "MaxHp": 65,
+              "SizeLevel": 5,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.45
+              },
+              "size": {
+                "x": 0.8357,
+                "y": 0.81
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -15,
+              "SafeTemperatureMax": 45
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 4.5
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Horse",
+      "parent": "Sheep",
+      "gameName": "马",
+      "description": "草原中快速而警觉的群居动物；首版为野生生态，捕捉与骑乘后续接入。",
+      "labelKey": "item.Horse.name",
+      "descriptionKey": "item.Horse.description",
+      "weight": 420,
+      "tags": [
+        "Horse",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Horse_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Horse/Horse_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 1.0316,
+            "y": 0.3
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.horse"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 140,
+              "MaxHp": 140,
+              "SizeLevel": 7,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.8
+              },
+              "size": {
+                "x": 1.5474,
+                "y": 1.44
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -15,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 7
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [
+                    "Horse"
+                  ],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Fox",
+      "parent": "Wolf",
+      "gameName": "狐狸",
+      "description": "猎食鼠、蜥蜴、蛙和小型鸟兽，通常避开玩家。",
+      "labelKey": "item.Fox.name",
+      "descriptionKey": "item.Fox.description",
+      "weight": 7,
+      "tags": [
+        "Fox",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator"
+      ],
+      "lootTableId": "Fox_Default",
+      "removeModules": [
+        "animalAudio",
+        "biteAttackSkill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Fox/Fox_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.6334,
+            "y": 0.195
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.fox"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 45,
+              "MaxHp": 45,
+              "SizeLevel": 4,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.325
+              },
+              "size": {
+                "x": 0.9502,
+                "y": 0.585
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -15,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 5
+              }
+            }
+          }
+        },
+        "ai": {
+          "inherit": false,
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5,
+            "detectorRefreshInterval": 0.6,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "hunting": {
+                  "preyIds": [
+                    "Chicken",
+                    "Rabbit",
+                    "Rat",
+                    "Frog",
+                    "Lizard",
+                    "WildDuck"
+                  ],
+                  "includePlayers": false,
+                  "initialHungerSeconds": 0,
+                  "satiatedRange": 5,
+                  "hungryRange": 16,
+                  "lossRange": 24,
+                  "pursuitLimit": 8,
+                  "reacquireDelay": 4
+                },
+                "combat": {
+                  "range": 0.9,
+                  "cooldown": 1.2,
+                  "damageWindow": 0.18,
+                  "windup": 0.25,
+                  "recovery": 0.25,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 240,
+                  "retryDelay": 2
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 3,
+                  "stopDistance": 0.15,
+                  "idleMin": 1,
+                  "idleMax": 3,
+                  "pauseMin": 1,
+                  "pauseMax": 3
+                },
+                "threat": {
+                  "tags": [
+                    "Wolf",
+                    "Bear",
+                    "SnowLeopard"
+                  ],
+                  "includePlayers": true,
+                  "radius": 20
+                }
+              },
+              "root": {
+                "type": "selector",
+                "children": [
+                  {
+                    "type": "subtree",
+                    "name": "temperatureRetreat"
+                  },
+                  {
+                    "type": "subtree",
+                    "name": "flee"
+                  },
+                  {
+                    "type": "subtree",
+                    "name": "huntAndWander",
+                    "parameters": {
+                      "source": "hunting"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Physical": 9,
+              "ImpactKind": 1
+            },
+            "xOffset": 0.425,
+            "$transform": {
+              "localPosition": {
+                "x": 0.425,
+                "y": 0.325,
+                "z": 0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.65,
+                "y": 0.5
+              },
+              "edgeRadius": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Lizard",
+      "parent": "Sheep",
+      "gameName": "蜥蜴",
+      "description": "沙漠和石地的小型动物，觅食昆虫与散落食物，遇到危险快速逃跑。",
+      "labelKey": "item.Lizard.name",
+      "descriptionKey": "item.Lizard.description",
+      "weight": 0.15,
+      "tags": [
+        "Lizard",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey"
+      ],
+      "lootTableId": "Lizard_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Lizard/Lizard_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.4057,
+            "y": 0.075
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.lizard"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 12,
+              "MaxHp": 12,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.125
+              },
+              "size": {
+                "x": 0.6086,
+                "y": 0.225
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 5,
+              "SafeTemperatureMax": 60
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 5
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Worm",
+                    "Seed",
+                    "Fruit",
+                    "Meat"
+                  ],
+                  "grassEnabled": false,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Scorpion",
+      "parent": "Wolf",
+      "gameName": "蝎子",
+      "description": "沙漠近身威胁；以钳击和尾刺攻击，掉落可加工的甲壳，不附带毒性。",
+      "labelKey": "item.Scorpion.name",
+      "descriptionKey": "item.Scorpion.description",
+      "weight": 0.1,
+      "tags": [
+        "Scorpion",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator"
+      ],
+      "lootTableId": "Scorpion_Default",
+      "removeModules": [
+        "animalAudio",
+        "biteAttackSkill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Scorpion/Scorpion_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.2259,
+            "y": 0.09
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.scorpion"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 25,
+              "MaxHp": 25,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.3388,
+                "y": 0.27
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 5,
+              "SafeTemperatureMax": 60
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 2.1
+              }
+            }
+          }
+        },
+        "ai": {
+          "inherit": false,
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5,
+            "detectorRefreshInterval": 0.6,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "hunting": {
+                  "preyIds": [
+                    "Lizard",
+                    "Rat"
+                  ],
+                  "includePlayers": true,
+                  "initialHungerSeconds": 0,
+                  "satiatedRange": 2.5,
+                  "hungryRange": 8,
+                  "lossRange": 14,
+                  "pursuitLimit": 8,
+                  "reacquireDelay": 4
+                },
+                "combat": {
+                  "range": 0.6,
+                  "cooldown": 1.2,
+                  "damageWindow": 0.18,
+                  "windup": 0.25,
+                  "recovery": 0.25,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 240,
+                  "retryDelay": 2
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 3,
+                  "stopDistance": 0.15,
+                  "idleMin": 1,
+                  "idleMax": 3,
+                  "pauseMin": 1,
+                  "pauseMax": 3
+                }
+              },
+              "root": {
+                "type": "subtree",
+                "name": "solitaryHunt"
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Physical": 8,
+              "ImpactKind": 1
+            },
+            "xOffset": 0.225,
+            "$transform": {
+              "localPosition": {
+                "x": 0.225,
+                "y": 0.15,
+                "z": 0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.65,
+                "y": 0.5
+              },
+              "edgeRadius": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Reindeer",
+      "parent": "Sheep",
+      "gameName": "驯鹿",
+      "description": "耐寒的雪地草食猎物，为狼和雪豹提供食物，产肉与生皮。",
+      "labelKey": "item.Reindeer.name",
+      "descriptionKey": "item.Reindeer.description",
+      "weight": 150,
+      "tags": [
+        "Reindeer",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Reindeer_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Reindeer/Reindeer_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.9237,
+            "y": 0.3
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.reindeer"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 110,
+              "MaxHp": 110,
+              "SizeLevel": 7,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.7
+              },
+              "size": {
+                "x": 1.3855,
+                "y": 1.26
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": -10,
+              "SafeTemperatureMin": -40,
+              "SafeTemperatureMax": 20
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 5.5
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [
+                    "Reindeer"
+                  ],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Carp",
+      "parent": "SmallFish",
+      "gameName": "鲤鱼",
+      "description": "河流和湖泊中的淡水渔获，食物价值高于通用小鱼。",
+      "labelKey": "item.Carp.name",
+      "descriptionKey": "item.Carp.description",
+      "weight": 2,
+      "tags": [
+        "Carp",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey",
+        "Fish"
+      ],
+      "lootTableId": "Carp_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Carp/Carp_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.5657,
+            "y": 0.135
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.carp"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 45,
+              "MaxHp": 45,
+              "SizeLevel": 3,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.8485,
+                "y": 0.405
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -15,
+              "SafeTemperatureMax": 45
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 1,
+            "wanderRadius": 4,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "Sardine",
+      "parent": "SmallFish",
+      "gameName": "沙丁鱼",
+      "description": "成群出现的海鱼，是海洋基础渔获与大型捕食者的食物。",
+      "labelKey": "item.Sardine.name",
+      "descriptionKey": "item.Sardine.description",
+      "weight": 0.12,
+      "tags": [
+        "Sardine",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey",
+        "Fish"
+      ],
+      "lootTableId": "Sardine_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Sardine/Sardine_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.4669,
+            "y": 0.075
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.sardine"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 12,
+              "MaxHp": 12,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.7003,
+                "y": 0.225
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 0,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 1.7,
+            "wanderRadius": 2,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "Crab",
+      "parent": "SmallFish",
+      "gameName": "螃蟹",
+      "description": "在海滩与浅水岸边横行觅食，可在水陆交界自由换位，提供肉与甲壳。",
+      "labelKey": "item.Crab.name",
+      "descriptionKey": "item.Crab.description",
+      "weight": 0.25,
+      "tags": [
+        "Crab",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey"
+      ],
+      "lootTableId": "Crab_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Crab/Crab_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.425,
+            "y": 0.105
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.crab"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 25,
+              "MaxHp": 25,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.175
+              },
+              "size": {
+                "x": 0.6375,
+                "y": 0.315
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 0,
+              "SafeTemperatureMax": 48
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 0.65,
+            "wanderRadius": 4,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5,
+            "landMovementEnabled": true,
+            "landSpeed": 0.65,
+            "minimumWetStacks": 1,
+            "edibleTags": [
+              "Worm",
+              "Meat",
+              "Seed",
+              "Fruit"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Bat",
+      "parent": "Bird",
+      "gameName": "蝙蝠",
+      "description": "栖居洞穴的飞行动物，趋向暗处并回避强光，不产鸟蛋。",
+      "labelKey": "item.Bat.name",
+      "descriptionKey": "item.Bat.description",
+      "weight": 0.04,
+      "tags": [
+        "Bat",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey"
+      ],
+      "lootTableId": "Bat_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Bat/Bat_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 1.1259,
+            "y": 0.195
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.bat"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 18,
+              "MaxHp": 18,
+              "SizeLevel": 4,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.325
+              },
+              "size": {
+                "x": 1.6888,
+                "y": 0.585
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -5,
+              "SafeTemperatureMax": 40
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 4.5
+              }
+            }
+          }
+        },
+        "flightMovement": {
+          "parameters": {
+            "flightSpeed": 4.5,
+            "avoidLight": true,
+            "lightAvoidanceThreshold": 0.35,
+            "lightAvoidanceSearchRadius": 12,
+            "enableBackpackSeedTaking": false,
+            "enableEggLaying": false,
+            "canBeCaughtByFishingRod": false,
+            "fishHuntRadius": 0,
+            "flightHeight": 0.6,
+            "groundSpeed": 0.6,
+            "permanentFlight": true,
+            "flightWanderRadius": 8,
+            "flightNavigation": {
+              "crossGroundObstacles": false,
+              "sampleSpacing": 0.25
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Spider",
+      "parent": "Wolf",
+      "gameName": "蜘蛛",
+      "description": "森林与洞穴的小型危险生物，掉落蜘蛛丝，可捻为缝纫线。",
+      "labelKey": "item.Spider.name",
+      "descriptionKey": "item.Spider.description",
+      "weight": 0.04,
+      "tags": [
+        "Spider",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator"
+      ],
+      "lootTableId": "Spider_Default",
+      "removeModules": [
+        "animalAudio",
+        "biteAttackSkill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Spider/Spider_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.298,
+            "y": 0.09
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.spider"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 24,
+              "MaxHp": 24,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.447,
+                "y": 0.27
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -5,
+              "SafeTemperatureMax": 45
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 2.6
+              }
+            }
+          }
+        },
+        "ai": {
+          "inherit": false,
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5,
+            "detectorRefreshInterval": 0.6,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "hunting": {
+                  "preyIds": [
+                    "Rat",
+                    "Frog"
+                  ],
+                  "includePlayers": true,
+                  "initialHungerSeconds": 0,
+                  "satiatedRange": 2.5,
+                  "hungryRange": 8,
+                  "lossRange": 14,
+                  "pursuitLimit": 8,
+                  "reacquireDelay": 4
+                },
+                "combat": {
+                  "range": 0.6,
+                  "cooldown": 1.2,
+                  "damageWindow": 0.18,
+                  "windup": 0.25,
+                  "recovery": 0.25,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 240,
+                  "retryDelay": 2
+                },
+                "wander": {
+                  "enabled": true,
+                  "radius": 3,
+                  "stopDistance": 0.15,
+                  "idleMin": 1,
+                  "idleMax": 3,
+                  "pauseMin": 1,
+                  "pauseMax": 3
+                }
+              },
+              "root": {
+                "type": "subtree",
+                "name": "solitaryHunt"
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Physical": 6,
+              "ImpactKind": 1
+            },
+            "xOffset": 0.25,
+            "$transform": {
+              "localPosition": {
+                "x": 0.25,
+                "y": 0.15,
+                "z": 0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.65,
+                "y": 0.5
+              },
+              "edgeRadius": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Frog",
+      "parent": "SmallFish",
+      "gameName": "青蛙",
+      "description": "淡水岸边的两栖小猎物，觅食昆虫，可连续上岸与下水。",
+      "labelKey": "item.Frog.name",
+      "descriptionKey": "item.Frog.description",
+      "weight": 0.08,
+      "tags": [
+        "Frog",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Prey"
+      ],
+      "lootTableId": "Frog_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Frog/Frog_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.2632,
+            "y": 0.09
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.frog"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 15,
+              "MaxHp": 15,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.3947,
+                "y": 0.27
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 0,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 1.3,
+            "wanderRadius": 4,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5,
+            "landMovementEnabled": true,
+            "landSpeed": 1.3,
+            "minimumWetStacks": 1,
+            "edibleTags": [
+              "Worm",
+              "Meat"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WildDuck",
+      "parent": "SmallFish",
+      "gameName": "野鸭",
+      "description": "河流与湖岸的水鸟，可在岸上和水里觅食，提供肉；首版不支持飞行与产蛋。",
+      "labelKey": "item.WildDuck.name",
+      "descriptionKey": "item.WildDuck.description",
+      "weight": 1.2,
+      "tags": [
+        "WildDuck",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey",
+        "Bird"
+      ],
+      "lootTableId": "WildDuck_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/WildDuck/WildDuck_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.3899,
+            "y": 0.18
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.wildduck"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 35,
+              "MaxHp": 35,
+              "SizeLevel": 3,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.3
+              },
+              "size": {
+                "x": 0.5848,
+                "y": 0.54
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -5,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 1.1,
+            "wanderRadius": 4,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5,
+            "landMovementEnabled": true,
+            "landSpeed": 1.1,
+            "minimumWetStacks": 1,
+            "edibleTags": [
+              "Worm",
+              "Meat",
+              "Seed",
+              "Fruit"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Snake",
+      "parent": "Wolf",
+      "gameName": "蛇",
+      "description": "森林、石地和沙漠的伏击者，原地守候近处小猎物，近身咬击，不附带毒性。",
+      "labelKey": "item.Snake.name",
+      "descriptionKey": "item.Snake.description",
+      "weight": 1.5,
+      "tags": [
+        "Snake",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator"
+      ],
+      "lootTableId": "Snake_Default",
+      "removeModules": [
+        "animalAudio",
+        "biteAttackSkill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Snake/Snake_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.2617,
+            "y": 0.09
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.snake"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 30,
+              "MaxHp": 30,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.3926,
+                "y": 0.27
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 5,
+              "SafeTemperatureMax": 55
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 3
+              }
+            }
+          }
+        },
+        "ai": {
+          "inherit": false,
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5,
+            "detectorRefreshInterval": 0.6,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "hunting": {
+                  "preyIds": [
+                    "Rat",
+                    "Frog",
+                    "Lizard"
+                  ],
+                  "includePlayers": true,
+                  "initialHungerSeconds": 0,
+                  "satiatedRange": 2.5,
+                  "hungryRange": 2.5,
+                  "lossRange": 6,
+                  "pursuitLimit": 3,
+                  "reacquireDelay": 4
+                },
+                "combat": {
+                  "range": 0.6,
+                  "cooldown": 1.2,
+                  "damageWindow": 0.18,
+                  "windup": 0.25,
+                  "recovery": 0.25,
+                  "animation": "Attack"
+                },
+                "chase": {
+                  "pathCostLimit": 240,
+                  "retryDelay": 2
+                },
+                "wander": {
+                  "enabled": false,
+                  "radius": 3,
+                  "stopDistance": 0.15,
+                  "idleMin": 1,
+                  "idleMax": 3,
+                  "pauseMin": 1,
+                  "pauseMax": 3
+                }
+              },
+              "root": {
+                "type": "subtree",
+                "name": "solitaryHunt"
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Physical": 12,
+              "ImpactKind": 1
+            },
+            "xOffset": 0.475,
+            "$transform": {
+              "localPosition": {
+                "x": 0.475,
+                "y": 0.15,
+                "z": 0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 0.65,
+                "y": 0.5
+              },
+              "edgeRadius": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Camel",
+      "parent": "Sheep",
+      "gameName": "骆驼",
+      "description": "耐热的大型沙漠草食动物，提供肉、生皮与脂肪；负重和骑乘后续接入。",
+      "labelKey": "item.Camel.name",
+      "descriptionKey": "item.Camel.description",
+      "weight": 600,
+      "tags": [
+        "Camel",
+        "Animal",
+        "Blood",
+        "Herbivore",
+        "Prey"
+      ],
+      "lootTableId": "Camel_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Camel/Camel_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 1.4118,
+            "y": 0.3
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.camel"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 200,
+              "MaxHp": 200,
+              "SizeLevel": 8,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.95
+              },
+              "size": {
+                "x": 2.1177,
+                "y": 1.71
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": 0,
+              "SafeTemperatureMax": 65
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 3.5
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Plant",
+                    "Grass",
+                    "Fruit",
+                    "Seed"
+                  ],
+                  "grassEnabled": true,
+                  "sustenanceDays": 4
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [
+                    "Camel"
+                  ],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Shark",
+      "parent": "SmallFish",
+      "gameName": "鲨鱼",
+      "description": "海洋深水捕食者，在连通水域追击海鱼和入水玩家，无法越过陆地攻击。",
+      "labelKey": "item.Shark.name",
+      "descriptionKey": "item.Shark.description",
+      "weight": 180,
+      "tags": [
+        "Shark",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator",
+        "Fish"
+      ],
+      "lootTableId": "Shark_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Shark/Shark_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": false,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 1.1849,
+            "y": 0.24
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.shark"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 220,
+              "MaxHp": 220,
+              "SizeLevel": 4,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 1.7774,
+                "y": 0.72
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -5,
+              "SafeTemperatureMax": 45
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "aquaticMovement": {
+          "parameters": {
+            "swimSpeed": 3.2,
+            "wanderRadius": 4,
+            "fleeTriggerDistance": 5,
+            "fleeSafeDistance": 9,
+            "fleeRunDistance": 5,
+            "avoidDetectedThreats": false,
+            "respectNavigationBlockers": true
+          }
+        },
+        "ai": {
+          "inherit": false,
+          "prefab": "Module_AnimalBehaviorTree",
+          "id": "AI",
+          "enabled": true,
+          "parameters": {
+            "damageThreatMemoryDuration": 5,
+            "detectorRefreshInterval": 0.6,
+            "behaviorTree": {
+              "schemaVersion": 1,
+              "capabilities": {
+                "hunting": {
+                  "preyIds": [
+                    "SmallFish",
+                    "Sardine",
+                    "Carp"
+                  ],
+                  "includePlayers": true,
+                  "initialHungerSeconds": 0,
+                  "hungryRange": 18,
+                  "satiatedRange": 10,
+                  "lossRange": 24,
+                  "pursuitLimit": 20,
+                  "reacquireDelay": 3
+                },
+                "combat": {
+                  "range": 1.4,
+                  "cooldown": 1.5,
+                  "windup": 0.3,
+                  "damageWindow": 0.25,
+                  "recovery": 0.3,
+                  "animation": "Attack"
+                }
+              },
+              "root": {
+                "type": "subtree",
+                "name": "swimAndHunt"
+              }
+            }
+          }
+        },
+        "damage": {
+          "prefab": "Module_AttackTrigger_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Physical": 28,
+              "ImpactKind": 1
+            },
+            "xOffset": 1.1,
+            "DamageInterval": -1,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "$transform": {
+              "localPosition": {
+                "x": 1.1,
+                "y": 0,
+                "z": 0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0
+              },
+              "size": {
+                "x": 1.6,
+                "y": 0.85
+              },
+              "edgeRadius": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Eagle",
+      "parent": "Bird",
+      "gameName": "鹰",
+      "description": "石地高地的飞行捕食者，俯冲捕猎兔、鼠、蛙与蜥蜴，也可捕鱼。",
+      "labelKey": "item.Eagle.name",
+      "descriptionKey": "item.Eagle.description",
+      "weight": 4,
+      "tags": [
+        "Eagle",
+        "Animal",
+        "Blood",
+        "Carnivore",
+        "Predator",
+        "Bird"
+      ],
+      "lootTableId": "Eagle_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Eagle/Eagle_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.7665,
+            "y": 0.24
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.eagle"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 60,
+              "MaxHp": 60,
+              "SizeLevel": 4,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.4
+              },
+              "size": {
+                "x": 1.1497,
+                "y": 0.72
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -15,
+              "SafeTemperatureMax": 42
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 7
+              }
+            }
+          }
+        },
+        "flightMovement": {
+          "parameters": {
+            "flightSpeed": 7,
+            "enableBackpackSeedTaking": false,
+            "enableEggLaying": false,
+            "canBeCaughtByFishingRod": false,
+            "fishHuntRadius": 18,
+            "flightHeight": 1.4,
+            "groundSpeed": 0.6,
+            "landPreyIds": [
+              "Rabbit",
+              "Rat",
+              "Frog",
+              "Lizard"
+            ],
+            "fishDiveDamage": 16,
+            "additionalForageTags": [
+              "Meat"
+            ],
+            "fishHuntHungerRate": 0.9,
+            "maximumPreyWeight": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "Rat",
+      "parent": "Sheep",
+      "gameName": "老鼠",
+      "description": "草原和森林的小型杂食动物，只吃自然食物与掉落物，不偷取库存。",
+      "labelKey": "item.Rat.name",
+      "descriptionKey": "item.Rat.description",
+      "weight": 0.15,
+      "tags": [
+        "Rat",
+        "Animal",
+        "Blood",
+        "Omnivore",
+        "Prey"
+      ],
+      "lootTableId": "Rat_Default",
+      "removeModules": [
+        "animalAudio"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Actors/Rat/Rat_Idle_Right.png",
+        "flipX": false,
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "path": "",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0.1
+          },
+          "size": {
+            "x": 0.2559,
+            "y": 0.075
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "ecology.rat"
+      },
+      "modules": {
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 10,
+              "MaxHp": 10,
+              "SizeLevel": 2,
+              "UseBodyPartHealth": false
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0,
+                "y": 0.125
+              },
+              "size": {
+                "x": 0.3839,
+                "y": 0.225
+              }
+            }
+          }
+        },
+        "temperature": {
+          "parameters": {
+            "Data": {
+              "CurrentTemperature": 36.5,
+              "SafeTemperatureMin": -5,
+              "SafeTemperatureMax": 45
+            }
+          }
+        },
+        "animator": {
+          "parameters": {
+            "visualMode": 1,
+            "singleSpriteStates": []
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 4
+              }
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "behaviorTree": {
+              "capabilities": {
+                "threat": {
+                  "tags": [
+                    "Predator",
+                    "Carnivore"
+                  ],
+                  "includePlayers": true,
+                  "radius": 18
+                },
+                "forage": {
+                  "foodTags": [
+                    "Worm",
+                    "Seed",
+                    "Fruit",
+                    "Meat"
+                  ],
+                  "grassEnabled": false,
+                  "sustenanceDays": 2
+                },
+                "wander": {
+                  "radius": 5,
+                  "stopDistance": 0.2,
+                  "herdTags": [],
+                  "herdRadius": 8,
+                  "herdCohesion": 0.8
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

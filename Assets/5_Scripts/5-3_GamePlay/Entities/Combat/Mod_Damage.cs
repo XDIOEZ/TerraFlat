@@ -8,6 +8,15 @@ public enum WeaponHitboxRegion
     UpperRightQuadrant = 1
 }
 
+#region 伤害来源目标资格
+/// <summary>攻击来源可按目标限制伤害，拒绝的目标不消耗本次攻击名额。</summary>
+public interface IOutgoingDamageTargetRule
+{
+    bool RestrictsOutgoingDamageTargets { get; }
+    bool AllowsOutgoingDamageTarget(Item target);
+}
+#endregion
+
 public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IBuildingDamageSource, ICombatDamageContextModifier, IItemPhysicsComponentsReceiver2D, IWorldPhysicsTriggerReceiver2D, IItemPhysicsColliderOwner2D
 {
     #region 伤害相关数据
@@ -114,6 +123,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     private uint attackPulse; // 物理接触与数据查询共用一个逻辑窗口。
     private double nextDataPulseTime; // 周期查询时钟，不依赖是否命中旧 Collider。
     private readonly List<ICombatDamageContextModifier> contextModifiers = new List<ICombatDamageContextModifier>(); // 装配时缓存的能力。
+    private readonly List<IOutgoingDamageTargetRule> outgoingTargetRules = new List<IOutgoingDamageTargetRule>();
+    private ItemMods outgoingTargetRuleOwner;
+    private uint outgoingTargetRuleVersion;
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool animationDrivenDamageWindow; // 动画武器按有效窗口检测命中，不用周期伤害间隔限制采样。
@@ -157,6 +169,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         WeaponDurabilityConsumedAtLaunch = false;
         if (sourceHealth != null) sourceHealth.DeathStarted -= HandleSourceDeath;
         sourceHealth = null;
+        outgoingTargetRules.Clear();
+        outgoingTargetRuleOwner = null;
         base.OnUnload();
     }
     private bool tileDamageAppliedThisWindow;
@@ -213,7 +227,28 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>同一窗口内同一外部身份只预约一次，不能绕过旧对象已经消耗的名额。</summary>
     public bool TryReserveExternalTarget(FlatWorld.Combat.CombatIdentity target)
     {
-        return hitWindow.TryReserve(target, MaxAttackTargets);
+        return AllowsOutgoingDamageTarget(null) && hitWindow.TryReserve(target, MaxAttackTargets);
+    }
+
+    // 外部目标尚未提供真实 Item 时不能绕过已启用的来源规则。
+    private bool AllowsOutgoingDamageTarget(Item target)
+    {
+        ItemMods modules = item?.itemMods;
+        if (!ReferenceEquals(modules, outgoingTargetRuleOwner) ||
+            modules != null && modules.StructureVersion != outgoingTargetRuleVersion)
+        {
+            outgoingTargetRules.Clear();
+            if (modules != null) outgoingTargetRules.AddRange(modules.GetCapabilities<IOutgoingDamageTargetRule>());
+            outgoingTargetRuleOwner = modules;
+            outgoingTargetRuleVersion = modules?.StructureVersion ?? 0;
+        }
+        foreach (IOutgoingDamageTargetRule rule in outgoingTargetRules)
+        {
+            if (rule is Module module && (module == null || !module.Enabled || !module.IsRuntimeLoaded || !module.isActiveAndEnabled)) continue;
+            if (rule.RestrictsOutgoingDamageTargets && (target == null || !rule.AllowsOutgoingDamageTarget(target)))
+                return false;
+        }
+        return true;
     }
 
     /// <summary>发送端组合器只遍历本武器的少量能力，禁止每帧扫描场景或每个 ECS 实体。</summary>
@@ -360,6 +395,9 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
         DeliveryCapabilities = FlatWorld.Combat.CombatDeliveryCapabilities.None;
         explicitProjectileSweep = false;
         contextModifiers.Clear();
+        outgoingTargetRules.Clear();
+        outgoingTargetRuleOwner = item?.itemMods;
+        outgoingTargetRuleVersion = outgoingTargetRuleOwner?.StructureVersion ?? 0;
         animationDrivenDamageWindow = false;
         if (item != null)
             foreach (Module module in item.itemMods.Mods.Values)
@@ -369,6 +407,8 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
                 // Mod_Damage 本身是上下文聚合器；同一 Item 可有多个伤害盒，聚合器之间禁止互相递归。
                 if (module is not Mod_Damage && module is ICombatDamageContextModifier modifier)
                     contextModifiers.Add(modifier);
+                if (module is IOutgoingDamageTargetRule targetRule)
+                    outgoingTargetRules.Add(targetRule);
             }
         var contract = default(FlatWorld.Combat.CombatDamageContext);
         ModifyDamageContext(ref contract);
@@ -740,6 +780,7 @@ public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlow
     /// <summary>抛掷物高空段只接受真正飞行的目标；不能在地面目标处提前消费唯一命中名额。</summary>
     private bool AllowsTargetDelivery(Mod_DamageReceiver receiver)
     {
+        if (!AllowsOutgoingDamageTarget(receiver.item)) return false;
         if ((DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly) == 0) return true;
         if (receiver.item?.itemMods == null) return false;
         foreach (Module module in receiver.item.itemMods.Mods.Values)

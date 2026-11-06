@@ -224,7 +224,8 @@
               "capabilities": {
                 "hunting": {
                   "preyIds": [
-                    "Rabbit"
+                    "Rabbit",
+                    "Reindeer"
                   ],
                   "satiatedRange": 8,
                   "hungryRange": 24,

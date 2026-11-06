@@ -53,6 +53,13 @@
             ]
           },
           {
+            "type": "sequence",
+            "children": [
+              { "type": "condition", "name": "flight.lightDanger" },
+              { "type": "action", "name": "flight.seekDark" }
+            ]
+          },
+          {
             "type": "subtree",
             "name": "aquaticPredation"
           },
