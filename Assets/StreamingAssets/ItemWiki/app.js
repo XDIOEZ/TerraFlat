@@ -119,6 +119,8 @@
         techTreeResources: {},
         techTreeError: "",
         behaviorTree: null,
+        circuitBoard: null,
+        mechanicalCatalog: null,
         behaviorSubtrees: null,
         behaviorTreeError: "",
         designDocs: [],
@@ -164,6 +166,9 @@
         behaviorTreeViewButton: document.getElementById("behaviorTreeViewButton"),
         behaviorTreeBook: document.getElementById("behaviorTreeBook"),
         behaviorTreeRoot: document.getElementById("behaviorTreeRoot"),
+        circuitBoardViewButton: document.getElementById("circuitBoardViewButton"),
+        circuitBoardBook: document.getElementById("circuitBoardBook"),
+        circuitBoardRoot: document.getElementById("circuitBoardRoot"),
         footerCapability: document.getElementById("footerCapability"),
         designViewButton: document.getElementById("designViewButton"),
         systemMapViewButton: document.getElementById("systemMapViewButton"),
@@ -231,6 +236,7 @@
 
     // 页面启动时绑定交互并加载当前 JSON。
     function init() {
+        state.circuitBoard = window.ItemCircuitBoard?.create({ root: els.circuitBoardRoot });
         state.behaviorTree = window.ItemBehaviorTreeViewer?.create({
             root: els.behaviorTreeRoot,
             onSelect: id => history.replaceState(null, "", `#behavior-tree/${encodeURIComponent(id)}`),
@@ -304,6 +310,7 @@
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
         els.techTreeViewButton.addEventListener("click", () => setView("tech-tree"));
         els.behaviorTreeViewButton.addEventListener("click", () => setView("behavior-tree"));
+        els.circuitBoardViewButton.addEventListener("click", () => setView("circuit-board"));
         els.designViewButton.addEventListener("click", () => setView("design"));
         els.systemMapViewButton.addEventListener("click", () => setView("system-map"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
@@ -440,7 +447,9 @@
             clearSpriteCache();
             state.techTreeError = "";
             state.behaviorTreeError = "";
-            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs, techTreeData] = await Promise.all([
+            // 共享同一次机器目录请求，但不让科技树的其他资料阻断电路实验室。
+            const mechanicalCatalogRequest = fetchJson("../../../Assets/Resources/Config/Mechanical/mechanical-catalog.json");
+            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs, techTreeData, mechanicalCatalog] = await Promise.all([
                 fetchJson(ITEM_MANIFEST_PATH),
                 fetchJson(LOOT_TABLE_PATH),
                 fetchJson(MODULE_GLOSSARY_PATH),
@@ -450,11 +459,15 @@
                 loadBuffCatalog(),
                 Promise.all([
                     fetchJson(TECH_TREE_CONFIG_PATH),
-                    fetchJson("../../../Assets/Resources/Config/Mechanical/mechanical-catalog.json"),
+                    mechanicalCatalogRequest,
                     fetchJson("../GameConfig/Liquids/liquids.json"),
                     loadResourceHabitatSources()
                 ]).catch(error => {
                     state.techTreeError = error.message;
+                    return null;
+                }),
+                mechanicalCatalogRequest.catch(error => {
+                    state.circuitBoard?.setError(`游戏电气目录读取失败：${error.message}`);
                     return null;
                 })
             ]);
@@ -499,6 +512,7 @@
             state.recipes = Array.from(recipes.resolved.values());
             state.techTreeConfig = techTreeData?.[0] || null;
             state.techTreeResources = { mechanicalCatalog: techTreeData?.[1], liquids: techTreeData?.[2], ...techTreeData?.[3] };
+            state.mechanicalCatalog = mechanicalCatalog;
             state.itemMetadata = itemMetadata && itemMetadata.schemaVersion === 1 && isPlainObject(itemMetadata.items)
                 ? itemMetadata
                 : { schemaVersion: 1, items: {} };
@@ -660,6 +674,7 @@
         state.entries.push(...Array.from(state.buffSources, ([key, source]) => BuffWiki.makeEntry(source, state.buffPackages.get(key))));
         rebuildTechTree();
         rebuildBehaviorTree();
+        state.circuitBoard?.setCatalog(state.mechanicalCatalog, state.entries);
     }
 
     // 行为树直接消费当前 Actor 继承结果与 Manifest 指定的公共子树。
@@ -743,17 +758,19 @@
 
     // 按页面切换物品档案、科技树与系统资料，并保持可分享地址同步。
     function setView(view, updateRoute = true) {
-        state.activeView = ["overview", "tech-tree", "behavior-tree", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
+        state.activeView = ["overview", "tech-tree", "behavior-tree", "circuit-board", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
         const overview = state.activeView === "overview";
         const techTree = state.activeView === "tech-tree";
         const behaviorTree = state.activeView === "behavior-tree";
+        const circuitBoard = state.activeView === "circuit-board";
         const design = state.activeView === "design";
         const systemMap = state.activeView === "system-map";
         const settings = state.activeView === "settings";
         document.body.classList.toggle("overview-mode", overview);
         document.body.classList.toggle("tech-tree-mode", techTree);
         document.body.classList.toggle("behavior-tree-mode", behaviorTree);
-        els.catalogBook.hidden = overview || techTree || behaviorTree || design || systemMap || settings;
+        els.catalogBook.hidden = overview || techTree || behaviorTree || circuitBoard || design || systemMap || settings;
+        els.circuitBoardBook.hidden = !circuitBoard;
         els.behaviorTreeBook.hidden = !behaviorTree;
         els.techTreeBook.hidden = !techTree;
         els.overviewBook.hidden = !overview;
@@ -765,10 +782,11 @@
         els.overviewViewButton.classList.toggle("active", overview);
         els.techTreeViewButton.classList.toggle("active", techTree);
         els.behaviorTreeViewButton.classList.toggle("active", behaviorTree);
+        els.circuitBoardViewButton.classList.toggle("active", circuitBoard);
         els.designViewButton.classList.toggle("active", design);
         els.systemMapViewButton.classList.toggle("active", systemMap);
         els.settingsButton.classList.toggle("active", settings);
-        for (const button of [els.catalogViewButton, els.buffViewButton, els.overviewViewButton, els.techTreeViewButton, els.behaviorTreeViewButton, els.designViewButton, els.systemMapViewButton, els.settingsButton]) {
+        for (const button of [els.catalogViewButton, els.buffViewButton, els.overviewViewButton, els.techTreeViewButton, els.behaviorTreeViewButton, els.circuitBoardViewButton, els.designViewButton, els.systemMapViewButton, els.settingsButton]) {
             button.setAttribute("aria-pressed", String(button.classList.contains("active")));
         }
         if (updateRoute) {
@@ -778,6 +796,8 @@
         if (techTree) state.techTree?.show();
         else state.techTree?.hide();
         if (behaviorTree) state.behaviorTree?.show();
+        if (circuitBoard) state.circuitBoard?.show();
+        else state.circuitBoard?.hide();
         if (overview) renderOverview();
         if (design) loadDesignDocs();
         if (systemMap) loadSystemMap();
@@ -1758,7 +1778,7 @@
         try { hash = decodeURIComponent(hash); } catch { hash = ""; }
         if (hash === "behavior-tree" || hash.startsWith("behavior-tree/")) return { view: "behavior-tree", id: hash.slice("behavior-tree/".length) };
         if (hash === "tech-tree" || hash.startsWith("tech-tree/")) return { view: "tech-tree", id: hash.slice(10) };
-        if (["overview", "design", "system-map", "settings", "buffs", "catalog"].includes(hash)) return { view: hash, id: "" };
+        if (["overview", "design", "system-map", "settings", "buffs", "catalog", "circuit-board"].includes(hash)) return { view: hash, id: "" };
         const id = hash.startsWith("item/") ? hash.slice(5) : hash;
         return { view: id.startsWith("buff:") ? "buffs" : "catalog", id };
     }

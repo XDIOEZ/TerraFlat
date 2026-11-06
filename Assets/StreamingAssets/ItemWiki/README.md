@@ -1,4 +1,4 @@
-# FlatWorld 物品字典、科技树与行为树
+# FlatWorld 物品字典、科技树、行为树与电路实验室
 
 这是直接读取当前项目配置的 HTML 工具，无需安装前端依赖或导出一份物品副本。
 
@@ -73,6 +73,8 @@ python -B Assets/StreamingAssets/ItemWiki/wiki_server.py --port 8765 --ensure-ru
 
 ## 时代和子阶段如何调整
 
+电路实验室的入口、规则与维护说明见下方「电路实验室」章节。
+
 `tech-tree-eras.json` 只管理物品字典的展示分期，不会增加或改变游戏解锁规则。
 
 - `eras`：各大时代的名称、顺序和颜色。`order` 从小到大排列在左到右；导航按实际时代数量排成单行，空间不足时横向滚动。
@@ -105,6 +107,7 @@ node --test Assets/StreamingAssets/ItemWiki/tests/balance-tuning.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-model.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-layout.test.js
 node --test Assets/StreamingAssets/ItemWiki/tests/behavior-tree-model.test.js
+node --test Assets/StreamingAssets/ItemWiki/tests/circuit-board-model.test.js
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_wiki_maintenance.py
 python -B -m unittest discover -s Assets/StreamingAssets/ItemWiki/tests -p test_balance_tuning.py
 ```
@@ -121,3 +124,19 @@ node --test Assets/StreamingAssets/ItemWiki/tests/tech-tree-browser.test.js
 ```
 
 已有 Chromium 时可设置 `ITEM_WIKI_CHROMIUM_PATH` 指向其可执行文件，省略浏览器安装。
+
+## 电路实验室
+
+顶部「08 电路实验室」或 `#circuit-board` 打开网格模拟器。无需新增前端依赖；HTML、Canvas、CSS 与纯 JavaScript 模型均内嵌在 ItemWiki。默认示例为电池供电、计时器控制灯泡亮 1 秒灭 1 秒，另有蓄水池自动控制、太阳能充放电与 AND 真值实验。
+
+- 三层独立数据：设备、电力线、信号线。点击放置、拖动布线，选择模式拖动设备；R 旋转，右键擦除当前层，Delete 删除选中设备，空格/中键拖动视野，滚轮缩放，支持铺满网页。相同层相邻线相连；信号跨线桥横竖分离。
+- `circuit-board-model.js` 从当前机械目录的 Electrical 节点创建游戏设备库，名称取 Wiki 已解析的物品；`circuit-board.js/.css` 仅负责编辑、显示、浏览器保存。`app.js` 负责分页生命周期和目录刷新，不在浏览器调用游戏命令或写配置接口。
+- 正式物品中的 `ShipFiber` 单独登记为光纤适配：保留真实来源，但在实验中只作为可连普通信号线的 0/1 线路，不复刻船体归属和飞船控制协议。
+- 机器目录与科技树共享一次请求，但其他科技树资料加载失败不阻断电路页；无关物品刷新不重置电路进度、选择与撤销。真实电气目录发生变化时保留布置并重置运行。
+- 电力以整网功率求解，W 与 J 分离；电压兼容、方向端口、缺电比例分摊、发电优先、充放电速率和整网过载告警沿用游戏当前规则。过载不自动断线，不做电阻压降。双向电机只模拟发电方向，外部机械动力由参数表示。
+- 逻辑元件与所有自动化控制口均为「模拟扩展」。同信号网采用 OR，输入悬空为 0，设备控制口不接线则按启用状态运行；每级门读上一拍、统一提交，每拍 0.05 秒。反馈环有真实离散延迟，不递归求稳态。SR 复位优先，计数与翻转只读上升沿。
+- 实验水箱通过目标 ID 与水泵/传感器关联，虚线表示抽象水路；仅模拟储量与简化流量，不模拟水源、压力、温度交换、配方、船只推力等完整游戏业务。实验光照、温度由用户设置。
+- 布置保存在当前浏览器 `flatworld-circuit-board-v1:<pathname>`，可导入/导出版本 1 JSON；只含布置和初始参数，不含运行进度。导入完整校验后替换，未知元件、非法数值、重复与越界会拒绝；损坏自动保存的原文保留在 `:recovery`。撤销恢复布置并重置运行。编辑、切页、后台时暂停，不补算离线时间。
+- 公开模式只新增三个明确脚本/样式白名单条目，不开放新写入接口；修改服务白名单后，已有公开只读服务需在方便时重启。普通本地服务直接刷新即可读取新页面。
+
+模型回归：`node --test Assets/StreamingAssets/ItemWiki/tests/circuit-board-model.test.js`。浏览器回归使用上述 Playwright 环境运行 `tests/circuit-board-browser.test.js`，真实浏览器截图保存在忽略目录 `Library/ItemWikiBrowserValidation/`。
