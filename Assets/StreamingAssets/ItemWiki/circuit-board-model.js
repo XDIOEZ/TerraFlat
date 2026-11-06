@@ -7,8 +7,6 @@
     "use strict";
     const STEP = 0.05;
     const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-    const WORD_BITS = 64;
-    const WORD_LIMIT = 1n << BigInt(WORD_BITS);
     const key = (x, y) => `${x},${y}`;
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const number = (value, fallback = 0) => Number.isFinite(value) ? value : fallback;
@@ -31,12 +29,10 @@
         count: { label: "计数达到 N 输出 1", min: 1, max: 1e6, step: 1 },
         tankCapacity: { label: "水箱容量 L", min: 1, max: 1e9, step: 10 },
         drainRate: { label: "水箱持续耗水 L/s", min: 0, max: 1e6, step: 0.1 },
-        flowRate: { label: "水泵满功率流量 L/s", min: 0, max: 1e6, step: 0.5 },
-        wordHex: { label: "64 位无符号整数（支持 0x 十六进制、0b 二进制或十进制）", type: "word64" }
+        flowRate: { label: "水泵满功率流量 L/s", min: 0, max: 1e6, step: 0.5 }
     };
     const EXTENSIONS = [
         { id: "sim:signal", name: "信号线", kind: "signal", group: "线路", symbol: "01", description: "只传递 0/1，不输送能量。同网任一输出为 1，整网为 1。" },
-        { id: "sim:bus64", name: "64 位数据总线", kind: "databus", group: "线路", symbol: "▤", description: "蓝色宽总线，每段同时传递最多 65 位二进制数据；不能与单比特信号线直接互通，同网不允许多个驱动器。" },
         { id: "sim:cross", name: "信号跨线桥", kind: "cross", group: "线路", symbol: "╋", description: "水平与垂直信号穿过同格但不相连；可与电线叠放。" },
         { id: "sim:switch", name: "手动开关", kind: "switch", group: "控制", symbol: "⏻", defaults: { on: true }, description: "双击元件或修改参数，切换输出。逻辑元件理想化，不额外耗电。" },
         { id: "sim:timer", name: "循环计时器", kind: "timer", group: "控制", symbol: "◷", defaults: { high: 1, low: 1 }, description: "从高电平开始循环；以 0.05 秒为时间精度。" },
@@ -57,48 +53,8 @@
         { id: "sim:solar", name: "太阳能板", kind: "generator", group: "实验设备", symbol: "▦", electrical: true, defaults: { enabled: true, watts: 600, voltage: 120, sourcePercent: 100 }, description: "扩展电源：输出随实验光照变化，不代表游戏已有太阳能机制。" },
         { id: "sim:source", name: "可调电源", kind: "generator", group: "实验设备", symbol: "G", electrical: true, defaults: { enabled: true, watts: 600, voltage: 120, sourcePercent: 100 }, description: "用于测试供需、充放电与不同电压，不消耗燃料。" },
         { id: "sim:load", name: "可调负载", kind: "consumer", group: "实验设备", symbol: "W", electrical: true, defaults: { enabled: true, watts: 100, voltage: 120 }, description: "通用耗电设备；左侧自动化口未接线时运行，接线后由 0/1 控制。" },
-        { id: "sim:tank", name: "实验水箱", kind: "tank", group: "实验设备", symbol: "≈", defaults: { tankCapacity: 100, initialPercent: 20, drainRate: 1 }, description: "通过水泵的“关联实验对象”接收水；蓝色虚线表示抽象水路，不是电线。" },
-        { id: "sim:word64", name: "64 位输入寄存器", kind: "wordsource", group: "64 位运算", symbol: "IN", defaults: { wordHex: "0x1" }, description: "可输入 0 到 2^64−1。右侧通过蓝色数据总线向加法器送数；这是抽象寄存器，无需逐根铺设 64 根线。" },
-        { id: "sim:adder64", name: "64 位逐位进位加法器", kind: "consumer", operation: "rippleAdder64", electrical: true, group: "64 位运算", symbol: "Σ", defaults: { enabled: true, voltage: 120, watts: 60 }, description: "内部逐级计算 64 个一位全加器：XOR、AND、OR 和进位。左 A、上 B 为数据输入，右 SUM 最多 65 位，下方输出最高进位。60W 是实验参数。" },
-        { id: "sim:worddisplay", name: "65 位结果显示器", kind: "worddisplay", group: "64 位运算", symbol: "OUT", defaults: {}, description: "左侧输入蓝色宽总线，显示包含进位的完整 65 位结果；未接线、无供电、总线冲突时不显示旧结果。" }
+        { id: "sim:tank", name: "实验水箱", kind: "tank", group: "实验设备", symbol: "≈", defaults: { tankCapacity: 100, initialPercent: 20, drainRate: 1 }, description: "通过水泵的“关联实验对象”接收水；蓝色虚线表示抽象水路，不是电线。" }
     ];
-
-    // 仅对保存的文本做精确任意精度校验；不使用 Number，避免 53 位以上损失精度。
-    function parseWord64(input) {
-        if (typeof input !== "string") throw new Error("整数必须使用文本输入。");
-        const s = input.trim().replace(/[\s_]/g, "");
-        if (!s || s.length > 256) throw new Error("输入长度太长或为空。");
-        let digits, radix;
-        if (/^0[xX][0-9a-fA-F]+$/.test(s)) { digits = s.slice(2); radix = 16; }
-        else if (/^0[bB][01]+$/.test(s)) { digits = s.slice(2); radix = 2; }
-        else if (/^[0-9]+$/.test(s)) { digits = s; radix = 10; }
-        else throw new Error("只支持非负整数：0x 十六进制、0b 二进制或十进制。");
-        if ((radix === 16 && digits.replace(/^0+/, "").length > 16) ||
-            (radix === 2 && digits.replace(/^0+/, "").length > WORD_BITS) ||
-            (radix === 10 && digits.replace(/^0+/, "").length > 20)) throw new Error("整数超过 64 位。");
-        const value = BigInt(radix === 10 ? digits : radix === 16 ? `0x${digits}` : `0b${digits}`);
-        if (value >= WORD_LIMIT) throw new Error("整数超过 64 位（上限 2^64−1）。");
-        return value;
-    }
-    function normalizeWord64(value) { return "0x" + parseWord64(value).toString(16).toUpperCase(); }
-
-    // 精确模拟 64 级全加器，保留每级两个输入以及输入/输出进位供学习和排错。
-    function addWordsWithRippleCarry(a, b) {
-        const x = parseWord64(a), y = parseWord64(b);
-        const stages = new Array(WORD_BITS);
-        let carry = 0, result = 0n;
-        for (let i = 0; i < WORD_BITS; i++) {
-            const bitA = Number((x >> BigInt(i)) & 1n), bitB = Number((y >> BigInt(i)) & 1n);
-            const xor = bitA ^ bitB;
-            const sum = xor ^ carry;
-            const out = (bitA & bitB) | (xor & carry);
-            stages[i] = { index: i, a: bitA, b: bitB, carryIn: carry, sum, carryOut: out };
-            if (sum) result |= 1n << BigInt(i);
-            carry = out;
-        }
-        if (carry) result |= WORD_LIMIT;
-        return { hex: "0x" + result.toString(16).toUpperCase(), carry, stages };
-    }
 
     // 只从实际目录登记游戏电气设备；新增控制能力显式标记为模拟扩展。
     function createRegistry(catalog, entries = []) {
@@ -145,9 +101,6 @@
                 if (typeof value !== "string" || value.length > 80) throw new Error("目标 ID 无效。");
             } else if (rule.type === "select") {
                 if (!rule.options.some(option => option[0] === value)) throw new Error("比较条件无效。");
-            } else if (rule.type === "word64") {
-                result[name] = normalizeWord64(value);
-                continue;
             } else if (!Number.isFinite(value) || value < rule.min || value > rule.max) throw new Error(`${rule.label} 超出范围。`);
             if (name === "count" && !Number.isInteger(value)) throw new Error("计数阈值必须为整数。");
             result[name] = value;
@@ -157,23 +110,13 @@
     function offset(direction, rotation) { return DIRECTIONS[(direction + rotation) & 3]; }
     function position(device, direction) { const [dx, dy] = offset(direction, device.rotation); return { x: device.x + dx, y: device.y + dy }; }
     function signalPins(definition) {
-        if (definition.operation === "rippleAdder64") return [{ name: "CARRY", direction: 1, input: false }];
-        if (["wire", "signal", "cross", "tank", "battery", "databus", "wordsource", "worddisplay"].includes(definition.kind)) return [];
+        if (["wire", "signal", "cross", "tank", "battery"].includes(definition.kind)) return [];
         if (definition.kind === "relay") return [{ name: "C", direction: 3, input: true }];
         if (["consumer", "generator", "probe"].includes(definition.kind)) return [{ name: "C", direction: 2, input: true }];
         const pins = [{ name: "Q", direction: 0, input: false }];
         if (["and", "or", "not", "xor", "latch", "toggle", "delay", "counter"].includes(definition.kind)) pins.push({ name: definition.kind === "latch" ? "S" : "A", direction: 2, input: true });
         if (["and", "or", "xor", "latch", "toggle", "counter"].includes(definition.kind)) pins.push({ name: ["latch", "toggle", "counter"].includes(definition.kind) ? "R" : "B", direction: 3, input: true });
         return pins;
-    }
-    function busPins(definition) {
-        if (definition.kind === "wordsource") return [{ name: "WORD", direction: 0, input: false }];
-        if (definition.operation === "rippleAdder64") return [
-            { name: "A", direction: 2, input: true }, { name: "B", direction: 3, input: true },
-            { name: "SUM", direction: 0, input: false }
-        ];
-        if (definition.kind === "worddisplay") return [{ name: "SUM", direction: 2, input: true }];
-        return [];
     }
     function powerPosition(definition, device) {
         const direction = { right: 0, down: 1, left: 2, up: 3 }[definition.connection];
@@ -184,7 +127,6 @@
         constructor(registry, width = 64, height = 40) {
             this.registry = registry; this.width = width; this.height = height;
             this.devices = new Map(); this.deviceCells = new Map(); this.power = new Map(); this.signal = new Map();
-            this.busNetworks = []; this.busIndex = new Map(); this.busValues = [];
             this.environment = { temperature: 25, light: 100 };
             this.ticks = 0; this.nextId = 1; this.dirty = true; this.powerDirty = true;
             this.signalNetworks = []; this.powerNetworks = []; this.signalIndex = new Map(); this.powerIndex = new Map();
@@ -200,7 +142,7 @@
             const definition = this.registry.get(type);
             if (!definition) throw new Error(`未知元件：${type}`);
             if (!this.inside(x, y)) throw new Error("超出棋盘边界。");
-            if (["wire", "signal", "cross", "databus"].includes(definition.kind)) return this.paint(type, x, y);
+            if (["wire", "signal", "cross"].includes(definition.kind)) return this.paint(type, x, y);
             if (this.at(x, y)) throw new Error("该格已有设备，请先移动或删除。");
             if (this.signal.has(key(x, y))) throw new Error("设备中心不能穿过信号线，请先擦除该格信号线。");
             if (definition.kind === "relay" && this.power.has(key(x, y))) throw new Error("继电器中心不能铺电线，请先擦除中心电线。");
@@ -210,7 +152,7 @@
         }
         paint(type, x, y) {
             const definition = this.registry.get(type);
-            if (!definition || !["wire", "signal", "cross", "databus"].includes(definition.kind) || !this.inside(x, y)) return false;
+            if (!definition || !["wire", "signal", "cross"].includes(definition.kind) || !this.inside(x, y)) return false;
             const cell = key(x, y), device = this.at(x, y);
             if (definition.kind === "wire") {
                 if (device && this.definition(device).kind === "relay") return false;
@@ -249,20 +191,16 @@
             const p = this.params(device), kind = this.definition(device).kind;
             device.runtime = { output: kind === "switch" ? p.on : kind === "timer", previous: false, count: 0, delayTicks: 0, closed: false, watts: 0, ratio: 0,
                 energy: (p.capacity || 0) * (p.initialPercent || 0) / 100, water: (p.tankCapacity || 0) * (p.initialPercent || 0) / 100 };
-            if (kind === "wordsource") device.runtime.wordHex = normalizeWord64(p.wordHex);
-            if (this.definition(device).operation === "rippleAdder64") Object.assign(device.runtime, { sumHex: null, lastHex: null, wordStatus: "等待输入", stages: null, carry: 0, lastInput: "" });
-            if (kind === "worddisplay") Object.assign(device.runtime, { sumHex: null, wordStatus: "等待输入" });
         }
         reset() { this.ticks = 0; for (const device of this.devices.values()) this.resetDevice(device); this.markDirty(); this.refresh(); }
         signalNode(x, y, direction) {
             const cell = key(x, y), type = this.signal.get(cell);
-            return !type || this.registry.get(type)?.kind === "databus" ? null : `${cell}:${type === "sim:cross" ? ((direction & 1) === 0 ? "h" : "v") : "a"}`;
+            return !type ? null : `${cell}:${type === "sim:cross" ? ((direction & 1) === 0 ? "h" : "v") : "a"}`;
         }
         // 跨线桥拆成两个节点，避免水平和垂直线路误短接。
         rebuildSignals() {
             this.signalNetworks = []; this.signalIndex.clear();
             for (const [cell, type] of this.signal) {
-                if (this.registry.get(type)?.kind === "databus") continue;
                 for (const lane of type === "sim:cross" ? ["h", "v"] : ["a"]) {
                     const root = `${cell}:${lane}`; if (this.signalIndex.has(root)) continue;
                     const index = this.signalNetworks.length, members = [], queue = [root]; this.signalIndex.set(root, index);
@@ -295,84 +233,6 @@
         readInput(device, direction, values = this.signalValues) {
             const index = this.pinNetwork(device, direction); return { connected: index !== undefined, value: index !== undefined && !!values[index] };
         }
-        // 宽数据总线有独立拓扑，不用 boolean OR 合并带宽不同的信号。
-        rebuildDataBuses() {
-            this.busNetworks = []; this.busIndex.clear();
-            for (const [root, type] of this.signal) {
-                if (this.registry.get(type)?.kind !== "databus" || this.busIndex.has(root)) continue;
-                const index = this.busNetworks.length, cells = [], queue = [root]; this.busIndex.set(root, index);
-                for (let i = 0; i < queue.length; i++) {
-                    const cell = queue[i], [x, y] = cell.split(",").map(Number); cells.push(cell);
-                    for (const [dx, dy] of DIRECTIONS) {
-                        const next = key(x + dx, y + dy);
-                        if (this.registry.get(this.signal.get(next))?.kind === "databus" && !this.busIndex.has(next)) {
-                            this.busIndex.set(next, index); queue.push(next);
-                        }
-                    }
-                }
-                this.busNetworks.push(cells);
-            }
-        }
-        busPinNetwork(device, direction) {
-            const point = position(device, direction);
-            return this.busIndex.get(key(point.x, point.y));
-        }
-        readDataBus(device, direction) {
-            const index = this.busPinNetwork(device, direction);
-            return index === undefined ? { hex: null, status: "未接总线" } : this.busValues[index] || { hex: null, status: "无数据" };
-        }
-        solveDataBuses() {
-            const networkDrivers = this.busNetworks.map(() => []);
-            for (const device of this.devices.values()) for (const pin of busPins(this.definition(device))) {
-                const index = this.busPinNetwork(device, pin.direction);
-                if (!pin.input && index !== undefined) networkDrivers[index].push(device);
-            }
-            this.busValues = networkDrivers.map(drivers => ({ hex: null, status: drivers.length > 1 ? "多驱动冲突" : "无数据", drivers: drivers.length }));
-            for (const device of this.devices.values()) {
-                if (this.definition(device).kind !== "wordsource") continue;
-                device.runtime.wordHex = normalizeWord64(this.params(device).wordHex);
-                const index = this.busPinNetwork(device, 0);
-                if (index !== undefined && networkDrivers[index].length === 1) this.busValues[index] = { hex: device.runtime.wordHex, status: "正常", drivers: 1 };
-            }
-            const pending = Array.from(this.devices.values()).filter(device => this.definition(device).operation === "rippleAdder64");
-            // 拓扑前推只处理已就绪输入；若形成环路则保持无数据，不会进行无限递归。
-            const maxPasses = pending.length;
-            for (let pass = 0; pass < maxPasses && pending.length; pass++) {
-                let progressed = false;
-                for (let index = pending.length - 1; index >= 0; index--) {
-                    const device = pending[index], runtime = device.runtime, a = this.readDataBus(device, 2), b = this.readDataBus(device, 3);
-                    const outputIndex = this.busPinNetwork(device, 0);
-                    runtime.sumHex = null; runtime.output = false; runtime.wordStatus = "等待有效输入";
-                    if (runtime.ratio < 0.999999) { runtime.wordStatus = "供电不足 / 未通电"; runtime.stages = null; pending.splice(index, 1); continue; }
-                    if (!a.hex || !b.hex) {
-                        runtime.wordStatus = a.status !== "正常" ? `输入 A：${a.status}` : `输入 B：${b.status}`;
-                        continue;
-                    }
-                    const inputKey = `${a.hex}|${b.hex}`;
-                    if (runtime.lastInput !== inputKey || !runtime.stages) {
-                        const result = addWordsWithRippleCarry(a.hex, b.hex);
-                        runtime.lastInput = inputKey; runtime.lastHex = result.hex; runtime.carry = result.carry; runtime.stages = result.stages;
-                    } else {
-                        runtime.carry = runtime.stages[WORD_BITS - 1].carryOut;
-                    }
-                    runtime.sumHex = runtime.lastHex;
-                    runtime.output = !!runtime.carry; runtime.wordStatus = "正常 · 64 级进位计算完成";
-                    if (outputIndex !== undefined && networkDrivers[outputIndex].length === 1)
-                        this.busValues[outputIndex] = { hex: runtime.sumHex, status: "正常", drivers: 1 };
-                    pending.splice(index, 1); progressed = true;
-                }
-                if (!progressed) break;
-            }
-            for (const device of pending) {
-                device.runtime.sumHex = null; device.runtime.output = false;
-                device.runtime.stages = null;
-            }
-            for (const device of this.devices.values()) if (this.definition(device).kind === "worddisplay") {
-                const data = this.readDataBus(device, 2);
-                device.runtime.sumHex = data.hex;
-                device.runtime.wordStatus = data.hex ? "正常 · 完整 65 位结果" : data.status;
-            }
-        }
         rebuildPower() {
             this.powerNetworks = []; this.powerIndex.clear();
             const bridges = new Map();
@@ -401,7 +261,7 @@
             for (const network of this.powerNetworks) network.devices.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
             this.powerDirty = false;
         }
-        ensureTopology() { if (this.dirty) { this.rebuildSignals(); this.rebuildDataBuses(); this.dirty = false; } if (this.powerDirty) this.rebuildPower(); }
+        ensureTopology() { if (this.dirty) { this.rebuildSignals(); this.dirty = false; } if (this.powerDirty) this.rebuildPower(); }
         accepts(definition, params, voltage) {
             const e = definition.electricalConfig || {};
             return voltage > 0 && voltage + 0.001 >= (e.MinimumVoltage || params.voltage) && voltage <= (e.MaximumVoltage || params.voltage) + 0.001;
@@ -479,7 +339,7 @@
             if (kind === "charge" && target && this.definition(target).kind === "battery") return target.runtime.energy / this.params(target).capacity * 100;
             return null;
         }
-        refresh() { this.ensureTopology(); this.signalValues = this.collectSignals(); this.solvePower(0); this.solveDataBuses(); this.signalValues = this.collectSignals(); }
+        refresh() { this.ensureTopology(); this.signalValues = this.collectSignals(); this.solvePower(0); }
         // 所有逻辑门读上一拍并统一提交，反馈回路不会递归求解或依赖遍历顺序。
         step() {
             this.ensureTopology(); const oldSignals = this.collectSignals(), updates = [];
@@ -508,7 +368,6 @@
             for (const [device, update] of updates) Object.assign(device.runtime, update);
             if (this.powerDirty) this.rebuildPower();
             this.signalValues = this.collectSignals(); this.solvePower(STEP);
-            this.solveDataBuses(); this.signalValues = this.collectSignals();
             // 水箱是显式关联的实验负载，不假装复刻游戏气液网络。
             const tankFlows = new Map();
             for (const device of this.devices.values()) {
@@ -536,7 +395,7 @@
             for (const source of data.devices) {
                 if (!source || !/^d[1-9][0-9]{0,7}$/.test(source.id) || ids.has(source.id) || !Number.isInteger(source.rotation) || source.rotation < 0 || source.rotation > 3) throw new Error("设备 ID 重复或旋转值无效。");
                 const definition = registry.get(source.type);
-                if (!definition || ["wire", "signal", "cross", "databus"].includes(definition.kind)) throw new Error(`当前目录不支持设备：${source.type}`);
+                if (!definition || ["wire", "signal", "cross"].includes(definition.kind)) throw new Error(`当前目录不支持设备：${source.type}`);
                 const device = board.add(source.type, source.x, source.y, source.rotation, source.params);
                 board.devices.delete(device.id); device.id = source.id; board.devices.set(device.id, device); board.deviceCells.set(key(device.x, device.y), device.id); ids.add(device.id);
                 board.nextId = Math.max(board.nextId, Number(device.id.slice(1)) + 1);
@@ -544,7 +403,7 @@
             for (const layer of ["power", "signal"]) for (const wire of data[layer]) {
                 if (!wire || typeof wire.cell !== "string" || !/^\d+,\d+$/.test(wire.cell)) throw new Error("线路坐标无效。");
                 const [x, y] = wire.cell.split(",").map(Number), definition = registry.get(wire.type);
-                if (!definition || (layer === "power" ? definition.kind !== "wire" : !["signal", "cross", "databus"].includes(definition.kind)) || board[layer].has(wire.cell) || !board.paint(wire.type, x, y)) throw new Error("线路越界、重复或与设备冲突。");
+                if (!definition || (layer === "power" ? definition.kind !== "wire" : !["signal", "cross"].includes(definition.kind)) || board[layer].has(wire.cell) || !board.paint(wire.type, x, y)) throw new Error("线路越界、重复或与设备冲突。");
             }
             if (!data.environment || !Number.isFinite(data.environment.temperature) || data.environment.temperature < -1000 || data.environment.temperature > 1e6 || !Number.isFinite(data.environment.light) || data.environment.light < 0 || data.environment.light > 100) throw new Error("实验环境参数无效。");
             board.environment = { temperature: data.environment.temperature, light: data.environment.light }; board.reset(); return board;
@@ -556,21 +415,7 @@
         const board = new CircuitBoard(registry), wire = registry.has("Wire_Copper") ? "Wire_Copper" : Array.from(registry.values()).find(d => d.kind === "wire")?.id;
         if (!wire) throw new Error("尚未读取游戏电线配置。");
         function line(type, x1, y1, x2, y2) { let x = x1, y = y1; board.paint(type, x, y); while (x !== x2) { x += Math.sign(x2 - x); board.paint(type, x, y); } while (y !== y2) { y += Math.sign(y2 - y); board.paint(type, x, y); } }
-        if (name === "adder64") {
-            const maxWord = "0x" + "F".repeat(16);
-            board.add("sim:word64", 3, 9, 0, { wordHex: maxWord });
-            board.add("sim:word64", 10, 3, 1, { wordHex: "0x1" });
-            board.add("sim:adder64", 10, 9);
-            board.add("sim:worddisplay", 18, 9);
-            board.add("sim:source", 10, 16, 0, { watts: 120 });
-            board.add("sim:probe", 14, 14);
-            line("sim:bus64", 4, 9, 9, 9);
-            line("sim:bus64", 10, 4, 10, 8);
-            line("sim:bus64", 11, 9, 17, 9);
-            line(wire, 10, 9, 10, 16);
-            line("sim:signal", 10, 10, 10, 14);
-            line("sim:signal", 10, 14, 13, 14);
-        } else if (name === "tank") {
+        if (name === "tank") {
             const tank = board.add("sim:tank", 17, 7), low = board.add("sim:level", 3, 8, 0, { target: tank.id, threshold: 30, compare: "below" });
             board.add("sim:level", 3, 3, 0, { target: tank.id, threshold: 90, compare: "above" });
             board.add("sim:latch", 8, 8); board.add("LiquidPump_Electric", 13, 8, 0, { target: tank.id });
@@ -588,5 +433,5 @@
         }
         board.reset(); return board;
     }
-    return { STEP, WORD_BITS, DIRECTIONS, PARAMS, CircuitBoard, createRegistry, createExample, signalPins, busPins, parseWord64, addWordsWithRippleCarry, powerPosition, position, key, clamp, parameters };
+    return { STEP, DIRECTIONS, PARAMS, CircuitBoard, createRegistry, createExample, signalPins, powerPosition, position, key, clamp, parameters };
 });

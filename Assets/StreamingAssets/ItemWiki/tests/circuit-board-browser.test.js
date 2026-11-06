@@ -17,7 +17,6 @@ async function install() {
     await page.goto("http://circuit.test/");
     await page.addStyleTag({ path: path.join(base, "circuit-board.css") });
     await page.addScriptTag({ path: path.join(base, "circuit-board-model.js") });
-    await page.addScriptTag({ path: path.join(base, "circuit-adder-panel.js") });
     await page.addScriptTag({ path: path.join(base, "circuit-board.js") });
     await page.evaluate(({ catalog, fiber }) => {
         window.circuit = ItemCircuitBoard.create({ root: document.getElementById("root") });
@@ -189,63 +188,4 @@ test("科技树配置失败不会阻断电路实验室", { skip: !process.env.IT
     await page.locator('#circuitBoardRoot [data-action="step"]').click();
     assert.match(await page.locator('#circuitBoardRoot [data-role="clock"]').textContent(), /00:00.05/);
     assert.match(await page.locator('#statusText').textContent(), /科技树暂不可用/);
-});
-
-test("64 位加法示例在真实棋盘供电，显示第 65 位进位和完整结果", async () => {
-    await page.locator('[data-role="example"]').selectOption("adder64");
-    await page.locator('[data-adder-role="result"]').waitFor({ state: "visible" });
-    assert.equal(await page.evaluate(() => circuit.getBoard().busNetworks.length), 3);
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
-    assert.match(await page.locator('[data-adder-role="metrics"]').textContent(), /64 \/ 64/);
-    assert.match(await page.locator('[data-adder-role="metrics"]').textContent(), /64.*第 65 位.*1/s);
-    await page.locator('[data-adder-role="format"]').selectOption("decimal");
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), (1n << 64n).toString(10));
-    await page.locator('[data-adder-role="format"]').selectOption("binary");
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0b1" + "0".repeat(64));
-    await page.locator('[data-adder-action="last"]').click();
-    assert.match(await page.locator('[data-adder-role="bit-table"]').textContent(), /#63/);
-    await page.screenshot({ path: path.join(output, "circuit-board-adder64.png"), fullPage: true });
-});
-
-test("加法工作台修改 64 位输入、阻断供电与撤销后都正确更新", async () => {
-    await page.locator('[data-role="example"]').selectOption("adder64");
-    const input = page.locator('[data-adder-operand="a"]');
-    await input.fill("0xABCDEF"); await input.press("Tab");
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xABCDF0");
-    await page.locator('[data-adder-action="simple"]').click();
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xBE0245");
-    await page.locator('[data-adder-operand="b"]').fill("0x" + "F".repeat(17));
-    await page.locator('[data-adder-operand="b"]').press("Tab");
-    assert.match(await page.locator('[data-adder-role="status"]').textContent(), /超过 64 位/);
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xBE0245");
-    await page.evaluate(() => {
-        const b = circuit.getBoard(); b.erase(10, 12, "power"); b.refresh();
-    });
-    await page.locator('[data-action="step"]').click();
-    assert.match(await page.locator('[data-adder-role="status"]').textContent(), /供电不足/);
-    assert.match(await page.locator('[data-adder-role="result"]').textContent(), /检查 A\/B/);
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-});
-
-test("64 位示例导出导入后保留数据总线、输入数值及计算结果", async () => {
-    await page.locator('[data-role="example"]').selectOption("adder64");
-    const before = await page.evaluate(() => JSON.stringify(circuit.getBoard().serialize()));
-    const downloadPromise = page.waitForEvent("download");
-    await page.locator('[data-action="export"]').click();
-    const exported = JSON.parse(fs.readFileSync(await (await downloadPromise).path(), "utf8"));
-    assert.equal(exported.signal.filter(s => s.type === "sim:bus64").length, 18);
-    await page.locator('[data-action="clear"]').click();
-    await page.locator('[data-role="file"]').setInputFiles({ name: "adder64.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exported)) });
-    await page.waitForFunction(() => circuit.getBoard().busNetworks.length === 3);
-    assert.equal(await page.evaluate(() => JSON.stringify(circuit.getBoard().serialize())), before);
-    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
-});
-
-test("真实 ItemWiki 的 64 位新示例资源和工作台可完整读取", { skip: !process.env.ITEM_WIKI_BASE_URL }, async () => {
-    await page.goto(`${process.env.ITEM_WIKI_BASE_URL}#circuit-board`, { waitUntil: "domcontentloaded" });
-    await page.locator('#circuitBoardRoot [data-role="example"]').selectOption("adder64");
-    await page.locator('#circuitBoardRoot [data-adder-role="result"]').waitFor({ state: "visible" });
-    assert.equal(await page.locator('#circuitBoardRoot [data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
-    await page.locator('#circuitBoardRoot [data-adder-action="simple"]').click();
-    assert.equal(await page.locator('#circuitBoardRoot [data-adder-role="result"]').textContent(), "0xBE0245");
 });

@@ -120,7 +120,7 @@ class WikiMaintenanceTests(unittest.TestCase):
                 self.assertEqual(200, response.status, request_path)
                 response.read()
             for resource in ["behavior-tree.js", "behavior-tree-model.js", "behavior-tree.css",
-                             "circuit-board-model.js", "circuit-board.js", "circuit-board.css", "circuit-adder-panel.js"]:
+                             "circuit-board-model.js", "circuit-board.js", "circuit-board.css"]:
                 connection.request("GET", "/Assets/StreamingAssets/ItemWiki/" + resource)
                 response = connection.getresponse()
                 self.assertEqual(200, response.status, resource)

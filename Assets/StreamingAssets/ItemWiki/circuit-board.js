@@ -11,21 +11,21 @@
         host.innerHTML = `<div class="cb-shell">
             <header class="cb-heading"><div><div class="cb-eyebrow">FLATWORLD / AUTOMATION LAB</div><h2>电路实验室 <span>SIMULATION</span></h2><p>在同一张地图上，连接能量与逻辑。</p></div><button data-action="expand" title="铺满网页 / Esc 退出">⛶ 铺满网页</button></header>
             <div class="cb-toolbar"><div class="cb-toolbar-group"><button data-action="run" class="cb-primary">▶ 运行</button><button data-action="step" title="推进 0.05 秒">单步</button><button data-action="reset" title="保留布置，重置计时与储量">↺ 重置</button><select data-role="speed" aria-label="模拟速度"><option value="0.25">0.25×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select></div>
-            <div class="cb-toolbar-group"><button data-action="undo" title="Ctrl+Z，恢复布置而非运行进度">↶</button><button data-action="redo" title="Ctrl+Y">↷</button><select data-role="example" aria-label="加载示例"><option value="">加载示例…</option><option value="blink">01 · 亮 1 秒，灭 1 秒</option><option value="tank">02 · 低水位开泵，高水位停泵</option><option value="battery">03 · 太阳能与电池充放电</option><option value="logic">04 · 两个开关控制与门</option><option value="adder64">05 · 64 位二进制加法器</option></select></div>
+            <div class="cb-toolbar-group"><button data-action="undo" title="Ctrl+Z，恢复布置而非运行进度">↶</button><button data-action="redo" title="Ctrl+Y">↷</button><select data-role="example" aria-label="加载示例"><option value="">加载示例…</option><option value="blink">01 · 亮 1 秒，灭 1 秒</option><option value="tank">02 · 低水位开泵，高水位停泵</option><option value="battery">03 · 太阳能与电池充放电</option><option value="logic">04 · 两个开关控制与门</option></select></div>
             <div class="cb-toolbar-group cb-file-tools"><button data-action="export">导出方案</button><button data-action="import">导入</button><button data-action="clear">新建</button><input data-role="file" type="file" accept=".json,application/json" hidden></div></div>
             <div class="cb-workbench"><aside class="cb-palette"><div class="cb-panel-title">元件库 <span data-role="component-count">—</span></div><input class="cb-search" data-role="search" type="search" placeholder="搜索元件 / ID" aria-label="搜索电路元件"><div class="cb-tool-grid"><button data-tool="select" class="active">↖ 选择 / 移动</button><button data-tool="erase">⌫ 擦除</button></div><label class="cb-layer-choice">当前擦除层<select data-role="erase-layer"><option value="device">设备层</option><option value="power">电力线层</option><option value="signal">信号线层</option></select></label><div class="cb-palette-list" data-role="palette"><p>正在读取游戏设备…</p></div><div class="cb-library-note"><i class="cb-game-dot"></i> 游戏配置　<i class="cb-extension-dot"></i> 模拟扩展</div></aside>
             <section class="cb-map-panel"><div class="cb-map-toolbar"><span class="cb-tool-name" data-role="tool-name">选择 / 移动</span><div><button data-action="rotate" title="R 旋转 90°">↻ <span data-role="rotation">0°</span></button><button data-action="zoom-out" aria-label="缩小">−</button><button data-action="fit">适配</button><button data-action="zoom-in" aria-label="放大">＋</button></div></div>
-            <div class="cb-viewport"><canvas class="cb-canvas" tabindex="0" aria-label="网格电路棋盘：选择元件后点击放置，拖动布线，空格拖动地图，滚轮缩放"></canvas><div class="cb-map-badges"><label><input data-layer="power" type="checkbox" checked><i class="cb-power-dot"></i> 电力</label><label><input data-layer="signal" type="checkbox" checked><i class="cb-signal-dot"></i> 信号 / 数据总线</label><label><input data-layer="device" type="checkbox" checked>设备</label></div><div class="cb-hover" data-role="hover">64 × 40 网格 · 每拍 0.05 秒</div><div class="cb-empty" data-role="empty" hidden>从左侧选择元件，点击网格开始搭建。<small>电线可从设备下方穿过；信号线连接设备边缘端口。</small></div></div>
+            <div class="cb-viewport"><canvas class="cb-canvas" tabindex="0" aria-label="网格电路棋盘：选择元件后点击放置，拖动布线，空格拖动地图，滚轮缩放"></canvas><div class="cb-map-badges"><label><input data-layer="power" type="checkbox" checked><i class="cb-power-dot"></i> 电力</label><label><input data-layer="signal" type="checkbox" checked><i class="cb-signal-dot"></i> 信号</label><label><input data-layer="device" type="checkbox" checked>设备</label></div><div class="cb-hover" data-role="hover">64 × 40 网格 · 每拍 0.05 秒</div><div class="cb-empty" data-role="empty" hidden>从左侧选择元件，点击网格开始搭建。<small>电线可从设备下方穿过；信号线连接设备边缘端口。</small></div></div>
             <div class="cb-map-footer"><span data-role="clock">00:00.00</span><span data-role="network-count">0 个电网 / 0 个信号网</span><span data-role="zoom">100%</span></div><div class="cb-environment"><strong>实验环境</strong><label>光照 <input data-role="light" type="range" min="0" max="100" value="100"><span data-role="light-value">100%</span></label><label>温度 <input data-role="temperature" type="number" min="-1000" max="1000000" value="25" step="1"> ℃</label></div></section>
             <aside class="cb-inspector"><div class="cb-panel-title">检查器 <span>INSPECTOR</span></div><div data-role="inspector"></div><div class="cb-scope-heading">信号观察 <span>最近 8 秒</span></div><canvas class="cb-scope" width="500" height="140" aria-label="所选元件的数字信号波形"></canvas><div class="cb-net-summary" data-role="summary"></div></aside></div>
-            <div data-role="adder-lab" class="cb-adder-host" hidden></div>
             <div class="cb-status" role="status" data-role="status">方案只保存在当前浏览器或导出的 JSON 中，不写回游戏。</div>
-            <details class="cb-help"><summary>操作说明与模拟边界</summary><div><p><b>搭建：</b>点击左侧元件后放置；拖动绘制线路。选择模式拖动设备，R 旋转，右键擦除当前层，空格 / 中键拖动地图，滚轮缩放，Delete 删除选中设备。编辑自动暂停；切走分页或浏览器后台也会暂停，不补算离线时间。</p><p><b>连接：</b>黄色线供电，绿色线传 0/1，两层交叉不相连。蓝色线是宽数据总线，最多传 65 位，不能与绿色的 0/1 线混用；一个宽总线不能有多个数据源。游戏设备按实际配置接同格或方向电力口；通常左侧 C 是扩展控制口，未接信号线时沿用启用状态。逻辑门右侧 Q 输出，左侧 A/S、上侧 B/R 输入；悬停或选中可查看。中心不能铺信号线；同层十字默认相连，跨线桥的横竖不相连。</p><p><b>64 位加法：</b>示例中蓝色 A/B 总线输入加法模块，内部的 64 级一位全加器逐级传进位，输出最多 65 位；下方绿色线传最高进位 0/1。下方工作台可修改输入、查看 64 级进位。模块封装只是为了方便观察，不代表已经在游戏里制造了 64 个实体门电路。</p><p><b>时间：</b>每拍 0.05 秒，每级逻辑门延迟一拍；信号网多输出采用 OR，输入悬空为 0，SR 同时置位和复位时复位优先。反馈环逐拍演化，不做无限递归；计时参数按最近的 0.05 秒取整。</p><p><b>电力：</b>读取当前 mechanical-catalog.json，使用 W、J、V；优先发电，余电充电、缺电放电，同网负载按比例分摊。相异源电压会停网，过载只报警，不自动断电，不求支路电流或压降。</p><p><b>边界：</b>所有自动化控制口和标紫色的元件均为设计实验。游戏设备这里只模拟电气负载，不运行 Unity 的配方、氧气、推力、重力或完整气液逻辑；双向电机只模拟受外部动力驱动的发电模式。水箱虚线是抽象水路，泵送不计算压力和水源。导出、撤销和自动保存记录布置及初始参数，不记录运行进度。</p></div></details>
+            <details class="cb-help"><summary>操作说明与模拟边界</summary><div><p><b>搭建：</b>点击左侧元件后放置；拖动绘制线路。选择模式拖动设备，R 旋转，右键擦除当前层，空格 / 中键拖动地图，滚轮缩放，Delete 删除选中设备。编辑自动暂停；切走分页或浏览器后台也会暂停，不补算离线时间。</p><p><b>连接：</b>黄色线供电，绿色线传 0/1，两层交叉不相连。游戏设备按实际配置接同格或方向电力口；通常左侧 C 是扩展控制口，未接信号线时沿用启用状态。逻辑门右侧 Q 输出，左侧 A/S、上侧 B/R 输入；悬停或选中可查看。中心不能铺信号线；同层十字默认相连，跨线桥的横竖不相连。</p><p><b>时间：</b>每拍 0.05 秒，每级逻辑门延迟一拍；信号网多输出采用 OR，输入悬空为 0，SR 同时置位和复位时复位优先。反馈环逐拍演化，不做无限递归；计时参数按最近的 0.05 秒取整。</p><p><b>电力：</b>读取当前 mechanical-catalog.json，使用 W、J、V；优先发电，余电充电、缺电放电，同网负载按比例分摊。相异源电压会停网，过载只报警，不自动断电，不求支路电流或压降。</p><p><b>边界：</b>所有自动化控制口和标紫色的元件均为设计实验。游戏设备这里只模拟电气负载，不运行 Unity 的配方、氧气、推力、重力或完整气液逻辑；双向电机只模拟受外部动力驱动的发电模式。水箱虚线是抽象水路，泵送不计算压力和水源。导出、撤销和自动保存记录布置及初始参数，不记录运行进度。</p></div></details>
         </div>`;
         const shell = host.querySelector(".cb-shell"), $ = role => host.querySelector(`[data-role="${role}"]`);
         const canvas = host.querySelector(".cb-canvas"), context = canvas.getContext("2d"), scope = host.querySelector(".cb-scope"), scopeContext = scope.getContext("2d");
         // 编辑器控件只增强现有 ItemWiki 视图，不改变模拟器数据模型。
         const palettePane = shell.querySelector(".cb-palette"), inspectorPane = shell.querySelector(".cb-inspector");
+        palettePane.querySelector(".cb-tool-grid").insertAdjacentHTML("beforeend", '<button data-tool="poke" title="测试模式：单击开关，仿真不中断">☝ 测试</button>');
         shell.querySelector(".cb-heading").insertAdjacentHTML("beforeend", '<span class="cb-run-pill" data-role="run-state">● 已暂停</span>');
         palettePane.querySelector(".cb-search").insertAdjacentHTML("beforebegin", '<button type="button" class="cb-find-trigger" data-action="quick-add">⌕ 快速查找元件 <kbd>F</kbd></button>');
         palettePane.querySelector(".cb-palette-list").insertAdjacentHTML("beforebegin", '<div class="cb-categories" data-role="categories" aria-label="按用途筛选元件"></div>');
@@ -34,15 +34,18 @@
         shell.querySelector(".cb-map-toolbar > div").insertAdjacentHTML("beforeend", '<button type="button" data-action="toggle-inspector" aria-pressed="true">☷ 属性</button>');
         inspectorPane.querySelector(".cb-panel-title").insertAdjacentHTML("beforeend", '<button type="button" class="cb-inspector-close" data-action="toggle-inspector" aria-label="收起属性面板" title="收起属性面板（I）">×</button>');
         shell.querySelector(".cb-viewport").insertAdjacentHTML("beforeend",
-            '<div class="cb-viewport-hint">⌕ F 添加　·　V 选择　·　W 电线　·　S 信号　·　空格平移</div>' +
+            '<div class="cb-viewport-hint" data-role="wire-hint">拖动引脚直接连线 · Esc 取消 · 空格平移</div>' +
             '<section class="cb-quick-picker" data-role="quick-picker" aria-label="快速选择元件" hidden>' +
             '<label class="cb-quick-search-row"><span>⌕</span><input data-role="quick-search" type="search" placeholder="输入元件名称 / ID，回车选择…" autocomplete="off" aria-label="快速搜索元件"><kbd>ESC</kbd></label>' +
             '<div class="cb-quick-results" data-role="quick-results"></div><div class="cb-quick-footer">↑ ↓ 选择　·　Enter 确认　·　Esc 关闭</div></section>');
+        shell.querySelector(".cb-help > div").insertAdjacentHTML("afterbegin",
+            '<p><b>快捷接线：</b>在选择工具下，从元件边缘端口拖至另一兼容端口，自动避开设备寻找线路；也可依次点击两端。Esc / 右键取消。测试工具单击开关可保持仿真运行。</p>' +
+            '<p><b>常用键：</b>A / F 搜索元件、V 选择、W 电线、S 信号线、D 复制、方向键移动所选元件（Shift 加速）、R 旋转、Esc 退出当前工具。移动元件不自动拖拽已有导线。</p>');
         let registry = M.createRegistry(null), board = new M.CircuitBoard(registry), ready = false, visible = false, running = false;
         let tool = "select", rotation = 0, selected = null, zoom = 1, panX = 32, panY = 32, cssWidth = 1, cssHeight = 1;
         let pointer = null, space = false, hover = null, accumulator = 0, lastFrame = 0, frameId = 0, lastReadout = 0, revision = 0, importId = 0;
         let undo = [], redo = [], wave = [], saveTimer = 0, needsFit = true, catalogSignature = "", savedStatus = "浏览器自动保存已启用";
-        let category = "全部", pickerOpen = false, pickerIndex = 0, pickerMatches = [], dragTool = null;
+        let category = "全部", pickerOpen = false, pickerIndex = 0, pickerMatches = [], dragTool = null, pendingWire = null, wirePreview = null;
         const layers = { power: true, signal: true, device: true }, storageKey = `flatworld-circuit-board-v1:${location.pathname}`;
         const button = action => host.querySelector(`[data-action="${action}"]`);
         function message(text, error = false) { $("status").textContent = text; $("status").classList.toggle("cb-error", error); }
@@ -72,20 +75,13 @@
             try { action(); finishEdit(previous, text); }
             catch (error) { message(error.message, true); board.refresh(); }
         }
-        const adderPanel = window.ItemCircuitAdderPanel?.create({
-            root: $("adder-lab"),
-            getBoard: () => board,
-            setOperands: (changes, text) => transaction(() => {
-                for (const [deviceId, wordHex] of changes) board.configure(deviceId, { wordHex });
-            }, text || "64 位输入已经更新。"),
-            focusAdder: id => select(id)
-        });
         function setTool(value) {
-            tool = value; if (registry.has(value)) $("erase-layer").value = registry.get(value).kind === "wire" ? "power" : ["signal", "cross", "databus"].includes(registry.get(value).kind) ? "signal" : "device";
+            tool = value; if (registry.has(value)) $("erase-layer").value = registry.get(value).kind === "wire" ? "power" : ["signal", "cross"].includes(registry.get(value).kind) ? "signal" : "device";
+            pendingWire = null; wirePreview = null;
             if (pickerOpen) closeQuickPicker();
             renderPaletteSelection();
-            $("tool-name").textContent = value === "select" ? "选择 / 移动" : value === "erase" ? "擦除当前层" : registry.get(value)?.name || value;
-            canvas.dataset.mode = value === "select" ? "select" : value === "erase" ? "erase" : "place";
+            $("tool-name").textContent = value === "select" ? "选择 / 移动 · 拖引脚接线" : value === "erase" ? "擦除当前层" : value === "poke" ? "测试 · 点击开关" : registry.get(value)?.name || value;
+            canvas.dataset.mode = value === "select" ? "select" : value === "erase" ? "erase" : value === "poke" ? "interact" : "place";
         }
         function renderPaletteSelection() {
             for (const element of host.querySelectorAll("[data-tool]")) { const active = element.dataset.tool === tool; element.classList.toggle("active", active); element.setAttribute("aria-pressed", String(active)); }
@@ -117,7 +113,7 @@
             $("component-count").textContent = registry.size; renderPaletteSelection();
         }
         function renderQuickTools() {
-            const shortcuts = [["Wire_Copper", "电线", "W"], ["sim:signal", "信号", "S"], [Array.from(registry.values()).find(def => def.kind === "databus")?.id, "数据线", ""], ["sim:switch", "开关", ""]];
+            const shortcuts = [["Wire_Copper", "电线", "W"], ["sim:signal", "信号", "S"], ["sim:switch", "开关", ""]];
             $("quicktools").innerHTML = '<span>快捷元件</span><div>' + shortcuts.filter(([id]) => registry.has(id)).map(([id, name, key]) =>
                 '<button type="button" data-quick-tool="' + escape(id) + '" title="' + escape(name) + '">' + escape(name) + (key ? ' <kbd>' + key + '</kbd>' : '') + '</button>').join("") + '</div>';
             renderPaletteSelection();
@@ -167,15 +163,14 @@
             if (!device) {
                 $("inspector").innerHTML = `<div class="cb-inspector-empty"><div>⌘</div><h3>选择一个元件</h3><p>查看接口、调整参数，<br>观察信号与实际供电。</p><small>游戏设备的控制口为实验扩展。<br>不修改任何游戏物品数据。</small></div>`; return;
             }
-            const def = board.definition(device), p = board.params(device), pins = M.signalPins(def), dataPins = M.busPins(def);
+            const def = board.definition(device), p = board.params(device), pins = M.signalPins(def);
             $("inspector").innerHTML = `<div class="cb-selection-heading"><span class="cb-selection-symbol">${escape(def.symbol)}</span><div><h3>${escape(def.name)}</h3><span class="cb-source-badge ${def.game ? "game" : ""}">${def.game ? "游戏配置 · 控制口扩展" : "模拟扩展"}</span></div></div><div class="cb-device-id">${escape(device.type)}<br>${device.id} · (${device.x}, ${device.y}) · ${device.rotation * 90}°</div><p class="cb-description">${escape(def.description)}</p>
-                <div class="cb-runtime" data-role="runtime"></div><div class="cb-ports">${pins.map(pin => { const point = M.position(device, pin.direction); return `<span class="${pin.input ? "" : "output"}">${pin.name} ${pin.input ? "输入" : "输出"} → ${point.x},${point.y}</span>`; }).join("")}${dataPins.map(pin => { const point = M.position(device, pin.direction); return `<span class="data">${pin.name} ${pin.input ? "宽总线输入" : "宽总线输出"} → ${point.x},${point.y}</span>`; }).join("")}${def.electrical ? (() => { const point = M.powerPosition(def, device); return `<span class="power">电力接点 ${point.x},${point.y}</span>`; })() : ""}</div>
+                <div class="cb-runtime" data-role="runtime"></div><div class="cb-ports">${pins.map(pin => { const point = M.position(device, pin.direction); return `<span class="${pin.input ? "" : "output"}">${pin.name} ${pin.input ? "输入" : "输出"} → ${point.x},${point.y}</span>`; }).join("")}${def.electrical ? (() => { const point = M.powerPosition(def, device); return `<span class="power">电力接点 ${point.x},${point.y}</span>`; })() : ""}</div>
                 <div class="cb-fields">${Object.entries(p).map(([name, value]) => {
                     const rule = M.PARAMS[name]; if (!rule) return "";
                     const input = rule.type === "boolean" ? `<input type="checkbox" data-param="${name}" ${value ? "checked" : ""}>` :
                         rule.type === "target" ? `<select data-param="${name}">${targetOptions(device, value)}</select>` :
                         rule.type === "select" ? `<select data-param="${name}">${rule.options.map(([v, label]) => `<option value="${v}" ${v === value ? "selected" : ""}>${label}</option>`).join("")}</select>` :
-                        rule.type === "word64" ? `<textarea data-param="${name}" rows="4" spellcheck="false" placeholder="0x… / 0b… / 十进制">${escape(value)}</textarea>` :
                         `<input type="number" data-param="${name}" min="${rule.min}" max="${rule.max}" step="${rule.step}" value="${value}">`;
                     return `<label class="${rule.type === "boolean" ? "cb-toggle-field" : ""}"><span>${rule.label}</span>${input}</label>`;
                 }).join("")}</div><div class="cb-selected-actions"><button data-action="rotate-selected">↻ 旋转</button><button data-action="duplicate">复制</button><button data-action="delete">删除</button></div>`;
@@ -185,10 +180,7 @@
             const device = selectedDevice(), runtime = $("runtime"); if (!device || !runtime) return;
             const def = board.definition(device), p = board.params(device), r = device.runtime, output = def.electrical ? board.readInput(device, 2) : null;
             const lines = [];
-            if (def.kind === "wordsource") lines.push(["宽数据输出", `0x${M.parseWord64(p.wordHex).toString(16).toUpperCase()}`], ["位数", String(M.parseWord64(p.wordHex).toString(2).length)]);
-            else if (def.operation === "rippleAdder64") lines.push(["64 级计算", r.wordStatus || "待机"], ["最高进位", String(r.carry || 0)], ["数据输出", r.sumHex || "—"], ["供电", `${format(r.watts)} / ${format(p.watts)} W`]);
-            else if (def.kind === "worddisplay") lines.push(["结果状态", r.wordStatus || "未接入"], ["输出位宽", r.sumHex ? String(BigInt(r.sumHex).toString(2).length) : "—"], ["结果", r.sumHex || "—"]);
-            else if (def.kind === "battery") lines.push(["储能", `${format(r.energy)} / ${format(p.capacity)} J`], ["剩余", `${format(r.energy / p.capacity * 100)}%`], [r.watts >= 0 ? "充电功率" : "放电功率", `${format(Math.abs(r.watts))} W`]);
+            if (def.kind === "battery") lines.push(["储能", `${format(r.energy)} / ${format(p.capacity)} J`], ["剩余", `${format(r.energy / p.capacity * 100)}%`], [r.watts >= 0 ? "充电功率" : "放电功率", `${format(Math.abs(r.watts))} W`]);
             else if (def.electrical) lines.push([def.kind === "generator" ? "实际发电" : "实际供电", `${format(r.watts)} W`], ["控制输入", output.connected ? Number(output.value) : "未接线（启用）"]);
             else if (def.kind === "tank") lines.push(["储水", `${format(r.water)} / ${format(p.tankCapacity)} L`], ["液位", `${format(r.water / p.tankCapacity * 100)}%`]);
             else if (def.kind === "relay") lines.push(["左右电路", r.closed ? "已接通" : "已断开"]);
@@ -202,7 +194,7 @@
         function updateReadouts() {
             const seconds = board.time, minutes = Math.floor(seconds / 60);
             $("clock").textContent = `${String(minutes).padStart(2, "0")}:${(seconds % 60).toFixed(2).padStart(5, "0")} ${running ? "运行中" : "已暂停"}`;
-            $("network-count").textContent = `${board.powerNetworks.length} 电网 / ${board.signalNetworks.length} 信号网 / ${board.busNetworks.length} 数据总线`;
+            $("network-count").textContent = `${board.powerNetworks.length} 电网 / ${board.signalNetworks.length} 信号网`;
             $("zoom").textContent = `${Math.round(zoom * 100)}%`; $("empty").hidden = board.devices.size > 0 || board.power.size > 0 || board.signal.size > 0;
             button("undo").disabled = !undo.length; button("redo").disabled = !redo.length;
             const totals = board.powerNetworks.reduce((sum, n) => ({ generated: sum.generated + n.generated, demand: sum.demand + n.demand, delivered: sum.delivered + n.delivered, charging: sum.charging + n.charging, discharging: sum.discharging + n.discharging }), { generated: 0, demand: 0, delivered: 0, charging: 0, discharging: 0 });
@@ -211,13 +203,12 @@
             $("run-state").title = warnings.length ? warnings.join("；") : "编辑器仿真状态";
             $("summary").innerHTML = `<h3>全图电力概览</h3><div><span>发电 / 需求</span><b>${format(totals.generated)} / ${format(totals.demand)} W</b></div><div><span>实际供电</span><b>${format(totals.delivered)} W</b></div><div><span>充电 / 放电</span><b>${format(totals.charging)} / ${format(totals.discharging)} W</b></div>${warnings.map(text => `<p class="cb-warning">⚠ ${escape(text)}</p>`).join("")}`;
             updateRuntime();
-            adderPanel?.render();
         }
         function select(id) { selected = id || null; wave = []; updateInspector(); renderPaletteSelection(); }
         function sample() {
             const device = selectedDevice();
             if (!device) return;
-            const definition = board.definition(device), value = definition.operation === "rippleAdder64" ? device.runtime.output : definition.electrical ? board.readInput(device, 2).value : definition.kind === "relay" ? device.runtime.closed : device.runtime.output;
+            const definition = board.definition(device), value = definition.electrical ? board.readInput(device, 2).value : definition.kind === "relay" ? device.runtime.closed : device.runtime.output;
             wave.push({ time: board.time, value: !!value }); if (wave.length > 161) wave.shift();
         }
         function drawScope() {
@@ -257,16 +248,11 @@
             for (const [cell, type] of map) {
                 const [x, y] = cell.split(",").map(Number); if (!inView(x, y)) continue;
                 const cx = x * 64 + 32, cy = y * 64 + 32;
-                const isBus = layer === "signal" && registry.get(type)?.kind === "databus";
                 for (const channel of layer === "signal" && type === "sim:cross" ? ["v", "h"] : ["a"]) {
                     let color;
                     if (layer === "power") { const n = board.powerNetworks[board.powerIndex.get(cell)]; color = n?.overloaded || ["电压冲突", "线路电压不兼容"].includes(n?.status) ? COLORS.error : n?.voltage ? COLORS.power : COLORS.wireOff; }
-                    else if (isBus) {
-                        const bus = board.busValues[board.busIndex.get(cell)];
-                        color = bus?.status === "多驱动冲突" ? COLORS.error : bus?.hex ? "#5FC8F5" : "#52788C";
-                    }
                     else color = board.signalValues[board.signalIndex.get(`${cell}:${channel}`)] ? COLORS.signal : COLORS.low;
-                    ctx.strokeStyle = "#0a171e"; ctx.lineWidth = isBus ? 18 : layer === "power" ? 12 : 10; ctx.setLineDash([]);
+                    ctx.strokeStyle = "#0a171e"; ctx.lineWidth = layer === "power" ? 12 : 10; ctx.setLineDash([]);
                     const drawSegments = () => {
                         ctx.beginPath(); let connected = false;
                         for (let direction = 0; direction < 4; direction++) {
@@ -276,9 +262,9 @@
                         }
                         if (!connected) { ctx.moveTo(cx - 2, cy); ctx.lineTo(cx + 2, cy); } ctx.stroke();
                     };
-                    drawSegments(); ctx.strokeStyle = color; ctx.lineWidth = isBus ? 10 : layer === "power" ? 6 : 4;
+                    drawSegments(); ctx.strokeStyle = color; ctx.lineWidth = layer === "power" ? 6 : 4;
                     if (registry.get(type)?.electricalConfig?.Hidden) ctx.setLineDash([6, 4]); drawSegments(); ctx.setLineDash([]);
-                    if (channel === "a") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(cx, cy, isBus ? 5 : layer === "power" ? 4 : 3, 0, Math.PI * 2); ctx.fill(); }
+                    if (channel === "a") { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(cx, cy, layer === "power" ? 4 : 3, 0, Math.PI * 2); ctx.fill(); }
                     else if (channel === "h") { ctx.strokeStyle = "#0a171e"; ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, 8, Math.PI, 0); ctx.stroke(); ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.stroke(); }
                 }
             }
@@ -291,13 +277,6 @@
                 const direction = (pin.direction + device.rotation) & 3, [dx, dy] = M.DIRECTIONS[direction], high = pin.input ? board.readInput(device, pin.direction).value : r.output;
                 const point = M.position(device, pin.direction), length = board.signal.has(M.key(point.x, point.y)) ? 64 : 32;
                 ctx.strokeStyle = high ? COLORS.signal : COLORS.low; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 32 + dx * 24, y + 32 + dy * 24); ctx.lineTo(x + 32 + dx * length, y + 32 + dy * length); ctx.stroke();
-            }
-            if (layers.signal) for (const pin of M.busPins(def)) {
-                const [dx, dy] = M.DIRECTIONS[(pin.direction + device.rotation) & 3], point = M.position(device, pin.direction);
-                const length = board.busIndex.has(M.key(point.x, point.y)) ? 64 : 32;
-                ctx.strokeStyle = "#5FC8F5"; ctx.lineWidth = 8; ctx.beginPath();
-                ctx.moveTo(x + 32 + dx * 24, y + 32 + dy * 24);
-                ctx.lineTo(x + 32 + dx * length, y + 32 + dy * length); ctx.stroke();
             }
             if (layers.power && def.electrical) {
                 const port = M.powerPosition(def, device); ctx.strokeStyle = COLORS.power; ctx.lineWidth = 4;
@@ -327,11 +306,6 @@
                 const [dx, dy] = M.DIRECTIONS[(pin.direction + device.rotation) & 3]; ctx.fillStyle = pin.input ? "#9bbbb5" : COLORS.signal; ctx.beginPath(); ctx.arc(x + 32 + dx * 25, y + 32 + dy * 25, 3.5, 0, Math.PI * 2); ctx.fill();
                 if (zoom > 0.65) { ctx.fillStyle = "#b1c5c6"; ctx.font = "8px monospace"; ctx.fillText(pin.name, x + 32 + dx * 18 + (dy ? 7 : 0), y + 35 + dy * 18); }
             }
-            if (layers.signal) for (const pin of M.busPins(def)) {
-                const [dx, dy] = M.DIRECTIONS[(pin.direction + device.rotation) & 3];
-                ctx.fillStyle = "#B7ECFF"; ctx.fillRect(x + 32 + dx * 25 - 4, y + 32 + dy * 25 - 4, 8, 8);
-                if (zoom > 0.65) { ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText(pin.name, x + 32 + dx * 14, y + 35 + dy * 14); }
-            }
             if (def.electrical && layers.power) { ctx.fillStyle = COLORS.power; ctx.fillRect(x + 42, y + 44, 5, 5); }
             ctx.restore();
         }
@@ -354,7 +328,7 @@
             }
             if (hover && board.inside(hover.x, hover.y)) {
                 ctx.fillStyle = tool === "erase" ? "#ff758922" : "#b6e6da12"; ctx.fillRect(hover.x * 64, hover.y * 64, 64, 64); ctx.strokeStyle = tool === "erase" ? COLORS.error : "#85b8ab88"; ctx.lineWidth = 1.5; ctx.strokeRect(hover.x * 64 + 1, hover.y * 64 + 1, 62, 62);
-                const def = registry.get(tool); if (def && !["wire", "signal", "cross", "databus"].includes(def.kind) && !board.at(hover.x, hover.y)) drawDevice({ id: "preview", type: tool, x: hover.x, y: hover.y, rotation, params: {}, runtime: {} }, true);
+                const def = registry.get(tool); if (def && !["wire", "signal", "cross"].includes(def.kind) && !board.at(hover.x, hover.y)) drawDevice({ id: "preview", type: tool, x: hover.x, y: hover.y, rotation, params: {}, runtime: {} }, true);
             }
             ctx.restore(); drawScope();
         }
@@ -372,12 +346,127 @@
         function canvasPoint(event) { const rect = canvas.getBoundingClientRect(); return { px: event.clientX - rect.left, py: event.clientY - rect.top }; }
         function cellPoint(event) { const p = canvasPoint(event); return { ...p, x: Math.floor((p.px - panX) / (64 * zoom)), y: Math.floor((p.py - panY) / (64 * zoom)) }; }
         function zoomAt(factor, px = cssWidth / 2, py = cssHeight / 2) { const old = zoom; zoom = M.clamp(zoom * factor, 0.25, 2); panX = px - (px - panX) / old * zoom; panY = py - (py - panY) / old * zoom; }
+        function portAt(point) {
+            const device = layers.device && board.at(point.x, point.y);
+            if (!device) return null;
+            const definition = board.definition(device), candidates = [];
+            const add = (layer, name, cell, x, y) => {
+                if (layers[layer === "bus" ? "signal" : layer]) candidates.push({ layer, name, x: cell.x, y: cell.y, deviceId: device.id, viewX: x, viewY: y });
+            };
+            for (const pin of M.signalPins(definition)) {
+                const [dx, dy] = M.DIRECTIONS[(pin.direction + device.rotation) & 3];
+                add("signal", pin.name, M.position(device, pin.direction), device.x * 64 + 32 + dx * 25, device.y * 64 + 32 + dy * 25);
+            }
+            for (const pin of M.busPins?.(definition) || []) {
+                const [dx, dy] = M.DIRECTIONS[(pin.direction + device.rotation) & 3];
+                add("bus", pin.name, M.position(device, pin.direction), device.x * 64 + 32 + dx * 25, device.y * 64 + 32 + dy * 25);
+            }
+            if (definition.electrical) {
+                add("power", "电力", M.powerPosition(definition, device), device.x * 64 + 44, device.y * 64 + 44);
+            } else if (definition.kind === "relay") for (const direction of [0, 2]) {
+                const [dx, dy] = M.DIRECTIONS[(direction + device.rotation) & 3];
+                add("power", "电力", M.position(device, direction), device.x * 64 + 32 + dx * 25, device.y * 64 + 32 + dy * 25);
+            }
+            const worldX = (point.px - panX) / zoom, worldY = (point.py - panY) / zoom;
+            const radius = Math.min(15, Math.max(9, 9 / zoom));
+            return candidates.map(port => ({ port, distance: (port.viewX - worldX) ** 2 + (port.viewY - worldY) ** 2 }))
+                .filter(entry => entry.distance <= radius ** 2).sort((a, b) => a.distance - b.distance)[0]?.port || null;
+        }
+        function wireTarget(point, source) {
+            const port = portAt(point);
+            if (port) return port.layer === source.layer ? port : null;
+            const cell = M.key(point.x, point.y);
+            const type = source.layer === "power" ? board.power.get(cell) : board.signal.get(cell);
+            const kind = registry.get(type)?.kind;
+            if (source.layer === "power" ? kind === "wire" : source.layer === "bus" ? kind === "databus" : kind === "signal")
+                return { x: point.x, y: point.y, layer: source.layer, name: "已有线路" };
+            return null;
+        }
+        function wireType(source, target) {
+            const first = M.key(source.x, source.y), last = M.key(target.x, target.y);
+            const existing = source.layer === "power" ? board.power.get(first) || board.power.get(last) : board.signal.get(first) || board.signal.get(last);
+            if (existing && registry.get(existing)?.kind === (source.layer === "power" ? "wire" : source.layer === "bus" ? "databus" : "signal")) return existing;
+            if (source.layer === "signal") return registry.has("sim:signal") ? "sim:signal" : Array.from(registry.values()).find(d => d.kind === "signal")?.id;
+            if (source.layer === "bus") return Array.from(registry.values()).find(d => d.kind === "databus")?.id;
+            return registry.has("Wire_Copper") ? "Wire_Copper" : Array.from(registry.values()).find(d => d.kind === "wire")?.id;
+        }
+        function routeWire(source, target) {
+            if (!target || source.layer !== target.layer || !board.inside(source.x, source.y) || !board.inside(target.x, target.y)) return null;
+            const layer = source.layer, start = M.key(source.x, source.y), end = M.key(target.x, target.y);
+            const passable = (x, y) => {
+                if (!board.inside(x, y)) return false;
+                const device = board.at(x, y), existing = (layer === "power" ? board.power : board.signal).get(M.key(x, y));
+                if (layer === "power") return !device || board.definition(device).kind !== "relay";
+                return !device && (!existing || registry.get(existing)?.kind === (layer === "bus" ? "databus" : "signal"));
+            };
+            if (!passable(source.x, source.y) || !passable(target.x, target.y)) return null;
+            const straight = horizontalFirst => {
+                const path = [{ x: source.x, y: source.y }], current = { x: source.x, y: source.y };
+                for (const axis of horizontalFirst ? ["x", "y"] : ["y", "x"]) {
+                    while (current[axis] !== target[axis]) {
+                        current[axis] += Math.sign(target[axis] - current[axis]);
+                        if (!passable(current.x, current.y)) return null;
+                        path.push({ x: current.x, y: current.y });
+                    }
+                }
+                return path;
+            };
+            const elbow = straight(true) || straight(false);
+            if (elbow) return elbow;
+            const visited = new Map([[start, null]]), queue = [{ x: source.x, y: source.y }];
+            for (let index = 0; index < queue.length && !visited.has(end); index++) {
+                const current = queue[index];
+                const neighbors = M.DIRECTIONS.map(([dx, dy]) => ({ x: current.x + dx, y: current.y + dy }));
+                neighbors.sort((a, b) => (Math.abs(a.x - target.x) + Math.abs(a.y - target.y)) - (Math.abs(b.x - target.x) + Math.abs(b.y - target.y)));
+                for (const next of neighbors) {
+                    const cell = M.key(next.x, next.y);
+                    if (visited.has(cell) || !passable(next.x, next.y)) continue;
+                    visited.set(cell, M.key(current.x, current.y)); queue.push(next);
+                }
+            }
+            if (!visited.has(end)) return null;
+            const path = [];
+            for (let cell = end; cell !== null; cell = visited.get(cell)) {
+                const [x, y] = cell.split(",").map(Number); path.push({ x, y });
+            }
+            return path.reverse();
+        }
+        function previewConnection(source, point) {
+            const target = wireTarget(point, source);
+            const path = routeWire(source, target || point);
+            wirePreview = { source, target, path };
+            $("wire-hint").textContent = target && path ? "松开连接「" + target.name + "」" : "指向同类接口或已有线路 · Esc 取消";
+            $("wire-hint").classList.add("cb-connecting");
+        }
+        function cancelConnection() {
+            pendingWire = null; wirePreview = null;
+            $("wire-hint").classList.remove("cb-connecting");
+            $("wire-hint").textContent = "拖动引脚直接连线 · Esc 取消 · 空格平移";
+        }
+        function connectPorts(source, target) {
+            if (!target || (source.deviceId && source.deviceId === target.deviceId && source.name === target.name)) return false;
+            const path = routeWire(source, target), type = wireType(source, target);
+            if (!path || !type) { message("无法避开设备连接两端，请用布线工具手动调整。", true); return false; }
+            const previous = beforeEdit(), layer = source.layer === "power" ? board.power : board.signal;
+            for (const point of path) if (!layer.has(M.key(point.x, point.y))) board.paint(type, point.x, point.y);
+            finishEdit(previous, "已连接 " + source.name + " → " + target.name + "（" + path.length + " 格）。");
+            cancelConnection(); return true;
+        }
+        function toggleSwitchWithoutPausing(device) {
+            if (!device || board.definition(device).kind !== "switch") return;
+            const previous = snapshot();
+            board.configure(device.id, { on: !board.params(device).on });
+            undo.push(previous); if (undo.length > 40) undo.shift(); redo = []; revision++;
+            clearTimeout(saveTimer); saveTimer = setTimeout(persist, 300);
+            board.refresh(); updateInspector(); updateReadouts();
+            message("开关已切换为 " + (board.params(device).on ? "1" : "0") + "；" + (running ? "仿真继续。" : "单步或运行后传递信号。"));
+        }
         function paintCell(cell, erase = false) {
             if (!board.inside(cell.x, cell.y)) return;
             if (erase || tool === "erase") { const old = board.at(cell.x, cell.y); board.erase(cell.x, cell.y, $("erase-layer").value); if (old?.id === selected && !board.devices.has(selected)) selected = null; }
             else if (registry.has(tool)) {
                 const def = registry.get(tool);
-                if (["wire", "signal", "cross", "databus"].includes(def.kind)) board.paint(tool, cell.x, cell.y);
+                if (["wire", "signal", "cross"].includes(def.kind)) board.paint(tool, cell.x, cell.y);
                 else if (!board.at(cell.x, cell.y)) { const placed = board.add(tool, cell.x, cell.y, rotation); selected = placed.id; }
             }
         }
@@ -394,7 +483,7 @@
                 if (tool === "select" && event.button === 0) { select(device?.id); pointer = { mode: device ? "move" : "select", device: device?.id, previous }; }
                 else {
                     const def = registry.get(tool), erasing = event.button === 2 || tool === "erase";
-                    pointer = { mode: erasing || ["wire", "signal", "cross", "databus"].includes(def?.kind) ? "paint" : "place", previous, last: point, erase: erasing };
+                    pointer = { mode: erasing || ["wire", "signal", "cross"].includes(def?.kind) ? "paint" : "place", previous, last: point, erase: erasing };
                     try { paintCell(point, erasing); board.refresh(); } catch (error) { message(error.message, true); }
                 }
             }
@@ -444,7 +533,7 @@
             const previous = beforeEdit();
             try {
                 const definition = registry.get(type);
-                if (["wire", "signal", "cross", "databus"].includes(definition.kind)) board.paint(type, point.x, point.y);
+                if (["wire", "signal", "cross"].includes(definition.kind)) board.paint(type, point.x, point.y);
                 else selected = board.add(type, point.x, point.y, rotation).id;
                 finishEdit(previous, "已拖放「" + definition.name + "」到 " + point.x + ", " + point.y + "。");
                 setTool("select"); canvas.focus();
@@ -489,7 +578,7 @@
         host.addEventListener("change", event => {
             const element = event.target;
             if (element.dataset.param && selectedDevice()) {
-                const name = element.dataset.param, rule = M.PARAMS[name], value = rule.type === "boolean" ? element.checked : ["target", "select", "word64"].includes(rule.type) ? element.value : element.value.trim() === "" ? NaN : Number(element.value);
+                const name = element.dataset.param, rule = M.PARAMS[name], value = rule.type === "boolean" ? element.checked : ["target", "select"].includes(rule.type) ? element.value : element.value.trim() === "" ? NaN : Number(element.value);
                 transaction(() => board.configure(selected, { [name]: value }));
             }
             if (element.dataset.layer) layers[element.dataset.layer] = element.checked;

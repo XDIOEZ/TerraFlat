@@ -51,7 +51,6 @@ PUBLIC_WIKI_FILES = {
     "behavior-tree-model.js",
     "behavior-tree.css",
     "circuit-board-model.js",
-    "circuit-adder-panel.js",
     "circuit-board.js",
     "circuit-board.css",
     "balance-tuning.js",
