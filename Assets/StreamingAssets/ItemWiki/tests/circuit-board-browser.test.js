@@ -127,7 +127,7 @@ test("从元件库拖放到画布可撤销，窄屏自动保持示例可见", as
     });
     assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9)?.type), "sim:switch");
     await page.locator('[data-action="undo"]').click();
-    assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9)), null);
+    assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9) ?? null), null);
     await page.setViewportSize({ width: 430, height: 1000 }); await page.waitForTimeout(120);
     const view = await page.evaluate(() => {
         const rectangle = document.querySelector(".cb-canvas").getBoundingClientRect();

@@ -28,10 +28,7 @@
         const palettePane = shell.querySelector(".cb-palette"), inspectorPane = shell.querySelector(".cb-inspector");
         shell.querySelector(".cb-heading").insertAdjacentHTML("beforeend", '<span class="cb-run-pill" data-role="run-state">● 已暂停</span>');
         palettePane.querySelector(".cb-search").insertAdjacentHTML("beforebegin", '<button type="button" class="cb-find-trigger" data-action="quick-add">⌕ 快速查找元件 <kbd>F</kbd></button>');
-        palettePane.querySelector(".cb-palette-list").insertAdjacentHTML("beforebegin",
-            '<div class="cb-categories" aria-label="按用途筛选元件">' +
-            ["全部", "线路", "控制", "逻辑", "检测", "游戏设备", "实验设备", "64 位运算"].map(name =>
-                '<button type="button" data-category="' + name + '" aria-pressed="' + (name === "全部") + '">' + name + '</button>').join("") + '</div>');
+        palettePane.querySelector(".cb-palette-list").insertAdjacentHTML("beforebegin", '<div class="cb-categories" data-role="categories" aria-label="按用途筛选元件"></div>');
         palettePane.querySelector(".cb-tool-grid").insertAdjacentHTML("afterend", '<div class="cb-quicktools" data-role="quicktools"></div>');
         shell.querySelector(".cb-map-toolbar > div").insertAdjacentHTML("afterbegin", '<button type="button" class="cb-map-add" data-action="quick-add">＋ 添加 <kbd>F</kbd></button>');
         shell.querySelector(".cb-map-toolbar > div").insertAdjacentHTML("beforeend", '<button type="button" data-action="toggle-inspector" aria-pressed="true">☷ 属性</button>');
@@ -97,6 +94,16 @@
                 element.classList.toggle("active", active); element.setAttribute("aria-pressed", String(active));
             }
             $("rotation").textContent = `${(tool === "select" && selectedDevice() ? selectedDevice().rotation : rotation) * 90}°`;
+        }
+        function renderCategories() {
+            const priority = ["线路", "控制", "逻辑", "检测", "游戏设备", "实验设备"];
+            const groups = [...new Set(Array.from(registry.values(), definition => definition.group))].sort((a, b) => {
+                const left = priority.indexOf(a), right = priority.indexOf(b);
+                return (left < 0 ? 99 : left) - (right < 0 ? 99 : right) || a.localeCompare(b, "zh-CN");
+            });
+            if (category !== "全部" && !groups.includes(category)) category = "全部";
+            $("categories").innerHTML = ["全部", ...groups].map(name =>
+                '<button type="button" data-category="' + escape(name) + '" aria-pressed="' + (category === name) + '">' + escape(name) + '</button>').join("");
         }
         function renderPalette() {
             const query = $("search").value.trim().toLowerCase(), groups = new Map();
@@ -559,7 +566,7 @@
                         if (!nextBoard) nextBoard = M.createExample(nextRegistry, "blink");
                     }
                     registry = nextRegistry; board = nextBoard; catalogSignature = nextSignature; ready = true; setRunning(false); revision++; selected = null; wave = []; undo = []; redo = [];
-                    syncEnvironment(); renderPalette(); renderQuickTools(); updateInspector(); updateReadouts(); resize(); needsFit = !visible; if (visible) fit(); message(`${Array.from(registry.values()).filter(d => d.game).length} 种游戏元件（含抽象光纤适配）+ ${Array.from(registry.values()).filter(d => !d.game).length} 种模拟扩展。${savedStatus}。`);
+                    syncEnvironment(); renderCategories(); renderPalette(); renderQuickTools(); updateInspector(); updateReadouts(); resize(); needsFit = !visible; if (visible) fit(); message(`${Array.from(registry.values()).filter(d => d.game).length} 种游戏元件（含抽象光纤适配）+ ${Array.from(registry.values()).filter(d => !d.game).length} 种模拟扩展。${savedStatus}。`);
                 } catch (error) { message(`目录刷新未应用，原棋盘保留：${error.message}`, true); }
             },
             show() { visible = true; lastFrame = 0; resize(); if (needsFit) { fit(); needsFit = false; } if (!frameId) frameId = requestAnimationFrame(animation); },
