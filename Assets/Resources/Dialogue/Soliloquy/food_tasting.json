@@ -1716,6 +1716,1062 @@
       "once": true,
       "completionFlag": "food.spoilage.WildDogMilk",
       "enabled": true
+    },
+    {
+      "id": "food.taste.Corn",
+      "topic": "food.taste.Corn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "玉米带着淡淡的甜味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The corn has a gentle sweetness."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Corn",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Corn",
+      "topic": "food.spoilage.Corn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份玉米已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This corn is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Corn",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Potato",
+      "topic": "food.taste.Potato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "马铃薯有朴实的谷物味。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The potato has a plain, earthy flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Potato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Potato",
+      "topic": "food.spoilage.Potato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份马铃薯已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This potato is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Potato",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Tomato",
+      "topic": "food.taste.Tomato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "番茄酸甜多汁。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The tomato tastes juicy and tangy."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Tomato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Tomato",
+      "topic": "food.spoilage.Tomato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份番茄已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This tomato is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Tomato",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Pumpkin",
+      "topic": "food.taste.Pumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "南瓜的味道清甜。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The pumpkin tastes mildly sweet."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Pumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Pumpkin",
+      "topic": "food.spoilage.Pumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份南瓜已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This pumpkin is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Pumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Watermelon",
+      "topic": "food.taste.Watermelon",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "西瓜清凉多汁。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The watermelon is cool and juicy."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Watermelon",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Watermelon",
+      "topic": "food.spoilage.Watermelon",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份西瓜已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This watermelon is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Watermelon",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Strawberry",
+      "topic": "food.taste.Strawberry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草莓酸甜又清香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The strawberry is fragrant and tart."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Strawberry",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Strawberry",
+      "topic": "food.spoilage.Strawberry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份草莓已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This strawberry is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Strawberry",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.RoastedCorn",
+      "topic": "food.taste.RoastedCorn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "烤玉米散发着焦香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The roasted corn has a toasted aroma."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.RoastedCorn",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.RoastedCorn",
+      "topic": "food.spoilage.RoastedCorn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份烤玉米已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This roasted corn is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.RoastedCorn",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.BakedPotato",
+      "topic": "food.taste.BakedPotato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "烤马铃薯软糯又香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The baked potato is soft and fragrant."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.BakedPotato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.BakedPotato",
+      "topic": "food.spoilage.BakedPotato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份烤马铃薯已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This baked potato is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.BakedPotato",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.CookedPumpkin",
+      "topic": "food.taste.CookedPumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "熟南瓜软甜可口。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The cooked pumpkin is tender and sweet."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.CookedPumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.CookedPumpkin",
+      "topic": "food.spoilage.CookedPumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份熟南瓜已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This cooked pumpkin is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.CookedPumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Tofu",
+      "topic": "food.taste.Tofu",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "豆腐柔软，带着豆香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The tofu is soft with a gentle bean flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Tofu",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Tofu",
+      "topic": "food.spoilage.Tofu",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份豆腐已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This tofu is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Tofu",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.TomatoPaste",
+      "topic": "food.taste.TomatoPaste",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "番茄酱味道浓郁。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The tomato paste has a rich flavor."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.TomatoPaste",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.TomatoPaste",
+      "topic": "food.spoilage.TomatoPaste",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份番茄酱已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This tomato paste is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.TomatoPaste",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Bread",
+      "topic": "food.taste.Bread",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "面包带着麦香。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The bread smells pleasantly of grain."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Bread",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Bread",
+      "topic": "food.spoilage.Bread",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份面包已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This bread is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Bread",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Wheat",
+      "topic": "food.taste.Seed_Wheat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "小麦种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These wheat seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Wheat",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Wheat",
+      "topic": "food.spoilage.Seed_Wheat",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份小麦种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These wheat seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Wheat",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Corn",
+      "topic": "food.taste.Seed_Corn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "玉米种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These corn seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Corn",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Corn",
+      "topic": "food.spoilage.Seed_Corn",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份玉米种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These corn seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Corn",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Soybean",
+      "topic": "food.taste.Seed_Soybean",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "大豆种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These soybean seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Soybean",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Soybean",
+      "topic": "food.spoilage.Seed_Soybean",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份大豆种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These soybean seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Soybean",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Potato",
+      "topic": "food.taste.Seed_Potato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "马铃薯种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These potato seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Potato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Potato",
+      "topic": "food.spoilage.Seed_Potato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份马铃薯种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These potato seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Potato",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Tomato",
+      "topic": "food.taste.Seed_Tomato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "番茄种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These tomato seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Tomato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Tomato",
+      "topic": "food.spoilage.Seed_Tomato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份番茄种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These tomato seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Tomato",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Pumpkin",
+      "topic": "food.taste.Seed_Pumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "南瓜种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These pumpkin seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Pumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Pumpkin",
+      "topic": "food.spoilage.Seed_Pumpkin",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份南瓜种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These pumpkin seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Pumpkin",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Watermelon",
+      "topic": "food.taste.Seed_Watermelon",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "西瓜种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These watermelon seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Watermelon",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Watermelon",
+      "topic": "food.spoilage.Seed_Watermelon",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份西瓜种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These watermelon seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Watermelon",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Strawberry",
+      "topic": "food.taste.Seed_Strawberry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "草莓种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These strawberry seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Strawberry",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Strawberry",
+      "topic": "food.spoilage.Seed_Strawberry",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份草莓种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These strawberry seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Strawberry",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Sugarcane",
+      "topic": "food.taste.Sugarcane",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "甘蔗嚼着清甜多汁。"
+      ],
+      "localizedLines": {
+        "en": [
+          "The sugarcane is sweet and juicy."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Sugarcane",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Sugarcane",
+      "topic": "food.spoilage.Sugarcane",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份甘蔗已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "This sugarcane is starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Sugarcane",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_Sugarcane",
+      "topic": "food.taste.Seed_Sugarcane",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "甘蔗种子嚼起来很硬。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These sugarcane seeds are hard to chew."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_Sugarcane",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_Sugarcane",
+      "topic": "food.spoilage.Seed_Sugarcane",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份甘蔗种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These sugarcane seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_Sugarcane",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.Seed_TeaLeaf",
+      "topic": "food.taste.Seed_TeaLeaf",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "茶树种子嚼起来有点苦。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These tea seeds taste slightly bitter."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.Seed_TeaLeaf",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.Seed_TeaLeaf",
+      "topic": "food.spoilage.Seed_TeaLeaf",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "这份茶树种子已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These tea seeds are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.Seed_TeaLeaf",
+      "enabled": true
+    },
+    {
+      "id": "food.taste.FriedPotato",
+      "topic": "food.taste.FriedPotato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "油煎土豆香香的，很适合补充体力。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These fried potatoes are warm and savory."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.taste.FriedPotato",
+      "enabled": true
+    },
+    {
+      "id": "food.spoilage.FriedPotato",
+      "topic": "food.spoilage.FriedPotato",
+      "triggers": [
+        "External"
+      ],
+      "priority": "Player",
+      "conditions": [],
+      "lines": [
+        "油煎土豆已经不太新鲜了。"
+      ],
+      "localizedLines": {
+        "en": [
+          "These fried potatoes are starting to go stale."
+        ]
+      },
+      "duration": 0,
+      "cooldown": 0,
+      "once": true,
+      "completionFlag": "food.spoilage.FriedPotato",
+      "enabled": true
     }
   ]
 }

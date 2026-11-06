@@ -355,6 +355,16 @@
       "id": "nuclear_industry",
       "path": "shells/nuclear_industry.json",
       "enabled": true
+    },
+    {
+      "id": "food_chain_foods",
+      "path": "shells/food_chain_foods.json",
+      "enabled": true
+    },
+    {
+      "id": "food_chain_crops",
+      "path": "shells/food_chain_crops.json",
+      "enabled": true
     }
   ]
 }

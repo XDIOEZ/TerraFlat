@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "processing_food_chain_gameplay",
+      "contractKind": "behavior",
+      "name": "新增食材的石臼加工和加热反应",
+      "luaPath": "GameplayTests/Systems/Processing/food-chain-gameplay.lua",
+      "enabled": true
+    }
+  ]
+}

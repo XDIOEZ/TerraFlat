@@ -536,7 +536,7 @@ public static class FurnaceMaterialHeating
                     if (fuelCombustion && combustionSupported) Consider(definition.Matter.IgnitionTemperature);
                     foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
                     {
-                        if (reaction.LiquidOutput != null) continue;
+                        if (reaction.LiquidInput != null || reaction.LiquidOutput != null) continue;
                         foreach (RuntimeRecipeIngredient ingredient in reaction.Recipe.inputs.RowItems_List)
                             if (CraftingIngredientMatcher.MatchesIdentity(ingredient, material))
                             { Consider(sourceTemperature > current ? reaction.MinTemperature : reaction.MaxTemperature); break; }
@@ -576,7 +576,7 @@ public static class FurnaceMaterialHeating
                 float next = ThermalRuntime.AdvanceAmbient(current, sourceTemperature,
                     ThermalRuntime.ResolveHeatingSeconds(current, sourceTemperature, seconds, heatingRateMultiplier));
                 foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
-                    if (reaction.LiquidOutput == null && reaction.TemperatureMatches(current) &&
+                    if (reaction.LiquidInput == null && reaction.LiquidOutput == null && reaction.TemperatureMatches(current) &&
                         !reaction.TemperatureMatches(next)) return true;
                 if (definition.Matter != null)
                     foreach (RuntimeItemMatterTransition transition in definition.Matter.Transitions)

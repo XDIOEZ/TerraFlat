@@ -347,10 +347,23 @@
       "id": "Flour",
       "parent": "Rice",
       "gameName": "面粉",
-      "description": "五份狗尾草籽经石臼研磨得到的一份面粉；可直接食用，补充碳水和蛋白质，但会消耗水分。",
+      "description": "狗尾草籽、小麦或玉米经石臼研磨得到的面粉；可食用或加热制成面包。",
       "weight": 0.1,
       "volume": 0.15,
       "stackable": true,
+      "reactions": [
+        {
+          "id": "core:heat_flour_bread",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            { "match": "exact_item", "itemId": "Flour", "amount": 1 }
+          ],
+          "outputs": [
+            { "itemId": "Bread", "amount": 1 }
+          ]
+        }
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Flour/Flour_Icon.png",
         "color": {

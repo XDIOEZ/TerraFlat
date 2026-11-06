@@ -94,7 +94,8 @@ test.system("dialogue", "builtin_locales", {}, function(data)
         "CookedRice", "Egg", "Egg_Cooked", "Fat", "Flour", "FoxtailSpike", "HerbPoultice", "IceBlock",
         "Jam", "Leaf", "Meat", "Meat_Cooked", "Meat_Cured", "Meat_Dehydrate", "Meat_Rotten", "Mushroom",
         "Orange", "Peach", "Radish", "Rice", "Salt", "Seed_Apple", "Seed_Berry", "Seed_Cotton",
-        "Seed_Foxtail", "Seed_Herb", "Seed_Mushroom", "Seed_Radish", "Seed_Willow", "Tea", "WildDogMilk"
+        "Seed_Foxtail", "Seed_Herb", "Seed_Mushroom", "Seed_Radish", "Seed_Willow", "Tea", "WildDogMilk",
+        "Corn", "Potato", "Tomato", "Pumpkin", "Watermelon", "Strawberry", "RoastedCorn", "BakedPotato", "FriedPotato", "CookedPumpkin", "Tofu", "TomatoPaste", "Bread", "Seed_Wheat", "Seed_Corn", "Seed_Soybean", "Seed_Potato", "Seed_Tomato", "Seed_Pumpkin", "Seed_Watermelon", "Seed_Strawberry", "Sugarcane", "Seed_Sugarcane", "Seed_TeaLeaf"
     }
     local expectedFoodSet, tasteEntries, spoilageEntries = {}, {}, {}
     local foodEntryCount = 0
@@ -109,7 +110,7 @@ test.system("dialogue", "builtin_locales", {}, function(data)
             spoilageEntries[string.sub(entry.id, #spoilagePrefix + 1)] = entry
         end
     end
-    assert(#expectedFoodIds == 39, "可食用内置物品清单意外变化")
+    assert(#expectedFoodIds == 63, "可食用内置物品清单意外变化")
     assert(foodEntryCount == #expectedFoodIds * 2, "食物口味/临期台词存在重复或多余条目")
     local uniqueSpoilageLines, uniqueEnglishSpoilageLines = {}, {}
     for _, itemId in ipairs(expectedFoodIds) do

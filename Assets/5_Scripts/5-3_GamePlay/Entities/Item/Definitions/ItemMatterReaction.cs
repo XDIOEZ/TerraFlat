@@ -94,6 +94,9 @@ public sealed partial class ItemReactionDefinitionDto
 
     [JsonProperty("liquidOutput", NullValueHandling = NullValueHandling.Ignore)]
     public ItemReactionLiquidOutputDto LiquidOutput;
+
+    [JsonProperty("liquidInput", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemReactionLiquidInputDto LiquidInput;
 }
 
 [Serializable]
@@ -130,6 +133,17 @@ public sealed partial class ItemReactionOutputDto
 [Serializable]
 [MemoryPackable]
 public sealed partial class ItemReactionLiquidOutputDto
+{
+    [JsonProperty("liquidId")]
+    public string LiquidId;
+
+    [JsonProperty("amount")]
+    public float Amount = 1f;
+}
+
+[Serializable]
+[MemoryPackable]
+public sealed partial class ItemReactionLiquidInputDto
 {
     [JsonProperty("liquidId")]
     public string LiquidId;
@@ -234,6 +248,7 @@ public sealed class RuntimeItemReactionDefinition
     public RuntimeRecipe Recipe { get; }
     public string Signature { get; }
     public RuntimeLiquidOutput LiquidOutput => Recipe.LiquidOutput;
+    public RuntimeLiquidInput LiquidInput { get; }
 
     public RuntimeItemReactionDefinition(
         string sourceItemId,
@@ -241,7 +256,8 @@ public sealed class RuntimeItemReactionDefinition
         float? minTemperature,
         float? maxTemperature,
         RuntimeRecipe recipe,
-        string signature)
+        string signature,
+        RuntimeLiquidInput liquidInput = null)
     {
         SourceItemId = sourceItemId;
         Id = id;
@@ -249,12 +265,25 @@ public sealed class RuntimeItemReactionDefinition
         MaxTemperature = maxTemperature;
         Recipe = recipe;
         Signature = signature;
+        LiquidInput = liquidInput;
     }
 
     public bool TemperatureMatches(float temperature)
     {
         return float.IsFinite(temperature) && (!MinTemperature.HasValue || temperature >= MinTemperature.Value) &&
                (!MaxTemperature.HasValue || temperature <= MaxTemperature.Value);
+    }
+}
+
+public sealed class RuntimeLiquidInput
+{
+    public string LiquidId { get; }
+    public float Amount { get; }
+
+    public RuntimeLiquidInput(string liquidId, float amount)
+    {
+        LiquidId = liquidId;
+        Amount = amount;
     }
 }
 
@@ -356,6 +385,8 @@ public static class ItemMatterReactionCompiler
             ValidateOptionalRange(definition.MinTemperature, definition.MaxTemperature, itemId, "reaction temperature");
             if (definition.Inputs == null || definition.Inputs.Count == 0)
                 throw new InvalidDataException($"物品 {itemId} 的 reaction 缺少 inputs");
+            if (definition.LiquidInput != null && definition.LiquidOutput != null)
+                throw new InvalidDataException($"物品 {itemId} 的 reaction 暂不支持同时声明 liquidInput 和 liquidOutput");
             if ((definition.Outputs == null || definition.Outputs.Count == 0) && definition.LiquidOutput == null)
                 throw new InvalidDataException($"物品 {itemId} 的 reaction 缺少产物");
 
@@ -399,6 +430,7 @@ public static class ItemMatterReactionCompiler
             }
 
             RuntimeLiquidOutput liquid = CompileLiquid(definition.LiquidOutput, itemId, "reaction");
+            RuntimeLiquidInput liquidInput = CompileLiquidInput(definition.LiquidInput, itemId);
             string id = string.IsNullOrWhiteSpace(definition.Id)
                 ? $"item-reaction.{itemId}.{result.Count}"
                 : definition.Id.Trim();
@@ -421,10 +453,10 @@ public static class ItemMatterReactionCompiler
                 outputs = new RuntimeRecipeOutput { results = outputs },
                 LiquidOutput = liquid
             };
-            string signature = BuildSignature(definition, ingredients, outputs, liquid);
+            string signature = BuildSignature(definition, ingredients, outputs, liquid, liquidInput);
             result.Add(new RuntimeItemReactionDefinition(
                 itemId, id, definition.MinTemperature, definition.MaxTemperature,
-                recipe, signature));
+                recipe, signature, liquidInput));
         }
 
         return result.AsReadOnly();
@@ -449,11 +481,21 @@ public static class ItemMatterReactionCompiler
         return new RuntimeLiquidOutput { LiquidId = id, Amount = source.Amount };
     }
 
+    private static RuntimeLiquidInput CompileLiquidInput(ItemReactionLiquidInputDto source, string itemId)
+    {
+        if (source == null) return null;
+        string id = source.LiquidId?.Trim();
+        if (string.IsNullOrWhiteSpace(id) || !IsFinite(source.Amount) || source.Amount <= 0f)
+            throw new InvalidDataException($"物品 {itemId} 的 reaction 液体原料无效");
+        return new RuntimeLiquidInput(id, source.Amount);
+    }
+
     private static string BuildSignature(
         ItemReactionDefinitionDto definition,
         IReadOnlyList<RuntimeRecipeIngredient> inputs,
         IReadOnlyList<RuntimeRecipeResult> outputs,
-        RuntimeLiquidOutput liquid)
+        RuntimeLiquidOutput liquid,
+        RuntimeLiquidInput liquidInput)
     {
         string inputKey = string.Join("|", inputs
             .Select(input => $"{(int)input.matchMode}:{(input.matchMode == MatchMode.ByTag ? input.Tag : input.ItemName)}:{input.amount}")
@@ -462,7 +504,8 @@ public static class ItemMatterReactionCompiler
             .Select(output => $"{output.ItemName}:{output.amount}:{F(output.durabilityMultiplier)}")
             .OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
         string liquidKey = liquid == null ? string.Empty : $"{liquid.LiquidId}:{F(liquid.Amount)}";
-        return $"T:{F(definition.MinTemperature)}:{F(definition.MaxTemperature)};I:{inputKey};O:{outputKey};L:{liquidKey}";
+        string liquidInputKey = liquidInput == null ? string.Empty : $"{liquidInput.LiquidId}:{F(liquidInput.Amount)}";
+        return $"T:{F(definition.MinTemperature)}:{F(definition.MaxTemperature)};I:{inputKey};O:{outputKey};LI:{liquidInputKey};L:{liquidKey}";
     }
 
     private static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
@@ -843,6 +886,36 @@ public static class MaterialThermalProcessor
 {
     #region 材料热反应
 
+    /// <summary>按正式热反应规则创建带温度、品质、湿度和固体后续转化的产物。</summary>
+    public static List<ItemData> CreateThermalReactionSolidOutputs(Inventory input, CraftingRecipeMatch match,
+        int batches, float fallbackTemperature)
+    {
+        if (input?.Data?.itemSlots == null || match?.Recipe?.outputs?.results == null || batches < 1)
+            throw new System.ArgumentException("热反应产物构造参数无效");
+        var outputs = new List<ItemData>();
+        if (match.Recipe.outputs.results.Count == 0) return outputs;
+        GameRes resources = GameRes.ExistingInstance
+            ?? throw new System.InvalidOperationException("热反应产物构造缺少物品目录");
+        float temperature = ItemMatterRuntime.GetMinimumConsumedTemperature(input, match, fallbackTemperature);
+        foreach (RuntimeRecipeResult result in match.Recipe.outputs.results)
+        {
+            ItemData product = resources.CreateItemData(result.ItemName);
+            product.Stack.Amount = result.amount * (float)batches;
+            CraftedDurabilityQuality.ApplyToCraftedOutput(product, result.durabilityMultiplier);
+            resources.TryGetItemDefinition(product.IDName, out RuntimeItemDefinition definition);
+            product.MatterState = new ItemMatterState
+            {
+                Initialized = true,
+                TemperatureCelsius = temperature,
+                Moisture = definition.Matter?.InitialMoisture ?? 0f
+            };
+            if (ItemMatterRuntime.TryCreateSolidTransitionOutputs(product, out IReadOnlyList<ItemData> transformed))
+                outputs.AddRange(transformed);
+            else outputs.Add(product);
+        }
+        return outputs;
+    }
+
     public static bool Process(Inventory input, Inventory output, Item actor = null,
         ISet<int> blockedMaterialSlots = null, ISet<int> rejectedMaterialSlots = null)
     {
@@ -855,24 +928,7 @@ public static class MaterialThermalProcessor
         foreach (RuntimeItemReactionDefinition reaction in ItemReactionResolver.GetCandidates(input, liquid: false))
         {
             if (!ItemReactionResolver.TryMatchBatch(input, reaction, out CraftingRecipeMatch match, out int batches, blockedSlots)) continue;
-            var outputs = new List<ItemData>();
-            float temperature = ItemMatterRuntime.GetMinimumConsumedTemperature(input, match, 0f);
-            foreach (RuntimeRecipeResult result in reaction.Recipe.outputs.results)
-            {
-                ItemData product = GameRes.ExistingInstance.CreateItemData(result.ItemName);
-                product.Stack.Amount = result.amount * (float)batches;
-                CraftedDurabilityQuality.ApplyToCraftedOutput(product, result.durabilityMultiplier);
-                GameRes.ExistingInstance.TryGetItemDefinition(product.IDName, out RuntimeItemDefinition definition);
-                product.MatterState = new ItemMatterState
-                {
-                    Initialized = true,
-                    TemperatureCelsius = temperature,
-                    Moisture = definition.Matter?.InitialMoisture ?? 0f
-                };
-                if (ItemMatterRuntime.TryCreateSolidTransitionOutputs(product, out IReadOnlyList<ItemData> transformed))
-                    outputs.AddRange(transformed);
-                else outputs.Add(product);
-            }
+            List<ItemData> outputs = CreateThermalReactionSolidOutputs(input, match, batches, 0f);
             CraftingResult committed = CraftingService.CommitMaterialOutputs(input, output, match, outputs);
             if (!committed.Success)
             {
@@ -920,8 +976,11 @@ public static class ItemReactionResolver
             ItemData item = slot?.itemData;
             if (item == null || !resources.TryGetItemDefinition(item.IDName, out RuntimeItemDefinition definition)) continue;
             foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
-                if (reaction != null && (reaction.LiquidOutput != null) == liquid && seen.Add(reaction.Signature))
+            {
+                bool liquidReaction = reaction?.LiquidInput != null || reaction?.LiquidOutput != null;
+                if (reaction != null && liquidReaction == liquid && seen.Add(reaction.Signature))
                     candidates.Add(reaction);
+            }
         }
         return candidates.OrderByDescending(reaction => reaction.Recipe.inputs.RowItems_List
                 .Select(ingredient => ingredient.matchMode == MatchMode.ByTag ? "tag:" + ingredient.Tag : ingredient.ItemName)
@@ -998,7 +1057,8 @@ public static class ItemReactionResolver
         reaction = null;
         match = null;
         foreach (RuntimeItemReactionDefinition candidate in GetCandidates(input, requireLiquidOutput))
-            if (TryMatch(input, candidate, out match)) { reaction = candidate; return true; }
+            if ((!requireLiquidOutput || candidate.LiquidOutput != null) && TryMatch(input, candidate, out match))
+            { reaction = candidate; return true; }
         return false;
     }
 }

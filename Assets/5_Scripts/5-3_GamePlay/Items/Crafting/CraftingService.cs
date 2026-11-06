@@ -62,14 +62,33 @@ public static class CraftingService
     #region 领域产物策略
     /// <summary>原料消耗与非物品领域效果共享库存锁及回滚，容器反应不另造扣料通道。</summary>
     public static CraftingResult ApplyInputEffect(Inventory inventory, CraftingRecipeMatch match, Action apply, Action rollback)
+        => ApplyInputEffect(inventory, match, Array.Empty<ItemData>(), apply, rollback);
+
+    /// <summary>把固体产物与原料纳入同一库存快照，再执行可回滚的领域效果。</summary>
+    public static CraftingResult ApplyInputEffect(Inventory inventory, CraftingRecipeMatch match,
+        IReadOnlyList<ItemData> suppliedOutputs, Action apply, Action rollback)
     {
-        if (inventory == null || match == null || apply == null || rollback == null || MachineInventory.IsBeingDragged(inventory))
+        if (inventory == null || match == null || suppliedOutputs == null || apply == null || rollback == null ||
+            MachineInventory.IsBeingDragged(inventory))
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "领域事务参数无效或正在拖拽");
         if (!TryAcquireInventories(inventory, inventory, out var locked))
             return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "库存正在提交另一笔事务");
         try
         {
-            if (!CraftingTransaction.TryCreateInputOnly(inventory, match, out var transaction, out var failure)) return failure;
+            CraftingTransaction transaction;
+            CraftingResult failure;
+            IReadOnlyList<ItemData> outputs = Array.Empty<ItemData>();
+            if (suppliedOutputs.Count == 0)
+            {
+                if (!CraftingTransaction.TryCreateInputOnly(inventory, match, out transaction, out failure)) return failure;
+            }
+            else
+            {
+                if (!TryPrepareInputEffectOutputs(inventory, match, suppliedOutputs, out List<ItemData> prepared, out failure)) return failure;
+                outputs = prepared;
+                if (!CraftingTransaction.TryCreate(inventory, inventory, match, prepared, true,
+                        out transaction, out failure)) return failure;
+            }
             if (!transaction.Commit(out failure)) return failure;
             try { apply(); transaction.Complete(); }
             catch
@@ -78,9 +97,34 @@ public static class CraftingService
                 finally { transaction.Rollback(); }
                 throw;
             }
-            return CraftingResult.Succeeded(match.Recipe, Array.Empty<ItemData>());
+            return CraftingResult.Succeeded(match.Recipe, outputs);
         }
         finally { ReleaseInventories(locked); }
+    }
+
+    private static bool TryPrepareInputEffectOutputs(Inventory inventory, CraftingRecipeMatch match,
+        IReadOnlyList<ItemData> suppliedOutputs, out List<ItemData> outputs, out CraftingResult failure)
+    {
+        outputs = new List<ItemData>(suppliedOutputs.Count);
+        failure = null;
+        GameRes resources = GameRes.Instance;
+        foreach (ItemData value in suppliedOutputs)
+        {
+            if (value?.Stack == null || string.IsNullOrWhiteSpace(value.IDName) ||
+                !float.IsFinite(value.Stack.Amount) || value.Stack.Amount <= 0f ||
+                resources == null || !resources.TryGetItemDefinition(value.IDName, out _))
+            {
+                failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "领域事务包含无效固体产物", match?.Recipe);
+                return false;
+            }
+            outputs.Add(FastCloner.FastCloner.DeepClone(value));
+        }
+        if (!CraftingOutputRules.Prepare(inventory, match, outputs, out string error, true))
+        {
+            failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, error, match.Recipe);
+            return false;
+        }
+        return true;
     }
 
     /// <summary>风干、堆肥等整槽转化共用事务；只消耗指定原槽，不误用其它同类材料。</summary>

@@ -380,7 +380,9 @@
         "Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.ElectronicMaterials.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestWorldRuntimeProbe.Planting.cs",
-        "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*"
+        "Assets/StreamingAssets/GameplayTests/Systems/Agriculture/*",
+        "Assets/StreamingAssets/GameConfig/Items/shells/food_chain_crops.json",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.FoodChain.cs"
       ],
       "dependsOn": [
         "terrain",
@@ -887,7 +889,10 @@
         "Assets/StreamingAssets/GameplayTests/mechanical-suite.json",
         "Assets/5_Scripts/5-3_GamePlay/Entities/DroppedItems/DroppedItemService.ColdWorld.cs",
         "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestSystemProbe.MineralContent.cs",
-        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRuntimeProbe.MaterialThermal.cs"
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRuntimeProbe.MaterialThermal.cs",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRuntimeProbe.Petrochemicals.cs",
+        "Assets/StreamingAssets/GameConfig/Items/shells/food_chain_foods.json",
+        "Assets/StreamingAssets/GameConfig/Recipes/cooking/advanced_food.json"
       ],
       "dependsOn": [
         "item_runtime",
@@ -903,7 +908,8 @@
       ],
       "rulesSuite": "GameplayTests/Systems/Processing/rules-suite.json",
       "integrationSuites": [
-        "GameplayTests/mechanical-suite.json"
+        "GameplayTests/mechanical-suite.json",
+        "GameplayTests/Systems/Processing/food-chain-gameplay-suite.json"
       ],
       "integrationCoverage": "partial",
       "coverageDocument": "GameplayTests/Systems/Processing/README.md",
@@ -915,7 +921,8 @@
         "mechanical_fluid_pump",
         "mechanical_control",
         "mechanical_processing",
-        "mechanical_manual_millstone"
+        "mechanical_manual_millstone",
+        "processing_food_chain_gameplay"
       ],
       "rulesCoverage": "partial"
     },

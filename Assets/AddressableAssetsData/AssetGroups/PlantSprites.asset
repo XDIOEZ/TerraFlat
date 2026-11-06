@@ -16,7 +16,241 @@ MonoBehaviour:
   m_Data:
     m_SerializedData: []
   m_GUID: 0a73f5d6333148c08eb4628f8fff98ab
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 0005bd32aa6f4bf183792844d0e49123
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/CookedPumpkin/CookedPumpkin_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1d1ce2c738fbbcc4bb0d313c84fc3d46
+    m_Address: Assets/6_Art/Generated/Farming/Soybean/SoybeanCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 204d485b5c07b1c41bfadcc01bbc94bb
+    m_Address: Assets/6_Art/Generated/Farming/Strawberry/Strawberry_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2dc5b2689a2945f4895dc1e7df436b8f
+    m_Address: Assets/6_Art/Generated/Farming/Soybean/Soybean_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 30915c818bd5df24da9a6c41b07623ac
+    m_Address: Assets/6_Art/Generated/Farming/Watermelon/Watermelon_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4914ff9d9e68df14cab7128e7cd09211
+    m_Address: Assets/6_Art/Generated/Farming/Sugarcane/SugarcaneCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4b366a7184d9cfc4b91cf35ad53783ea
+    m_Address: Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeaf_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5077340147b0dc0428260ae15236a3ee
+    m_Address: Assets/6_Art/Generated/Farming/Wheat/WheatCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 514fd6d44c79fcf42ab1473c94dd58d3
+    m_Address: Assets/6_Art/Generated/Farming/Strawberry/StrawberryCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5bbf6730c00c1524e956b82f284004ae
+    m_Address: Assets/6_Art/Generated/Farming/Wheat/Wheat_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 62fd0fe6cba9d5542a1fe20efe45a26b
+    m_Address: Assets/6_Art/Generated/Farming/Watermelon/WatermelonCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d7b5d23d77656a48babbbd72b884684
+    m_Address: Assets/6_Art/Generated/Farming/Sugarcane/Sugarcane_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6f1821c8d2ad4bb79965124116008adb
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/RoastedCorn/RoastedCorn_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 84db7d7a63fb40f41b7fb020ed1603cb
+    m_Address: Assets/6_Art/Generated/Farming/Corn/CornCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 979b6b6270297064e8e28663320d0e75
+    m_Address: Assets/6_Art/Generated/Farming/Pumpkin/PumpkinCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a7176fb29ed1f9e4f9d82522ecc8bde2
+    m_Address: Assets/6_Art/Generated/Farming/Potato/PotatoCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: afab2aef9f93de54092837fc95b56b66
+    m_Address: Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeafCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b4a2828a7e414997ac01c4b15d30fbf4
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/BakedPotato/BakedPotato_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c434963663e3425baf3740b06557ed95
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/SoybeanMeal/SoybeanMeal_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c4a1d9c3058b43f4fb01223f8a7a418a
+    m_Address: Assets/6_Art/Generated/Farming/Tomato/Tomato_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c596e6cf987d46f49aef68a47421fabe
+    m_Address: Assets/6_Art/Generated/Farming/Corn/Corn_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c8eea2d25662f6a4190649dfedc1d9d7
+    m_Address: Assets/6_Art/Generated/Farming/Pumpkin/Pumpkin_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cb6e51c253b4479caaaace813612f2e3
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Bread/Bread_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: da5b0496188d439d9b85d9e531d6e0f9
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Sugar/Sugar_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e761bf2f28c845bcafcaf9fd8b31c6a5
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/Tofu/Tofu_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e8aa007dbacf4d2fae4fa5ad03a469f2
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/TomatoPaste/TomatoPaste_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4ba47ab638ff7c40a74f536a3c1327f
+    m_Address: Assets/6_Art/Generated/Farming/Tomato/TomatoCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fcb48a8f45ff9294abddd9a36ef37a12
+    m_Address: Assets/6_Art/Generated/Farming/Potato/Potato_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 21b56a94049f3154584f312402db6a68
+    m_Address: Assets/6_Art/Generated/Farming/Strawberry/StrawberrySeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 28ce01ce2b6aadc47ac00620b203911e
+    m_Address: Assets/6_Art/Generated/Farming/Tomato/TomatoSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 33bb29c859f380c4c9d0eb7ca3bdeb74
+    m_Address: Assets/6_Art/Generated/Farming/Potato/PotatoSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3d4545103224a1e4c91117c008c72b59
+    m_Address: Assets/6_Art/Generated/Farming/Sugarcane/SugarcaneSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 777b9f2e4a9ca0b43a89d920a789a342
+    m_Address: Assets/6_Art/Generated/Farming/Watermelon/WatermelonSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7f4016e221ee2db4eabcbd7ddc21197f
+    m_Address: Assets/6_Art/Generated/Farming/Wheat/WheatSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c892b99727ba734491051bd22104dfd
+    m_Address: Assets/6_Art/Generated/Farming/Corn/CornSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c06d923fe459c047b93ba66cd370867
+    m_Address: Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeafSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: afffe35ce1a87fd40ae3c30ddebe84d2
+    m_Address: Assets/6_Art/Generated/Farming/Pumpkin/PumpkinSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c3c31171e38d55e41ab38aaf5bf43b5b
+    m_Address: Assets/6_Art/Generated/Farming/Soybean/SoybeanSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b359dd8473514862880ad9fce7efa4a6
+    m_Address: Assets/6_Art/Generated/InventoryCrafting/FriedPotato/FriedPotato_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:

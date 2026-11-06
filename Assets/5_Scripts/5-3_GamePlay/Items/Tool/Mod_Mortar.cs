@@ -332,30 +332,66 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory, IVesselConte
         {
             if (!ItemReactionResolver.TryMatchBatch(materialInventory, reaction, out CraftingRecipeMatch fullMatch,
                     out int batches, blockedSlots)) continue;
-            RuntimeLiquidOutput product = reaction.LiquidOutput;
             if (!Mod_WaterVessel.TryRead(itemData, out var targetStorage, out var targetState)) continue;
-            int spaceBatches = Mathf.FloorToInt(Mathf.Max(0f,
-                Mod_WaterVessel.ResolveContainerCapacity(itemData) - targetState.Amount) / product.Amount);
-            CraftingRecipeMatch match = fullMatch;
-            bool partial = spaceBatches < batches;
-            if (spaceBatches <= 0 || partial && !ItemReactionResolver.TryMatchBatch(materialInventory, reaction,
-                    out match, out batches, blockedSlots, spaceBatches))
+            RuntimeLiquidInput liquidInput = reaction.LiquidInput;
+            RuntimeLiquidOutput liquidOutput = reaction.LiquidOutput;
+            int spaceBatches = batches;
+            if (liquidInput != null)
+            {
+                float availableServings = Mathf.Max(0f,
+                    MixedLiquidContents.GetAmount(targetState, liquidInput.LiquidId) -
+                    MixedLiquidContents.Reserved(targetState, liquidInput.LiquidId));
+                // 按实际浮点扣量校验向上候选，避免整数边界少算或多扣。
+                spaceBatches = (int)Math.Min(batches, Math.Ceiling((double)availableServings / liquidInput.Amount));
+                if (liquidInput.Amount * spaceBatches > availableServings) spaceBatches--;
+                // 液体原料不足时保留普通固体热反应的回退机会。
+                if (spaceBatches <= 0) continue;
+            }
+            else if (liquidOutput != null)
+            {
+                float receivableServings = MixedLiquidContents.GetReceivableServings(targetState,
+                    Mod_WaterVessel.ResolveContainerCapacity(itemData), liquidOutput.LiquidId, float.MaxValue);
+                spaceBatches = Mathf.FloorToInt(Mathf.Min(batches,
+                    (receivableServings + Mod_WaterVessel.AmountEpsilon) / liquidOutput.Amount));
+                if (spaceBatches <= 0)
+                {
+                    foreach (CraftingConsumption consumption in fullMatch.Consumptions) blockedSlots.Add(consumption.SlotIndex);
+                    continue;
+                }
+            }
+            else continue;
+            if (!ItemReactionResolver.TryMatchBatch(materialInventory, reaction, out CraftingRecipeMatch match,
+                    out int acceptedBatches, blockedSlots, spaceBatches))
             {
                 foreach (CraftingConsumption consumption in fullMatch.Consumptions) blockedSlots.Add(consumption.SlotIndex);
                 continue;
             }
-            float amount = product.Amount * batches;
-            if (!Mod_WaterVessel.CanAddLiquidToItemData(itemData, product.LiquidId, amount))
+            bool partial = acceptedBatches < batches;
+            float liquidInputAmount = liquidInput == null ? 0f : liquidInput.Amount * acceptedBatches;
+            float liquidOutputAmount = liquidOutput == null ? 0f : liquidOutput.Amount * acceptedBatches;
+            if (!float.IsFinite(liquidInputAmount) || !float.IsFinite(liquidOutputAmount) ||
+                liquidOutput != null && !Mod_WaterVessel.CanAddLiquidToItemData(itemData, liquidOutput.LiquidId, liquidOutputAmount))
             {
                 foreach (CraftingConsumption consumption in fullMatch.Consumptions) blockedSlots.Add(consumption.SlotIndex);
                 continue;
             }
             LiquidContainerState before = FastCloner.FastCloner.DeepClone(targetState);
             float materialTemperature = ItemMatterRuntime.GetMinimumConsumedTemperature(materialInventory, match, temperature);
-            CraftingResult result = CraftingService.ApplyInputEffect(materialInventory, match,
+            IReadOnlyList<ItemData> solidOutputs = match.Recipe.outputs.results.Count == 0
+                ? Array.Empty<ItemData>()
+                : MaterialThermalProcessor.CreateThermalReactionSolidOutputs(materialInventory, match, acceptedBatches, temperature);
+            CraftingResult result = CraftingService.ApplyInputEffect(materialInventory, match, solidOutputs,
                 () =>
                 {
-                    if (!Mod_WaterVessel.TryAddLiquidToItemData(itemData, product.LiquidId, amount, materialTemperature))
+                    if (liquidInput != null)
+                    {
+                        if (!MixedLiquidContents.RemoveSpecies(targetState, liquidInput.LiquidId, liquidInputAmount))
+                            throw new InvalidOperationException("坩埚液体原料在提交前已被消耗或预约。");
+                        Mod_WaterVessel.NormalizeStoredAmount(targetState);
+                        targetStorage.WriteData(targetState);
+                    }
+                    else if (!Mod_WaterVessel.TryAddLiquidToItemData(itemData, liquidOutput.LiquidId,
+                                 liquidOutputAmount, materialTemperature))
                         throw new InvalidOperationException("材料液化时容器空间发生变化。");
                 },
                 () => targetStorage.WriteData(before));

@@ -98,7 +98,7 @@ public static class ItemDefinitionCatalogLoader
     }
 
     private static BinaryContentCache CreateBinaryCache()
-        => BinaryContentCache.ForBuiltIn<List<ItemDefinitionDto>>("items", BuiltInItemRoot, BuiltInManifestPath, 1);
+        => BinaryContentCache.ForBuiltIn<List<ItemDefinitionDto>>("items", BuiltInItemRoot, BuiltInManifestPath, 2);
 
     /// <summary>返回合并后的原始定义，供迁移工具保留 parent 与手工覆盖字段。</summary>
     public static JObject LoadBuiltInSourceCatalog()

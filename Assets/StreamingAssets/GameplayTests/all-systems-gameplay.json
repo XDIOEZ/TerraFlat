@@ -301,6 +301,13 @@
       "enabled": true
     },
     {
+      "id": "processing_food_chain_gameplay",
+      "contractKind": "behavior",
+      "name": "新增食材的石臼加工和加热反应",
+      "luaPath": "GameplayTests/Systems/Processing/food-chain-gameplay.lua",
+      "enabled": true
+    },
+    {
       "id": "universe_content",
       "contractKind": "mixed",
       "name": "宇宙内容、轨道、地表与快照",

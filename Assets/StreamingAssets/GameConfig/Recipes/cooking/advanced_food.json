@@ -1,4 +1,50 @@
 {
   "schemaVersion": 1,
-  "recipes": []
+  "recipes": [
+    {
+      "id": "core:strawberry_seed",
+      "displayName": "提取草莓种子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Strawberry",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Seed_Strawberry",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:strawberry_jam",
+      "displayName": "草莓果酱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Strawberry",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Sugar",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Jam",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
 }

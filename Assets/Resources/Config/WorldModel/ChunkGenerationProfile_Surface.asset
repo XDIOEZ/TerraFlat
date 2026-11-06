@@ -430,6 +430,16 @@ MonoBehaviour:
   - surface.forest.stick
   - surface.forest.leaf
   - surface.grassland.berry
+  - surface.grassland.wildStrawberry
+  - surface.grassland.seedWheat
+  - surface.grassland.seedCorn
+  - surface.grassland.seedSoybean
+  - surface.grassland.seedPotato
+  - surface.grassland.seedTomato
+  - surface.grassland.seedPumpkin
+  - surface.grassland.seedWatermelon
+  - surface.grassland.seedSugarcane
+  - surface.grassland.seedTeaLeaf
   - surface.grassland.radish
   - surface.grassland.stick
   - surface.grassland.oreStone

@@ -12,6 +12,9 @@
       "litersPerServing": 0.25,
       "drinkable": true,
       "hydrationPerServing": 25.0,
+      "ingredientReactions": [
+        { "itemId": "TeaLeaf", "amount": 40, "resultLiquidId": "core:tea_infusion", "requireFullContainer": true }
+      ],
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
         "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
@@ -133,7 +136,8 @@
       "drinkable": true,
       "hydrationPerServing": 25.0,
       "ingredientReactions": [
-        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true }
+        { "itemId": "Salt", "amount": 10, "resultLiquidId": "core:salt_water", "requireFullContainer": true },
+        { "itemId": "TeaLeaf", "amount": 40, "resultLiquidId": "core:tea_infusion", "requireFullContainer": true }
       ],
       "worldWater": {
         "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
@@ -408,6 +412,38 @@
         "outputItemId": "Naphtha",
         "outputAmount": 1
       }
+    },
+    {
+      "id": "core:tea_infusion",
+      "displayName": "茶液",
+      "description": "在满桶纯水或饮用水中加入茶叶得到；加热后消耗真实液量制成茶。",
+      "category": "water",
+      "visualState": "tea",
+      "primaryColor": { "r": 0.52, "g": 0.42, "b": 0.18, "a": 1.0 },
+      "viscosity": 1.0,
+      "litersPerServing": 0.25,
+      "drinkable": true,
+      "hydrationPerServing": 25.0,
+      "heatProcess": {
+        "mode": "ConsumeServing",
+        "minimumTemperature": 100.0,
+        "seconds": 3.0,
+        "consumeAmount": 5,
+        "outputItemId": "Tea",
+        "outputAmount": 1
+      }
+    },
+    {
+      "id": "core:soybean_oil",
+      "displayName": "豆油",
+      "description": "大豆热压榨得到的食用油，可盛装并用于烹饪。",
+      "category": "food_oil",
+      "visualState": "filled",
+      "primaryColor": { "r": 0.82, "g": 0.66, "b": 0.24, "a": 1.0 },
+      "viscosity": 1.4,
+      "litersPerServing": 0.1,
+      "drinkable": false,
+      "hydrationPerServing": 0.0
     }
   ]
 }

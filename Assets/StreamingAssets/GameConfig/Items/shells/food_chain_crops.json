@@ -1,0 +1,584 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Seed_Wheat",
+      "parent": "Seed_Radish",
+      "gameName": "小麦种子",
+      "description": "可以播种并收获小麦；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Wheat/WheatSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "WheatCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Corn",
+      "parent": "Seed_Radish",
+      "gameName": "玉米种子",
+      "description": "可以播种并收获玉米；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Corn/CornSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "CornCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Soybean",
+      "parent": "Seed_Radish",
+      "gameName": "大豆种子",
+      "description": "可以播种并收获大豆；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Soybean/SoybeanSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "SoybeanCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Potato",
+      "parent": "Seed_Radish",
+      "gameName": "土豆种子",
+      "description": "可以播种并收获土豆；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Potato/PotatoSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "PotatoCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Tomato",
+      "parent": "Seed_Radish",
+      "gameName": "番茄种子",
+      "description": "可以播种并收获番茄；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Tomato/TomatoSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "TomatoCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Pumpkin",
+      "parent": "Seed_Radish",
+      "gameName": "南瓜种子",
+      "description": "可以播种并收获南瓜；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Pumpkin/PumpkinSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "PumpkinCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Watermelon",
+      "parent": "Seed_Radish",
+      "gameName": "西瓜种子",
+      "description": "可以播种并收获西瓜；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Watermelon/WatermelonSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "WatermelonCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Strawberry",
+      "parent": "Seed_Radish",
+      "gameName": "草莓种子",
+      "description": "从草莓中提取；可以播种成长期更短的栽培草莓。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Strawberry/StrawberrySeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "StrawberryCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_Sugarcane",
+      "parent": "Seed_Radish",
+      "gameName": "甘蔗种子",
+      "description": "可以播种并收获甘蔗；成熟时可收获农作物和种子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Sugarcane/SugarcaneSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "SugarcaneCrop" }
+        }
+      }
+    },
+    {
+      "id": "Seed_TeaLeaf",
+      "parent": "Seed_Radish",
+      "gameName": "茶树种子",
+      "description": "可以播种成茶树；成熟后可反复采收茶叶。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeafSeed_Icon.png"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": { "cropItemId": "TeaLeafCrop" }
+        }
+      }
+    },
+    {
+      "id": "WheatCrop",
+      "parent": "Crop_Base",
+      "gameName": "小麦-农作物",
+      "description": "成熟后收获小麦，并可获得小麦种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Wheat/WheatCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 700.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Wheat", "minAmount": 3, "maxAmount": 4, "probability": 1.0 },
+              { "itemId": "Seed_Wheat", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "CornCrop",
+      "parent": "Crop_Base",
+      "gameName": "玉米-农作物",
+      "description": "成熟后收获玉米，并可获得玉米种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Corn/CornCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 650.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Corn", "minAmount": 1, "maxAmount": 2, "probability": 1.0 },
+              { "itemId": "Seed_Corn", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "SoybeanCrop",
+      "parent": "Crop_Base",
+      "gameName": "大豆-农作物",
+      "description": "成熟后收获大豆，并可获得大豆种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Soybean/SoybeanCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 700.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Soybean", "minAmount": 2, "maxAmount": 4, "probability": 1.0 },
+              { "itemId": "Seed_Soybean", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "PotatoCrop",
+      "parent": "Crop_Base",
+      "gameName": "土豆-农作物",
+      "description": "成熟后收获土豆，并可获得土豆种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Potato/PotatoCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 500.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.25 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Potato", "minAmount": 2, "maxAmount": 4, "probability": 1.0 },
+              { "itemId": "Seed_Potato", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "TomatoCrop",
+      "parent": "Crop_Base",
+      "gameName": "番茄-农作物",
+      "description": "成熟后收获番茄，并可获得番茄种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Tomato/TomatoCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 600.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Tomato", "minAmount": 2, "maxAmount": 4, "probability": 1.0 },
+              { "itemId": "Seed_Tomato", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "PumpkinCrop",
+      "parent": "Crop_Base",
+      "gameName": "南瓜-农作物",
+      "description": "经过较长生长期后收获南瓜，并可获得南瓜种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Pumpkin/PumpkinCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 900.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Pumpkin", "minAmount": 1, "maxAmount": 1, "probability": 1.0 },
+              { "itemId": "Seed_Pumpkin", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "WatermelonCrop",
+      "parent": "Crop_Base",
+      "gameName": "西瓜-农作物",
+      "description": "成熟后收获西瓜，并可获得西瓜种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Watermelon/WatermelonCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 600.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Watermelon", "minAmount": 1, "maxAmount": 1, "probability": 1.0 },
+              { "itemId": "Seed_Watermelon", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "SugarcaneCrop",
+      "parent": "Crop_Base",
+      "gameName": "甘蔗-农作物",
+      "description": "成熟后收获甘蔗茎，并可获得甘蔗种子。",
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Sugarcane/SugarcaneCrop_Mature.png"
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 700.0 }
+        },
+        "cropVisual": {
+          "parameters": { "buriedClip": 0.0 }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              { "itemId": "Sugarcane", "minAmount": 3, "maxAmount": 5, "probability": 1.0 },
+              { "itemId": "Seed_Sugarcane", "minAmount": 1, "maxAmount": 1, "probability": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "TeaLeafCrop",
+      "parent": "WildCrop_Base",
+      "traversalSpeedMultiplier": 0.5,
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "gameName": "茶树-栽培灌木",
+      "description": "成熟后保留植株，周期采收鲜叶；茶叶可用于制作茶饮。",
+      "weight": 1.5,
+      "volume": 5.0,
+      "stackable": true,
+      "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeafCrop_Mature.png",
+        "shadows": {
+          "contactWidth": 0.85,
+          "footLocalPosition": { "x": 0.0, "y": 0.0 }
+        },
+        "collider": {
+          "size": { "x": 0.8, "y": 0.8 },
+          "offset": { "x": 0.0, "y": 0.4 }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 1200.0 }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 0.25,
+            "matureScale": 0.75
+          }
+        },
+        "cropYield": { "enabled": false },
+        "collectable": {
+          "prefab": "Module_Collectable",
+          "id": "采集模块",
+          "enabled": true,
+          "data": { "CurrentStock": 0, "IsInitialized": false },
+          "parameters": {
+            "CollectItemId": "TeaLeaf",
+            "MaxStock": 16,
+            "NaturalInitialStockMin": 1,
+            "NaturalInitialStockMax": 2
+          }
+        },
+        "production": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "TeaLeaf",
+                "itemCountMin": 3,
+                "itemCountMax": 9,
+                "MaxProductionTime": 5760.0,
+                "ProductionIntervalDays": 4.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "StoreInModule": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": { "x": 0.0, "y": 0.0 },
+                "IsInitialized": false,
+                "YieldGeneVariants": []
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": false
+          }
+        }
+      }
+    },
+    {
+      "id": "StrawberryCrop",
+      "parent": "WildCrop_Base",
+      "traversalSpeedMultiplier": 0.5,
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "gameName": "草莓-栽培灌木",
+      "description": "种植后较快成熟，果实按较短周期再生，采果后植株保留。",
+      "weight": 1.5,
+      "volume": 5.0,
+      "stackable": true,
+      "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Strawberry/StrawberryCrop_Mature.png",
+        "shadows": {
+          "contactWidth": 0.85,
+          "footLocalPosition": { "x": 0.0, "y": 0.0 }
+        },
+        "collider": {
+          "size": { "x": 0.8, "y": 0.8 },
+          "offset": { "x": 0.0, "y": 0.4 }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 420.0 }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 0.25,
+            "matureScale": 0.75
+          }
+        },
+        "cropYield": { "enabled": false },
+        "collectable": {
+          "prefab": "Module_Collectable",
+          "id": "采集模块",
+          "enabled": true,
+          "data": { "CurrentStock": 0, "IsInitialized": false },
+          "parameters": {
+            "CollectItemId": "Strawberry",
+            "MaxStock": 16,
+            "NaturalInitialStockMin": 1,
+            "NaturalInitialStockMax": 2
+          }
+        },
+        "production": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Strawberry",
+                "itemCountMin": 1,
+                "itemCountMax": 1,
+                "MaxProductionTime": 4320.0,
+                "ProductionIntervalDays": 3.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "StoreInModule": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": { "x": 0.0, "y": 0.0 },
+                "IsInitialized": false,
+                "YieldGeneVariants": []
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": false
+          }
+        }
+      }
+    },
+    {
+      "id": "WildStrawberryCrop",
+      "parent": "WildCrop_Base",
+      "traversalSpeedMultiplier": 0.5,
+      "tags": ["BeeForage.Crop", "InventoryCategory.Nature"],
+      "gameName": "野草莓-自然灌木",
+      "description": "野外成熟的野草莓灌木；采果后会缓慢再生果实，母株保留。",
+      "weight": 1.5,
+      "volume": 5.0,
+      "stackable": true,
+      "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Strawberry/StrawberryCrop_Mature.png",
+        "shadows": {
+          "contactWidth": 0.85,
+          "footLocalPosition": { "x": 0.0, "y": 0.0 }
+        },
+        "collider": {
+          "size": { "x": 0.8, "y": 0.8 },
+          "offset": { "x": 0.0, "y": 0.4 }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": { "growthDurationSeconds": 840.0 }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 0.25,
+            "matureScale": 0.75
+          }
+        },
+        "cropYield": { "enabled": false },
+        "collectable": {
+          "prefab": "Module_Collectable",
+          "id": "采集模块",
+          "enabled": true,
+          "data": { "CurrentStock": 0, "IsInitialized": false },
+          "parameters": {
+            "CollectItemId": "Strawberry",
+            "MaxStock": 16,
+            "NaturalInitialStockMin": 1,
+            "NaturalInitialStockMax": 2
+          }
+        },
+        "production": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Strawberry",
+                "itemCountMin": 1,
+                "itemCountMax": 1,
+                "MaxProductionTime": 8640.0,
+                "ProductionIntervalDays": 6.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "StoreInModule": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": { "x": 0.0, "y": 0.0 },
+                "IsInitialized": false,
+                "YieldGeneVariants": []
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": false
+          }
+        }
+      }
+    }
+  ]
+}

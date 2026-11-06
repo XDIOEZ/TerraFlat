@@ -61,6 +61,12 @@ end, "农业差量坐标键复用、世界隔离与热提交零分配")
 
 test.system("agriculture", "crop_health_catalog", {}, function(data)
     assert(#data.crops > 0, "未读取到正式作物定义")
+    local ids = {}
+    for _, crop in ipairs(data.crops) do ids[crop.id] = true end
+    for _, id in ipairs({"WheatCrop", "CornCrop", "SoybeanCrop", "PotatoCrop", "TomatoCrop",
+        "PumpkinCrop", "WatermelonCrop", "StrawberryCrop", "WildStrawberryCrop", "SugarcaneCrop", "TeaLeafCrop"}) do
+        assert(ids[id], "正式作物目录缺少：" .. id)
+    end
     for _, crop in ipairs(data.crops) do
         local expectedHealth = crop.id == "Cactus" and 45 or 20
         assert(crop.hp == expectedHealth and crop.maximum == expectedHealth,
@@ -205,3 +211,57 @@ test.system("agriculture", "manual_harvest_shader", {}, function(data)
     assert(data.unrelatedPropertyKept, "采摘覆盖了水态等已有材质属性")
     assert(data.cleared and data.boundsRestored, "采摘结束没有恢复 GPU 参数和裁剪边界")
 end, "徒手采摘：Shader共用根点、连点、裁剪与结束清理")
+
+-- 对照正式继承目录检查新作物、食品和茶饮的连接。
+local foodChainNames = {"Wheat", "Corn", "Soybean", "Potato", "Tomato", "Pumpkin", "Watermelon", "Strawberry", "Sugarcane", "TeaLeaf"}
+local foodChainIds = {"WildStrawberryCrop", "Flour", "Bread", "Tofu", "TomatoPaste", "Sugar", "BakedPotato", "FriedPotato"}
+for _, name in ipairs(foodChainNames) do
+    table.insert(foodChainIds, name)
+    table.insert(foodChainIds, "Seed_" .. name)
+    table.insert(foodChainIds, name .. "Crop")
+end
+
+test.system("agriculture", "food_chain_catalog", {ids = foodChainIds}, function(data)
+    local items = data.items
+    for _, name in ipairs(foodChainNames) do
+        local seed, crop, product = items["Seed_" .. name], items[name .. "Crop"], items[name]
+        assert(seed and crop and product, name .. "的种子、作物或原料没有进入正式物品目录")
+        assert(seed.modules.plantable.parameters.cropItemId == name .. "Crop", name .. "种子指向错误作物")
+        assert(crop.sprite and product.sprite and crop.sprite ~= product.sprite, name .. "植株和原料缺少独立贴图")
+        if name ~= "Strawberry" and name ~= "TeaLeaf" then
+            local outputs = crop.modules.cropYield.parameters.outputs
+            local seenProduct, seenSeed = false, false
+            for _, output in ipairs(outputs) do
+                if output.itemId == name and output.minAmount >= 1 and output.probability == 1 then seenProduct = true end
+                if output.itemId == "Seed_" .. name and output.minAmount >= 1 and output.probability == 1 then seenSeed = true end
+            end
+            assert(seenProduct and seenSeed, name .. "成熟收获未配置原料与留种")
+        else
+            assert(crop.modules.collectable.enabled and not crop.modules.cropYield.enabled,
+                name .. "持续采收未启用库存或仍依赖 ECS 不会发放的副产物")
+        end
+    end
+    local wild, cultivated = items.WildStrawberryCrop, items.StrawberryCrop
+    assert(wild.modules.crop.parameters.growthDurationSeconds == cultivated.modules.crop.parameters.growthDurationSeconds * 2,
+        "野生与栽培草莓成长时间不是2:1")
+    assert(wild.modules.production.parameters.ProductionList[1].ProductionIntervalDays ==
+        cultivated.modules.production.parameters.ProductionList[1].ProductionIntervalDays * 2,
+        "野生与栽培草莓的再结果周期不是2:1")
+    assert(items.Watermelon.modules.food.data.FoodData.nutrition.Water >
+        items.Tomato.modules.food.data.FoodData.nutrition.Water, "西瓜未体现更高补水量")
+    assert(items.FriedPotato.modules.food.data.FoodData.nutrition.Fat >
+        items.BakedPotato.modules.food.data.FoodData.nutrition.Fat, "油煎土豆未体现豆油的营养作用")
+    local seedRecipe, jamRecipe = data.recipes["core:strawberry_seed"], data.recipes["core:strawberry_jam"]
+    assert(#data.recipeWarnings == 0 and seedRecipe.inputs.Strawberry == 1 and
+        seedRecipe.outputs.Seed_Strawberry == 1, "草莓提种配方缺料或产物错误")
+    assert(jamRecipe.inputs.Strawberry == 2 and jamRecipe.inputs.Sugar == 1 and
+        jamRecipe.outputs.Jam == 1, "草莓果酱配方缺料或产物错误")
+    for _, id in ipairs({"core:pure_water", "core:drinkable_water"}) do
+        local source = data.tea.sources[id]
+        assert(source.full and source.amount == 40 and source.result == "core:tea_infusion",
+            "茶叶投料未使用满桶真实水和指定数量")
+    end
+    assert(data.tea.litersPerServing == 0.25 and data.tea.consume == 5 and data.tea.temperature == 100
+        and data.tea.output == "Tea" and data.tea.outputAmount == 1,
+        "茶液体积、热处理或真实耗水配置错误")
+end, "食材作物目录、草莓持续收获与茶饮真实水量")

@@ -1,0 +1,1001 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Wheat",
+      "parent": "BasicItem_Base",
+      "gameName": "小麦",
+      "description": "收获后可储存，也能磨成面粉。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "canBePickedUp": true,
+      "weight": 0.08,
+      "volume": 0.1,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Wheat/Wheat_Icon.png"
+      },
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "Flour",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Corn",
+      "parent": "Apple",
+      "gameName": "玉米",
+      "description": "富含碳水的玉米，可以烤熟或磨成面粉。",
+      "weight": 0.3,
+      "volume": 0.5,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Corn/Corn_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 32,
+                "Max_Carbohydrates": 32,
+                "Fat": 2,
+                "Max_Fat": 2,
+                "Protein": 5,
+                "Max_Protein": 5,
+                "Water": 12,
+                "Max_Water": 12,
+                "Vitamins": 4,
+                "Max_Vitamins": 4
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1200,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "Flour",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:heat_corn",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Corn"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "RoastedCorn",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Soybean",
+      "parent": "BasicItem_Base",
+      "gameName": "大豆",
+      "description": "田间收获的豆粒，可加工成豆腐，也可热压榨提取豆油并留下豆粕。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "canBePickedUp": true,
+      "weight": 0.1,
+      "volume": 0.15,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Soybean/Soybean_Icon.png"
+      },
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 6,
+          "outputs": [
+            {
+              "itemId": "Tofu",
+              "amount": 1
+            }
+          ]
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:soybean_oil_pressing",
+          "minTemperature": 120.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "itemId": "Soybean",
+              "amount": 4
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "SoybeanMeal",
+              "amount": 3
+            }
+          ],
+          "liquidOutput": {
+            "liquidId": "core:soybean_oil",
+            "amount": 1.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "SoybeanMeal",
+      "parent": "BasicItem_Base",
+      "gameName": "豆粕",
+      "description": "大豆热压榨后留下的固体副产物，可作为后续饲料的蛋白原料。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "weight": 0.1,
+      "volume": 0.15,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/SoybeanMeal/SoybeanMeal_Icon.png"
+      }
+    },
+    {
+      "id": "Potato",
+      "parent": "Apple",
+      "gameName": "马铃薯",
+      "description": "可储存的块茎，可以烤制，也可用豆油煎制。",
+      "weight": 0.3,
+      "volume": 0.4,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Potato/Potato_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30,
+                "Max_Carbohydrates": 30,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Protein": 3,
+                "Max_Protein": 3,
+                "Water": 12,
+                "Max_Water": 12,
+                "Vitamins": 6,
+                "Max_Vitamins": 6
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 3600,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:potato_oil_frying",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Potato"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "FriedPotato",
+              "amount": 1
+            }
+          ],
+          "liquidInput": {
+            "liquidId": "core:soybean_oil",
+            "amount": 1.0
+          }
+        },
+        {
+          "id": "core:heat_potato",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Potato"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "BakedPotato",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Tomato",
+      "parent": "Apple",
+      "gameName": "番茄",
+      "description": "鲜食补充水分和维生素，也可磨制番茄酱。",
+      "weight": 0.2,
+      "volume": 0.3,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Tomato/Tomato_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 12,
+                "Max_Carbohydrates": 12,
+                "Fat": 0.3,
+                "Max_Fat": 0.3,
+                "Protein": 1,
+                "Max_Protein": 1,
+                "Water": 30,
+                "Max_Water": 30,
+                "Vitamins": 18,
+                "Max_Vitamins": 18
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 900,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 4,
+          "outputs": [
+            {
+              "itemId": "TomatoPaste",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "Pumpkin",
+      "parent": "Apple",
+      "gameName": "南瓜",
+      "description": "较耐储存的瓜果，加热后可以作为主食。",
+      "weight": 2.0,
+      "volume": 3.0,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Pumpkin/Pumpkin_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 60,
+                "Max_Carbohydrates": 60,
+                "Fat": 1,
+                "Max_Fat": 1,
+                "Protein": 4,
+                "Max_Protein": 4,
+                "Water": 35,
+                "Max_Water": 35,
+                "Vitamins": 25,
+                "Max_Vitamins": 25
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 4800,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "reactions": [
+        {
+          "id": "core:heat_pumpkin",
+          "minTemperature": 100.0,
+          "maxTemperature": 2000.0,
+          "inputs": [
+            {
+              "match": "exact_item",
+              "amount": 1,
+              "itemId": "Pumpkin"
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "CookedPumpkin",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Watermelon",
+      "parent": "Apple",
+      "gameName": "西瓜",
+      "description": "含有大量水分的瓜果，适合补充水分。",
+      "weight": 3.0,
+      "volume": 5.0,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Watermelon/Watermelon_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 18,
+                "Max_Carbohydrates": 18,
+                "Fat": 0.2,
+                "Max_Fat": 0.2,
+                "Protein": 1,
+                "Max_Protein": 1,
+                "Water": 90,
+                "Max_Water": 90,
+                "Vitamins": 12,
+                "Max_Vitamins": 12
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1200,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Strawberry",
+      "parent": "Apple",
+      "gameName": "草莓",
+      "description": "易腐的鲜果，可用石臼加工成果酱。",
+      "weight": 0.05,
+      "volume": 0.08,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Strawberry/Strawberry_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 4,
+                "Max_Carbohydrates": 4,
+                "Fat": 0.2,
+                "Max_Fat": 0.2,
+                "Protein": 0.3,
+                "Max_Protein": 0.3,
+                "Water": 7,
+                "Max_Water": 7,
+                "Vitamins": 5,
+                "Max_Vitamins": 5
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 600,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "RoastedCorn",
+      "parent": "Apple",
+      "gameName": "烤玉米",
+      "description": "烤熟的玉米，是方便携带的口粮。",
+      "weight": 0.25,
+      "volume": 0.4,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/RoastedCorn/RoastedCorn_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 42,
+                "Max_Carbohydrates": 42,
+                "Fat": 2,
+                "Max_Fat": 2,
+                "Protein": 6,
+                "Max_Protein": 6,
+                "Water": 5,
+                "Max_Water": 5,
+                "Vitamins": 3,
+                "Max_Vitamins": 3
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "BakedPotato",
+      "parent": "Apple",
+      "gameName": "烤马铃薯",
+      "description": "加热后的马铃薯，提供充足碳水。",
+      "weight": 0.25,
+      "volume": 0.35,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/BakedPotato/BakedPotato_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 42,
+                "Max_Carbohydrates": 42,
+                "Fat": 1,
+                "Max_Fat": 1,
+                "Protein": 4,
+                "Max_Protein": 4,
+                "Water": 8,
+                "Max_Water": 8,
+                "Vitamins": 5,
+                "Max_Vitamins": 5
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "FriedPotato",
+      "parent": "Apple",
+      "gameName": "油煎土豆",
+      "description": "马铃薯与豆油在坩埚中加热制成，提供碳水和脂肪。",
+      "weight": 0.35,
+      "volume": 0.35,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/FriedPotato/FriedPotato_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 42,
+                "Max_Carbohydrates": 42,
+                "Fat": 10,
+                "Max_Fat": 10,
+                "Protein": 4,
+                "Max_Protein": 4,
+                "Water": 8,
+                "Max_Water": 8,
+                "Vitamins": 5,
+                "Max_Vitamins": 5
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "CookedPumpkin",
+      "parent": "Apple",
+      "gameName": "熟南瓜",
+      "description": "加热后的南瓜，提供碳水和维生素。",
+      "weight": 1.5,
+      "volume": 2.5,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/CookedPumpkin/CookedPumpkin_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 70,
+                "Max_Carbohydrates": 70,
+                "Fat": 1,
+                "Max_Fat": 1,
+                "Protein": 5,
+                "Max_Protein": 5,
+                "Water": 25,
+                "Max_Water": 25,
+                "Vitamins": 20,
+                "Max_Vitamins": 20
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1500,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Tofu",
+      "parent": "Apple",
+      "gameName": "豆腐",
+      "description": "由大豆加工而成，提供蛋白质和少量脂肪。",
+      "weight": 0.25,
+      "volume": 0.3,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Tofu/Tofu_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 5,
+                "Max_Carbohydrates": 5,
+                "Fat": 5,
+                "Max_Fat": 5,
+                "Protein": 18,
+                "Max_Protein": 18,
+                "Water": 25,
+                "Max_Water": 25,
+                "Vitamins": 3,
+                "Max_Vitamins": 3
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 900,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "TomatoPaste",
+      "parent": "Apple",
+      "gameName": "番茄酱",
+      "description": "番茄加工后的浓酱，较鲜番茄更耐存放。",
+      "weight": 0.25,
+      "volume": 0.3,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/TomatoPaste/TomatoPaste_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 18,
+                "Max_Carbohydrates": 18,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Protein": 2,
+                "Max_Protein": 2,
+                "Water": 15,
+                "Max_Water": 15,
+                "Vitamins": 20,
+                "Max_Vitamins": 20
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 2400,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Bread",
+      "parent": "Apple",
+      "gameName": "面包",
+      "description": "面粉加热制成的主食，以碳水为主要营养。",
+      "weight": 0.2,
+      "volume": 0.3,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Bread/Bread_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 35,
+                "Max_Carbohydrates": 35,
+                "Fat": 2,
+                "Max_Fat": 2,
+                "Protein": 6,
+                "Max_Protein": 6,
+                "Water": 3,
+                "Max_Water": 3,
+                "Vitamins": 1,
+                "Max_Vitamins": 1
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 2400,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Sugarcane",
+      "parent": "Apple",
+      "gameName": "甘蔗",
+      "description": "含糖的茎秆，可鲜食或经石臼加工成糖。",
+      "weight": 0.5,
+      "volume": 0.8,
+      "tags": [
+        "47",
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/Sugarcane/Sugarcane_Icon.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30,
+                "Max_Carbohydrates": 30,
+                "Fat": 0.1,
+                "Max_Fat": 0.1,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 20,
+                "Max_Water": 20,
+                "Vitamins": 2,
+                "Max_Vitamins": 2
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "processing": {
+        "grind": {
+          "inputAmount": 2,
+          "work": 6,
+          "outputs": [
+            {
+              "itemId": "Sugar",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "TeaLeaf",
+      "parent": "BasicItem_Base",
+      "gameName": "鲜茶叶",
+      "description": "满桶纯水或饮用水加入40份鲜茶叶，将所得茶液加热可制茶。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "canBePickedUp": true,
+      "weight": 0.05,
+      "volume": 0.1,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Farming/TeaLeaf/TeaLeaf_Icon.png"
+      }
+    },
+    {
+      "id": "Sugar",
+      "parent": "BasicItem_Base",
+      "gameName": "糖",
+      "description": "甘蔗加工得到的糖，可用于制作果酱。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "canBePickedUp": true,
+      "weight": 0.1,
+      "volume": 0.1,
+      "tags": [
+        "InventoryCategory.Food"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/InventoryCrafting/Sugar/Sugar_Icon.png"
+      }
+    }
+  ]
+}

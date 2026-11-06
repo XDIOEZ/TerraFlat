@@ -18,6 +18,7 @@
 - InventoryVesselHeating.ProcessWorldHeat供落地容器/已加载坩埚按当地环境每游戏秒消除剩余温差1%；坩埚仅自身Tick一次并继续凝固，炉内ProcessHeat主动10℃/秒独立。冷库存/轻掉落不额外模拟液体内容物。
 - CollectsRainwater声明朝上接雨，仅权威落地实例按当地雨量累积：强度0.5每60秒一份、限制30～120秒，跟游戏倍速/暂停。VesselRainwaterCollection只管时钟/水质，ContaminationSystem.TryGetNormalizedLoad汇总本格全部指标，零污染纯水、正值脏水、无地格不产。满桶不积债，RainwaterProgress随共享模块装拆/保存；铁/木桶用正式建筑配对。
 - 转液走ILiquidTransferPort原子事务，ingredientReactions扣真实槽；Mod_VesselContents独立存木桶6格固体，关面板只解绑。IInventoryHeatTreatment按LiquidDefinition.HeatProcess先提交产物再耗液。
+- 食物链中40份茶叶将满桶200份水转为茶汤，加热后每5份茶汤制1份茶；坩埚热处理可在同一事务中扣固体与 liquidInput 或产 liquidOutput 和固体，输入输出液体暂不同时声明；豆油可煎土豆，固体产物放不下时整批保留原料。
 
 ## 世界装液与倾倒
 

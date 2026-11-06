@@ -109,6 +109,13 @@ internal sealed class ItemResourceCatalogValidator : IIncrementalResourceCatalog
             try
             {
                 if (definition.ShellPrefab == null) throw new InvalidDataException("缺少外壳");
+                foreach (RuntimeItemReactionDefinition reaction in definition.Reactions)
+                {
+                    if (reaction.LiquidInput != null && !resources.TryGetLiquidDefinition(reaction.LiquidInput.LiquidId, out _))
+                        errors.Add($"物品 {definition.Id} -> reaction {reaction.Id} 引用了未知输入液体 {reaction.LiquidInput.LiquidId}");
+                    if (reaction.LiquidOutput != null && !resources.TryGetLiquidDefinition(reaction.LiquidOutput.LiquidId, out _))
+                        errors.Add($"物品 {definition.Id} -> reaction {reaction.Id} 引用了未知输出液体 {reaction.LiquidOutput.LiquidId}");
+                }
                 if (!string.IsNullOrWhiteSpace(definition.RendererPath))
                 {
                     Transform renderer = definition.ShellPrefab.transform.Find(definition.RendererPath);

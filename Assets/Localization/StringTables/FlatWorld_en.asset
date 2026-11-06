@@ -3404,7 +3404,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002180
-    m_Localized: "Grind five foxtail seeds in a stone mortar to make one portion of flour. It can be eaten directly for carbohydrates and protein, but consumes water."
+    m_Localized: "Grind foxtail seeds, wheat or corn into flour, then heat it to make bread."
     m_Metadata:
       m_Items: []
   - m_Id: 27915474606002181
@@ -4359,6 +4359,326 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 28102900001000007
     m_Localized: "Creative mode only. Continuously supplies a 2:1 hydrogen-oxygen mix. The 100 standard L shown is a composition sample. Four output-only gas ports still follow pipe throughput, filters and receiving capacity; it does not combine with ordinary tanks."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7048653819114946813
+    m_Localized: "Wheat Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7046286388013921434
+    m_Localized: "Plant in farmland to grow wheat."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7006297173447183573
+    m_Localized: "Corn Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7024069023530208197
+    m_Localized: "Plant in farmland to grow corn."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001842091809424592
+    m_Localized: "Soybean Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7026656313912606411
+    m_Localized: "Plant in farmland to grow soybeans."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7024817655993179005
+    m_Localized: "Potato Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7035728011112374493
+    m_Localized: "Plant in farmland to grow potatoes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7011445393262314263
+    m_Localized: "Tomato Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7003633318380467022
+    m_Localized: "Plant in farmland to grow tomatoes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7067844130742017416
+    m_Localized: "Pumpkin Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7004018144553130291
+    m_Localized: "Plant in farmland to grow pumpkins."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7009558348024569415
+    m_Localized: "Watermelon Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7035271749596043888
+    m_Localized: "Plant in farmland to grow watermelons."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7024374841999347496
+    m_Localized: "Strawberry Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7009002034525839656
+    m_Localized: "Plant in farmland to grow strawberries."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7062589057665449345
+    m_Localized: "Sugarcane Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7017859175637587773
+    m_Localized: "Plant in farmland to grow sugarcane."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7003695957678581371
+    m_Localized: "Tea Seeds"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7071673636873106274
+    m_Localized: "Plant in farmland to grow tea leaves."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7014022675486112836
+    m_Localized: "Wheat Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7021872081101456182
+    m_Localized: "A mature crop that yields wheat and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7013561228488449775
+    m_Localized: "Corn Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7040798761508278045
+    m_Localized: "A mature crop that yields corn and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7069467312596766167
+    m_Localized: "Soybean Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7056342450161085466
+    m_Localized: "A mature crop that yields soybeans and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7007472151786290389
+    m_Localized: "Potato Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7038779918759869288
+    m_Localized: "A mature crop that yields potatoes and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7044327480978545596
+    m_Localized: "Tomato Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7047933350558531614
+    m_Localized: "A mature crop that yields tomatoes and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7052294255356858252
+    m_Localized: "Pumpkin Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7028612450368247825
+    m_Localized: "A mature crop that yields pumpkins and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7049629777594572078
+    m_Localized: "Watermelon Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7031183666575173413
+    m_Localized: "A mature crop that yields watermelons and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7031015826988780722
+    m_Localized: "Sugarcane Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7035683779266679948
+    m_Localized: "A mature crop that yields sugarcane and seeds when harvested."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7037192183985583160
+    m_Localized: "Tea Bush"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7045600950311068283
+    m_Localized: "A tea bush that can be harvested repeatedly without destroying it."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7000084452338504985
+    m_Localized: "Strawberry Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7007145248062913134
+    m_Localized: "A cultivated strawberry plant that can be harvested repeatedly."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7067345364853906000
+    m_Localized: "Wild Strawberry Crop"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7060784377156883649
+    m_Localized: "Gather wild strawberries and extract their seeds for cultivation."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7023378332755066478
+    m_Localized: "Wheat"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7047532542969361128
+    m_Localized: "Harvested grain that can be stored or ground into flour."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7062759810397074281
+    m_Localized: "Corn"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7016062483225156340
+    m_Localized: "A source of carbohydrates that can be roasted or ground into flour."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7059627477619111319
+    m_Localized: "Soybean"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7034930373024080683
+    m_Localized: "Harvested beans that can be processed into tofu or oil."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7045512196045866712
+    m_Localized: "Soybean Meal"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7021017048209575362
+    m_Localized: "A protein-rich solid byproduct left after extracting soybean oil; reserved for future feed recipes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7030977643335479823
+    m_Localized: "Potato"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7040357180996523904
+    m_Localized: "A storable tuber that can be baked or fried with soybean oil."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7017017061280227507
+    m_Localized: "Tomato"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7058031994718110261
+    m_Localized: "A juicy fruit that can be eaten fresh or ground into tomato paste."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7000640652493362122
+    m_Localized: "Pumpkin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7047252671938298435
+    m_Localized: "A storable squash that can be heated for food."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7035337328054061606
+    m_Localized: "Watermelon"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7064458709690230371
+    m_Localized: "A heavy, juicy fruit that replenishes water."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7068587056664527659
+    m_Localized: "Strawberry"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7051216353554439880
+    m_Localized: "A perishable fruit. Extract seeds or combine with sugar to make jam."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7046707250861118436
+    m_Localized: "Roasted Corn"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7008321978966580839
+    m_Localized: "Roasted corn that provides carbohydrates."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7037210923616140189
+    m_Localized: "Baked Potato"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7064568212404217760
+    m_Localized: "A baked potato that provides carbohydrates."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7018796512830502194
+    m_Localized: "Cooked Pumpkin"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7066793979978243441
+    m_Localized: "Cooked pumpkin that provides carbohydrates and vitamins."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7022666278370522391
+    m_Localized: "Tofu"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7022095890130249672
+    m_Localized: "Food made from soybeans, providing protein and fat."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7061650973037137328
+    m_Localized: "Tomato Paste"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7019566659589274190
+    m_Localized: "A concentrated paste that keeps longer than fresh tomatoes."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7036337528538929026
+    m_Localized: "Bread"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7032891400957105947
+    m_Localized: "A staple made by heating flour."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7001554463875649971
+    m_Localized: "Sugarcane"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7066475260967224342
+    m_Localized: "A sweet stalk that can be eaten or ground into sugar."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7011032410809543478
+    m_Localized: "Fresh Tea Leaves"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7061529200415161094
+    m_Localized: "Add 40 portions of tea leaves to a full wooden barrel of clean water, then heat the infusion to make tea."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7024486080637691925
+    m_Localized: "Sugar"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7010441793044010546
+    m_Localized: "Sugar produced from sugarcane, used to make jam."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7020467996433230901
+    m_Localized: "Fried Potato"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7029905296256883550
+    m_Localized: "Potato fried with soybean oil, providing carbohydrates and fat."
     m_Metadata:
       m_Items: []
   references:
