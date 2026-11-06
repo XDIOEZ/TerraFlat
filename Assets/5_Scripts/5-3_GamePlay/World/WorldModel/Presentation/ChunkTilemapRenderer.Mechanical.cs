@@ -209,11 +209,15 @@ public sealed partial class ChunkTilemapRenderer
             int x = Mathf.RoundToInt(delta.x), y = Mathf.RoundToInt(delta.y);
             if ((uint)x >= (uint)boundChunk.Terrain.Width || (uint)y >= (uint)boundChunk.Terrain.Height) continue;
             MachineEntity wire = MachineWorld.GetElectricalWireAtCurrentWorld(cell);
-            if (wire == null) continue;
-            var key = new Vector3Int(x, y, wire.Definition.Layer);
-            int mask = MachineWorld.GetElectricalWireConnectionMask(cell);
-            if (!submittedWireMasks.TryGetValue(key, out int previous) || previous != mask)
-                SubmitMechanicalNode(wire, x, y);
+            Refresh(wire);
+            Refresh(MachineWorld.GetAtCurrentWorld(cell, 4));
+            void Refresh(MachineEntity line)
+            {
+                if (line == null || line.Definition.Electrical?.IsWire != true && line.Definition.Signal?.IsWire != true) return;
+                var key = new Vector3Int(x, y, line.Definition.Layer);
+                int mask = line.Definition.Signal?.IsWire == true ? MachineWorld.GetSignalWireConnectionMask(cell) : MachineWorld.GetElectricalWireConnectionMask(cell);
+                if (!submittedWireMasks.TryGetValue(key, out int previous) || previous != mask) SubmitMechanicalNode(line, x, y);
+            }
         }
     }
 
@@ -279,6 +283,7 @@ public sealed partial class ChunkTilemapRenderer
                 origin + rotation * facilityBodyOffset, rotation, facilityBodyScale, def.Visual?.Shadows);
         else MechanicalShadowRegistry.Remove(this, key);
         PrepareMechanicalDepthVisual(node, x, y, origin, def.Visual);
+        SubmitCircuitSignalPortMarkers(node, x, y, origin);
         MechanicalDepthVisual depthVisual = mechanicalDepthVisuals[key];
         try
         {
@@ -302,6 +307,17 @@ public sealed partial class ChunkTilemapRenderer
             // 接线形状由世界方向决定，忽略召唤器旋转并保持一格宽度。
             Part(node, x, y, 0, wire, material, origin, Quaternion.identity,
                 facilityBodyOffset, Vector3.one, 0, 0f);
+            submittedWireMasks[key] = mask;
+            return;
+        }
+        if (node.Definition.Signal?.IsWire == true)
+        {
+            int mask = MachineWorld.GetSignalWireConnectionMask(node.Cell);
+            Sprite signal = def.TryGetVisualStateSprite("signal" + mask, out Sprite connected) ? connected : def.Sprite;
+            Part(node, x, y, 0, signal, material, origin, Quaternion.identity,
+                facilityBodyOffset, Fit(signal, 1f, 1f), 0, 0f);
+            mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)].SetPartTint(0,
+                node.SignalOutput ? new Color(.65f, 1f, .8f, 1f) : new Color(.5f, .6f, .6f, 1f));
             submittedWireMasks[key] = mask;
             return;
         }
@@ -536,6 +552,29 @@ public sealed partial class ChunkTilemapRenderer
             mechanicalAxisPortSprite == null)
             throw new InvalidOperationException("机械标准连接杆端口贴图缺失。");
         return mechanicalAxisPortSprite;
+    }
+
+    // 端口标记只投影已提交位值，输入与输出随同一安装朝向旋转。
+    private void SubmitCircuitSignalPortMarkers(MachineEntity node, int x, int y, Vector3 origin)
+    {
+        CircuitSignalDefinition signal = node.Definition.Signal;
+        if (signal == null || signal.IsWire || !GameRes.Instance.TryGetItemDefinition("SignalWire", out RuntimeItemDefinition wire)) return;
+        Sprite sprite = wire.Sprite;
+        if (sprite == null) return;
+        int index = 13;
+        Add(signal.HasInput && (signal.Kind != "radio" || node.RadioTransmitMode), signal.InputA, node.SignalInputA);
+        Add(signal.IsGate && signal.Kind != "not", signal.InputB, node.SignalInputB);
+        Add(signal.HasOutput && (signal.Kind != "radio" || !node.RadioTransmitMode), signal.Output, node.SignalOutput);
+        void Add(bool enabled, string port, bool value)
+        {
+            if (!enabled) return;
+            Vector2Int direction = CircuitSignalDefinition.Offset(port, node.RotationQuarterTurns);
+            Part(node, x, y, index, sprite, wire.Material ?? mechanicalFallbackMaterial, origin, Quaternion.identity,
+                new Vector3(direction.x * .43f, direction.y * .43f), Fit(sprite, .3f, .3f), 0, 0f);
+            mechanicalDepthVisuals[new Vector3Int(x, y, node.Definition.Layer)].SetPartTint(index,
+                value ? new Color(.65f, 1f, .8f) : new Color(.45f, .5f, .5f));
+            index++;
+        }
     }
 
     /// <summary>写入 GPU 动画速度和相位，零转速时停在当前角度。</summary>

@@ -21,7 +21,7 @@ description: "FlatWorld Lua 测试系统导航：编写与分组案例、定时�
 | `GameplayTestLuaRunner.cs` | Lua 沙箱、命令编排、预检、运行与断言 |
 | `GameplayTestReport.cs` / `GameplayTestArtifacts.cs` | 报告数据、自动截图、Markdown 汇总与结果包 |
 | `GameplayTestSuite.cs` / `GameplayTestSelection.cs` | 严格 JSON、执行模式、路径/案例身份与多选清单 |
-| `GameplayTestSystemCatalog.cs` / `GameplayTestSystemProbe.*.cs` | 38个系统归属和生产规则白名单，Lua持有业务断言 |
+| `GameplayTestSystemCatalog.cs` / `GameplayTestSystemProbe.*.cs` | 系统归属和生产规则白名单，Lua持有业务断言 |
 | `GameplayTestRulesSuiteRunner.cs` / Editor `GameplayTestPipelineCoordinator.Rules.cs` | 编辑态直接跑规则，不启动资源/世界/PlayMode |
 | `GameplayTestRuntimeProbe*.cs` / `GameplayTest*RuntimeProbe*.cs` | 隔离世界现场采样、跨帧流程与每用例收尾；对话/引导探针在各自程序集内自注册 |
 | `GameplayTestShowroom.cs` / `GameplayTestGm.cs` | 可选全物品陈列、白名单 GM 前置条件 |

@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:automation_radio_signal_wire",
+      "displayName": "信号线",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SignalWire_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_and_gate",
+      "displayName": "与门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LogicGate_AND_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_or_gate",
+      "displayName": "或门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LogicGate_OR_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_not_gate",
+      "displayName": "非门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LogicGate_NOT_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_xor_gate",
+      "displayName": "异或门",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LogicGate_XOR_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_signal_relay",
+      "displayName": "信号继电器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "SignalRelay_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_radio_signal_converter",
+      "displayName": "无线电信号转换器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "VacuumTube",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "RadioSignalConverter_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_radio_station",
+      "displayName": "无线电台",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "VacuumTube",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Transistor",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 2
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "RadioStation_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_battery",
+      "displayName": "无线电电池",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "Lithium",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Rubber",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Radio_Battery",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:automation_radio_transceiver",
+      "displayName": "对讲机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "match": "exact_item",
+          "itemId": "CircuitBoard",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "VacuumTube",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "CopperPlate",
+          "amount": 1
+        },
+        {
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "RadioTransceiver",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

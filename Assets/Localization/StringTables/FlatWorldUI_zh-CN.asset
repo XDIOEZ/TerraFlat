@@ -9045,6 +9045,154 @@ MonoBehaviour:
     m_Localized: "\u5DF2\u63A5\u7EBF\uFF0C\u7B49\u5F85\u4F9B\u7535"
     m_Metadata:
       m_Items: []
+  - m_Id: 2476910142664501736
+    m_Localized: "对讲机"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2768547356487867886
+    m_Localized: "频道 {0} · {1}\n电池 {2:0.#} / 3600 J"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3558505954209026171
+    m_Localized: "开机"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 805662852303796154
+    m_Localized: "关机"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 815327317316169830
+    m_Localized: "设置频道"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1341278966443753333
+    m_Localized: "发送文字"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4186469875402173318
+    m_Localized: "频道必须为 1～16"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2027411913872969281
+    m_Localized: "广播已发送"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4064432985530831320
+    m_Localized: "设置已更新"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2112918059711027431
+    m_Localized: "无线电操作失败，请检查电源和频道"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4183311000577465071
+    m_Localized: "广播：求救"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2262403873511315602
+    m_Localized: "广播：预警"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 704673368652037581
+    m_Localized: "广播：通告"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2466710059097166748
+    m_Localized: "广播：文字"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 84279854222450357
+    m_Localized: "发射模式"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4440515514720227084
+    m_Localized: "接收模式"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2756722340433567815
+    m_Localized: "发送广播"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4161905198732627474
+    m_Localized: "频道 {0} · {1}\n实际供电 {2:0.#}/{3:0.#} W\n输入 {4} · 输出 {5}\n{6}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2845229346807338871
+    m_Localized: "已供电"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4551452319542245300
+    m_Localized: "未供电"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1608249447005096859
+    m_Localized: "无线反馈连接已阻断"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2217946775575917701
+    m_Localized: "无线信号有效"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2612594906638882441
+    m_Localized: "无有效无线来源"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 728290668350414317
+    m_Localized: "电池槽"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 721038518291240838
+    m_Localized: "信号 {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2686608534550160365
+    m_Localized: "输入 A {0} · B {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4435518488231843377
+    m_Localized: "输出 {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 642730874495041146
+    m_Localized: "触点接通"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2398632909420639282
+    m_Localized: "触点断开"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1906771268991342433
+    m_Localized: "触点 A {0} · B {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3087558025791609853
+    m_Localized: "已接线"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1221770448125052698
+    m_Localized: "未接线"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3713454942466076294
+    m_Localized: "信号输出 {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 238516364016764900
+    m_Localized: "接线会形成同网同频道无线收发回环"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1179587532914927288
+    m_Localized: "继电器主体格不能穿过电线"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3235120247462201319
+    m_Localized: "收听中"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1685474569092357487
+    m_Localized: "未收听"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

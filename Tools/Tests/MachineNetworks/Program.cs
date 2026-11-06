@@ -388,5 +388,6 @@ long before = GC.GetAllocatedBytesForCurrentThread();
 for (int i = 0; i < 100; i++) Solve(network);
 long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 Check(allocated < 1024, "稳定129节点/128负载连续100轮应无按负载数量增长的分配，实际 " + allocated);
+CircuitSignalTests.Run(Check);
 Console.WriteLine($"PASS {passed} assertions; stable 129-node/128-consumer x100 allocated {allocated} B; routes reused.");
 #endregion

@@ -21,6 +21,7 @@ public sealed class InductionStoveLogic : MachineLogic
     public float MaximumPowerWatts => Entity.Definition.Electrical.PowerWatts;
     public float RequestedWatts => MaximumPowerWatts * ElectricalDemandFactor;
     public float SuppliedWatts => State.SuppliedWatts;
+    public override bool IsActuallyWorking => Entity.Active && Entity.ElectricalSuppliedWatts > 0f && SuppliedWatts > 0f;
     public override float ElectricalDemandFactor => Configuration.GetPowerDemandFactor(TargetTemperature);
     public float HeatingRatePercent => Configuration.HeatingRatePercent;
     public override float TickInterval => .1f;

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "circuit_signals_rules",
+      "name": "电路信号与继电器规则",
+      "luaPath": "GameplayTests/Systems/CircuitSignals/rules.lua",
+      "enabled": true,
+      "contractKind": "behavior"
+    }
+  ]
+}

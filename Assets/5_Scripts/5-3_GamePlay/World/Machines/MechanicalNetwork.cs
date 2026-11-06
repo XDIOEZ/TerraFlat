@@ -401,7 +401,7 @@ public sealed partial class MechanicalNetworkGraph
             node.FlowVisited = false;
             Vector2Int nodeChunk = ChunkOf(node.Cell);
             node.SimulationBounds = new BoundsInt(nodeChunk.x, nodeChunk.y, 0, 1, 1, 1);
-            if (!node.Definition.HasMechanicalPorts) Facilities.Add(node);
+            if (!node.Definition.HasMechanicalPorts && node.Definition.Signal?.IsWire != true) Facilities.Add(node);
         }
         foreach (MachineEntity node in sorted)
             if (node.Definition.Layer <= 1 && pressureSwitches.ContainsKey(node.Cell)) node.MechanicalPortsSuppressed = true;

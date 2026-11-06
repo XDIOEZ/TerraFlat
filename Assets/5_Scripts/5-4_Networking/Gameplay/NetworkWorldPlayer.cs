@@ -417,6 +417,7 @@ namespace FlatWorld.Networking.Gameplay
                         ItemNetworkStateSerialization.ApplyRemoteReplica(corePlayer, payload, (module, state) =>
                         {
                             if (module is Mod_HotBar hotbar) hotbar.ApplyNetworkAuthorityData(corePlayer, state);
+                            else if (module is Mod_Equipment equipment) equipment.ApplyNetworkAuthorityInventory();
                             else if (module is IRemoteNetworkModule remote) remote.ApplyRemoteNetworkData(corePlayer, state);
                         });
                     else ApplyRemoteItemState(payload);

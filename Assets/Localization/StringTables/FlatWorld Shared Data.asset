@@ -4539,6 +4539,150 @@ MonoBehaviour:
     m_Key: item.FriedPotato.description
     m_Metadata:
       m_Items: []
+  - m_Id: 421688587692259860
+    m_Key: "item.SignalWire.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 689741288335917699
+    m_Key: "item.SignalWire.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 30933246319279075
+    m_Key: "item.SignalWire_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4181290835909221343
+    m_Key: "item.SignalWire_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3334780087115864827
+    m_Key: "item.LogicGate_AND.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357854018868170500
+    m_Key: "item.LogicGate_AND.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1296015216021958086
+    m_Key: "item.LogicGate_AND_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 559389970482599398
+    m_Key: "item.LogicGate_AND_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2646969487018412908
+    m_Key: "item.LogicGate_OR.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 957380192787074973
+    m_Key: "item.LogicGate_OR.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3960573105850514960
+    m_Key: "item.LogicGate_OR_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 644439120138179534
+    m_Key: "item.LogicGate_OR_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4501697934613277508
+    m_Key: "item.LogicGate_NOT.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3793042519703167847
+    m_Key: "item.LogicGate_NOT.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4034449881914484673
+    m_Key: "item.LogicGate_NOT_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4543089696268121399
+    m_Key: "item.LogicGate_NOT_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1494638394564423633
+    m_Key: "item.LogicGate_XOR.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4316653811622289318
+    m_Key: "item.LogicGate_XOR.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4199704218990825623
+    m_Key: "item.LogicGate_XOR_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3933521569154700328
+    m_Key: "item.LogicGate_XOR_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 994659412374286442
+    m_Key: "item.SignalRelay.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4048299589486665924
+    m_Key: "item.SignalRelay.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3237058654738390824
+    m_Key: "item.SignalRelay_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1217630443450911128
+    m_Key: "item.SignalRelay_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4518425646935509198
+    m_Key: "item.RadioSignalConverter.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 587853853757295380
+    m_Key: "item.RadioSignalConverter.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 601708653498031982
+    m_Key: "item.RadioSignalConverter_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 923236425758267720
+    m_Key: "item.RadioSignalConverter_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2987876851065379581
+    m_Key: "item.RadioStation.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2591988475108652366
+    m_Key: "item.RadioStation.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1017639132437687075
+    m_Key: "item.RadioStation_Summoner.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1322594806600073463
+    m_Key: "item.RadioStation_Summoner.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3048150103841211522
+    m_Key: "item.RadioTransceiver.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2093655406133664904
+    m_Key: "item.RadioTransceiver.description"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1036188801093162037
+    m_Key: "item.Radio_Battery.name"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1554840542220725617
+    m_Key: "item.Radio_Battery.description"
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

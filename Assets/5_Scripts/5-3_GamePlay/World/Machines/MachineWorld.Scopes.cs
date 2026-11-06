@@ -45,6 +45,11 @@ public static partial class MachineWorld
         public readonly List<Vector2Int> Players = new();
         public MechanicalNetworkGraph Graph;
         public ElectricalNetworkGraph Electrical;
+        public CircuitSignalNetworkGraph Signals;
+        public RadioSignalService Radio;
+        public bool ElectricalTopologyDirty;
+        public readonly HashSet<int> AutomationNodes = new();
+        public readonly Queue<MachineEntity> AutomationQueue = new();
         public FluidNetworkGraph Fluid;
         public string FluidTopologyKey;
         public FluidCatalog FluidTopologyCatalog;
@@ -294,6 +299,7 @@ public static partial class MachineWorld
                     BuildingOccupancyRegistry.IsOccupiedNormalized(cell, layer: node.Definition.Layer))
                     throw new InvalidOperationException("机器转移落点的建筑层已经占用：" + cell);
             }
+            ValidateTransferredCircuitTopology(candidates, identities, sameScope);
         }
 
         using (UseScope(fromKey))

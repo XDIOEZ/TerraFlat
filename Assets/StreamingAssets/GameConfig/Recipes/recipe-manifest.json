@@ -200,6 +200,11 @@
       "id": "crafting/nuclear_industry",
       "path": "crafting/nuclear_industry.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/automation_radio",
+      "path": "crafting/automation_radio.json",
+      "enabled": true
     }
   ]
 }

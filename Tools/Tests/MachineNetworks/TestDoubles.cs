@@ -85,6 +85,8 @@ public sealed class MachineDefinition
     public float TorqueLoadStep = 10f;
     public int SourceRotationDirection = 1;
     public ElectricalDefinition Electrical;
+    public CircuitSignalDefinition Signal;
+    public string LogicId;
     public object PowerIndicator;
     public object Fluid;
     public TransportDefinition Transport;
@@ -103,6 +105,7 @@ public sealed class ElectricalDefinition
 {
     public bool UnlimitedGeneration;
     public string Role = "wire", PowerProvider = "", DemandProvider = "", Connection = "cell";
+    public string ContactA = "left", ContactB = "right";
     public float ConversionEfficiency = 1f, PowerWatts = 120, NominalVoltage = 120,
         MinimumVoltage, MaximumVoltage, CapacityJoules = 1000, MaxDischargeWatts = 100, MaxChargeWatts = 100, MaxCurrentAmps = 1000;
     public bool HasConnection => true;
@@ -132,7 +135,7 @@ public static partial class MachineWorld
     {
         public ElectricalNetworkGraph Electrical;
         public int TopologyMutationDepth = 0, SimulationStepDepth = 0;
-        public bool FluidTopologyDirty;
+        public bool FluidTopologyDirty, ElectricalTopologyDirty;
     }
     private static readonly ScopeState scope = new();
     private static MechanicalNetworkGraph graph;
@@ -163,6 +166,7 @@ public static partial class MachineWorld
     private static void RebuildFluidNetworks() { FluidTopologyRebuildsForTest++; }
     private static void PublishCombinedFluidTankTopologyChanges() { }
     private static void RebuildCombatSearchPadding() { }
+    private static void RebuildCircuitSignalsAndSimulationDependencies(bool rebuildSignals) { }
     private static void UpdateConveyorVisualSpeed(MachineEntity node) { }
     private static float GetFluidElectricalDemand(MachineEntity node) => 1f;
     public static void SetWorld(MechanicalNetworkGraph mechanical, ElectricalNetworkGraph electrical, IEnumerable<MachineEntity> entities)

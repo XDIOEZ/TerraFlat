@@ -192,6 +192,8 @@ public sealed class MechanicalPanelSession : IMachinePanelSession
         // 定时刷新已经离开按 F 时的调用栈，必须重新进入设备所属的机器作用域。
         using var nodeScope = mechanicalOwner != null ? MachineWorld.UseNodeScope(mechanicalOwner) : default;
         string text = (status?.Invoke() ?? string.Empty).Replace(" · ", "\n");
+        if (mechanicalOwner?.Definition.Signal?.Kind == "source")
+            text += "\n" + FlatWorldLocalizationService.GetUiFormat("信号输出 {0}", mechanicalOwner.SignalOutput ? 1 : 0);
         if (view.Status.text != text) view.Status.text = text;
         if (batteryCharge01 != null) view.SetBatteryCharge(batteryCharge01());
         if (gasCapacity01 != null) view.SetGasCapacity(gasCapacity01());

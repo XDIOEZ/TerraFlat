@@ -5,7 +5,7 @@ using FlatWorld.Networking;
 using UnityEngine;
 
 /// <summary>机器的粗粒度领域逻辑；库存与玩法状态不依赖世界 Item 或面板存活。</summary>
-public abstract class MachineLogic : IDisposable
+public abstract class MachineLogic : IDisposable, IMachineWorkingStateSource
 {
     #region 领域生命周期
     protected readonly List<Inventory> inventories = new();
@@ -14,6 +14,7 @@ public abstract class MachineLogic : IDisposable
     public virtual GameObject PanelPrefab => null;
     public virtual float TickInterval => .5f;
     public virtual bool IsBurning => false;
+    public virtual bool IsActuallyWorking => false;
     public virtual float Progress01 => 0f;
     public virtual string Status => string.Empty;
     public virtual string ActionLabel => string.Empty;

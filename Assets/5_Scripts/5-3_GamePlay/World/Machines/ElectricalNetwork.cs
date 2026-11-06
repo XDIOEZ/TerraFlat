@@ -36,6 +36,7 @@ public sealed partial class ElectricalNetworkGraph
     private readonly Dictionary<Vector2Int, MachineEntity> wires = new();
     private readonly Dictionary<Vector2Int, List<MachineEntity>> endpoints = new();
     private readonly Dictionary<Vector2Int, MachineEntity> pressureSwitches = new();
+    private readonly HashSet<int> contactPath = new();
     private readonly WorldTopologyDomain topology;
     public readonly List<ElectricalNetwork> Networks = new();
     internal readonly HashSet<MechanicalNetwork> ResolvedMechanicalNetworks = new();
@@ -64,7 +65,21 @@ public sealed partial class ElectricalNetworkGraph
                 for (int direction = 0; direction < 4; direction++)
                     if (Normalize(cell + Directions[direction]) == node.Cell)
                         mask |= direction switch { 0 => 2, 1 => 1, 2 => 8, _ => 4 };
+        for (int direction = 0; direction < Directions.Length; direction++)
+            if (pressureSwitches.TryGetValue(Normalize(cell + Directions[direction]), out MachineEntity contact) &&
+                TryGetContactExit(contact, Normalize(cell), out _))
+                mask |= direction switch { 0 => 2, 1 => 1, 2 => 8, _ => 4 };
         return mask;
+    }
+
+    private bool TryGetContactExit(MachineEntity node, Vector2Int entry, out Vector2Int exit)
+    {
+        ElectricalDefinition definition = node.Definition.Electrical;
+        Vector2Int a = CircuitSignalDefinition.Offset(definition.ContactA, node.RotationQuarterTurns);
+        Vector2Int b = CircuitSignalDefinition.Offset(definition.ContactB, node.RotationQuarterTurns);
+        if (Normalize(node.Cell + a) == entry) { exit = b; return true; }
+        if (Normalize(node.Cell + b) == entry) { exit = a; return true; }
+        exit = default; return false;
     }
 
     /// <summary>只有拓扑变化时重建，按同格或旋转后的邻格接入端口。</summary>
@@ -75,7 +90,8 @@ public sealed partial class ElectricalNetworkGraph
         var sorted = new List<MachineEntity>(source);
         sorted.Sort((a, b) => a.Id.CompareTo(b.Id));
         foreach (MachineEntity node in sorted)
-            if (MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true) pressureSwitches[Normalize(node.Cell)] = node;
+            if (node.Definition.Electrical?.Role == "switch" || MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true)
+                pressureSwitches[Normalize(node.Cell)] = node;
 
         foreach (MachineEntity node in sorted)
         {
@@ -83,7 +99,7 @@ public sealed partial class ElectricalNetworkGraph
             ElectricalDefinition electrical = node.Definition?.Electrical;
             if (electrical?.HasConnection != true) continue;
             node.Cell = Normalize(node.Cell);
-            if (MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true) continue;
+            if (electrical.Role == "switch" || MachineWorld.GetFluidDeviceBehavior(node)?.SwitchesElectricalPorts == true) continue;
             if (electrical.IsWire)
             {
                 // 测点格中的普通线不能把探针的两个端点短接。
@@ -104,7 +120,7 @@ public sealed partial class ElectricalNetworkGraph
         var queue = new Queue<MachineEntity>();
         foreach (MachineEntity root in sorted)
         {
-            if (root.Definition?.Electrical?.IsWire != true || root.ElectricalNetwork != null) continue;
+            if (root.Definition?.Electrical?.IsWire != true || root.ElectricalNetwork != null || !wires.ContainsKey(root.Cell)) continue;
             var network = new ElectricalNetwork();
             Networks.Add(network);
             root.ElectricalNetwork = network;
@@ -126,11 +142,16 @@ public sealed partial class ElectricalNetworkGraph
                 {
                     Vector2Int direction = Directions[portDirection];
                     Vector2Int adjacent = Normalize(wire.Cell + direction);
-                    if (pressureSwitches.TryGetValue(adjacent, out MachineEntity pressureSwitch) &&
-                        pressureSwitch.FluidProbeConnected && (pressureSwitch.RotationQuarterTurns & 1) == (portDirection & 1))
+                    Vector2Int previous = wire.Cell;
+                    contactPath.Clear();
+                    while (pressureSwitches.TryGetValue(adjacent, out MachineEntity contact))
                     {
-                        if (pressureSwitch.ElectricalNetwork == null)
-                        { pressureSwitch.ElectricalNetwork = network; network.Nodes.Add(pressureSwitch); }
+                        bool closed = contact.Definition.Electrical.Role == "switch"
+                            ? contact.ElectricalContactsClosed : contact.FluidProbeConnected;
+                        if (!closed || !contactPath.Add(contact.Id) || !TryGetContactExit(contact, previous, out direction)) break;
+                        if (contact.ElectricalNetwork == null)
+                        { contact.ElectricalNetwork = network; network.Nodes.Add(contact); }
+                        previous = contact.Cell;
                         adjacent = Normalize(adjacent + direction);
                     }
                     if (!wires.TryGetValue(adjacent, out MachineEntity next) ||

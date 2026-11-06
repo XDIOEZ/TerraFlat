@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "gameplay",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "circuit_wireless_automation_gameplay",
+      "name": "无线信号与继电器真实供电闭环",
+      "luaPath": "GameplayTests/Systems/CircuitSignals/gameplay.lua",
+      "enabled": true,
+      "contractKind": "behavior"
+    }
+  ]
+}

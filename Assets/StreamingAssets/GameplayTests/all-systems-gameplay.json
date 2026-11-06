@@ -560,6 +560,13 @@
       "name": "Lua专用GameRes跨编译缓存与正式目录",
       "luaPath": "GameplayTests/Systems/Testing/gameplay-resource-cache.lua",
       "enabled": true
+    },
+    {
+      "id": "circuit_wireless_automation_gameplay",
+      "name": "无线信号与继电器真实供电闭环",
+      "luaPath": "GameplayTests/Systems/CircuitSignals/gameplay.lua",
+      "enabled": true,
+      "contractKind": "behavior"
     }
   ]
 }

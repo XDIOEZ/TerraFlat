@@ -175,6 +175,8 @@ public sealed class MachineInteractionTarget : IGridInteractionTarget, IWorldInt
     /// <summary>状态文本仅读取权威网络解算结果，不保存第二份面板状态。</summary>
     private string GetStatus()
     {
+        if (node.Definition.Signal?.IsWire == true)
+            return FlatWorldLocalizationService.GetUiFormat("信号 {0}", node.SignalOutput ? 1 : 0);
         string state = FlatWorldLocalizationService.GetUiText(node.GetOperatingStatus());
         string status = state;
         if (node.Definition.Transport != null) status += MachineWorld.GetConveyorConnectionStatus(node);

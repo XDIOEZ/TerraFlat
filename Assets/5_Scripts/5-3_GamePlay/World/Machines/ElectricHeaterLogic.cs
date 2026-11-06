@@ -11,6 +11,7 @@ public sealed class ElectricHeaterLogic : MachineLogic
     private ElectricHeaterState state;
     private TemperatureMgr temperatureManager;
     private ElectricHeaterDefinition Heating => Entity.Definition.Heating;
+    public override bool IsActuallyWorking => Entity.Active && Entity.ElectricalSuppliedWatts > 0f && state.SuppliedWatts > 0f;
     public override float TickInterval => .1f;
     public override bool CanAct => false;
     public override string ActionLabel => "通电自动加热";

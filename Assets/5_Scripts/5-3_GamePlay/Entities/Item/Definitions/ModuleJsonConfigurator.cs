@@ -477,7 +477,8 @@ public static class ModuleJsonConfigurator
                 [nameof(EquipmentInstance_ThermalInsulation)] = typeof(EquipmentInstance_ThermalInsulation),
                 [nameof(EquipmentInstance_PressureProtection)] = typeof(EquipmentInstance_PressureProtection),
                 [nameof(EquipmentInstance_RadiationProtection)] = typeof(EquipmentInstance_RadiationProtection),
-                [nameof(EquipmentInstance_SpacesuitSupport)] = typeof(EquipmentInstance_SpacesuitSupport)
+                [nameof(EquipmentInstance_SpacesuitSupport)] = typeof(EquipmentInstance_SpacesuitSupport),
+                [nameof(EquipmentInstance_RadioTransceiver)] = typeof(EquipmentInstance_RadioTransceiver)
             };
 
         public override bool CanWrite => false;

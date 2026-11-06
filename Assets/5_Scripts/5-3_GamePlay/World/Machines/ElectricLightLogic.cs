@@ -10,6 +10,7 @@ public sealed class ElectricLightLogic : MachineLogic
     #region 供电状态与同步
     private ElectricLightState state;
     public float PowerFraction => Mathf.Clamp01(state.SuppliedWatts / Entity.Definition.Electrical.PowerWatts);
+    public override bool IsActuallyWorking => Entity.Active && Entity.ElectricalSuppliedWatts > 0f && PowerFraction > 0f;
     public override float TickInterval => .1f;
     public override bool CanAct => false;
     public override string ActionLabel => "通电自动照明";

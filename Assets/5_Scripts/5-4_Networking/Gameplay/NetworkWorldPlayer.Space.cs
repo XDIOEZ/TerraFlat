@@ -321,12 +321,14 @@ namespace FlatWorld.Networking.Gameplay
             Mod_HotBar hotbar = corePlayer.itemMods.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             int selectedIndex = hotbar?.CurrentIndex ?? -1;
             byte[] appliedPayload = payload;
+            ItemData authoritativeRadioState = null;
             if (!IsInSpace)
             {
                 // 地表只回收本次战斗交接的模块，氧气、环境和其它本地状态继续使用当前数据。
                 byte[] localPayload = ItemNetworkStateSerialization.Capture(corePlayer, true);
                 if (!ItemNetworkStateSerialization.TryDeserializeItemData(localPayload, out ItemData merged) ||
                     !ItemNetworkStateSerialization.TryDeserializeItemData(payload, out ItemData authority) || merged.Guid != authority.Guid) return;
+                authoritativeRadioState = authority;
                 foreach (Module module in corePlayer.Mods.Values)
                     if ((module is IPlayerStateAuthorityModule ||
                         (authoritativeGroundCombatPending || SpaceSession.ClientGroundCombatPending) && (module is Mod_HotBar or Mod_Inventory)) &&
@@ -335,6 +337,7 @@ namespace FlatWorld.Networking.Gameplay
                 if (!ItemNetworkStateSerialization.TrySerializeItemData(merged, out appliedPayload)) return;
             }
             if (!ItemNetworkStateSerialization.Apply(corePlayer, appliedPayload, reloadRuntimeModules: true, requireMatchingGuid: true)) return;
+            RadioInventoryNetworkAuthority.ApplyAuthoritativeRadioStates(corePlayer, authoritativeRadioState);
             if (selectedIndex >= 0) hotbar?.ApplyNetworkSelectedIndex(selectedIndex);
             lastAppliedCombatStateHash = ItemNetworkStateSerialization.CalculateHash(payload);
             lastSubmittedItemStateHash = 0; itemStateDirty = true;

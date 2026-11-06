@@ -24,6 +24,14 @@ internal static class MachinePanelBuiltIns
         MachinePanelFactoryRegistry.AddBuiltIn("hand-drill", CreateHandDrill);
         MachinePanelFactoryRegistry.AddBuiltIn("vessel", entity => new VesselMachinePanelSession((VesselLogic)entity.Logic));
         MachinePanelFactoryRegistry.AddBuiltIn("fluid", entity => new FluidMachinePanelSession((FluidMachineLogic)entity.Logic));
+        MachinePanelFactoryRegistry.AddBuiltIn("circuit-signal", entity =>
+            new MechanicalPanelSession("UI_Mechanical", entity, null, null,
+                () => entity.Logic.Status, () => string.Empty, refreshStatusPeriodically: true));
+        MachinePanelFactoryRegistry.AddBuiltIn("radio-converter", RadioMachinePanelSession.CreateForMachine);
+        MachinePanelFactoryRegistry.AddBuiltIn("radio-station", RadioMachinePanelSession.CreateForMachine);
+        MachinePanelFactoryRegistry.AddBuiltIn("electric-light", entity =>
+            new MechanicalPanelSession("UI_Mechanical", entity, null, null,
+                () => entity.Logic.Status, () => string.Empty, refreshStatusPeriodically: true));
         MachinePanelFactoryRegistry.AddBuiltIn("electric-heater", entity =>
             new MechanicalPanelSession(entity.Definition.Heating.PanelId, entity, null, null,
                 () => entity.Logic.Status, () => entity.Logic.ActionLabel, () => entity.Logic.CanAct,
@@ -353,6 +361,8 @@ internal sealed class InductionStovePanelSession : MachinePanelSession
         if (capacity != null) capacity.text = FurnaceInputCapacityFeedback.Describe(stove.Input);
         if (power != null) power.text = FlatWorldLocalizationService.GetUiFormat(
             "需求功率 {0:0.#} W\n实际供电 {1:0.#} W", stove.RequestedWatts, stove.SuppliedWatts);
+        if (power != null && Entity.Definition.Signal?.Kind == "source")
+            power.text += "\n" + FlatWorldLocalizationService.GetUiFormat("信号输出 {0}", Entity.SignalOutput ? 1 : 0);
         if (hint != null) hint.text = FlatWorldLocalizationService.GetUiFormat(
             "升温系数 {0:0}% · {1}", stove.HeatingRatePercent,
             FlatWorldLocalizationService.GetUiText(stove.Temperature > stove.TargetTemperature + .1f ? "自然冷却" :

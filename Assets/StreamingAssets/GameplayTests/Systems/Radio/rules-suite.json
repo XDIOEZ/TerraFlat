@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "executionMode": "rules",
+  "continueAfterFailure": true,
+  "buildShowroom": false,
+  "cases": [
+    {
+      "id": "radio_rules",
+      "name": "无线电传播与来源规则",
+      "luaPath": "GameplayTests/Systems/Radio/rules.lua",
+      "enabled": true,
+      "contractKind": "mixed"
+    }
+  ]
+}

@@ -112,6 +112,8 @@ public sealed class FluidMachinePanelSession : IMachinePanelSession
         view.Title.text = FlatWorldLocalizationService.Get(FlatWorldLocalizationService.GetItemLabelKey(logic.Entity.Definition.Id),
             logic.Entity.Definition.Content?.Definition.DisplayName ?? logic.Entity.Definition.Id);
         view.Status.text = logic.Status;
+        if (logic.Entity.Definition.Signal?.Kind == "source")
+            view.Status.text += "\n" + FlatWorldLocalizationService.GetUiFormat("信号输出 {0}", logic.Entity.SignalOutput ? 1 : 0);
         if (view.WaterCapacity.gameObject.activeSelf)
         {
             string chamber = Array.Find(logic.Definition.Ports, port => port.Phase != "gas")?.Chamber ?? logic.Definition.LiquidResidueChamber;

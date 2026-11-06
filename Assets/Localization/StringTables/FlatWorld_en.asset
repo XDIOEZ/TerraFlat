@@ -4681,6 +4681,150 @@ MonoBehaviour:
     m_Localized: "Potato fried with soybean oil, providing carbohydrates and fat."
     m_Metadata:
       m_Items: []
+  - m_Id: 421688587692259860
+    m_Localized: "Signal Wire"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 689741288335917699
+    m_Localized: "An insulated line that connects logic gates and signal devices. Carries logic signals, not electrical power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 30933246319279075
+    m_Localized: "Signal Wire"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4181290835909221343
+    m_Localized: "An insulated line that connects logic gates and signal devices. Carries logic signals, not electrical power."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3334780087115864827
+    m_Localized: "AND Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357854018868170500
+    m_Localized: "Outputs an active signal only while both inputs are active. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1296015216021958086
+    m_Localized: "AND Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 559389970482599398
+    m_Localized: "Outputs an active signal only while both inputs are active. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2646969487018412908
+    m_Localized: "OR Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 957380192787074973
+    m_Localized: "Outputs an active signal while either input is active. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3960573105850514960
+    m_Localized: "OR Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 644439120138179534
+    m_Localized: "Outputs an active signal while either input is active. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4501697934613277508
+    m_Localized: "NOT Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3793042519703167847
+    m_Localized: "Inverts its left-side input and outputs to the right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4034449881914484673
+    m_Localized: "NOT Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4543089696268121399
+    m_Localized: "Inverts its left-side input and outputs to the right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1494638394564423633
+    m_Localized: "XOR Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4316653811622289318
+    m_Localized: "Outputs an active signal only when its two inputs differ. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4199704218990825623
+    m_Localized: "XOR Logic Gate"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3933521569154700328
+    m_Localized: "Outputs an active signal only when its two inputs differ. Faces right by default: input A is left, input B is below, and output is right. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 994659412374286442
+    m_Localized: "Signal Relay"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4048299589486665924
+    m_Localized: "Receives a logic signal from below and controls the electrical path between its left and right contacts. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3237058654738390824
+    m_Localized: "Signal Relay"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1217630443450911128
+    m_Localized: "Receives a logic signal from below and controls the electrical path between its left and right contacts. Rotates while placing."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4518425646935509198
+    m_Localized: "Radio Signal Converter"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 587853853757295380
+    m_Localized: "Connects a logic signal to a radio link. Connect 120 V power on the left and a radio signal port on the right; requires 5 W."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 601708653498031982
+    m_Localized: "Radio Signal Converter"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 923236425758267720
+    m_Localized: "Connects a logic signal to a radio link. Connect 120 V power on the left and a radio signal port on the right; requires 5 W."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2987876851065379581
+    m_Localized: "Radio Station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2591988475108652366
+    m_Localized: "A radio communication station. Connect 120 V power on the left; requires 20 W."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1017639132437687075
+    m_Localized: "Radio Station"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1322594806600073463
+    m_Localized: "A radio communication station. Connect 120 V power on the left; requires 20 W."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3048150103841211522
+    m_Localized: "Radio Transceiver"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2093655406133664904
+    m_Localized: "Wear it in the off hand to set a channel and receive or send text broadcasts. Requires a radio battery."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1036188801093162037
+    m_Localized: "Radio Battery"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1554840542220725617
+    m_Localized: "A single-use 3,600 joule radio battery. It cannot be recharged; replace it when depleted."
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

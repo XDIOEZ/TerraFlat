@@ -7,7 +7,7 @@ namespace FlatWorld.Networking.Gameplay
     public static class NetworkGameplayProtocol
     {
         // 太空快照使用每连接基线和共享字段差量。
-        public const int CurrentVersion = 40;
+        public const int CurrentVersion = 41;
         public const int SnapshotChunkBytes = 24 * 1024;
         public const int MaxSnapshotBytes = 64 * 1024 * 1024;
 
@@ -296,6 +296,10 @@ namespace FlatWorld.Networking.Gameplay
         public bool ResetChunk;
         public bool Removed;
         public bool SpeedOnly;
+        public bool SignalOnly;
+        public byte SignalBits;
+        public ulong SignalRevision;
+        public float SignalSuppliedWatts;
         public float Rpm;
         public int EntryDirection;
     }

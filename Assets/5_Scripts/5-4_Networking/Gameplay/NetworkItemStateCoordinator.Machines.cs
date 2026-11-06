@@ -313,7 +313,8 @@ namespace FlatWorld.Networking.Gameplay
             Item actor = connection.identity.GetComponent<NetworkWorldPlayer>()?.CorePlayer;
             if (connection.identity.GetComponent<NetworkWorldPlayer>()?.HasServerPickupTransaction == true ||
                 request.Source.MachineId == 0 && request.Target.MachineId == 0 &&
-                !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) || actor == null ||
+                !MachineInventoryCommands.IsSpacesuitAddress(request.Source) && !MachineInventoryCommands.IsSpacesuitAddress(request.Target) &&
+                !MachineInventoryCommands.IsRadioAddress(request.Source) && !MachineInventoryCommands.IsRadioAddress(request.Target) || actor == null ||
                 request.Source.MachineId != 0 && !CanOperateInventoryMachine(connection, actor, request.Source.MachineId) ||
                 request.Target.MachineId != 0 && !CanOperateInventoryMachine(connection, actor, request.Target.MachineId) ||
                 (request.Source.PlayerInventory?.Length ?? 0) > 128 || (request.Target.PlayerInventory?.Length ?? 0) > 128 ||
@@ -471,6 +472,7 @@ namespace FlatWorld.Networking.Gameplay
             Inventory inventory = MachineInventoryCommands.Resolve(actor, address);
             if (inventory == null) return false;
             MachineInventory.ApplySnapshot(inventory, MemoryPackSerializer.Deserialize<Inventory_Data>(payload));
+            if (inventory is RadioBatteryInventory radio) RadioTransceiverSystem.Flush(radio.Device);
             Mod_HotBar hotbar = actor.itemMods?.GetMod_ByID<Mod_HotBar>(ModText.Hotbar);
             if (hotbar != null && ReferenceEquals(hotbar.RuntimeInventory, inventory)) hotbar.RefreshUI();
             return true;

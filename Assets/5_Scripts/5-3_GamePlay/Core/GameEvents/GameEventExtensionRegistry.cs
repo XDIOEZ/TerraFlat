@@ -35,6 +35,7 @@ namespace FlatWorld.Gameplay.Events
             RegisterAction(new CreatureAdvanceGameEventAction());
             RegisterAction(new WeatherOverrideGameEventAction());
             RegisterAction(new EmitSignalGameEventAction());
+            RegisterAction(new RadioBroadcastGameEventAction());
         }
 
         public static bool RegisterTrigger(IGameEventTriggerHandler handler, bool replace = false)

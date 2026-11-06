@@ -62,6 +62,7 @@ public static partial class MachineWorld
         CellChanged = null; NodeCellChanged = null;
         ResetSurfaceChangeBatch();
         NodeStateChanged = null; NodeRemoved = null; VisualSpeedChanged = null; PhysicsSourcesReset = null;
+        SignalStateChanged = null;
     }
 
     /// <summary>MOD 扭矩条件返回 0..1 可用比例，条件必须独立于 GameObject 与 ChunkView。</summary>
@@ -99,6 +100,7 @@ public static partial class MachineWorld
             : Vector2Int.zero;
         graph = new MechanicalNetworkGraph(chunkSize, period, topology);
         InitializeElectricalScope(topology);
+        InitializeSignalScope(topology);
         GameplayCombatBridge.Register(MachineCombatBridge.Instance);
         if (save?.Mechanical?.Worlds != null && save.Mechanical.Worlds.TryGetValue(key, out var snapshots))
             foreach (var data in snapshots) RestoreDescriptor(data);
@@ -125,6 +127,7 @@ public static partial class MachineWorld
             Engaged = state.Engaged, RatioIndex = state.RatioIndex
         };
         InitializeElectricalState(node, state);
+        InitializeSignalDeviceState(node);
         node.ScopeKey = worldKey;
         nodes.Add(snapshot.Guid, node);
         PublishMachineCombustibility(node);
@@ -144,6 +147,7 @@ public static partial class MachineWorld
             node = new MachineEntity { Id = id, Cell = CellOf(view.item.transform.position), Definition = view.Definition,
                 Snapshot = view.item.itemData, State = view.LocalState };
             InitializeElectricalState(node, view.LocalState);
+            InitializeSignalDeviceState(node);
             node.ScopeKey = worldKey;
             nodes.Add(id, node); dirty = true;
             CopyTopology(node);
@@ -186,9 +190,12 @@ public static partial class MachineWorld
             State = state
         };
         InitializeElectricalState(node, state);
+        InitializeSignalDeviceState(node);
         CopyTopology(node);
         node.ScopeKey = worldKey;
         EnsureProcessor(node);
+        if (definition.Signal != null && HasCandidateRadioFeedback(node))
+        { DisposeProcessor(node); throw new InvalidOperationException("接线会形成同网同频道无线收发回环"); }
         nodes.Add(node.Id, node);
         PublishMachineCombustibility(node);
         dirty = true;
@@ -345,6 +352,7 @@ public static partial class MachineWorld
         node.State = incomingState;
         ApplyFluidRemoteState(node, applied);
         InitializeElectricalState(node, incomingState);
+        InitializeSignalDeviceState(node);
         if (!applied) { DisposeProcessor(node); EnsureProcessor(node); }
         CopyTopology(node);
         node.Rpm = rpm;
@@ -678,7 +686,7 @@ public static partial class MachineWorld
                 foreach (var network in graph.Networks)
                 {
                     bool active = KeepSimulatingWithoutPlayers || graph.ShouldBeActive(network, players, step, MachineCatalog.Settings) ||
-                        RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network);
+                        RequiresElectricalBridgeSimulation(network) || RequiresFluidSimulation(network) || RequiresSignalSimulation(network);
                     if (!active)
                     {
                         if (network.Active) SleepNetwork(network);
@@ -724,6 +732,8 @@ public static partial class MachineWorld
                     MachineFluidCompleteMarker.SetGauge(fluidStepStock.Count);
                 }
                 PressureExplosionQueue.Tick(step);
+                AdvanceCircuitSignals(step);
+                advancingScope.Radio?.Advance(step);
             }
             finally
             {
@@ -1016,6 +1026,7 @@ public static partial class MachineWorld
         if (IsOccupied(cell, definition.Layer)) { reason = "当前机械层已占用"; return false; }
         if (BuildingOccupancyRegistry.IsOccupied(cell, layer: definition.Layer))
         { reason = "当前建筑层已占用"; return false; }
+        if (!ValidateSignalPlacement(definition, cell, out reason)) return false;
         if (definition.Kind == "bridge")
         {
             if (graph.At(cell, 0)?.Definition.HasMechanicalPorts != true)
@@ -1147,6 +1158,7 @@ public static partial class MachineWorld
     }
     private static void ReleaseRuntime()
     {
+        scope.Radio?.Clear();
         foreach (MachineInteractionTarget interaction in interactions.Values) interaction.Dispose();
         interactions.Clear();
         foreach (var node in nodes.Values)

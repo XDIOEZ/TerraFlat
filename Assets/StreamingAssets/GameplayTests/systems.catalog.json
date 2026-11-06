@@ -1574,6 +1574,68 @@
         "testing_resource_cache_gameplay"
       ],
       "rulesCoverage": "partial"
+    },
+    {
+      "id": "circuit_signals",
+      "name": "电路信号",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Machines/*Circuit*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/*Circuit*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestAutomationRadioRuntimeProbe.cs",
+        "Assets/StreamingAssets/GameplayTests/Systems/CircuitSignals/*",
+        "Assets/StreamingAssets/GameConfig/Items/shells/automation_radio.json",
+        "Assets/StreamingAssets/GameConfig/Recipes/crafting/automation_radio.json",
+        "Assets/6_Art/Generated/AutomationRadio/*"
+      ],
+      "dependsOn": [
+        "electrical",
+        "mechanical"
+      ],
+      "ruleCaseIds": [
+        "circuit_signals_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/CircuitSignals/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/CircuitSignals/gameplay-suite.json"
+      ],
+      "integrationCaseIds": [
+        "circuit_wireless_automation_gameplay"
+      ],
+      "rulesCoverage": "partial",
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/CircuitSignals/README.md"
+    },
+    {
+      "id": "radio",
+      "name": "无线电",
+      "group": "工业与能源",
+      "sourcePaths": [
+        "Assets/5_Scripts/5-3_GamePlay/World/Radio/*",
+        "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/*Radio*",
+        "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Radio*",
+        "Assets/5_Scripts/5-4_Networking/Gameplay/*Radio*",
+        "Assets/StreamingAssets/GameplayTests/Systems/Radio/*",
+        "Assets/5_Scripts/5-3_GamePlay/Development/Testing/GameplayTestRadio*",
+        "Assets/5_Scripts/5-4_Networking/Gameplay/Testing/GameplayTestRadio*"
+      ],
+      "dependsOn": [
+        "circuit_signals",
+        "networking"
+      ],
+      "ruleCaseIds": [
+        "radio_rules"
+      ],
+      "rulesSuite": "GameplayTests/Systems/Radio/rules-suite.json",
+      "integrationSuites": [
+        "GameplayTests/Systems/CircuitSignals/gameplay-suite.json"
+      ],
+      "integrationCaseIds": [
+        "circuit_wireless_automation_gameplay"
+      ],
+      "rulesCoverage": "partial",
+      "integrationCoverage": "partial",
+      "coverageDocument": "GameplayTests/Systems/Radio/README.md"
     }
   ]
 }

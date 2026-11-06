@@ -4586,6 +4586,150 @@ MonoBehaviour:
     m_Localized: "马铃薯与豆油在坩埚中加热制成，提供碳水和脂肪。"
     m_Metadata:
       m_Items: []
+  - m_Id: 421688587692259860
+    m_Localized: "信号线-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 689741288335917699
+    m_Localized: "连接逻辑门和信号设备的绝缘导线；只传递逻辑信号，不传导电力。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 30933246319279075
+    m_Localized: "信号线"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4181290835909221343
+    m_Localized: "连接逻辑门和信号设备的绝缘导线；只传递逻辑信号，不传导电力。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3334780087115864827
+    m_Localized: "与门-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357854018868170500
+    m_Localized: "两路输入同时有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1296015216021958086
+    m_Localized: "与门"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 559389970482599398
+    m_Localized: "两路输入同时有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2646969487018412908
+    m_Localized: "或门-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 957380192787074973
+    m_Localized: "任一路输入有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3960573105850514960
+    m_Localized: "或门"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 644439120138179534
+    m_Localized: "任一路输入有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4501697934613277508
+    m_Localized: "非门-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3793042519703167847
+    m_Localized: "反转左侧输入信号并从右侧输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4034449881914484673
+    m_Localized: "非门"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4543089696268121399
+    m_Localized: "反转左侧输入信号并从右侧输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1494638394564423633
+    m_Localized: "异或门-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4316653811622289318
+    m_Localized: "仅当两路输入状态不同时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4199704218990825623
+    m_Localized: "异或门"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3933521569154700328
+    m_Localized: "仅当两路输入状态不同时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 994659412374286442
+    m_Localized: "信号继电器-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4048299589486665924
+    m_Localized: "接收下侧逻辑信号，并通过左右电触点控制连接状态；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3237058654738390824
+    m_Localized: "信号继电器"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1217630443450911128
+    m_Localized: "接收下侧逻辑信号，并通过左右电触点控制连接状态；放置时可旋转。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4518425646935509198
+    m_Localized: "无线电信号转换器-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 587853853757295380
+    m_Localized: "将逻辑信号接入无线电链路；左侧接入120V电源，右侧连接无线信号端口，需要5W。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 601708653498031982
+    m_Localized: "无线电信号转换器"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 923236425758267720
+    m_Localized: "将逻辑信号接入无线电链路；左侧接入120V电源，右侧连接无线信号端口，需要5W。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2987876851065379581
+    m_Localized: "无线电台-建筑"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2591988475108652366
+    m_Localized: "无线电通信设施；左侧接入120V电源，需要20W。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1017639132437687075
+    m_Localized: "无线电台"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1322594806600073463
+    m_Localized: "无线电通信设施；左侧接入120V电源，需要20W。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3048150103841211522
+    m_Localized: "对讲机"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2093655406133664904
+    m_Localized: "佩戴在副手后可设置频道、接收或发送文字广播；工作需要安装无线电电池。"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1036188801093162037
+    m_Localized: "无线电电池"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1554840542220725617
+    m_Localized: "一次性无线电电池，内含3600焦耳电量；不可充电，耗尽后需要更换。"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

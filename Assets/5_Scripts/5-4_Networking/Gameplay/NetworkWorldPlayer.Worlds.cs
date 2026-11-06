@@ -42,6 +42,7 @@ namespace FlatWorld.Networking.Gameplay
             foreach (Module module in corePlayer.Mods.Values)
                 if (module is IPlayerStateAuthorityModule && authority.ModuleDataDic.TryGetValue(module.StableName, out ModuleData data))
                     incoming.ModuleDataDic[module.StableName] = data;
+            RadioInventoryNetworkAuthority.PreserveServerRadioStates(corePlayer, incoming);
             return ItemNetworkStateSerialization.TrySerializeItemData(incoming, out payload);
         }
         private bool AcceptWorldSubmission(uint realm)

@@ -55,7 +55,7 @@ public static partial class MachineWorld
     {
         if (scope.TopologyMutationDepth > 0 || scope.SimulationStepDepth > 0) return;
         bool rebuildAllNetworks = dirty;
-        if (!rebuildAllNetworks && !scope.FluidTopologyDirty) return;
+        if (!rebuildAllNetworks && !scope.FluidTopologyDirty && !scope.ElectricalTopologyDirty) return;
         using var topologySample = MachineTopologyMarker.Auto();
         if (rebuildAllNetworks)
         {
@@ -63,9 +63,12 @@ public static partial class MachineWorld
             electricalGraph?.Rebuild(nodes.Values);
             RebuildCombatSearchPadding();
         }
-        RebuildFluidNetworks();
+        else if (scope.ElectricalTopologyDirty) electricalGraph?.Rebuild(nodes.Values);
+        if (rebuildAllNetworks || scope.FluidTopologyDirty) RebuildFluidNetworks();
         dirty = false;
         scope.FluidTopologyDirty = false;
+        scope.ElectricalTopologyDirty = false;
+        RebuildCircuitSignalsAndSimulationDependencies(rebuildAllNetworks);
         PublishCombinedFluidTankTopologyChanges();
         if (!rebuildAllNetworks) return;
         foreach (MachineEntity conveyor in graph.ConveyorChanges)

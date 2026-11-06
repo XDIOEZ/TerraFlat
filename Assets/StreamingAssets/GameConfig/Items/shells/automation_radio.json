@@ -1,0 +1,1596 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "SignalWire",
+      "parent": "BuildingBody_Base",
+      "gameName": "信号线-建筑",
+      "description": "连接逻辑门和信号设备的绝缘导线；只传递逻辑信号，不传导电力。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "spriteStates": {
+          "signal0": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_00]",
+          "signal1": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_01]",
+          "signal2": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_02]",
+          "signal3": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_03]",
+          "signal4": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_04]",
+          "signal5": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_05]",
+          "signal6": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_06]",
+          "signal7": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_07]",
+          "signal8": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_08]",
+          "signal9": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_09]",
+          "signal10": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_10]",
+          "signal11": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_11]",
+          "signal12": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_12]",
+          "signal13": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_13]",
+          "signal14": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_14]",
+          "signal15": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_15]"
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalWire\",\"SummonerPrefabId\":\"SignalWire_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalWire"
+          }
+        }
+      }
+    },
+    {
+      "id": "SignalWire_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "信号线",
+      "description": "连接逻辑门和信号设备的绝缘导线；只传递逻辑信号，不传导电力。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_10]",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "spriteStates": {
+          "signal0": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_00]",
+          "signal1": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_01]",
+          "signal2": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_02]",
+          "signal3": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_03]",
+          "signal4": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_04]",
+          "signal5": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_05]",
+          "signal6": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_06]",
+          "signal7": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_07]",
+          "signal8": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_08]",
+          "signal9": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_09]",
+          "signal10": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_10]",
+          "signal11": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_11]",
+          "signal12": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_12]",
+          "signal13": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_13]",
+          "signal14": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_14]",
+          "signal15": "Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png[SignalWire_15]"
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalWire\",\"SummonerPrefabId\":\"SignalWire_Summoner\",\"CraftingMaterials\":{\"Ingot_Copper\":1,\"Rubber\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalWire"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_AND",
+      "parent": "BuildingBody_Base",
+      "gameName": "与门-建筑",
+      "description": "两路输入同时有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_AND/LogicGate_AND_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_AND\",\"SummonerPrefabId\":\"LogicGate_AND_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_AND"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_AND_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "与门",
+      "description": "两路输入同时有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_AND/LogicGate_AND_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_AND\",\"SummonerPrefabId\":\"LogicGate_AND_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"Transistor\":1,\"CopperPlate\":1,\"Ingot_WroughtIron\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_AND"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_OR",
+      "parent": "BuildingBody_Base",
+      "gameName": "或门-建筑",
+      "description": "任一路输入有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_OR/LogicGate_OR_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_OR\",\"SummonerPrefabId\":\"LogicGate_OR_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_OR"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_OR_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "或门",
+      "description": "任一路输入有效时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_OR/LogicGate_OR_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_OR\",\"SummonerPrefabId\":\"LogicGate_OR_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"Transistor\":1,\"CopperPlate\":1,\"Ingot_WroughtIron\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_OR"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_NOT",
+      "parent": "BuildingBody_Base",
+      "gameName": "非门-建筑",
+      "description": "反转左侧输入信号并从右侧输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_NOT/LogicGate_NOT_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_NOT\",\"SummonerPrefabId\":\"LogicGate_NOT_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_NOT"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_NOT_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "非门",
+      "description": "反转左侧输入信号并从右侧输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_NOT/LogicGate_NOT_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_NOT\",\"SummonerPrefabId\":\"LogicGate_NOT_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"Transistor\":1,\"CopperPlate\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_NOT"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_XOR",
+      "parent": "BuildingBody_Base",
+      "gameName": "异或门-建筑",
+      "description": "仅当两路输入状态不同时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_XOR/LogicGate_XOR_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_XOR\",\"SummonerPrefabId\":\"LogicGate_XOR_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_XOR"
+          }
+        }
+      }
+    },
+    {
+      "id": "LogicGate_XOR_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "异或门",
+      "description": "仅当两路输入状态不同时输出有效信号。默认左侧为输入A、下侧为输入B、右侧为输出；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/LogicGate_XOR/LogicGate_XOR_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"LogicGate_XOR\",\"SummonerPrefabId\":\"LogicGate_XOR_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"Transistor\":2,\"CopperPlate\":1,\"Ingot_WroughtIron\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "LogicGate_XOR"
+          }
+        }
+      }
+    },
+    {
+      "id": "SignalRelay",
+      "parent": "BuildingBody_Base",
+      "gameName": "信号继电器-建筑",
+      "description": "接收下侧逻辑信号，并通过左右电触点控制连接状态；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalRelay/SignalRelay_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalRelay\",\"SummonerPrefabId\":\"SignalRelay_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalRelay"
+          }
+        }
+      }
+    },
+    {
+      "id": "SignalRelay_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "信号继电器",
+      "description": "接收下侧逻辑信号，并通过左右电触点控制连接状态；放置时可旋转。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/SignalRelay/SignalRelay_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SignalRelay\",\"SummonerPrefabId\":\"SignalRelay_Summoner\",\"CraftingMaterials\":{\"CopperPlate\":1,\"Transistor\":1,\"Ingot_WroughtIron\":1}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "SignalRelay"
+          }
+        }
+      }
+    },
+    {
+      "id": "RadioSignalConverter",
+      "parent": "BuildingBody_Base",
+      "gameName": "无线电信号转换器-建筑",
+      "description": "将逻辑信号接入无线电链路；左侧接入120V电源，右侧连接无线信号端口，需要5W。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/RadioSignalConverter/RadioSignalConverter_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"RadioSignalConverter\",\"SummonerPrefabId\":\"RadioSignalConverter_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "RadioSignalConverter"
+          }
+        }
+      }
+    },
+    {
+      "id": "RadioSignalConverter_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "无线电信号转换器",
+      "description": "将逻辑信号接入无线电链路；左侧接入120V电源，右侧连接无线信号端口，需要5W。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/RadioSignalConverter/RadioSignalConverter_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"RadioSignalConverter\",\"SummonerPrefabId\":\"RadioSignalConverter_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":1,\"VacuumTube\":1,\"CopperPlate\":2,\"Ingot_WroughtIron\":2}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "RadioSignalConverter"
+          }
+        }
+      }
+    },
+    {
+      "id": "RadioStation",
+      "parent": "BuildingBody_Base",
+      "gameName": "无线电台-建筑",
+      "description": "无线电通信设施；左侧接入120V电源，需要20W。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1,
+      "volume": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/RadioStation/RadioStation_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"RadioStation\",\"SummonerPrefabId\":\"RadioStation_Summoner\"}",
+            "Type": 0
+          },
+          "parameters": {
+            "LightOcclusionMode": "None",
+            "CastSunShadow": false
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "RadioStation"
+          }
+        }
+      }
+    },
+    {
+      "id": "RadioStation_Summoner",
+      "worldDropBehavior": "interactive",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "无线电台",
+      "description": "无线电通信设施；左侧接入120V电源，需要20W。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/RadioStation/RadioStation_Idle.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        }
+      },
+      "health": {
+        "impactAudioMaterial": 5,
+        "hasHp": true,
+        "hp": 60,
+        "maxHp": 60,
+        "defense": {
+          "physical": 2
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        },
+        "weakTool": 4,
+        "combatBalanceVersion": 1
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"RadioStation\",\"SummonerPrefabId\":\"RadioStation_Summoner\",\"CraftingMaterials\":{\"CircuitBoard\":2,\"VacuumTube\":2,\"Transistor\":1,\"CopperPlate\":2,\"Ingot_WroughtIron\":3}}",
+            "Type": 0
+          }
+        },
+        "机械扭矩模块": {
+          "prefab": "Module_MechanicalNode",
+          "id": "机械扭矩模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DefinitionId": "RadioStation"
+          }
+        }
+      }
+    },
+    {
+      "id": "RadioTransceiver",
+      "parent": "Equipment_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "对讲机",
+      "description": "佩戴在副手后可设置频道、接收或发送文字广播；工作需要安装无线电电池。",
+      "durability": 1000,
+      "maxDurability": 1000,
+      "amount": 1,
+      "weight": 1.2,
+      "volume": 1.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "Equipment",
+        "EquipmentSlot.OffHand",
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Equipment"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/RadioTransceiver/RadioTransceiver_Icon.png",
+        "spriteStates": {
+          "wearable": "Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/RadioTransceiver.png"
+        },
+        "rendererLocalPosition": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "Mod_EquipmentStore": {
+          "prefab": "Mod_EquipmentStore",
+          "id": "装备存储模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "equipmentInstances": [
+              {
+                "Name": "无线电",
+                "$concreteType": "EquipmentInstance_RadioTransceiver"
+              }
+            ]
+          }
+        },
+        "对讲机模块": {
+          "prefab": "Module_RadioTransceiver",
+          "id": "对讲机模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Radio_Battery",
+      "parent": "BasicItem_Base",
+      "worldDropBehavior": "interactive",
+      "gameName": "无线电电池",
+      "description": "一次性无线电电池，内含3600焦耳电量；不可充电，耗尽后需要更换。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 0.4,
+      "volume": 0.6,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "InventoryGroup.ElectricalPower",
+        "InventoryCategory.Functional"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/AutomationRadio/Radio_Battery/Radio_Battery_Icon.png"
+      },
+      "modules": {
+        "无线电电池模块": {
+          "prefab": "Module_RadioBattery",
+          "id": "无线电电池模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        }
+      }
+    }
+  ]
+}

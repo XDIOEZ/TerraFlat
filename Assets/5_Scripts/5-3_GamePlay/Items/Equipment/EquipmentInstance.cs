@@ -12,6 +12,7 @@ using MemoryPack;
 [MemoryPackUnion(6, typeof(EquipmentInstance_PressureProtection))]
 [MemoryPackUnion(7, typeof(EquipmentInstance_SpacesuitSupport))]
 [MemoryPackUnion(8, typeof(EquipmentInstance_RadiationProtection))]
+[MemoryPackUnion(9, typeof(EquipmentInstance_RadioTransceiver))]
 public abstract partial class EquipmentInstance
 {
     [MemoryPackOrder(0)] public string Name;

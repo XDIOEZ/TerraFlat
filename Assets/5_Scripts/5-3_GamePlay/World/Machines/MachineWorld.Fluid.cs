@@ -285,6 +285,7 @@ public static partial class MachineWorld
         {
             // 船内流体网随船持续模拟，不用地表玩家区块判断休眠。
             bool near = KeepSimulatingWithoutPlayers;
+            if (!near) foreach (MachineEntity node in component.Nodes) near |= RequiresAutomationSimulation(node);
             int range = component.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
             if (!near)
             {

@@ -365,6 +365,11 @@
       "id": "food_chain_crops",
       "path": "shells/food_chain_crops.json",
       "enabled": true
+    },
+    {
+      "id": "automation_radio",
+      "path": "shells/automation_radio.json",
+      "enabled": true
     }
   ]
 }

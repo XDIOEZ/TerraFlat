@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: AutomationRadio
+  m_EditorClassIdentifier: 
+  m_GroupName: AutomationRadio
+  m_Data:
+    m_SerializedData: []
+  m_GUID: 1d929959953e4548bd447705d3772be3
+  m_SerializeEntries:
+  - m_GUID: bd7d54cb04580f14c9b5dc203f116b1e
+    m_Address: Assets/6_Art/Generated/AutomationRadio/LogicGate_AND/LogicGate_AND_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2d49c382bb96307499d44b678ba6ba19
+    m_Address: Assets/6_Art/Generated/AutomationRadio/LogicGate_NOT/LogicGate_NOT_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: adcb59b8de3ef8445b1eee7b499d834b
+    m_Address: Assets/6_Art/Generated/AutomationRadio/LogicGate_OR/LogicGate_OR_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f23e02c2cea05b548be70e514a43ed4d
+    m_Address: Assets/6_Art/Generated/AutomationRadio/LogicGate_XOR/LogicGate_XOR_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3fc32c62f5981e04296b41247f27505c
+    m_Address: Assets/6_Art/Generated/AutomationRadio/RadioSignalConverter/RadioSignalConverter_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 49e30f492954c8f44982f8ae1b5bf771
+    m_Address: Assets/6_Art/Generated/AutomationRadio/RadioStation/RadioStation_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 74e16b65e2489d9429483bab9a128a99
+    m_Address: Assets/6_Art/Generated/AutomationRadio/RadioTransceiver/RadioTransceiver_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 665f1b2c978f82641aab14f3e9f5ee55
+    m_Address: Assets/6_Art/Generated/AutomationRadio/Radio_Battery/Radio_Battery_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 414bab2b1dc2b7b4682869ec704026db
+    m_Address: Assets/6_Art/Generated/AutomationRadio/SignalRelay/SignalRelay_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1fdfdb1e15c2334449b2f1a3125762a0
+    m_Address: Assets/6_Art/Generated/AutomationRadio/SignalWire/SignalWire_Connections.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 838bc1b972c1d45468fe645c3ba24e63
+    m_Address: Assets/6_Art/Generated/Characters/PlayerTemplate/Wearables/RadioTransceiver.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 38b9a172cecf4e888522d80847ec2509
+    m_Address: Module_RadioTransceiver
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 094db22530034d8d844537dc19a56355
+    m_Address: Module_RadioBattery
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 8599f587397b4595aab77889d08f1e80, type: 2}
+    - {fileID: 11400000, guid: 607f30c30ff24b1481985ac62e1e11f3, type: 2}

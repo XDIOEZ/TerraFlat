@@ -550,6 +550,18 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
             equipment_Instances = saveData.EquipmentInstances;
     }
 
+    // 服务端原位应用远端装备槽，同时复用实际装备效果生命周期。
+    public void ApplyNetworkAuthorityInventory()
+    {
+        Mod_EquipmentSaveData state = ModSaveData.GetData<Mod_EquipmentSaveData>();
+        if (state?.EquipmentInventoryData == null || EquipmentInventory?.Data == null) return;
+        state.EquipmentInventoryData.RestoreTo(EquipmentInventory.Data,
+            data => data.SharedConfiguration == null ? ItemDefinitionRuntime.RebasePersistedData(GameRes.ExistingInstance, data) : data);
+        EnsureEquipmentListSize();
+        foreach (ItemSlot slot in EquipmentInventory.Data.itemSlots)
+            if (slot != null) UpdateEquipment(slot, null);
+    }
+
     void EnsureEquipmentListSize()
     {
         if (EquipmentInventory?.Data == null) return;

@@ -224,6 +224,9 @@ public sealed partial class ChunkTilemapRenderer
             if (node.Definition.Electrical?.IsWire == true)
                 changed = !submittedWireMasks.TryGetValue(key, out int wireMask) ||
                     wireMask != MachineWorld.GetElectricalWireConnectionMask(cell);
+            else if (node.Definition.Signal?.IsWire == true)
+                changed = !submittedWireMasks.TryGetValue(key, out int signalMask) ||
+                    signalMask != MachineWorld.GetSignalWireConnectionMask(cell);
             else if (node.Definition.IsFluidPipeSegment)
                 changed = !submittedPipeMasks.TryGetValue(key, out int pipeMask) || pipeMask != MachineWorld.GetFluidPipeConnectionMask(node);
             else if (MachineWorld.IsFluidTankBlock(node))

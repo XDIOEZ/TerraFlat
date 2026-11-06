@@ -43,6 +43,7 @@ namespace FlatWorld.Networking.Gameplay
                 MachineWorld.NodeStateChanged += OnMechanicalStateChanged;
                 MachineWorld.NodeRemoved += OnMechanicalRemoved;
                 MachineWorld.VisualSpeedChanged += OnMechanicalSpeedChanged;
+                MachineWorld.SignalStateChanged += OnCircuitSignalChanged;
             }
 
             internal void StopServerSide()
@@ -50,6 +51,7 @@ namespace FlatWorld.Networking.Gameplay
                 MachineWorld.NodeStateChanged -= OnMechanicalStateChanged;
                 MachineWorld.NodeRemoved -= OnMechanicalRemoved;
                 MachineWorld.VisualSpeedChanged -= OnMechanicalSpeedChanged;
+                MachineWorld.SignalStateChanged -= OnCircuitSignalChanged;
                 dirtyMechanicalWorlds.Clear();
                 mechanicalFlushKeys.Clear();
                 mechanicalSyncNodes.Clear();
@@ -146,6 +148,16 @@ namespace FlatWorld.Networking.Gameplay
                 }
             }
 
+            // 位值变化走轻量可靠增量，不为线路重复序列化整份物品快照。
+            private void OnCircuitSignalChanged(MachineEntity node)
+            {
+                if (!NetworkServer.active) return;
+                SendToMechanicalObservers(new NetworkMechanicalNodeMessage
+                { NodeGuid = node.Id, WorldKey = node.ScopeKey, Position = node.Position, SignalOnly = true,
+                    SignalBits = MachineWorld.CaptureCircuitSignalBits(node), SignalRevision = node.SignalRevision,
+                    SignalSuppliedWatts = node.ElectricalSuppliedWatts });
+            }
+
             /// <summary>把本帧变化节点合并为每半秒一次的权威快照。</summary>
             private void FlushMechanicalStates()
             {
@@ -173,7 +185,9 @@ namespace FlatWorld.Networking.Gameplay
                 mechanicalPositions[(MachineWorld.WorldKey, node.Id)] = node.Position;
                 return new NetworkMechanicalNodeMessage
                 { NodeGuid = node.Id, Payload = payload, WorldKey = MachineWorld.WorldKey, Rpm = node.Rpm,
-                    EntryDirection = node.EntryDirection, Position = node.Position };
+                    EntryDirection = node.EntryDirection, Position = node.Position,
+                    SignalBits = MachineWorld.CaptureCircuitSignalBits(node), SignalRevision = node.SignalRevision,
+                    SignalSuppliedWatts = node.ElectricalSuppliedWatts };
             }
 
             internal static void SendSnapshot(NetworkConnectionToClient connection, MachineEntity node)
@@ -264,7 +278,8 @@ namespace FlatWorld.Networking.Gameplay
                         NetworkMechanicalNodeMessage old = queue[i];
                         if (old.ResetChunk) break;
                         if (old.NodeGuid != message.NodeGuid) continue;
-                        if (message.SpeedOnly && !old.SpeedOnly) break;
+                        if (message.SpeedOnly && !old.SpeedOnly || message.SignalOnly && !old.SignalOnly) break;
+                        if (!message.Removed && (old.SpeedOnly && !message.SpeedOnly || old.SignalOnly && !message.SignalOnly)) continue;
                         queue.RemoveAt(i);
                     }
                 }
@@ -324,10 +339,13 @@ namespace FlatWorld.Networking.Gameplay
                 if (message.Removed) { MachineWorld.ApplyRemoteRemoval(message.NodeGuid); return; }
                 if (message.SpeedOnly)
                 { MachineWorld.ApplyRemoteSpeed(message.NodeGuid, message.Rpm, message.EntryDirection); return; }
+                if (message.SignalOnly)
+                { MachineWorld.ApplyRemoteCircuitState(message.NodeGuid, message.SignalBits, message.SignalRevision, message.SignalSuppliedWatts); return; }
                 if (!ItemNetworkStateSerialization.TryDeserializeItemData(message.Payload, out ItemData snapshot) ||
                     snapshot.Guid != message.NodeGuid)
                     throw new InvalidOperationException("机械联机节点快照损坏：" + message.NodeGuid);
                 MachineWorld.ApplyRemoteSnapshot(snapshot, message.Rpm, message.EntryDirection);
+                MachineWorld.ApplyRemoteCircuitState(message.NodeGuid, message.SignalBits, message.SignalRevision, message.SignalSuppliedWatts);
             }
         }
         #endregion

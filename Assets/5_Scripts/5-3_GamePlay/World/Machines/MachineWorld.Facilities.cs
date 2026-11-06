@@ -200,7 +200,7 @@ public static partial class MachineWorld
                 continue;
             }
             // 船内格不对应地表场景，设施与船上机械网一样持续模拟。
-            bool active = KeepSimulatingWithoutPlayers || entity.SharedInventoryConsumers > 0;
+            bool active = KeepSimulatingWithoutPlayers || entity.SharedInventoryConsumers > 0 || RequiresAutomationSimulation(entity);
             int range = entity.Active ? MachineCatalog.Settings.DeactivationChunks : MachineCatalog.Settings.ActivationChunks;
             if (!active)
                 foreach (Vector2Int player in players)

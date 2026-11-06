@@ -52,6 +52,7 @@ namespace FlatWorld.Dialogue
         private InputAction openChatAction;
         private InputAction cancelChatAction;
         private int openedFrame = -1;
+        private Func<string, bool> submitOverride;
 
         public bool IsOpen => isOpen;
         public TMP_InputField InputField => inputField;
@@ -69,6 +70,9 @@ namespace FlatWorld.Dialogue
         private void OnEnable()
         {
             ResolveReferences();
+            RadioTextInputBridge.OpenRequested += OpenRadioInput;
+            RadioTextDelivery.Presented += PresentRadioMessage;
+            RadioTextDelivery.Feedback += PresentRadioFeedback;
             BindOpenChatInput();
             if (player != null)
                 ActorProfileRegistry.GetBinding(player).Changed += HandleProfileContextChanged;
@@ -81,6 +85,9 @@ namespace FlatWorld.Dialogue
 
         private void OnDisable()
         {
+            RadioTextInputBridge.OpenRequested -= OpenRadioInput;
+            RadioTextDelivery.Presented -= PresentRadioMessage;
+            RadioTextDelivery.Feedback -= PresentRadioFeedback;
             UnbindOpenChatInput();
             if (player != null)
                 ActorProfileRegistry.GetBinding(player).Changed -= HandleProfileContextChanged;
@@ -199,7 +206,10 @@ namespace FlatWorld.Dialogue
                 right.CommandOrder.CompareTo(left.CommandOrder));
         }
 
-        public bool OpenChat()
+        public bool OpenChat() => OpenChat(null);
+
+        // 独立用途只接管本次输入，关闭后恢复普通聊天。
+        public bool OpenChat(Func<string, bool> submit)
         {
             ResolveReferences();
             if (isOpen || !CanUseChat() || gameController.IsGameplayInputLocked || !EnsureView())
@@ -211,6 +221,7 @@ namespace FlatWorld.Dialogue
             inputSuspended = gameController.InputBindings != null;
 
             isOpen = true;
+            submitOverride = submit;
             // Enter 同时负责打开与提交，记录打开帧避免同一帧立即提交空消息。
             openedFrame = Time.frameCount;
             viewObject.SetActive(true);
@@ -222,6 +233,7 @@ namespace FlatWorld.Dialogue
 
         public void CloseChat(bool clearText = true)
         {
+            submitOverride = null;
             if (!isOpen && !inputSuspended)
             {
                 if (clearText && inputField != null)
@@ -269,7 +281,7 @@ namespace FlatWorld.Dialogue
                 return true;
             }
 
-            bool submitted = TrySubmitText(text);
+            bool submitted = submitOverride != null ? submitOverride(NormalizeText(text)) : TrySubmitText(text);
             if (submitted)
                 CloseChat(clearText: true);
             else
@@ -468,6 +480,22 @@ private bool EnsureView()
         {
             if (!CanUseChat())
                 CloseChat(clearText: true);
+        }
+
+        private bool OpenRadioInput(Item actor, Func<string, bool> submit) => actor == player && OpenChat(submit);
+
+        private void PresentRadioMessage(Item receiver, RadioTextMessage message)
+        {
+            if (receiver != player || speechController == null) return;
+            speechController.Present(new CharacterSpeechRequest(
+                $"[{message.Channel}] {message.Sender}: {message.Text}", "radio.received", CharacterSpeechPriority.Player));
+        }
+
+        private void PresentRadioFeedback(Item receiver, string text)
+        {
+            if (receiver != player || speechController == null) return;
+            speechController.Present(new CharacterSpeechRequest(
+                FlatWorldLocalizationService.GetUiText(text), "radio.feedback", CharacterSpeechPriority.Player));
         }
 
         private string NormalizeText(string text)

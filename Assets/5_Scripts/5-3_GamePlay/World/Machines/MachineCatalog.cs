@@ -293,6 +293,7 @@ public sealed partial class MachineDefinition
     public ElectricHeaterDefinition Heating; // 周围加热能力独立于气液库存与管网。
     public MachineLightDefinition Lighting; // 通用照明参数与具体灯泡外观分离。
     public ElectricalDefinition Electrical; // 可选电气能力；同一机器可同时属于机械网与电网。
+    public CircuitSignalDefinition Signal; // 信号端口与供电端口分别连接各自覆盖层。
     public BatteryChargeIndicatorDefinition BatteryIndicator; // 指示灯布局独立于电池充放电规则。
     public MachinePowerIndicatorDefinition PowerIndicator; // 可选供电状态贴图覆盖。
     [MemoryPack.MemoryPackIgnore]
@@ -310,9 +311,9 @@ public sealed partial class MachineDefinition
     [MemoryPack.MemoryPackIgnore]
     public bool IsFluidPipeSegment => Fluid?.Kind == "pipe" || Fluid?.PipeSegment == true;
     [MemoryPack.MemoryPackIgnore]
-    public bool IsConnectionLine => Electrical?.IsWire == true || IsFluidPipeSegment; // 自动接邻格的线路与设备主体分层显示。
+    public bool IsConnectionLine => Electrical?.IsWire == true || IsFluidPipeSegment || Signal?.IsWire == true; // 自动接邻格的线路与设备主体分层显示。
     [MemoryPack.MemoryPackIgnore]
-    public int VisualLayer => IsFluidPipeSegment ? -2 : Electrical?.IsWire == true ? -1 : Layer; // 显示和同格交互共用底层到高层的顺序。
+    public int VisualLayer => Signal?.IsWire == true ? -3 : IsFluidPipeSegment ? -2 : Electrical?.IsWire == true ? -1 : Layer; // 显示和同格交互共用底层到高层的顺序。
     [MemoryPack.MemoryPackIgnore]
     public bool Rotatable => PlacementRotationSteps.HasValue ||
         ((!IsConnectionLine || Fluid?.PipeSegment == true) && Fluid?.Kind != "pipe" &&
@@ -388,6 +389,7 @@ public sealed partial class MachineDefinition
         Transport?.Validate(Id, HasMechanicalPorts);
         Fluid?.Validate(Id);
         Electrical?.Validate(Id);
+        Signal?.Validate(Id);
         Heating?.Validate(Id, Electrical);
         Induction?.Validate(Id, Electrical);
         Lighting?.Validate(Id, Electrical);
@@ -473,6 +475,7 @@ public sealed partial class ElectricalDefinition
     public string Role = "wire"; // wire/generator/consumer/battery
     public bool Hidden; // 隐藏线路仍参与供电，显示与操作由工程视野决定。
     public string Connection = "cell"; // cell 接同格电线，其余方向表示随设备旋转的邻格端口。
+    public string ContactA = "left", ContactB = "right"; // 条件触点在断开时保留独立的两侧网络。
     public float ConversionEfficiency = 1f; // 双向电机的转换效率不允许超过百分之百。
     public float NominalVoltage = 120f;
     public float MinimumVoltage;

@@ -9248,6 +9248,154 @@ MonoBehaviour:
     m_Localized: Connected; waiting for power
     m_Metadata:
       m_Items: []
+  - m_Id: 2476910142664501736
+    m_Localized: "Radio Transceiver"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2768547356487867886
+    m_Localized: "Channel {0} · {1}\nBattery {2:0.#} / 3600 J"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3558505954209026171
+    m_Localized: "Turn On"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 805662852303796154
+    m_Localized: "Turn Off"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 815327317316169830
+    m_Localized: "Set Channel"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1341278966443753333
+    m_Localized: "Send Text"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4186469875402173318
+    m_Localized: "Channel must be between 1 and 16."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2027411913872969281
+    m_Localized: "Broadcast sent."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4064432985530831320
+    m_Localized: "Settings updated."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2112918059711027431
+    m_Localized: "Radio operation failed. Check power and channel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4183311000577465071
+    m_Localized: "Broadcast: SOS"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2262403873511315602
+    m_Localized: "Broadcast: Alert"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 704673368652037581
+    m_Localized: "Broadcast: Announcement"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2466710059097166748
+    m_Localized: "Broadcast: Text"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 84279854222450357
+    m_Localized: "Transmit Mode"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4440515514720227084
+    m_Localized: "Receive Mode"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2756722340433567815
+    m_Localized: "Send Broadcast"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4161905198732627474
+    m_Localized: "Channel {0} · {1}\nPower {2:0.#}/{3:0.#} W\nInput {4} · Output {5}\n{6}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2845229346807338871
+    m_Localized: "Powered"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4551452319542245300
+    m_Localized: "No Power"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1608249447005096859
+    m_Localized: "Radio feedback link blocked."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2217946775575917701
+    m_Localized: "Valid radio signal."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2612594906638882441
+    m_Localized: "No valid radio source."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 728290668350414317
+    m_Localized: "Battery slot"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 721038518291240838
+    m_Localized: "Signal {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2686608534550160365
+    m_Localized: "Input A {0} · B {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4435518488231843377
+    m_Localized: "Output {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 642730874495041146
+    m_Localized: "Contacts closed"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2398632909420639282
+    m_Localized: "Contacts open"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1906771268991342433
+    m_Localized: "Contact A {0} · B {1}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3087558025791609853
+    m_Localized: "Connected"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1221770448125052698
+    m_Localized: "Disconnected"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3713454942466076294
+    m_Localized: "Signal output {0}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 238516364016764900
+    m_Localized: "This connection would create a radio feedback loop on the same circuit and channel."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1179587532914927288
+    m_Localized: "Electrical wires cannot cross the relay body cell."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3235120247462201319
+    m_Localized: "Listening"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1685474569092357487
+    m_Localized: "Not listening"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

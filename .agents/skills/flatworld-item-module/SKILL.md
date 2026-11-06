@@ -30,6 +30,8 @@ description: "FlatWorld 物品/模块的身份、生命周期、定义装配、�
 
 ## 身份与模块边界
 
+- 对讲机 `Mod_RadioTransceiver` 在手持或副手装备且开机有电时登记；退出资格立即注销。单电池槽通过 `RadioBatteryStorage` 读写电池自身冷模块状态，空电池保留、半电拆装不回满；模块与装备路径不得重复扣电。联机嵌套状态按真实持有GUID保留权威值，不重载整套库存来刷新电量。
+
 - 运行时物品归属由 `GameplayWorldRegistry` 的世界物品账本和反向索引统一维护，Item 不缓存世界身份；注册入口按拥有者或明确世界上下文登记。Item 的 Load/Save/Unload/Tick 借用自身世界，每步回调核对归属修订，作用域不跨 yield。船内起降沿正式事务迁原实例、机器和库存，不能通过重建外壳绕过账本。
 - 轻量掉落模拟按 WorldKey 持有，Scene 解绑只释放显示，重绑沿用原载荷与句柄；`TransferWorldItems` 批量移交保留旧句柄转发和回滚。`SimulateWithoutObservers` 的局部世界持续运行，不按本机视距停更物品；其它未加载世界仍按实际宿主能力处理。
 - 子定义模块声明 `inherit:false` 时整体替换父模块，同 Prefab 也不深合并；其余模块正常继承。该作者标记在 JObject 解析后移除，不扩展运行时 DTO。

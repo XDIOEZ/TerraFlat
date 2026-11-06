@@ -1,5 +1,7 @@
 # 机械、电力与耦合调度离线回归
 
+电路新增直接编译正式 `CircuitSignalNetworkGraph`：四门全部真值组合、旧步读取、反相环确定性振荡、候选图不污染现有线路、有效零/反馈阻断设备通知，以及连续双触点继电器控制真实功率；不代替Unity现场与双端验收。
+
 运行：`dotnet run --project Tools/Tests/MachineNetworks/MachineNetworks.Tests.csproj`
 
 直接编译生产 `MechanicalNetwork`、`MechanicalNetworkGraph.Conveyors`、`ConveyorPath`、`ConveyorPresentation`、`ElectricalNetwork`、`MachineWorld.MechanicalSolver` 和 `MachineWorld.Electrical`；替身只提供 Unity 数学/贴图元数据、外部机器定义和环境入口。

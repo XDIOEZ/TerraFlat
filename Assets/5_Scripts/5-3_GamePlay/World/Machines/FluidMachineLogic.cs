@@ -17,6 +17,7 @@ public sealed class FluidMachineLogic : MachineLogic, IContainerPortProvider
     public FuelData Fuel => SolidFuelBurner?.Fuel;
     public float FuelRatio => Fuel?.Fuel.y > 0 ? Mathf.Clamp01(Fuel.Fuel.x / Fuel.Fuel.y) : 0;
     public override bool IsBurning => !State.Ruptured && SolidFuelBurner?.IsBurning == true;
+    public override bool IsActuallyWorking => Entity.Active && !State.Ruptured && !string.IsNullOrEmpty(State.LastFlowPhase);
     public override bool CanAct => !State.Ruptured && (SolidFuelBurner?.CanAct ?? base.CanAct);
     public float GetFuelAbsorptionProgress(int slotIndex) => SolidFuelBurner?.Progress(slotIndex) ?? 0;
     private readonly IDisposable combustionSourceLease;

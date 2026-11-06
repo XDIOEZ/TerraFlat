@@ -62,7 +62,8 @@ public static class MachineInventoryCommands
     {
         result = false;
         if (GameNetwork.HasStateAuthority || source?.MachineOwner == null && target?.MachineOwner == null &&
-            source is not SpacesuitTankInventory && target is not SpacesuitTankInventory) return false;
+            source is not SpacesuitTankInventory && target is not SpacesuitTankInventory &&
+            source is not RadioBatteryInventory && target is not RadioBatteryInventory) return false;
         result = RemoteTransferRequested?.Invoke(source, sourceIndex, target, targetIndex, operation, amount) == true;
         return true;
     }
@@ -100,6 +101,10 @@ public static class MachineInventoryCommands
         }
         foreach (var pair in PlayerInventories(actor))
             if (ReferenceEquals(pair.Inventory, inventory)) { address = pair.Address; return true; }
+        if (inventory is RadioBatteryInventory radio &&
+            RadioTransceiverCommands.TryFindActiveDevice(actor, radio.Device?.Guid ?? 0, out ItemData device) &&
+            ReferenceEquals(RadioTransceiverSystem.Bind(device, actor)?.Inventory, inventory))
+        { address = new MachineInventoryAddress { PlayerInventory = "@radio:" + device.Guid }; return true; }
         foreach (ItemData suit in OwnedSpacesuits(actor))
         {
             SpacesuitBinding binding = SpacesuitSystem.GetBinding(suit, actor);
@@ -114,6 +119,12 @@ public static class MachineInventoryCommands
     public static Inventory Resolve(Item actor, MachineInventoryAddress address)
     {
         if (actor == null || address.Index < 0) return null;
+        if (IsRadioAddress(address))
+        {
+            if (!int.TryParse(address.PlayerInventory.Substring(7), out int guid) ||
+                !RadioTransceiverCommands.TryFindActiveDevice(actor, guid, out ItemData device)) return null;
+            return RadioTransceiverSystem.Bind(device, actor)?.Inventory;
+        }
         if (address.MachineId == 0 && address.Index >= 0 && address.Index <= 1 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true)
         {
             if (!int.TryParse(address.PlayerInventory.Substring(6), out int guid)) return null;
@@ -177,6 +188,18 @@ public static class MachineInventoryCommands
 
     public static bool IsSpacesuitAddress(MachineInventoryAddress address)
         => address.MachineId == 0 && address.Index >= 0 && address.Index <= 1 && address.PlayerInventory?.StartsWith("@suit:", StringComparison.Ordinal) == true;
+    public static bool IsRadioAddress(MachineInventoryAddress address)
+        => address.MachineId == 0 && address.Index == 0 && address.PlayerInventory?.StartsWith("@radio:", StringComparison.Ordinal) == true;
+
+    public static IEnumerable<ItemData> OwnedRadioTransceivers(Item actor)
+    {
+        if (actor == null) yield break;
+        foreach (var pair in PlayerInventories(actor))
+            if (pair.Inventory?.Data?.itemSlots != null)
+                foreach (ItemSlot slot in pair.Inventory.Data.itemSlots)
+                    if (slot?.itemData != null && FluidTankStorage.FindBinary(slot.itemData, Mod_RadioTransceiver.ModuleId) != null)
+                        yield return slot.itemData;
+    }
     #endregion
 
     #region 私有存档的网络裁剪

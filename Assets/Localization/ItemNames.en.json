@@ -538,6 +538,24 @@
     "TeaLeafCrop": "Tea Bush",
     "Seed_TeaLeaf": "Tea Seeds",
     "Sugar": "Sugar",
-    "SoybeanMeal": "Soybean Meal"
+    "SoybeanMeal": "Soybean Meal",
+    "SignalWire": "Signal Wire",
+    "SignalWire_Summoner": "Signal Wire",
+    "LogicGate_AND": "AND Logic Gate",
+    "LogicGate_AND_Summoner": "AND Logic Gate",
+    "LogicGate_OR": "OR Logic Gate",
+    "LogicGate_OR_Summoner": "OR Logic Gate",
+    "LogicGate_NOT": "NOT Logic Gate",
+    "LogicGate_NOT_Summoner": "NOT Logic Gate",
+    "LogicGate_XOR": "XOR Logic Gate",
+    "LogicGate_XOR_Summoner": "XOR Logic Gate",
+    "SignalRelay": "Signal Relay",
+    "SignalRelay_Summoner": "Signal Relay",
+    "RadioSignalConverter": "Radio Signal Converter",
+    "RadioSignalConverter_Summoner": "Radio Signal Converter",
+    "RadioStation": "Radio Station",
+    "RadioStation_Summoner": "Radio Station",
+    "RadioTransceiver": "Radio Transceiver",
+    "Radio_Battery": "Radio Battery"
   }
 }

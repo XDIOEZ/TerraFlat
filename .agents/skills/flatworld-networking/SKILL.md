@@ -5,7 +5,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 
 # FlatWorld 联机
 
-- 协议40：Mirror 连接代理 NetworkWorldPlayer 保留，核心身体为通用 Item。Join/ProfileId 是稳定身份，PlayerName/DisplayName 仅显示；权限来自连接与能力模块，不能从显示名推断。公开快照与档案元数据同范围裁剪，ECS 外部战斗代理仍随通用身体注册/更新/释放。
+- 协议41：Mirror 连接代理 NetworkWorldPlayer 保留，核心身体为通用 Item。Join/ProfileId 是稳定身份，PlayerName/DisplayName 仅显示；权限来自连接与能力模块，不能从显示名推断。公开快照与档案元数据同范围裁剪，ECS 外部战斗代理仍随通用身体注册/更新/释放。
 - 原生攻击通过 ActorControl→本体 combat 能力；owned 预测与服务器 Command 共用原有冷却，命令携带 RealmRevision。远端服务器推进身体状态，客户端手控不运行自主树。
 - 连接代理同步 actorDefinitionId，观察者缺档案数据时按该Actor创建身体；不能先造Human再把其他物种快照合入。创建模板只在权威端首次创建Human时注入，不给远端影子或动物补人形能力。
 
@@ -23,7 +23,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - `NetworkItemStateCoordinator` 的 `Spawning/Buildings/MachineReplication` 分管生成、建造事务与机器复制；`NetworkBuildingRequestLedger` 统一建造/拆除回执、到期与断线清理，等待帧不复制键数组。规则 `networking/building_request_ledger`。
 - `Gameplay/NetworkSpaceStateCoordinator*.cs/NetworkWorldPlayer.Space.cs/NetworkSpaceInterestManagement.cs`：太空输入、限额分片快照、真实距离观察和投射物表现。
 - `SaveDataMgr.CreateCompressedNetworkSnapshot/ApplyCompressedNetworkSnapshot`：入世快照。
-- Gameplay 协议为 40；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
+- Gameplay 协议为 41；入世与维度快照只传目标世界元数据，地形、生态、天气和实体按观察窗口请求。握手尚无玩家身份时按授权出生窗口取区块；WorldReady 后逐块补实体基线并等待回执，失败持续重试。
 - `Gameplay/NetworkModeUIController*.cs`：面板；资源为 `Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab`、`Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
 - 假人回归：`Gameplay/Testing/GameplayTestNetworkBots*.cs` 和 `GameplayTestBotTransport.cs`，Lua 入口 `GameplayTests/Systems/Networking/gameplay-suite.json`；同进程独立连接走正式 Mirror 收发和服务端规则，覆盖入世/身份/输入/断线重连/拾取租约，不代表真实 Client 库存、Host 本地接管或 LAN 通过。
 - 假人手写 Mirror Command 参数时，`uint` 须使用 Weaver 对应的 `WriteVarUInt`；定长 `WriteUInt` 会使后续参数错位。
@@ -74,6 +74,7 @@ description: "FlatWorld 的 Mirror/KCP 会话、玩家权威、世界快照、�
 - 状态与位姿分别复制：普通世界状态包不带位姿，`NetworkItemPoseMessage` 独立递增版本；出生/完整包带当前姿态版本，客户端拒绝旧位姿。DTO 协议号由 `NetworkGameplayProtocol` 管理。
 - 天气雷击复制同时携带最新 LightningCell、LightningStrength 和序号，客户端只播放同落点的视觉/雷声，不重算落点或伤害；初始同步只建基线。
 - 机器走 `MachineWorld` 快照、删除消息和转速增量，不进普通 Item 状态流。完整重同步清空旧节点；拆除先发布召唤器再删节点；客户端库存交互只发命令。
+- 电路位值/触点/无线来源有效性与供电按 `SignalOnly` 轻量修订同步，完整机器基线携同样字段；客户端只表现、不重算。无线文字按实际接收设备定向投递，按世界代际、来源/接收端与登记代际去重，完整快照不重播文字或Cue。
 - 通用机器操作沿现有响应包回传 token、实体、操作、参数与真实结果，UI按本次请求匹配；世界门禁拒绝立即带原因回执，8秒超时或断连只报未确认，库存回执排序保留原语义。
 - 机器快速转移成功回执携带同次源/目标库存快照及最多 256 个精确收货槽/数量/目标 GUID，客户端仅匹配未超时 token、Accepted 且两端快照成功应用后发布动画反馈；不从加工/其他玩家引起的数量增量猜收货，远端请求服务端执行范围抑制 Host 本地动画。新增消息字段须同步提升 Gameplay 协议。
 

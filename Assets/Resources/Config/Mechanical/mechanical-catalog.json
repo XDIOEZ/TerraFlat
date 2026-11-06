@@ -187,7 +187,14 @@
         "ConversionEfficiency": 1,
         "NominalVoltage": 120,
         "PowerWatts": 600
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "electrical"
+        }
     },
     {
       "Id": "Wire_Copper",
@@ -252,7 +259,14 @@
         "CapacityJoules": 60000,
         "MaxChargeWatts": 600,
         "MaxDischargeWatts": 600
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "electrical"
+        }
     },
     {
       "Id": "Battery_LithiumIronPhosphate",
@@ -264,7 +278,14 @@
         "CapacityJoules": 60000,
         "MaxChargeWatts": 600,
         "MaxDischargeWatts": 600
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "electrical"
+        }
     },
     {
       "Id": "Creative_Power_Source",
@@ -276,7 +297,14 @@
         "NominalVoltage": 120,
         "PowerWatts": 0,
         "UnlimitedGeneration": true
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "electrical"
+        }
     },
     {
       "Id": "Conveyor_Wood",
@@ -906,7 +934,14 @@
         "NominalVoltage": 120,
         "PowerWatts": 600,
         "DemandProvider": "fluid"
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "logic"
+        }
     },
     {
       "Id": "ElectricLightBulb",
@@ -941,7 +976,14 @@
         "EmissiveSprite": true,
         "EmissiveStartLocalY": 0.14,
         "PanelId": "UI_Mechanical"
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "logic"
+        }
     },
     {
       "Id": "InductionStove",
@@ -968,7 +1010,14 @@
         "InputMaxWeightKg": 300,
         "InputMaxVolumeLiters": 300,
         "PanelId": "UI_Furnace"
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "logic"
+        }
     },
     {
       "Id": "ElectricHeater",
@@ -988,7 +1037,14 @@
         "Radius": 3,
         "TargetTemperature": 60,
         "PanelId": "UI_Mechanical"
-      }
+      },
+      "Signal": {
+          "Kind": "source",
+          "InputA": "",
+          "InputB": "",
+          "Output": "up",
+          "SourceProvider": "logic"
+        }
     },
     {
       "Id": "FuelEngine",
@@ -1581,6 +1637,153 @@
           }
         ],
         "VolumeLiters": 1
+      }
+    },
+    {
+      "Id": "SignalWire",
+      "Kind": "signal-wire",
+      "Ports": "none",
+      "LogicId": "",
+      "PlacementLayer": 4,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": false,
+      "CastVisualShadows": false,
+      "Signal": {
+        "Kind": "wire",
+        "InputA": "",
+        "InputB": "",
+        "Output": "",
+        "SourceProvider": ""
+      }
+    },
+    {
+      "Id": "LogicGate_AND",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "circuit-signal",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "and",
+        "InputA": "left",
+        "InputB": "down",
+        "Output": "right",
+        "SourceProvider": ""
+      }
+    },
+    {
+      "Id": "LogicGate_OR",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "circuit-signal",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "or",
+        "InputA": "left",
+        "InputB": "down",
+        "Output": "right",
+        "SourceProvider": ""
+      }
+    },
+    {
+      "Id": "LogicGate_NOT",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "circuit-signal",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "not",
+        "InputA": "left",
+        "InputB": "",
+        "Output": "right",
+        "SourceProvider": ""
+      }
+    },
+    {
+      "Id": "LogicGate_XOR",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "circuit-signal",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "xor",
+        "InputA": "left",
+        "InputB": "down",
+        "Output": "right",
+        "SourceProvider": ""
+      }
+    },
+    {
+      "Id": "SignalRelay",
+      "Kind": "facility",
+      "Ports": "none",
+      "LogicId": "circuit-signal",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "relay",
+        "InputA": "down",
+        "InputB": "",
+        "Output": "up",
+        "SourceProvider": ""
+      },
+      "Electrical": {
+        "Role": "switch",
+        "Connection": "cell",
+        "ContactA": "left",
+        "ContactB": "right"
+      }
+    },
+    {
+      "Id": "RadioSignalConverter",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "radio-converter",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Signal": {
+        "Kind": "radio",
+        "InputA": "right",
+        "InputB": "",
+        "Output": "right",
+        "SourceProvider": "radio-converter"
+      },
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "left",
+        "NominalVoltage": 120,
+        "PowerWatts": 5
+      }
+    },
+    {
+      "Id": "RadioStation",
+      "Kind": "consumer",
+      "Ports": "none",
+      "LogicId": "radio-station",
+      "PlacementLayer": 0,
+      "PlacementRotationSteps": 4,
+      "BlocksMovement": true,
+      "CastVisualShadows": true,
+      "Electrical": {
+        "Role": "consumer",
+        "Connection": "left",
+        "NominalVoltage": 120,
+        "PowerWatts": 20
       }
     }
   ],
