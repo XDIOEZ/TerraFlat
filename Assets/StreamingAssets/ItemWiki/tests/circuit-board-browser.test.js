@@ -17,6 +17,7 @@ async function install() {
     await page.goto("http://circuit.test/");
     await page.addStyleTag({ path: path.join(base, "circuit-board.css") });
     await page.addScriptTag({ path: path.join(base, "circuit-board-model.js") });
+    await page.addScriptTag({ path: path.join(base, "circuit-adder-panel.js") });
     await page.addScriptTag({ path: path.join(base, "circuit-board.js") });
     await page.evaluate(({ catalog, fiber }) => {
         window.circuit = ItemCircuitBoard.create({ root: document.getElementById("root") });
@@ -96,6 +97,49 @@ test("铺满退出与窄屏不产生横向滚动", async () => {
     await page.screenshot({ path: path.join(output, "circuit-board-mobile.png"), fullPage: true });
 });
 
+test("分类筛选、F 快速添加、快捷键与属性面板收合", async () => {
+    await page.locator('[data-category="逻辑"]').click();
+    assert.equal(await page.locator('.cb-palette-list [data-tool="sim:and"]').count(), 1);
+    assert.equal(await page.locator('.cb-palette-list [data-tool="sim:switch"]').count(), 0);
+    await page.locator('.cb-canvas').focus(); await page.keyboard.press("f");
+    await page.locator('[data-role="quick-search"]').fill("与门");
+    assert.equal(await page.locator('.cb-quick-result').count(), 1);
+    await page.keyboard.press("Enter");
+    assert.equal(await page.locator('.cb-quick-picker:visible').count(), 0);
+    await clickCell(8, 9);
+    assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9)?.type), "sim:and");
+    await page.locator('.cb-map-toolbar [data-action="toggle-inspector"]').click();
+    assert.equal(await page.locator('.cb-inspector-collapsed').count(), 1);
+    await page.keyboard.press("i");
+    assert.equal(await page.locator('.cb-inspector-collapsed').count(), 0);
+    await page.locator('.cb-canvas').focus();
+    await page.keyboard.press("v"); assert.match(await page.locator('[data-role="tool-name"]').textContent(), /选择/);
+    await page.keyboard.press("w"); assert.equal(await page.locator('.cb-palette-list [data-tool="Wire_Copper"].active').count(), 0);
+    assert.equal(await page.locator('.cb-quicktools [data-quick-tool="Wire_Copper"].active').count(), 1);
+    await page.keyboard.press("s"); assert.equal(await page.locator('.cb-quicktools [data-quick-tool="sim:signal"].active').count(), 1);
+});
+
+test("从元件库拖放到画布可撤销，窄屏自动保持示例可见", async () => {
+    await page.locator('[data-category="控制"]').click();
+    const bounds = await page.locator('.cb-canvas').boundingBox(), target = await point(8, 9);
+    await page.locator('.cb-palette-list [data-tool="sim:switch"]').dragTo(page.locator('.cb-canvas'), {
+        targetPosition: { x: target.x - bounds.x, y: target.y - bounds.y }
+    });
+    assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9)?.type), "sim:switch");
+    await page.locator('[data-action="undo"]').click();
+    assert.equal(await page.evaluate(() => circuit.getBoard().at(8, 9)), null);
+    await page.setViewportSize({ width: 430, height: 1000 }); await page.waitForTimeout(120);
+    const view = await page.evaluate(() => {
+        const rectangle = document.querySelector(".cb-canvas").getBoundingClientRect();
+        return { rect: { left: rectangle.left, right: rectangle.right, top: rectangle.top, bottom: rectangle.bottom },
+            points: [circuit.getCellClientPoint(4, 8), circuit.getCellClientPoint(12, 3)] };
+    });
+    for (const point of view.points) {
+        assert.ok(point.x > view.rect.left && point.x < view.rect.right, "缩窄视窗后示例仍在横向可见范围");
+        assert.ok(point.y > view.rect.top && point.y < view.rect.bottom, "缩窄视窗后示例仍在纵向可见范围");
+    }
+});
+
 test("隐藏时加载再显示自动居中，运行时选择观察不会暂停", async () => {
     await page.evaluate(catalog => {
         circuit.hide(); document.getElementById("root").hidden = true; circuit.setCatalog(catalog, []);
@@ -145,4 +189,63 @@ test("科技树配置失败不会阻断电路实验室", { skip: !process.env.IT
     await page.locator('#circuitBoardRoot [data-action="step"]').click();
     assert.match(await page.locator('#circuitBoardRoot [data-role="clock"]').textContent(), /00:00.05/);
     assert.match(await page.locator('#statusText').textContent(), /科技树暂不可用/);
+});
+
+test("64 位加法示例在真实棋盘供电，显示第 65 位进位和完整结果", async () => {
+    await page.locator('[data-role="example"]').selectOption("adder64");
+    await page.locator('[data-adder-role="result"]').waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(() => circuit.getBoard().busNetworks.length), 3);
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
+    assert.match(await page.locator('[data-adder-role="metrics"]').textContent(), /64 \/ 64/);
+    assert.match(await page.locator('[data-adder-role="metrics"]').textContent(), /64.*第 65 位.*1/s);
+    await page.locator('[data-adder-role="format"]').selectOption("decimal");
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), (1n << 64n).toString(10));
+    await page.locator('[data-adder-role="format"]').selectOption("binary");
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0b1" + "0".repeat(64));
+    await page.locator('[data-adder-action="last"]').click();
+    assert.match(await page.locator('[data-adder-role="bit-table"]').textContent(), /#63/);
+    await page.screenshot({ path: path.join(output, "circuit-board-adder64.png"), fullPage: true });
+});
+
+test("加法工作台修改 64 位输入、阻断供电与撤销后都正确更新", async () => {
+    await page.locator('[data-role="example"]').selectOption("adder64");
+    const input = page.locator('[data-adder-operand="a"]');
+    await input.fill("0xABCDEF"); await input.press("Tab");
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xABCDF0");
+    await page.locator('[data-adder-action="simple"]').click();
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xBE0245");
+    await page.locator('[data-adder-operand="b"]').fill("0x" + "F".repeat(17));
+    await page.locator('[data-adder-operand="b"]').press("Tab");
+    assert.match(await page.locator('[data-adder-role="status"]').textContent(), /超过 64 位/);
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0xBE0245");
+    await page.evaluate(() => {
+        const b = circuit.getBoard(); b.erase(10, 12, "power"); b.refresh();
+    });
+    await page.locator('[data-action="step"]').click();
+    assert.match(await page.locator('[data-adder-role="status"]').textContent(), /供电不足/);
+    assert.match(await page.locator('[data-adder-role="result"]').textContent(), /检查 A\/B/);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+});
+
+test("64 位示例导出导入后保留数据总线、输入数值及计算结果", async () => {
+    await page.locator('[data-role="example"]').selectOption("adder64");
+    const before = await page.evaluate(() => JSON.stringify(circuit.getBoard().serialize()));
+    const downloadPromise = page.waitForEvent("download");
+    await page.locator('[data-action="export"]').click();
+    const exported = JSON.parse(fs.readFileSync(await (await downloadPromise).path(), "utf8"));
+    assert.equal(exported.signal.filter(s => s.type === "sim:bus64").length, 18);
+    await page.locator('[data-action="clear"]').click();
+    await page.locator('[data-role="file"]').setInputFiles({ name: "adder64.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(exported)) });
+    await page.waitForFunction(() => circuit.getBoard().busNetworks.length === 3);
+    assert.equal(await page.evaluate(() => JSON.stringify(circuit.getBoard().serialize())), before);
+    assert.equal(await page.locator('[data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
+});
+
+test("真实 ItemWiki 的 64 位新示例资源和工作台可完整读取", { skip: !process.env.ITEM_WIKI_BASE_URL }, async () => {
+    await page.goto(`${process.env.ITEM_WIKI_BASE_URL}#circuit-board`, { waitUntil: "domcontentloaded" });
+    await page.locator('#circuitBoardRoot [data-role="example"]').selectOption("adder64");
+    await page.locator('#circuitBoardRoot [data-adder-role="result"]').waitFor({ state: "visible" });
+    assert.equal(await page.locator('#circuitBoardRoot [data-adder-role="result"]').textContent(), "0x1" + "0".repeat(16));
+    await page.locator('#circuitBoardRoot [data-adder-action="simple"]').click();
+    assert.equal(await page.locator('#circuitBoardRoot [data-adder-role="result"]').textContent(), "0xBE0245");
 });

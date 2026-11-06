@@ -25,6 +25,7 @@
 - 科技树 `tech-tree-eras.json` 配展示时代/细分阶段，`tech-tree-model.js` 从当前配方、物品加工和机器/温变数据建关系；processing 不继承。新增浏览器资源或配置入口同步 `wiki_server.py` 公开白名单。
 - ItemWiki「行为树」分页只读展示继承后的 Actor 树及 Manifest 的 `behaviorSubtrees`；`behavior-tree-model.js` 处理局部覆盖、展开、实参和引用生物，`behavior-tree.js` 管树图交互。回归 `tests/behavior-tree-model.test.js` 与 Python 公开资源路由。
 - ItemWiki「电路实验室」由 `circuit-board-model.js` 从真实 Electrical 目录建立设备库，`circuit-board.js/.css` 管三层网格与本机方案；逻辑/控制口为模拟扩展，电力保留整网分摊和过载仅告警，不写游戏配置。回归 `tests/circuit-board-{model,browser}.test.js` 与公开资源白名单；设计边界见 Wiki README。
+- 64 位加法示例为可观察的逐位进位宏：蓝色宽总线在 `circuit-board-model.js` 进行独立拓扑/冲突判断；`circuit-adder-panel.js` 展示完整精确结果、64 级真值和输入修改。元件只是网页设计实验，不是游戏运行时数字总线。
 - 科技树资源区按 NaturalItems 的群系组合分块，伴生沿宿主、产物沿采集/掉落链传递来源；洞穴/小行星独立标注，Tiles.groundHarvest 只标地表采挖，未映射生物与未知来源不猜群系。节点不复制，时代独立；`stages.layoutBand: "natural"` 仍优先指定整组进入资源区，其他自然生成/采矿/树木来源自动识别。新增数据源须同步公开服务 manifest 白名单与布局/浏览器回归。
 - 科技树连线仅绘制所选物品的直接上下游（支持配方聚焦）；依赖链只筛节点。低于35%卡片仅显示名称，完整名字提示保持屏幕字号，停止画布图标观察，回近景恢复；浏览器回归 `tests/tech-tree-browser.test.js`，安装方式见 Wiki README。
 - 连线点击复用`select`定位另一端，反向可返回；悬停/聚焦说明只消费edge/route条件。SVG加宽命中线统一置于可见线下方，避免密集线互挡，保留viewport拖拽和防误触时限。
