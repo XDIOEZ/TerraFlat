@@ -45,7 +45,7 @@
         let tool = "select", rotation = 0, selected = null, zoom = 1, panX = 32, panY = 32, cssWidth = 1, cssHeight = 1;
         let pointer = null, space = false, hover = null, accumulator = 0, lastFrame = 0, frameId = 0, lastReadout = 0, revision = 0, importId = 0;
         let undo = [], redo = [], wave = [], saveTimer = 0, needsFit = true, catalogSignature = "", savedStatus = "浏览器自动保存已启用";
-        let category = "全部", pickerOpen = false, pickerIndex = 0, pickerMatches = [], dragTool = null, pendingWire = null, wirePreview = null;
+        let category = "全部", pickerOpen = false, pickerIndex = 0, pickerMatches = [], dragTool = null, pendingWire = null, wirePreview = null, hoveredPort = null;
         const layers = { power: true, signal: true, device: true }, storageKey = `flatworld-circuit-board-v1:${location.pathname}`;
         const button = action => host.querySelector(`[data-action="${action}"]`);
         function message(text, error = false) { $("status").textContent = text; $("status").classList.toggle("cb-error", error); }
@@ -77,11 +77,12 @@
         }
         function setTool(value) {
             tool = value; if (registry.has(value)) $("erase-layer").value = registry.get(value).kind === "wire" ? "power" : ["signal", "cross"].includes(registry.get(value).kind) ? "signal" : "device";
-            pendingWire = null; wirePreview = null;
+            cancelConnection(); hoveredPort = null;
             if (pickerOpen) closeQuickPicker();
             renderPaletteSelection();
             $("tool-name").textContent = value === "select" ? "选择 / 移动 · 拖引脚接线" : value === "erase" ? "擦除当前层" : value === "poke" ? "测试 · 点击开关" : registry.get(value)?.name || value;
             canvas.dataset.mode = value === "select" ? "select" : value === "erase" ? "erase" : value === "poke" ? "interact" : "place";
+            canvas.classList.remove("cb-over-port");
         }
         function renderPaletteSelection() {
             for (const element of host.querySelectorAll("[data-tool]")) { const active = element.dataset.tool === tool; element.classList.toggle("active", active); element.setAttribute("aria-pressed", String(active)); }
@@ -330,6 +331,22 @@
                 ctx.fillStyle = tool === "erase" ? "#ff758922" : "#b6e6da12"; ctx.fillRect(hover.x * 64, hover.y * 64, 64, 64); ctx.strokeStyle = tool === "erase" ? COLORS.error : "#85b8ab88"; ctx.lineWidth = 1.5; ctx.strokeRect(hover.x * 64 + 1, hover.y * 64 + 1, 62, 62);
                 const def = registry.get(tool); if (def && !["wire", "signal", "cross"].includes(def.kind) && !board.at(hover.x, hover.y)) drawDevice({ id: "preview", type: tool, x: hover.x, y: hover.y, rotation, params: {}, runtime: {} }, true);
             }
+            if (hoveredPort && !wirePreview) {
+                ctx.strokeStyle = hoveredPort.layer === "power" ? "#f7c768" : hoveredPort.layer === "bus" ? "#7bd9ff" : "#82f4c2";
+                ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hoveredPort.viewX, hoveredPort.viewY, 8, 0, Math.PI * 2); ctx.stroke();
+            }
+            if (wirePreview?.path?.length) {
+                const { source, target, path } = wirePreview;
+                ctx.lineCap = "round"; ctx.lineJoin = "round";
+                ctx.lineWidth = source.layer === "power" ? 6 : source.layer === "bus" ? 9 : 5;
+                ctx.strokeStyle = wirePreview.invalid ? COLORS.error : target ? (source.layer === "power" ? "#f7c768" : source.layer === "bus" ? "#7bd9ff" : "#82f4c2") : "#a8bcc4";
+                ctx.setLineDash([10, 7]); ctx.beginPath(); ctx.moveTo(source.viewX, source.viewY);
+                for (const cell of path) ctx.lineTo(cell.x * 64 + 32, cell.y * 64 + 32);
+                if (target?.viewX !== undefined) ctx.lineTo(target.viewX, target.viewY);
+                ctx.stroke(); ctx.setLineDash([]);
+                ctx.lineWidth = 3; ctx.strokeStyle = "#eafbf3"; ctx.beginPath(); ctx.arc(source.viewX, source.viewY, 9, 0, Math.PI * 2); ctx.stroke();
+                if (target?.viewX !== undefined) { ctx.beginPath(); ctx.arc(target.viewX, target.viewY, 9, 0, Math.PI * 2); ctx.stroke(); }
+            }
             ctx.restore(); drawScope();
         }
         function animation(now) {
@@ -393,11 +410,23 @@
         function routeWire(source, target) {
             if (!target || source.layer !== target.layer || !board.inside(source.x, source.y) || !board.inside(target.x, target.y)) return null;
             const layer = source.layer, start = M.key(source.x, source.y), end = M.key(target.x, target.y);
+            const lines = layer === "power" ? board.power : board.signal;
+            const expectedKind = layer === "power" ? "wire" : layer === "bus" ? "databus" : "signal";
+            const networkAt = cell => layer === "power" ? board.powerIndex.get(cell) : layer === "bus" ?
+                board.busIndex?.get(cell) : board.signalIndex.get(cell + ":a");
+            const intendedNetworks = new Set([networkAt(start), networkAt(end)].filter(index => index !== undefined));
             const passable = (x, y) => {
                 if (!board.inside(x, y)) return false;
-                const device = board.at(x, y), existing = (layer === "power" ? board.power : board.signal).get(M.key(x, y));
-                if (layer === "power") return !device || board.definition(device).kind !== "relay";
-                return !device && (!existing || registry.get(existing)?.kind === (layer === "bus" ? "databus" : "signal"));
+                const cell = M.key(x, y), device = board.at(x, y), existing = lines.get(cell);
+                if (layer === "power" ? device && board.definition(device).kind === "relay" : !!device) return false;
+                if (existing && registry.get(existing)?.kind !== expectedKind) return false;
+                if (existing && cell !== start && cell !== end && !intendedNetworks.has(networkAt(cell))) return false;
+                // 与第三条已有网络相邻会形成意外短路，自动布线应绕开而非偷偷合网。
+                for (const [dx, dy] of M.DIRECTIONS) {
+                    const neighbor = M.key(x + dx, y + dy), neighborType = lines.get(neighbor);
+                    if (neighborType && (!intendedNetworks.has(networkAt(neighbor)) || registry.get(neighborType)?.kind !== expectedKind)) return false;
+                }
+                return true;
             };
             if (!passable(source.x, source.y) || !passable(target.x, target.y)) return null;
             const straight = horizontalFirst => {
@@ -432,21 +461,23 @@
             return path.reverse();
         }
         function previewConnection(source, point) {
+            const port = portAt(point), invalid = !!(port && port.layer !== source.layer);
             const target = wireTarget(point, source);
-            const path = routeWire(source, target || point);
-            wirePreview = { source, target, path };
-            $("wire-hint").textContent = target && path ? "松开连接「" + target.name + "」" : "指向同类接口或已有线路 · Esc 取消";
+            const path = routeWire(source, target || { ...point, layer: source.layer });
+            wirePreview = { source, target, path, invalid };
+            $("wire-hint").textContent = invalid ? "接口类型不匹配：电力和信号不能混接" : target && path ? "松开连接「" + target.name + "」" : "指向同类接口或已有线路 · Esc 取消";
             $("wire-hint").classList.add("cb-connecting");
+            $("wire-hint").classList.toggle("cb-connect-invalid", invalid);
         }
         function cancelConnection() {
             pendingWire = null; wirePreview = null;
-            $("wire-hint").classList.remove("cb-connecting");
+            $("wire-hint").classList.remove("cb-connecting", "cb-connect-invalid");
             $("wire-hint").textContent = "拖动引脚直接连线 · Esc 取消 · 空格平移";
         }
         function connectPorts(source, target) {
             if (!target || (source.deviceId && source.deviceId === target.deviceId && source.name === target.name)) return false;
             const path = routeWire(source, target), type = wireType(source, target);
-            if (!path || !type) { message("无法避开设备连接两端，请用布线工具手动调整。", true); return false; }
+            if (!path || !type) return "blocked";
             const previous = beforeEdit(), layer = source.layer === "power" ? board.power : board.signal;
             for (const point of path) if (!layer.has(M.key(point.x, point.y))) board.paint(type, point.x, point.y);
             finishEdit(previous, "已连接 " + source.name + " → " + target.name + "（" + path.length + " 格）。");
@@ -478,6 +509,17 @@
             if (!ready || pointer || ![0, 1, 2].includes(event.button)) return;
             event.preventDefault(); canvas.focus(); const point = cellPoint(event);
             if (event.button === 1 || space) pointer = { mode: "pan", px: point.px, py: point.py, originX: panX, originY: panY };
+            else if (pendingWire && event.button === 2) { cancelConnection(); return; }
+            else if (tool === "select" && event.button === 0 && (pendingWire || portAt(point))) {
+                const source = pendingWire || portAt(point);
+                if (!pendingWire) select(source.deviceId);
+                pointer = { mode: "connect", source, last: point };
+                previewConnection(source, point);
+            }
+            else if (tool === "poke" && event.button === 0) {
+                const device = board.at(point.x, point.y);
+                select(device?.id); pointer = { mode: "poke", deviceId: device?.id };
+            }
             else {
                 const previous = tool === "select" && event.button === 0 ? snapshot() : beforeEdit(), device = board.at(point.x, point.y);
                 if (tool === "select" && event.button === 0) { select(device?.id); pointer = { mode: device ? "move" : "select", device: device?.id, previous }; }
@@ -492,20 +534,44 @@
         canvas.addEventListener("pointermove", event => {
             const point = cellPoint(event); hover = point;
             const device = board.at(point.x, point.y), cell = M.key(point.x, point.y), net = board.powerNetworks[board.powerIndex.get(cell)];
-            $("hover").textContent = board.inside(point.x, point.y) ? `${point.x}, ${point.y}${device ? ` · ${board.definition(device).name}` : ""}${net ? ` · ${format(net.voltage)} V / ${format(net.current)} A · ${net.status}` : ""}` : "棋盘之外 · 空格拖动返回";
+            const port = tool === "select" && !space ? portAt(point) : null;
+            hoveredPort = port; canvas.classList.toggle("cb-over-port", !!port);
+            $("hover").textContent = port ? `${port.layer === "power" ? "电力" : port.layer === "bus" ? "数据" : "信号"}接口 ${port.name} · 从此处拖动接线` :
+                board.inside(point.x, point.y) ? `${point.x}, ${point.y}${device ? ` · ${board.definition(device).name}` : ""}${net ? ` · ${format(net.voltage)} V / ${format(net.current)} A · ${net.status}` : ""}` : "棋盘之外 · 空格拖动返回";
+            if (!pointer && pendingWire) previewConnection(pendingWire, point);
             if (!pointer || pointer.id !== event.pointerId) return;
             if (pointer.mode === "pan") { panX = pointer.originX + point.px - pointer.px; panY = pointer.originY + point.py - pointer.py; }
             else if (pointer.mode === "move") { if (board.move(pointer.device, point.x, point.y)) { setRunning(false); board.refresh(); } }
             else if (pointer.mode === "paint" && (point.x !== pointer.last.x || point.y !== pointer.last.y)) { paintPath(pointer.last, point, pointer.erase); pointer.last = point; board.refresh(); }
+            else if (pointer.mode === "connect" && (point.x !== pointer.last.x || point.y !== pointer.last.y)) { previewConnection(pointer.source, point); pointer.last = point; }
         });
         function finishPointer(event) {
             if (!pointer || (event && event.pointerId !== pointer.id)) return;
             const completed = pointer; pointer = null;
             if (canvas.hasPointerCapture(completed.id)) canvas.releasePointerCapture(completed.id);
+            if (completed.mode === "connect") {
+                if (event?.type !== "pointerup") { cancelConnection(); return; }
+                const target = wireTarget(cellPoint(event), completed.source);
+                const result = connectPorts(completed.source, target);
+                if (result !== true) {
+                    pendingWire = completed.source;
+                    previewConnection(pendingWire, cellPoint(event));
+                    const otherPort = portAt(cellPoint(event));
+                    message(result === "blocked" ? "自动布线找不到安全路径：不会覆盖设备或短接其他网络，请调整布局或手动布线。" :
+                        otherPort && otherPort.layer !== pendingWire.layer ? "接口类型不匹配：电力、信号及数据线不能直接混接。" :
+                        "选中 " + pendingWire.name + " 接口，请点击或拖到另一兼容接口；Esc 取消。", result === "blocked" || !!(otherPort && otherPort.layer !== pendingWire.layer));
+                }
+                return;
+            }
+            if (completed.mode === "poke") {
+                const point = event?.type === "pointerup" ? cellPoint(event) : null;
+                if (point && board.at(point.x, point.y)?.id === completed.deviceId) toggleSwitchWithoutPausing(board.devices.get(completed.deviceId));
+                return;
+            }
             if (completed.previous !== undefined) finishEdit(completed.previous);
         }
         canvas.addEventListener("pointerup", finishPointer); canvas.addEventListener("pointercancel", finishPointer); canvas.addEventListener("lostpointercapture", finishPointer);
-        canvas.addEventListener("pointerleave", () => { if (!pointer) hover = null; });
+        canvas.addEventListener("pointerleave", () => { if (!pointer) { hover = null; hoveredPort = null; canvas.classList.remove("cb-over-port"); } });
         canvas.addEventListener("contextmenu", event => event.preventDefault());
         canvas.addEventListener("wheel", event => { event.preventDefault(); const p = canvasPoint(event); zoomAt(Math.exp(-event.deltaY * 0.001), p.px, p.py); }, { passive: false });
         // 原生拖放仅在落点提交一次布置事务，拖动途中不更改电路。
@@ -543,15 +609,15 @@
         function rotateSelected() { const device = selectedDevice(); if (!device) return; transaction(() => { device.rotation = (device.rotation + 1) & 3; board.markDirty(); }); }
         function restoreHistory(from, to) {
             if (!from.length) return; setRunning(false);
-            try { const restored = M.CircuitBoard.restore(registry, JSON.parse(from[from.length - 1])); to.push(snapshot()); from.pop(); board = restored; revision++; selected = null; wave = []; updateInspector(); updateReadouts(); persist(); syncEnvironment(); message("已恢复布置与初始参数；运行进度已重置。"); } catch (error) { message(error.message, true); }
+            try { const restored = M.CircuitBoard.restore(registry, JSON.parse(from[from.length - 1])); to.push(snapshot()); from.pop(); board = restored; revision++; selected = null; wave = []; cancelConnection(); updateInspector(); updateReadouts(); persist(); syncEnvironment(); message("已恢复布置与初始参数；运行进度已重置。"); } catch (error) { message(error.message, true); }
         }
         function syncEnvironment() { $("light").value = board.environment.light; $("light-value").textContent = `${board.environment.light}%`; $("temperature").value = board.environment.temperature; }
-        function replaceBoard(next, text) { const previous = beforeEdit(); board = next; selected = null; wave = []; syncEnvironment(); finishEdit(previous, text); fit(); }
+        function replaceBoard(next, text) { const previous = beforeEdit(); board = next; selected = null; wave = []; cancelConnection(); syncEnvironment(); finishEdit(previous, text); fit(); }
         const actions = {
             run: () => setRunning(!running), step: () => { setRunning(false); board.step(); sample(); updateReadouts(); },
             reset: () => { setRunning(false); board.reset(); wave = []; updateReadouts(); message("已重置时间、记忆状态和储量，布置保留。"); },
             undo: () => restoreHistory(undo, redo), redo: () => restoreHistory(redo, undo),
-            rotate: () => { if (tool === "select") rotateSelected(); else { rotation = (rotation + 1) & 3; renderPaletteSelection(); } }, "rotate-selected": rotateSelected,
+            rotate: () => { if (tool === "select" || tool === "poke") rotateSelected(); else { rotation = (rotation + 1) & 3; renderPaletteSelection(); } }, "rotate-selected": rotateSelected,
             delete: () => { const device = selectedDevice(); if (device) transaction(() => { board.erase(device.x, device.y, "device"); selected = null; }); },
             duplicate: () => { const device = selectedDevice(); if (!device) return; transaction(() => { for (let radius = 1; radius < 5; radius++) for (const [dx, dy] of M.DIRECTIONS) { const x = device.x + dx * radius, y = device.y + dy * radius; if (board.inside(x, y) && !board.at(x, y) && !board.signal.has(M.key(x, y)) && !(board.definition(device).kind === "relay" && board.power.has(M.key(x, y)))) { selected = board.add(device.type, x, y, device.rotation, device.params).id; return; } } throw new Error("附近没有可复制到的空格。"); }); },
             fit, "zoom-in": () => zoomAt(1.2), "zoom-out": () => zoomAt(1 / 1.2),
@@ -618,13 +684,34 @@
         });
         host.addEventListener("keydown", event => {
             if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) return;
+            if (event.key === "Escape") {
+                if (pendingWire || pointer?.mode === "connect") {
+                    event.preventDefault(); event.stopPropagation();
+                    const captureId = pointer?.id;
+                    pointer = null;
+                    if (captureId !== undefined && canvas.hasPointerCapture(captureId)) canvas.releasePointerCapture(captureId);
+                    cancelConnection(); message("已取消接线，原电路未改变。"); return;
+                }
+                if (tool !== "select") { event.preventDefault(); event.stopPropagation(); setTool("select"); return; }
+            }
             if (!event.ctrlKey && !event.metaKey && !event.altKey) {
                 const key = event.key.toLowerCase();
-                if (key === "f") { event.preventDefault(); openQuickPicker(); return; }
+                if (key === "f" || key === "a") { event.preventDefault(); openQuickPicker(); return; }
                 if (key === "v") { event.preventDefault(); setTool("select"); return; }
                 if (key === "e") { event.preventDefault(); setTool("erase"); return; }
                 if (key === "w") { event.preventDefault(); setTool(registry.has("Wire_Copper") ? "Wire_Copper" : Array.from(registry.values()).find(def => def.kind === "wire")?.id || "select"); return; }
                 if (key === "s") { event.preventDefault(); setTool("sim:signal"); return; }
+                if (key === "d" && selectedDevice()) { event.preventDefault(); actions.duplicate(); return; }
+                if (event.target === canvas && selectedDevice() && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+                    event.preventDefault();
+                    const directions = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+                    const [dx, dy] = directions[event.key], distance = event.shiftKey ? 4 : 1, device = selectedDevice();
+                    transaction(() => {
+                        if (!board.move(device.id, device.x + dx * distance, device.y + dy * distance))
+                            throw new Error("目标网格被占用或超出边界。");
+                    }, "元件已移动；导线不会自动跟随。");
+                    return;
+                }
                 if (key === "i") { event.preventDefault(); toggleInspector(); return; }
                 if (event.key === "/") { event.preventDefault(); $("search").focus(); $("search").select(); return; }
             }
@@ -637,7 +724,7 @@
         document.addEventListener("keyup", event => { if (event.key === " ") space = false; });
         document.addEventListener("keydown", event => { if (visible && !pickerOpen && event.key === "Escape" && shell.classList.contains("cb-expanded")) actions.expand(); });
         document.addEventListener("visibilitychange", () => { if (document.hidden) { setRunning(false); space = false; persist(); } });
-        window.addEventListener("blur", () => { space = false; finishPointer(); });
+        window.addEventListener("blur", () => { space = false; finishPointer(); cancelConnection(); });
         window.addEventListener("pagehide", persist);
         const observer = new ResizeObserver(resize); observer.observe(canvas.parentElement);
         updateInspector();
@@ -655,11 +742,11 @@
                         if (!nextBoard) nextBoard = M.createExample(nextRegistry, "blink");
                     }
                     registry = nextRegistry; board = nextBoard; catalogSignature = nextSignature; ready = true; setRunning(false); revision++; selected = null; wave = []; undo = []; redo = [];
-                    syncEnvironment(); renderCategories(); renderPalette(); renderQuickTools(); updateInspector(); updateReadouts(); resize(); needsFit = !visible; if (visible) fit(); message(`${Array.from(registry.values()).filter(d => d.game).length} 种游戏元件（含抽象光纤适配）+ ${Array.from(registry.values()).filter(d => !d.game).length} 种模拟扩展。${savedStatus}。`);
+                    cancelConnection(); syncEnvironment(); renderCategories(); renderPalette(); renderQuickTools(); updateInspector(); updateReadouts(); resize(); needsFit = !visible; if (visible) fit(); message(`${Array.from(registry.values()).filter(d => d.game).length} 种游戏元件（含抽象光纤适配）+ ${Array.from(registry.values()).filter(d => !d.game).length} 种模拟扩展。${savedStatus}。`);
                 } catch (error) { message(`目录刷新未应用，原棋盘保留：${error.message}`, true); }
             },
             show() { visible = true; lastFrame = 0; resize(); if (needsFit) { fit(); needsFit = false; } if (!frameId) frameId = requestAnimationFrame(animation); },
-            hide() { visible = false; setRunning(false); if (frameId) cancelAnimationFrame(frameId); frameId = 0; space = false; closeQuickPicker(); finishPointer(); if (shell.classList.contains("cb-expanded")) actions.expand(); persist(); },
+            hide() { visible = false; setRunning(false); if (frameId) cancelAnimationFrame(frameId); frameId = 0; space = false; closeQuickPicker(); finishPointer(); cancelConnection(); if (shell.classList.contains("cb-expanded")) actions.expand(); persist(); },
             getBoard: () => board,
             getCellClientPoint(x, y) { const rect = canvas.getBoundingClientRect(); return { x: rect.left + panX + (x + 0.5) * 64 * zoom, y: rect.top + panY + (y + 0.5) * 64 * zoom }; },
             setError: text => message(text, true)
