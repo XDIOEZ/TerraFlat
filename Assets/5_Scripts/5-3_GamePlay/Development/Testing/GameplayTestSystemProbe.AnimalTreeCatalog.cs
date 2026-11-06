@@ -128,8 +128,10 @@ public static partial class GameplayTestSystemProbe
 #endif
             if (shell == null) throw new InvalidOperationException($"动物 {definition.Id} 缺少正式外壳。");
             ItemModuleDefinitionDto treeDefinition = definition.Modules["ai"];
+            var scene = CreateGameplayTestProbeScene("AnimalTreeCatalog_" + definition.Id);
             GameObject root = new("[LuaAnimalTreeCatalog]") { hideFlags = HideFlags.HideAndDontSave };
             root.SetActive(false);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
             Mod_AnimalBehaviorTree host = null;
             try
             {
@@ -151,8 +153,8 @@ public static partial class GameplayTestSystemProbe
                     foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in definition.Modules)
                     {
                         ItemModuleDefinitionDto configured = pair.Value;
-                        Module module = ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Prefab) ??
-                            ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Id);
+                        Module module = ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Id) ??
+                            ItemDefinitionCatalogLoader.FindModulePrototype(instance, null, configured.Prefab);
                         if (module == null)
                         {
                             GameObject prefab = resources.GetPrefab(configured.Prefab, false);
@@ -195,7 +197,6 @@ public static partial class GameplayTestSystemProbe
                         (item.itemMods.GetModList_ByID(ModText.AI)?.Count ?? 0) == 1,
                     ["shellActors"] = shellActors, ["missingScripts"] = missingScripts,
                     ["treeLoaded"] = host.IsRuntimeLoaded && host.BehaviorTree?.Root != null,
-                    ["hasSharedSubtrees"] = host.BehaviorTree?.Subtrees?.Count > 0,
                     ["subtreeDefinitions"] = new JArray(host.BehaviorTree.Subtrees.Keys),
                     ["subtreeReferences"] = new JArray(subtreeReferences),
                     ["hasPack"] = hasPack, ["hasTerritory"] = hasTerritory,
@@ -226,6 +227,7 @@ public static partial class GameplayTestSystemProbe
             {
                 host?.Unload();
                 UnityEngine.Object.DestroyImmediate(root);
+                CloseGameplayTestProbeScene(scene);
             }
         }
         return new JObject { ["actors"] = rows };

@@ -17,6 +17,8 @@ public static class ActorPerceptionShapeCompiler
         var shapes = new List<PerceptionShape2D>();
         bool rootOverride = declaration != null && string.IsNullOrWhiteSpace(declaration.Path);
         bool applied = false;
+        Collider2D inactiveRootCollider = null;
+        ItemColliderDefinitionDto inactiveRootDefinition = null;
         foreach (Component component in shell.GetComponents<Component>())
         {
             if (component is Collider2D collider)
@@ -25,6 +27,7 @@ public static class ActorPerceptionShapeCompiler
                 ItemColliderDefinitionDto config = matches ? declaration : null;
                 applied |= matches;
                 if (config?.Enabled ?? collider.enabled) shapes.Add(CompileShape(collider, config));
+                else if (matches) { inactiveRootCollider = collider; inactiveRootDefinition = config; }
             }
             else if (component is ItemPhysicsTemplate2D template && !string.IsNullOrWhiteSpace(template.colliderType))
             {
@@ -36,10 +39,14 @@ public static class ActorPerceptionShapeCompiler
                     CreateTemplateShapeDefinition(template, matches ? declaration : null);
                 applied |= matches;
                 if (config?.Enabled ?? (leased != null ? leased.enabled : true)) shapes.Add(CompileShape(leased, config));
+                else if (matches) { inactiveRootCollider = leased; inactiveRootDefinition = config; }
             }
         }
         if (rootOverride && !applied)
             throw new InvalidOperationException($"Actor 根级感知声明找不到作者碰撞体 {declaration.Type}，请先修复外壳或配置。");
+        // 没有启用形状时，用明确声明的根几何感知角色，不改变物理碰撞状态。
+        if (shapes.Count == 0 && inactiveRootDefinition != null)
+            shapes.Add(CompileShape(inactiveRootCollider, inactiveRootDefinition));
         return shapes.ToArray();
     }
 

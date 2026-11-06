@@ -59,8 +59,8 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     {
         GameplayTestRuntimeProbe.Register("ai", "aquatic_habitat", CaptureAquaticHabitatRuntime);
         GameplayTestRuntimeProbe.RegisterAsync("ai", "aquatic_combat", CaptureAquaticCombatRuntime);
-        GameplayTestRuntimeProbe.Register("ai", "flight_land_predation", CaptureFlightLandPredationRuntime);
-        GameplayTestRuntimeProbe.Register("ai", "flight_light_avoidance", CaptureFlightLightAvoidanceRuntime);
+        GameplayTestRuntimeProbe.RegisterAsync("ai", "flight_land_predation", CaptureFlightLandPredationRuntime);
+        GameplayTestRuntimeProbe.RegisterAsync("ai", "flight_light_avoidance", CaptureFlightLightAvoidanceRuntime);
     }
 
     // 使用真实生物和液体层，结束时还原本轮自有地块。
@@ -140,6 +140,12 @@ public static partial class GameplayTestActorWorldRuntimeProbe
                 throw new InvalidOperationException("水生战斗无法设置测试水格。");
             shark = new ActorFixture(positions[0], "Shark");
             prey = new ActorFixture(positions[2], "SmallFish");
+            bool declaredPreyGeometry = GameRes.Instance.TryGetItemDefinition(prey.Actor.itemData.IDName, out RuntimeItemDefinition preyDefinition) &&
+                preyDefinition.PerceptionShapes.Count > 0;
+            Collider2D preyRootCollider = WorldPhysicsService2D.GetItemRootCollider<Collider2D>(prey.Actor);
+            bool preyRootCollisionDisabled = preyRootCollider != null && !preyRootCollider.enabled;
+            int sharkWorld = GameplayWorldRegistry.GetItemWorldIdentity(shark.Actor);
+            int preyWorld = GameplayWorldRegistry.GetItemWorldIdentity(prey.Actor);
             Mod_AnimalBehaviorTree sharkTree = shark.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI);
             Mod_AnimalBehaviorTree preyTree = prey.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI);
             Mod_DamageReceiver preyHealth = prey.Actor.itemMods.RequireSingleModById<Mod_DamageReceiver>(ModText.Hp);
@@ -156,11 +162,31 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             yield return new WaitForFixedUpdate();
             yield return null;
             float afterDistance = WorldTopologyRuntime.Distance(shark.Actor.transform.position, prey.Actor.transform.position);
+            Mod_ItemDetector detector = sharkTree.Context.Detector;
+            long detectorRequest = detector.RequestDetectorUpdate();
+            double detectorDeadline = Time.realtimeSinceStartupAsDouble + 3d;
+            while (!detector.IsRequestApplied(detectorRequest) && Time.realtimeSinceStartupAsDouble < detectorDeadline)
+                yield return null;
+            bool detectorApplied = detector.IsRequestApplied(detectorRequest);
+            bool detectorSeesPrey = detector.CurrentItemsInArea.Contains(prey.Actor);
+            bool visibleOnDetection = AnimalLandTargetRules.IsVisible(sharkTree.Context, prey.Actor, 18f);
             sharkTree.SetAutonomousControlSuspended(false);
-            sharkTree.Context.Detector.CurrentItemsInArea = new List<Item> { prey.Actor };
-            sharkTree.ModUpdate(.02f);
             bool hasCombat = sharkTree.Context.TryGetCapability("combat", out AnimalCombatCapability combat);
+            bool hasHunting = sharkTree.Context.TryGetCapability("hunting", out AnimalHuntingCapability hunting);
+            double attackDeadline = Time.realtimeSinceStartupAsDouble + 3d;
+            while (hasCombat && !combat.IsAttackLocked && Time.realtimeSinceStartupAsDouble < attackDeadline)
+                yield return null;
             bool attackStarted = hasCombat && combat.IsAttackLocked;
+            bool hungry = hasHunting && hunting.IsHungry;
+            string huntedId = hasHunting ? hunting.Target?.itemData?.IDName : null;
+            bool targetVisible = hasHunting && hunting.TargetVisible;
+            bool preyLivingOpponent = AnimalLandTargetRules.IsLivingOpponent(sharkTree.Context, prey.Actor);
+            bool preyVisible = AnimalLandTargetRules.IsVisible(sharkTree.Context, prey.Actor, 18f);
+            bool externallyControlled = movement.IsBehaviorExternallyControlled;
+            bool stranded = movement.IsStranded;
+            bool threatened = movement.HasAquaticThreat;
+            bool temperatureSafety = sharkTree.HasTemperatureSafetyRequest;
+            string action = sharkTree.CurrentAction;
             bool restrictionActive = movement.RestrictsOutgoingDamageTargets;
             Vector2 lockedPosition = shark.Actor.transform.position;
             sharkTree.ModUpdate(.02f);
@@ -201,6 +227,13 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             {
                 ["shoreBlocked"] = shoreBlocked, ["connected"] = connected,
                 ["moveRequested"] = moveRequested, ["beforeDistance"] = beforeDistance, ["afterDistance"] = afterDistance,
+                ["declaredPreyGeometry"] = declaredPreyGeometry, ["preyRootCollisionDisabled"] = preyRootCollisionDisabled,
+                ["sharkWorld"] = sharkWorld, ["preyWorld"] = preyWorld, ["visibleOnDetection"] = visibleOnDetection,
+                ["detectorApplied"] = detectorApplied, ["detectorSeesPrey"] = detectorSeesPrey,
+                ["hasHunting"] = hasHunting, ["hungry"] = hungry, ["huntedId"] = huntedId,
+                ["targetVisible"] = targetVisible, ["preyLivingOpponent"] = preyLivingOpponent, ["preyVisible"] = preyVisible,
+                ["externallyControlled"] = externallyControlled, ["stranded"] = stranded, ["threatened"] = threatened,
+                ["temperatureSafety"] = temperatureSafety, ["action"] = action,
                 ["attackStarted"] = attackStarted, ["lockStoppedMovement"] = lockStoppedMovement,
                 ["restrictionActive"] = restrictionActive, ["restrictionCleared"] = restrictionCleared,
                 ["attackStoppedAtRange"] = attackStoppedAtRange, ["waterTargetAccepted"] = waterTargetAccepted,
@@ -220,7 +253,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     }
 
     // 捕食真实陆生猎物并复用伤害结算，取消后不得残留旧目标。
-    private static JObject CaptureFlightLandPredationRuntime(Item player, JObject args)
+    private static IEnumerator CaptureFlightLandPredationRuntime(Item player, JObject args, Action<JObject> completed)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player);
         Vector2 origin = (Vector2)site.WorldCell + Vector2.one * 0.5f;
@@ -233,18 +266,28 @@ public static partial class GameplayTestActorWorldRuntimeProbe
         frog.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI).SetAutonomousControlSuspended(true);
         Mod_ItemDetector detector = eagle.Actor.itemMods.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
         flight.fleeTriggerDistance = flight.fleeSafeDistance = .25f;
+        flight.hurtEscapeSeconds = .2f;
         flight.landPreyIds = Array.Empty<string>();
         long request = detector.RequestDetectorUpdate();
-        detector.ApplyDetectorResults(request, new List<Item> { frog.Actor });
-        flight.TickFlightEnvironmentAndTimers(.5f);
+        double detectionDeadline = Time.realtimeSinceStartupAsDouble + 3d;
+        while (!detector.IsRequestApplied(request) && Time.realtimeSinceStartupAsDouble < detectionDeadline)
+            yield return null;
+        bool frogDetected = detector.IsRequestApplied(request) && detector.CurrentItemsInArea.Contains(frog.Actor);
+        flight.TickFlightEnvironmentAndTimers(0f);
         bool ordinaryThreatDetected = flight.IsEscaping;
-        flight.TickEscapeAction(10f);
-        flight.StopFlightAction();
+        double escapeDeadline = Time.realtimeSinceStartupAsDouble + 3d;
+        while (flight.IsEscaping && Time.realtimeSinceStartupAsDouble < escapeDeadline)
+            yield return null;
+        bool escapeExpired = !flight.IsEscaping;
         flight.landPreyIds = new[] { "Frog" };
         request = detector.RequestDetectorUpdate();
-        detector.ApplyDetectorResults(request, new List<Item> { frog.Actor });
-        flight.TickFlightEnvironmentAndTimers(.5f);
-        bool preyDoesNotScare = !flight.IsEscaping;
+        detectionDeadline = Time.realtimeSinceStartupAsDouble + 3d;
+        while (!detector.IsRequestApplied(request) && Time.realtimeSinceStartupAsDouble < detectionDeadline)
+            yield return null;
+        bool preyDetected = detector.IsRequestApplied(request) && detector.CurrentItemsInArea.Contains(frog.Actor);
+        flight.TickFlightEnvironmentAndTimers(0f);
+        bool preyDoesNotScare = escapeExpired && !flight.IsEscaping &&
+            WorldTopologyRuntime.SqrDistance(eagle.Actor.transform.position, frog.Actor.transform.position) <= .25f * .25f;
         Nutrition nutrition = eagle.Actor.itemMods.RequireSingleModById<Mod_Food>(ModText.Food).Data.nutrition;
         nutrition.Carbohydrates = nutrition.Fat = 0f;
         flight.landPreyIds = new[] { "Frog" };
@@ -274,22 +317,24 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             shark.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI).SetAutonomousControlSuspended(true);
             flight.landPreyIds = Array.Empty<string>();
             flight.aquaticPreyTag = "Shark";
-            flight.TickFlightEnvironmentAndTimers(1f, false);
+            double scanDeadline = Time.realtimeSinceStartupAsDouble + .6d;
+            while (Time.realtimeSinceStartupAsDouble < scanDeadline) yield return null;
             float sharkWeight = shark.Actor.itemData.Stack.CurrentWeight;
             bool heavyRejected = !flight.ThreatensAquaticPrey(shark.Actor) && !flight.CanStartAquaticHunt;
             shark.Actor.itemData.Stack.Weight = .5f;
-            flight.TickFlightEnvironmentAndTimers(1f, false);
+            scanDeadline = Time.realtimeSinceStartupAsDouble + .6d;
+            while (Time.realtimeSinceStartupAsDouble < scanDeadline) yield return null;
             bool lightAccepted = flight.ThreatensAquaticPrey(shark.Actor) && flight.CanStartAquaticHunt;
             flight.CancelAquaticHunt();
-            return new JObject
+            completed(new JObject
             {
                 ["acquired"] = acquired, ["firstRunning"] = first == AnimalBehaviorTreeStatus.Running,
                 ["wounded"] = wounded, ["killCompleted"] = second == AnimalBehaviorTreeStatus.Success && killed,
                 ["cancelled"] = cancelled, ["ordinaryThreatDetected"] = ordinaryThreatDetected,
-                ["preyDoesNotScare"] = preyDoesNotScare,
+                ["frogDetected"] = frogDetected, ["preyDetected"] = preyDetected, ["preyDoesNotScare"] = preyDoesNotScare,
                 ["sharkWeight"] = sharkWeight,
                 ["heavyRejected"] = heavyRejected, ["lightAccepted"] = lightAccepted
-            };
+            });
         }
         finally
         {
@@ -301,23 +346,38 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     }
 
     // 临时隔离太阳光并使用正式点光源，观察飞行者实际选点和主动位移。
-    private static JObject CaptureFlightLightAvoidanceRuntime(Item player, JObject args)
+    private static IEnumerator CaptureFlightLightAvoidanceRuntime(Item player, JObject args, Action<JObject> completed)
     {
         RuntimeTerrainTileSample site = FindOpenCell(player, true);
         Vector2 origin = (Vector2)site.WorldCell + Vector2.one * 0.5f;
         using var bat = new ActorFixture(origin, "Bat");
-        bat.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI).SetAutonomousControlSuspended(true);
+        Mod_AnimalBehaviorTree tree = bat.Actor.itemMods.RequireSingleModById<Mod_AnimalBehaviorTree>(ModText.AI);
+        tree.SetAutonomousControlSuspended(true);
         Mod_AnimalFlightMovement flight = bat.Actor.itemMods.RequireSingleModById<Mod_AnimalFlightMovement>(Mod_AnimalFlightMovement.ModuleId);
+        Rigidbody2D body = WorldPhysicsService2D.GetItemRigidbody(bat.Actor);
         LightLayerMgr lights = LightLayerMgr.Instance;
+        DayTimeSystem daytime = DayTimeSystem.Instance;
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
         FieldInfo lightValue = typeof(LightLayerMgr).GetField("_timeLightValue", flags);
         FieldInfo hasLight = typeof(LightLayerMgr).GetField("_hasTimeLightValue", flags);
-        if (lights == null || lightValue == null || hasLight == null)
+        if (body == null || lights == null || daytime == null || lightValue == null || hasLight == null)
             throw new InvalidOperationException("飞行避光缺少世界光照服务。");
+        string sceneName = daytime.GetCurrentActiveSceneName();
+        bool hadLightingRate = daytime.SceneLightingRateDict.TryGetValue(sceneName, out float oldLightingRate);
         object oldValue = lightValue.GetValue(lights), oldHasLight = hasLight.GetValue(lights);
         GameObject lamp = null;
+        bool seekStarted = false;
+        Vector2 seekStart = body.position;
+        float seekDistanceSqr = 0f;
+        Action<string, string> observeAction = (previous, next) =>
+        {
+            if (previous == "flight.seekDark")
+                seekDistanceSqr = Mathf.Max(seekDistanceSqr, WorldTopologyRuntime.SqrDistance(seekStart, body.position));
+            if (next == "flight.seekDark") { seekStarted = true; seekStart = body.position; }
+        };
         try
         {
+            daytime.SceneLightingRateDict[sceneName] = 0f;
             lightValue.SetValue(lights, 0f);
             hasLight.SetValue(lights, true);
             if (!lights.TryGetLightLevel(origin, out float background) || background >= .95f)
@@ -340,25 +400,48 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             lamp.SetActive(true);
             bool bright = flight.IsCurrentFlightPositionTooBright;
             bool selected = flight.CanSeekDarkerFlightPosition;
-            flight.BeginFlightLightAvoidance();
-            Vector2 before = bat.Actor.transform.position;
-            bool advanced = false, escaped = false;
-            for (int i = 0; i < 40; i++)
+            Vector2 beforeBody = body.position;
+            Vector2 beforeTransform = bat.Actor.transform.position;
+            bool escaped = false;
+            float transformDistanceSqr = 0f;
+            tree.OnStateChanged.DynamicCalls += observeAction;
+            tree.SetAutonomousControlSuspended(false);
+            double deadline = Time.realtimeSinceStartupAsDouble + 6d;
+            while (Time.realtimeSinceStartupAsDouble < deadline)
             {
-                if (!flight.IsCurrentFlightPositionTooBright) { escaped = true; break; }
-                if (!flight.TickFlightLightAvoidance(.1f)) break;
-                advanced |= WorldTopologyRuntime.SqrDistance(before, bat.Actor.transform.position) > .01f;
+                yield return new WaitForFixedUpdate();
+                yield return null;
+                if (tree.CurrentAction == "flight.seekDark")
+                    seekDistanceSqr = Mathf.Max(seekDistanceSqr, WorldTopologyRuntime.SqrDistance(seekStart, body.position));
+                transformDistanceSqr = Mathf.Max(transformDistanceSqr,
+                    WorldTopologyRuntime.SqrDistance(beforeTransform, bat.Actor.transform.position));
+                escaped = lights.TryGetLightLevel(body.position, out float currentLight) &&
+                    currentLight < flight.lightAvoidanceThreshold;
+                if (seekStarted && seekDistanceSqr > .01f && transformDistanceSqr > .01f && escaped) break;
             }
-            flight.EndFlightLightAvoidance();
-            return new JObject
+            tree.SetAutonomousControlSuspended(true);
+            Vector2 afterBody = body.position;
+            Vector2 afterTransform = bat.Actor.transform.position;
+            bool sourceStayedBright = lights.TryGetLightLevel(origin, out float sourceLight) &&
+                sourceLight >= flight.lightAvoidanceThreshold;
+            completed(new JObject
             {
                 ["initiallySafe"] = initiallySafe, ["bright"] = bright, ["selected"] = selected,
-                ["advanced"] = advanced, ["escaped"] = escaped
-            };
+                ["seekStarted"] = seekStarted, ["advanced"] = seekDistanceSqr > .01f,
+                ["presentationAdvanced"] = transformDistanceSqr > .01f, ["escaped"] = escaped,
+                ["sourceStayedBright"] = sourceStayedBright, ["seekDistanceSqr"] = seekDistanceSqr,
+                ["transformDistanceSqr"] = transformDistanceSqr,
+                ["beforeBody"] = Position(beforeBody), ["afterBody"] = Position(afterBody),
+                ["beforeTransform"] = Position(beforeTransform), ["afterTransform"] = Position(afterTransform)
+            });
         }
         finally
         {
+            tree.SetAutonomousControlSuspended(true);
+            tree.OnStateChanged.DynamicCalls -= observeAction;
             if (lamp != null) UnityEngine.Object.DestroyImmediate(lamp);
+            if (hadLightingRate) daytime.SceneLightingRateDict[sceneName] = oldLightingRate;
+            else daytime.SceneLightingRateDict.Remove(sceneName);
             lightValue.SetValue(lights, oldValue);
             hasLight.SetValue(lights, oldHasLight);
         }

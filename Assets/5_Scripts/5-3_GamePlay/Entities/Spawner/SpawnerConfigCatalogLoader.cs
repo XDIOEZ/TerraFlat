@@ -133,10 +133,12 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException("生物生成配置至少需要一个 config");
 
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // 生命周期与休眠恢复按物种唯一归属生态配置，多栖息地合并在同一规则内。
+        var speciesIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int index = 0; index < catalog.Configs.Count; index++)
         {
             SpawnerConfigDefinition config = catalog.Configs[index];
-            ValidateConfig(config, index, ids);
+            ValidateConfig(config, index, ids, speciesIds);
         }
     }
 
@@ -158,7 +160,8 @@ public static class SpawnerConfigCatalogLoader
     private static void ValidateConfig(
         SpawnerConfigDefinition config,
         int index,
-        ISet<string> ids)
+        ISet<string> ids,
+        ISet<string> speciesIds)
     {
         if (config == null)
             throw new InvalidDataException($"生物生成 config[{index}] 为空");
@@ -200,7 +203,6 @@ public static class SpawnerConfigCatalogLoader
             config.MinimumWaterDepth > config.MaximumWaterDepth || config.ShoreRadius < 0 || config.ShoreRadius > 8)
             throw new InvalidDataException($"生物生成配置 {config.Id} 的维度或水岸栖息地无效");
 
-        HashSet<string> speciesIds = new(StringComparer.OrdinalIgnoreCase);
         if (config.TreeHabitat == null || config.TreeHabitat.TreesPerActor < 1 ||
             !IsFinite(config.TreeHabitat.SpawnRadius) || config.TreeHabitat.SpawnRadius <= 0f)
             throw new InvalidDataException($"生成配置 {config.Id} 的树木栖息地参数无效。");
@@ -223,7 +225,7 @@ public static class SpawnerConfigCatalogLoader
         if (string.IsNullOrWhiteSpace(entry.PrefabName))
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 spawnEntry[{index}] 缺少 prefabName");
         if (!speciesIds.Add(entry.PrefabName))
-            throw new InvalidDataException($"生物生成配置 {config.Id} 重复声明物种：{entry.PrefabName}");
+            throw new InvalidDataException($"物种必须唯一归属于一个生态配置，{config.Id} 重复声明：{entry.PrefabName}");
         if (!IsSupportedRuntimeBackend(entry.RuntimeBackend))
             throw new InvalidDataException($"物种 {entry.PrefabName} 的 runtimeBackend 不受支持：{entry.RuntimeBackend}");
         if (!IsFinite(entry.Probability) || entry.Probability <= 0f)

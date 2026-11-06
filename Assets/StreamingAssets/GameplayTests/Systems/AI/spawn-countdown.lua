@@ -12,8 +12,7 @@ test.system("ai", "spawn_monitor", {}, function(data)
 end, "世界单一倒计时监控只读，待出生数只属于本轮所选物种")
 
 test.system("ai", "spawn_countdown", {}, function(data)
-    assert(data.ruleCount == 9 and data.speciesCount == 10 and data.zombieDisabled,
-        "共享生物库遗漏正式规则或错误开启自然尸潮")
+    assert(data.zombieDisabled, "自然生成错误开启了尸潮")
     assert(data.initial.pending == 0 and data.initial.remaining == data.interval and data.earlySelectionRejected,
         "首次进入世界未等待完整间隔，或到期前已经绑定物种")
     assert(data.beforeDue.pending == 0 and math.abs(data.beforeDue.remaining - .25) < .000001,

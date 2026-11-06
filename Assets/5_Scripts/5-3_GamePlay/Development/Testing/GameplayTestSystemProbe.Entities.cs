@@ -547,6 +547,13 @@ public static partial class GameplayTestSystemProbe
             try { ActorPerceptionShapeCompiler.Compile(root, new ItemColliderDefinitionDto { Type = nameof(CapsuleCollider2D) }); }
             catch (InvalidOperationException) { unknownTypeRejected = true; }
 
+            body.colliderEnabled = rootModule.colliderEnabled = false;
+            PerceptionShape2D[] undeclared = ActorPerceptionShapeCompiler.Compile(root);
+            PerceptionShape2D[] declaredFallback = ActorPerceptionShapeCompiler.Compile(root, definition);
+            bool fallbackKeepsPhysicsDisabled = !body.colliderEnabled && !rootModule.colliderEnabled &&
+                root.GetComponents<Collider2D>().Length == 0;
+            body.colliderEnabled = rootModule.colliderEnabled = true;
+
             physics.RegisterItem(item);
             WorldPhysicsService2D.GetItemRootCollider<BoxCollider2D>(item).size = new Vector2(10f, 12f);
             PerceptionShape2D[] rented = ActorPerceptionShapeCompiler.Compile(root);
@@ -560,6 +567,12 @@ public static partial class GameplayTestSystemProbe
                 ["overrideY"] = overridden[0].Center.y, ["overrideHalfWidth"] = overridden[0].Extents.x,
                 ["overrideHalfHeight"] = overridden[0].Extents.y,
                 ["disabledCount"] = disabled.Length, ["disabledRadius"] = disabled[0].Radius,
+                ["undeclaredCount"] = undeclared.Length, ["declaredFallbackCount"] = declaredFallback.Length,
+                ["fallbackKeepsPhysicsDisabled"] = fallbackKeepsPhysicsDisabled,
+                ["declaredFallbackX"] = declaredFallback.Length > 0 ? declaredFallback[0].Center.x : 0f,
+                ["declaredFallbackY"] = declaredFallback.Length > 0 ? declaredFallback[0].Center.y : 0f,
+                ["declaredFallbackHalfWidth"] = declaredFallback.Length > 0 ? declaredFallback[0].Extents.x : 0f,
+                ["declaredFallbackHalfHeight"] = declaredFallback.Length > 0 ? declaredFallback[0].Extents.y : 0f,
                 ["unknownTypeRejected"] = unknownTypeRejected, ["rentedCount"] = rented.Length,
                 ["rentedHalfWidth"] = rented[0].Extents.x, ["rentedHalfHeight"] = rented[0].Extents.y
             };

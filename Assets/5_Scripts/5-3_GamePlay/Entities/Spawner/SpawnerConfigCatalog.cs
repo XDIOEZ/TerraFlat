@@ -67,7 +67,7 @@ public sealed partial class SpawnerConfigDefinition
 {
     [JsonProperty(Required = Required.Default)]
     public bool WaterOnly;
-    [JsonProperty(Required = Required.Default)]
+    [JsonProperty(Required = Required.Default, ObjectCreationHandling = ObjectCreationHandling.Replace)]
     public List<string> AllowedDimensionIds = new() { WorldAddress.SurfaceDimensionId };
     [JsonProperty(Required = Required.Default)]
     public float MinimumWaterDepth;

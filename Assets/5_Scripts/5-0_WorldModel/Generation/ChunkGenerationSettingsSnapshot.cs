@@ -199,6 +199,7 @@ namespace FlatWorld.WorldModel
                 SurfaceBiomeKind.Forest => "森林",
                 SurfaceBiomeKind.Snow => "雪地",
                 SurfaceBiomeKind.Stone => "石地",
+                (SurfaceBiomeKind)100 => "洞穴", // 沿用洞穴稳定编号，不加入地表群系枚举。
                 _ => string.Empty
             };
         }

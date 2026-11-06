@@ -45,34 +45,6 @@
         }
       },
       {
-        "prefabName": "Lizard",
-        "runtimeBackend": "gameObject",
-        "probability": 2,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 10,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
-      {
-        "prefabName": "Snake",
-        "runtimeBackend": "gameObject",
-        "probability": 1,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 5,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
-      {
         "prefabName": "Eagle",
         "runtimeBackend": "gameObject",
         "probability": 0.5,

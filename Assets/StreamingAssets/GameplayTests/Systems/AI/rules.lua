@@ -9,10 +9,28 @@ test.system("ai", "animal_ecology_catalog", {}, function(data)
         assert(rule.limit > 0 and rule.budget > 0, "动物刷新绕开生态预算：" .. rule.id)
         if rule.id == "ecology_cave_animals" then
             assert(rule.cave and not rule.surface, "洞穴动物没有独立维度")
+        elseif rule.id == "ecology_forest_predators" then
+            assert(rule.surface and rule.cave and math.abs(rule.maxLight - .35) < .0001, "蜘蛛未覆盖森林与阴暗洞穴")
         else
             assert(rule.surface and not rule.cave, "地表规则泄漏到洞穴：" .. rule.id)
         end
-        for _, id in ipairs(rule.species) do spawned[id] = true end
+        for _, id in ipairs(rule.species) do
+            assert(not spawned[id], "物种重复归属于不同生态规则：" .. id)
+            spawned[id] = rule
+        end
+    end
+    assert(data.caveBiomeName == "洞穴", "洞穴稳定编号100未映射到生态群系名")
+    assert(data.duplicateError and data.duplicateError:find("唯一归属于一个生态配置", 1, true) and
+        data.duplicateError:find(data.duplicateSpecies, 1, true),
+        "正式目录校验未拒绝跨规则重复物种")
+    for id, expected in pairs({Deer = {"森林", "温带草原"}, Rat = {"森林", "温带草原"},
+        Fox = {"森林", "温带草原"}, Lizard = {"沙漠", "石地"},
+        Snake = {"森林", "石地", "沙漠"}, Spider = {"森林", "洞穴"}}) do
+        local rule = spawned[id]
+        assert(rule and #rule.biomes == #expected, "多群系合并改变了物种栖息范围：" .. id)
+        local biomes = {}
+        for _, biome in ipairs(rule.biomes) do biomes[biome] = true end
+        for _, biome in ipairs(expected) do assert(biomes[biome], "物种缺少栖息群系：" .. id .. "/" .. biome) end
     end
     for _, id in ipairs(ids) do
         local actor = actors[id]
@@ -24,7 +42,10 @@ test.system("ai", "animal_ecology_catalog", {}, function(data)
         assert(drops and #drops > 0, "新增动物没有实际产出：" .. id)
         for _, drop in ipairs(drops) do assert(drop.min > 0 and drop.max >= drop.min, "掉落数量无效：" .. id) end
     end
-    assert(spawned.Sheep, "已有绵羊仍没有自然生成入口")
+    for _, id in ipairs({"Bear", "Bird", "Chicken", "Ghost", "Rabbit", "Seagull", "SmallFish",
+        "SnowLeopard", "WildBoar", "Wolf", "Zombie", "Sheep"}) do
+        assert(actors[id] and spawned[id], "已有动物缺少正式目录或自然生成入口：" .. id)
+    end
     assert(actors.Wolf.modules.temperature.parameters.Data.SafeTemperatureMin == -30 and
         actors.Zombie.modules.temperature.parameters.Data.SafeTemperatureMin == 5,
         "雪地狼没有耐寒能力，或改动错误传播到继承狼的丧尸")
@@ -50,6 +71,23 @@ test.system("ai", "animal_ecology_catalog", {}, function(data)
     assert(actors.Eagle.modules.flightMovement.parameters.landPreyIds[1] == "Rabbit",
         "飞行捕食者未接入陆生猎物")
 end, "P0/P1动物生态目录、产出、群体与维度水岸约束")
+
+test.system("ai", "perception_template_shapes", {}, function(data)
+    assert(data.coldWithoutNative and data.coldCount == 2 and data.coldX == 0.25 and data.coldY == -0.5 and
+        data.coldHalfWidth == 1 and data.coldHalfHeight == 2 and data.rootModuleRadius == 0.75,
+        "根节点模板默认形状或模块同节点形状丢失，或把子节点攻击框算入体型")
+    assert(data.overrideCount == 2 and data.overrideX == -2 and data.overrideY == 5 and
+        data.overrideHalfWidth == 3 and data.overrideHalfHeight == 4,
+        "JSON 覆盖未叠加到匹配的根模板")
+    assert(data.disabledCount == 1 and data.disabledRadius == 0.75 and data.unknownTypeRejected,
+        "根模板启用覆盖或不匹配形状的拒绝行为改变")
+    assert(data.undeclaredCount == 0 and data.declaredFallbackCount == 1 and data.fallbackKeepsPhysicsDisabled and
+        data.declaredFallbackX == -2 and data.declaredFallbackY == 5 and
+        data.declaredFallbackHalfWidth == 3 and data.declaredFallbackHalfHeight == 4,
+        "禁用碰撞的明确根几何没有用于感知、无声明产生了形状，或物理状态被改变")
+    assert(data.rentedCount == 2 and data.rentedHalfWidth == 5 and data.rentedHalfHeight == 6,
+        "运行时已领取形状重复计入，或未读取实时碰撞尺寸")
+end, "Actor 感知冷编译支持根级物理模板和运行时领取")
 
 -- 原生居民按当前位置归块；卸载休眠保留身份，恢复不补算离线期限。
 for _, wrapped in ipairs({false, true}) do
@@ -727,19 +765,6 @@ test.system("ai", "perception_shape_batch", {}, function(data)
     assert(data.bounds and data.withoutOutput, "合并计算的粗筛包围盒与独立计算不一致")
     assert(data.rejectedEmpty, "空形状仍登记目标或修改了已有 Burst 几何列表")
 end, "Actor 感知形状一次变换生成包围盒和 Burst 数据")
-
-test.system("ai", "perception_template_shapes", {}, function(data)
-    assert(data.coldWithoutNative and data.coldCount == 2 and data.coldX == 0.25 and data.coldY == -0.5 and
-        data.coldHalfWidth == 1 and data.coldHalfHeight == 2 and data.rootModuleRadius == 0.75,
-        "根节点模板默认形状或模块同节点形状丢失，或把子节点攻击框算入体型")
-    assert(data.overrideCount == 2 and data.overrideX == -2 and data.overrideY == 5 and
-        data.overrideHalfWidth == 3 and data.overrideHalfHeight == 4,
-        "JSON 覆盖未叠加到匹配的根模板")
-    assert(data.disabledCount == 1 and data.disabledRadius == 0.75 and data.unknownTypeRejected,
-        "根模板启用覆盖或不匹配形状的拒绝行为改变")
-    assert(data.rentedCount == 2 and data.rentedHalfWidth == 5 and data.rentedHalfHeight == 6,
-        "运行时已领取形状重复计入，或未读取实时碰撞尺寸")
-end, "Actor 感知冷编译支持根级物理模板和运行时领取")
 
 test.system("ai", "closest_target_batch", {}, function(data)
     assert(data.unwrappedNearest and data.wrappedTieFirst,

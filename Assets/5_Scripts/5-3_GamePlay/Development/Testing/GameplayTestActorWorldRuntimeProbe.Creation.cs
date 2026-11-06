@@ -12,6 +12,7 @@ public static partial class GameplayTestActorWorldRuntimeProbe
     private static void RegisterCreatureCreation()
     {
         GameplayTestRuntimeProbe.Register("ai", "creature_creation", CaptureCreatureCreation);
+        GameplayTestRuntimeProbe.Register("ai", "animal_ecology_creation", CaptureAnimalEcologyCreation);
         GameplayTestRuntimeProbe.Register("ai", "actor_control", CaptureActorControl);
         GameplayTestRuntimeProbe.RegisterAsync("ai", "incremental_creature_creation", CaptureIncrementalCreatureCreation);
     }
@@ -109,6 +110,48 @@ public static partial class GameplayTestActorWorldRuntimeProbe
             result["cleanupComplete"] = owned.TrueForAll(guid => ItemMgr.Instance.GetItemByGuid(guid) == null &&
                 !SaveDataMgr.Instance.ContainsParkedRuntimeAi(guid));
         }
+    }
+
+    // 逐只正式出生并立即回收，采样真实模块和贴图，不把配置存在当作装配成功。
+    private static JObject CaptureAnimalEcologyCreation(Item player, JObject args)
+    {
+        GameplayTestRuntimeProbe.RequireIsolatedSaveRoot(player);
+        var sample = FindOpenCell(player);
+        Vector3 position = WorldLocalPresentation.ProjectPosition((Vector2)sample.WorldCell + Vector2.one * .5f);
+        var owned = new List<int>();
+        GameplayTestRuntimeProbe.RegisterCleanup(new Cleanup(() =>
+        {
+            foreach (int guid in owned) AiRuntimeBackendService.TryDespawnActor(guid);
+        }));
+        var actors = new JArray();
+        foreach (JToken species in (JArray)args["species"])
+        {
+            var row = new JObject { ["requested"] = (string)species };
+            actors.Add(row);
+            bool created = AiRuntimeBackendService.TrySpawnDirect((string)species, position, 0, out int guid);
+            row["created"] = created;
+            if (!created) continue;
+            owned.Add(guid);
+            try
+            {
+                Item actor = ItemMgr.Instance.GetItemByGuid(guid);
+                var ai = actor.itemMods.GetMod_ByID<Mod_AnimalBehaviorTree>(ModText.AI);
+                var animation = actor.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
+                row["guid"] = actor.itemData.Guid;
+                row["id"] = actor.itemData.IDName;
+                row["initialized"] = actor.IsInitialized;
+                row["aiLoaded"] = ai != null && ai.IsRuntimeLoaded;
+                row["alive"] = ai != null && ai.IsAlive;
+                row["aiCount"] = actor.itemMods.GetModList_ByID(ModText.AI)?.Count ?? 0;
+                row["sprite"] = animation?.targetSpriteRenderer?.sprite?.name;
+            }
+            finally
+            {
+                AiRuntimeBackendService.TryDespawnActor(guid);
+                row["cleaned"] = ItemMgr.Instance.GetItemByGuid(guid) == null;
+            }
+        }
+        return new JObject { ["actors"] = actors };
     }
 
     #endregion

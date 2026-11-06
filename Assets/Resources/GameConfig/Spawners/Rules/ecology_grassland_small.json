@@ -20,6 +20,7 @@
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
     "allowedBiomeNames": [
+      "森林",
       "温带草原"
     ],
     "recycleDistance": 110.0,
@@ -30,20 +31,6 @@
       "spawnRadius": 3.0
     },
     "spawnEntries": [
-      {
-        "prefabName": "Rat",
-        "runtimeBackend": "gameObject",
-        "probability": 2,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 10,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
       {
         "prefabName": "Fox",
         "runtimeBackend": "gameObject",

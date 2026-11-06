@@ -10,6 +10,10 @@ test.runtime("ai", "aquatic_habitat", {}, function(data)
 end, "真实两栖、水生和非水液体栖息规则")
 test.runtime("ai", "aquatic_combat", {}, function(data)
     assert(data.shoreBlocked and data.connected, "鲨鱼没有按真实隔岸和连通水路筛选目标")
+    assert(data.declaredPreyGeometry and data.preyRootCollisionDisabled and
+        data.sharkWorld ~= 0 and data.sharkWorld == data.preyWorld and data.visibleOnDetection,
+        "猎物的感知几何、禁用物理碰撞、世界归属或真实视线错误")
+    assert(data.detectorApplied and data.detectorSeesPrey, "真实感知未完成或未发现水中猎物")
     assert(data.moveRequested and data.afterDistance < data.beforeDistance and data.attackStarted and data.lockStoppedMovement,
         "水路接通后鲨鱼未实际接近、打开攻击窗口，或攻击锁定时仍主动前进")
     assert(data.attackStoppedAtRange, "猎物离开攻击距离后旧窗口仍然保持")
@@ -19,6 +23,7 @@ test.runtime("ai", "aquatic_combat", {}, function(data)
         "水生攻击目标限制未随动作进入和中断正确启停")
 end, "水中追击、隔岸拒绝与攻击窗口")
 test.runtime("ai", "flight_land_predation", {}, function(data)
+    assert(data.frogDetected and data.preyDetected, "鹰没有经真实感知发现陆生猎物")
     assert(data.acquired and data.firstRunning and data.wounded and data.killCompleted,
         "飞行捕食者没有锁定陆生猎物、持续俯冲并通过正式伤害击杀")
     assert(data.ordinaryThreatDetected and data.preyDoesNotScare,
@@ -28,7 +33,8 @@ test.runtime("ai", "flight_land_predation", {}, function(data)
         "飞行捕食没有按实际猎物重量拒绝超重目标并接受轻型目标")
 end, "陆生猎物俯冲、取消与捕食体重限制")
 test.runtime("ai", "flight_light_avoidance", {}, function(data)
-    assert(data.initiallySafe and data.bright and data.selected and data.advanced and data.escaped,
+    assert(data.initiallySafe and data.bright and data.selected and data.seekStarted and data.advanced and
+        data.presentationAdvanced and data.escaped and data.sourceStayedBright,
         "飞行生物未识别强光、选择可达暗点或实际离开光区")
 end, "真实光照下的飞行避光")
 test.runtime("ai", "advance_navigation", {}, function(data)

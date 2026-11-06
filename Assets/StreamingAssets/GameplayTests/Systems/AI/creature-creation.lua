@@ -1,6 +1,20 @@
 -- 真实隔离世界只采正式管理器，不修改当前玩家世界或模拟出生算法。
 test.check("world_ready", "统一生物出生使用真实隔离世界")
 test.check("terrain_ready", "出生现场区块已经加载")
+local ecologySpecies = {"Deer", "Cow", "Goat", "Horse", "Fox", "Lizard", "Scorpion", "Reindeer",
+    "Carp", "Sardine", "Crab", "Bat", "Spider", "Frog", "WildDuck", "Snake", "Camel", "Shark", "Eagle", "Rat"}
+test.runtime("ai", "animal_ecology_creation", {species = ecologySpecies}, function(data)
+    assert(#data.actors == #ecologySpecies, "新增动物的正式出生采样数量不完整")
+    for index, id in ipairs(ecologySpecies) do
+        local actor = data.actors[index]
+        assert(actor.requested == id and actor.created and actor.guid ~= 0 and actor.id == id,
+            "新增动物未通过正式入口完成同身份出生：" .. id)
+        assert(actor.initialized and actor.aiLoaded and actor.alive and actor.aiCount == 1,
+            "新增动物缺少已加载的唯一行为树或出生后没有存活：" .. id)
+        assert(actor.sprite == id .. "_Idle_Right", "新增动物的实际贴图未替换父物种：" .. id)
+        assert(actor.cleaned, "新增动物未通过正式入口回收：" .. id)
+    end
+end, "20种新增动物逐只正式出生、实际外观、行为树加载与回收")
 test.runtime("ai", "incremental_creature_creation", {}, function(data)
     assert(data.created and data.steps > 6 and data.frames > 1 and not data.prematureDelivery,
         "分帧创建没有跨帧执行，或模块完成前提前交付了生物")

@@ -20,7 +20,8 @@
     "requireCompletelyDarkTile": false,
     "maxAllowedTileLight": 1.0,
     "allowedBiomeNames": [
-      "森林"
+      "森林",
+      "温带草原"
     ],
     "recycleDistance": 110.0,
     "recycleGraceSeconds": 20.0,

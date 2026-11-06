@@ -18,9 +18,10 @@
     "asyncSpawnInterval": 0.25,
     "ignorePopulationLimits": false,
     "requireCompletelyDarkTile": false,
-    "maxAllowedTileLight": 1.0,
+    "maxAllowedTileLight": 0.35,
     "allowedBiomeNames": [
-      "森林"
+      "森林",
+      "洞穴"
     ],
     "recycleDistance": 110.0,
     "recycleGraceSeconds": 20.0,
@@ -30,34 +31,6 @@
       "spawnRadius": 3.0
     },
     "spawnEntries": [
-      {
-        "prefabName": "Fox",
-        "runtimeBackend": "gameObject",
-        "probability": 1,
-        "ecologyCost": 2,
-        "speciesAliveLimit": 4,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
-      {
-        "prefabName": "Snake",
-        "runtimeBackend": "gameObject",
-        "probability": 1,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 5,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
       {
         "prefabName": "Spider",
         "runtimeBackend": "gameObject",
@@ -77,7 +50,8 @@
     "ignoreEcologyBudget": false,
     "batchSpawnRadius": 2,
     "allowedDimensionIds": [
-      "surface"
+      "surface",
+      "cave"
     ]
   }
 }

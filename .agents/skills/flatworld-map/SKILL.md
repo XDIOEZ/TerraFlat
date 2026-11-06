@@ -16,6 +16,8 @@ description: "FlatWorld 地块定义、确定性地形、气候水文、生态�
 | `5-3_GamePlay/World/Planting/GroundTileLayerSystem.cs` | 天然深度、玩家覆盖层与恢复 |
 | `5-3_GamePlay/World/Chunk/` | 生成结果接入、自然物归属与差量 |
 
+洞穴格沿用稳定群系编号100，旧玩法名称映射为“洞穴”；该编号不加入地表 `SurfaceBiomeKind` 枚举。
+
 内容根目录 `Assets/StreamingAssets/GameConfig/`：
 
 - `Tiles/tile-manifest.json` 及分包是地块真源；`Assets/7_Tiles/` 是外观，`Assets/4_ScriptObjects/World/Tiles/` 的 SO 仅为稳定 ID/GUID 引用壳。

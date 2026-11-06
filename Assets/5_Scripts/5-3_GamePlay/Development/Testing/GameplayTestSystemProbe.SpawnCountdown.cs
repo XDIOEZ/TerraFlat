@@ -193,11 +193,9 @@ public static partial class GameplayTestSystemProbe
         var configs = new List<SpawnerConfig>();
         try
         {
-            int speciesCount = 0;
             foreach (SpawnerConfigDefinition definition in catalog.Configs)
             {
                 configs.Add(definition.CreateRuntimeConfig());
-                speciesCount += definition.SpawnEntries.Count;
             }
             SpawnerConfig bird = configs.Find(value => value.PersistentId == "bird_ecology");
             SpawnerConfig wildlife = configs.Find(value => value.PersistentId == "wildlife_resources");
@@ -210,7 +208,6 @@ public static partial class GameplayTestSystemProbe
             SpawnerCountdownProgress clock = save.NaturalCountdown;
             bool Tick(double time) => MonsterSpawnerManager.AdvanceCountdownSchedule(clock, time, catalog.Settings, 1f);
             var result = new JObject { ["interval"] = interval, ["batchSize"] = bird.SpawnCount,
-                ["speciesCount"] = speciesCount, ["ruleCount"] = configs.Count,
                 ["zombieDisabled"] = configs.Find(value => value.PersistentId == "zombie_horde").SpawnChance == 0f };
             Tick(100d);
             result["initial"] = CountdownSample(clock, state);

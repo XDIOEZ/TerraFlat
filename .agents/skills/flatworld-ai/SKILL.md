@@ -28,7 +28,8 @@ description: "FlatWorld 动物、怪物与蜂群的生成、GameObject AI、可�
 Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则：`Assets/Resources/GameConfig/Spawners/Rules/`；ECS 图集：`Assets/6_Art/Generated/Actors/AIECS/`，Shader：`Assets/9_Shaders/Shader/AiecsSpriteLit.shader`。
 
 - P0/P1 的20种动物在 `definitions/ecology-actors.json`，共用已有外壳和独立单图；飞行变体清空 `animator.singleSpriteStates`，避免父物种状态图覆盖。原料在 Items/Recipes 的 `animal_ecology.json`；未验收的捕捉、骑乘、挤奶、繁殖与毒性不计作已实现。
-- 生成规则 `allowedDimensionIds` 默认仅 `surface`，空列表才不限制；洞穴启用自然生成后只接显式 `cave` 规则。正式草原名为“温带草原”，河湖共用“河流”；`shoreRadius` 要求同轮已加载的可走陆地和真实水格，深度范围约束出生水格与邻水格，岸上不套最低水深。
+- 每物种唯一归属于一个生成配置；多群系合并到该规则的 `allowedBiomeNames`，不能重复登记，否则生命周期计数与休眠恢复会归错组。蜘蛛同规则覆盖森林/洞穴，洞穴固定群系100映射为“洞穴”，不扩充地表群系枚举。
+- 生成规则 `allowedDimensionIds` 默认仅 `surface`，显式 JSON 名单须替换默认列表，空列表才不限制；洞穴启用自然生成后只接显式 `cave` 规则。正式草原名为“温带草原”，河湖共用“河流”；`shoreRadius` 要求同轮已加载的可走陆地和真实水格，深度范围约束出生水格与邻水格，岸上不套最低水深。
 - 两栖复用 `Mod_AquaticMovement.landMovementEnabled/landSpeed`，不叠地面 Mover；真实水体须 `WorldWater.WaterContact`。`swimAndHunt/aquatic.combat` 用通用 hunting/combat 与连通水路，逐次复核身份/视线/攻击范围；`flightMovement.landPreyIds` 让陆猎与可选携鱼分离，`avoidLight` 启用飞行避光。草食群聚只用 `wander.herdTags/herdRadius/herdCohesion`，不创建群猎能力。覆盖入口为 `ai/animal_ecology_catalog`、`ai/aquatic_traversal` 和现场 `ai/aquatic_habitat`。
 
 ## JSON 行为树
@@ -89,6 +90,7 @@ Actor：`Assets/StreamingAssets/GameConfig/Actors/definitions/`；生成规则�
 - GO 感知和模拟距离按世界账本的物品归属分桶；跨世界交接使旧目标和异步结果失效，旧结果列表在下次读取时原位清理。拓扑与 LOS 仍需进入对应世界作用域，尚不是飞船独立世界的完整环境接口。
 - GO 感知最终半径受 `Item.MaximumPerceptionRadius` 通用外部上限约束，批查询在目标倍率后钳制，旧候选/锁定目标也实时受限；雾的施加与撤销归 `WeatherMgr.Fog`，AI 不查询天气。幽灵直查玩家同样钳制；回归 `environment/fog_perception`。
 - Actor 感知冻结时同轮仿射变换一次性写入 Burst 形状与粗筛包围盒，保留复杂形状、负缩放和独立查询的相同包围语义；规则 `ai/perception_shape_batch`。
+- 物理根碰撞禁用不等于不可感知：没有启用根形状时，`ActorPerceptionShapeCompiler` 保留显式根声明的几何作纯数据感知；没有声明仍为空，存在启用形状则不额外回退，不改变物理状态。规则 `ai/perception_template_shapes`。
 - 狼的目标筛选与通用 Detector 最近物查询在单次遍历内最多获取一次 `WorldTopologyDomain`，无匹配对象时不解析世界边界；逐候选仍实时读位置和阵营，通用入口供鸡、野猪使用，规则 `ai/closest_target_batch` 覆盖接缝、同距、玩家和移动目标。
 - `Mod_ItemDetector.ApplyDetectorResults` 仅在 `DebugMode` 开启时构造旧候选差集并比较进入/离开，普通批次保留去重、顺序和原标签 List 引用；关闭 Debug 时清理旧集合，回归 `ai/detector_apply_batch`。
 - `ItemMgr.QueueDetectorQuery` 用本批 `Dictionary<Mod_ItemDetector,int>` 定位已有请求槽位，重复申请只更新最新版本且保持首次顺序；批次消费后清空索引，不跨批缓存检测器。

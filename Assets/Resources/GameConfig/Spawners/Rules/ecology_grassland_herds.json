@@ -45,20 +45,6 @@
         }
       },
       {
-        "prefabName": "Deer",
-        "runtimeBackend": "gameObject",
-        "probability": 2,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 10,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
-      },
-      {
         "prefabName": "Cow",
         "runtimeBackend": "gameObject",
         "probability": 1,

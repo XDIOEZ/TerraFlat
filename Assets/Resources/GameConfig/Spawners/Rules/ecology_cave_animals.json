@@ -41,20 +41,6 @@
             "maxFoodRate": 0.95
           }
         }
-      },
-      {
-        "prefabName": "Spider",
-        "runtimeBackend": "gameObject",
-        "probability": 1,
-        "ecologyCost": 1,
-        "speciesAliveLimit": 6,
-        "initialization": {
-          "nutrition": {
-            "enabled": true,
-            "minFoodRate": 0.65,
-            "maxFoodRate": 0.95
-          }
-        }
       }
     ],
     "waterOnly": false,

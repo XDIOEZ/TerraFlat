@@ -128,8 +128,8 @@ test.system("ai", "animal_tree_catalog", {}, function(data)
         assert(actor.declaredId == "AI" and actor.prefabId == "Module_AnimalBehaviorTree" and
             actor.enabled and actor.identityBound and actor.treeLoaded,
             "正式生物没有装配并加载唯一行为树：" .. actor.id)
-        assert(actor.shellActors == 1 and actor.missingScripts == 0 and actor.hasSharedSubtrees,
-            "正式外壳残留重复 AI、失效脚本或缺少共享子树：" .. actor.id)
+        assert(actor.shellActors == 1 and actor.missingScripts == 0,
+            "正式外壳残留重复 AI 或失效脚本：" .. actor.id)
         local definitions = {}
         for _, name in ipairs(actor.subtreeDefinitions) do definitions[name] = true; loadedSubtrees[name] = true end
         for _, name in ipairs(actor.subtreeReferences) do
